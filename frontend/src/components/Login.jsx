@@ -1,33 +1,30 @@
 import React, { useState } from 'react';
-import { ShieldCheck, LogIn, User as UserIcon, Key, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, LogIn, User as UserIcon, Key, ShieldAlert, Loader } from 'lucide-react';
 import Logo from './Logo';
+import { authAPI } from '../services/api';
 
-const Login = ({ onLogin, authorizedUsers, customLogo }) => {
+const Login = ({ onLogin, customLogo }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    loginWith(username, password);
-  };
-
-  const loginWith = (u, p) => {
-    const cleanUser = u.trim().toUpperCase();
-    const cleanPass = p.trim();
-
-    const user = authorizedUsers.find(
-      usr => usr.username.toUpperCase() === cleanUser && usr.password === cleanPass
-    );
+    setIsLoading(true);
+    setError(null);
     
-    if (user) {
-      if (!user.isActive) {
-        setError('CUENTA DESACTIVADA');
-        return;
+    try {
+      const result = await authAPI.login(username.trim(), password.trim());
+      if (result.success && result.user) {
+        onLogin(result.user);
+      } else {
+        setError('CREDENCIALES NO VÁLIDAS');
       }
-      onLogin(user);
-    } else {
-      setError('CREDENCIALES NO VÁLIDAS');
+    } catch (err) {
+      setError(err.message || 'CREDENCIALES NO VÁLIDAS');
+    } finally {
+      setIsLoading(false);
     }
   };
 
