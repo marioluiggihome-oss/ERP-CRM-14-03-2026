@@ -404,14 +404,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         </div>
 
         {/* Tabs */}
-        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto">
+        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-3 overflow-x-auto">
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-              activeTab === 'users' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+              activeTab === 'users' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
             }`}
           >
-            <Users size={14} className="inline mr-2" />
+            <Users size={16} />
             Red Distribución
           </button>
           
@@ -419,11 +419,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
             <button
               onClick={() => setActiveTab('inventory')}
-              className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                activeTab === 'inventory' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'inventory' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
               }`}
             >
-              <Package size={14} className="inline mr-2" />
+              <Package size={16} />
               Inventario
             </button>
           )}
@@ -432,22 +432,22 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
             <button
               onClick={() => setActiveTab('pricing')}
-              className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                activeTab === 'pricing' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'pricing' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
               }`}
             >
-              <Euro size={14} className="inline mr-2" />
+              <Euro size={16} />
               Márgenes
             </button>
           )}
           
           <button
             onClick={() => setActiveTab('identity')}
-            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-              activeTab === 'identity' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+              activeTab === 'identity' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
             }`}
           >
-            <Camera size={14} className="inline mr-2" />
+            <Camera size={16} />
             Identidad
           </button>
         </div>
