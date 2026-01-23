@@ -11,187 +11,72 @@ Feature requests have been provided incrementally through a PowerPoint presentat
     *   **Tienda:** Limited access, cannot see administrative sections.
 3.  **Inventory Management (Inventario Maestro):**
     *   Manage two separate product catalogs:  (finished furniture) and  (individual components).
-    *    items have 12 distinct price zones (Z1-Z12).
-    *    items have a single base price (Puntos Base).
-    *   The UI must adapt to show the correct data and columns for each catalog type.
 4.  **Master Margins (Márgenes Maestros):**
-    *   A settings panel to configure base prices, costs for special cuts, and manage a list of materials () with price modifiers.
+    *   A settings panel to configure base prices, costs, and materials.
 5.  **AI Catalog Import (Telemetría IA):**
-    *   A feature to upload images of product sheets ().
-    *   Use AI (Gemini Vision) to analyze the images and automatically populate the inventory.
-6.  **UI/UX enhancements:**
-    *   Change the Mesa de trabajo icon and label to Presupuesto.
-    *   Make the sidebar UI more compact.
+    *   A feature to upload product sheets and use AI (Gemini Vision) to auto-populate the inventory.
+6.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets.
+7.  **PDF Export:** Generate a PDF of the current budget.
+8.  **Security:** Ensure user passwords are stored securely.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A frontend-only React application that clones the LUIGGI HOME ERP. The application's state (users, products, settings) is persisted in the browser's .
+A full-stack application with a React frontend and a FastAPI backend connected to a MongoDB database. The initial phase of migrating all data persistence from the browser's  to MongoDB is complete.
 
 The application includes:
-- A complete, hierarchical user and permissions system (Admin, Comercial, Tienda).
-- An advanced inventory management system that handles two distinct types of products ( with 12 price zones and  with one price point).
+- A FastAPI backend with a full suite of CRUD API endpoints for users, products, materials, projects (budgets), and system settings.
+- A React frontend fully integrated with the backend API for all data operations.
+- A complete, hierarchical user and permissions system with password hashing ().
+- An advanced inventory management system with bulk-delete functionality.
 - A settings panel (Master) to manage master margins and materials.
-- A UI for the AI Telemetry feature, which is connected to a newly created backend endpoint for processing images.
-- A FastAPI backend with an endpoint  ready to process image uploads using Google Gemini Vision via the  library.
+- A working AI Telemetry feature for catalog import using Gemini Vision.
+- A project library to save, load, and delete budgets from the database.
 
 **Last working item**:
-- Last item agent was working: Implementing the backend and frontend for the **Telemetría IA** (AI Telemetry) feature. The agent successfully created the  endpoint in , installed the necessary  library, configured the , and updated the  frontend component to call this endpoint. The agent was about to update a UI warning message after connecting the frontend to the backend.
+- Last item agent was working: Implementing a feature to export budgets to a PDF file. The agent installed  and , created a new service file , and added an Exportar PDF button to the  component. The next step is to implement the PDF generation logic within the service and connect it to the button's  event.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? both
+- Which testing method agent to use? frontend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Test the end-to-end AI Telemetry feature (P0)**
--   **Issue 2: Login for new users is unreliable (P1)**
--   **Issue 3: Implement remaining features from the user's PowerPoint (P1)**
-
-Issues Detail:
--   **Issue 1:**
-    -   **Attempted fixes:** N/A. The feature was just built.
-    -   **Next debug checklist:**
-        1.  In , trigger a file upload.
-        2.  Verify the  request is sent to .
-        3.  Check the backend logs (==> /var/log/supervisor/backend.err.log <==
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [42] using WatchFiles
-INFO:     Started server process [73]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [73]
-INFO:     Stopping reloader process [42]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [195] using WatchFiles
-INFO:     Started server process [240]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [42] using WatchFiles
-INFO:     Started server process [86]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [86]
-python-dotenv could not parse statement starting at line 3
-INFO:     Started server process [4506]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [4506]
-python-dotenv could not parse statement starting at line 3
-INFO:     Started server process [4766]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [4766]
-INFO:     Stopping reloader process [42]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [4965] using WatchFiles
-python-dotenv could not parse statement starting at line 3
-INFO:     Started server process [4967]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [48] using WatchFiles
-
-==> /var/log/supervisor/backend.out.log <==
-INFO:     10.64.138.62:42924 - "GET /api/ HTTP/1.1" 200 OK
-INFO:     10.64.129.226:34706 - "GET /api/ HTTP/1.1" 200 OK) for the request and any errors from the  call to Gemini.
-        4.  Confirm that the backend returns the parsed JSON data correctly.
-        5.  Ensure the frontend correctly receives the data and updates the application state (e.g., adds the new product to the catalog).
-    -   **Why fix this issue and what will be achieved with the fix?** To complete the AI-powered catalog import functionality, which is a key feature requested by the user.
-    -   **Status:** TESTING PENDING
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** both
-    -   **Blocked on other issue:** None
-
--   **Issue 2:**
-    -   **Attempted fixes:** The agent encountered a CREDENCIALES NO VÁLIDAS error when trying to log in as a newly created Comercial user. The issue seemed related to the component state and  not being in sync immediately after user creation. The agent tried to fix it by modifying how the user password was saved, but the login test failed again.
-    -   **Next debug checklist:**
-        1.  Review the  function in .
-        2.  Ensure that after a new user is created, the main  state in  is updated correctly.
-        3.  Verify that  is called with the *new* state immediately after the user is added.
-        4.  Review the  function in  to ensure it's correctly reading the latest state from .
-    -   **Why fix this issue and what will be achieved with the fix?** The user management system is unusable if newly created users cannot log in. This is critical for the role-based permission system to work.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None
-
--   **Issue 3:**
-    -   **Attempted fixes:** N/A
-    -   **Next debug checklist:**
-        1.  The user provided a PowerPoint file () with 9 slides detailing features.
-        2.  The agent has implemented features from the first few slides.
-        3.  The agent must re-examine the extracted images/content from the  file (located in ) to identify and list the remaining unimplemented sections.
-    -   **Why fix this issue and what will be achieved with the fix?** To fulfill all the user's requirements and complete the application clone.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** both
-    -   **Blocked on other issue:** None
+- There are no outstanding high-priority bugs. The previously reported unreliable login for new users was resolved as part of the migration from  to the MongoDB backend.
 
 **In progress Task List**:
--   **Task 1: Complete AI Catalog Import (Telemetría IA)**
-    -   **Where to resume:** The frontend and backend are connected. The next step is to perform an end-to-end test by uploading a product sheet image and verifying that it gets processed by the AI and added to the inventory.
-    -   **What will be achieved with this?** A fully functional AI feature for automatically adding products to the catalog from an image.
+-   **Task 1: Complete PDF Export Feature (P0)**
+    -   **Where to resume:** In , implement the function that takes the budget data and uses  and  to create a downloadable PDF. Wire this function to the  handler of the Exportar PDF button in .
+    -   **What will be achieved with this?** Users will be able to generate and download a PDF quotation of their current budget.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** both
+    -   **Should Test frontend/backend/both after fix?** frontend
     -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-  - **Backend and Database Migration (P0):** Migrate all data currently stored in  (users, products, projects, settings) to MongoDB. This involves:
-    - Defining MongoDB schemas for all data models.
-    - Creating a full suite of CRUD API endpoints in  for users, products, etc.
-    - Refactoring the entire frontend (, , etc.) to fetch data from and send data to the new API endpoints instead of using .
-  - **Implement Remaining PowerPoint Features (P1):** Analyze the remaining slides in  and implement the missing sections.
+  - **Implement Remaining PowerPoint Features (P1):** The user provided a PowerPoint file () with additional features. The agent previously noted the extracted content folder was missing. This requires re-investigation or asking the user for the file/details again to identify and implement the remaining unimplemented sections.
 
 - **Future Tasks:**
-  - **Project Archiving (ARCHIVO) (P2):** Fully implement the project library functionality () to allow users to save, load, and manage their kitchen budgets.
+  - **Project Archiving (ARCHIVO) (P2):** The original handoff mentioned a project archiving feature. While projects can be saved and loaded, a dedicated archive status or section could be implemented for completed or old projects.
 
 **Completed work in this session**
 - List of all completed tasks with file and method name:
-  - **Application Scaffolding:** Cloned the UI/UX of the LUIGGI HOME application.
-  - **User Management System:** Implemented full hierarchical user management (Admin, Comercial, Tienda) with granular permissions in .
-  - **Advanced Inventory System:** Created a dual-catalog inventory in  that distinguishes between  (12 price zones) and  (1 price point) products.
-  - **Master Margins Configuration:** Built the UI and logic for managing master prices and materials in .
-  - **AI Telemetry Feature:**
-    - Created the frontend UI in .
-    - Implemented a backend endpoint  in  using Gemini Vision.
-  - **UI/UX Refinements:**
-    - Renamed Mesa to Presupuesto and updated its icon in  and .
-    - Made the sidebar UI in  more compact by adjusting styles.
+  - **Full Backend Migration to MongoDB:** Migrated the entire application state (users, products, materials, settings) from  to a MongoDB database. This involved creating Pydantic models and a full suite of FastAPI endpoints in .
+  - **Frontend API Integration:** Refactored the entire React frontend (, , ) to fetch and manipulate data exclusively through the new backend API, using a new service layer in .
+  - **Security Enhancements:** Implemented server-side password hashing with  and created a  model in  to prevent passwords from being sent to the client.
+  - **Project/Budget Management:** Implemented a full CRUD lifecycle for projects (budgets), including API endpoints and frontend integration in .
+  - **Inventory Bulk Delete:** Added checkboxes and logic to  to allow for the selection and deletion of multiple inventory items at once.
+  - **AI Telemetry Feature Testing:** Verified the end-to-end functionality of the AI-powered catalog import feature.
+  - **Permissions & UI Fixes:** Added permission checks for AI-related links in the sidebar () and fixed styling issues in the  tabs.
 
 - Recently completed:
-  - Backend integration for AI Telemetry (DONE)
-  - UI for AI Telemetry (DONE)
-  - Permissions for administrative sections (DONE)
-  - Compact sidebar UI (DONE)
-  - Independent inventories for Montada and Despiece (DONE)
+  - Project Library connected to MongoDB (DONE)
+  - Password hashing and security improvements (DONE)
+  - Full data migration from localStorage to MongoDB (DONE)
+  - Bulk-delete functionality for inventory (DONE)
+  - Permission checks for AI sidebar links (DONE)
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Unreliable new user login**
-    -   **Debug checklist:** See All Pending/In progress Issue list - Issue 2.
-    -   **Why to solve this issue and what will be achieved with this?** A core part of the application is user management; if new users cannot log in, the feature is broken.
-    -   **Should Test frontend/backend/both after fix:** frontend
-    -   **Is recurring issue?** Y
+- None. All issues raised during the session were addressed and resolved.
 
 **Known issue recurrence from previous fork**
 - Issue recurrence in previous fork: None
@@ -202,70 +87,84 @@ INFO:     10.64.129.226:34706 - "GET /api/ HTTP/1.1" 200 OK) for the request and
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, , Shadcn UI components.
-- **State Management:** React Hooks (, , ) with data persistence via the browser's .
-- **Backend:** Python, FastAPI.
+- **Frontend:** React, TailwindCSS, , Shadcn UI, , .
+- **Backend:** Python, FastAPI, Pydantic.
+- **Database:** MongoDB (via ).
+- **Security:** Password hashing with .
 - **AI Integration:**  library, Google Gemini Vision API.
-- **Database:** MongoDB (planned for the next phase, not yet implemented).
+- **State Management:** React Hooks, with all persistent state managed by the backend.
 
 **key DB schema**
-None implemented. All data is stored in a single JSON object in . The planned structure will likely include collections for , , , and .
+The schemas are defined by Pydantic models in :
+- : {id, username, password (hashed), clientName, isAdmin, permissions...}
+- : {id, code, name, module, price_zones (p1-p12)...}
+- : {id, name, fixedIncrement, thickness}
+- : {id, name, customerName, items: [BudgetItem]}
+- : {id, pointValueMontada, pointValueDespiece, brandColor...}
 
 **changes in tech stack**
--  library was added to the backend to facilitate AI integration.
+-  has been completely deprecated for data persistence in favor of MongoDB.
+-  was added to the backend for password hashing.
+-  and  were added to the frontend for PDF generation.
 
 **All files of reference**
--   : Main state management and component routing.
--   : Contains the logic for Users, Inventory, and Master Margins. This is the most complex component.
--   : The new component for the AI import feature.
--   : Defines the structure and initial data for the product catalogs.
--   : The single backend file, now containing the  endpoint for AI processing.
--   : Updated to include .
-
-**Areas that need refactoring**:
-- The entire state management in  needs to be refactored to work with a backend API instead of . The component is becoming overly large and manages too much state.
--  is also very large and complex. It could be broken down into smaller, more manageable child components for each tab (Users, Inventory, Margins).
+- : The single source of truth for all backend logic, API endpoints, and database models.
+- : Contains all the functions for communicating with the backend API.
+- : Main frontend component, handles routing and global state fetched from the API.
+- : Manages all administrative CRUD operations (users, products, materials, settings).
+- : Manages saving/loading budgets.
+- : Where the PDF export button was added.
+- : The new file where PDF logic will be implemented.
 
 **key api endpoints**
-- : Default health check endpoint.
-- : **(New)** Accepts an image file and uses Gemini Vision to extract product data, returning it as JSON.
+- : User login (verifies hashed password).
+- : Creates/updates the default admin user on startup.
+- : CRUD for users.
+- : CRUD for products, includes bulk delete.
+- : CRUD for materials.
+- : GET/PUT for system-wide settings.
+- : CRUD for projects/budgets.
+- : For the AI Telemetry feature.
 
 **Critical Info for New Agent**
-- **All data is in !** The application is currently frontend-only in terms of data persistence. The next major task is to build the backend and migrate this data to MongoDB.
-- The user is non-technical and provides requirements incrementally through images and short descriptions. Be prepared to ask clarifying questions and guide them.
-- The user has already asked about backend integration, indicating they are ready for the next phase of development.
-- The AI Telemetry feature has been built but not tested. This should be the immediate first step.
-- Pay close attention to the user roles (Admin, Comercial, Tienda) and their specific permissions, as this is a critical part of the application logic.
+- The application is now a true full-stack application. **Do not use or reference  for data persistence.** All data must go through the API service defined in .
+- The screenshot tool has been unreliable for testing interactive flows (like login). It's better to verify backend functionality with  and use the  for comprehensive frontend and backend E2E tests.
+- All core features have been migrated and tested. The current task is a new feature addition (PDF export).
 
 **documents and test reports created in this job**
-None.
+- : Updated with the latest progress.
+- : Comprehensive test report from the testing agent after the MongoDB migration.
+- : Folder created by the testing agent containing pytest files.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests to implement the AI catalog import feature (Telemetría IA). (IN PROGRESS)
-2.  **User:** Asks for the AI analysis to be meticulous and confirms the use of Gemini Vision API. (ADDRESSED)
-3.  **User:** Thanks the agent and asks to proceed with the AI import section. (ADDRESSED)
-4.  **User:** Asks if the application code is private or can be copied by others. (ADDRESSED, agent confirmed code is private)
-5.  **User:** Corrects the logic for the despiece catalog, stating it should have only one price zone, not twelve. (COMPLETED)
-6.  **User:** Points out that the inventory counter is static and that the montada and despiece inventories should be separate. (COMPLETED)
-7.  **User:** Asks to make the sidebar panel more compact. (COMPLETED)
-8.  **User:** Asks to change the Mesa icon and label to Presupuesto. (COMPLETED)
-9.  **User:** Specifies that only Admins and authorized Comerciales should access the inventory and master margins sections. Provides an image for the Márgenes Maestros section. (COMPLETED)
-10. **User:** Submits a slide for the Inventario Maestro and requests its implementation. (COMPLETED)
+1.  **User:**  (Agrees to implement PDF export). (IN PROGRESS)
+2.  **User:**  (Agrees to connect the project library to the backend). (COMPLETED)
+3.  **User:**  (Agrees to implement security enhancements). (COMPLETED)
+4.  **User:** Uploads an image (context unclear, but agent proceeded with planned tasks). (ADDRESSED)
+5.  **User:**  (Agrees to the plan including MongoDB migration). (COMPLETED)
+6.  **User:**  (Requests permission checks for sidebar items). (COMPLETED)
+7.  **User:**  (Requests bulk-delete for inventory). (COMPLETED)
+8.  **User:** Uploads screenshot of a UI bug in the settings tabs. (COMPLETED)
+9.  **User:**  (Reports a login failure). (COMPLETED)
+10. **User:**  (Requests a change of admin credentials). (COMPLETED)
 
 **Project Health Check:**
--   **Broken:** The login flow for newly created users is unreliable and has failed during testing.
--   **Mocked:** The entire application's data persistence is mocked via . There is no database integration.
+- **Broken:** None.
+- **Mocked:** None.
 
 **3rd Party Integrations**
--   **Google Gemini Vision:** Integrated via the  library to perform OCR and data extraction from images. Uses the **Emergent LLM Key**.
+- **Google Gemini Vision:** Used via  for AI catalog import. Uses Emergent LLM Key.
+- **jspdf / html2canvas:** Frontend libraries for generating PDF files.
 
 **Testing status**
--   Testing agent used after significant changes: NO
--   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: []
--   Known regressions: Login for newly created users may fail.
+- Testing agent used after significant changes: YES (after MongoDB migration).
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: []
+- Known regressions: None.
 
 **Credentials to test flow:**
-Login as the default administrator:
--   **User:** MARIO
--   **Password:** 1234</analysis>
+- **User:** MARIO
+- **Password:** MARIO
+
+**What agent forgot to execute**
+- The agent needs to re-investigate the user's request to implement features from the  PowerPoint file. The agent noted the  directory was missing but did not formulate a plan to recover or re-request this information from the user. This is the main pending requirement aside from the current PDF task.</analysis>
