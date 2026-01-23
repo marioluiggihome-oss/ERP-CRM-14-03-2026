@@ -729,6 +729,269 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </div>
           )}
 
+          {activeTab === 'inventory' && (
+            <div className="space-y-6">
+              {!isEditingProduct ? (
+                <>
+                  {/* Header with module selector, search and add button */}
+                  <div className="flex justify-between items-center mb-6 gap-4">
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setInventoryModule('montada')}
+                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                          inventoryModule === 'montada' ? 'bg-orange-600 text-white shadow-lg' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        Cocina Montada
+                      </button>
+                      <button
+                        onClick={() => setInventoryModule('despiece')}
+                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                          inventoryModule === 'despiece' ? 'bg-indigo-700 text-white shadow-lg' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        Formato Despiece
+                      </button>
+                    </div>
+                    
+                    <div className="flex gap-3 flex-1 max-w-2xl">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                          type="text"
+                          placeholder="BUSCAR REFERENCIA..."
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold uppercase outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <button
+                        onClick={handleCreateProduct}
+                        className="flex items-center gap-2 px-6 py-2 bg-indigo-950 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-900 transition-all shadow-lg whitespace-nowrap"
+                      >
+                        <Plus size={18} />
+                        Nueva Alta
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Products Table */}
+                  <div className="bg-white border-2 border-indigo-100 rounded-2xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-indigo-950 text-white">
+                          <tr>
+                            <th className="p-3 text-left text-[9px] font-black uppercase whitespace-nowrap">REF</th>
+                            <th className="p-3 text-left text-[9px] font-black uppercase min-w-[200px]">NOMBRE</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z1</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z2</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z3</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z4</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z5</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z6</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z7</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z8</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z9</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z10</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z11</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z12</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">GESTIÓN</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredProducts.length === 0 ? (
+                            <tr>
+                              <td colSpan="15" className="p-8 text-center text-slate-400 italic">
+                                No hay productos en este catálogo
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredProducts.map(product => (
+                              <tr key={product.id} className="hover:bg-indigo-50/30 transition-colors">
+                                <td className="p-3 text-xs font-black text-orange-600 uppercase">{product.code}</td>
+                                <td className="p-3 text-xs font-bold text-slate-900">{product.name}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z1 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z2 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z3 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z4 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z5 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z6 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z7 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z8 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z9 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z10 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z11 || 0}</td>
+                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z12 || 0}</td>
+                                <td className="p-3">
+                                  <div className="flex justify-center gap-2">
+                                    <button
+                                      onClick={() => handleEditProduct(product)}
+                                      className="p-2 hover:bg-indigo-100 rounded-lg transition-all"
+                                      title="Editar"
+                                    >
+                                      <Pencil size={14} className="text-indigo-600" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteProduct(product.id)}
+                                      className="p-2 hover:bg-red-100 rounded-lg transition-all"
+                                      title="Eliminar"
+                                    >
+                                      <Trash2 size={14} className="text-red-600" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                    <p className="text-xs font-bold text-indigo-900">
+                      📊 Total de artículos en catálogo: <span className="font-black text-orange-600">{filteredProducts.length}</span>
+                    </p>
+                  </div>
+                </>
+              ) : (
+                /* Product Form */
+                <div className="bg-white border-2 border-orange-200 rounded-2xl p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-black text-slate-900 uppercase">
+                      {editingProductId ? 'Editar Artículo' : 'Nuevo Artículo'}
+                    </h3>
+                    <button
+                      onClick={() => setIsEditingProduct(false)}
+                      className="text-slate-400 hover:text-slate-600"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Código / Referencia *</label>
+                        <input
+                          type="text"
+                          value={productForm.code}
+                          onChange={(e) => setProductForm({...productForm, code: e.target.value.toUpperCase()})}
+                          placeholder="Ej: 35A1P350"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-black uppercase outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Nombre Comercial *</label>
+                        <input
+                          type="text"
+                          value={productForm.name}
+                          onChange={(e) => setProductForm({...productForm, name: e.target.value})}
+                          placeholder="Ej: Alto 1 Puerta 35cm"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Dimensions */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Ancho (cm)</label>
+                        <input
+                          type="number"
+                          value={productForm.width}
+                          onChange={(e) => setProductForm({...productForm, width: parseInt(e.target.value) || 0})}
+                          className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 text-lg font-black text-center outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Alto (cm)</label>
+                        <input
+                          type="number"
+                          value={productForm.height}
+                          onChange={(e) => setProductForm({...productForm, height: parseInt(e.target.value) || 0})}
+                          className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 text-lg font-black text-center outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Fondo (cm)</label>
+                        <input
+                          type="number"
+                          value={productForm.depth}
+                          onChange={(e) => setProductForm({...productForm, depth: parseInt(e.target.value) || 0})}
+                          className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 text-lg font-black text-center outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Zone Points */}
+                    <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
+                      <h4 className="text-sm font-black text-indigo-900 uppercase mb-4">Puntos por Zona de Acabado</h4>
+                      <div className="grid grid-cols-4 gap-3">
+                        {Object.keys(productForm.zonePoints).map(zone => (
+                          <div key={zone}>
+                            <label className="text-[9px] font-black text-indigo-600 uppercase mb-1 block">{zone}</label>
+                            <input
+                              type="number"
+                              value={productForm.zonePoints[zone]}
+                              onChange={(e) => setProductForm({
+                                ...productForm,
+                                zonePoints: { ...productForm.zonePoints, [zone]: parseInt(e.target.value) || 0 }
+                              })}
+                              className="w-full bg-white border border-indigo-200 rounded-lg p-2 text-sm font-black text-center text-indigo-900 outline-none focus:border-orange-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Additional Info */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Categoría</label>
+                        <input
+                          type="text"
+                          value={productForm.category}
+                          onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                          placeholder="Ej: Altos"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Serie</label>
+                        <input
+                          type="text"
+                          value={productForm.series}
+                          onChange={(e) => setProductForm({...productForm, series: e.target.value})}
+                          placeholder="Ej: Altos 35cm"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-4 border-t border-slate-200">
+                      <button
+                        onClick={handleSaveProduct}
+                        className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black uppercase text-sm hover:bg-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <Save size={18} />
+                        Guardar Artículo
+                      </button>
+                      <button
+                        onClick={() => setIsEditingProduct(false)}
+                        className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-black uppercase text-sm hover:bg-slate-300 transition-all"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'pricing' && (
             <div className="space-y-6">
               <div className="bg-white border border-indigo-100 rounded-2xl p-6 shadow-sm">
