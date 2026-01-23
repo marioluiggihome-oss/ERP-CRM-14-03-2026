@@ -1008,26 +1008,52 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       </div>
                     </div>
 
-                    {/* Zone Points */}
-                    <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
-                      <h4 className="text-sm font-black text-indigo-900 uppercase mb-4">Puntos por Zona de Acabado</h4>
-                      <div className="grid grid-cols-4 gap-3">
-                        {Object.keys(productForm.zonePoints).map(zone => (
-                          <div key={zone}>
-                            <label className="text-[9px] font-black text-indigo-600 uppercase mb-1 block">{zone}</label>
-                            <input
-                              type="number"
-                              value={productForm.zonePoints[zone]}
-                              onChange={(e) => setProductForm({
-                                ...productForm,
-                                zonePoints: { ...productForm.zonePoints, [zone]: parseInt(e.target.value) || 0 }
-                              })}
-                              className="w-full bg-white border border-indigo-200 rounded-lg p-2 text-sm font-black text-center text-indigo-900 outline-none focus:border-orange-500"
-                            />
-                          </div>
-                        ))}
+                    {/* Zone Points - Solo para Montada */}
+                    {inventoryModule === 'montada' ? (
+                      <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
+                        <h4 className="text-sm font-black text-indigo-900 uppercase mb-4">Puntos por Zona de Acabado (Montada)</h4>
+                        <div className="grid grid-cols-4 gap-3">
+                          {Object.keys(productForm.zonePoints).map(zone => (
+                            <div key={zone}>
+                              <label className="text-[9px] font-black text-indigo-600 uppercase mb-1 block">{zone}</label>
+                              <input
+                                type="number"
+                                value={productForm.zonePoints[zone]}
+                                onChange={(e) => setProductForm({
+                                  ...productForm,
+                                  zonePoints: { ...productForm.zonePoints, [zone]: parseInt(e.target.value) || 0 }
+                                })}
+                                className="w-full bg-white border border-indigo-200 rounded-lg p-2 text-sm font-black text-center text-indigo-900 outline-none focus:border-orange-500"
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="bg-orange-50 p-6 rounded-xl border border-orange-200">
+                        <h4 className="text-sm font-black text-orange-900 uppercase mb-4">Puntos Base (Despiece - Sin Zonas)</h4>
+                        <p className="text-xs text-orange-700 mb-4">En despiece el precio solo varía según el material del armazón/casco</p>
+                        <div>
+                          <label className="text-xs font-black text-orange-600 uppercase mb-2 block">Puntos Base del Componente</label>
+                          <input
+                            type="number"
+                            value={productForm.zonePoints?.Z1 || 0}
+                            onChange={(e) => {
+                              const basePoints = parseInt(e.target.value) || 0;
+                              setProductForm({
+                                ...productForm,
+                                zonePoints: {
+                                  Z1: basePoints, Z2: basePoints, Z3: basePoints, Z4: basePoints,
+                                  Z5: basePoints, Z6: basePoints, Z7: basePoints, Z8: basePoints,
+                                  Z9: basePoints, Z10: basePoints, Z11: basePoints, Z12: basePoints
+                                }
+                              });
+                            }}
+                            className="w-full bg-white border-2 border-orange-300 rounded-xl p-4 text-2xl font-black text-center text-orange-900 outline-none focus:border-orange-500"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Additional Info */}
                     <div className="grid grid-cols-2 gap-4">
