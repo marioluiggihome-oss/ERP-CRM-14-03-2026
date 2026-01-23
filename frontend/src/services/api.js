@@ -212,6 +212,55 @@ export const settingsAPI = {
 };
 
 // ============================================
+// PROJECTS/BUDGETS
+// ============================================
+
+export const projectsAPI = {
+  getAll: async (userId = null) => {
+    const url = userId 
+      ? `${API_URL}/api/projects?user_id=${userId}`
+      : `${API_URL}/api/projects`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener proyectos');
+    return response.json();
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_URL}/api/projects/${id}`);
+    if (!response.ok) throw new Error('Proyecto no encontrado');
+    return response.json();
+  },
+
+  create: async (project, userId) => {
+    const response = await fetch(`${API_URL}/api/projects?user_id=${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project)
+    });
+    if (!response.ok) throw new Error('Error al crear proyecto');
+    return response.json();
+  },
+
+  update: async (id, project) => {
+    const response = await fetch(`${API_URL}/api/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project)
+    });
+    if (!response.ok) throw new Error('Error al actualizar proyecto');
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/projects/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Error al eliminar proyecto');
+    return response.json();
+  }
+};
+
+// ============================================
 // TELEMETRY (AI)
 // ============================================
 
