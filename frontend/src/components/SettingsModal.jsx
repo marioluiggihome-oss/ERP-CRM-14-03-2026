@@ -386,51 +386,66 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
 
                     {/* Role & Hierarchy */}
-                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                      <h4 className="text-sm font-black text-orange-900 uppercase mb-3">Rol y Jerarquía</h4>
-                      <div className="space-y-3">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={userForm.isAdmin}
-                            onChange={(e) => setUserForm({...userForm, isAdmin: e.target.checked})}
-                            className="w-5 h-5 rounded border-2 border-orange-300"
-                          />
-                          <div>
-                            <span className="text-sm font-black text-slate-900">Administrador Maestro</span>
-                            <p className="text-xs text-slate-500">Control total del sistema</p>
-                          </div>
-                        </label>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={userForm.isRepresentative}
-                            onChange={(e) => setUserForm({...userForm, isRepresentative: e.target.checked})}
-                            className="w-5 h-5 rounded border-2 border-orange-300"
-                          />
-                          <div>
-                            <span className="text-sm font-black text-slate-900">Comercial / Representante</span>
-                            <p className="text-xs text-slate-500">Puede tener tiendas asignadas</p>
-                          </div>
-                        </label>
+                    {state.currentUser?.isAdmin && (
+                      <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                        <h4 className="text-sm font-black text-orange-900 uppercase mb-3">Rol y Jerarquía</h4>
+                        <div className="space-y-3">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={userForm.isAdmin}
+                              onChange={(e) => setUserForm({...userForm, isAdmin: e.target.checked})}
+                              className="w-5 h-5 rounded border-2 border-orange-300"
+                            />
+                            <div>
+                              <span className="text-sm font-black text-slate-900">Administrador Maestro</span>
+                              <p className="text-xs text-slate-500">Control total del sistema</p>
+                            </div>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={userForm.isRepresentative}
+                              onChange={(e) => setUserForm({...userForm, isRepresentative: e.target.checked})}
+                              className="w-5 h-5 rounded border-2 border-orange-300"
+                            />
+                            <div>
+                              <span className="text-sm font-black text-slate-900">Comercial / Representante</span>
+                              <p className="text-xs text-slate-500">Puede tener tiendas asignadas</p>
+                            </div>
+                          </label>
 
-                        {!userForm.isAdmin && !userForm.isRepresentative && representatives.length > 0 && (
-                          <div>
-                            <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Asignar a Comercial</label>
-                            <select
-                              value={userForm.linkedRepresentativeId || ''}
-                              onChange={(e) => setUserForm({...userForm, linkedRepresentativeId: e.target.value})}
-                              className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm font-bold outline-none"
-                            >
-                              <option value="">Sin comercial asignado</option>
-                              {representatives.map(rep => (
-                                <option key={rep.id} value={rep.id}>{rep.clientName}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
+                          {!userForm.isAdmin && !userForm.isRepresentative && representatives.length > 0 && (
+                            <div>
+                              <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Asignar a Comercial</label>
+                              <select
+                                value={userForm.linkedRepresentativeId || ''}
+                                onChange={(e) => setUserForm({...userForm, linkedRepresentativeId: e.target.value})}
+                                className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm font-bold outline-none"
+                              >
+                                <option value="">Sin comercial asignado</option>
+                                {representatives.map(rep => (
+                                  <option key={rep.id} value={rep.id}>{rep.clientName}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Si es comercial, mostrar info de asignación automática */}
+                    {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && (
+                      <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
+                        <div className="flex items-center gap-3">
+                          <Briefcase size={20} className="text-indigo-600" />
+                          <div>
+                            <p className="text-sm font-black text-indigo-900">Nueva tienda asignada a ti</p>
+                            <p className="text-xs text-indigo-600">Como comercial, esta tienda quedará bajo tu gestión</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Modules */}
                     <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
