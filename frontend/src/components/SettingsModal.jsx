@@ -185,6 +185,348 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8">
+          {activeTab === 'users' && (
+            <div className="space-y-6">
+              {!isEditingUser ? (
+                <>
+                  {/* Header with search and add button */}
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input
+                        type="text"
+                        placeholder="Buscar usuario..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <button
+                      onClick={handleCreateUser}
+                      className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg"
+                    >
+                      <UserPlus size={18} />
+                      Nuevo Usuario
+                    </button>
+                  </div>
+
+                  {/* Users List */}
+                  <div className="space-y-3">
+                    {filteredUsers.map(user => (
+                      <div key={user.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className={`p-2 rounded-lg ${user.isAdmin ? 'bg-orange-100' : user.isRepresentative ? 'bg-purple-100' : 'bg-indigo-100'}`}>
+                                {user.isAdmin ? <Shield size={20} className="text-orange-600" /> : 
+                                 user.isRepresentative ? <Briefcase size={20} className="text-purple-600" /> :
+                                 <Store size={20} className="text-indigo-600" />}
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-black text-slate-900">{user.clientName}</h3>
+                                <p className="text-xs text-slate-500 font-bold uppercase">@{user.username}</p>
+                              </div>
+                              <div className={`px-3 py-1 rounded-lg text-xs font-black ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                {user.isActive ? 'ACTIVO' : 'INACTIVO'}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-3 mt-3">
+                              <div className="bg-slate-50 p-2 rounded-lg">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rol</p>
+                                <p className="text-xs font-bold text-slate-900">
+                                  {user.isAdmin ? '🛡️ Admin Maestro' : user.isRepresentative ? '💼 Comercial' : '🏪 Tienda'}
+                                </p>
+                              </div>
+                              <div className="bg-slate-50 p-2 rounded-lg">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Descuento</p>
+                                <p className="text-xs font-bold text-orange-600">{user.commercialDiscount}%</p>
+                              </div>
+                              <div className="bg-slate-50 p-2 rounded-lg">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Módulos</p>
+                                <p className="text-xs font-bold text-indigo-600">
+                                  {user.allowedModules?.join(', ').toUpperCase() || 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Capabilities badges */}
+                            <div className="flex flex-wrap gap-1 mt-3">
+                              {user.canUseAIAnalysis && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-[9px] font-black">IA LAB</span>}
+                              {user.canSeeCost && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">VER COSTO</span>}
+                              {user.canViewTechnicalDespiece && <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-[9px] font-black">INFORMES</span>}
+                              {user.canManageArticles && <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[9px] font-black">INVENTARIO</span>}
+                              {user.useCustomBranding && <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded text-[9px] font-black">PERSONALIZAR</span>}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditUser(user)}
+                              className="p-2 hover:bg-indigo-50 rounded-lg transition-all"
+                              title="Editar"
+                            >
+                              <Pencil size={16} className="text-indigo-600" />
+                            </button>
+                            {user.id !== 'admin' && (
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="p-2 hover:bg-red-50 rounded-lg transition-all"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={16} className="text-red-600" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                /* User Form */
+                <div className="bg-white border-2 border-orange-200 rounded-2xl p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-black text-slate-900 uppercase">
+                      {editingUserId ? 'Editar Usuario' : 'Nuevo Usuario'}
+                    </h3>
+                    <button
+                      onClick={() => setIsEditingUser(false)}
+                      className="text-slate-400 hover:text-slate-600"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Nombre Público Tienda *</label>
+                        <input
+                          type="text"
+                          value={userForm.clientName}
+                          onChange={(e) => setUserForm({...userForm, clientName: e.target.value})}
+                          placeholder="Ej: COCINAS MADRID S.L."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Identificador Técnico *</label>
+                        <input
+                          type="text"
+                          value={userForm.username}
+                          onChange={(e) => setUserForm({...userForm, username: e.target.value.toUpperCase()})}
+                          placeholder="USUARIO"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-black uppercase outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Clave Acceso</label>
+                      <input
+                        type="password"
+                        value={userForm.password || ''}
+                        onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                        placeholder={editingUserId ? "Dejar vacío para no cambiar" : "••••"}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                      />
+                    </div>
+
+                    {/* Role & Hierarchy */}
+                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                      <h4 className="text-sm font-black text-orange-900 uppercase mb-3">Rol y Jerarquía</h4>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.isAdmin}
+                            onChange={(e) => setUserForm({...userForm, isAdmin: e.target.checked})}
+                            className="w-5 h-5 rounded border-2 border-orange-300"
+                          />
+                          <div>
+                            <span className="text-sm font-black text-slate-900">Administrador Maestro</span>
+                            <p className="text-xs text-slate-500">Control total del sistema</p>
+                          </div>
+                        </label>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.isRepresentative}
+                            onChange={(e) => setUserForm({...userForm, isRepresentative: e.target.checked})}
+                            className="w-5 h-5 rounded border-2 border-orange-300"
+                          />
+                          <div>
+                            <span className="text-sm font-black text-slate-900">Comercial / Representante</span>
+                            <p className="text-xs text-slate-500">Puede tener tiendas asignadas</p>
+                          </div>
+                        </label>
+
+                        {!userForm.isAdmin && !userForm.isRepresentative && representatives.length > 0 && (
+                          <div>
+                            <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Asignar a Comercial</label>
+                            <select
+                              value={userForm.linkedRepresentativeId || ''}
+                              onChange={(e) => setUserForm({...userForm, linkedRepresentativeId: e.target.value})}
+                              className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm font-bold outline-none"
+                            >
+                              <option value="">Sin comercial asignado</option>
+                              {representatives.map(rep => (
+                                <option key={rep.id} value={rep.id}>{rep.clientName}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Modules */}
+                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                      <h4 className="text-sm font-black text-indigo-900 uppercase mb-3">Módulos Activos</h4>
+                      <div className="flex gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.allowedModules?.includes('montada')}
+                            onChange={() => handleToggleModule('montada')}
+                            className="w-5 h-5 rounded border-2 border-indigo-300"
+                          />
+                          <span className="text-sm font-black text-slate-900">Uso Cocina Montada</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.allowedModules?.includes('despiece')}
+                            onChange={() => handleToggleModule('despiece')}
+                            className="w-5 h-5 rounded border-2 border-indigo-300"
+                          />
+                          <span className="text-sm font-black text-slate-900">Uso Formato Despiece</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Technical Capabilities */}
+                    <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                      <h4 className="text-sm font-black text-purple-900 uppercase mb-3">Capacidades Técnicas</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canUseAIAnalysis}
+                            onChange={(e) => setUserForm({...userForm, canUseAIAnalysis: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">IA Lab (Reconocimiento)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canSeeCost}
+                            onChange={(e) => setUserForm({...userForm, canSeeCost: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">Visualizar Costo Fábrica</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canViewTechnicalDespiece}
+                            onChange={(e) => setUserForm({...userForm, canViewTechnicalDespiece: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">Informes Industriales</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canManageArticles}
+                            onChange={(e) => setUserForm({...userForm, canManageArticles: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">Gestionar Inventario</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.useCustomBranding}
+                            onChange={(e) => setUserForm({...userForm, useCustomBranding: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">Personalizar Interfaz</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canChangeLogo}
+                            onChange={(e) => setUserForm({...userForm, canChangeLogo: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">Modificar Logo Corporativo</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Commercial Discount */}
+                    <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                      <h4 className="text-sm font-black text-green-900 uppercase mb-3">Descuento Comercial Base (%)</h4>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={userForm.commercialDiscount}
+                          onChange={(e) => setUserForm({...userForm, commercialDiscount: parseInt(e.target.value)})}
+                          className="flex-1"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={userForm.commercialDiscount}
+                          onChange={(e) => setUserForm({...userForm, commercialDiscount: parseInt(e.target.value) || 0})}
+                          className="w-20 bg-white border-2 border-green-300 rounded-xl p-2 text-center text-lg font-black text-green-700 outline-none"
+                        />
+                        <span className="text-sm font-black text-green-700">%</span>
+                      </div>
+                    </div>
+
+                    {/* Active Status */}
+                    <label className="flex items-center gap-3 cursor-pointer p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={userForm.isActive}
+                        onChange={(e) => setUserForm({...userForm, isActive: e.target.checked})}
+                        className="w-5 h-5 rounded border-2 border-slate-300"
+                      />
+                      <div>
+                        <span className="text-sm font-black text-slate-900">Usuario Activo</span>
+                        <p className="text-xs text-slate-500">Puede iniciar sesión en el sistema</p>
+                      </div>
+                    </label>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-4 border-t border-slate-200">
+                      <button
+                        onClick={handleSaveUser}
+                        className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black uppercase text-sm hover:bg-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <Check size={18} />
+                        Guardar Configuración
+                      </button>
+                      <button
+                        onClick={() => setIsEditingUser(false)}
+                        className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-black uppercase text-sm hover:bg-slate-300 transition-all"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'pricing' && (
             <div className="space-y-6">
               <div className="bg-white border border-indigo-100 rounded-2xl p-6 shadow-sm">
