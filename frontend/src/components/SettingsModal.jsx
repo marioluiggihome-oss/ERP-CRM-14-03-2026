@@ -318,6 +318,42 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       };
 
       setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+      setSelectedProducts(prev => prev.filter(id => id !== productId));
+    }
+  };
+
+  // Mass delete products
+  const handleToggleProductSelection = (productId) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const handleSelectAllProducts = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  const handleDeleteSelectedProducts = () => {
+    if (selectedProducts.length === 0) return;
+    
+    if (window.confirm(`¿Eliminar ${selectedProducts.length} artículos seleccionados?`)) {
+      const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
+      if (catalogIndex === -1) return;
+
+      const updatedCatalogs = [...state.catalogs];
+      updatedCatalogs[catalogIndex] = {
+        ...updatedCatalogs[catalogIndex],
+        products: updatedCatalogs[catalogIndex].products.filter(p => !selectedProducts.includes(p.id))
+      };
+
+      setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+      setSelectedProducts([]);
     }
   };
 
