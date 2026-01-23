@@ -162,8 +162,8 @@ const App = () => {
                 onClick={() => setState(p => ({...p, currentTab: 'budget'}))} 
                 className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
               >
-                <ShoppingCart size={22}/>
-                <span className="text-[7px] font-black uppercase tracking-widest">Mesa</span>
+                <FileText size={22}/>
+                <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
               </button>
               <button 
                 onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
