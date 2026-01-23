@@ -226,6 +226,7 @@ const App = () => {
                 onOpenManufacturing={() => setIsManufacturingView(true)} 
               />
             )}
+            {state.currentTab === 'telemetry' && <TelemetryAI state={state} setState={setState} />}
             {state.currentTab === 'visualizer' && <Visualizer images={state.uploadedImages} state={state} setState={setState} />}
             {state.currentTab === 'library' && <ProjectLibrary state={state} setState={setState} />}
 
