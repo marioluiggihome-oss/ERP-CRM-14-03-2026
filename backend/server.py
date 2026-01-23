@@ -82,6 +82,27 @@ class UserModelInternal(BaseModel):
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
+# User response model (without password)
+class UserResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    username: str
+    clientName: str
+    isActive: bool = True
+    isAdmin: bool = False
+    isRepresentative: bool = False
+    linkedRepresentativeId: Optional[str] = None
+    allowedModules: List[str] = ["montada"]
+    allowedCatalogIds: List[str] = []
+    commercialDiscount: float = 0
+    canSeeCost: bool = False
+    canSeeRetail: bool = True
+    canUseAIAnalysis: bool = False
+    canManageArticles: bool = False
+    canViewTechnicalDespiece: bool = False
+    useCustomBranding: bool = False
+    canChangeLogo: bool = False
+
 class UserCreate(BaseModel):
     username: str
     password: str
