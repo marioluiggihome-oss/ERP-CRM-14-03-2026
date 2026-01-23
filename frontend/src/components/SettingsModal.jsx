@@ -932,7 +932,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
                   <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                     <p className="text-xs font-bold text-indigo-900">
-                      📊 Total de artículos en catálogo: <span className="font-black text-orange-600">{filteredProducts.length}</span>
+                      📊 Total de artículos en catálogo <span className="text-orange-600">({inventoryModule === 'montada' ? 'Cocina Montada' : 'Formato Despiece'})</span>: <span className="font-black text-orange-600">{filteredProducts.length}</span>
+                      {productSearch && <span className="text-indigo-400 ml-2">(Filtrados de {currentCatalog?.products?.length || 0})</span>}
                     </p>
                   </div>
                 </>
