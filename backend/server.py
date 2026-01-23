@@ -663,6 +663,63 @@ async def update_settings(settings: SettingsUpdate):
     return updated
 
 # ============================================
+# PROJECT/BUDGET ENDPOINTS
+# ============================================
+
+@api_router.get("/projects", response_model=List[ProjectModel])
+async def get_projects(user_id: Optional[str] = None):
+    """Obtener proyectos, opcionalmente filtrados por usuario"""
+    query = {}
+    if user_id:
+        query["userId"] = user_id
+    projects = await db.projects.find(query, {"_id": 0}).to_list(1000)
+    return projects
+
+@api_router.get("/projects/{project_id}", response_model=ProjectModel)
+async def get_project(project_id: str):
+    """Obtener un proyecto por ID"""
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return project
+
+@api_router.post("/projects", response_model=ProjectModel)
+async def create_project(project: ProjectCreate, user_id: str):
+    """Crear un nuevo proyecto"""
+    project_data = project.model_dump()
+    project_data["id"] = f"proj-{uuid.uuid4().hex[:8]}"
+    project_data["userId"] = user_id
+    project_data["createdAt"] = datetime.now(timezone.utc).isoformat()
+    project_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.projects.insert_one(project_data)
+    return project_data
+
+@api_router.put("/projects/{project_id}", response_model=ProjectModel)
+async def update_project(project_id: str, project: ProjectUpdate):
+    """Actualizar un proyecto"""
+    existing = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    
+    update_data = {k: v for k, v in project.model_dump().items() if v is not None}
+    update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    
+    if update_data:
+        await db.projects.update_one({"id": project_id}, {"$set": update_data})
+    
+    updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/projects/{project_id}")
+async def delete_project(project_id: str):
+    """Eliminar un proyecto"""
+    result = await db.projects.delete_one({"id": project_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return {"message": "Proyecto eliminado"}
+
+# ============================================
 # INIT DATA (seed admin user if needed)
 # ============================================
 
