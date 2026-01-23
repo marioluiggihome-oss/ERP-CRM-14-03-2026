@@ -219,20 +219,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     });
   };
 
-  // Product management functions
-  const currentCatalog = useMemo(() => {
-    return state.catalogs.find(c => c.module === inventoryModule);
-  }, [state.catalogs, inventoryModule]);
-
-  const filteredProducts = useMemo(() => {
-    if (!currentCatalog) return [];
-    const query = productSearch.toLowerCase();
-    return currentCatalog.products.filter(p =>
-      p.code.toLowerCase().includes(query) ||
-      p.name.toLowerCase().includes(query)
-    );
-  }, [currentCatalog, productSearch]);
-
   const handleCreateProduct = () => {
     setIsEditingProduct(true);
     setEditingProductId(null);
