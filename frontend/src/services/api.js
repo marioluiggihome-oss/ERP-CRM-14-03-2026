@@ -281,3 +281,45 @@ export const telemetryAPI = {
     return response.json();
   }
 };
+
+// ============================================
+// BACKUP
+// ============================================
+
+export const backupAPI = {
+  getStatus: async () => {
+    const response = await fetch(`${API_URL}/api/backup/status`);
+    if (!response.ok) throw new Error('Error al obtener estado de backup');
+    return response.json();
+  },
+
+  triggerManual: async () => {
+    const response = await fetch(`${API_URL}/api/backup/manual`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error('Error al crear backup');
+    return response.json();
+  },
+
+  download: async () => {
+    const response = await fetch(`${API_URL}/api/backup/download`);
+    if (!response.ok) throw new Error('Error al descargar backup');
+    return response.json();
+  },
+
+  restore: async (backupData) => {
+    const response = await fetch(`${API_URL}/api/backup/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(backupData)
+    });
+    if (!response.ok) throw new Error('Error al restaurar backup');
+    return response.json();
+  },
+
+  getHistory: async () => {
+    const response = await fetch(`${API_URL}/api/backup/history`);
+    if (!response.ok) throw new Error('Error al obtener historial');
+    return response.json();
+  }
+};
