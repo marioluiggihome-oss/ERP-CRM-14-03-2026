@@ -63,12 +63,18 @@ const App = () => {
           })
         }));
 
+        // Asegurar que el admin siempre tenga las credenciales actuales
+        const updatedUsers = parsed.users ? parsed.users.map(u => 
+          u.id === 'admin' ? { ...u, ...adminUser } : u
+        ) : [adminUser];
+
         return { 
           ...defaultState,
           ...parsed, 
           uploadedImages: [], 
           currentUser: null, 
           catalogs: sanitizedCatalogs,
+          users: updatedUsers,
           brandColor: parsed.brandColor || DEFAULT_BRAND_COLOR
         };
       }
