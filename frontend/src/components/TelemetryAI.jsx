@@ -224,14 +224,14 @@ const TelemetryAI = ({ state, setState }) => {
         </div>
       )}
 
-      {/* Warning */}
-      <div className="mt-6 bg-yellow-500/20 border border-yellow-500 rounded-xl p-4 flex items-start gap-3">
-        <AlertTriangle size={24} className="text-yellow-400 flex-shrink-0" />
+      {/* Info */}
+      <div className="mt-6 bg-green-500/20 border border-green-500 rounded-xl p-4 flex items-start gap-3">
+        <CheckCircle size={24} className="text-green-400 flex-shrink-0" />
         <div>
-          <p className="text-sm font-black text-yellow-300 uppercase mb-1">Funcionalidad de IA Requerida</p>
-          <p className="text-xs text-yellow-200">
-            Esta función requiere integración con Google Gemini AI. Actualmente en modo DEMO.
-            Para activarla en producción, se necesita configurar la API de Gemini Vision.
+          <p className="text-sm font-black text-green-300 uppercase mb-1">Gemini Vision AI Activo</p>
+          <p className="text-xs text-green-200">
+            La función de análisis inteligente está habilitada con Google Gemini 2.5 Pro.
+            El sistema analiza minuciosamente cada ficha y extrae todos los datos automáticamente.
           </p>
         </div>
       </div>
