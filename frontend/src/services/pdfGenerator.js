@@ -304,7 +304,7 @@ export const generateBudgetPDF = ({
   const footerText = [
     'Este presupuesto tiene una validez de 30 días desde la fecha de emisión.',
     'Los precios no incluyen IVA ni transporte. Consulte condiciones de montaje.',
-    `Generado con LUIGGI HOME - ${new Date().toLocaleString('es-ES')}`
+    `Generado con ${companyName} - ${new Date().toLocaleString('es-ES')}`
   ];
   
   footerText.forEach((text, i) => {
