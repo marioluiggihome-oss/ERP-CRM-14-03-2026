@@ -307,71 +307,59 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
       <div className="flex flex-1 overflow-hidden">
         <aside style={{ width: isConfigOpen ? sidebarWidth : 0 }} className="bg-white border-r border-indigo-50 flex flex-col no-print transition-all duration-300 relative overflow-hidden shadow-inner">
            <div onMouseDown={() => { isResizingSidebar.current = true; }} className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-600 z-50"></div>
-           <div className="p-6 space-y-6 overflow-y-auto scrollbar-thin">
-              <section className="space-y-4">
-                 <h4 className="text-[9px] font-black text-indigo-300 uppercase tracking-widest italic flex items-center gap-2">📂 DATOS EXPEDIENTE</h4>
-                 <div className="space-y-2">
+           <div className="p-4 space-y-3 overflow-y-auto scrollbar-thin">
+              <section className="space-y-2">
+                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic flex items-center gap-1">📂 DATOS EXPEDIENTE</h4>
+                 <div className="space-y-1.5">
                     <div className="relative">
-                      <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-200" size={14} />
-                      <input type="text" value={state.budgetNumber} onChange={e => setState(p => ({...p, budgetNumber: e.target.value}))} placeholder="Nº Expediente" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-xl py-3 pl-10 pr-3 text-[10px] font-black outline-none focus:border-orange-500 uppercase" />
+                      <Hash className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-200" size={10} />
+                      <input type="text" value={state.budgetNumber} onChange={e => setState(p => ({...p, budgetNumber: e.target.value}))} placeholder="Nº Expediente" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg py-2 pl-7 pr-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
                     </div>
                     <div className="relative">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-200" size={14} />
-                      <input type="text" value={state.internalReference} onChange={e => setState(p => ({...p, internalReference: e.target.value}))} placeholder="Referencia de Proyecto" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-xl py-3 pl-10 pr-3 text-[10px] font-black outline-none focus:border-orange-500 uppercase" />
+                      <Tag className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-200" size={10} />
+                      <input type="text" value={state.internalReference} onChange={e => setState(p => ({...p, internalReference: e.target.value}))} placeholder="Ref. Proyecto" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg py-2 pl-7 pr-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
                     </div>
-                    <input type="text" value={state.customerName} onChange={e => setState(p => ({...p, customerName: e.target.value}))} placeholder="Titular / Cliente" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-xl p-3 text-[10px] font-black outline-none focus:border-orange-500 uppercase" />
+                    <input type="text" value={state.customerName} onChange={e => setState(p => ({...p, customerName: e.target.value}))} placeholder="Cliente" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
                  </div>
               </section>
               
-              <section className="space-y-4 pt-4 border-t border-indigo-50">
-                 <h4 className="text-[9px] font-black text-indigo-300 uppercase tracking-widest italic">🎨 ACABADO GLOBAL</h4>
-                 <select className="w-full bg-indigo-950 text-white rounded-xl p-4 text-[9px] font-black outline-none cursor-pointer shadow-md" value={state.globalFinish} onChange={e => setState(p => ({...p, globalFinish: e.target.value}))}>
+              <section className="space-y-2 pt-2 border-t border-indigo-50">
+                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">🎨 ACABADO</h4>
+                 <select className="w-full bg-indigo-950 text-white rounded-lg p-2 text-[8px] font-black outline-none cursor-pointer shadow-md" value={state.globalFinish} onChange={e => setState(p => ({...p, globalFinish: e.target.value}))}>
                     {DOOR_FINISHES.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}
                  </select>
               </section>
               
-              <section className="space-y-4 pt-4 border-t border-indigo-50">
-                 <h4 className="text-[9px] font-black text-indigo-300 uppercase tracking-widest italic">🏗️ ARMAZÓN / CASCO</h4>
-                 <select className="w-full bg-indigo-50/50 text-indigo-900 border border-indigo-100 rounded-xl p-4 text-[9px] font-black outline-none cursor-pointer" value={state.selectedCarcassMaterialId} onChange={e => setState(p => ({...p, selectedCarcassMaterialId: e.target.value}))}>
+              <section className="space-y-2 pt-2 border-t border-indigo-50">
+                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">🏗️ ARMAZÓN</h4>
+                 <select className="w-full bg-indigo-50/50 text-indigo-900 border border-indigo-100 rounded-lg p-2 text-[8px] font-black outline-none cursor-pointer" value={state.selectedCarcassMaterialId} onChange={e => setState(p => ({...p, selectedCarcassMaterialId: e.target.value}))}>
                     {state.carcassMaterials.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                  </select>
               </section>
 
-              <section className="space-y-4 pt-4 border-t border-indigo-50">
-                 <h4 className="text-[9px] font-black text-indigo-300 uppercase tracking-widest italic">✏️ DETALLES DE COLOR ESPECÍFICOS</h4>
-                 <div className="space-y-3">
-                    <div className="space-y-1">
-                       <label className="text-[7px] font-black text-indigo-300 uppercase">Puertas Bajos</label>
-                       <input type="text" value={state.doorColorLow} onChange={e => setState(p => ({...p, doorColorLow: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-xl p-3 text-[10px] font-black outline-none focus:border-orange-500 uppercase" placeholder="Ej: Blanco Mate" />
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[7px] font-black text-indigo-300 uppercase">Puertas Altos</label>
-                       <input type="text" value={state.doorColorHigh} onChange={e => setState(p => ({...p, doorColorHigh: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-xl p-3 text-[10px] font-black outline-none focus:border-orange-500 uppercase" placeholder="Ej: Roble Nudo" />
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[7px] font-black text-indigo-300 uppercase">Puertas Columnas</label>
-                       <input type="text" value={state.doorColorColumns} onChange={e => setState(p => ({...p, doorColorColumns: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-xl p-3 text-[10px] font-black outline-none focus:border-orange-500 uppercase" placeholder="Ej: Verde Salvia" />
-                    </div>
-                    <div className="space-y-1">
-                       <label className="text-[7px] font-black text-indigo-300 uppercase">Costados / Vistos</label>
-                       <input type="text" value={state.sideColor} onChange={e => setState(p => ({...p, sideColor: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-xl p-3 text-[10px] font-black outline-none focus:border-orange-500 uppercase" placeholder="Ej: Gris Antracita" />
-                    </div>
+              <section className="space-y-2 pt-2 border-t border-indigo-50">
+                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">✏️ COLORES ESPECÍFICOS</h4>
+                 <div className="space-y-1.5">
+                    <input type="text" value={state.doorColorLow} onChange={e => setState(p => ({...p, doorColorLow: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-bold outline-none focus:border-orange-500" placeholder="P. Bajos" />
+                    <input type="text" value={state.doorColorHigh} onChange={e => setState(p => ({...p, doorColorHigh: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-bold outline-none focus:border-orange-500" placeholder="P. Altos" />
+                    <input type="text" value={state.doorColorColumns} onChange={e => setState(p => ({...p, doorColorColumns: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-bold outline-none focus:border-orange-500" placeholder="P. Columnas" />
+                    <input type="text" value={state.sideColor} onChange={e => setState(p => ({...p, sideColor: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-bold outline-none focus:border-orange-500" placeholder="Costados" />
                  </div>
               </section>
 
-              <div className="pt-8 space-y-3">
+              <div className="pt-4 space-y-2">
                  {items.length > 0 ? (
-                   <button onClick={handleSaveBudget} className="w-full bg-orange-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 shadow-xl hover:opacity-90 transition-all border-b-4 border-slate-900/20">
-                      <Save size={18}/> GUARDAR EXPEDIENTE
+                   <button onClick={handleSaveBudget} className="w-full bg-orange-600 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition-all border-b-2 border-slate-900/20">
+                      <Save size={14}/> GUARDAR
                    </button>
                  ) : (
-                   <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 flex items-center gap-3">
-                      <AlertCircle size={18} className="text-indigo-300" />
-                      <span className="text-[8px] font-black text-indigo-300 uppercase leading-tight italic">Añade muebles para habilitar guardado</span>
+                   <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center gap-2">
+                      <AlertCircle size={14} className="text-indigo-300" />
+                      <span className="text-[7px] font-black text-indigo-300 uppercase leading-tight italic">Añade muebles</span>
                    </div>
                  )}
-                 <button onClick={() => exportToPdf('budget-pdf', `EXP_${state.budgetNumber}`)} className="w-full bg-indigo-950 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 shadow-xl hover:bg-indigo-900 transition-all">
-                    <Printer size={18}/> IMPRIMIR PDF
+                 <button onClick={() => exportToPdf('budget-pdf', `EXP_${state.budgetNumber}`)} className="w-full bg-indigo-950 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-900 transition-all">
+                    <Printer size={14}/> IMPRIMIR
                  </button>
               </div>
            </div>
