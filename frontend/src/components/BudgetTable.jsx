@@ -118,7 +118,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
          usedPoints = item.manualPoints || 0;
          finalProductName = item.manualDescription || "Concepto Manual";
      } else {
-         if (!product) return { total: 0, breakdown: '', hasExtras: false };
+         if (!product) return { total: 0, breakdown: '', hasExtras: false, usedPoints: 0 };
          
          const currentFinish = item.specificFinish || state.globalFinish;
          const finishObj = DOOR_FINISHES.find(f => f.name === currentFinish) || DOOR_FINISHES[0];
