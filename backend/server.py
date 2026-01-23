@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import base64
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 import json
+import bcrypt
 
 
 ROOT_DIR = Path(__file__).parent
@@ -30,6 +31,23 @@ api_router = APIRouter(prefix="/api")
 
 
 # ============================================
+# PASSWORD UTILITIES
+# ============================================
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify a password against its hash"""
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    except:
+        # If hash is invalid (plain text password from old data), compare directly
+        return password == hashed
+
+
+# ============================================
 # MODELS
 # ============================================
 
@@ -42,8 +60,8 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
-# User Model
-class UserModel(BaseModel):
+# User Model (internal with password)
+class UserModelInternal(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: f"user-{uuid.uuid4().hex[:8]}")
     username: str
