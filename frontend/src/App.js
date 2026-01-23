@@ -94,8 +94,8 @@ const App = () => {
             { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: productsMontada, module: 'montada' },
             { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: productsDespiece, module: 'despiece' }
           ],
-          carcassMaterials: materials.length > 0 ? materials : [{ id: 'mat-blanco', name: 'Blanco', fixedIncrement: 0, thickness: 16 }],
-          selectedCarcassMaterialId: materials.length > 0 ? materials[0].id : 'mat-blanco',
+          carcassMaterials: materials.length > 0 ? materials : INITIAL_CARCASS_MATERIALS,
+          selectedCarcassMaterialId: materials.length > 0 ? materials[0].id : INITIAL_CARCASS_MATERIALS[0].id,
           pointValueMontada: settings.pointValueMontada || 1.0,
           pointValueDespiece: settings.pointValueDespiece || 0.88,
           specialIncrementWidth: settings.specialIncrementWidth || 45,
