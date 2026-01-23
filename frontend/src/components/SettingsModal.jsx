@@ -205,6 +205,112 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     });
   };
 
+  // Product management functions
+  const currentCatalog = useMemo(() => {
+    return state.catalogs.find(c => c.module === inventoryModule);
+  }, [state.catalogs, inventoryModule]);
+
+  const filteredProducts = useMemo(() => {
+    if (!currentCatalog) return [];
+    const query = productSearch.toLowerCase();
+    return currentCatalog.products.filter(p =>
+      p.code.toLowerCase().includes(query) ||
+      p.name.toLowerCase().includes(query)
+    );
+  }, [currentCatalog, productSearch]);
+
+  const handleCreateProduct = () => {
+    setIsEditingProduct(true);
+    setEditingProductId(null);
+    setProductForm({
+      code: '',
+      name: '',
+      category: '',
+      series: '',
+      visualType: '',
+      width: 0,
+      height: 0,
+      depth: 0,
+      manufacturer: 'Luiggi Home Master',
+      zonePoints: {
+        Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0, Z6: 0,
+        Z7: 0, Z8: 0, Z9: 0, Z10: 0, Z11: 0, Z12: 0
+      }
+    });
+  };
+
+  const handleEditProduct = (product) => {
+    setIsEditingProduct(true);
+    setEditingProductId(product.id);
+    setProductForm({
+      code: product.code,
+      name: product.name,
+      category: product.category || '',
+      series: product.series || '',
+      visualType: product.visualType || '',
+      width: product.width || 0,
+      height: product.height || 0,
+      depth: product.depth || 0,
+      manufacturer: product.manufacturer || 'Luiggi Home Master',
+      zonePoints: product.zonePoints || {
+        Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0, Z6: 0,
+        Z7: 0, Z8: 0, Z9: 0, Z10: 0, Z11: 0, Z12: 0
+      }
+    });
+  };
+
+  const handleSaveProduct = () => {
+    if (!productForm.code || !productForm.name) {
+      alert('Código y Nombre son obligatorios');
+      return;
+    }
+
+    const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
+    if (catalogIndex === -1) return;
+
+    const updatedCatalogs = [...state.catalogs];
+    
+    if (editingProductId) {
+      // Edit existing
+      updatedCatalogs[catalogIndex] = {
+        ...updatedCatalogs[catalogIndex],
+        products: updatedCatalogs[catalogIndex].products.map(p =>
+          p.id === editingProductId ? { ...productForm, id: editingProductId, points: productForm.zonePoints.Z1 } : p
+        )
+      };
+    } else {
+      // Create new
+      const newProduct = {
+        ...productForm,
+        id: `${productForm.code}-${Date.now()}`,
+        points: productForm.zonePoints.Z1
+      };
+      updatedCatalogs[catalogIndex] = {
+        ...updatedCatalogs[catalogIndex],
+        products: [...updatedCatalogs[catalogIndex].products, newProduct]
+      };
+    }
+
+    setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+    setIsEditingProduct(false);
+    setEditingProductId(null);
+  };
+
+  const handleDeleteProduct = (productId) => {
+    if (window.confirm('¿Eliminar este artículo del inventario?')) {
+      const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
+      if (catalogIndex === -1) return;
+
+      const updatedCatalogs = [...state.catalogs];
+      updatedCatalogs[catalogIndex] = {
+        ...updatedCatalogs[catalogIndex],
+        products: updatedCatalogs[catalogIndex].products.filter(p => p.id !== productId)
+      };
+
+      setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
