@@ -28,13 +28,29 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
   const representatives = useMemo(() => state.users.filter(u => u.isRepresentative), [state.users]);
 
+  // Filtrar usuarios según el rol del usuario actual
+  const visibleUsers = useMemo(() => {
+    if (state.currentUser?.isAdmin) {
+      // Admins ven todos los usuarios
+      return state.users;
+    } else if (state.currentUser?.isRepresentative) {
+      // Comerciales solo ven sus tiendas asignadas + a sí mismos
+      return state.users.filter(u => 
+        u.id === state.currentUser.id || // El comercial se ve a sí mismo
+        u.linkedRepresentativeId === state.currentUser.id // Tiendas asignadas al comercial
+      );
+    }
+    // Tiendas no deberían poder acceder aquí, pero por seguridad retornamos vacío
+    return [];
+  }, [state.users, state.currentUser]);
+
   const filteredUsers = useMemo(() => {
     const query = userSearch.toLowerCase();
-    return state.users.filter(u => 
+    return visibleUsers.filter(u => 
       u.username.toLowerCase().includes(query) || 
       u.clientName.toLowerCase().includes(query)
     );
-  }, [state.users, userSearch]);
+  }, [visibleUsers, userSearch]);
 
   if (!isOpen) return null;
 
