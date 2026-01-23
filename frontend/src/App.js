@@ -76,16 +76,29 @@ const App = () => {
     const loadData = async () => {
       try {
         // Init admin if needed
-        await authAPI.init();
+        await authAPI.init().catch(() => {});
         
-        // Load users, products, materials, settings
-        const [users, productsMontada, productsDespiece, materials, settings] = await Promise.all([
-          usersAPI.getAll(),
-          productsAPI.getAll('montada'),
-          productsAPI.getAll('despiece'),
-          materialsAPI.getAll(),
-          settingsAPI.get()
+        // Load users, products, materials, settings with timeout
+        const fetchWithTimeout = async (promise, timeout = 10000) => {
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), timeout)
+          );
+          return Promise.race([promise, timeoutPromise]);
+        };
+
+        const results = await Promise.allSettled([
+          fetchWithTimeout(usersAPI.getAll()),
+          fetchWithTimeout(productsAPI.getAll('montada')),
+          fetchWithTimeout(productsAPI.getAll('despiece')),
+          fetchWithTimeout(materialsAPI.getAll()),
+          fetchWithTimeout(settingsAPI.get())
         ]);
+
+        const users = results[0].status === 'fulfilled' ? results[0].value : [];
+        const productsMontada = results[1].status === 'fulfilled' ? results[1].value : [];
+        const productsDespiece = results[2].status === 'fulfilled' ? results[2].value : [];
+        const materials = results[3].status === 'fulfilled' ? results[3].value : [];
+        const settings = results[4].status === 'fulfilled' ? results[4].value : {};
 
         setState(prev => ({
           ...prev,
