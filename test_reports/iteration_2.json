@@ -1,0 +1,61 @@
+{
+  "summary": "Tested PDF export functionality for LUIGGI HOME ERP/CRM. Found and FIXED critical bug: TypeError 'doc.autoTable is not a function' caused by incorrect jspdf-autotable v5 import. Changed from side-effect import to functional import pattern. PDF export now works correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "fixed_issues": [
+      {
+        "component": "pdfGenerator.js",
+        "issue": "TypeError: doc.autoTable is not a function - jspdf-autotable v5 requires functional import pattern",
+        "fix_applied": "Changed import from 'import jspdf-autotable' (side-effect) to 'import autoTable from jspdf-autotable' and updated all doc.autoTable() calls to autoTable(doc, {...})",
+        "priority": "CRITICAL"
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_2.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "jspdf-autotable v5.x requires functional import pattern: import autoTable from 'jspdf-autotable' and use autoTable(doc, {...}) instead of doc.autoTable({...})"
+  ],
+  "updated_files": [
+    "/app/frontend/src/services/pdfGenerator.js"
+  ],
+  "success_rate": {
+    "backend": "N/A (frontend only testing)",
+    "frontend": "100% (all tested flows working)"
+  },
+  "test_credentials": {
+    "username": "MARIO",
+    "password": "MARIO"
+  },
+  "seed_data_creation": "None - used manual line feature",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "PDF export functionality is now working. The fix involved updating jspdf-autotable import pattern for v5 compatibility. Login with MARIO/MARIO, add manual line, fill description and points, click EXPORTAR PDF - PDF downloads successfully with budget data.",
+  "features_tested": {
+    "login": "PASSED - MARIO/MARIO credentials work",
+    "add_manual_line": "PASSED - LÍNEA MANUAL button adds editable row",
+    "fill_budget_data": "PASSED - Customer name, description, points all editable",
+    "export_pdf": "PASSED - PDF generates and downloads with filename Presupuesto_EXP-2026-001_CLIENTE_TEST_PDF.pdf",
+    "pdf_content": "PASSED - PDF includes budget number, customer name, items, and totals"
+  },
+  "bug_rca": {
+    "issue": "TypeError: doc.autoTable is not a function",
+    "root_cause": "jspdf-autotable v5.0.7 changed the import/export pattern. The side-effect import 'import jspdf-autotable' no longer extends jsPDF prototype correctly in modern bundlers",
+    "reproduction_steps": [
+      "1. Login with MARIO/MARIO",
+      "2. Add manual line",
+      "3. Fill description and points",
+      "4. Click EXPORTAR PDF button",
+      "5. Error appears: doc.autoTable is not a function"
+    ],
+    "fix": "Changed import to functional pattern: import autoTable from 'jspdf-autotable' and replaced all doc.autoTable({...}) calls with autoTable(doc, {...})"
+  }
+}
