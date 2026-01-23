@@ -115,7 +115,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 35, 
     depth: 1.6, 
     points: 15, 
-    zonePoints: { Z1: 15, Z2: 15, Z3: 15, Z4: 15, Z5: 15, Z6: 15, Z7: 15, Z8: 15, Z9: 15, Z10: 15, Z11: 15, Z12: 15 }, 
     manufacturer: mfr 
   },
   { 
@@ -129,7 +128,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 35, 
     depth: 0.4, 
     points: 12, 
-    zonePoints: { Z1: 12, Z2: 12, Z3: 12, Z4: 12, Z5: 12, Z6: 12, Z7: 12, Z8: 12, Z9: 12, Z10: 12, Z11: 12, Z12: 12 }, 
     manufacturer: mfr 
   },
   { 
@@ -143,7 +141,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 70, 
     depth: 1.6, 
     points: 28, 
-    zonePoints: { Z1: 28, Z2: 28, Z3: 30, Z4: 30, Z5: 32, Z6: 35, Z7: 37, Z8: 40, Z9: 42, Z10: 45, Z11: 48, Z12: 52 }, 
     manufacturer: mfr 
   },
   { 
@@ -157,7 +154,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 60, 
     depth: 0.4, 
     points: 22, 
-    zonePoints: { Z1: 22, Z2: 22, Z3: 24, Z4: 24, Z5: 26, Z6: 28, Z7: 30, Z8: 32, Z9: 34, Z10: 36, Z11: 38, Z12: 40 }, 
     manufacturer: mfr 
   },
   { 
@@ -171,7 +167,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 60, 
     depth: 1.6, 
     points: 25, 
-    zonePoints: { Z1: 25, Z2: 25, Z3: 27, Z4: 27, Z5: 29, Z6: 31, Z7: 33, Z8: 35, Z9: 37, Z10: 39, Z11: 42, Z12: 45 }, 
     manufacturer: mfr 
   },
   { 
@@ -185,7 +180,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 35, 
     depth: 1.9, 
     points: 35, 
-    zonePoints: { Z1: 35, Z2: 37, Z3: 40, Z4: 42, Z5: 45, Z6: 50, Z7: 55, Z8: 58, Z9: 62, Z10: 68, Z11: 72, Z12: 78 }, 
     manufacturer: mfr 
   },
   { 
@@ -199,7 +193,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 70, 
     depth: 1.9, 
     points: 65, 
-    zonePoints: { Z1: 65, Z2: 68, Z3: 72, Z4: 75, Z5: 80, Z6: 88, Z7: 95, Z8: 100, Z9: 108, Z10: 118, Z11: 125, Z12: 135 }, 
     manufacturer: mfr 
   },
   { 
@@ -213,7 +206,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 10, 
     depth: 3.5, 
     points: 8, 
-    zonePoints: { Z1: 8, Z2: 8, Z3: 8, Z4: 8, Z5: 8, Z6: 9, Z7: 9, Z8: 9, Z9: 10, Z10: 10, Z11: 11, Z12: 12 }, 
     manufacturer: mfr 
   },
   { 
@@ -227,7 +219,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 2, 
     depth: 2, 
     points: 12, 
-    zonePoints: { Z1: 12, Z2: 12, Z3: 13, Z4: 13, Z5: 14, Z6: 15, Z7: 16, Z8: 17, Z9: 18, Z10: 19, Z11: 20, Z12: 22 }, 
     manufacturer: mfr 
   },
   { 
@@ -241,7 +232,6 @@ export const CATALOG_BASE_DESPIECE = [
     height: 33, 
     depth: 1.6, 
     points: 18, 
-    zonePoints: { Z1: 18, Z2: 18, Z3: 19, Z4: 19, Z5: 20, Z6: 22, Z7: 23, Z8: 24, Z9: 25, Z10: 27, Z11: 28, Z12: 30 }, 
     manufacturer: mfr 
   },
 ];
