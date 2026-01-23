@@ -1076,8 +1076,19 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
           {activeTab === 'pricing' && (
             <div className="space-y-6">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-200">
+                <h3 className="text-xl font-black text-indigo-950 uppercase mb-2 flex items-center gap-3">
+                  <Euro size={24} className="text-orange-600" />
+                  Márgenes Maestros del Sistema
+                </h3>
+                <p className="text-xs text-indigo-600 font-bold uppercase">Configuración Global de Costos y Valores</p>
+              </div>
+
+              {/* Valores de Punto */}
               <div className="bg-white border border-indigo-100 rounded-2xl p-6 shadow-sm">
-                <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4">Valor de Punto</h3>
+                <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  💰 Valor de Punto Base
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">Montada (€/punto)</label>
@@ -1086,7 +1097,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       step="0.01"
                       value={state.pointValueMontada}
                       onChange={(e) => setState(prev => ({ ...prev, pointValueMontada: parseFloat(e.target.value) || 1.0 }))}
-                      className="w-full bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-lg font-black text-indigo-900 outline-none focus:border-orange-500"
+                      className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center"
                     />
                   </div>
                   <div>
@@ -1096,43 +1107,154 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       step="0.01"
                       value={state.pointValueDespiece}
                       onChange={(e) => setState(prev => ({ ...prev, pointValueDespiece: parseFloat(e.target.value) || 0.88 }))}
-                      className="w-full bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-lg font-black text-indigo-900 outline-none focus:border-orange-500"
+                      className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white border border-indigo-100 rounded-2xl p-6 shadow-sm">
-                <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4">Incrementos Cortes Especiales</h3>
+              {/* Incrementos Cortes Especiales */}
+              <div className="bg-white border border-orange-100 rounded-2xl p-6 shadow-sm">
+                <h3 className="text-sm font-black text-orange-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  ✂️ Incrementos Cortes Especiales
+                </h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">Ancho (€)</label>
+                    <label className="text-xs font-black text-orange-400 uppercase mb-2 block">Ancho (€)</label>
                     <input
                       type="number"
                       value={state.specialIncrementWidth}
                       onChange={(e) => setState(prev => ({ ...prev, specialIncrementWidth: parseInt(e.target.value) || 45 }))}
-                      className="w-full bg-orange-50 border border-orange-100 rounded-xl p-3 text-lg font-black text-orange-900 outline-none focus:border-orange-500"
+                      className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-2xl font-black text-orange-900 outline-none focus:border-orange-500 text-center"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">Alto (€)</label>
+                    <label className="text-xs font-black text-orange-400 uppercase mb-2 block">Alto (€)</label>
                     <input
                       type="number"
                       value={state.specialIncrementHeight}
                       onChange={(e) => setState(prev => ({ ...prev, specialIncrementHeight: parseInt(e.target.value) || 45 }))}
-                      className="w-full bg-orange-50 border border-orange-100 rounded-xl p-3 text-lg font-black text-orange-900 outline-none focus:border-orange-500"
+                      className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-2xl font-black text-orange-900 outline-none focus:border-orange-500 text-center"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">Fondo (€)</label>
+                    <label className="text-xs font-black text-orange-400 uppercase mb-2 block">Fondo (€)</label>
                     <input
                       type="number"
                       value={state.specialIncrementDepth}
                       onChange={(e) => setState(prev => ({ ...prev, specialIncrementDepth: parseInt(e.target.value) || 45 }))}
-                      className="w-full bg-orange-50 border border-orange-100 rounded-xl p-3 text-lg font-black text-orange-900 outline-none focus:border-orange-500"
+                      className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-2xl font-black text-orange-900 outline-none focus:border-orange-500 text-center"
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Gestión de Armazones */}
+              <div className="bg-white border border-purple-100 rounded-2xl p-6 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-black text-purple-900 uppercase tracking-widest flex items-center gap-2">
+                    🏗️ Gestión de Armazones / Cascos
+                  </h3>
+                  {!isEditingMaterial && (
+                    <button
+                      onClick={handleCreateMaterial}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-black uppercase text-[10px] hover:bg-purple-700 transition-all shadow-md"
+                    >
+                      <Plus size={16} />
+                      Nuevo Material
+                    </button>
+                  )}
+                </div>
+
+                {!isEditingMaterial ? (
+                  <div className="space-y-3">
+                    {state.carcassMaterials.map(material => (
+                      <div key={material.id} className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex justify-between items-center hover:shadow-md transition-all">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-black text-purple-900">{material.name}</h4>
+                          <div className="flex gap-4 mt-2">
+                            <span className="text-xs text-purple-600 font-bold">
+                              Incremento: <span className="text-orange-600">+{material.fixedIncrement}€</span>
+                            </span>
+                            <span className="text-xs text-purple-600 font-bold">
+                              Grosor: <span className="text-indigo-600">{material.thickness}mm</span>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditMaterial(material)}
+                            className="p-2 hover:bg-purple-100 rounded-lg transition-all"
+                            title="Editar"
+                          >
+                            <Pencil size={16} className="text-purple-600" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMaterial(material.id)}
+                            className="p-2 hover:bg-red-100 rounded-lg transition-all"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={16} className="text-red-600" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* Material Form */
+                  <div className="bg-purple-50 border-2 border-purple-300 rounded-xl p-6">
+                    <h4 className="text-sm font-black text-purple-900 uppercase mb-4">
+                      {editingMaterialId ? 'Editar Material' : 'Nuevo Material'}
+                    </h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-black text-purple-600 uppercase mb-2 block">Nombre del Material *</label>
+                        <input
+                          type="text"
+                          value={materialForm.name}
+                          onChange={(e) => setMaterialForm({...materialForm, name: e.target.value})}
+                          placeholder="Ej: Blanco Ártico Standard"
+                          className="w-full bg-white border border-purple-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-black text-purple-600 uppercase mb-2 block">Incremento Fijo (€)</label>
+                          <input
+                            type="number"
+                            value={materialForm.fixedIncrement}
+                            onChange={(e) => setMaterialForm({...materialForm, fixedIncrement: parseInt(e.target.value) || 0})}
+                            className="w-full bg-white border border-purple-200 rounded-xl p-3 text-lg font-black text-center text-orange-600 outline-none focus:border-orange-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-black text-purple-600 uppercase mb-2 block">Grosor (mm)</label>
+                          <input
+                            type="number"
+                            value={materialForm.thickness}
+                            onChange={(e) => setMaterialForm({...materialForm, thickness: parseInt(e.target.value) || 16})}
+                            className="w-full bg-white border border-purple-200 rounded-xl p-3 text-lg font-black text-center text-indigo-600 outline-none focus:border-orange-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={handleSaveMaterial}
+                          className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-black uppercase text-xs hover:bg-purple-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                        >
+                          <Check size={18} />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={() => setIsEditingMaterial(false)}
+                          className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-black uppercase text-xs hover:bg-slate-300 transition-all"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
