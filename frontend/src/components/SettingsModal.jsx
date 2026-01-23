@@ -89,11 +89,24 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       return;
     }
 
+    if (!editingUserId && !userForm.password) {
+      alert('La contraseña es obligatoria para nuevos usuarios');
+      return;
+    }
+
     if (editingUserId) {
       // Edit existing user
+      const updatedUser = { ...userForm, id: editingUserId };
+      // Si no se proporcionó password, mantener el anterior
+      if (!userForm.password) {
+        const existingUser = state.users.find(u => u.id === editingUserId);
+        if (existingUser) {
+          updatedUser.password = existingUser.password;
+        }
+      }
       setState(prev => ({
         ...prev,
-        users: prev.users.map(u => u.id === editingUserId ? { ...userForm, id: editingUserId } : u)
+        users: prev.users.map(u => u.id === editingUserId ? updatedUser : u)
       }));
     } else {
       // Create new user
