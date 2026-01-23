@@ -341,24 +341,33 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             <Users size={14} className="inline mr-2" />
             Red Distribución
           </button>
-          <button
-            onClick={() => setActiveTab('inventory')}
-            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-              activeTab === 'inventory' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
-            }`}
-          >
-            <Package size={14} className="inline mr-2" />
-            Inventario
-          </button>
-          <button
-            onClick={() => setActiveTab('pricing')}
-            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-              activeTab === 'pricing' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
-            }`}
-          >
-            <Euro size={14} className="inline mr-2" />
-            Márgenes
-          </button>
+          
+          {/* Solo Admin y Comerciales con permiso canManageArticles pueden ver Inventario */}
+          {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
+            <button
+              onClick={() => setActiveTab('inventory')}
+              className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                activeTab === 'inventory' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
+              }`}
+            >
+              <Package size={14} className="inline mr-2" />
+              Inventario
+            </button>
+          )}
+          
+          {/* Solo Admin y Comerciales con permiso canManageArticles pueden ver Márgenes */}
+          {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
+            <button
+              onClick={() => setActiveTab('pricing')}
+              className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                activeTab === 'pricing' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
+              }`}
+            >
+              <Euro size={14} className="inline mr-2" />
+              Márgenes
+            </button>
+          )}
+          
           <button
             onClick={() => setActiveTab('identity')}
             className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
