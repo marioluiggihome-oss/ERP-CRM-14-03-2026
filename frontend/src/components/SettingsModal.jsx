@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square } from 'lucide-react';
+import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader } from 'lucide-react';
+import { usersAPI, productsAPI, materialsAPI, settingsAPI } from '../services/api';
 
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [activeTab, setActiveTab] = useState('users');
@@ -7,6 +8,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [userSearch, setUserSearch] = useState('');
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Inventory states
   const [inventoryModule, setInventoryModule] = useState('montada');
