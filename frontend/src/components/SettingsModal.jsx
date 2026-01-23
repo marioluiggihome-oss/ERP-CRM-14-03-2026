@@ -53,6 +53,86 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
   };
 
+  const handleCreateUser = () => {
+    setIsEditingUser(true);
+    setEditingUserId(null);
+    setUserForm({
+      username: '',
+      password: '',
+      clientName: '',
+      isActive: true,
+      isAdmin: false,
+      isRepresentative: false,
+      linkedRepresentativeId: '',
+      allowedModules: ['montada'],
+      allowedCatalogIds: state.catalogs.map(c => c.id),
+      commercialDiscount: 0,
+      canSeeCost: false,
+      canSeeRetail: true,
+      canUseAIAnalysis: false,
+      canManageArticles: false,
+      canViewTechnicalDespiece: false,
+      useCustomBranding: false,
+      canChangeLogo: false
+    });
+  };
+
+  const handleEditUser = (user) => {
+    setIsEditingUser(true);
+    setEditingUserId(user.id);
+    setUserForm({ ...user });
+  };
+
+  const handleSaveUser = () => {
+    if (!userForm.username || !userForm.clientName) {
+      alert('Usuario y Nombre de Cliente son obligatorios');
+      return;
+    }
+
+    if (editingUserId) {
+      // Edit existing user
+      setState(prev => ({
+        ...prev,
+        users: prev.users.map(u => u.id === editingUserId ? { ...userForm, id: editingUserId } : u)
+      }));
+    } else {
+      // Create new user
+      const newUser = {
+        ...userForm,
+        id: `user-${Date.now()}`
+      };
+      setState(prev => ({
+        ...prev,
+        users: [...prev.users, newUser]
+      }));
+    }
+
+    setIsEditingUser(false);
+    setEditingUserId(null);
+  };
+
+  const handleDeleteUser = (userId) => {
+    if (userId === 'admin') {
+      alert('No puedes eliminar el usuario administrador principal');
+      return;
+    }
+    if (window.confirm('¿Estás seguro de eliminar este usuario?')) {
+      setState(prev => ({
+        ...prev,
+        users: prev.users.filter(u => u.id !== userId)
+      }));
+    }
+  };
+
+  const handleToggleModule = (module) => {
+    setUserForm(prev => {
+      const modules = prev.allowedModules.includes(module)
+        ? prev.allowedModules.filter(m => m !== module)
+        : [...prev.allowedModules, module];
+      return { ...prev, allowedModules: modules };
+    });
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
