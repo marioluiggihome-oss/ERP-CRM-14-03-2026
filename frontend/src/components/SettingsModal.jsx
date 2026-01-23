@@ -1,9 +1,40 @@
-import React, { useState } from 'react';
-import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search } from 'lucide-react';
 
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
-  const [activeTab, setActiveTab] = useState('pricing');
+  const [activeTab, setActiveTab] = useState('users');
   const [colorInput, setColorInput] = useState(state.brandColor || '#ea580c');
+  const [userSearch, setUserSearch] = useState('');
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [userForm, setUserForm] = useState({
+    username: '',
+    password: '',
+    clientName: '',
+    isActive: true,
+    isAdmin: false,
+    isRepresentative: false,
+    linkedRepresentativeId: '',
+    allowedModules: ['montada'],
+    commercialDiscount: 0,
+    canSeeCost: false,
+    canSeeRetail: true,
+    canUseAIAnalysis: false,
+    canManageArticles: false,
+    canViewTechnicalDespiece: false,
+    useCustomBranding: false,
+    canChangeLogo: false
+  });
+
+  const representatives = useMemo(() => state.users.filter(u => u.isRepresentative), [state.users]);
+
+  const filteredUsers = useMemo(() => {
+    const query = userSearch.toLowerCase();
+    return state.users.filter(u => 
+      u.username.toLowerCase().includes(query) || 
+      u.clientName.toLowerCase().includes(query)
+    );
+  }, [state.users, userSearch]);
 
   if (!isOpen) return null;
 
