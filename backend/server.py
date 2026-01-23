@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, APIRouter, File, UploadFile, Form, HTTPException, BackgroundTasks
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -13,6 +13,11 @@ import base64
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 import json
 import bcrypt
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+import asyncio
 
 
 ROOT_DIR = Path(__file__).parent
