@@ -1,7 +1,7 @@
 export const adminUser = { 
   id: 'admin', 
   username: 'MARIO', 
-  password: '1234', 
+  password: 'MARIO', 
   clientName: 'LUIGGI MASTER DESIGN', 
   isActive: true, 
   allowedCatalogIds: ['cat-m-base', 'cat-d-base'], 
