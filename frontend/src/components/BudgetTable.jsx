@@ -1,6 +1,7 @@
-import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, FileText, ChevronDown, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool } from 'lucide-react';
+import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, FileText, ChevronDown, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download } from 'lucide-react';
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { exportToPdf } from '../utils/pdfHelper';
+import { generateBudgetPDF } from '../services/pdfGenerator';
 import { DOOR_FINISHES, CabinetCategory } from '../constants';
 import Logo from './Logo';
 
