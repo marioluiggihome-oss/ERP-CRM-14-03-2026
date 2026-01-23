@@ -7,6 +7,27 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [userSearch, setUserSearch] = useState('');
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
+  
+  // Inventory states
+  const [inventoryModule, setInventoryModule] = useState('montada');
+  const [productSearch, setProductSearch] = useState('');
+  const [isEditingProduct, setIsEditingProduct] = useState(false);
+  const [editingProductId, setEditingProductId] = useState(null);
+  const [productForm, setProductForm] = useState({
+    code: '',
+    name: '',
+    category: '',
+    series: '',
+    visualType: '',
+    width: 0,
+    height: 0,
+    depth: 0,
+    manufacturer: 'Luiggi Home Master',
+    zonePoints: {
+      Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0, Z6: 0,
+      Z7: 0, Z8: 0, Z9: 0, Z10: 0, Z11: 0, Z12: 0
+    }
+  });
   const [userForm, setUserForm] = useState({
     username: '',
     password: '',
