@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 /**
  * Genera un PDF del presupuesto actual
@@ -158,7 +158,7 @@ export const generateBudgetPDF = ({
     const totalPointsMontada = itemsMontada.reduce((sum, item) => sum + (item.totalPoints || 0), 0);
     const totalPriceMontada = totalPointsMontada * pointValueMontada;
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [['REF', 'DESCRIPCIÓN', 'UDS', 'PTS/UD', 'PTS TOTAL', 'IMPORTE']],
       body: montadaData,
@@ -222,7 +222,7 @@ export const generateBudgetPDF = ({
     const totalPointsDespiece = itemsDespiece.reduce((sum, item) => sum + (item.totalPoints || 0), 0);
     const totalPriceDespiece = totalPointsDespiece * pointValueDespiece;
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [['REF', 'DESCRIPCIÓN', 'UDS', 'PTS/UD', 'PTS TOTAL', 'IMPORTE']],
       body: despieceData,
