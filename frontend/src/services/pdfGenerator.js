@@ -20,7 +20,8 @@ export const generateBudgetPDF = ({
   sideColor,
   carcassMaterialName,
   logo,
-  brandColor = '#ea580c'
+  brandColor = '#ea580c',
+  companyName = 'LUIGGI HOME'
 }) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -33,18 +34,32 @@ export const generateBudgetPDF = ({
   const lightGray = [241, 245, 249]; // slate-100
 
   // ==========================================
-  // CABECERA
+  // CABECERA CON LOGO
   // ==========================================
   
-  // Logo o título
-  doc.setFontSize(24);
+  let logoWidth = 0;
+  
+  // Si hay logo, añadirlo
+  if (logo && logo.startsWith('data:image')) {
+    try {
+      // Añadir logo (máximo 40x40mm)
+      const logoSize = 35;
+      doc.addImage(logo, 'PNG', margin, yPos - 10, logoSize, logoSize);
+      logoWidth = logoSize + 8;
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+  }
+  
+  // Título de la empresa
+  doc.setFontSize(22);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
-  doc.text('LUIGGI HOME', margin, yPos);
+  doc.text(companyName, margin + logoWidth, yPos);
   
   doc.setFontSize(10);
   doc.setTextColor(...accentColor);
-  doc.text('PRESUPUESTO DE COCINA', margin, yPos + 7);
+  doc.text('PRESUPUESTO DE COCINA', margin + logoWidth, yPos + 7);
   
   // Número de expediente (derecha)
   doc.setFontSize(12);
