@@ -320,6 +320,262 @@ IMPORTANTE: Responde SOLO el JSON, sin texto adicional."""
             "error": str(e)
         }
 
+# ============================================
+# USER ENDPOINTS
+# ============================================
+
+@api_router.get("/users", response_model=List[UserModel])
+async def get_users():
+    """Obtener todos los usuarios"""
+    users = await db.users.find({}, {"_id": 0}).to_list(1000)
+    return users
+
+@api_router.get("/users/{user_id}", response_model=UserModel)
+async def get_user(user_id: str):
+    """Obtener un usuario por ID"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return user
+
+@api_router.post("/users", response_model=UserModel)
+async def create_user(user: UserCreate):
+    """Crear un nuevo usuario"""
+    # Check if username exists
+    existing = await db.users.find_one({"username": user.username.upper()})
+    if existing:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+    
+    user_obj = UserModel(**user.model_dump())
+    user_obj.username = user_obj.username.upper()
+    
+    await db.users.insert_one(user_obj.model_dump())
+    return user_obj
+
+@api_router.put("/users/{user_id}", response_model=UserModel)
+async def update_user(user_id: str, user: UserUpdate):
+    """Actualizar un usuario"""
+    existing = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    update_data = {k: v for k, v in user.model_dump().items() if v is not None}
+    if "username" in update_data:
+        update_data["username"] = update_data["username"].upper()
+    
+    if update_data:
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    updated = await db.users.find_one({"id": user_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str):
+    """Eliminar un usuario"""
+    if user_id == "admin":
+        raise HTTPException(status_code=400, detail="No se puede eliminar el administrador principal")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return {"message": "Usuario eliminado"}
+
+@api_router.post("/auth/login")
+async def login(credentials: dict):
+    """Iniciar sesión"""
+    username = credentials.get("username", "").upper().strip()
+    password = credentials.get("password", "").strip()
+    
+    user = await db.users.find_one({"username": username, "password": password}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Credenciales no válidas")
+    
+    if not user.get("isActive", True):
+        raise HTTPException(status_code=401, detail="Cuenta desactivada")
+    
+    return {"success": True, "user": user}
+
+# ============================================
+# PRODUCT ENDPOINTS
+# ============================================
+
+@api_router.get("/products", response_model=List[ProductModel])
+async def get_products(module: Optional[str] = None):
+    """Obtener todos los productos, opcionalmente filtrados por módulo"""
+    query = {}
+    if module:
+        query["module"] = module
+    products = await db.products.find(query, {"_id": 0}).to_list(10000)
+    return products
+
+@api_router.get("/products/{product_id}", response_model=ProductModel)
+async def get_product(product_id: str):
+    """Obtener un producto por ID"""
+    product = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    return product
+
+@api_router.post("/products", response_model=ProductModel)
+async def create_product(product: ProductCreate):
+    """Crear un nuevo producto"""
+    product_obj = ProductModel(**product.model_dump())
+    product_obj.code = product_obj.code.upper()
+    
+    # Set points from Z1 if zonePoints exists
+    if product_obj.zonePoints:
+        product_obj.points = product_obj.zonePoints.Z1
+    
+    await db.products.insert_one(product_obj.model_dump())
+    return product_obj
+
+@api_router.post("/products/bulk", response_model=List[ProductModel])
+async def create_products_bulk(products: List[ProductCreate]):
+    """Crear múltiples productos"""
+    created = []
+    for product in products:
+        product_obj = ProductModel(**product.model_dump())
+        product_obj.code = product_obj.code.upper()
+        if product_obj.zonePoints:
+            product_obj.points = product_obj.zonePoints.Z1
+        await db.products.insert_one(product_obj.model_dump())
+        created.append(product_obj)
+    return created
+
+@api_router.put("/products/{product_id}", response_model=ProductModel)
+async def update_product(product_id: str, product: ProductCreate):
+    """Actualizar un producto"""
+    existing = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    update_data = product.model_dump()
+    update_data["code"] = update_data["code"].upper()
+    if update_data.get("zonePoints"):
+        update_data["points"] = update_data["zonePoints"]["Z1"]
+    
+    await db.products.update_one({"id": product_id}, {"$set": update_data})
+    updated = await db.products.find_one({"id": product_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str):
+    """Eliminar un producto"""
+    result = await db.products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    return {"message": "Producto eliminado"}
+
+@api_router.delete("/products/bulk/delete")
+async def delete_products_bulk(product_ids: List[str]):
+    """Eliminar múltiples productos"""
+    result = await db.products.delete_many({"id": {"$in": product_ids}})
+    return {"message": f"{result.deleted_count} productos eliminados"}
+
+# ============================================
+# MATERIAL ENDPOINTS
+# ============================================
+
+@api_router.get("/materials", response_model=List[MaterialModel])
+async def get_materials():
+    """Obtener todos los materiales"""
+    materials = await db.materials.find({}, {"_id": 0}).to_list(1000)
+    return materials
+
+@api_router.post("/materials", response_model=MaterialModel)
+async def create_material(material: MaterialCreate):
+    """Crear un nuevo material"""
+    material_obj = MaterialModel(**material.model_dump())
+    await db.materials.insert_one(material_obj.model_dump())
+    return material_obj
+
+@api_router.put("/materials/{material_id}", response_model=MaterialModel)
+async def update_material(material_id: str, material: MaterialCreate):
+    """Actualizar un material"""
+    existing = await db.materials.find_one({"id": material_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Material no encontrado")
+    
+    await db.materials.update_one({"id": material_id}, {"$set": material.model_dump()})
+    updated = await db.materials.find_one({"id": material_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/materials/{material_id}")
+async def delete_material(material_id: str):
+    """Eliminar un material"""
+    # Check if it's the last one
+    count = await db.materials.count_documents({})
+    if count <= 1:
+        raise HTTPException(status_code=400, detail="Debe existir al menos un material")
+    
+    result = await db.materials.delete_one({"id": material_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Material no encontrado")
+    return {"message": "Material eliminado"}
+
+# ============================================
+# SETTINGS ENDPOINTS
+# ============================================
+
+@api_router.get("/settings", response_model=SettingsModel)
+async def get_settings():
+    """Obtener configuración global"""
+    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
+    if not settings:
+        # Return defaults
+        return SettingsModel()
+    return settings
+
+@api_router.put("/settings", response_model=SettingsModel)
+async def update_settings(settings: SettingsUpdate):
+    """Actualizar configuración global"""
+    update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
+    
+    if update_data:
+        await db.settings.update_one(
+            {"id": "global-settings"}, 
+            {"$set": update_data},
+            upsert=True
+        )
+    
+    updated = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
+    if not updated:
+        return SettingsModel()
+    return updated
+
+# ============================================
+# INIT DATA (seed admin user if needed)
+# ============================================
+
+@api_router.post("/init")
+async def init_data():
+    """Inicializar datos base (admin user)"""
+    # Check if admin exists
+    admin = await db.users.find_one({"id": "admin"})
+    if not admin:
+        admin_user = UserModel(
+            id="admin",
+            username="MARIO",
+            password="MARIO",
+            clientName="LUIGGI MASTER DESIGN",
+            isActive=True,
+            isAdmin=True,
+            allowedModules=["montada", "despiece"],
+            allowedCatalogIds=["cat-m-base", "cat-d-base"],
+            commercialDiscount=45,
+            canSeeCost=True,
+            canSeeRetail=True,
+            canUseAIAnalysis=True,
+            canManageArticles=True,
+            canViewTechnicalDespiece=True,
+            useCustomBranding=True,
+            canChangeLogo=True
+        )
+        await db.users.insert_one(admin_user.model_dump())
+        return {"message": "Admin creado", "admin": admin_user.model_dump()}
+    
+    return {"message": "Admin ya existe"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
