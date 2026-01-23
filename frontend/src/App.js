@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Zap } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Zap, Loader } from 'lucide-react';
 import "./App.css";
 import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
@@ -8,16 +8,12 @@ import SettingsModal from './components/SettingsModal';
 import ManufacturingReport from './components/ManufacturingReport';
 import Login from './components/Login';
 import TelemetryAI from './components/TelemetryAI';
-import { adminUser } from './mock';
-import { CATALOG_BASE_MONTADA, CATALOG_BASE_DESPIECE, DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
-
-const initialCatalogs = [
-  { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: CATALOG_BASE_MONTADA, module: 'montada' },
-  { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: CATALOG_BASE_DESPIECE, module: 'despiece' }
-];
+import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI } from './services/api';
+import { DOOR_FINISHES, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 
 const App = () => {
   const [isManufacturingView, setIsManufacturingView] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [state, setState] = useState(() => {
     const defaultState = {
