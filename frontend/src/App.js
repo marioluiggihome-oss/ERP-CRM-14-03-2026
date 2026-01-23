@@ -7,6 +7,7 @@ import ProjectLibrary from './components/ProjectLibrary';
 import SettingsModal from './components/SettingsModal';
 import ManufacturingReport from './components/ManufacturingReport';
 import Login from './components/Login';
+import TelemetryAI from './components/TelemetryAI';
 import { adminUser } from './mock';
 import { CATALOG_BASE_MONTADA, CATALOG_BASE_DESPIECE, DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 
