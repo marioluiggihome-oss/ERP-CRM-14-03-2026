@@ -446,7 +446,8 @@ async def login(credentials: dict):
     if not user.get("isActive", True):
         raise HTTPException(status_code=401, detail="Cuenta desactivada")
     
-    return {"success": True, "user": user}
+    # Return user without password
+    return {"success": True, "user": user_to_response(user)}
 
 # ============================================
 # PRODUCT ENDPOINTS
