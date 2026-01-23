@@ -84,9 +84,14 @@ const Login = ({ onLogin, customLogo }) => {
               <div className="grid grid-cols-1 gap-4 pt-2">
                 <button 
                   type="submit"
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-xs"
+                  disabled={isLoading}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <LogIn size={18} /> ENTRAR AL SISTEMA
+                  {isLoading ? (
+                    <><Loader size={18} className="animate-spin" /> CONECTANDO...</>
+                  ) : (
+                    <><LogIn size={18} /> ENTRAR AL SISTEMA</>
+                  )}
                 </button>
               </div>
             </form>
