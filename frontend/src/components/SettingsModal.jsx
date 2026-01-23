@@ -72,6 +72,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const handleCreateUser = () => {
     setIsEditingUser(true);
     setEditingUserId(null);
+    
+    // Si es comercial, automáticamente crear como tienda asignada a él
+    const isCommercial = !state.currentUser?.isAdmin && state.currentUser?.isRepresentative;
+    
     setUserForm({
       username: '',
       password: '',
@@ -79,7 +83,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       isActive: true,
       isAdmin: false,
       isRepresentative: false,
-      linkedRepresentativeId: '',
+      linkedRepresentativeId: isCommercial ? state.currentUser.id : '',
       allowedModules: ['montada'],
       allowedCatalogIds: state.catalogs.map(c => c.id),
       commercialDiscount: 0,
@@ -94,6 +98,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   };
 
   const handleEditUser = (user) => {
+    // Comerciales solo pueden editar tiendas asignadas a ellos
+    if (!state.currentUser?.isAdmin && state.currentUser?.isRepresentative) {
+      if (user.linkedRepresentativeId !== state.currentUser.id && user.id !== state.currentUser.id) {
+        alert('No tienes permisos para editar este usuario');
+        return;
+      }
+    }
+    
     setIsEditingUser(true);
     setEditingUserId(user.id);
     setUserForm({ ...user });
