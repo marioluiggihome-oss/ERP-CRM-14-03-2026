@@ -380,8 +380,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
         <div className="flex-1 overflow-y-auto p-12 bg-indigo-50/30 scrollbar-thin">
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center opacity-20">
-               <ShoppingCart size={120} strokeWidth={0.5} className="text-indigo-900 mb-6" />
-               <p className="text-sm font-black uppercase tracking-[0.5em] text-indigo-950">Mesa de trabajo despejada</p>
+               <FileText size={120} strokeWidth={0.5} className="text-indigo-900 mb-6" />
+               <p className="text-sm font-black uppercase tracking-[0.5em] text-indigo-950">Presupuesto vacío</p>
                <p className="text-[10px] font-bold text-indigo-400 mt-2 italic uppercase">Selecciona muebles de la librería inferior o añade líneas manuales</p>
             </div>
           ) : (
