@@ -314,7 +314,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                 doorColorColumns: state.doorColorColumns,
                 sideColor: state.sideColor,
                 carcassMaterialName: carcassMat?.name || 'No especificado',
-                brandColor: state.brandColor
+                brandColor: state.brandColor,
+                logo: state.logo,
+                companyName: state.currentUser?.clientName || 'LUIGGI HOME'
               });
             }}
             className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg"
