@@ -278,56 +278,79 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     });
   };
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!productForm.code || !productForm.name) {
       alert('Código y Nombre son obligatorios');
       return;
     }
 
-    const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
-    if (catalogIndex === -1) return;
-
-    const updatedCatalogs = [...state.catalogs];
-    
-    if (editingProductId) {
-      // Edit existing
-      updatedCatalogs[catalogIndex] = {
-        ...updatedCatalogs[catalogIndex],
-        products: updatedCatalogs[catalogIndex].products.map(p =>
-          p.id === editingProductId ? { ...productForm, id: editingProductId, points: productForm.zonePoints.Z1 } : p
-        )
-      };
-    } else {
-      // Create new
-      const newProduct = {
+    setIsSaving(true);
+    try {
+      const productData = {
         ...productForm,
-        id: `${productForm.code}-${Date.now()}`,
-        points: productForm.zonePoints.Z1
+        module: inventoryModule,
+        points: productForm.zonePoints?.Z1 || 0
       };
-      updatedCatalogs[catalogIndex] = {
-        ...updatedCatalogs[catalogIndex],
-        products: [...updatedCatalogs[catalogIndex].products, newProduct]
-      };
-    }
 
-    setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
-    setIsEditingProduct(false);
-    setEditingProductId(null);
+      if (editingProductId) {
+        // Edit existing via API
+        const updated = await productsAPI.update(editingProductId, productData);
+        
+        // Update local state
+        const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
+        if (catalogIndex !== -1) {
+          const updatedCatalogs = [...state.catalogs];
+          updatedCatalogs[catalogIndex] = {
+            ...updatedCatalogs[catalogIndex],
+            products: updatedCatalogs[catalogIndex].products.map(p =>
+              p.id === editingProductId ? updated : p
+            )
+          };
+          setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+        }
+      } else {
+        // Create new via API
+        const newProduct = await productsAPI.create(productData);
+        
+        // Update local state
+        const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
+        if (catalogIndex !== -1) {
+          const updatedCatalogs = [...state.catalogs];
+          updatedCatalogs[catalogIndex] = {
+            ...updatedCatalogs[catalogIndex],
+            products: [...updatedCatalogs[catalogIndex].products, newProduct]
+          };
+          setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+        }
+      }
+
+      setIsEditingProduct(false);
+      setEditingProductId(null);
+    } catch (err) {
+      alert('Error al guardar producto: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteProduct = (productId) => {
+  const handleDeleteProduct = async (productId) => {
     if (window.confirm('¿Eliminar este artículo del inventario?')) {
-      const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
-      if (catalogIndex === -1) return;
-
-      const updatedCatalogs = [...state.catalogs];
-      updatedCatalogs[catalogIndex] = {
-        ...updatedCatalogs[catalogIndex],
-        products: updatedCatalogs[catalogIndex].products.filter(p => p.id !== productId)
-      };
-
-      setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
-      setSelectedProducts(prev => prev.filter(id => id !== productId));
+      try {
+        await productsAPI.delete(productId);
+        
+        const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
+        if (catalogIndex !== -1) {
+          const updatedCatalogs = [...state.catalogs];
+          updatedCatalogs[catalogIndex] = {
+            ...updatedCatalogs[catalogIndex],
+            products: updatedCatalogs[catalogIndex].products.filter(p => p.id !== productId)
+          };
+          setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+        }
+        setSelectedProducts(prev => prev.filter(id => id !== productId));
+      } catch (err) {
+        alert('Error al eliminar producto: ' + err.message);
+      }
     }
   };
 
