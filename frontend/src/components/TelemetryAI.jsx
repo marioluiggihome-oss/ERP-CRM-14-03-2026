@@ -23,52 +23,62 @@ const TelemetryAI = ({ state, setState }) => {
     setIsProcessing(true);
     setProcessResult(null);
 
-    // Simulación de procesamiento con IA
-    // En producción, aquí se llamaría a la API de Gemini
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    try {
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('module', selectedModule);
+      
+      uploadedFiles.forEach(file => {
+        formData.append('files', file.file);
+      });
 
-    // Mock: Crear productos de ejemplo
-    const mockProducts = uploadedFiles.map((file, idx) => ({
-      id: `AI-${Date.now()}-${idx}`,
-      code: `AI-${selectedModule.toUpperCase()}-${String(idx + 1).padStart(3, '0')}`,
-      name: `Producto Importado ${idx + 1}`,
-      category: selectedModule === 'montada' ? 'Altos' : 'Despiece',
-      series: `Importación IA ${new Date().toLocaleDateString()}`,
-      visualType: selectedModule === 'montada' ? '1P' : 'COSTADO',
-      width: 40 + (idx * 5),
-      height: 70,
-      depth: 33,
-      points: 50 + (idx * 10),
-      manufacturer: 'Luiggi Home Master',
-      ...(selectedModule === 'montada' ? {
-        zonePoints: {
-          Z1: 50 + (idx * 10), Z2: 52 + (idx * 10), Z3: 55 + (idx * 10),
-          Z4: 58 + (idx * 10), Z5: 62 + (idx * 10), Z6: 68 + (idx * 10),
-          Z7: 75 + (idx * 10), Z8: 82 + (idx * 10), Z9: 90 + (idx * 10),
-          Z10: 98 + (idx * 10), Z11: 105 + (idx * 10), Z12: 115 + (idx * 10)
+      // Call backend API
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+      const response = await fetch(`${BACKEND_URL}/api/analyze-product-sheets`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.products) {
+        // Add products to catalog
+        const catalogIndex = state.catalogs.findIndex(c => c.module === selectedModule);
+        if (catalogIndex !== -1) {
+          const updatedCatalogs = [...state.catalogs];
+          const validProducts = result.products.filter(p => !p.error);
+          
+          updatedCatalogs[catalogIndex] = {
+            ...updatedCatalogs[catalogIndex],
+            products: [...updatedCatalogs[catalogIndex].products, ...validProducts]
+          };
+          
+          setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
         }
-      } : {})
-    }));
 
-    // Agregar productos al catálogo correspondiente
-    const catalogIndex = state.catalogs.findIndex(c => c.module === selectedModule);
-    if (catalogIndex !== -1) {
-      const updatedCatalogs = [...state.catalogs];
-      updatedCatalogs[catalogIndex] = {
-        ...updatedCatalogs[catalogIndex],
-        products: [...updatedCatalogs[catalogIndex].products, ...mockProducts]
-      };
-      setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+        setProcessResult({
+          success: true,
+          count: result.products.filter(p => !p.error).length,
+          products: result.products
+        });
+      } else {
+        setProcessResult({
+          success: false,
+          error: result.error || 'Error desconocido'
+        });
+      }
+
+      setUploadedFiles([]);
+      setIsProcessing(false);
+      
+    } catch (error) {
+      console.error('Error processing files:', error);
+      setProcessResult({
+        success: false,
+        error: error.message
+      });
+      setIsProcessing(false);
     }
-
-    setProcessResult({
-      success: true,
-      count: mockProducts.length,
-      products: mockProducts
-    });
-
-    setIsProcessing(false);
-    setUploadedFiles([]);
   };
 
   const removeFile = (fileId) => {
