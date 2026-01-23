@@ -371,21 +371,26 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
   };
 
-  const handleDeleteSelectedProducts = () => {
+  const handleDeleteSelectedProducts = async () => {
     if (selectedProducts.length === 0) return;
     
     if (window.confirm(`¿Eliminar ${selectedProducts.length} artículos seleccionados?`)) {
-      const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
-      if (catalogIndex === -1) return;
-
-      const updatedCatalogs = [...state.catalogs];
-      updatedCatalogs[catalogIndex] = {
-        ...updatedCatalogs[catalogIndex],
-        products: updatedCatalogs[catalogIndex].products.filter(p => !selectedProducts.includes(p.id))
-      };
-
-      setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
-      setSelectedProducts([]);
+      try {
+        await productsAPI.deleteBulk(selectedProducts);
+        
+        const catalogIndex = state.catalogs.findIndex(c => c.module === inventoryModule);
+        if (catalogIndex !== -1) {
+          const updatedCatalogs = [...state.catalogs];
+          updatedCatalogs[catalogIndex] = {
+            ...updatedCatalogs[catalogIndex],
+            products: updatedCatalogs[catalogIndex].products.filter(p => !selectedProducts.includes(p.id))
+          };
+          setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+        }
+        setSelectedProducts([]);
+      } catch (err) {
+        alert('Error al eliminar productos: ' + err.message);
+      }
     }
   };
 
@@ -406,18 +411,40 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     });
   };
 
-  const handleSaveMaterial = () => {
+  const handleSaveMaterial = async () => {
     if (!materialForm.name) {
       alert('El nombre del material es obligatorio');
       return;
     }
 
-    if (editingMaterialId) {
-      // Edit existing
-      setState(prev => ({
-        ...prev,
-        carcassMaterials: prev.carcassMaterials.map(m =>
-          m.id === editingMaterialId ? { ...materialForm, id: editingMaterialId } : m
+    setIsSaving(true);
+    try {
+      if (editingMaterialId) {
+        // Edit existing via API
+        const updated = await materialsAPI.update(editingMaterialId, materialForm);
+        setState(prev => ({
+          ...prev,
+          carcassMaterials: prev.carcassMaterials.map(m =>
+            m.id === editingMaterialId ? updated : m
+          )
+        }));
+      } else {
+        // Create new via API
+        const newMaterial = await materialsAPI.create(materialForm);
+        setState(prev => ({
+          ...prev,
+          carcassMaterials: [...prev.carcassMaterials, newMaterial]
+        }));
+      }
+
+      setIsEditingMaterial(false);
+      setEditingMaterialId(null);
+    } catch (err) {
+      alert('Error al guardar material: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
         )
       }));
     } else {
