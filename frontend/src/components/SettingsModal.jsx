@@ -865,25 +865,31 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           <tr>
                             <th className="p-3 text-left text-[9px] font-black uppercase whitespace-nowrap">REF</th>
                             <th className="p-3 text-left text-[9px] font-black uppercase min-w-[200px]">NOMBRE</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z1</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z2</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z3</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z4</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z5</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z6</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z7</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z8</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z9</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z10</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z11</th>
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z12</th>
+                            {inventoryModule === 'montada' ? (
+                              <>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z1</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z2</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z3</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z4</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z5</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z6</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z7</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z8</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z9</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z10</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z11</th>
+                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z12</th>
+                              </>
+                            ) : (
+                              <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap bg-orange-900">PUNTOS BASE</th>
+                            )}
                             <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">GESTIÓN</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {filteredProducts.length === 0 ? (
                             <tr>
-                              <td colSpan="15" className="p-8 text-center text-slate-400 italic">
+                              <td colSpan={inventoryModule === 'montada' ? 15 : 5} className="p-8 text-center text-slate-400 italic">
                                 No hay productos en este catálogo
                               </td>
                             </tr>
@@ -892,18 +898,24 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               <tr key={product.id} className="hover:bg-indigo-50/30 transition-colors">
                                 <td className="p-3 text-xs font-black text-orange-600 uppercase">{product.code}</td>
                                 <td className="p-3 text-xs font-bold text-slate-900">{product.name}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z1 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z2 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z3 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z4 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z5 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z6 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z7 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z8 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z9 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z10 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z11 || 0}</td>
-                                <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z12 || 0}</td>
+                                {inventoryModule === 'montada' ? (
+                                  <>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z1 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z2 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z3 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z4 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z5 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z6 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z7 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z8 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z9 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z10 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z11 || product.points || 0}</td>
+                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z12 || product.points || 0}</td>
+                                  </>
+                                ) : (
+                                  <td className="p-3 text-center text-lg font-black text-orange-600 bg-orange-50">{product.points || 0}</td>
+                                )}
                                 <td className="p-3">
                                   <div className="flex justify-center gap-2">
                                     <button
