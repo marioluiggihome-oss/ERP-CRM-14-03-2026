@@ -466,7 +466,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         alert('Error al eliminar material: ' + err.message);
       }
     }
-    }
   };
 
   return (
