@@ -267,6 +267,18 @@ const App = () => {
                 <FolderOpen size={22}/>
                 <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
               </button>
+              
+              {/* Solo Admin puede ver Copia de Seguridad */}
+              {state.currentUser?.isAdmin && (
+                <button 
+                  onClick={() => setState(p => ({...p, currentTab: 'backup'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'backup' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                  data-testid="backup-nav-btn"
+                >
+                  <HardDrive size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Copia Seguridad</span>
+                </button>
+              )}
             </div>
 
             <div className="mt-auto flex flex-col gap-6 w-full px-2">
