@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save } from 'lucide-react';
+import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square } from 'lucide-react';
 
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [activeTab, setActiveTab] = useState('users');
@@ -13,6 +13,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [productSearch, setProductSearch] = useState('');
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
+  const [selectedProducts, setSelectedProducts] = useState([]);
   const [productForm, setProductForm] = useState({
     code: '',
     name: '',
