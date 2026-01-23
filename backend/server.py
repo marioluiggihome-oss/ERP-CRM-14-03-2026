@@ -69,6 +69,113 @@ async def get_status_checks():
     
     return status_checks
 
+@api_router.post("/analyze-product-sheets")
+async def analyze_product_sheets(
+    module: str = Form(...),
+    files: List[UploadFile] = File(...)
+):
+    """
+    Analiza fichas de productos usando Gemini Vision API.
+    Extrae: código, nombre, dimensiones, puntos por zona, categoría, serie.
+    """
+    try:
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            return {"error": "EMERGENT_LLM_KEY not configured"}
+        
+        products = []
+        
+        for file in files:
+            # Read file content
+            content = await file.read()
+            base64_image = base64.b64encode(content).decode('utf-8')
+            
+            # Create Gemini chat with vision
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"product-analysis-{uuid.uuid4()}",
+                system_message="""Eres un experto en digitalización de fichas técnicas de muebles de cocina.
+Analiza la imagen de la ficha técnica y extrae TODA la información visible con máximo detalle y precisión.
+
+INSTRUCCIONES CRÍTICAS:
+1. Lee TODO el texto visible en la imagen (OCR completo)
+2. Identifica la estructura de la ficha (tablas, columnas, secciones)
+3. Extrae TODOS los datos numéricos y códigos
+4. Si ves una tabla de zonas (Z1-Z12), extrae TODOS los valores exactos
+5. Si no ves zonas, solo extrae el punto base
+
+Debes responder ÚNICAMENTE con un objeto JSON válido (sin markdown, sin comillas extras).
+Formato exacto:
+{
+  "code": "CÓDIGO_EXACTO",
+  "name": "Nombre completo del producto",
+  "width": número_en_cm,
+  "height": número_en_cm,
+  "depth": número_en_cm,
+  "category": "Categoría detectada",
+  "series": "Serie o familia",
+  "visualType": "Tipo visual (1P, 2P, HK-TOP, etc)",
+  "points": número_base,
+  "zonePoints": {
+    "Z1": número, "Z2": número, "Z3": número, "Z4": número,
+    "Z5": número, "Z6": número, "Z7": número, "Z8": número,
+    "Z9": número, "Z10": número, "Z11": número, "Z12": número
+  }
+}
+
+Si no encuentras zonas (para despiece), usa el mismo valor en todas las zonas.
+IMPORTANTE: Responde SOLO el JSON, sin texto adicional."""
+            ).with_model("gemini", "gemini-2.5-pro")
+            
+            # Create message with image
+            user_message = UserMessage(
+                text="Analiza esta ficha técnica de producto y extrae toda la información en el formato JSON especificado. Sé exhaustivo y preciso con todos los números y códigos.",
+                file_contents=[ImageContent(image_base64=base64_image)]
+            )
+            
+            # Get AI response
+            response = await chat.send_message(user_message)
+            
+            # Parse JSON response
+            try:
+                # Clean response (remove markdown code blocks if present)
+                clean_response = response.strip()
+                if clean_response.startswith('```'):
+                    clean_response = clean_response.split('```')[1]
+                    if clean_response.startswith('json'):
+                        clean_response = clean_response[4:]
+                clean_response = clean_response.strip()
+                
+                product_data = json.loads(clean_response)
+                
+                # Add metadata
+                product_data['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
+                product_data['manufacturer'] = 'Luiggi Home Master'
+                product_data['importedAt'] = datetime.utcnow().isoformat()
+                product_data['originalFilename'] = file.filename
+                
+                products.append(product_data)
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing JSON from Gemini: {e}. Response: {response}")
+                products.append({
+                    "error": f"No se pudo parsear la respuesta para {file.filename}",
+                    "raw_response": response[:500]
+                })
+        
+        return {
+            "success": True,
+            "count": len(products),
+            "products": products
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in analyze_product_sheets: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 # Include the router in the main app
 app.include_router(api_router)
 
