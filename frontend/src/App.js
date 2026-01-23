@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Zap, Loader } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Zap, Loader, HardDrive } from 'lucide-react';
 import "./App.css";
 import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
@@ -8,6 +8,7 @@ import SettingsModal from './components/SettingsModal';
 import ManufacturingReport from './components/ManufacturingReport';
 import Login from './components/Login';
 import TelemetryAI from './components/TelemetryAI';
+import BackupManager from './components/BackupManager';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI } from './services/api';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 
