@@ -320,6 +320,70 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
   };
 
+  // Carcass material management
+  const handleCreateMaterial = () => {
+    setIsEditingMaterial(true);
+    setEditingMaterialId(null);
+    setMaterialForm({ name: '', fixedIncrement: 0, thickness: 16 });
+  };
+
+  const handleEditMaterial = (material) => {
+    setIsEditingMaterial(true);
+    setEditingMaterialId(material.id);
+    setMaterialForm({
+      name: material.name,
+      fixedIncrement: material.fixedIncrement || 0,
+      thickness: material.thickness || 16
+    });
+  };
+
+  const handleSaveMaterial = () => {
+    if (!materialForm.name) {
+      alert('El nombre del material es obligatorio');
+      return;
+    }
+
+    if (editingMaterialId) {
+      // Edit existing
+      setState(prev => ({
+        ...prev,
+        carcassMaterials: prev.carcassMaterials.map(m =>
+          m.id === editingMaterialId ? { ...materialForm, id: editingMaterialId } : m
+        )
+      }));
+    } else {
+      // Create new
+      const newMaterial = {
+        ...materialForm,
+        id: `mat-${Date.now()}`
+      };
+      setState(prev => ({
+        ...prev,
+        carcassMaterials: [...prev.carcassMaterials, newMaterial]
+      }));
+    }
+
+    setIsEditingMaterial(false);
+    setEditingMaterialId(null);
+  };
+
+  const handleDeleteMaterial = (materialId) => {
+    if (state.carcassMaterials.length <= 1) {
+      alert('Debe existir al menos un material de armazón');
+      return;
+    }
+    
+    if (window.confirm('¿Eliminar este material de armazón?')) {
+      setState(prev => ({
+        ...prev,
+        carcassMaterials: prev.carcassMaterials.filter(m => m.id !== materialId),
+        selectedCarcassMaterialId: prev.selectedCarcassMaterialId === materialId 
+          ? prev.carcassMaterials[0].id 
+          : prev.selectedCarcassMaterialId
+      }));
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
