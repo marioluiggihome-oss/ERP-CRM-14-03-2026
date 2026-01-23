@@ -28,6 +28,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       Z7: 0, Z8: 0, Z9: 0, Z10: 0, Z11: 0, Z12: 0
     }
   });
+
+  // Carcass material states
+  const [isEditingMaterial, setIsEditingMaterial] = useState(false);
+  const [editingMaterialId, setEditingMaterialId] = useState(null);
+  const [materialForm, setMaterialForm] = useState({
+    name: '',
+    fixedIncrement: 0,
+    thickness: 16
+  });
   const [userForm, setUserForm] = useState({
     username: '',
     password: '',
