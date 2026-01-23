@@ -158,7 +158,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     setUserForm({ ...user });
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (!userForm.username || !userForm.clientName) {
       alert('Usuario y Nombre de Cliente son obligatorios');
       return;
@@ -169,37 +169,39 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       return;
     }
 
-    if (editingUserId) {
-      // Edit existing user
-      const updatedUser = { ...userForm, id: editingUserId };
-      // Si no se proporcionó password, mantener el anterior
-      if (!userForm.password) {
-        const existingUser = state.users.find(u => u.id === editingUserId);
-        if (existingUser) {
-          updatedUser.password = existingUser.password;
+    setIsSaving(true);
+    try {
+      if (editingUserId) {
+        // Edit existing user
+        const updateData = { ...userForm };
+        // Si no se proporcionó password, no lo enviamos
+        if (!userForm.password) {
+          delete updateData.password;
         }
+        const updated = await usersAPI.update(editingUserId, updateData);
+        setState(prev => ({
+          ...prev,
+          users: prev.users.map(u => u.id === editingUserId ? updated : u)
+        }));
+      } else {
+        // Create new user
+        const newUser = await usersAPI.create(userForm);
+        setState(prev => ({
+          ...prev,
+          users: [...prev.users, newUser]
+        }));
       }
-      setState(prev => ({
-        ...prev,
-        users: prev.users.map(u => u.id === editingUserId ? updatedUser : u)
-      }));
-    } else {
-      // Create new user
-      const newUser = {
-        ...userForm,
-        id: `user-${Date.now()}`
-      };
-      setState(prev => ({
-        ...prev,
-        users: [...prev.users, newUser]
-      }));
-    }
 
-    setIsEditingUser(false);
-    setEditingUserId(null);
+      setIsEditingUser(false);
+      setEditingUserId(null);
+    } catch (err) {
+      alert('Error al guardar usuario: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = async (userId) => {
     if (userId === 'admin') {
       alert('No puedes eliminar el usuario administrador principal');
       return;
@@ -215,10 +217,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
     
     if (window.confirm('¿Estás seguro de eliminar este usuario?')) {
-      setState(prev => ({
-        ...prev,
-        users: prev.users.filter(u => u.id !== userId)
-      }));
+      try {
+        await usersAPI.delete(userId);
+        setState(prev => ({
+          ...prev,
+          users: prev.users.filter(u => u.id !== userId)
+        }));
+      } catch (err) {
+        alert('Error al eliminar usuario: ' + err.message);
+      }
     }
   };
 
