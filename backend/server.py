@@ -363,35 +363,41 @@ IMPORTANTE: Responde SOLO el JSON, sin texto adicional."""
 # USER ENDPOINTS
 # ============================================
 
-@api_router.get("/users", response_model=List[UserModel])
+def user_to_response(user_doc: dict) -> dict:
+    """Convert user document to response (excluding password)"""
+    return {k: v for k, v in user_doc.items() if k != "password"}
+
+@api_router.get("/users", response_model=List[UserResponse])
 async def get_users():
-    """Obtener todos los usuarios"""
-    users = await db.users.find({}, {"_id": 0}).to_list(1000)
+    """Obtener todos los usuarios (sin passwords)"""
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
     return users
 
-@api_router.get("/users/{user_id}", response_model=UserModel)
+@api_router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(user_id: str):
-    """Obtener un usuario por ID"""
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    """Obtener un usuario por ID (sin password)"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return user
 
-@api_router.post("/users", response_model=UserModel)
+@api_router.post("/users", response_model=UserResponse)
 async def create_user(user: UserCreate):
-    """Crear un nuevo usuario"""
+    """Crear un nuevo usuario con password hasheado"""
     # Check if username exists
     existing = await db.users.find_one({"username": user.username.upper()})
     if existing:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
     
-    user_obj = UserModel(**user.model_dump())
-    user_obj.username = user_obj.username.upper()
+    user_data = user.model_dump()
+    user_data["id"] = f"user-{uuid.uuid4().hex[:8]}"
+    user_data["username"] = user_data["username"].upper()
+    user_data["password"] = hash_password(user_data["password"])
     
-    await db.users.insert_one(user_obj.model_dump())
-    return user_obj
+    await db.users.insert_one(user_data)
+    return user_to_response(user_data)
 
-@api_router.put("/users/{user_id}", response_model=UserModel)
+@api_router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(user_id: str, user: UserUpdate):
     """Actualizar un usuario"""
     existing = await db.users.find_one({"id": user_id}, {"_id": 0})
@@ -402,10 +408,14 @@ async def update_user(user_id: str, user: UserUpdate):
     if "username" in update_data:
         update_data["username"] = update_data["username"].upper()
     
+    # Hash password if provided
+    if "password" in update_data and update_data["password"]:
+        update_data["password"] = hash_password(update_data["password"])
+    
     if update_data:
         await db.users.update_one({"id": user_id}, {"$set": update_data})
     
-    updated = await db.users.find_one({"id": user_id}, {"_id": 0})
+    updated = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     return updated
 
 @api_router.delete("/users/{user_id}")
@@ -421,12 +431,16 @@ async def delete_user(user_id: str):
 
 @api_router.post("/auth/login")
 async def login(credentials: dict):
-    """Iniciar sesión"""
+    """Iniciar sesión con verificación de password hasheado"""
     username = credentials.get("username", "").upper().strip()
     password = credentials.get("password", "").strip()
     
-    user = await db.users.find_one({"username": username, "password": password}, {"_id": 0})
+    user = await db.users.find_one({"username": username}, {"_id": 0})
     if not user:
+        raise HTTPException(status_code=401, detail="Credenciales no válidas")
+    
+    # Verify password (supports both hashed and plain text for migration)
+    if not verify_password(password, user.get("password", "")):
         raise HTTPException(status_code=401, detail="Credenciales no válidas")
     
     if not user.get("isActive", True):
