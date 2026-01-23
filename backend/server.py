@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, File, UploadFile, Form
+from fastapi import FastAPI, APIRouter, File, UploadFile, Form, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,7 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone
 import base64
@@ -29,13 +29,157 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
+# ============================================
+# MODELS
+# ============================================
+
 class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
+    model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     client_name: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StatusCheckCreate(BaseModel):
+    client_name: str
+
+# User Model
+class UserModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"user-{uuid.uuid4().hex[:8]}")
+    username: str
+    password: str
+    clientName: str
+    isActive: bool = True
+    isAdmin: bool = False
+    isRepresentative: bool = False
+    linkedRepresentativeId: Optional[str] = None
+    allowedModules: List[str] = ["montada"]
+    allowedCatalogIds: List[str] = []
+    commercialDiscount: float = 0
+    canSeeCost: bool = False
+    canSeeRetail: bool = True
+    canUseAIAnalysis: bool = False
+    canManageArticles: bool = False
+    canViewTechnicalDespiece: bool = False
+    useCustomBranding: bool = False
+    canChangeLogo: bool = False
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    clientName: str
+    isActive: bool = True
+    isAdmin: bool = False
+    isRepresentative: bool = False
+    linkedRepresentativeId: Optional[str] = None
+    allowedModules: List[str] = ["montada"]
+    allowedCatalogIds: List[str] = []
+    commercialDiscount: float = 0
+    canSeeCost: bool = False
+    canSeeRetail: bool = True
+    canUseAIAnalysis: bool = False
+    canManageArticles: bool = False
+    canViewTechnicalDespiece: bool = False
+    useCustomBranding: bool = False
+    canChangeLogo: bool = False
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    password: Optional[str] = None
+    clientName: Optional[str] = None
+    isActive: Optional[bool] = None
+    isAdmin: Optional[bool] = None
+    isRepresentative: Optional[bool] = None
+    linkedRepresentativeId: Optional[str] = None
+    allowedModules: Optional[List[str]] = None
+    allowedCatalogIds: Optional[List[str]] = None
+    commercialDiscount: Optional[float] = None
+    canSeeCost: Optional[bool] = None
+    canSeeRetail: Optional[bool] = None
+    canUseAIAnalysis: Optional[bool] = None
+    canManageArticles: Optional[bool] = None
+    canViewTechnicalDespiece: Optional[bool] = None
+    useCustomBranding: Optional[bool] = None
+    canChangeLogo: Optional[bool] = None
+
+# Product Model
+class ZonePoints(BaseModel):
+    Z1: float = 0
+    Z2: float = 0
+    Z3: float = 0
+    Z4: float = 0
+    Z5: float = 0
+    Z6: float = 0
+    Z7: float = 0
+    Z8: float = 0
+    Z9: float = 0
+    Z10: float = 0
+    Z11: float = 0
+    Z12: float = 0
+
+class ProductModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"prod-{uuid.uuid4().hex[:8]}")
+    code: str
+    name: str
+    category: str = ""
+    series: str = ""
+    visualType: str = ""
+    width: float = 0
+    height: float = 0
+    depth: float = 0
+    manufacturer: str = "Luiggi Home Master"
+    points: float = 0
+    zonePoints: Optional[ZonePoints] = None
+    module: str = "montada"  # montada or despiece
+
+class ProductCreate(BaseModel):
+    code: str
+    name: str
+    category: str = ""
+    series: str = ""
+    visualType: str = ""
+    width: float = 0
+    height: float = 0
+    depth: float = 0
+    manufacturer: str = "Luiggi Home Master"
+    points: float = 0
+    zonePoints: Optional[ZonePoints] = None
+    module: str = "montada"
+
+# Material Model
+class MaterialModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"mat-{uuid.uuid4().hex[:8]}")
+    name: str
+    fixedIncrement: float = 0
+    thickness: float = 16
+
+class MaterialCreate(BaseModel):
+    name: str
+    fixedIncrement: float = 0
+    thickness: float = 16
+
+# Settings Model
+class SettingsModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = "global-settings"
+    pointValueMontada: float = 1.0
+    pointValueDespiece: float = 0.88
+    specialIncrementWidth: float = 45
+    specialIncrementHeight: float = 45
+    specialIncrementDepth: float = 45
+    brandColor: str = "#ea580c"
+    logo: Optional[str] = None
+
+class SettingsUpdate(BaseModel):
+    pointValueMontada: Optional[float] = None
+    pointValueDespiece: Optional[float] = None
+    specialIncrementWidth: Optional[float] = None
+    specialIncrementHeight: Optional[float] = None
+    specialIncrementDepth: Optional[float] = None
+    brandColor: Optional[str] = None
+    logo: Optional[str] = None
 
 class StatusCheckCreate(BaseModel):
     client_name: str
