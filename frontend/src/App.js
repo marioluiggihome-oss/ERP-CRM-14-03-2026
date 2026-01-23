@@ -182,13 +182,16 @@ const App = () => {
             </div>
 
             <div className="mt-auto flex flex-col gap-6 w-full px-2">
-              <button 
-                  onClick={() => setState(p => ({...p, showSettings: true}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-              >
-                  <Settings size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Master</span>
-              </button>
+              {/* Solo mostrar Panel Maestro si es Admin o Comercial */}
+              {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && (
+                <button 
+                    onClick={() => setState(p => ({...p, showSettings: true}))} 
+                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                >
+                    <Settings size={22}/>
+                    <span className="text-[7px] font-black uppercase tracking-widest">Master</span>
+                </button>
+              )}
               <button 
                   onClick={() => setState(p => ({...p, currentUser: null}))}
                   className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-red-500 transition-all"
