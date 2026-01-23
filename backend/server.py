@@ -199,6 +199,71 @@ class MaterialCreate(BaseModel):
     fixedIncrement: float = 0
     thickness: float = 16
 
+# Budget Item Model
+class BudgetItemModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"item-{uuid.uuid4().hex[:8]}")
+    productId: str
+    productCode: str
+    productName: str
+    quantity: int = 1
+    customWidth: Optional[float] = None
+    customHeight: Optional[float] = None
+    customDepth: Optional[float] = None
+    unitPoints: float = 0
+    totalPoints: float = 0
+    unitPrice: float = 0
+    totalPrice: float = 0
+    module: str = "montada"
+
+# Project/Budget Model
+class ProjectModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"proj-{uuid.uuid4().hex[:8]}")
+    userId: str
+    budgetNumber: str
+    customerName: str = ""
+    customerAddress: str = ""
+    internalReference: str = ""
+    itemsMontada: List[Dict] = []
+    itemsDespiece: List[Dict] = []
+    doorColorLow: str = ""
+    doorColorHigh: str = ""
+    doorColorColumns: str = ""
+    sideColor: str = ""
+    selectedCarcassMaterialId: Optional[str] = None
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    status: str = "draft"  # draft, completed, archived
+
+class ProjectCreate(BaseModel):
+    budgetNumber: str
+    customerName: str = ""
+    customerAddress: str = ""
+    internalReference: str = ""
+    itemsMontada: List[Dict] = []
+    itemsDespiece: List[Dict] = []
+    doorColorLow: str = ""
+    doorColorHigh: str = ""
+    doorColorColumns: str = ""
+    sideColor: str = ""
+    selectedCarcassMaterialId: Optional[str] = None
+    status: str = "draft"
+
+class ProjectUpdate(BaseModel):
+    budgetNumber: Optional[str] = None
+    customerName: Optional[str] = None
+    customerAddress: Optional[str] = None
+    internalReference: Optional[str] = None
+    itemsMontada: Optional[List[Dict]] = None
+    itemsDespiece: Optional[List[Dict]] = None
+    doorColorLow: Optional[str] = None
+    doorColorHigh: Optional[str] = None
+    doorColorColumns: Optional[str] = None
+    sideColor: Optional[str] = None
+    selectedCarcassMaterialId: Optional[str] = None
+    status: Optional[str] = None
+
 # Settings Model
 class SettingsModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
