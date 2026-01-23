@@ -145,16 +145,28 @@ const App = () => {
     }));
   };
 
+  // Loading screen
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <Loader size={48} className="animate-spin text-orange-500 mx-auto mb-4" />
+          <p className="text-white font-bold text-sm uppercase tracking-widest">Cargando Sistema...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!state.currentUser) {
     return (
         <>
             <style>{`:root { --brand-primary: ${state.brandColor}; }`}</style>
-            <Login onLogin={handleLogin} authorizedUsers={state.users} customLogo={state.logo} />
+            <Login onLogin={handleLogin} customLogo={state.logo} />
         </>
     );
   }
 
-  const carcassMaterialName = state.carcassMaterials.find(m => m.id === state.selectedCarcassMaterialId)?.name || 'Blanco';
+  const carcassMaterialName = state.carcassMaterials?.find(m => m.id === state.selectedCarcassMaterialId)?.name || 'Blanco';
 
   return (
     <div className="flex h-screen bg-slate-950 overflow-hidden text-slate-800">
