@@ -277,6 +277,52 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
              <Keyboard size={16}/> LÍNEA MANUAL
           </button>
 
+          <button 
+            onClick={() => {
+              const carcassMat = state.carcassMaterials?.find(m => m.id === state.selectedCarcassMaterialId);
+              generateBudgetPDF({
+                budgetNumber: state.budgetNumber,
+                customerName: state.customerName,
+                customerAddress: state.customerAddress,
+                internalReference: state.internalReference,
+                itemsMontada: state.budgetItemsMontada.map(item => {
+                  const product = allProducts.find(p => p.id === item.productId);
+                  const details = calculateLineDetails(item, product);
+                  return {
+                    ...item,
+                    productCode: item.customReference || product?.code || 'MANUAL',
+                    productName: item.isManual ? item.manualDescription : product?.name || 'Producto',
+                    unitPoints: details.usedPoints,
+                    totalPoints: details.usedPoints * item.quantity
+                  };
+                }),
+                itemsDespiece: state.budgetItemsDespiece.map(item => {
+                  const product = allProducts.find(p => p.id === item.productId);
+                  const details = calculateLineDetails(item, product);
+                  return {
+                    ...item,
+                    productCode: item.customReference || product?.code || 'MANUAL',
+                    productName: item.isManual ? item.manualDescription : product?.name || 'Producto',
+                    unitPoints: details.usedPoints,
+                    totalPoints: details.usedPoints * item.quantity
+                  };
+                }),
+                pointValueMontada: state.pointValueMontada,
+                pointValueDespiece: state.pointValueDespiece,
+                doorColorLow: state.doorColorLow,
+                doorColorHigh: state.doorColorHigh,
+                doorColorColumns: state.doorColorColumns,
+                sideColor: state.sideColor,
+                carcassMaterialName: carcassMat?.name || 'No especificado',
+                brandColor: state.brandColor
+              });
+            }}
+            className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg"
+            data-testid="export-pdf-btn"
+          >
+            <Download size={16}/> EXPORTAR PDF
+          </button>
+
           {state.currentUser?.canViewTechnicalDespiece && (
             <button onClick={onOpenManufacturing} className="bg-indigo-950 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-3 hover:bg-orange-600 transition-all shadow-xl">
               <FileText size={16}/> INFORME INDUSTRIAL
