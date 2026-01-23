@@ -603,30 +603,38 @@ async def update_settings(settings: SettingsUpdate):
 
 @api_router.post("/init")
 async def init_data():
-    """Inicializar datos base (admin user)"""
+    """Inicializar datos base (admin user con password hasheado)"""
     # Check if admin exists
     admin = await db.users.find_one({"id": "admin"})
     if not admin:
-        admin_user = UserModel(
-            id="admin",
-            username="MARIO",
-            password="MARIO",
-            clientName="LUIGGI MASTER DESIGN",
-            isActive=True,
-            isAdmin=True,
-            allowedModules=["montada", "despiece"],
-            allowedCatalogIds=["cat-m-base", "cat-d-base"],
-            commercialDiscount=45,
-            canSeeCost=True,
-            canSeeRetail=True,
-            canUseAIAnalysis=True,
-            canManageArticles=True,
-            canViewTechnicalDespiece=True,
-            useCustomBranding=True,
-            canChangeLogo=True
-        )
-        await db.users.insert_one(admin_user.model_dump())
-        return {"message": "Admin creado", "admin": admin_user.model_dump()}
+        admin_data = {
+            "id": "admin",
+            "username": "MARIO",
+            "password": hash_password("MARIO"),  # Hash the password
+            "clientName": "LUIGGI MASTER DESIGN",
+            "isActive": True,
+            "isAdmin": True,
+            "isRepresentative": False,
+            "linkedRepresentativeId": None,
+            "allowedModules": ["montada", "despiece"],
+            "allowedCatalogIds": ["cat-m-base", "cat-d-base"],
+            "commercialDiscount": 45,
+            "canSeeCost": True,
+            "canSeeRetail": True,
+            "canUseAIAnalysis": True,
+            "canManageArticles": True,
+            "canViewTechnicalDespiece": True,
+            "useCustomBranding": True,
+            "canChangeLogo": True
+        }
+        await db.users.insert_one(admin_data)
+        return {"message": "Admin creado", "admin": user_to_response(admin_data)}
+    
+    # If admin exists with plain text password, update to hashed
+    if admin.get("password") and not admin["password"].startswith("$2"):
+        hashed = hash_password(admin["password"])
+        await db.users.update_one({"id": "admin"}, {"$set": {"password": hashed}})
+        return {"message": "Admin password actualizado a hash"}
     
     return {"message": "Admin ya existe"}
 
