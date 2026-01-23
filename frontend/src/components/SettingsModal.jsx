@@ -445,38 +445,27 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       setIsSaving(false);
     }
   };
-        )
-      }));
-    } else {
-      // Create new
-      const newMaterial = {
-        ...materialForm,
-        id: `mat-${Date.now()}`
-      };
-      setState(prev => ({
-        ...prev,
-        carcassMaterials: [...prev.carcassMaterials, newMaterial]
-      }));
-    }
 
-    setIsEditingMaterial(false);
-    setEditingMaterialId(null);
-  };
-
-  const handleDeleteMaterial = (materialId) => {
+  const handleDeleteMaterial = async (materialId) => {
     if (state.carcassMaterials.length <= 1) {
       alert('Debe existir al menos un material de armazón');
       return;
     }
     
     if (window.confirm('¿Eliminar este material de armazón?')) {
-      setState(prev => ({
-        ...prev,
-        carcassMaterials: prev.carcassMaterials.filter(m => m.id !== materialId),
-        selectedCarcassMaterialId: prev.selectedCarcassMaterialId === materialId 
-          ? prev.carcassMaterials[0].id 
-          : prev.selectedCarcassMaterialId
-      }));
+      try {
+        await materialsAPI.delete(materialId);
+        setState(prev => ({
+          ...prev,
+          carcassMaterials: prev.carcassMaterials.filter(m => m.id !== materialId),
+          selectedCarcassMaterialId: prev.selectedCarcassMaterialId === materialId 
+            ? prev.carcassMaterials[0].id 
+            : prev.selectedCarcassMaterialId
+        }));
+      } catch (err) {
+        alert('Error al eliminar material: ' + err.message);
+      }
+    }
     }
   };
 
