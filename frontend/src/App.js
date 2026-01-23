@@ -184,13 +184,16 @@ const App = () => {
                 </button>
               )}
               
-              <button 
-                onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
-                className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-              >
-                <Sparkles size={22}/>
-                <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
-              </button>
+              {/* Solo Admin y usuarios con canUseAIAnalysis pueden ver IA Lab */}
+              {(state.currentUser?.isAdmin || state.currentUser?.canUseAIAnalysis) && (
+                <button 
+                  onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                >
+                  <Sparkles size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
+                </button>
+              )}
               <button 
                 onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
                 className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
