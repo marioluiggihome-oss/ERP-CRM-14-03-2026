@@ -316,6 +316,7 @@ const App = () => {
             {state.currentTab === 'telemetry' && <TelemetryAI state={state} setState={setState} />}
             {state.currentTab === 'visualizer' && <Visualizer images={state.uploadedImages} state={state} setState={setState} />}
             {state.currentTab === 'library' && <ProjectLibrary state={state} setState={setState} />}
+            {state.currentTab === 'backup' && <BackupManager />}
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />
