@@ -162,7 +162,7 @@ CANTIDAD: x${item.quantity}
 ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
 `.trim();
 
-     return { total: finalPrice, breakdown, hasExtras: (carcassCost > 0 || cutsCost > 0) };
+     return { total: finalPrice, breakdown, hasExtras: (carcassCost > 0 || cutsCost > 0), usedPoints };
   }, [state.globalFinish, state.currentModule, state.pointValueMontada, state.pointValueDespiece, state.specialIncrementWidth, state.specialIncrementHeight, state.specialIncrementDepth, state.showDistributorPrice, state.currentUser?.commercialDiscount, state.selectedCarcassMaterialId, state.carcassMaterials]);
 
 
