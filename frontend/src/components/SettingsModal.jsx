@@ -153,10 +153,19 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         </div>
 
         {/* Tabs */}
-        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2">
+        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+              activeTab === 'users' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
+            }`}
+          >
+            <Users size={14} className="inline mr-2" />
+            Red Distribución
+          </button>
           <button
             onClick={() => setActiveTab('pricing')}
-            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
               activeTab === 'pricing' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
             }`}
           >
@@ -165,7 +174,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           </button>
           <button
             onClick={() => setActiveTab('identity')}
-            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
               activeTab === 'identity' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white'
             }`}
           >
