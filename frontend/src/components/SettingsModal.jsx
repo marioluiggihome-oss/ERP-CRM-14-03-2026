@@ -157,6 +157,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       alert('No puedes eliminar el usuario administrador principal');
       return;
     }
+    
+    // Comerciales solo pueden eliminar tiendas asignadas a ellos
+    if (!state.currentUser?.isAdmin && state.currentUser?.isRepresentative) {
+      const userToDelete = state.users.find(u => u.id === userId);
+      if (userToDelete && userToDelete.linkedRepresentativeId !== state.currentUser.id) {
+        alert('No tienes permisos para eliminar este usuario');
+        return;
+      }
+    }
+    
     if (window.confirm('¿Estás seguro de eliminar este usuario?')) {
       setState(prev => ({
         ...prev,
