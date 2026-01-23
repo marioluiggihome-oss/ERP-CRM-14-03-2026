@@ -32,9 +32,14 @@ const App = () => {
       specialIncrementWidth: 45,
       specialIncrementHeight: 45,
       specialIncrementDepth: 45,
-      catalogs: initialCatalogs, 
-      activeCatalogIds: initialCatalogs.map(c => c.id),
-      users: [adminUser], 
+      catalogs: [
+        { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: [], module: 'montada' },
+        { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: [], module: 'despiece' }
+      ], 
+      activeCatalogIds: ['cat-m-base', 'cat-d-base'],
+      users: [], 
+      carcassMaterials: [],
+      selectedCarcassMaterialId: null,
       customerName: '', customerAddress: '', 
       budgetNumber: `EXP-2026-001`, 
       internalReference: '', logo: null,
@@ -43,51 +48,90 @@ const App = () => {
       brandColor: DEFAULT_BRAND_COLOR
     };
 
+    // Load budget items from localStorage (these stay local)
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const loadedCatalogs = parsed.catalogs && parsed.catalogs.length > 0 ? parsed.catalogs : initialCatalogs;
-        const sanitizedCatalogs = loadedCatalogs.map((cat) => ({
-          ...cat,
-          products: cat.products.map((p) => {
-            let cleanPoints = p.points;
-            if (typeof p.points === 'object' && p.points !== null) {
-              cleanPoints = p.points.Z1 || p.points.points || 0;
-            }
-            return { ...p, points: Number(cleanPoints) || 0 };
-          })
-        }));
-
-        // Asegurar que el admin siempre tenga las credenciales actuales
-        const updatedUsers = parsed.users ? parsed.users.map(u => 
-          u.id === 'admin' ? { ...u, ...adminUser } : u
-        ) : [adminUser];
-
         return { 
           ...defaultState,
-          ...parsed, 
-          uploadedImages: [], 
-          currentUser: null, 
-          catalogs: sanitizedCatalogs,
-          users: updatedUsers,
-          brandColor: parsed.brandColor || DEFAULT_BRAND_COLOR
+          budgetItemsMontada: parsed.budgetItemsMontada || [],
+          budgetItemsDespiece: parsed.budgetItemsDespiece || [],
+          projects: parsed.projects || [],
+          customerName: parsed.customerName || '',
+          customerAddress: parsed.customerAddress || '',
+          budgetNumber: parsed.budgetNumber || 'EXP-2026-001',
+          internalReference: parsed.internalReference || '',
+          budgetCount: parsed.budgetCount || 0
         };
       }
     } catch (e) {
-      console.error("Error persistencia:", e);
+      console.error("Error loading local data:", e);
     }
     return defaultState;
   });
 
+  // Load data from API on mount
   useEffect(() => {
-    const { currentUser, uploadedImages, ...toSave } = state; 
+    const loadData = async () => {
+      try {
+        // Init admin if needed
+        await authAPI.init();
+        
+        // Load users, products, materials, settings
+        const [users, productsMontada, productsDespiece, materials, settings] = await Promise.all([
+          usersAPI.getAll(),
+          productsAPI.getAll('montada'),
+          productsAPI.getAll('despiece'),
+          materialsAPI.getAll(),
+          settingsAPI.get()
+        ]);
+
+        setState(prev => ({
+          ...prev,
+          users,
+          catalogs: [
+            { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: productsMontada, module: 'montada' },
+            { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: productsDespiece, module: 'despiece' }
+          ],
+          carcassMaterials: materials.length > 0 ? materials : [{ id: 'mat-blanco', name: 'Blanco', fixedIncrement: 0, thickness: 16 }],
+          selectedCarcassMaterialId: materials.length > 0 ? materials[0].id : 'mat-blanco',
+          pointValueMontada: settings.pointValueMontada || 1.0,
+          pointValueDespiece: settings.pointValueDespiece || 0.88,
+          specialIncrementWidth: settings.specialIncrementWidth || 45,
+          specialIncrementHeight: settings.specialIncrementHeight || 45,
+          specialIncrementDepth: settings.specialIncrementDepth || 45,
+          brandColor: settings.brandColor || DEFAULT_BRAND_COLOR,
+          logo: settings.logo || null
+        }));
+      } catch (err) {
+        console.error("Error loading data from API:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Save budget items to localStorage (these stay local for now)
+  useEffect(() => {
+    const { budgetItemsMontada, budgetItemsDespiece, projects, customerName, customerAddress, budgetNumber, internalReference, budgetCount } = state;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        budgetItemsMontada,
+        budgetItemsDespiece,
+        projects,
+        customerName,
+        customerAddress,
+        budgetNumber,
+        internalReference,
+        budgetCount
+      }));
     } catch (err) {
       console.error("Storage error:", err);
     }
-  }, [state]);
+  }, [state.budgetItemsMontada, state.budgetItemsDespiece, state.projects, state.customerName, state.customerAddress, state.budgetNumber, state.internalReference, state.budgetCount]);
 
   const activeBrandColor = useMemo(() => {
     return state.brandColor || DEFAULT_BRAND_COLOR;
@@ -97,7 +141,7 @@ const App = () => {
     setState(prev => ({ 
       ...prev, 
       currentUser: user,
-      currentModule: user.allowedModules[0] || 'montada'
+      currentModule: user.allowedModules?.[0] || 'montada'
     }));
   };
 
