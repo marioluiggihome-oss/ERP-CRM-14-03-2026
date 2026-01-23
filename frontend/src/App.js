@@ -9,7 +9,7 @@ import ManufacturingReport from './components/ManufacturingReport';
 import Login from './components/Login';
 import TelemetryAI from './components/TelemetryAI';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI } from './services/api';
-import { DOOR_FINISHES, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
+import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 
 const App = () => {
   const [isManufacturingView, setIsManufacturingView] = useState(false);
