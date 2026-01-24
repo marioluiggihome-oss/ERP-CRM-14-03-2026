@@ -1524,137 +1524,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   )}
                 </>
               ) : (
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors"
-                        data-testid="add-client-btn"
-                      >
-                        <Plus size={14} />
-                        Nuevo Cliente
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Import result message */}
-                  {importResult && (
-                    <div className={`p-4 rounded-xl text-sm font-medium ${importResult.error ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                      {importResult.error ? (
-                        `Error: ${importResult.error}`
-                      ) : (
-                        `Importación completada: ${importResult.imported} nuevos, ${importResult.updated} actualizados${importResult.errors?.length ? `, ${importResult.errors.length} errores` : ''}`
-                      )}
-                      <button onClick={() => setImportResult(null)} className="ml-2 underline">Cerrar</button>
-                    </div>
-                  )}
-
-                  {/* Loading state */}
-                  {isImportingClients && (
-                    <div className="flex items-center gap-2 text-emerald-600">
-                      <Loader size={16} className="animate-spin" />
-                      <span className="text-sm font-medium">Importando clientes...</span>
-                    </div>
-                  )}
-
-                  {/* Clients table */}
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Código</th>
-                          <th className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Nombre</th>
-                          <th className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">CIF</th>
-                          <th className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Localidad</th>
-                          <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">Dto%</th>
-                          <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">Estado</th>
-                          <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {clients
-                          .filter(c => {
-                            if (!clientSearch) return true;
-                            const q = clientSearch.toLowerCase();
-                            return c.codigo?.toLowerCase().includes(q) ||
-                                   c.nombre?.toLowerCase().includes(q) ||
-                                   c.cif?.toLowerCase().includes(q) ||
-                                   c.localidad?.toLowerCase().includes(q);
-                          })
-                          .map(client => (
-                            <tr key={client.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-4 py-3">
-                                <span className="font-mono font-bold text-emerald-600">{client.codigo}</span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="font-bold text-slate-900">{client.nombre}</span>
-                              </td>
-                              <td className="px-4 py-3 text-slate-600 text-sm">{client.cif || '-'}</td>
-                              <td className="px-4 py-3 text-slate-600 text-sm">{client.localidad || '-'}</td>
-                              <td className="px-4 py-3 text-center">
-                                {client.descuento > 0 ? (
-                                  <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-bold">{client.descuento}%</span>
-                                ) : '-'}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${client.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                  {client.activo ? 'Activo' : 'Inactivo'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex justify-center gap-1">
-                                  <button
-                                    onClick={() => {
-                                      setIsEditingClient(true);
-                                      setEditingClientId(client.id);
-                                      setClientForm({ ...client });
-                                    }}
-                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                    title="Editar"
-                                  >
-                                    <Pencil size={14} />
-                                  </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (!window.confirm(`¿Eliminar cliente "${client.nombre}"?`)) return;
-                                      try {
-                                        await clientsAPI.delete(client.id);
-                                        loadClients();
-                                      } catch (err) {
-                                        alert(err.message);
-                                      }
-                                    }}
-                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Eliminar"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                    
-                    {clients.length === 0 && (
-                      <div className="p-8 text-center text-slate-400">
-                        <Building2 size={40} className="mx-auto mb-3 opacity-50" />
-                        <p className="font-medium">No hay clientes registrados</p>
-                        <p className="text-sm">Añade clientes manualmente o importa desde CSV</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CSV Format info */}
-                  <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600">
-                    <p className="font-bold text-slate-700 mb-2">Formato CSV para importación:</p>
-                    <code className="text-xs bg-white px-2 py-1 rounded border">
-                      codigo;nombre;cif;direccion;localidad;provincia;cp;telefono;email;descuento;activo;notas
-                    </code>
-                  </div>
-                </>
-              ) : (
                 /* Client Edit Form */
                 <div className="bg-white rounded-xl border border-slate-200 p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-lg font-black text-slate-900 uppercase">
-                      {editingClientId ? 'Editar Cliente' : 'Nuevo Cliente'}
+                      {editingClientId ? 'Editar Cliente' : clientForm.tipo === 'activo' ? 'Nuevo Cliente Activo' : 'Nuevo Cliente Potencial'}
                     </h3>
                     <button
                       onClick={() => {
@@ -1668,18 +1542,49 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
+                    {/* Tipo y Segmento */}
                     <div>
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Código *</label>
-                      <input
-                        type="text"
-                        value={clientForm.codigo}
-                        onChange={(e) => setClientForm(p => ({ ...p, codigo: e.target.value.toUpperCase() }))}
-                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono font-bold focus:outline-none focus:border-emerald-500"
-                        placeholder="CLI001"
-                        data-testid="client-codigo"
-                      />
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Tipo de Cliente *</label>
+                      <select
+                        value={clientForm.tipo}
+                        onChange={(e) => setClientForm(p => ({ ...p, tipo: e.target.value }))}
+                        className={`w-full mt-1 px-3 py-2 border rounded-lg text-sm font-bold focus:outline-none ${
+                          clientForm.tipo === 'activo' ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'
+                        }`}
+                      >
+                        <option value="potencial">🟠 Potencial</option>
+                        <option value="activo">🟢 Activo</option>
+                      </select>
                     </div>
                     <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Segmento</label>
+                      <select
+                        value={clientForm.segmento}
+                        onChange={(e) => setClientForm(p => ({ ...p, segmento: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="">Seleccionar segmento...</option>
+                        {clientSegments.map(seg => (
+                          <option key={seg} value={seg}>{seg}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Código (solo si es activo) */}
+                    {clientForm.tipo === 'activo' && (
+                      <div>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Código *</label>
+                        <input
+                          type="text"
+                          value={clientForm.codigo}
+                          onChange={(e) => setClientForm(p => ({ ...p, codigo: e.target.value.toUpperCase() }))}
+                          className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono font-bold focus:outline-none focus:border-emerald-500"
+                          placeholder="CLI001"
+                          data-testid="client-codigo"
+                        />
+                      </div>
+                    )}
+                    <div className={clientForm.tipo === 'activo' ? '' : 'col-span-2'}>
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">CIF/NIF</label>
                       <input
                         type="text"
@@ -1689,6 +1594,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         placeholder="B12345678"
                       />
                     </div>
+
                     <div className="col-span-2">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Nombre / Razón Social *</label>
                       <input
@@ -1700,6 +1606,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         data-testid="client-nombre"
                       />
                     </div>
+
                     <div className="col-span-2">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Dirección</label>
                       <input
@@ -1710,6 +1617,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         placeholder="Calle Mayor, 123"
                       />
                     </div>
+
                     <div>
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Localidad</label>
                       <input
@@ -1780,7 +1688,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${clientForm.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
                       >
                         {clientForm.activo ? <CheckSquare size={16} /> : <Square size={16} />}
-                        {clientForm.activo ? 'Activo' : 'Inactivo'}
+                        {clientForm.activo ? 'Habilitado' : 'Deshabilitado'}
                       </button>
                     </div>
                     <div className="col-span-2">
@@ -1808,8 +1716,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </button>
                     <button
                       onClick={async () => {
-                        if (!clientForm.codigo || !clientForm.nombre) {
-                          alert('Código y Nombre son obligatorios');
+                        if (!clientForm.nombre) {
+                          alert('El nombre es obligatorio');
+                          return;
+                        }
+                        if (clientForm.tipo === 'activo' && !clientForm.codigo) {
+                          alert('El código es obligatorio para clientes activos');
                           return;
                         }
                         
@@ -1830,7 +1742,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         }
                       }}
                       disabled={isSavingClient}
-                      className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg text-sm font-bold transition-colors"
+                      className={`flex items-center gap-2 px-6 py-2 text-white rounded-lg text-sm font-bold transition-colors ${
+                        clientForm.tipo === 'activo' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-500 hover:bg-orange-600'
+                      }`}
                       data-testid="save-client-btn"
                     >
                       {isSavingClient ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
