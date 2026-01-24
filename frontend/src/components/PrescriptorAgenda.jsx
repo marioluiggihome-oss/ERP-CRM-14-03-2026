@@ -59,8 +59,23 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
     if (currentUser?.id) {
       loadContacts();
       loadCalendarNotes();
+      loadSystemLogo();
     }
   }, [currentUser?.id]);
+
+  const loadSystemLogo = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/settings`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.logo) {
+          setSystemLogo(data.logo);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading system logo:', err);
+    }
+  };
 
   useEffect(() => {
     if (currentUser?.id) {
