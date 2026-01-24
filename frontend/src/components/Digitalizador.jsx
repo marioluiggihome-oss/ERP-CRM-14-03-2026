@@ -315,8 +315,88 @@ const Digitalizador = ({ state }) => {
     setArmazon('');
     setCostados('');
     setError(null);
+    setOpportunityCreated(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  // Open CRM modal with pre-filled data
+  const openCRMModal = () => {
+    setCrmContactName(customerName || '');
+    setCrmContactEmail(customerEmail || '');
+    setCrmContactPhone(customerPhone || '');
+    setCrmCompany('');
+    setShowCRMModal(true);
+  };
+
+  // Create opportunity in CRM
+  const handleCreateOpportunity = async () => {
+    if (lines.length === 0) {
+      setError('No hay líneas en el presupuesto');
+      return;
+    }
+
+    setIsCreatingOpportunity(true);
+    setError(null);
+
+    try {
+      // First, create or find a contact
+      const contactResponse = await fetch(`${API_URL}/api/crm/contacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: crmContactName || customerName || 'Cliente sin nombre',
+          email: crmContactEmail || customerEmail || '',
+          phone: crmContactPhone || customerPhone || '',
+          company: crmCompany || '',
+          type: 'lead',
+          source: 'digitalizador',
+          notes: `Contacto creado desde Digitalizador de Borradores - Proyecto: ${projectName || 'Sin nombre'}`
+        })
+      });
+
+      if (!contactResponse.ok) {
+        throw new Error('Error al crear contacto');
+      }
+
+      const contact = await contactResponse.json();
+
+      // Now create the opportunity
+      const opportunityResponse = await fetch(`${API_URL}/api/crm/opportunities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: projectName || `Presupuesto ${crmContactName || customerName || 'Cliente'}`,
+          description: `Presupuesto digitalizado - ${lines.length} líneas\nAcabado: ${acabado || 'N/A'}\nArmazón: ${armazon || 'N/A'}\nCostados: ${costados || 'N/A'}`,
+          contactId: contact.id,
+          contactName: contact.name,
+          company: crmCompany || contact.company || '',
+          value: totals.total,
+          probability: 30,
+          stage: 'lead',
+          notes: `Creado desde Digitalizador de Borradores\nBase imponible: ${totals.baseImponible.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}\nIVA (${ivaRate}%): ${totals.iva.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`,
+          tags: ['digitalizador', 'presupuesto'],
+          assignedTo: state.currentUser?.id || ''
+        })
+      });
+
+      if (!opportunityResponse.ok) {
+        throw new Error('Error al crear oportunidad');
+      }
+
+      const opportunity = await opportunityResponse.json();
+      
+      setOpportunityCreated(opportunity);
+      setSuccessMessage(`¡Oportunidad "${opportunity.title}" creada en el CRM!`);
+      setShowCRMModal(false);
+      
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err) {
+      console.error('Create opportunity error:', err);
+      setError(err.message);
+    } finally {
+      setIsCreatingOpportunity(false);
     }
   };
 
