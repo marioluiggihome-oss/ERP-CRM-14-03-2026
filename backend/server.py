@@ -937,11 +937,6 @@ async def import_clients_csv(data: dict):
         "total": len(clients_data)
     }
 
-@api_router.get("/clients/segments")
-async def get_client_segments():
-    """Obtener lista de segmentos de clientes disponibles"""
-    return {"segments": CLIENT_SEGMENTS}
-
 @api_router.post("/clients/from-contact/{contact_id}")
 async def create_client_from_contact(contact_id: str):
     """Convertir un contacto del CRM en cliente potencial"""
