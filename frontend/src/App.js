@@ -332,6 +332,18 @@ const App = () => {
                   <span className="text-[7px] font-black uppercase tracking-widest">Copia Seguridad</span>
                 </button>
               )}
+              
+              {/* Solo Admin puede ver Mantenimiento */}
+              {state.currentUser?.isAdmin && (
+                <button 
+                  onClick={() => setShowMaintenancePanel(true)} 
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all text-slate-500 hover:text-white hover:bg-white/10"
+                  data-testid="maintenance-nav-btn"
+                >
+                  <Wrench size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Mantenimiento</span>
+                </button>
+              )}
             </div>
 
             <div className="mt-auto flex flex-col gap-6 w-full px-2">
