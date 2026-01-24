@@ -194,6 +194,44 @@ const ProjectLibrary = ({ state, setState }) => {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Filtros de estado */}
+          <div className="flex bg-white rounded-xl border-2 border-indigo-100 p-1" data-testid="project-filter">
+            <button
+              onClick={() => setViewFilter('active')}
+              className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${
+                viewFilter === 'active' 
+                  ? 'bg-indigo-600 text-white shadow-md' 
+                  : 'text-slate-500 hover:bg-indigo-50'
+              }`}
+              data-testid="filter-active"
+            >
+              Activos ({projectCounts.active})
+            </button>
+            <button
+              onClick={() => setViewFilter('archived')}
+              className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${
+                viewFilter === 'archived' 
+                  ? 'bg-slate-600 text-white shadow-md' 
+                  : 'text-slate-500 hover:bg-slate-100'
+              }`}
+              data-testid="filter-archived"
+            >
+              <Archive size={14} className="inline mr-1" />
+              Archivados ({projectCounts.archived})
+            </button>
+            <button
+              onClick={() => setViewFilter('all')}
+              className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${
+                viewFilter === 'all' 
+                  ? 'bg-orange-500 text-white shadow-md' 
+                  : 'text-slate-500 hover:bg-orange-50'
+              }`}
+              data-testid="filter-all"
+            >
+              Todos ({projectCounts.all})
+            </button>
+          </div>
+
           {/* Buscar */}
           <div className="relative w-72">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={16} />
@@ -203,6 +241,7 @@ const ProjectLibrary = ({ state, setState }) => {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full bg-white border-2 border-indigo-100 rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold outline-none focus:border-indigo-500 uppercase"
+              data-testid="search-projects"
             />
           </div>
 
@@ -212,6 +251,7 @@ const ProjectLibrary = ({ state, setState }) => {
             disabled={isLoading}
             className="p-2.5 bg-white border-2 border-indigo-100 text-indigo-600 rounded-xl hover:bg-indigo-50 transition-all"
             title="Refrescar lista"
+            data-testid="refresh-projects"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
@@ -221,6 +261,7 @@ const ProjectLibrary = ({ state, setState }) => {
             onClick={saveCurrentBudget}
             disabled={isSaving}
             className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg disabled:opacity-50"
+            data-testid="save-current-budget"
           >
             {isSaving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />}
             Guardar Actual
