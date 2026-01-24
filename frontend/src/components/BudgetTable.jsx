@@ -13,6 +13,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [isConfigOpen, setIsConfigOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [catalogHeight, setCatalogHeight] = useState(300);
+  const [isDespieceOpen, setIsDespieceOpen] = useState(false);
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
 
