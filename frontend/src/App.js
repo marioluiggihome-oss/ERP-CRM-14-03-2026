@@ -229,6 +229,22 @@ const App = () => {
             </div>
             
             <div className="flex flex-col gap-6 flex-1 w-full px-2">
+              {/* CRM - Solo visible para Admin o usuarios con canAccessCRM */}
+              {(state.currentUser?.isAdmin || state.currentUser?.canAccessCRM) && (
+                <button 
+                  onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
+                    state.currentTab?.startsWith('crm-') 
+                      ? 'bg-indigo-600 text-white shadow-xl scale-110' 
+                      : 'text-slate-500 hover:text-white hover:bg-white/10'
+                  }`}
+                  data-testid="crm-dashboard-nav"
+                >
+                  <Target size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">CRM</span>
+                </button>
+              )}
+
               <button 
                 onClick={() => setState(p => ({...p, currentTab: 'budget'}))} 
                 className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -264,22 +280,6 @@ const App = () => {
                 >
                   <HardDrive size={22}/>
                   <span className="text-[7px] font-black uppercase tracking-widest">Copia Seguridad</span>
-                </button>
-              )}
-
-              {/* CRM - Solo visible para Admin o usuarios con canAccessCRM */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canAccessCRM) && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
-                    state.currentTab?.startsWith('crm-') 
-                      ? 'bg-indigo-600 text-white shadow-xl scale-110' 
-                      : 'text-slate-500 hover:text-white hover:bg-white/10'
-                  }`}
-                  data-testid="crm-dashboard-nav"
-                >
-                  <Target size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">CRM</span>
                 </button>
               )}
             </div>
