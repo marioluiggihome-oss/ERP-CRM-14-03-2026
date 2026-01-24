@@ -484,3 +484,36 @@ El prescriptor tiene un calendario simple donde puede añadir notas en fechas es
 - Solo hay GOLA - ALTOS, SEMICOLUMNAS y COLUMNAS
 - Necesitan ser importados usando el Importador de Catálogo IA
 
+
+## Nueva Sección: Diseñador de Armarios (24/01/2026)
+
+### Funcionalidades
+- **Configurador visual 2D** con vista previa en tiempo real
+- **Dimensiones**: Ancho (1000-6000mm), Alto (1800-3000mm), Fondo (400-900mm)
+- **Módulos**: 1-8 módulos independientes
+- **Tipos de puerta**: Abatible, Corredera, Plegable
+- **Colores FINSA**: Paleta completa (básicos, grises, negros, maderas, texturas)
+- **Configuración por módulo**: Baldas, Cajones, Barras de colgar
+- **Extras**: Cierre suave, Anti-huella, LED, Espejo
+
+### Permisos
+- Campo `canAccessArmarios` en modelo de usuario
+- Solo visible para Admin o usuarios con permiso activado
+- Configurable desde Panel Master > Red Distribución
+
+### Precios
+- Estructura base: 450€/m²
+- Sistema puertas corredera: +180€/m²
+- Sistema puertas plegable: +250€/m²
+- Baldas: 25€/unidad
+- Cajones: 85€/unidad
+- Barras: 35€/unidad
+- Cierre suave: 45€/módulo
+- Anti-huella: 80€/m²
+- LED: 120€/módulo
+- Espejo: 200€
+
+### Archivos
+- `/app/frontend/src/components/Armarios.jsx`
+- Backend: Campo `canAccessArmarios` en UserModel
+
