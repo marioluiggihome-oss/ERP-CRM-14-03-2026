@@ -110,6 +110,56 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
   };
 
+  // Backup states
+  const [backups, setBackups] = useState([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+
+  // Load backups when tab is active
+  useEffect(() => {
+    if (isOpen && activeTab === 'backups') {
+      loadBackups();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadBackups = async () => {
+    setLoadingBackups(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backups`);
+      const data = await response.json();
+      setBackups(data);
+    } catch (err) {
+      console.error('Error loading backups:', err);
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
+  const createManualBackup = async () => {
+    setCreatingBackup(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backups/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: 'manual',
+          createdBy: state.currentUser?.username || 'admin'
+        })
+      });
+      if (response.ok) {
+        await loadBackups();
+        alert('✅ Backup creado correctamente');
+      } else {
+        throw new Error('Error al crear backup');
+      }
+    } catch (err) {
+      console.error('Error creating backup:', err);
+      alert('Error al crear backup');
+    } finally {
+      setCreatingBackup(false);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen || activeTab !== 'telemetry') return;
     const loadCodes = async () => {
