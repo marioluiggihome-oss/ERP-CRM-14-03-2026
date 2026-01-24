@@ -1148,9 +1148,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             <div className="space-y-6">
               {!isEditingClient ? (
                 <>
-                  {/* Header with search and add button */}
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-4">
+                  {/* Header with filters */}
+                  <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <div className="relative">
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
@@ -1158,34 +1158,51 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           placeholder="Buscar cliente..."
                           value={clientSearch}
                           onChange={(e) => setClientSearch(e.target.value)}
-                          className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 w-64"
+                          className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 w-56"
                         />
                       </div>
-                      <span className="text-sm text-slate-500 font-medium">
-                        {clients.length} clientes
-                      </span>
+                      
+                      {/* Filtro por tipo */}
+                      <select
+                        value={clientFilterType}
+                        onChange={(e) => setClientFilterType(e.target.value)}
+                        className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="todos">Todos</option>
+                        <option value="potencial">🟠 Potenciales</option>
+                        <option value="activo">🟢 Activos</option>
+                      </select>
+                      
+                      {/* Filtro por segmento */}
+                      <select
+                        value={clientFilterSegment}
+                        onChange={(e) => setClientFilterSegment(e.target.value)}
+                        className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="">Todos los segmentos</option>
+                        {clientSegments.map(seg => (
+                          <option key={seg} value={seg}>{seg}</option>
+                        ))}
+                      </select>
                     </div>
+                    
                     <div className="flex gap-2">
-                      {/* Import CSV button */}
-                      <label className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors">
+                      <label className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase cursor-pointer transition-colors">
                         <Upload size={14} />
                         Importar CSV
                         <input
                           type="file"
-                          accept=".csv,.xlsx,.xls"
+                          accept=".csv"
                           className="hidden"
                           onChange={async (e) => {
                             const file = e.target.files[0];
                             if (!file) return;
-                            
                             setIsImportingClients(true);
                             setImportResult(null);
-                            
                             try {
                               const text = await file.text();
                               const lines = text.split('\n').filter(l => l.trim());
                               const headers = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase());
-                              
                               const clientsData = lines.slice(1).map(line => {
                                 const values = line.split(/[,;]/);
                                 const client = {};
@@ -1195,7 +1212,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 });
                                 return client;
                               });
-                              
                               const result = await clientsAPI.importCSV(clientsData);
                               setImportResult(result);
                               loadClients();
@@ -1209,14 +1225,17 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         />
                       </label>
                       
+                      {/* Nuevo Cliente Potencial */}
                       <button
                         onClick={() => {
                           setIsEditingClient(true);
                           setEditingClientId(null);
                           setClientForm({
+                            tipo: 'potencial',
                             codigo: '',
                             nombre: '',
                             cif: '',
+                            segmento: '',
                             direccion: '',
                             localidad: '',
                             provincia: '',
@@ -1228,6 +1247,283 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             notas: ''
                           });
                         }}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold uppercase transition-colors"
+                      >
+                        <Plus size={14} />
+                        Potencial
+                      </button>
+                      
+                      {/* Nuevo Cliente Activo */}
+                      <button
+                        onClick={() => {
+                          setIsEditingClient(true);
+                          setEditingClientId(null);
+                          setClientForm({
+                            tipo: 'activo',
+                            codigo: '',
+                            nombre: '',
+                            cif: '',
+                            segmento: '',
+                            direccion: '',
+                            localidad: '',
+                            provincia: '',
+                            codigoPostal: '',
+                            telefono: '',
+                            email: '',
+                            descuento: 0,
+                            activo: true,
+                            notas: ''
+                          });
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase transition-colors"
+                        data-testid="add-client-btn"
+                      >
+                        <Plus size={14} />
+                        Activo
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-slate-700">{clients.length}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
+                    </div>
+                    <div className="bg-orange-50 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-orange-600">{clients.filter(c => c.tipo === 'potencial').length}</p>
+                      <p className="text-[10px] font-bold text-orange-400 uppercase">Potenciales</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-emerald-600">{clients.filter(c => c.tipo === 'activo').length}</p>
+                      <p className="text-[10px] font-bold text-emerald-400 uppercase">Activos</p>
+                    </div>
+                  </div>
+
+                  {importResult && (
+                    <div className={`p-4 rounded-xl text-sm font-medium ${importResult.error ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      {importResult.error ? `Error: ${importResult.error}` : `Importación: ${importResult.imported} nuevos, ${importResult.updated} actualizados`}
+                      <button onClick={() => setImportResult(null)} className="ml-2 underline">Cerrar</button>
+                    </div>
+                  )}
+
+                  {/* Clients table */}
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="px-3 py-3 text-left text-[10px] font-black text-slate-500 uppercase">Tipo</th>
+                          <th className="px-3 py-3 text-left text-[10px] font-black text-slate-500 uppercase">Código</th>
+                          <th className="px-3 py-3 text-left text-[10px] font-black text-slate-500 uppercase">Nombre</th>
+                          <th className="px-3 py-3 text-left text-[10px] font-black text-slate-500 uppercase">Segmento</th>
+                          <th className="px-3 py-3 text-left text-[10px] font-black text-slate-500 uppercase">Localidad</th>
+                          <th className="px-3 py-3 text-center text-[10px] font-black text-slate-500 uppercase">Dto%</th>
+                          <th className="px-3 py-3 text-center text-[10px] font-black text-slate-500 uppercase">Vinculado</th>
+                          <th className="px-3 py-3 text-center text-[10px] font-black text-slate-500 uppercase">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {clients
+                          .filter(c => {
+                            if (clientFilterType !== 'todos' && c.tipo !== clientFilterType) return false;
+                            if (clientFilterSegment && c.segmento !== clientFilterSegment) return false;
+                            if (!clientSearch) return true;
+                            const q = clientSearch.toLowerCase();
+                            return c.codigo?.toLowerCase().includes(q) ||
+                                   c.nombre?.toLowerCase().includes(q) ||
+                                   c.cif?.toLowerCase().includes(q) ||
+                                   c.localidad?.toLowerCase().includes(q);
+                          })
+                          .map(client => (
+                            <tr key={client.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-3 py-2">
+                                <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
+                                  client.tipo === 'activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {client.tipo === 'activo' ? '🟢 ACTIVO' : '🟠 POTENCIAL'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className="font-mono font-bold text-indigo-600">{client.codigo || '-'}</span>
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className="font-bold text-slate-900 text-sm">{client.nombre}</span>
+                                {client.cif && <p className="text-[10px] text-slate-400">{client.cif}</p>}
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className="text-xs text-slate-600">{client.segmento || '-'}</span>
+                              </td>
+                              <td className="px-3 py-2 text-slate-600 text-xs">{client.localidad || '-'}</td>
+                              <td className="px-3 py-2 text-center">
+                                {client.descuento > 0 ? (
+                                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-bold">{client.descuento}%</span>
+                                ) : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                {client.usuarioVinculadoId ? (
+                                  <span className="text-emerald-600 text-xs font-bold">✓ Sí</span>
+                                ) : (
+                                  <span className="text-slate-300 text-xs">No</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="flex justify-center gap-1">
+                                  {/* Activar (solo si es potencial) */}
+                                  {client.tipo === 'potencial' && (
+                                    <button
+                                      onClick={() => { setShowActivateModal(client); setActivateCode(''); }}
+                                      className="p-1.5 text-orange-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                      title="Activar cliente"
+                                    >
+                                      <CheckCircle size={14} />
+                                    </button>
+                                  )}
+                                  {/* Vincular usuario */}
+                                  <button
+                                    onClick={() => { setShowLinkUserModal(client); setLinkUserId(client.usuarioVinculadoId || ''); }}
+                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                    title="Vincular usuario"
+                                  >
+                                    <UserPlus size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setIsEditingClient(true);
+                                      setEditingClientId(client.id);
+                                      setClientForm({ ...client });
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                    title="Editar"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (!window.confirm(`¿Eliminar cliente "${client.nombre}"?`)) return;
+                                      try {
+                                        await clientsAPI.delete(client.id);
+                                        loadClients();
+                                      } catch (err) {
+                                        alert(err.message);
+                                      }
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    
+                    {clients.length === 0 && (
+                      <div className="p-8 text-center text-slate-400">
+                        <Building2 size={40} className="mx-auto mb-3 opacity-50" />
+                        <p className="font-medium">No hay clientes registrados</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modal Activar Cliente */}
+                  {showActivateModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                        <h3 className="text-lg font-black text-emerald-700 uppercase mb-4">Activar Cliente</h3>
+                        <p className="text-sm text-slate-600 mb-4">
+                          Asigna un código del programa de gestión para activar a <strong>{showActivateModal.nombre}</strong>
+                        </p>
+                        <div className="mb-4">
+                          <label className="text-xs font-black text-slate-500 uppercase block mb-1">Código de Cliente *</label>
+                          <input
+                            type="text"
+                            value={activateCode}
+                            onChange={(e) => setActivateCode(e.target.value.toUpperCase())}
+                            placeholder="Ej: CLI001"
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-mono font-bold text-center focus:outline-none focus:border-emerald-500"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setShowActivateModal(null)}
+                            className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!activateCode.trim()) {
+                                alert('El código es obligatorio');
+                                return;
+                              }
+                              try {
+                                await clientsAPI.activate(showActivateModal.id, activateCode);
+                                setShowActivateModal(null);
+                                loadClients();
+                              } catch (err) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold"
+                          >
+                            Activar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Modal Vincular Usuario */}
+                  {showLinkUserModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                        <h3 className="text-lg font-black text-indigo-700 uppercase mb-4">Vincular Usuario</h3>
+                        <p className="text-sm text-slate-600 mb-4">
+                          Vincula un usuario del sistema a <strong>{showLinkUserModal.nombre}</strong>
+                        </p>
+                        <div className="mb-4">
+                          <label className="text-xs font-black text-slate-500 uppercase block mb-1">Usuario</label>
+                          <select
+                            value={linkUserId}
+                            onChange={(e) => setLinkUserId(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-indigo-500"
+                          >
+                            <option value="">Sin vincular</option>
+                            {state.users.map(u => (
+                              <option key={u.id} value={u.id}>{u.username} ({u.clientName})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setShowLinkUserModal(null)}
+                            className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await clientsAPI.linkUser(showLinkUserModal.id, linkUserId);
+                                setShowLinkUserModal(null);
+                                loadClients();
+                              } catch (err) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold"
+                          >
+                            Guardar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors"
                         data-testid="add-client-btn"
                       >
