@@ -26,6 +26,24 @@ export const authAPI = {
 };
 
 // ============================================
+// EXPEDIENT (CONTADOR CORRELATIVO)
+// ============================================
+
+export const expedientAPI = {
+  getNext: async () => {
+    const response = await fetch(`${API_URL}/api/expedient/next`);
+    if (!response.ok) throw new Error('Error al obtener número de expediente');
+    return response.json();
+  },
+  
+  getCurrent: async () => {
+    const response = await fetch(`${API_URL}/api/expedient/current`);
+    if (!response.ok) throw new Error('Error al obtener info de expediente');
+    return response.json();
+  }
+};
+
+// ============================================
 // USERS
 // ============================================
 
