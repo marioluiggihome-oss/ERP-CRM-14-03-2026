@@ -410,28 +410,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                 customerName: state.customerName,
                 customerAddress: state.customerAddress,
                 internalReference: state.internalReference,
-                itemsMontada: state.budgetItemsMontada.map(item => {
-                  const product = allProducts.find(p => p.id === item.productId);
-                  const details = calculateLineDetails(item, product);
-                  return {
-                    ...item,
-                    productCode: item.customReference || product?.code || 'MANUAL',
-                    productName: item.isManual ? item.manualDescription : product?.name || 'Producto',
-                    unitPoints: details.usedPoints,
-                    totalPoints: details.usedPoints * item.quantity
-                  };
-                }),
-                itemsDespiece: state.budgetItemsDespiece.map(item => {
-                  const product = allProducts.find(p => p.id === item.productId);
-                  const details = calculateLineDetails(item, product);
-                  return {
-                    ...item,
-                    productCode: item.customReference || product?.code || 'MANUAL',
-                    productName: item.isManual ? item.manualDescription : product?.name || 'Producto',
-                    unitPoints: details.usedPoints,
-                    totalPoints: details.usedPoints * item.quantity
-                  };
-                }),
+                itemsMontada: state.budgetItemsMontada,
+                itemsDespiece: state.budgetItemsDespiece,
                 pointValueMontada: state.pointValueMontada,
                 pointValueDespiece: state.pointValueDespiece,
                 doorColorLow: state.doorColorLow,
@@ -441,7 +421,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                 carcassMaterialName: carcassMat?.name || 'No especificado',
                 brandColor: state.brandColor,
                 logo: state.logo,
-                companyName: state.currentUser?.clientName || 'LUIGGI HOME'
+                companyName: state.currentUser?.clientName || 'LUIGGI HOME',
+                globalFinish: state.globalFinish,
+                allProducts: allProducts,
+                calculateLineDetails: calculateLineDetails
               });
             }}
             className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg"
