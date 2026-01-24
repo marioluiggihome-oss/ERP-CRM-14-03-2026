@@ -2298,7 +2298,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 <h3 className="text-sm font-black text-orange-900 uppercase tracking-widest mb-4 flex items-center gap-2">
                   ✂️ Incrementos Cortes Especiales
                 </h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div>
                     <label className="text-xs font-black text-orange-400 uppercase mb-2 block">Ancho (€)</label>
                     <input
@@ -2326,7 +2326,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-2xl font-black text-orange-900 outline-none focus:border-orange-500 text-center"
                     />
                   </div>
+                  <div>
+                    <label className="text-xs font-black text-amber-600 uppercase mb-2 block">🪵 Corte Viga (€)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={state.vigaCutIncrement || 0}
+                      onChange={(e) => setState(prev => ({ ...prev, vigaCutIncrement: parseFloat(e.target.value) || 0 }))}
+                      className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-2xl font-black text-amber-800 outline-none focus:border-amber-500 text-center"
+                    />
+                  </div>
                 </div>
+                <p className="text-xs text-slate-500 mt-3 italic">Los incrementos se aplican por línea cuando hay corte especial o corte de viga activado.</p>
               </div>
 
               {/* Gestión de Armazones */}
