@@ -368,6 +368,19 @@ const CRMCalendar = ({ currentUser }) => {
             </label>
           )}
 
+          {/* Admin: Show Prescriptor Notes Toggle */}
+          {currentUser?.isAdmin && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPrescriptorNotes}
+                onChange={(e) => setShowPrescriptorNotes(e.target.checked)}
+                className="w-4 h-4 rounded accent-amber-500"
+              />
+              <span className="text-xs font-bold text-amber-600">Notas Prescriptores</span>
+            </label>
+          )}
+
           {/* Add Event Button */}
           <button
             onClick={() => openCreateModal()}
