@@ -59,29 +59,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canChangeLogo: false
   });
 
-  // Telemetry AI states
-  const [telemetryModule, setTelemetryModule] = useState('montada');
-  const [telemetryFiles, setTelemetryFiles] = useState([]);
-  const [isProcessingTelemetry, setIsProcessingTelemetry] = useState(false);
-  const [telemetryLog, setTelemetryLog] = useState([]);
-  const [telemetryProgress, setTelemetryProgress] = useState({ current: 0, total: 0 });
-  const [existingCodes, setExistingCodes] = useState(new Set());
-  const [telemetryResult, setTelemetryResult] = useState(null);
-
-  // Load existing codes for telemetry duplicate detection - only when modal is open AND on telemetry tab
-  useEffect(() => {
-    if (!isOpen || activeTab !== 'telemetry') return;
-    
-    const loadCodes = async () => {
-      try {
-        const products = await productsAPI.getAll(telemetryModule);
-        setExistingCodes(new Set(products.map(p => p.code)));
-      } catch (err) {
-        console.error('Error loading codes:', err);
-      }
-    };
-    loadCodes();
-  }, [telemetryModule, isOpen, activeTab]);
 
   const representatives = useMemo(() => state.users.filter(u => u.isRepresentative), [state.users]);
 
