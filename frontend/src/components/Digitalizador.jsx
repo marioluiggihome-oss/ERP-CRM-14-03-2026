@@ -322,15 +322,11 @@ const Digitalizador = ({ state }) => {
               <div className="p-8 border-b border-indigo-100">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-4">
-                    <Logo className="h-12 w-auto" customLogo={state.logo} />
-                    <div>
-                      <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">Budget System</p>
-                      <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">Professional v4.4</p>
-                    </div>
+                    <Logo className="h-16 w-auto" customLogo={state.logo} />
                   </div>
                   <div className="text-right">
                     <h1 className="text-2xl font-black text-indigo-950 uppercase tracking-tight">
-                      Presupuesto <span className="text-orange-600">Valorado</span>
+                      Presupuesto <span className="text-orange-600">Técnico</span>
                     </h1>
                     <p className="text-xs text-indigo-400 mt-1">
                       EXP: {state.currentUser?.clientName || 'FACTORY 01'} &nbsp; {new Date().toLocaleDateString('es-ES')}
