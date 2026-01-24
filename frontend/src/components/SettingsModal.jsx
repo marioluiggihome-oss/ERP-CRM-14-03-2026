@@ -2044,6 +2044,136 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </div>
           )}
 
+          {/* Tab Armazones - Separada */}
+          {activeTab === 'armazones' && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-xl">
+                    <Package size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-indigo-950 uppercase">Gestión de Armazones / Cascos</h3>
+                    <p className="text-xs text-indigo-400">Configura los materiales de estructura</p>
+                  </div>
+                </div>
+                {!isEditingMaterial && (
+                  <button
+                    onClick={handleCreateMaterial}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl font-black uppercase text-xs hover:bg-amber-700 transition-all shadow-md"
+                  >
+                    <Plus size={16} />
+                    Nuevo Material
+                  </button>
+                )}
+              </div>
+
+              {!isEditingMaterial ? (
+                <div className="grid grid-cols-2 gap-4">
+                  {state.carcassMaterials.map(material => (
+                    <div key={material.id} className="bg-white border border-amber-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="text-base font-black text-amber-900">{material.name}</h4>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleEditMaterial(material)}
+                            className="p-1.5 hover:bg-amber-100 rounded-lg transition-all"
+                            title="Editar"
+                          >
+                            <Pencil size={14} className="text-amber-600" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMaterial(material.id)}
+                            className="p-1.5 hover:bg-red-100 rounded-lg transition-all"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={14} className="text-red-600" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-amber-50 rounded-lg p-3 text-center">
+                          <p className="text-[9px] font-black text-amber-400 uppercase">Incremento</p>
+                          <p className="text-xl font-black text-orange-600">+{material.fixedIncrement}€</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3 text-center">
+                          <p className="text-[9px] font-black text-slate-400 uppercase">Grosor</p>
+                          <p className="text-xl font-black text-indigo-600">{material.thickness}mm</p>
+                        </div>
+                      </div>
+                      {material.id === state.selectedCarcassMaterialId && (
+                        <div className="mt-3 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold text-center uppercase">
+                          Seleccionado como predeterminado
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Material Form */
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6 max-w-lg mx-auto">
+                  <h4 className="text-sm font-black text-amber-900 uppercase mb-4">
+                    {editingMaterialId ? 'Editar Material' : 'Nuevo Material'}
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Nombre del Material *</label>
+                      <input
+                        type="text"
+                        value={materialForm.name}
+                        onChange={(e) => setMaterialForm({...materialForm, name: e.target.value})}
+                        placeholder="Ej: Blanco Ártico Standard"
+                        className="w-full bg-white border border-amber-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Incremento Fijo (€)</label>
+                        <input
+                          type="number"
+                          value={materialForm.fixedIncrement}
+                          onChange={(e) => setMaterialForm({...materialForm, fixedIncrement: parseInt(e.target.value) || 0})}
+                          className="w-full bg-white border border-amber-200 rounded-xl p-3 text-lg font-black text-center text-orange-600 outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Grosor (mm)</label>
+                        <input
+                          type="number"
+                          value={materialForm.thickness}
+                          onChange={(e) => setMaterialForm({...materialForm, thickness: parseInt(e.target.value) || 16})}
+                          className="w-full bg-white border border-amber-200 rounded-xl p-3 text-lg font-black text-center text-indigo-600 outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={handleSaveMaterial}
+                        className="flex-1 bg-amber-600 text-white py-3 rounded-xl font-black uppercase text-xs hover:bg-amber-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <Check size={18} />
+                        Guardar
+                      </button>
+                      <button
+                        onClick={() => setIsEditingMaterial(false)}
+                        className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-black uppercase text-xs hover:bg-slate-300 transition-all"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Info */}
+              <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600">
+                <p className="font-bold text-slate-700 mb-1">¿Qué es el incremento de armazón?</p>
+                <p className="text-xs">El incremento fijo se suma al precio de cada mueble para cubrir el coste del material de estructura (casco/armazón). El grosor afecta a los cálculos del despiece.</p>
+              </div>
+            </div>
+          )}
+
           {/* Tab Backups */}
           {activeTab === 'backups' && (
             <div className="space-y-6">
