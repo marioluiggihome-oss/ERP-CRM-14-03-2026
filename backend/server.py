@@ -41,6 +41,19 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# ============================================
+# MAINTENANCE MODE STATE
+# ============================================
+# Estado del modo mantenimiento (en memoria, se sincroniza con BD)
+maintenance_state = {
+    "active": False,
+    "message": "Sistema en actualización. Volvemos pronto.",
+    "activatedAt": None,
+    "activatedBy": None,
+    "estimatedEndTime": None,
+    "preUpdateBackupId": None
+}
+
 
 # ============================================
 # PASSWORD UTILITIES
