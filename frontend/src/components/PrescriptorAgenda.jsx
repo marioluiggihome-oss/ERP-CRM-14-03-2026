@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, Phone, Mail, Building2, MapPin, Save, X, Loader2,
-  Search, Edit2, Trash2, User, CheckCircle
+  Search, Edit2, Trash2, User, CheckCircle, LogOut
 } from 'lucide-react';
 
 const CLIENT_SEGMENTS = [
