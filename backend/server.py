@@ -2257,6 +2257,158 @@ async def delete_activity(act_id: str):
     return {"message": "Actividad eliminada", "id": act_id}
 
 # ============================================
+# CRM CALENDAR API ENDPOINTS
+# ============================================
+
+EVENT_TYPES = {
+    "cita": {"name": "Cita/Visita", "color": "#3b82f6"},
+    "seguimiento": {"name": "Seguimiento", "color": "#f59e0b"},
+    "llamada": {"name": "Llamada", "color": "#10b981"},
+    "reunion": {"name": "Reunión", "color": "#8b5cf6"},
+    "otro": {"name": "Otro", "color": "#6b7280"}
+}
+
+@api_router.get("/crm/calendar/event-types")
+async def get_event_types():
+    """Get available event types"""
+    return EVENT_TYPES
+
+@api_router.get("/crm/calendar/events")
+async def get_calendar_events(
+    userId: Optional[str] = None,
+    startDate: Optional[str] = None,
+    endDate: Optional[str] = None,
+    eventType: Optional[str] = None,
+    viewAll: bool = False,
+    commercialId: Optional[str] = None
+):
+    """
+    Get calendar events with visibility rules:
+    - Normal user: only their events (assignedTo = userId)
+    - Admin with viewAll=true: all events
+    - Commercial with commercialId: events from their assigned shops
+    """
+    try:
+        query = {}
+        
+        # Date range filter
+        if startDate:
+            query["startDate"] = {"$gte": startDate}
+        if endDate:
+            if "startDate" in query:
+                query["startDate"]["$lte"] = endDate
+            else:
+                query["startDate"] = {"$lte": endDate}
+        
+        # Event type filter
+        if eventType:
+            query["eventType"] = eventType
+        
+        # Visibility rules
+        if viewAll:
+            # Admin sees all - no user filter
+            pass
+        elif commercialId:
+            # Commercial sees their shops' events
+            # First get the shops assigned to this commercial
+            shops = await db.users.find(
+                {"linkedRepresentativeId": commercialId},
+                {"id": 1, "_id": 0}
+            ).to_list(100)
+            shop_ids = [s["id"] for s in shops]
+            shop_ids.append(commercialId)  # Include commercial's own events
+            query["assignedTo"] = {"$in": shop_ids}
+        elif userId:
+            # Normal user sees only their events
+            query["assignedTo"] = userId
+        
+        events = await db.calendar_events.find(query, {"_id": 0}).sort("startDate", 1).to_list(5000)
+        return events
+    except Exception as e:
+        logger.error(f"Get calendar events error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/crm/calendar/events")
+async def create_calendar_event(event: CalendarEventCreate, createdBy: str = "", createdByName: str = ""):
+    """Create a new calendar event"""
+    try:
+        evt_dict = event.model_dump()
+        evt_dict["createdBy"] = createdBy
+        evt_dict["createdByName"] = createdByName
+        evt_obj = CalendarEventModel(**evt_dict)
+        doc = evt_obj.model_dump()
+        doc['createdAt'] = doc['createdAt'].isoformat()
+        doc['updatedAt'] = doc['updatedAt'].isoformat()
+        
+        await db.calendar_events.insert_one(doc)
+        doc.pop('_id', None)
+        return doc
+    except Exception as e:
+        logger.error(f"Create calendar event error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/crm/calendar/events/{event_id}")
+async def get_calendar_event(event_id: str):
+    """Get a single calendar event"""
+    event = await db.calendar_events.find_one({"id": event_id}, {"_id": 0})
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+    return event
+
+@api_router.put("/crm/calendar/events/{event_id}")
+async def update_calendar_event(event_id: str, update: CalendarEventUpdate):
+    """Update a calendar event"""
+    try:
+        update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+        
+        update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+        
+        # If marking as completed, set completedAt
+        if update_data.get("completed") == True:
+            update_data["completedAt"] = datetime.now(timezone.utc).isoformat()
+        
+        result = await db.calendar_events.update_one(
+            {"id": event_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Evento no encontrado")
+        
+        updated = await db.calendar_events.find_one({"id": event_id}, {"_id": 0})
+        return updated
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update calendar event error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/crm/calendar/events/{event_id}")
+async def delete_calendar_event(event_id: str):
+    """Delete a calendar event"""
+    result = await db.calendar_events.delete_one({"id": event_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+    return {"message": "Evento eliminado", "id": event_id}
+
+@api_router.post("/crm/calendar/events/{event_id}/complete")
+async def complete_calendar_event(event_id: str):
+    """Mark a calendar event as completed"""
+    result = await db.calendar_events.update_one(
+        {"id": event_id},
+        {"$set": {
+            "completed": True,
+            "completedAt": datetime.now(timezone.utc).isoformat(),
+            "updatedAt": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+    return {"message": "Evento completado", "id": event_id}
+
+# ============================================
 # CRM DASHBOARD STATS
 # ============================================
 
