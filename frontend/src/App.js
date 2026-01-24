@@ -14,6 +14,7 @@ import MaintenanceScreen from './components/MaintenanceScreen';
 import MaintenancePanel from './components/MaintenancePanel';
 import AdminWorkView from './components/AdminWorkView';
 import CommercialWorkView from './components/CommercialWorkView';
+import PrescriptorAgenda from './components/PrescriptorAgenda';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI } from './services/api';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 
