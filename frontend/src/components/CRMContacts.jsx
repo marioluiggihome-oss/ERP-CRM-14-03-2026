@@ -267,7 +267,7 @@ const CRMContacts = ({ currentUser }) => {
               className="px-3 py-2 bg-white border-2 border-amber-100 rounded-xl text-sm font-bold outline-none focus:border-amber-500"
               data-testid="prescriptor-filter"
             >
-              <option value="">Todos los prescriptores</option>
+              <option value="">Todos los colaboradores</option>
               {prescriptors.map(p => (
                 <option key={p.id} value={p.id}>{p.clientName}</option>
               ))}
@@ -320,7 +320,7 @@ const CRMContacts = ({ currentUser }) => {
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Contacto</th>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Empresa</th>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Segmento</th>
-                  <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Prescriptor</th>
+                  <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Colaborador</th>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Estado</th>
                   <th className="text-right py-4 px-4 text-xs font-black text-slate-500 uppercase">Valor</th>
                   <th className="text-center py-4 px-4 text-xs font-black text-slate-500 uppercase">Acciones</th>
@@ -520,7 +520,7 @@ const CRMContacts = ({ currentUser }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Prescriptor</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Colaborador Comercial</label>
                   <select
                     value={formData.prescriptorId}
                     onChange={e => {
@@ -535,13 +535,13 @@ const CRMContacts = ({ currentUser }) => {
                     data-testid="contact-prescriptor-select"
                     disabled={currentUser?.isPrescriptor}
                   >
-                    <option value="">Sin prescriptor</option>
+                    <option value="">Sin colaborador</option>
                     {prescriptors.map(p => (
                       <option key={p.id} value={p.id}>{p.clientName}</option>
                     ))}
                   </select>
                   {currentUser?.isPrescriptor && (
-                    <p className="text-[10px] text-amber-600 mt-1">Este contacto será tuyo como prescriptor</p>
+                    <p className="text-[10px] text-amber-600 mt-1">Este contacto será tuyo como colaborador comercial</p>
                   )}
                 </div>
               </div>
