@@ -664,6 +664,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </button>
           )}
           
+          {/* Tab Armazones - Separada */}
+          {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
+            <button
+              onClick={() => setActiveTab('armazones')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'armazones' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+              data-testid="armazones-tab"
+            >
+              <Package size={16} />
+              Armazones
+            </button>
+          )}
+          
           {/* Tab Backups - Solo Admin */}
           {state.currentUser?.isAdmin && (
             <button
