@@ -185,10 +185,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     // Si es comercial, automáticamente crear como tienda asignada a él
     const isCommercial = !state.currentUser?.isAdmin && state.currentUser?.isRepresentative;
     
+    // Load clients if not already loaded
+    if (clients.length === 0) {
+      loadClients();
+    }
+    
     setUserForm({
       username: '',
       password: '',
       clientName: '',
+      linkedClientId: '',
       isActive: true,
       isAdmin: false,
       isRepresentative: false,
