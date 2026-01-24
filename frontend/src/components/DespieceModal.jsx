@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler } from 'lucide-react';
+import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash } from 'lucide-react';
 import { despieceAPI } from '../services/api';
 
-const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName }) => {
+const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, customerName, projectReference, expedientNumber }) => {
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -10,6 +10,18 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName }
   const [expandedItems, setExpandedItems] = useState({});
   const [editingComponent, setEditingComponent] = useState(null);
   const [editedComponents, setEditedComponents] = useState({});
+  
+  // Editable header fields
+  const [editableCustomerName, setEditableCustomerName] = useState(customerName || '');
+  const [editableProjectRef, setEditableProjectRef] = useState(projectReference || '');
+  const [editableExpedient, setEditableExpedient] = useState(expedientNumber || '');
+  
+  // Update editable fields when props change
+  useEffect(() => {
+    setEditableCustomerName(customerName || '');
+    setEditableProjectRef(projectReference || '');
+    setEditableExpedient(expedientNumber || '');
+  }, [customerName, projectReference, expedientNumber]);
 
   // Get all products from catalogs
   const allProducts = useMemo(() => {
