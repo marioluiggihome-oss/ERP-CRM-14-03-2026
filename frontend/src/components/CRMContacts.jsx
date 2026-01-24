@@ -272,6 +272,19 @@ const CRMContacts = ({ currentUser }) => {
             ))}
           </select>
 
+          {/* Business Type Filter */}
+          <select
+            value={businessTypeFilter}
+            onChange={(e) => setBusinessTypeFilter(e.target.value)}
+            className="px-3 py-2 bg-white border-2 border-purple-100 rounded-xl text-sm font-bold outline-none focus:border-purple-500"
+            data-testid="business-type-filter"
+          >
+            <option value="">Todos los negocios</option>
+            {BUSINESS_TYPES.map(bt => (
+              <option key={bt.id} value={bt.id}>{bt.name}</option>
+            ))}
+          </select>
+
           {/* Colaborador Filter */}
           {prescriptors.length > 0 && (
             <select
