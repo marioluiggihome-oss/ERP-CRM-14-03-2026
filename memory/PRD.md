@@ -361,3 +361,44 @@ El prescriptor tiene un calendario simple donde puede añadir notas en fechas es
 - `PUT /api/crm/calendar/events/{id}` - Actualizar evento
 - `DELETE /api/crm/calendar/events/{id}` - Eliminar evento
 - `POST /api/crm/calendar/events/{id}/complete` - Marcar completado
+
+## Correcciones de Layout y Persistencia (24/01/2026) ✅ COMPLETADO
+
+### 1. BUG CRÍTICO: Guardado de Presupuestos
+- **Problema:** Los presupuestos se guardaban solo en memoria (React state), no en MongoDB
+- **Solución:** `handleSaveBudget()` ahora llama a `POST /api/projects?user_id=X` para persistir
+- **Verificación:** Los proyectos ahora aparecen en ARCHIVO después de guardar
+
+### 2. Layout de BudgetTable.jsx Mejorado
+- **Cambio:** Migración de sistema `grid-cols-12` a sistema `flex` con anchos fijos
+- **Mejoras:**
+  - Columna REF ampliada (w-28) para códigos largos
+  - Icono "Corte Viga" movido al inicio de cada fila (columna V)
+  - Precios siempre alineados a la derecha (w-20)
+  - Selector D/I deshabilitado automáticamente para muebles de 2 puertas
+  - Líneas manuales con diseño diferenciado (fondo verde claro)
+
+### 3. Muebles de 2 Puertas
+- **Detección:** `isTwoDoor` detecta si nombre contiene "2 puerta", "2P" o visualType "2P"
+- **Comportamiento:** Columna AP muestra "-" en lugar del selector D/I
+
+### 4. Estilos de Impresión
+- **Archivo:** `/app/frontend/src/index.css`
+- **Mejoras:** Oculta sidebar, header, botones y catálogo al imprimir
+- **Solo imprime:** El contenedor `#budget-pdf` con el presupuesto
+
+### Estructura de columnas del presupuesto:
+| Columna | Ancho | Contenido |
+|---------|-------|-----------|
+| V (Viga) | w-7 | Icono corte viga |
+| UD | w-8 | Cantidad |
+| REF | w-28 | Referencia del producto |
+| DESCRIPCIÓN | flex-1 | Nombre del producto |
+| AN | w-10 | Ancho (cm) |
+| AL | w-10 | Alto (cm) |
+| FO | w-10 | Fondo (cm) |
+| AP | w-8 | Apertura D/I/- |
+| OBS | w-24 | Observaciones |
+| € | w-20 | Precio |
+| 🗑 | w-6 | Eliminar |
+
