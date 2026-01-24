@@ -840,6 +840,130 @@ const Digitalizador = ({ state }) => {
           </div>
         </div>
       )}
+
+      {/* CRM Opportunity Modal */}
+      {showCRMModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 no-print">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="bg-purple-600 text-white px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <Briefcase size={24} />
+                <h3 className="font-black uppercase tracking-wider">Nueva Oportunidad CRM</h3>
+              </div>
+              <button 
+                onClick={() => setShowCRMModal(false)} 
+                className="p-1 hover:bg-white/10 rounded transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* Preview del presupuesto */}
+              <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2">Presupuesto a vincular</p>
+                <p className="font-bold text-purple-900 text-lg">{projectName || 'Sin nombre de proyecto'}</p>
+                <p className="text-2xl font-black text-purple-600 mt-1">
+                  {totals.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                </p>
+                <p className="text-xs text-purple-400 mt-1">{lines.length} líneas · IVA {ivaRate}% incluido</p>
+              </div>
+
+              {/* Datos del contacto */}
+              <div>
+                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">
+                  Nombre del Cliente *
+                </label>
+                <input
+                  type="text"
+                  value={crmContactName}
+                  onChange={(e) => setCrmContactName(e.target.value)}
+                  placeholder="Nombre completo del cliente"
+                  className="w-full bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 text-sm font-medium text-indigo-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                  data-testid="crm-contact-name"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">
+                  Empresa
+                </label>
+                <input
+                  type="text"
+                  value={crmCompany}
+                  onChange={(e) => setCrmCompany(e.target.value)}
+                  placeholder="Nombre de la empresa (opcional)"
+                  className="w-full bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 text-sm font-medium text-indigo-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                  data-testid="crm-company"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={crmContactEmail}
+                    onChange={(e) => setCrmContactEmail(e.target.value)}
+                    placeholder="email@ejemplo.com"
+                    className="w-full bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 text-sm font-medium text-indigo-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    data-testid="crm-contact-email"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">
+                    Teléfono
+                  </label>
+                  <input
+                    type="tel"
+                    value={crmContactPhone}
+                    onChange={(e) => setCrmContactPhone(e.target.value)}
+                    placeholder="+34 600 000 000"
+                    className="w-full bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3 text-sm font-medium text-indigo-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                    data-testid="crm-contact-phone"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={16} className="text-red-500 shrink-0" />
+                  <p className="text-red-700 text-sm font-medium">{error}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() => setShowCRMModal(false)}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateOpportunity}
+                disabled={isCreatingOpportunity || !crmContactName.trim()}
+                className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-purple-700 disabled:bg-purple-400 transition-colors shadow-lg flex items-center justify-center gap-2"
+                data-testid="confirm-create-opportunity-btn"
+              >
+                {isCreatingOpportunity ? (
+                  <>
+                    <Loader size={16} className="animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <Briefcase size={16} />
+                    Crear Oportunidad
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
