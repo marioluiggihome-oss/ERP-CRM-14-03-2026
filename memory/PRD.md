@@ -41,6 +41,8 @@
 | 33 | **COPIA SEGURIDAD y MANTENIMIENTO movidos dentro de Master** | ✅ | 24/01 |
 | 34 | **CRM: Alertas clientes sin oferta en 30+ días** | ✅ | 24/01 |
 | 35 | **CRM: Alertas clientes sin compra en 60/90 días** | ✅ | 24/01 |
+| 36 | **CRM: Calendario completo (Mes/Semana/Día)** | ✅ | 24/01 |
+| 37 | **CRM: Traducción completa al español** | ✅ | 24/01 |
 
 ### 🟢 TODO COMPLETADO
 
