@@ -71,7 +71,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       customHeight: Number(product.height),
       customDepth: Number(product.depth),
       openingDirection: 'Derecha',
-      notes: ''
+      notes: '',
+      hasVigaCut: false  // Nuevo campo para incremento de corte viga
     };
     setState(prev => ({ ...prev, [budgetKey]: [...prev[budgetKey], newItem] }));
   };
@@ -88,6 +89,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       notes: '',
       isManual: true,
       manualDescription: '',
+      hasVigaCut: false  // Nuevo campo
       manualPoints: 0
     };
     setState(prev => ({ ...prev, [budgetKey]: [...prev[budgetKey], newItem] }));
