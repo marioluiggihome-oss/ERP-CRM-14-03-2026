@@ -64,7 +64,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       const result = await despieceAPI.calculate(
         apiItems,
         carcassMaterialName,
-        "Tablero 3mm",
+        "Tablero 8mm",  // Trasera siempre 8mm
         18
       );
       
