@@ -465,6 +465,13 @@ const App = () => {
             onClose={() => setShowAdminWorkView(false)}
             currentUser={state.currentUser}
           />
+
+          {/* Commercial Work View Modal - COMMERCIAL ONLY */}
+          <CommercialWorkView 
+            isOpen={showCommercialWorkView}
+            onClose={() => setShowCommercialWorkView(false)}
+            currentUser={state.currentUser}
+          />
         </>
       )}
     </div>
