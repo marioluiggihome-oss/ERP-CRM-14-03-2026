@@ -162,6 +162,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canManageArticles: false,
       canViewTechnicalDespiece: false,
       canAccessCRM: false,
+      canUseDigitalizador: false,
       useCustomBranding: false,
       canChangeLogo: false
     });
