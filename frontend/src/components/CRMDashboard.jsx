@@ -283,7 +283,7 @@ const CRMDashboard = ({ onNavigate }) => {
           ) : (
             <div className="p-8 text-center text-slate-400">
               <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="font-bold">Sin actividad reciente</p>
+              <p className="font-bold">Sin historial reciente</p>
             </div>
           )}
         </div>
@@ -300,7 +300,7 @@ const CRMDashboard = ({ onNavigate }) => {
                   <AlertTriangle className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h2 className="font-black text-orange-900 uppercase text-sm">Sin Oferta +30 días</h2>
+                  <h2 className="font-black text-orange-900 uppercase text-sm">Sin Presupuesto +30 días</h2>
                   <p className="text-xs text-orange-600">{analytics.summary?.totalWithoutOffer30Days || 0} contactos</p>
                 </div>
               </div>
