@@ -1923,19 +1923,20 @@ Responde SOLO con el JSON, sin texto adicional."""
             # Build response lines
             extracted_lines = []
             for idx, line in enumerate(parsed.get("lines", [])):
+                # Ensure no None values - use 'or' to convert None to default
                 extracted_lines.append(DigitalizadorLine(
                     id=f"LINE-{uuid.uuid4().hex[:8]}",
-                    quantity=line.get("quantity", 1),
-                    reference=line.get("reference", ""),
-                    description=line.get("description", ""),
-                    price=line.get("price", 0),
+                    quantity=int(line.get("quantity") or 1),
+                    reference=str(line.get("reference") or ""),
+                    description=str(line.get("description") or ""),
+                    price=float(line.get("price") or 0),
                     discount=0,
                     isManual=False
                 ))
             
             return DigitalizadorResponse(
                 success=True,
-                projectName=parsed.get("projectName", ""),
+                projectName=str(parsed.get("projectName") or ""),
                 lines=extracted_lines,
                 rawText=response_text
             )
