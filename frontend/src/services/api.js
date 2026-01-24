@@ -334,3 +334,175 @@ export const backupAPI = {
     return response.json();
   }
 };
+
+// ============================================
+// CRM - CONTACTS
+// ============================================
+
+export const crmContactsAPI = {
+  getAll: async (status = null, search = null) => {
+    let url = `${API_URL}/api/crm/contacts`;
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (search) params.append('search', search);
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener contactos');
+    return response.json();
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_URL}/api/crm/contacts/${id}`);
+    if (!response.ok) throw new Error('Contacto no encontrado');
+    return response.json();
+  },
+
+  create: async (contact) => {
+    const response = await fetch(`${API_URL}/api/crm/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contact)
+    });
+    if (!response.ok) throw new Error('Error al crear contacto');
+    return response.json();
+  },
+
+  update: async (id, contact) => {
+    const response = await fetch(`${API_URL}/api/crm/contacts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contact)
+    });
+    if (!response.ok) throw new Error('Error al actualizar contacto');
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/crm/contacts/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Error al eliminar contacto');
+    return response.json();
+  }
+};
+
+// ============================================
+// CRM - OPPORTUNITIES
+// ============================================
+
+export const crmOpportunitiesAPI = {
+  getAll: async (stage = null, contactId = null) => {
+    let url = `${API_URL}/api/crm/opportunities`;
+    const params = new URLSearchParams();
+    if (stage) params.append('stage', stage);
+    if (contactId) params.append('contactId', contactId);
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener oportunidades');
+    return response.json();
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_URL}/api/crm/opportunities/${id}`);
+    if (!response.ok) throw new Error('Oportunidad no encontrada');
+    return response.json();
+  },
+
+  create: async (opportunity) => {
+    const response = await fetch(`${API_URL}/api/crm/opportunities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(opportunity)
+    });
+    if (!response.ok) throw new Error('Error al crear oportunidad');
+    return response.json();
+  },
+
+  createFromProject: async (projectId) => {
+    const response = await fetch(`${API_URL}/api/crm/opportunities/from-project/${projectId}`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error('Error al crear oportunidad desde proyecto');
+    return response.json();
+  },
+
+  update: async (id, opportunity) => {
+    const response = await fetch(`${API_URL}/api/crm/opportunities/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(opportunity)
+    });
+    if (!response.ok) throw new Error('Error al actualizar oportunidad');
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/crm/opportunities/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Error al eliminar oportunidad');
+    return response.json();
+  }
+};
+
+// ============================================
+// CRM - ACTIVITIES
+// ============================================
+
+export const crmActivitiesAPI = {
+  getAll: async (filters = {}) => {
+    let url = `${API_URL}/api/crm/activities`;
+    const params = new URLSearchParams();
+    if (filters.type) params.append('type', filters.type);
+    if (filters.contactId) params.append('contactId', filters.contactId);
+    if (filters.opportunityId) params.append('opportunityId', filters.opportunityId);
+    if (filters.completed !== undefined) params.append('completed', filters.completed);
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener actividades');
+    return response.json();
+  },
+
+  create: async (activity) => {
+    const response = await fetch(`${API_URL}/api/crm/activities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(activity)
+    });
+    if (!response.ok) throw new Error('Error al crear actividad');
+    return response.json();
+  },
+
+  update: async (id, activity) => {
+    const response = await fetch(`${API_URL}/api/crm/activities/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(activity)
+    });
+    if (!response.ok) throw new Error('Error al actualizar actividad');
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/crm/activities/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Error al eliminar actividad');
+    return response.json();
+  }
+};
+
+// ============================================
+// CRM - DASHBOARD
+// ============================================
+
+export const crmDashboardAPI = {
+  get: async () => {
+    const response = await fetch(`${API_URL}/api/crm/dashboard`);
+    if (!response.ok) throw new Error('Error al obtener dashboard CRM');
+    return response.json();
+  }
+};
