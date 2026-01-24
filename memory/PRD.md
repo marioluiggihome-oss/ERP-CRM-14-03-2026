@@ -437,3 +437,22 @@ El prescriptor tiene un calendario simple donde puede añadir notas en fechas es
 - **Archivo:** `/app/frontend/src/components/BudgetTable.jsx`
 - **Condición:** `{state.currentUser?.isAdmin && ...}`
 
+
+## Mejoras de Totales y PDF (24/01/2026)
+
+### 10. Sección de Totales con IVA
+- **Añadido:** Nueva caja de totales en el pie del presupuesto mostrando:
+  - BRUTO LÍNEAS (suma de todas las líneas)
+  - BASE IMPONIBLE NETO (igual al bruto, sin descuentos)
+  - IVA 21% (calculado automáticamente)
+  - TOTAL PRESUPUESTO (con IVA incluido)
+- **Ubicación:** Al final del contenedor `#budget-pdf`, después de la tabla de items
+
+### 11. Generador de PDF Mejorado
+- **Archivo:** `/app/frontend/src/services/pdfGenerator.js`
+- **Cambios:**
+  - Recibe `allProducts` y `calculateLineDetails` para calcular precios correctamente
+  - Genera tabla con columnas: UD, REF, DESCRIPCIÓN, AN, AL, FO, AP, IMPORTE
+  - Incluye caja de totales con IVA al final
+  - Soporta logo personalizado de la empresa
+
