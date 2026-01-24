@@ -1462,6 +1462,295 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </div>
           )}
 
+          {activeTab === 'telemetry' && (
+            <div className="flex gap-6 h-[calc(100vh-280px)]">
+              {/* Left Panel - Upload */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-xl">
+                    <Zap size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-indigo-950 uppercase">Telemetría IA</h3>
+                    <p className="text-xs text-indigo-400">Sincronización por Reconocimiento Óptico</p>
+                  </div>
+                </div>
+
+                {/* Module Selection */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => setTelemetryModule('montada')}
+                    disabled={isProcessingTelemetry}
+                    className={`flex-1 p-3 rounded-xl transition-all border-2 ${
+                      telemetryModule === 'montada'
+                        ? 'bg-orange-500 border-orange-400 text-white'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-orange-300'
+                    }`}
+                  >
+                    <span className="font-black text-sm uppercase">Montada</span>
+                  </button>
+                  <button
+                    onClick={() => setTelemetryModule('despiece')}
+                    disabled={isProcessingTelemetry}
+                    className={`flex-1 p-3 rounded-xl transition-all border-2 ${
+                      telemetryModule === 'despiece'
+                        ? 'bg-indigo-500 border-indigo-400 text-white'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-300'
+                    }`}
+                  >
+                    <span className="font-black text-sm uppercase">Despiece</span>
+                  </button>
+                </div>
+
+                {/* Upload Area */}
+                <div className="bg-slate-50 rounded-xl p-4 flex-1 flex flex-col border border-slate-200">
+                  <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-4 cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all">
+                    <FileImage size={40} className="text-slate-400 mb-2" />
+                    <p className="text-sm font-black text-slate-700 uppercase">Click para cargar fichas</p>
+                    <p className="text-xs text-slate-500">JPG, PNG, PDF</p>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files);
+                        const newFiles = files.map(file => ({
+                          id: Math.random().toString(36).substr(2, 9),
+                          file,
+                          name: file.name,
+                          preview: URL.createObjectURL(file)
+                        }));
+                        setTelemetryFiles(prev => [...prev, ...newFiles]);
+                      }}
+                      className="hidden"
+                      disabled={isProcessingTelemetry}
+                    />
+                  </label>
+
+                  {/* Uploaded Files */}
+                  {telemetryFiles.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="max-h-[100px] overflow-y-auto space-y-1">
+                        {telemetryFiles.map(file => (
+                          <div key={file.id} className="bg-white border border-slate-200 rounded-lg p-2 flex items-center justify-between">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {file.preview && (
+                                <img src={file.preview} alt={file.name} className="w-8 h-8 object-cover rounded" />
+                              )}
+                              <p className="text-xs font-bold text-slate-700 truncate">{file.name}</p>
+                            </div>
+                            <button
+                              onClick={() => setTelemetryFiles(prev => prev.filter(f => f.id !== file.id))}
+                              className="p-1 hover:bg-red-100 rounded"
+                              disabled={isProcessingTelemetry}
+                            >
+                              <XCircle size={14} className="text-red-500" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={async () => {
+                          setIsProcessingTelemetry(true);
+                          setTelemetryResult(null);
+                          setTelemetryLog([]);
+                          setTelemetryProgress({ current: 0, total: telemetryFiles.length });
+
+                          const addLog = (entry) => setTelemetryLog(prev => [...prev, { ...entry, time: new Date().toLocaleTimeString() }]);
+
+                          addLog({ type: 'info', msg: `Iniciando sincronización de ${telemetryFiles.length} archivo(s)...` });
+                          addLog({ type: 'info', msg: `Destino: ${telemetryModule.toUpperCase()}` });
+
+                          try {
+                            const formData = new FormData();
+                            formData.append('module', telemetryModule);
+                            telemetryFiles.forEach(f => formData.append('files', f.file));
+
+                            addLog({ type: 'processing', msg: 'Enviando archivos al servidor...' });
+
+                            const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+                            const response = await fetch(`${BACKEND_URL}/api/analyze-product-sheets`, {
+                              method: 'POST',
+                              body: formData
+                            });
+
+                            const result = await response.json();
+
+                            if (result.success && result.products) {
+                              addLog({ type: 'info', msg: `IA detectó ${result.products.length} producto(s)` });
+
+                              const newProducts = [];
+                              const duplicateProducts = [];
+                              const errorProducts = [];
+
+                              for (let i = 0; i < result.products.length; i++) {
+                                const product = result.products[i];
+                                setTelemetryProgress({ current: i + 1, total: result.products.length });
+                                await new Promise(resolve => setTimeout(resolve, 100));
+
+                                if (product.error) {
+                                  errorProducts.push(product);
+                                  addLog({ type: 'error', code: 'ERROR', name: product.error });
+                                } else if (existingCodes.has(product.code)) {
+                                  duplicateProducts.push(product);
+                                  addLog({ type: 'duplicate', code: product.code, name: product.name, points: product.points || product.zonePoints?.Z1 || 0 });
+                                } else {
+                                  newProducts.push(product);
+                                  addLog({ type: 'new', code: product.code, name: product.name, points: product.points || product.zonePoints?.Z1 || 0 });
+                                  setExistingCodes(prev => new Set([...prev, product.code]));
+                                }
+                              }
+
+                              if (newProducts.length > 0) {
+                                addLog({ type: 'info', msg: `Guardando ${newProducts.length} producto(s) nuevo(s)...` });
+                                await productsAPI.bulkCreate(newProducts);
+                                addLog({ type: 'success', msg: `${newProducts.length} producto(s) guardado(s)` });
+
+                                // Update local state
+                                const catalogIndex = state.catalogs.findIndex(c => c.module === telemetryModule);
+                                if (catalogIndex !== -1) {
+                                  const updatedCatalogs = [...state.catalogs];
+                                  updatedCatalogs[catalogIndex] = {
+                                    ...updatedCatalogs[catalogIndex],
+                                    products: [...updatedCatalogs[catalogIndex].products, ...newProducts]
+                                  };
+                                  setState(prev => ({ ...prev, catalogs: updatedCatalogs }));
+                                }
+                              }
+
+                              setTelemetryResult({ success: true, newCount: newProducts.length, duplicateCount: duplicateProducts.length, errorCount: errorProducts.length });
+                            } else {
+                              addLog({ type: 'error', msg: result.error || 'Error desconocido' });
+                              setTelemetryResult({ success: false, error: result.error });
+                            }
+
+                            setTelemetryFiles([]);
+                          } catch (error) {
+                            addLog({ type: 'error', msg: error.message });
+                            setTelemetryResult({ success: false, error: error.message });
+                          } finally {
+                            setIsProcessingTelemetry(false);
+                          }
+                        }}
+                        disabled={isProcessingTelemetry || telemetryFiles.length === 0}
+                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {isProcessingTelemetry ? (
+                          <><Loader size={16} className="animate-spin" /> Procesando...</>
+                        ) : (
+                          <><Zap size={16} /> Iniciar Digitalización</>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Result */}
+                  {telemetryResult && telemetryResult.success && (
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded-xl p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle size={18} className="text-green-600" />
+                        <span className="font-black text-green-800 text-sm uppercase">Completado</span>
+                      </div>
+                      <p className="text-xs text-green-700">
+                        {telemetryResult.newCount} nuevo(s) • {telemetryResult.duplicateCount} duplicado(s) • {telemetryResult.errorCount} error(es)
+                      </p>
+                      <button
+                        onClick={() => { setTelemetryResult(null); setTelemetryLog([]); }}
+                        className="mt-2 w-full bg-indigo-900 text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2"
+                      >
+                        <RefreshCw size={14} /> Nueva Sincronización
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Panel - Log */}
+              <div className="w-[320px] bg-indigo-950 rounded-2xl flex flex-col overflow-hidden">
+                <div className="p-3 border-b border-indigo-800 flex items-center gap-2">
+                  <Zap size={14} className="text-orange-500" />
+                  <span className="text-xs font-black text-white uppercase">Log: {telemetryModule}</span>
+                </div>
+
+                {/* Progress */}
+                {isProcessingTelemetry && telemetryProgress.total > 0 && (
+                  <div className="px-3 py-2 bg-indigo-900/50">
+                    <div className="flex justify-between text-[10px] text-white/60 mb-1">
+                      <span>Procesando...</span>
+                      <span>{telemetryProgress.current}/{telemetryProgress.total}</span>
+                    </div>
+                    <div className="h-1 bg-indigo-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-orange-500 to-yellow-500 transition-all"
+                        style={{ width: `${(telemetryProgress.current / telemetryProgress.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Log Content */}
+                <div ref={logContainerRef} className="flex-1 overflow-y-auto p-3 space-y-1">
+                  {telemetryLog.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center">
+                      <Zap size={24} className="text-indigo-700 mb-2" />
+                      <p className="text-xs text-indigo-500">Sin actividad</p>
+                    </div>
+                  ) : (
+                    telemetryLog.map((entry, idx) => {
+                      if (entry.type === 'new' || entry.type === 'duplicate') {
+                        const isNew = entry.type === 'new';
+                        return (
+                          <div key={idx} className="flex items-center gap-2 py-1.5 px-2 rounded bg-white/5">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-white ${isNew ? 'bg-green-500' : 'bg-orange-500'}`}>
+                              {isNew ? '+' : '='}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1">
+                                <span className="font-bold text-white text-xs">{entry.code}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${isNew ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>
+                                  {isNew ? 'NUEVO' : 'DUPLICADO'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-white/50 truncate">{entry.name}</p>
+                            </div>
+                            <span className={`text-sm font-black ${isNew ? 'text-green-400' : 'text-orange-400'}`}>{entry.points}</span>
+                          </div>
+                        );
+                      }
+                      if (entry.type === 'error' && entry.code) {
+                        return (
+                          <div key={idx} className="flex items-center gap-2 py-1.5 px-2 rounded bg-red-500/20">
+                            <XCircle size={14} className="text-red-400" />
+                            <span className="text-xs text-red-300">{entry.name || entry.msg}</span>
+                          </div>
+                        );
+                      }
+                      const colors = { info: 'text-blue-300', processing: 'text-yellow-300', success: 'text-green-300', error: 'text-red-300' };
+                      return (
+                        <div key={idx} className={`text-[10px] ${colors[entry.type] || 'text-white/60'}`}>
+                          [{entry.time}] {entry.msg}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Legend */}
+                <div className="p-2 border-t border-indigo-800 flex justify-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span className="text-[9px] text-white/50 font-bold">Nuevo</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                    <span className="text-[9px] text-white/50 font-bold">Duplicado</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'identity' && (
             <div className="space-y-6">
               <div className="bg-white border border-purple-100 rounded-2xl p-6 shadow-sm">
