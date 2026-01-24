@@ -573,6 +573,35 @@ const CRMContacts = ({ currentUser }) => {
                 </div>
               </div>
 
+              {/* Tipo de Negocio (Tags) */}
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo de Negocio</label>
+                <div className="flex flex-wrap gap-2">
+                  {BUSINESS_TYPES.map(bt => {
+                    const isSelected = formData.tags?.includes(bt.id);
+                    return (
+                      <button
+                        key={bt.id}
+                        type="button"
+                        onClick={() => {
+                          const newTags = isSelected
+                            ? (formData.tags || []).filter(t => t !== bt.id)
+                            : [...(formData.tags || []), bt.id];
+                          setFormData({...formData, tags: newTags});
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
+                          isSelected 
+                            ? bt.color + ' shadow-md' 
+                            : 'bg-slate-100 text-slate-400 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {bt.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dirección</label>
                 <input
