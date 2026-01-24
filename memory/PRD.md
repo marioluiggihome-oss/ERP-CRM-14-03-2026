@@ -2,37 +2,56 @@
 
 ## Estado de Correcciones - 24/01/2026
 
-### ✅ COMPLETADO (16/19 tareas del documento POR CORREGIR.docx)
+### ✅ COMPLETADO (21/25 tareas)
 
-| # | Corrección | Estado |
-|---|------------|--------|
-| 1 | Prompt IA mejorado (alturas 110cm, 220cm) | ✅ |
-| 2 | Producto faltante 35A1P350 añadido | ✅ |
-| 3 | Logo más grande en Digitalizador | ✅ |
-| 4 | "BUDGET SYSTEM" → "PRESUPUESTO TÉCNICO" | ✅ |
-| 5 | Campo REF (AUTO) editable | ✅ |
-| 6 | Casilla descuento más ancha y editable | ✅ |
-| 7 | Decimales con punto y coma | ✅ |
-| 8 | Despiece: cliente, referencia, fecha, expediente | ✅ |
-| 9 | Historial persistente (guardado en BD) | ✅ |
-| 10 | Búsqueda en historial | ✅ |
-| 11 | Modo Mantenimiento | ✅ |
-| 12 | Backup Pre-Actualización automático | ✅ |
-| 13 | Panel de control para Admin | ✅ |
-| 14 | Pantalla "Sistema en actualización" | ✅ |
-| 15 | **INCREMENTO POR CORTE VIGA** | ✅ NUEVO |
-| 16 | **CONTADOR CORRELATIVO EXPEDIENTES** | ✅ NUEVO |
+| # | Corrección | Estado | Fecha |
+|---|------------|--------|-------|
+| 1 | Prompt IA mejorado (alturas 110cm, 220cm) | ✅ | 23/01 |
+| 2 | Producto faltante 35A1P350 añadido | ✅ | 23/01 |
+| 3 | Logo más grande en Digitalizador | ✅ | 23/01 |
+| 4 | "BUDGET SYSTEM" → "PRESUPUESTO TÉCNICO" | ✅ | 23/01 |
+| 5 | Campo REF (AUTO) editable | ✅ | 23/01 |
+| 6 | Casilla descuento más ancha y editable | ✅ | 23/01 |
+| 7 | Decimales con punto y coma | ✅ | 23/01 |
+| 8 | Despiece: cliente, referencia, fecha, expediente | ✅ | 23/01 |
+| 9 | Historial persistente (guardado en BD) | ✅ | 23/01 |
+| 10 | Búsqueda en historial | ✅ | 23/01 |
+| 11 | Modo Mantenimiento | ✅ | 23/01 |
+| 12 | Backup Pre-Actualización automático | ✅ | 23/01 |
+| 13 | Panel de control para Admin | ✅ | 23/01 |
+| 14 | Pantalla "Sistema en actualización" | ✅ | 23/01 |
+| 15 | Incremento por corte viga | ✅ | 23/01 |
+| 16 | Contador correlativo expedientes | ✅ | 23/01 |
+| 17 | **Conexión Digitalizador → CRM** | ✅ | 24/01 |
+| 18 | **Sistema Clientes Activos** | ✅ | 24/01 |
+| 19 | **Botón AUTO solo para Admin** | ✅ | 24/01 |
+| 20 | **Unidades semicolumnas corregidas (110cm, 120cm...)** | ✅ | 24/01 |
+| 21 | **Líneas manuales no afectadas por cambio PVP/COSTO** | ✅ | 24/01 |
+| 22 | **Botón "Línea Manual" en Presupuesto Técnico** | ✅ | 24/01 |
+| 23 | **Panel Admin: Ver todos los trabajos** | ✅ | 24/01 |
+| 24 | **Endpoints para Comercial: Ver tiendas asignadas** | ✅ | 24/01 |
 
-### 🔄 PENDIENTE (2/19 tareas)
+### 🔄 PENDIENTE (4 tareas)
 
 | # | Tarea | Prioridad |
 |---|-------|-----------|
-| 18 | Gestión armazones en pestaña separada | Baja |
-| 19 | Admin ver todos los trabajos | Baja |
+| 25 | Gestión armazones en pestaña separada | 🟢 Baja |
+| 26 | Ordenación de muebles por catálogo al importar | 🟡 Media |
+| 27 | Copia Seguridad y Mantenimiento en Maestro con permisos | 🟡 Media |
+| 28 | Volcado a CRM al guardar presupuesto | 🟡 Media |
 
-### ✅ COMPLETADO HOY (24/01/2026)
-| 17 | **Conexión Digitalizador → CRM** | ✅ COMPLETADO |
-| 20 | **Sistema Clientes Activos** | ✅ COMPLETADO |
+## Correcciones Hoy (24/01/2026)
+
+### Bug Fixes:
+1. **Botón AUTO solo para Admin** - Los usuarios no-admin tienen presupuestos independientes
+2. **Unidades de semicolumnas** - Corregidas 1457 productos (11→110, 12→120, etc.)
+3. **Líneas manuales estables** - No se alteran al cambiar modo PVP/COSTO
+
+### Nuevas Funcionalidades:
+4. **Botón "+ LÍNEA MANUAL"** en el panel lateral del presupuestador
+5. **Panel Administrador** - Nueva vista para ver todos los trabajos del sistema
+6. **API `/api/admin/all-work`** - Proyectos, oportunidades y digitalizaciones agrupados
+7. **API `/api/commercial/my-shops-work`** - Trabajos de tiendas asignadas a comercial
 
 ## Sistema de Clientes Activos (NUEVO - 24/01/2026)
 
