@@ -3122,7 +3122,7 @@ def calculate_furniture_despiece(
     - TAPA INFERIOR: width x depth (bottom cover) 
     - LATERAL IZQUIERDO: (height - 2*grosor) x depth
     - LATERAL DERECHO: (height - 2*grosor) x depth
-    - TRASERA: width x (height - 2*grosor) (back panel, thinner material)
+    - TRASERA: width x (height - 2*grosor) (back panel, 8mm)
     - BALDA/ESTANTE: (width - 2*grosor) x (depth - 3mm) - optional shelves
     
     For ALTOS (wall cabinets):
