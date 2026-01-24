@@ -183,10 +183,21 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
           <button
             onClick={() => openModal()}
             className="flex items-center gap-2 px-5 py-3 bg-amber-500 text-white rounded-xl font-black uppercase text-sm hover:bg-amber-600 transition-all shadow-lg"
+            data-testid="new-contact-btn"
           >
             <Plus size={18} />
             Nuevo Contacto
           </button>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-2 px-4 py-3 bg-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-300 transition-all"
+              data-testid="prescriptor-logout-btn"
+            >
+              <LogOut size={18} />
+              Salir
+            </button>
+          )}
         </div>
       </div>
 
