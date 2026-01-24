@@ -1307,7 +1307,7 @@ const Armarios = ({ state, setState }) => {
         height: wardrobeConfig.height, 
         depth: wardrobeConfig.depth 
       },
-      accessories: generateAccessoriesList,
+      accessories: editableAccessories.length > 0 ? editableAccessories : generateAccessoriesList,
       boardsCalculation: boardsCalculation,
       pricing: pricing,
       colors: {
@@ -1315,6 +1315,175 @@ const Armarios = ({ state, setState }) => {
         interior: getColorByName(wardrobeConfig.interiorColor).name
       }
     });
+  };
+
+  // ========== FUNCIONES IA ==========
+  
+  // Configurar armario con IA
+  const configureWithIA = async () => {
+    if (!iaInstruction.trim()) return;
+    
+    setIaLoading(true);
+    setIaError(null);
+    
+    try {
+      const result = await armariosAPI.iaConfiguracion(iaInstruction, {
+        width: wardrobeConfig.width,
+        height: wardrobeConfig.height,
+        depth: wardrobeConfig.depth,
+        modules: wardrobeConfig.modules
+      });
+      
+      if (result.success && result.config) {
+        const config = result.config;
+        
+        // Aplicar configuración
+        if (config.modules) {
+          setWardrobeConfig(prev => ({ ...prev, modules: config.modules }));
+          adjustModules(config.modules);
+        }
+        if (config.doorType) {
+          setWardrobeConfig(prev => ({ ...prev, doorType: config.doorType }));
+        }
+        if (config.moduleConfigs) {
+          setModuleConfigs(config.moduleConfigs.map((m, i) => ({
+            id: i + 1,
+            shelves: m.shelves || 4,
+            drawers: m.drawers || 0,
+            hangingRods: m.hangingRods || 0,
+            hangingHeight: m.hangingHeight || 1200,
+            extras: m.extras || {}
+          })));
+        }
+        if (config.extras) {
+          setExtras(config.extras);
+        }
+        
+        setShowIAModal(false);
+        setIaInstruction('');
+        setSaveMessage({ type: 'success', text: config.explanation || 'Configuración aplicada' });
+        setTimeout(() => setSaveMessage(null), 5000);
+      } else {
+        setIaError(result.error || 'Error en la configuración');
+      }
+    } catch (error) {
+      console.error('Error IA:', error);
+      setIaError(error.message || 'Error al configurar con IA');
+    } finally {
+      setIaLoading(false);
+    }
+  };
+
+  // Generar render realista
+  const generateRender = async () => {
+    setRenderLoading(true);
+    setRenderError(null);
+    setRenderImage(null);
+    
+    try {
+      const result = await armariosAPI.iaRender({
+        width: wardrobeConfig.width,
+        height: wardrobeConfig.height,
+        depth: wardrobeConfig.depth,
+        modules: wardrobeConfig.modules,
+        doorType: wardrobeConfig.doorType,
+        exteriorColorName: getColorByName(wardrobeConfig.exteriorColor).name,
+        exteriorColorHex: getColorByName(wardrobeConfig.exteriorColor).hex,
+        interiorColorName: getColorByName(wardrobeConfig.interiorColor).name,
+        handleColorName: getColorByName(wardrobeConfig.handleColor).name,
+        moduleConfigs: moduleConfigs,
+        roomStyle: roomStyle
+      });
+      
+      if (result.success && result.image) {
+        setRenderImage(`data:${result.image.mime_type};base64,${result.image.data}`);
+      } else {
+        setRenderError(result.error || 'No se pudo generar el render');
+      }
+    } catch (error) {
+      console.error('Error render:', error);
+      setRenderError(error.message || 'Error al generar render');
+    } finally {
+      setRenderLoading(false);
+    }
+  };
+
+  // ========== FUNCIONES EDICIÓN DESPIECE ==========
+  
+  // Inicializar lista editable cuando se abre el modal
+  useEffect(() => {
+    if (showDespieceModal) {
+      setEditableAccessories([...generateAccessoriesList]);
+      setSelectedAccessoryIndex(null);
+    }
+  }, [showDespieceModal, generateAccessoriesList]);
+
+  // Mover accesorio arriba
+  const moveAccessoryUp = (index) => {
+    if (index === 0) return;
+    const newList = [...editableAccessories];
+    [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
+    // Renumerar
+    newList.forEach((item, i) => item.num = i + 1);
+    setEditableAccessories(newList);
+  };
+
+  // Mover accesorio abajo
+  const moveAccessoryDown = (index) => {
+    if (index >= editableAccessories.length - 1) return;
+    const newList = [...editableAccessories];
+    [newList[index], newList[index + 1]] = [newList[index + 1], newList[index]];
+    // Renumerar
+    newList.forEach((item, i) => item.num = i + 1);
+    setEditableAccessories(newList);
+  };
+
+  // Eliminar accesorio
+  const deleteAccessory = (index) => {
+    const newList = editableAccessories.filter((_, i) => i !== index);
+    // Renumerar
+    newList.forEach((item, i) => item.num = i + 1);
+    setEditableAccessories(newList);
+    setSelectedAccessoryIndex(null);
+  };
+
+  // Duplicar accesorio
+  const duplicateAccessory = (index) => {
+    const item = { ...editableAccessories[index] };
+    item.isCustom = true;
+    item.code = `DUP-${item.code}`;
+    const newList = [...editableAccessories];
+    newList.splice(index + 1, 0, item);
+    // Renumerar
+    newList.forEach((item, i) => item.num = i + 1);
+    setEditableAccessories(newList);
+  };
+
+  // Editar accesorio
+  const updateAccessory = (index, field, value) => {
+    const newList = [...editableAccessories];
+    newList[index] = { ...newList[index], [field]: value };
+    if (field === 'quantity' || field === 'unitPrice') {
+      newList[index].totalPrice = newList[index].quantity * newList[index].unitPrice;
+    }
+    setEditableAccessories(newList);
+  };
+
+  // Añadir nuevo accesorio vacío
+  const addNewAccessory = () => {
+    const newAcc = {
+      num: editableAccessories.length + 1,
+      code: `NUEVO-${editableAccessories.length + 1}`,
+      name: 'Nuevo accesorio',
+      category: 'PERSONALIZADO',
+      dimensions: '-',
+      quantity: 1,
+      unitPrice: 0,
+      totalPrice: 0,
+      notes: '',
+      isCustom: true
+    };
+    setEditableAccessories([...editableAccessories, newAcc]);
   };
 
   // Cargar proyectos al montar
