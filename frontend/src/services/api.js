@@ -653,6 +653,68 @@ export const crmAnalyticsAPI = {
 };
 
 // ============================================
+// CRM - CALENDAR (Calendario)
+// ============================================
+
+export const crmCalendarAPI = {
+  getEventTypes: async () => {
+    const response = await fetch(`${API_URL}/api/crm/calendar/event-types`);
+    if (!response.ok) throw new Error('Error al obtener tipos de evento');
+    return response.json();
+  },
+  
+  getEvents: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.userId) queryParams.append('userId', params.userId);
+    if (params.startDate) queryParams.append('startDate', params.startDate);
+    if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.eventType) queryParams.append('eventType', params.eventType);
+    if (params.viewAll) queryParams.append('viewAll', 'true');
+    if (params.commercialId) queryParams.append('commercialId', params.commercialId);
+    
+    const response = await fetch(`${API_URL}/api/crm/calendar/events?${queryParams.toString()}`);
+    if (!response.ok) throw new Error('Error al obtener eventos');
+    return response.json();
+  },
+  
+  create: async (event, createdBy, createdByName) => {
+    const response = await fetch(`${API_URL}/api/crm/calendar/events?createdBy=${createdBy}&createdByName=${encodeURIComponent(createdByName)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event)
+    });
+    if (!response.ok) throw new Error('Error al crear evento');
+    return response.json();
+  },
+  
+  update: async (eventId, updates) => {
+    const response = await fetch(`${API_URL}/api/crm/calendar/events/${eventId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!response.ok) throw new Error('Error al actualizar evento');
+    return response.json();
+  },
+  
+  delete: async (eventId) => {
+    const response = await fetch(`${API_URL}/api/crm/calendar/events/${eventId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Error al eliminar evento');
+    return response.json();
+  },
+  
+  complete: async (eventId) => {
+    const response = await fetch(`${API_URL}/api/crm/calendar/events/${eventId}/complete`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error('Error al completar evento');
+    return response.json();
+  }
+};
+
+// ============================================
 // DESPIECE (BILL OF MATERIALS)
 // ============================================
 
