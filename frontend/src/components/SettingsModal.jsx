@@ -2090,6 +2090,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       {productSearch && <span className="text-indigo-400 ml-2">(Filtrados de {currentCatalog?.products?.length || 0})</span>}
                     </p>
                   </div>
+
+                  {/* Catalog Importer - AI */}
+                  <CatalogImporter 
+                    onProductsImported={() => {
+                      // Refresh catalog after import
+                      loadCatalogs();
+                    }}
+                  />
                 </>
               ) : (
                 /* Product Form */
