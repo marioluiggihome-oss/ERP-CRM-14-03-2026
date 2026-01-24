@@ -711,7 +711,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                          </div>
 
                          {item.isManual ? (
-                             <div className="col-span-6">
+                             <div className="col-span-7">
                                 <input 
                                     type="text" 
                                     value={item.manualDescription || ''} 
@@ -723,7 +723,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                              </div>
                          ) : (
                             <>
-                                <div className="col-span-2 flex flex-col">
+                                <div className="col-span-3 flex flex-col">
                                     <span className={`text-[8px] font-bold uppercase italic leading-tight ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}>{product.name}</span>
                                     {specialLabel && <span className="text-[6px] font-black text-orange-600 uppercase mt-0.5 tracking-widest">{specialLabel}</span>}
                                 </div>
@@ -750,7 +750,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                             </>
                          )}
 
-                         <div className="col-span-2">
+                         <div className="col-span-3">
                             {item.isManual ? (
                                 <div className="flex items-center gap-1 bg-white border border-indigo-200 rounded px-2 py-1 no-print">
                                     <span className="text-[7px] font-black text-indigo-400">PTS:</span>
@@ -769,7 +769,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                                 </>
                             )}
                          </div>
-                         <div className="col-span-1 text-right flex items-center justify-end gap-1 relative group/price">
+                         <div className="col-span-2 text-right flex items-center justify-end gap-1 relative group/price">
                             {hasExtras && <Info size={10} className="text-orange-600 no-print animate-pulse" />}
                             {item.hasVigaCut && <span className="text-[7px] font-black text-orange-600 bg-orange-100 px-1 rounded">VIGA</span>}
                             {item.isManual && <PenTool size={10} className="text-indigo-300 no-print mr-1" />}
