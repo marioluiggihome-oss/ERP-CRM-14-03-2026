@@ -139,6 +139,58 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           </button>
         </div>
 
+        {/* Project Info Bar - Cliente, Referencia, Fecha, Expediente */}
+        <div className="bg-white px-8 py-4 border-b border-indigo-100 shrink-0">
+          <div className="grid grid-cols-4 gap-4">
+            <div className="flex items-center gap-2">
+              <User size={16} className="text-indigo-400" />
+              <div className="flex-1">
+                <label className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Cliente</label>
+                <input
+                  type="text"
+                  value={editableCustomerName}
+                  onChange={(e) => setEditableCustomerName(e.target.value)}
+                  placeholder="Nombre del cliente..."
+                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-indigo-400" />
+              <div className="flex-1">
+                <label className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Referencia Proyecto</label>
+                <input
+                  type="text"
+                  value={editableProjectRef}
+                  onChange={(e) => setEditableProjectRef(e.target.value)}
+                  placeholder="REF-001..."
+                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar size={16} className="text-indigo-400" />
+              <div className="flex-1">
+                <label className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Fecha</label>
+                <p className="text-sm font-bold text-indigo-900">{new Date().toLocaleDateString('es-ES')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Hash size={16} className="text-indigo-400" />
+              <div className="flex-1">
+                <label className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Nº Expediente</label>
+                <input
+                  type="text"
+                  value={editableExpedient}
+                  onChange={(e) => setEditableExpedient(e.target.value)}
+                  placeholder="EXP-0001..."
+                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* View Tabs */}
         <div className="bg-indigo-50 px-8 py-3 flex gap-2 border-b border-indigo-100 shrink-0">
           <button
