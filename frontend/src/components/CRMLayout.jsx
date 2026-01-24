@@ -23,7 +23,7 @@ const CRMLayout = ({ currentUser }) => {
           <div className="p-2 bg-indigo-600 rounded-xl">
             <Target size={18} className="text-white" />
           </div>
-          <span className="text-lg font-black text-slate-900 uppercase">Gestión Comercial</span>
+          <span className="text-lg font-black text-slate-900 uppercase">CRM</span>
         </div>
         
         <div className="flex gap-1">
