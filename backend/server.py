@@ -821,10 +821,11 @@ async def get_client(client_id: str):
 @api_router.post("/clients")
 async def create_client(client: ClientCreate):
     """Crear un nuevo cliente"""
-    # Check if codigo exists
-    existing = await db.clients.find_one({"codigo": client.codigo.upper()})
-    if existing:
-        raise HTTPException(status_code=400, detail="El código de cliente ya existe")
+    # Check if codigo exists (only if codigo is not empty)
+    if client.codigo and client.codigo.strip():
+        existing = await db.clients.find_one({"codigo": client.codigo.upper()})
+        if existing:
+            raise HTTPException(status_code=400, detail="El código de cliente ya existe")
     
     client_data = client.model_dump()
     client_data["id"] = f"cli-{uuid.uuid4().hex[:8]}"
