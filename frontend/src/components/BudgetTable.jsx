@@ -328,7 +328,17 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
           </button>
 
           {state.currentUser?.canViewTechnicalDespiece && (
-            <button onClick={onOpenManufacturing} className="bg-indigo-950 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-3 hover:bg-orange-600 transition-all shadow-xl">
+            <button 
+              onClick={() => setIsDespieceOpen(true)} 
+              className="bg-orange-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-3 hover:bg-orange-700 transition-all shadow-xl"
+              data-testid="despiece-btn"
+            >
+              <Scissors size={16}/> DESPIECE
+            </button>
+          )}
+
+          {state.currentUser?.canViewTechnicalDespiece && (
+            <button onClick={onOpenManufacturing} className="bg-indigo-950 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-3 hover:bg-indigo-800 transition-all shadow-xl">
               <FileText size={16}/> INFORME INDUSTRIAL
             </button>
           )}
