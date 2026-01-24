@@ -1119,6 +1119,147 @@ const Armarios = ({ state, setState }) => {
     return FINSA_COLORS.find(c => c.id === colorId) || FINSA_COLORS[0];
   };
 
+  // ========== FUNCIONES GUARDAR/CARGAR ==========
+  
+  // Cargar lista de proyectos guardados
+  const loadProjectsList = async () => {
+    setLoadingProjects(true);
+    try {
+      const result = await armariosAPI.getAll();
+      setSavedProjects(result.projects || []);
+    } catch (error) {
+      console.error('Error cargando proyectos:', error);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  // Guardar proyecto actual
+  const saveProject = async () => {
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const projectData = {
+        name: projectName,
+        customerName,
+        projectRef,
+        ...wardrobeConfig,
+        moduleConfigs: moduleConfigs.map(m => ({
+          id: m.id,
+          shelves: m.shelves,
+          drawers: m.drawers,
+          hangingRods: m.hangingRods,
+          hangingHeight: m.hangingHeight,
+          extras: m.extras || {}
+        })),
+        extras,
+        ivaRate,
+        customAccessories,
+        totalPrice: pricing.total,
+        totalArea: boardsCalculation.totalArea
+      };
+
+      if (currentProjectId) {
+        // Actualizar proyecto existente
+        await armariosAPI.update(currentProjectId, projectData);
+        setSaveMessage({ type: 'success', text: 'Proyecto actualizado correctamente' });
+      } else {
+        // Crear nuevo proyecto
+        const result = await armariosAPI.create(projectData);
+        setCurrentProjectId(result.project.id);
+        setSaveMessage({ type: 'success', text: 'Proyecto guardado correctamente' });
+      }
+
+      // Recargar lista
+      loadProjectsList();
+    } catch (error) {
+      console.error('Error guardando proyecto:', error);
+      setSaveMessage({ type: 'error', text: 'Error al guardar proyecto' });
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMessage(null), 3000);
+    }
+  };
+
+  // Cargar un proyecto
+  const loadProject = async (project) => {
+    setCurrentProjectId(project.id);
+    setProjectName(project.name);
+    setCustomerName(project.customerName || '');
+    setProjectRef(project.projectRef || '');
+    setWardrobeConfig({
+      width: project.width,
+      height: project.height,
+      depth: project.depth,
+      modules: project.modules,
+      doorType: project.doorType,
+      exteriorColor: project.exteriorColor,
+      interiorColor: project.interiorColor,
+      handleColor: project.handleColor,
+      endLeft: project.endLeft,
+      endRight: project.endRight
+    });
+    setModuleConfigs(project.moduleConfigs || []);
+    setExtras(project.extras || {});
+    setIvaRate(project.ivaRate || 21);
+    setCustomAccessories(project.customAccessories || []);
+    setShowProjectsModal(false);
+  };
+
+  // Nuevo proyecto
+  const newProject = () => {
+    setCurrentProjectId(null);
+    setProjectName('Nuevo Armario');
+    setCustomerName('');
+    setProjectRef('');
+    setWardrobeConfig({
+      width: 2400,
+      height: 2400,
+      depth: 600,
+      modules: 3,
+      doorType: DoorType.SLIDING,
+      exteriorColor: '010',
+      interiorColor: '010',
+      handleColor: '231',
+      endLeft: EndType.STANDARD,
+      endRight: EndType.STANDARD
+    });
+    setModuleConfigs([
+      { id: 1, shelves: 4, drawers: 0, hangingRods: 1, hangingHeight: 1200, extras: {} },
+      { id: 2, shelves: 6, drawers: 2, hangingRods: 0, hangingHeight: 0, extras: {} },
+      { id: 3, shelves: 4, drawers: 0, hangingRods: 2, hangingHeight: 1000, extras: {} }
+    ]);
+    setExtras({ softClose: true, antiFingerprint: false, led: false, mirror: false });
+    setIvaRate(21);
+    setCustomAccessories([]);
+    setShowProjectsModal(false);
+  };
+
+  // Eliminar proyecto
+  const deleteProject = async (projectId) => {
+    if (!window.confirm('¿Estás seguro de eliminar este proyecto?')) return;
+    try {
+      await armariosAPI.delete(projectId);
+      loadProjectsList();
+      if (currentProjectId === projectId) {
+        newProject();
+      }
+    } catch (error) {
+      console.error('Error eliminando proyecto:', error);
+    }
+  };
+
+  // Exportar a PDF
+  const exportToPDF = () => {
+    // Por ahora usamos window.print() - se puede mejorar con jsPDF
+    window.print();
+  };
+
+  // Cargar proyectos al montar
+  useEffect(() => {
+    loadProjectsList();
+  }, []);
+
   // Render visual del armario
   const renderWardrobeVisual = () => {
     const { width, height, modules, doorType } = wardrobeConfig;
