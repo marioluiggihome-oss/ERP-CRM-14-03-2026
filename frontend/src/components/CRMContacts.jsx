@@ -50,7 +50,8 @@ const CRMContacts = ({ currentUser }) => {
     source: '',
     segment: '',
     prescriptorId: '',
-    prescriptorName: ''
+    prescriptorName: '',
+    tags: [] // Etiquetas de tipo de negocio
   });
 
   useEffect(() => {
