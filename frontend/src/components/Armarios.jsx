@@ -2251,11 +2251,11 @@ const Armarios = ({ state, setState }) => {
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => window.print()}
-                  className="bg-white border border-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-colors"
+                  onClick={exportDespiecePDF}
+                  className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-blue-500 transition-colors"
                 >
-                  <Printer size={16} />
-                  Imprimir
+                  <Download size={16} />
+                  Descargar PDF
                 </button>
                 <button
                   onClick={() => setShowDespieceModal(false)}
