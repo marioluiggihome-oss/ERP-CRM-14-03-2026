@@ -500,9 +500,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                      <div className="col-span-1 text-center">CANT</div>
                      <div className="col-span-2">REFERENCIA</div>
                      <div className="col-span-2">NOMBRE MUEBLE</div>
-                     <div className="col-span-1 text-center">W</div>
-                     <div className="col-span-1 text-center">H</div>
-                     <div className="col-span-1 text-center">D</div>
+                     <div className="col-span-1 text-center">ANCHO</div>
+                     <div className="col-span-1 text-center">ALTO</div>
+                     <div className="col-span-1 text-center">FONDO</div>
                      <div className="col-span-1 text-center">MANO</div>
                      <div className="col-span-2">OBSERVACIONES</div>
                      <div className="col-span-1 text-right">SUBTOTAL</div>
