@@ -419,3 +419,21 @@ El prescriptor tiene un calendario simple donde puede añadir notas en fechas es
 - El campo de descripción de líneas manuales ahora ocupa el espacio de AN+AL+FO+AP
 - Mayor área para escribir conceptos personalizados
 
+
+## Correcciones de Datos y UI (24/01/2026)
+
+### 7. Corrección Series Semicolumnas
+- **Cambio:** Series "11" → "110", "12" → "120", etc.
+- **Productos afectados:** 757
+- **Endpoint usado:** `POST /api/products/fix-data`
+
+### 8. Corrección Fondo Muebles Bajos
+- **Cambio:** Fondo de 33cm → 58cm para todos los muebles BAJOS (códigos 7B*, 8B*)
+- **Productos afectados:** 907
+- **Nota:** Los muebles ALTOS mantienen fondo 33cm (correcto)
+
+### 9. Desglose de Precio Solo para Admin
+- **Cambio:** El tooltip con desglose (puntos, valor punto, extras) ahora solo es visible para usuarios con `isAdmin: true`
+- **Archivo:** `/app/frontend/src/components/BudgetTable.jsx`
+- **Condición:** `{state.currentUser?.isAdmin && ...}`
+
