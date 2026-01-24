@@ -663,8 +663,23 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                          </div>
                          <div className="col-span-1 text-right flex items-center justify-end gap-1 relative group/price">
                             {hasExtras && <Info size={10} className="text-orange-600 no-print animate-pulse" />}
+                            {item.hasVigaCut && <span className="text-[7px] font-black text-orange-600 bg-orange-100 px-1 rounded">VIGA</span>}
                             {item.isManual && <PenTool size={10} className="text-indigo-300 no-print mr-1" />}
                             <span className="text-xs font-black italic tracking-tighter cursor-help border-b border-dotted border-indigo-300">{price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
+                            
+                            {/* Checkbox de Corte Viga */}
+                            {!item.isManual && (
+                              <label className="no-print flex items-center gap-1 cursor-pointer ml-1" title="Añadir incremento por corte de viga">
+                                <input 
+                                  type="checkbox"
+                                  checked={item.hasVigaCut || false}
+                                  onChange={(e) => updateItem(item.id, 'hasVigaCut', e.target.checked)}
+                                  className="w-3 h-3 rounded accent-orange-600"
+                                />
+                                <span className="text-[7px] font-bold text-indigo-400">V</span>
+                              </label>
+                            )}
+                            
                             <button onClick={() => removeItem(item.id)} className="no-print p-1 text-indigo-100 hover:text-red-500 transition-all"><Trash2 size={12}/></button>
                             
                             <div className="absolute right-0 top-full mt-2 z-50 hidden group-hover/price:block w-64 bg-slate-900 text-white p-4 rounded-xl shadow-2xl text-[9px] font-mono whitespace-pre-wrap text-left border border-indigo-500/30">
