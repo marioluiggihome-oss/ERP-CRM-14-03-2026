@@ -460,6 +460,15 @@ const Armarios = ({ state, setState }) => {
   
   // Estado para filtro de categoría de colores
   const [colorCategory, setColorCategory] = useState('all');
+  
+  // Estado para guardar/cargar proyectos
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [savedProjects, setSavedProjects] = useState([]);
+  const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [projectName, setProjectName] = useState('Nuevo Armario');
+  const [saving, setSaving] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
 
   // Ajustar módulos al cambiar el número (en el handler)
   const adjustModules = useCallback((targetCount) => {
