@@ -456,3 +456,31 @@ El prescriptor tiene un calendario simple donde puede añadir notas en fechas es
   - Incluye caja de totales con IVA al final
   - Soporta logo personalizado de la empresa
 
+
+## Cambios UI y Terminología (24/01/2026)
+
+### 12. IVA Editable en Presupuesto
+- Campo de IVA ahora es editable (input numérico)
+- Por defecto 21%, pero puede cambiarse según cliente
+- Estado guardado en `state.ivaRate`
+- Todos los cálculos (IVA, TOTAL) se ajustan automáticamente
+
+### 13. Renombrado "Prescriptor" → "Colaborador Comercial"
+- Todos los textos de UI cambiados a "Colaborador Comercial"
+- Afecta: SettingsModal, CRMContacts, CRMCalendar, PrescriptorAgenda
+- El campo técnico `isPrescriptor` se mantiene por compatibilidad
+
+### 14. "MONTADA/DESPIECE" → "COCINA MONTADA / COCINA DESPIECE"
+- Botones del selector de módulo actualizados
+- Más descriptivo para el usuario
+
+### 15. Valor en CRM Contactos
+- El endpoint `/api/crm/contacts` ahora calcula `totalValue`
+- Suma el valor de todas las oportunidades asociadas al contacto
+- Se muestra correctamente en la columna VALOR
+
+### Nota: Muebles BAJOS GOLA
+- **NO existen** actualmente en la base de datos
+- Solo hay GOLA - ALTOS, SEMICOLUMNAS y COLUMNAS
+- Necesitan ser importados usando el Importador de Catálogo IA
+
