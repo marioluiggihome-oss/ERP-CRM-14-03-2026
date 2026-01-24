@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, Copy, CheckCircle } from 'lucide-react';
 import { usersAPI, productsAPI, materialsAPI, settingsAPI } from '../services/api';
 
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
