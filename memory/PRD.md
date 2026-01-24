@@ -38,6 +38,7 @@
 | 30 | **Clientes Potenciales vs Activos (naranja/verde)** | ✅ | 24/01 |
 | 31 | **Usuario hereda descuento de cliente vinculado** | ✅ | 24/01 |
 | 32 | **Comercial: Botón "Mis Tiendas" para ver trabajo** | ✅ | 24/01 |
+| 33 | **COPIA SEGURIDAD y MANTENIMIENTO movidos dentro de Master** | ✅ | 24/01 |
 
 ### 🟢 TODO COMPLETADO
 
