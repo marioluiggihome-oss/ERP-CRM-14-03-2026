@@ -344,10 +344,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const filteredProducts = useMemo(() => {
     if (!currentCatalog) return [];
     const query = productSearch.toLowerCase();
-    return currentCatalog.products.filter(p =>
+    const filtered = currentCatalog.products.filter(p =>
       p.code.toLowerCase().includes(query) ||
       p.name.toLowerCase().includes(query)
     );
+    // Ordenar por código de referencia
+    return filtered.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
   }, [currentCatalog, productSearch]);
 
   if (!isOpen) return null;
