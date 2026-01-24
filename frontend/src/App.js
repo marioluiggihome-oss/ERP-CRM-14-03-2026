@@ -320,14 +320,8 @@ const App = () => {
             {state.currentTab === 'library' && <ProjectLibrary state={state} setState={setState} />}
             {state.currentTab === 'backup' && <BackupManager />}
             
-            {/* CRM Components */}
-            {state.currentTab === 'crm-dashboard' && (
-              <CRMDashboard 
-                onNavigate={(tab) => setState(p => ({...p, currentTab: `crm-${tab}`}))} 
-              />
-            )}
-            {state.currentTab === 'crm-pipeline' && <CRMPipeline />}
-            {state.currentTab === 'crm-contacts' && <CRMContacts />}
+            {/* CRM - Single Component with internal navigation */}
+            {state.currentTab?.startsWith('crm') && <CRMLayout />}
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />
