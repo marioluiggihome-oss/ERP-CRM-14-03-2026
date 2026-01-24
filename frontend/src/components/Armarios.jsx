@@ -1250,10 +1250,54 @@ const Armarios = ({ state, setState }) => {
     }
   };
 
-  // Exportar a PDF
+  // Exportar a PDF presupuesto
   const exportToPDF = () => {
-    // Por ahora usamos window.print() - se puede mejorar con jsPDF
-    window.print();
+    generateArmarioPresupuestoPDF({
+      projectName,
+      customerName,
+      projectRef,
+      dimensions: { 
+        width: wardrobeConfig.width, 
+        height: wardrobeConfig.height, 
+        depth: wardrobeConfig.depth 
+      },
+      modules: wardrobeConfig.modules,
+      doorType: wardrobeConfig.doorType,
+      colors: { 
+        exterior: wardrobeConfig.exteriorColor,
+        exteriorName: getColorByName(wardrobeConfig.exteriorColor).name,
+        interior: wardrobeConfig.interiorColor,
+        interiorName: getColorByName(wardrobeConfig.interiorColor).name
+      },
+      pricing: pricing,
+      specifications: {
+        shelves: moduleConfigs.reduce((acc, m) => acc + m.shelves, 0).toString(),
+        drawers: moduleConfigs.reduce((acc, m) => acc + m.drawers, 0).toString(),
+        hangingRods: moduleConfigs.reduce((acc, m) => acc + m.hangingRods, 0).toString()
+      },
+      boardsCalculation: boardsCalculation,
+      ivaRate: ivaRate
+    });
+  };
+
+  // Exportar despiece a PDF
+  const exportDespiecePDF = () => {
+    generateArmariosDespiecePDF({
+      customerName,
+      projectRef,
+      dimensions: { 
+        width: wardrobeConfig.width, 
+        height: wardrobeConfig.height, 
+        depth: wardrobeConfig.depth 
+      },
+      accessories: generateAccessoriesList,
+      boardsCalculation: boardsCalculation,
+      pricing: pricing,
+      colors: {
+        exterior: getColorByName(wardrobeConfig.exteriorColor).name,
+        interior: getColorByName(wardrobeConfig.interiorColor).name
+      }
+    });
   };
 
   // Cargar proyectos al montar
