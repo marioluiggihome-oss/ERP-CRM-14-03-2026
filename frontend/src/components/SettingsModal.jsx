@@ -852,6 +852,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
+                            checked={userForm.canAccessCRM}
+                            onChange={(e) => setUserForm({...userForm, canAccessCRM: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">Acceso al CRM</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
                             checked={userForm.useCustomBranding}
                             onChange={(e) => setUserForm({...userForm, useCustomBranding: e.target.checked})}
                             className="w-4 h-4 rounded"
