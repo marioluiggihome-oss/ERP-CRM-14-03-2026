@@ -5,68 +5,80 @@ Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriale
 
 ## Estado de Correcciones (POR CORREGIR.docx) - 24/01/2026
 
-### ✅ COMPLETADO
+### ✅ COMPLETADO (14/19 tareas)
 
 | # | Corrección | Estado |
 |---|------------|--------|
-| 1 | **Prompt mejorado para alturas** | ✅ HECHO - Contexto de medidas de muebles (70-220cm) |
-| 2 | **Logo más grande** | ✅ HECHO - h-16 en lugar de h-12 |
-| 3 | **Cambiar "BUDGET SYSTEM" → "PRESUPUESTO TÉCNICO"** | ✅ HECHO |
-| 4 | **Campo REF (AUTO) editable** | ✅ HECHO - Ahora es input editable |
-| 5 | **Casilla descuento más ancha** | ✅ HECHO - w-16 con fondo visible |
-| 6 | **Descuento editable por línea (todas)** | ✅ HECHO - Todas las líneas editables |
-| 7 | **Decimales con punto y coma** | ✅ HECHO - replace(',', '.') |
-| 8 | **Despiece: campos cliente, ref, fecha, expediente** | ✅ HECHO - Barra de info editable |
+| 1 | **Prompt IA mejorado** (alturas 110cm, 220cm) | ✅ HECHO |
+| 2 | **Producto faltante 35A1P350** añadido | ✅ HECHO |
+| 3 | **Logo más grande** en Digitalizador | ✅ HECHO |
+| 4 | **"BUDGET SYSTEM" → "PRESUPUESTO TÉCNICO"** | ✅ HECHO |
+| 5 | **Campo REF (AUTO) editable** | ✅ HECHO |
+| 6 | **Casilla descuento más ancha** y editable | ✅ HECHO |
+| 7 | **Decimales con punto y coma** | ✅ HECHO |
+| 8 | **Despiece: cliente, referencia, fecha, expediente** | ✅ HECHO |
+| 9 | **Historial persistente** (guardado en BD) | ✅ HECHO |
+| 10 | **Búsqueda en historial** por proyecto/cliente | ✅ HECHO |
+| 11 | **Modo Mantenimiento** | ✅ HECHO |
+| 12 | **Backup Pre-Actualización automático** | ✅ HECHO |
+| 13 | **Panel de control para Admin** | ✅ HECHO |
+| 14 | **Pantalla de "Sistema en actualización"** | ✅ HECHO |
 
-### 🔄 PENDIENTE (Prioridad Baja)
+### 🔄 PENDIENTE (5/19 tareas)
 
-| # | Tarea | Descripción |
-|---|-------|-------------|
-| 9 | Incremento por corte viga | Añadir campo y botón |
-| 10 | Contador correlativo expedientes | Nº auto para todos los usuarios |
-| 11 | Historial persistente digitalizador | Guardar en BD |
-| 12 | Conexión Digitalizador → CRM | Crear oportunidad desde presupuesto digitalizado |
-| 13 | Gestión armazones en pestaña separada | Mover fuera de Márgenes |
-| 14 | Revisar artículos faltantes sin duplicar | Verificar catálogo |
-| 15 | Admin ver todos los trabajos | Listados e informes |
+| # | Tarea | Prioridad |
+|---|-------|-----------|
+| 15 | Incremento por corte viga | Media |
+| 16 | Contador correlativo de expedientes | Media |
+| 17 | Conexión Digitalizador → CRM | Baja |
+| 18 | Gestión armazones en pestaña separada | Baja |
+| 19 | Admin ver todos los trabajos | Baja |
 
-## Características Implementadas ✅
+## Sistema de Mantenimiento (NUEVO)
 
-### Core
-- Autenticación con roles (Admin > Comercial > Tienda)
-- Inventario con 3,533 productos
-- Sistema de presupuestos
-- Archivo de proyectos
-- Exportación PDF
-- Backups automáticos
+### Funcionalidades:
+1. **Panel de Mantenimiento** (solo Admin)
+   - Activar/desactivar modo mantenimiento
+   - Mensaje personalizable para usuarios
+   - Tiempo estimado configurable
+   - Opción de backup automático
 
-### CRM
-- Dashboard con métricas
-- Pipeline Kanban
-- Gestión de contactos
-- Actividades y tareas
+2. **Backup Pre-Actualización**
+   - Se crea automáticamente al activar mantenimiento
+   - Guarda: usuarios, productos, proyectos, contactos, oportunidades, etc.
+   - Descargable en formato JSON
+   - Histórico de todos los backups
 
-### Despiece (Bill of Materials)
-- Cálculo automático de componentes
-- Orden de Montaje y Lista de Corte
-- **NUEVO**: Campos cliente, referencia, fecha, expediente
+3. **Pantalla de Mantenimiento**
+   - Solo para usuarios NO admin
+   - Muestra mensaje, tiempo estimado
+   - Indica si hay backup de seguridad
+   - Se actualiza automáticamente cada 30s
 
-### Digitalizador de Borradores
-- OCR con Gemini Vision (prompt mejorado para medidas)
-- Líneas editables (cantidad, descripción, precio)
-- Campo REF editable
-- Descuento global + descuento por línea
-- Decimales con punto y coma
-- Título: "PRESUPUESTO TÉCNICO"
-- Logo más grande
-- Exportación CSV para máquina seccionadora
+### APIs de Mantenimiento:
+- `GET /api/maintenance/status` - Estado actual
+- `POST /api/maintenance/activate` - Activar (con backup opcional)
+- `POST /api/maintenance/deactivate` - Desactivar
+- `GET /api/maintenance/backups` - Lista de backups
+- `GET /api/maintenance/backups/{id}/download` - Descargar backup
 
 ## Credenciales de Prueba
 - Usuario: MARIO
 - Contraseña: MARIO
 
-## Archivos Modificados (24/01/2026)
-- `/app/backend/server.py` - Prompt mejorado para digitalizador
-- `/app/frontend/src/components/Digitalizador.jsx` - UI mejorada
-- `/app/frontend/src/components/DespieceModal.jsx` - Campos de cliente
-- `/app/frontend/src/components/BudgetTable.jsx` - Props para despiece
+## Productos en Base de Datos
+- Total: **3,534 productos**
+
+## Colecciones en MongoDB:
+- users
+- products
+- projects
+- materials
+- settings
+- contacts
+- opportunities
+- activities
+- catalogs
+- digitalizador_history
+- system_settings (modo mantenimiento)
+- system_backups (backups pre-actualización)
