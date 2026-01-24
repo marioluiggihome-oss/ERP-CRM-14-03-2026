@@ -985,7 +985,8 @@ const Armarios = ({ state, setState }) => {
 
   // Función helper para obtener color
   function getColorByName(colorId) {
-    return FINSA_COLORS.find(c => c.id === colorId) || FINSA_COLORS[0];
+    const color = FINSA_COLORS.find(c => c.id === colorId);
+    return color || { id: '010', name: 'Blanco Standard', hex: '#FFFFFF', ref: '010', category: 'blancos' };
   }
 
   // Añadir accesorio personalizado
