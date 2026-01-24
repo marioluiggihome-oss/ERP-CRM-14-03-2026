@@ -140,7 +140,7 @@ const CRMContacts = () => {
 
   const getStatusName = (status) => {
     const names = {
-      lead: 'Lead',
+      lead: 'Nuevo',
       active: 'Activo',
       customer: 'Cliente',
       inactive: 'Inactivo'
