@@ -221,6 +221,19 @@ const App = () => {
     return <MaintenanceScreen onCheckAgain={checkMaintenanceMode} />;
   }
 
+  // Prescriptor users see ONLY their agenda - restricted access
+  if (state.currentUser?.isPrescriptor) {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
+        <PrescriptorAgenda 
+          currentUser={state.currentUser} 
+          onLogout={() => setState(prev => ({ ...prev, currentUser: null }))}
+        />
+      </div>
+    );
+  }
+
   const carcassMaterialName = state.carcassMaterials?.find(m => m.id === state.selectedCarcassMaterialId)?.name || 'Blanco';
 
   return (
