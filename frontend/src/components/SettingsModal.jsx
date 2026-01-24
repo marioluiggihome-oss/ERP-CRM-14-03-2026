@@ -1429,7 +1429,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                          );})
+                        }
                       </tbody>
                     </table>
                     
