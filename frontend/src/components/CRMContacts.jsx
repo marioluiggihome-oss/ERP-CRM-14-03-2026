@@ -1,15 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Search, Plus, Mail, Phone, Building2, MapPin, Tag,
-  Edit2, Trash2, X, Save, Loader2, UserPlus, Filter, UserCheck
+  Edit2, Trash2, X, Save, Loader2, UserPlus, Filter, UserCheck, User
 } from 'lucide-react';
-import { crmContactsAPI, clientsAPI } from '../services/api';
+import { crmContactsAPI, clientsAPI, usersAPI } from '../services/api';
 
-const CRMContacts = () => {
+const CLIENT_SEGMENTS = [
+  "PROMOTOR",
+  "CONSTRUCTOR",
+  "PROMOTOR-CONSTRUCTOR",
+  "DECORADOR-INTERIORISTA",
+  "ESTUDIO DE COCINA",
+  "TIENDA DE MUEBLES",
+  "TIENDA DE COCINA Y BAÑOS",
+  "TIENDA DE ARMARIOS",
+  "ARQUITECTO",
+  "REFORMISTA",
+  "USUARIO FINAL",
+  "OTRO"
+];
+
+const CRMContacts = ({ currentUser }) => {
   const [contacts, setContacts] = useState([]);
+  const [prescriptors, setPrescriptors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [segmentFilter, setSegmentFilter] = useState('');
+  const [prescriptorFilter, setPrescriptorFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [formData, setFormData] = useState({
@@ -21,23 +39,48 @@ const CRMContacts = () => {
     address: '',
     notes: '',
     status: 'lead',
-    source: ''
+    source: '',
+    segment: '',
+    prescriptorId: '',
+    prescriptorName: ''
   });
 
   useEffect(() => {
     loadContacts();
-  }, [statusFilter]);
+    loadPrescriptors();
+  }, [statusFilter, segmentFilter, prescriptorFilter]);
 
   const loadContacts = async () => {
     setIsLoading(true);
     try {
       const data = await crmContactsAPI.getAll(statusFilter || null, null);
-      setContacts(data);
+      // Apply local filters for segment and prescriptor
+      let filtered = data;
+      if (segmentFilter) {
+        filtered = filtered.filter(c => c.segment === segmentFilter);
+      }
+      if (prescriptorFilter) {
+        filtered = filtered.filter(c => c.prescriptorId === prescriptorFilter);
+      }
+      setContacts(filtered);
     } catch (err) {
       console.error('Error loading contacts:', err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadPrescriptors = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/prescriptors`);
+      if (response.ok) {
+        const data = await response.json();
+        setPrescriptors(data);
+      }
+    } catch (err) {
+      console.error('Error loading prescriptors:', err);
+    }
+  };
   };
 
   const handleSearch = async () => {
