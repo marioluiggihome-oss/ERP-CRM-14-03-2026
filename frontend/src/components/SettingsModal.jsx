@@ -1069,7 +1069,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 ) : (
                                   <td className="p-3 text-center text-lg font-black text-orange-600 bg-orange-50">{product.points || 0}</td>
                                 )}
-                                <td className="p-3">
+                                <td className="p-3 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.1)]">
                                   <div className="flex justify-center gap-2">
                                     <button
                                       onClick={() => handleEditProduct(product)}
