@@ -629,6 +629,14 @@ const Digitalizador = ({ state }) => {
                 Nuevo Presupuesto
               </button>
               <button
+                onClick={handleSaveBudget}
+                disabled={isSaving}
+                className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-green-700 disabled:bg-green-400 transition-colors shadow-lg"
+              >
+                {isSaving ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
+                Guardar en Historial
+              </button>
+              <button
                 onClick={handleExportCSV}
                 className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-indigo-700 transition-colors shadow-lg"
               >
@@ -636,32 +644,80 @@ const Digitalizador = ({ state }) => {
                 Exportar CSV Máquina
               </button>
             </div>
+
+            {/* Success Message */}
+            {successMessage && (
+              <div className="mt-4 p-4 bg-green-100 border border-green-300 rounded-xl text-center">
+                <p className="text-green-700 font-bold">{successMessage}</p>
+              </div>
+            )}
           </div>
         )}
       </main>
 
       {/* History Sidebar */}
       {showHistory && (
-        <div className="fixed inset-y-0 left-0 w-80 bg-white shadow-2xl z-50 flex flex-col no-print">
-          <div className="bg-indigo-950 text-white px-6 py-4 flex justify-between items-center">
+        <div className="fixed inset-y-0 left-0 w-96 bg-white shadow-2xl z-50 flex flex-col no-print">
+          <div className="bg-indigo-950 text-white px-6 py-4 flex justify-between items-center shrink-0">
             <h3 className="font-black uppercase tracking-wider">Historial</h3>
             <button onClick={() => setShowHistory(false)} className="p-1 hover:bg-white/10 rounded">
               <X size={20} />
             </button>
           </div>
+          
+          {/* Search */}
+          <div className="p-4 border-b border-indigo-100 shrink-0">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" />
+              <input
+                type="text"
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                placeholder="Buscar por proyecto o cliente..."
+                className="w-full pl-10 pr-4 py-2 bg-indigo-50 rounded-lg text-sm font-medium text-indigo-900 outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+          </div>
+          
           <div className="flex-1 overflow-auto p-4 space-y-2">
-            {history.length === 0 ? (
+            {loadingHistory ? (
+              <div className="flex justify-center py-8">
+                <Loader size={24} className="animate-spin text-indigo-400" />
+              </div>
+            ) : history.length === 0 ? (
               <p className="text-center text-indigo-400 text-sm py-8">No hay historial</p>
             ) : (
               history.map((entry) => (
-                <div key={entry.id} className="p-4 bg-indigo-50 rounded-xl">
-                  <p className="font-bold text-indigo-900">{entry.projectName || 'Sin nombre'}</p>
-                  <p className="text-xs text-indigo-400 mt-1">
-                    {new Date(entry.date).toLocaleString('es-ES')}
+                <div 
+                  key={entry.id} 
+                  onClick={() => loadBudgetFromHistory(entry)}
+                  className="p-4 bg-indigo-50 rounded-xl hover:bg-indigo-100 cursor-pointer transition-colors group"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-bold text-indigo-900">{entry.projectName || 'Sin nombre'}</p>
+                      {entry.customerName && (
+                        <p className="text-xs text-orange-600 font-bold mt-0.5">{entry.customerName}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => deleteBudgetFromHistory(entry.id, e)}
+                      className="p-1.5 text-indigo-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-indigo-400 mt-2">
+                    {new Date(entry.createdAt).toLocaleString('es-ES')}
                   </p>
-                  <p className="text-xs text-indigo-400">
-                    {entry.lineCount} líneas · {entry.filename}
-                  </p>
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-indigo-400">
+                      {entry.lines?.length || 0} líneas
+                    </p>
+                    <p className="text-sm font-black text-indigo-900">
+                      {(entry.totalConIva || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                    </p>
+                  </div>
                 </div>
               ))
             )}
