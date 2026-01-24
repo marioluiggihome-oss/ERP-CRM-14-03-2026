@@ -185,12 +185,19 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
 
   const openNoteModal = (date, note = null) => {
     setSelectedDate(date);
+    setShowNewContactInNote(false);
+    setNewContactInNote({ name: '', phone: '', company: '' });
     if (note) {
       setEditingNote(note);
-      setNoteFormData({ title: note.title || '', content: note.content || '' });
+      setNoteFormData({ 
+        title: note.title || '', 
+        content: note.content || '',
+        contactId: note.contactId || '',
+        contactName: note.contactName || ''
+      });
     } else {
       setEditingNote(null);
-      setNoteFormData({ title: '', content: '' });
+      setNoteFormData({ title: '', content: '', contactId: '', contactName: '' });
     }
     setShowNoteModal(true);
   };
