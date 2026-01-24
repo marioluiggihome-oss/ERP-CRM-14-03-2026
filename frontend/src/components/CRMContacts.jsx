@@ -317,47 +317,55 @@ const CRMContacts = ({ currentUser }) => {
             <table className="w-full">
               <thead className="bg-slate-50 sticky top-0">
                 <tr>
-                  <th className="text-left py-4 px-6 text-xs font-black text-slate-500 uppercase">Contacto</th>
-                  <th className="text-left py-4 px-6 text-xs font-black text-slate-500 uppercase">Empresa</th>
-                  <th className="text-left py-4 px-6 text-xs font-black text-slate-500 uppercase">Contacto</th>
-                  <th className="text-left py-4 px-6 text-xs font-black text-slate-500 uppercase">Estado</th>
-                  <th className="text-right py-4 px-6 text-xs font-black text-slate-500 uppercase">Valor Total</th>
-                  <th className="text-center py-4 px-6 text-xs font-black text-slate-500 uppercase">Acciones</th>
+                  <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Contacto</th>
+                  <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Empresa</th>
+                  <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Segmento</th>
+                  <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Prescriptor</th>
+                  <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Estado</th>
+                  <th className="text-right py-4 px-4 text-xs font-black text-slate-500 uppercase">Valor</th>
+                  <th className="text-center py-4 px-4 text-xs font-black text-slate-500 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredContacts.map(contact => (
                   <tr key={contact.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-4 px-6">
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center">
                           <span className="text-indigo-600 font-black text-sm">
                             {contact.name?.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900">{contact.name}</p>
-                          <p className="text-xs text-slate-500">{contact.position}</p>
+                          <p className="font-bold text-slate-900 text-sm">{contact.name}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                            {contact.email && <span>{contact.email}</span>}
+                            {contact.phone && <span>· {contact.phone}</span>}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-slate-400" />
-                        <span className="text-sm text-slate-600">{contact.company || '-'}</span>
-                      </div>
+                    <td className="py-3 px-4">
+                      <span className="text-sm text-slate-600">{contact.company || '-'}</span>
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="space-y-1">
-                        {contact.email && (
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <Mail className="w-3 h-3" />
-                            {contact.email}
-                          </div>
-                        )}
-                        {contact.phone && (
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <Phone className="w-3 h-3" />
+                    <td className="py-3 px-4">
+                      {contact.segment ? (
+                        <span className="text-[10px] px-2 py-1 bg-violet-100 text-violet-700 rounded-full font-bold">
+                          {contact.segment}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-300">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {contact.prescriptorName ? (
+                        <span className="text-[10px] px-2 py-1 bg-amber-100 text-amber-700 rounded-full font-bold flex items-center gap-1 w-fit">
+                          <User size={10} />
+                          {contact.prescriptorName}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-300">-</span>
+                      )}
                             {contact.phone}
                           </div>
                         )}
