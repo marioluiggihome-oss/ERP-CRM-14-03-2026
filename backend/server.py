@@ -1192,6 +1192,378 @@ async def get_backup_status():
         "backup_email": os.environ.get('BACKUP_EMAIL', 'marioluiggihome@gmail.com')
     }
 
+# ============================================
+# CRM API ENDPOINTS - Contactos
+# ============================================
+
+@api_router.get("/crm/contacts")
+async def get_contacts(status: Optional[str] = None, search: Optional[str] = None):
+    """Get all contacts with optional filters"""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        if search:
+            query["$or"] = [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"company": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}}
+            ]
+        
+        contacts = await db.contacts.find(query, {"_id": 0}).sort("createdAt", -1).to_list(1000)
+        return contacts
+    except Exception as e:
+        logger.error(f"Get contacts error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/crm/contacts/{contact_id}")
+async def get_contact(contact_id: str):
+    """Get a single contact by ID"""
+    contact = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contacto no encontrado")
+    return contact
+
+@api_router.post("/crm/contacts")
+async def create_contact(contact: ContactCreate):
+    """Create a new contact"""
+    try:
+        contact_dict = contact.model_dump()
+        contact_obj = ContactModel(**contact_dict)
+        doc = contact_obj.model_dump()
+        doc['createdAt'] = doc['createdAt'].isoformat()
+        doc['updatedAt'] = doc['updatedAt'].isoformat()
+        
+        await db.contacts.insert_one(doc)
+        doc.pop('_id', None)
+        return doc
+    except Exception as e:
+        logger.error(f"Create contact error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/crm/contacts/{contact_id}")
+async def update_contact(contact_id: str, contact: ContactUpdate):
+    """Update an existing contact"""
+    try:
+        update_data = {k: v for k, v in contact.model_dump().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+        
+        update_data['updatedAt'] = datetime.now(timezone.utc).isoformat()
+        
+        result = await db.contacts.update_one(
+            {"id": contact_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Contacto no encontrado")
+        
+        updated = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
+        return updated
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update contact error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/crm/contacts/{contact_id}")
+async def delete_contact(contact_id: str):
+    """Delete a contact"""
+    result = await db.contacts.delete_one({"id": contact_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Contacto no encontrado")
+    return {"message": "Contacto eliminado", "id": contact_id}
+
+# ============================================
+# CRM API ENDPOINTS - Oportunidades
+# ============================================
+
+@api_router.get("/crm/opportunities")
+async def get_opportunities(stage: Optional[str] = None, contactId: Optional[str] = None):
+    """Get all opportunities with optional filters"""
+    try:
+        query = {}
+        if stage:
+            query["stage"] = stage
+        if contactId:
+            query["contactId"] = contactId
+        
+        opportunities = await db.opportunities.find(query, {"_id": 0}).sort("createdAt", -1).to_list(1000)
+        return opportunities
+    except Exception as e:
+        logger.error(f"Get opportunities error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/crm/opportunities/{opp_id}")
+async def get_opportunity(opp_id: str):
+    """Get a single opportunity by ID"""
+    opp = await db.opportunities.find_one({"id": opp_id}, {"_id": 0})
+    if not opp:
+        raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+    return opp
+
+@api_router.post("/crm/opportunities")
+async def create_opportunity(opportunity: OpportunityCreate):
+    """Create a new opportunity"""
+    try:
+        opp_dict = opportunity.model_dump()
+        opp_obj = OpportunityModel(**opp_dict)
+        doc = opp_obj.model_dump()
+        doc['createdAt'] = doc['createdAt'].isoformat()
+        doc['updatedAt'] = doc['updatedAt'].isoformat()
+        if doc.get('closedAt'):
+            doc['closedAt'] = doc['closedAt'].isoformat()
+        
+        await db.opportunities.insert_one(doc)
+        doc.pop('_id', None)
+        return doc
+    except Exception as e:
+        logger.error(f"Create opportunity error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/crm/opportunities/{opp_id}")
+async def update_opportunity(opp_id: str, opportunity: OpportunityUpdate):
+    """Update an existing opportunity"""
+    try:
+        update_data = {k: v for k, v in opportunity.model_dump().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+        
+        update_data['updatedAt'] = datetime.now(timezone.utc).isoformat()
+        
+        # If stage changed to won/lost, set closedAt
+        if update_data.get('stage') in ['won', 'lost']:
+            update_data['closedAt'] = datetime.now(timezone.utc).isoformat()
+        
+        result = await db.opportunities.update_one(
+            {"id": opp_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+        
+        updated = await db.opportunities.find_one({"id": opp_id}, {"_id": 0})
+        return updated
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update opportunity error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/crm/opportunities/{opp_id}")
+async def delete_opportunity(opp_id: str):
+    """Delete an opportunity"""
+    result = await db.opportunities.delete_one({"id": opp_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+    return {"message": "Oportunidad eliminada", "id": opp_id}
+
+# ============================================
+# CRM API ENDPOINTS - Actividades
+# ============================================
+
+@api_router.get("/crm/activities")
+async def get_activities(type: Optional[str] = None, contactId: Optional[str] = None, opportunityId: Optional[str] = None, completed: Optional[bool] = None):
+    """Get all activities with optional filters"""
+    try:
+        query = {}
+        if type:
+            query["type"] = type
+        if contactId:
+            query["contactId"] = contactId
+        if opportunityId:
+            query["opportunityId"] = opportunityId
+        if completed is not None:
+            query["completed"] = completed
+        
+        activities = await db.activities.find(query, {"_id": 0}).sort("dueDate", 1).to_list(1000)
+        return activities
+    except Exception as e:
+        logger.error(f"Get activities error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/crm/activities")
+async def create_activity(activity: ActivityCreate):
+    """Create a new activity"""
+    try:
+        act_dict = activity.model_dump()
+        act_obj = ActivityModel(**act_dict)
+        doc = act_obj.model_dump()
+        doc['createdAt'] = doc['createdAt'].isoformat()
+        if doc.get('completedAt'):
+            doc['completedAt'] = doc['completedAt'].isoformat()
+        
+        await db.activities.insert_one(doc)
+        doc.pop('_id', None)
+        return doc
+    except Exception as e:
+        logger.error(f"Create activity error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/crm/activities/{act_id}")
+async def update_activity(act_id: str, activity: ActivityUpdate):
+    """Update an existing activity"""
+    try:
+        update_data = {k: v for k, v in activity.model_dump().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+        
+        # If completed changed to True, set completedAt
+        if update_data.get('completed') == True:
+            update_data['completedAt'] = datetime.now(timezone.utc).isoformat()
+        
+        result = await db.activities.update_one(
+            {"id": act_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Actividad no encontrada")
+        
+        updated = await db.activities.find_one({"id": act_id}, {"_id": 0})
+        return updated
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update activity error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/crm/activities/{act_id}")
+async def delete_activity(act_id: str):
+    """Delete an activity"""
+    result = await db.activities.delete_one({"id": act_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Actividad no encontrada")
+    return {"message": "Actividad eliminada", "id": act_id}
+
+# ============================================
+# CRM DASHBOARD STATS
+# ============================================
+
+@api_router.get("/crm/dashboard")
+async def get_crm_dashboard():
+    """Get CRM dashboard statistics"""
+    try:
+        # Count totals
+        total_contacts = await db.contacts.count_documents({})
+        active_opportunities = await db.opportunities.count_documents({"stage": {"$nin": ["won", "lost"]}})
+        won_this_month = await db.opportunities.count_documents({
+            "stage": "won",
+            "closedAt": {"$gte": datetime.now(timezone.utc).replace(day=1).isoformat()}
+        })
+        
+        # Calculate pipeline value
+        pipeline_opps = await db.opportunities.find(
+            {"stage": {"$nin": ["won", "lost"]}},
+            {"value": 1, "_id": 0}
+        ).to_list(1000)
+        pipeline_value = sum(opp.get("value", 0) for opp in pipeline_opps)
+        
+        # Top opportunities
+        top_opportunities = await db.opportunities.find(
+            {"stage": {"$nin": ["lost"]}},
+            {"_id": 0}
+        ).sort("value", -1).limit(5).to_list(5)
+        
+        # Upcoming activities
+        upcoming_activities = await db.activities.find(
+            {"completed": False},
+            {"_id": 0}
+        ).sort("dueDate", 1).limit(5).to_list(5)
+        
+        # Recent activity log
+        recent_activities = await db.activities.find(
+            {},
+            {"_id": 0}
+        ).sort("createdAt", -1).limit(10).to_list(10)
+        
+        return {
+            "totalContacts": total_contacts,
+            "activeOpportunities": active_opportunities,
+            "wonThisMonth": won_this_month,
+            "pipelineValue": pipeline_value,
+            "topOpportunities": top_opportunities,
+            "upcomingActivities": upcoming_activities,
+            "recentActivities": recent_activities
+        }
+    except Exception as e:
+        logger.error(f"Get CRM dashboard error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
+# CRM - Create Opportunity from Project/Budget
+# ============================================
+
+@api_router.post("/crm/opportunities/from-project/{project_id}")
+async def create_opportunity_from_project(project_id: str):
+    """Create a CRM opportunity from an existing project/budget"""
+    try:
+        # Get the project
+        project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+        if not project:
+            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+        
+        # Calculate project total value
+        total_value = 0
+        for item in project.get("itemsMontada", []):
+            total_value += item.get("totalPrice", 0)
+        for item in project.get("itemsDespiece", []):
+            total_value += item.get("totalPrice", 0)
+        
+        # Check if contact exists or create one
+        customer_name = project.get("customerName", "Cliente sin nombre")
+        contact = await db.contacts.find_one({"name": customer_name}, {"_id": 0})
+        
+        if not contact:
+            # Create new contact
+            contact = ContactModel(
+                name=customer_name,
+                address=project.get("customerAddress", ""),
+                status="customer"
+            ).model_dump()
+            contact['createdAt'] = contact['createdAt'].isoformat()
+            contact['updatedAt'] = contact['updatedAt'].isoformat()
+            await db.contacts.insert_one(contact)
+        
+        contact_id = contact.get("id")
+        
+        # Create opportunity
+        opp = OpportunityModel(
+            title=f"Presupuesto Cocina - {customer_name}",
+            description=f"Presupuesto #{project.get('budgetNumber', '')}",
+            contactId=contact_id,
+            contactName=customer_name,
+            value=total_value,
+            probability=50,
+            stage="proposal",
+            linkedProjectId=project_id,
+            linkedProjectNumber=project.get("budgetNumber", "")
+        ).model_dump()
+        opp['createdAt'] = opp['createdAt'].isoformat()
+        opp['updatedAt'] = opp['updatedAt'].isoformat()
+        
+        await db.opportunities.insert_one(opp)
+        
+        # Link project to contact
+        await db.contacts.update_one(
+            {"id": contact_id},
+            {"$addToSet": {"linkedProjectIds": project_id}}
+        )
+        
+        opp.pop('_id', None)
+        return {
+            "opportunity": opp,
+            "contact": contact,
+            "message": "Oportunidad creada desde presupuesto"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create opportunity from project error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include the router in the main app (AFTER all endpoints are defined)
 app.include_router(api_router)
 
