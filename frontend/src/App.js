@@ -325,19 +325,18 @@ const App = () => {
                 </button>
               )}
               
-              {/* Solo Admin puede ver Copia de Seguridad */}
-              {state.currentUser?.isAdmin && (
+              {/* Solo Admin puede ver Digitalizador (o si tiene permiso) */}
+              {(state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && (
                 <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'backup'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'backup' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                  data-testid="backup-nav-btn"
+                  onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                  data-testid="digitalizador-nav-btn"
                 >
-                  <HardDrive size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Copia Seguridad</span>
+                  <ScanLine size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Digitalizador</span>
                 </button>
               )}
               
-              {/* Solo Admin puede ver Mantenimiento */}
               {/* Botón Panel Admin - Solo para Admin */}
               {state.currentUser?.isAdmin && (
                 <button 
@@ -359,18 +358,6 @@ const App = () => {
                 >
                   <Users size={22}/>
                   <span className="text-[7px] font-black uppercase tracking-widest">Mis Tiendas</span>
-                </button>
-              )}
-              
-              {/* Botón Mantenimiento - Solo para Admin */}
-              {state.currentUser?.isAdmin && (
-                <button 
-                  onClick={() => setShowMaintenancePanel(true)} 
-                  className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all text-slate-500 hover:text-white hover:bg-white/10"
-                  data-testid="maintenance-nav-btn"
-                >
-                  <Wrench size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Mantenimiento</span>
                 </button>
               )}
             </div>
