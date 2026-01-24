@@ -117,6 +117,17 @@ export const productsAPI = {
     return response.json();
   },
 
+  // Alias for backwards compatibility
+  bulkCreate: async (products) => {
+    const response = await fetch(`${API_URL}/api/products/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(products)
+    });
+    if (!response.ok) throw new Error('Error al crear productos');
+    return response.json();
+  },
+
   update: async (id, product) => {
     const response = await fetch(`${API_URL}/api/products/${id}`, {
       method: 'PUT',
