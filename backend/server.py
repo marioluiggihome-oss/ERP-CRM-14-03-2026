@@ -3201,14 +3201,14 @@ def calculate_furniture_despiece(
         "Canto frontal visto"
     )
     
-    # TRASERA (Back panel)
+    # TRASERA (Back panel) - siempre 8mm
     back_width = w - (2 * g) + 6  # Recessed into grooves (3mm each side)
     back_height = h - (2 * g) + 6 if not is_alto else h - g - 80 + 6
     add_component(
         "TRASERA", "TRAS",
         back_material,
         back_width, back_height, 1,
-        "Tablero 3mm encastrado"
+        "Tablero 8mm encastrado"
     )
     
     # BALDAS / ESTANTES (Shelves) - estimate based on height
