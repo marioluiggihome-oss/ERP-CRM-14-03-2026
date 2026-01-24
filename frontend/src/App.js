@@ -432,6 +432,7 @@ const App = () => {
             {state.currentTab === 'library' && <ProjectLibrary state={state} setState={setState} />}
             {state.currentTab === 'backup' && <BackupManager />}
             {state.currentTab === 'digitalizador' && <Digitalizador state={state} />}
+            {state.currentTab === 'armarios' && <Armarios state={state} setState={setState} />}
             
             {/* CRM - Single Component with internal navigation */}
             {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} />}
