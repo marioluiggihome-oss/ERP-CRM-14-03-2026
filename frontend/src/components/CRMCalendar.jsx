@@ -32,6 +32,7 @@ const CRMCalendar = ({ currentUser }) => {
   const [events, setEvents] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
+  const [prescriptorNotes, setPrescriptorNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState('month');
@@ -40,6 +41,7 @@ const CRMCalendar = ({ currentUser }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [filterType, setFilterType] = useState('');
   const [viewAllEvents, setViewAllEvents] = useState(false);
+  const [showPrescriptorNotes, setShowPrescriptorNotes] = useState(true);
   
   const [formData, setFormData] = useState({
     title: '',
