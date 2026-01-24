@@ -718,6 +718,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </button>
           )}
           
+          {/* Pestaña Mantenimiento - Solo Admin */}
+          {state.currentUser?.isAdmin && (
+            <button
+              onClick={() => setActiveTab('maintenance')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'maintenance' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+              data-testid="maintenance-tab"
+            >
+              <Wrench size={16} />
+              Mantenimiento
+            </button>
+          )}
+          
           {state.currentUser?.isAdmin && (
             <button
               onClick={() => setActiveTab('telemetry')}
