@@ -453,6 +453,9 @@ class ContactCreate(BaseModel):
     tags: List[str] = []
     source: str = ""
     status: str = "lead"
+    segment: str = ""
+    prescriptorId: str = ""
+    prescriptorName: str = ""
 
 class ContactUpdate(BaseModel):
     name: Optional[str] = None
@@ -465,6 +468,9 @@ class ContactUpdate(BaseModel):
     tags: Optional[List[str]] = None
     source: Optional[str] = None
     status: Optional[str] = None
+    segment: Optional[str] = None
+    prescriptorId: Optional[str] = None
+    prescriptorName: Optional[str] = None
     totalValue: Optional[float] = None
     linkedProjectIds: Optional[List[str]] = None
 
