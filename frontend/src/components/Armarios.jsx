@@ -78,11 +78,10 @@ const Armarios = ({ state, setState }) => {
   const [showConfig, setShowConfig] = useState(true);
   const [selectedModule, setSelectedModule] = useState(0);
 
-  // Actualizar módulos cuando cambia el número
-  useEffect(() => {
+  // Ajustar módulos al cambiar el número (en el handler)
+  const adjustModules = useCallback((targetCount) => {
     setModuleConfigs(prevModules => {
       const currentCount = prevModules.length;
-      const targetCount = wardrobeConfig.modules;
       
       if (targetCount > currentCount) {
         const newModules = [...prevModules];
@@ -103,14 +102,13 @@ const Armarios = ({ state, setState }) => {
       return prevModules;
     });
     
-    // Ajustar módulo seleccionado si es necesario
     setSelectedModule(prev => {
-      if (prev >= wardrobeConfig.modules) {
-        return Math.max(0, wardrobeConfig.modules - 1);
+      if (prev >= targetCount) {
+        return Math.max(0, targetCount - 1);
       }
       return prev;
     });
-  }, [wardrobeConfig.modules]);
+  }, []);
 
   // Calcular precios
   const pricing = useMemo(() => {
