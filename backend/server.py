@@ -322,6 +322,57 @@ class StatusCheckCreate(BaseModel):
     client_name: str
 
 # ============================================
+# CLIENT MODELS - Clientes Activos (Empresas/Tiendas)
+# ============================================
+
+class ClientModel(BaseModel):
+    """Modelo para clientes activos (empresas/tiendas que compran)"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"cli-{uuid.uuid4().hex[:8]}")
+    codigo: str  # Código del programa de gestión
+    nombre: str  # Nombre comercial / Razón social
+    cif: str = ""  # CIF/NIF
+    direccion: str = ""
+    localidad: str = ""
+    provincia: str = ""
+    codigoPostal: str = ""
+    telefono: str = ""
+    email: str = ""
+    descuento: float = 0  # Descuento personalizado (%)
+    activo: bool = True
+    notas: str = ""
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ClientCreate(BaseModel):
+    codigo: str
+    nombre: str
+    cif: str = ""
+    direccion: str = ""
+    localidad: str = ""
+    provincia: str = ""
+    codigoPostal: str = ""
+    telefono: str = ""
+    email: str = ""
+    descuento: float = 0
+    activo: bool = True
+    notas: str = ""
+
+class ClientUpdate(BaseModel):
+    codigo: Optional[str] = None
+    nombre: Optional[str] = None
+    cif: Optional[str] = None
+    direccion: Optional[str] = None
+    localidad: Optional[str] = None
+    provincia: Optional[str] = None
+    codigoPostal: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    descuento: Optional[float] = None
+    activo: Optional[bool] = None
+    notas: Optional[str] = None
+
+# ============================================
 # CRM MODELS - Contactos, Oportunidades, Actividades
 # ============================================
 
