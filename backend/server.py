@@ -1995,6 +1995,8 @@ async def delete_digitalizador_item(item_id: str):
     except Exception as e:
         logger.error(f"Delete digitalizador item error: {e}")
         raise HTTPException(status_code=500, detail=f"Error eliminando presupuesto: {str(e)}")
+
+@api_router.post("/digitalizador/analyze")
 async def analyze_draft(request: DigitalizadorRequest):
     """
     Analyze a draft image using Gemini Vision to extract budget lines.
