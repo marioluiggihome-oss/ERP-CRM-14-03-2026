@@ -239,17 +239,6 @@ const App = () => {
                 <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
               </button>
               
-              {/* Solo Admin y Comerciales con canManageArticles pueden ver Telemetría IA */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'telemetry'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'telemetry' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                >
-                  <Zap size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Telemetría IA</span>
-                </button>
-              )}
-              
               {/* Solo Admin y usuarios con canUseAIAnalysis pueden ver IA Lab */}
               {(state.currentUser?.isAdmin || state.currentUser?.canUseAIAnalysis) && (
                 <button 
