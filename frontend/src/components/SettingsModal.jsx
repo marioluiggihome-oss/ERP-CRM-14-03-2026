@@ -60,6 +60,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canViewTechnicalDespiece: false,
     canAccessCRM: false,
     canUseDigitalizador: false,
+    canAccessArmarios: false,
     useCustomBranding: false,
     canChangeLogo: false,
     linkedClientId: ''
