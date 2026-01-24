@@ -74,15 +74,24 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   // Client states
   const [clients, setClients] = useState([]);
   const [clientSearch, setClientSearch] = useState('');
+  const [clientFilterType, setClientFilterType] = useState('todos'); // 'todos', 'potencial', 'activo'
+  const [clientFilterSegment, setClientFilterSegment] = useState('');
+  const [clientSegments, setClientSegments] = useState([]);
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [editingClientId, setEditingClientId] = useState(null);
   const [isSavingClient, setIsSavingClient] = useState(false);
   const [isImportingClients, setIsImportingClients] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [showActivateModal, setShowActivateModal] = useState(null);
+  const [activateCode, setActivateCode] = useState('');
+  const [showLinkUserModal, setShowLinkUserModal] = useState(null);
+  const [linkUserId, setLinkUserId] = useState('');
   const [clientForm, setClientForm] = useState({
+    tipo: 'potencial',
     codigo: '',
     nombre: '',
     cif: '',
+    segmento: '',
     direccion: '',
     localidad: '',
     provincia: '',
@@ -93,6 +102,23 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     activo: true,
     notas: ''
   });
+
+  // Load clients and segments when tab is active
+  useEffect(() => {
+    if (isOpen && activeTab === 'clients') {
+      loadClients();
+      loadSegments();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadSegments = async () => {
+    try {
+      const data = await clientsAPI.getSegments();
+      setClientSegments(data.segments || []);
+    } catch (err) {
+      console.error('Error loading segments:', err);
+    }
+  };
 
   // Load clients when tab is active
   useEffect(() => {
