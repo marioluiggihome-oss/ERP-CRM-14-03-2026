@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Search, Plus, Mail, Phone, Building2, MapPin, Tag,
-  Edit2, Trash2, X, Save, Loader2, UserPlus, Filter
+  Edit2, Trash2, X, Save, Loader2, UserPlus, Filter, UserCheck
 } from 'lucide-react';
-import { crmContactsAPI } from '../services/api';
+import { crmContactsAPI, clientsAPI } from '../services/api';
 
 const CRMContacts = () => {
   const [contacts, setContacts] = useState([]);
@@ -105,6 +105,26 @@ const CRMContacts = () => {
       } catch (err) {
         alert('Error al eliminar contacto: ' + err.message);
       }
+    }
+  };
+
+  // Convertir contacto CRM a cliente potencial
+  const handleConvertToClient = async (contact) => {
+    if (contact.convertedToClientId) {
+      alert('Este contacto ya fue convertido a cliente');
+      return;
+    }
+    
+    if (!window.confirm(`¿Convertir "${contact.name}" a Cliente Potencial?\n\nEsto copiará los datos del contacto a la base de datos de Clientes.`)) {
+      return;
+    }
+    
+    try {
+      const newClient = await clientsAPI.createFromContact(contact.id);
+      alert(`✅ Cliente potencial "${newClient.nombre}" creado correctamente.\n\nPuedes gestionarlo desde Maestro → Clientes.`);
+      loadContacts(); // Reload to update the contact's status
+    } catch (err) {
+      alert('Error al convertir: ' + err.message);
     }
   };
 
