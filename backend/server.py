@@ -91,6 +91,7 @@ class UserModelInternal(BaseModel):
     canUseAIAnalysis: bool = False
     canManageArticles: bool = False
     canViewTechnicalDespiece: bool = False
+    canAccessCRM: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
@@ -112,6 +113,7 @@ class UserResponse(BaseModel):
     canUseAIAnalysis: bool = False
     canManageArticles: bool = False
     canViewTechnicalDespiece: bool = False
+    canAccessCRM: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
@@ -131,6 +133,7 @@ class UserCreate(BaseModel):
     canUseAIAnalysis: bool = False
     canManageArticles: bool = False
     canViewTechnicalDespiece: bool = False
+    canAccessCRM: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
@@ -150,6 +153,7 @@ class UserUpdate(BaseModel):
     canUseAIAnalysis: Optional[bool] = None
     canManageArticles: Optional[bool] = None
     canViewTechnicalDespiece: Optional[bool] = None
+    canAccessCRM: Optional[bool] = None
     useCustomBranding: Optional[bool] = None
     canChangeLogo: Optional[bool] = None
 
