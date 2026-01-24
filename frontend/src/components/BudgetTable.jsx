@@ -5,6 +5,7 @@ import { generateBudgetPDF } from '../services/pdfGenerator';
 import { DOOR_FINISHES, CabinetCategory } from '../constants';
 import Logo from './Logo';
 import DespieceModal from './DespieceModal';
+import { getProductIcon } from './FurnitureIcons';
 
 const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpenManufacturing }) => {
   const [searchQuery, setSearchQuery] = useState('');
