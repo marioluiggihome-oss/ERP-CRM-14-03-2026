@@ -1502,7 +1502,7 @@ const Armarios = ({ state, setState }) => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-yellow-600 italic">No hay accesorios personalizados. Usa "AÑADIR" para incluir accesorios del dibujo no listados.</p>
+                  <p className="text-xs text-yellow-600 italic">No hay accesorios personalizados. Usa AÑADIR para incluir accesorios del dibujo no listados.</p>
                 )}
               </div>
             </div>
