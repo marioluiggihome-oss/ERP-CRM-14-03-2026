@@ -443,6 +443,18 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                  <p className="text-[7px] text-indigo-300 italic">Se añade al total si hay corte de viga</p>
               </section>
 
+              {/* Botón para añadir línea manual */}
+              <section className="pt-2 border-t border-indigo-50">
+                <button 
+                  onClick={addManualItemToBudget}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 transition-colors"
+                  data-testid="add-manual-line-btn"
+                >
+                  <Plus size={14}/> LÍNEA MANUAL
+                </button>
+                <p className="text-[7px] text-indigo-300 italic mt-1 text-center">Añadir concepto libre</p>
+              </section>
+
               <section className="space-y-2 pt-2 border-t border-indigo-50">
                  <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">✏️ COLORES ESPECÍFICOS</h4>
                  <div className="space-y-1.5">
