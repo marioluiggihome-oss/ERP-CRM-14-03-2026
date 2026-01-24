@@ -426,9 +426,9 @@ const Armarios = ({ state, setState }) => {
     depth: 600, // mm
     modules: 3,
     doorType: DoorType.SLIDING,
-    exteriorColor: 'blanco-seda',
-    interiorColor: 'blanco-seda',
-    handleColor: 'gris-antracita',
+    exteriorColor: '010', // Blanco Standard
+    interiorColor: '010', // Blanco Standard
+    handleColor: '231', // Negro
     endLeft: EndType.STANDARD,
     endRight: EndType.STANDARD,
   });
@@ -456,6 +456,9 @@ const Armarios = ({ state, setState }) => {
   const [showDespieceModal, setShowDespieceModal] = useState(false);
   const [customAccessories, setCustomAccessories] = useState([]);
   const [nextAccessoryNum, setNextAccessoryNum] = useState(1);
+  
+  // Estado para filtro de categoría de colores
+  const [colorCategory, setColorCategory] = useState('all');
 
   // Ajustar módulos al cambiar el número (en el handler)
   const adjustModules = useCallback((targetCount) => {
