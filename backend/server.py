@@ -1977,6 +1977,79 @@ async def delete_contact(contact_id: str):
         raise HTTPException(status_code=404, detail="Contacto no encontrado")
     return {"message": "Contacto eliminado", "id": contact_id}
 
+@api_router.get("/crm/contacts/by-prescriptor/{prescriptor_id}")
+async def get_contacts_by_prescriptor(prescriptor_id: str):
+    """Get all contacts referred by a specific prescriptor"""
+    try:
+        contacts = await db.contacts.find(
+            {"prescriptorId": prescriptor_id},
+            {"_id": 0}
+        ).sort("createdAt", -1).to_list(1000)
+        return contacts
+    except Exception as e:
+        logger.error(f"Get contacts by prescriptor error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/crm/prescriptors")
+async def get_prescriptors():
+    """Get all users who are prescriptors"""
+    try:
+        prescriptors = await db.users.find(
+            {"isPrescriptor": True, "isActive": True},
+            {"_id": 0, "password": 0}
+        ).to_list(100)
+        return prescriptors
+    except Exception as e:
+        logger.error(f"Get prescriptors error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/crm/prescriptors/{prescriptor_id}/stats")
+async def get_prescriptor_stats(prescriptor_id: str):
+    """Get statistics for a prescriptor's referred contacts"""
+    try:
+        # Get all contacts referred by this prescriptor
+        contacts = await db.contacts.find(
+            {"prescriptorId": prescriptor_id},
+            {"_id": 0}
+        ).to_list(1000)
+        
+        # Count by segment
+        segments_count = {}
+        for contact in contacts:
+            seg = contact.get("segment", "SIN SEGMENTO")
+            segments_count[seg] = segments_count.get(seg, 0) + 1
+        
+        # Count by status
+        status_count = {}
+        for contact in contacts:
+            status = contact.get("status", "lead")
+            status_count[status] = status_count.get(status, 0) + 1
+        
+        # Count converted to client
+        converted_count = len([c for c in contacts if c.get("convertedToClientId")])
+        
+        # Get opportunities value from these contacts
+        contact_ids = [c.get("id") for c in contacts]
+        opportunities = await db.opportunities.find(
+            {"contactId": {"$in": contact_ids}},
+            {"_id": 0, "value": 1, "stage": 1}
+        ).to_list(1000)
+        
+        total_value = sum(o.get("value", 0) for o in opportunities)
+        won_value = sum(o.get("value", 0) for o in opportunities if o.get("stage") == "won")
+        
+        return {
+            "totalContacts": len(contacts),
+            "convertedToClient": converted_count,
+            "bySegment": segments_count,
+            "byStatus": status_count,
+            "totalOpportunitiesValue": total_value,
+            "wonOpportunitiesValue": won_value
+        }
+    except Exception as e:
+        logger.error(f"Get prescriptor stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============================================
 # CRM API ENDPOINTS - Oportunidades
 # ============================================
