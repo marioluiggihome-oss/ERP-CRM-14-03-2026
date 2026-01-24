@@ -932,6 +932,127 @@ async def import_clients_csv(data: dict):
         "total": len(clients_data)
     }
 
+@api_router.get("/clients/segments")
+async def get_client_segments():
+    """Obtener lista de segmentos de clientes disponibles"""
+    return {"segments": CLIENT_SEGMENTS}
+
+@api_router.post("/clients/from-contact/{contact_id}")
+async def create_client_from_contact(contact_id: str):
+    """Convertir un contacto del CRM en cliente potencial"""
+    # Get contact from CRM
+    contact = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contacto no encontrado")
+    
+    # Check if already converted
+    existing = await db.clients.find_one({"origenCrmContactId": contact_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Este contacto ya fue convertido a cliente")
+    
+    # Create client from contact data
+    client_data = {
+        "id": f"cli-{uuid.uuid4().hex[:8]}",
+        "tipo": "potencial",
+        "codigo": "",  # Sin código hasta que se active
+        "nombre": contact.get("name", ""),
+        "cif": "",
+        "segmento": "",
+        "direccion": contact.get("address", ""),
+        "localidad": "",
+        "provincia": "",
+        "codigoPostal": "",
+        "telefono": contact.get("phone", ""),
+        "email": contact.get("email", ""),
+        "descuento": 0,
+        "activo": True,
+        "notas": f"Convertido desde contacto CRM: {contact.get('company', '')}\n{contact.get('notes', '')}",
+        "origenCrmContactId": contact_id,
+        "usuarioVinculadoId": "",
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "convertidoAt": None
+    }
+    
+    await db.clients.insert_one(client_data)
+    
+    # Update contact to mark as converted
+    await db.contacts.update_one(
+        {"id": contact_id},
+        {"$set": {"convertedToClientId": client_data["id"], "type": "customer"}}
+    )
+    
+    del client_data["_id"] if "_id" in client_data else None
+    return client_data
+
+@api_router.post("/clients/{client_id}/activate")
+async def activate_client(client_id: str, data: dict):
+    """Activar un cliente potencial asignándole código"""
+    codigo = data.get("codigo", "").upper().strip()
+    if not codigo:
+        raise HTTPException(status_code=400, detail="El código es obligatorio para activar")
+    
+    # Check client exists
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    if client.get("tipo") == "activo":
+        raise HTTPException(status_code=400, detail="El cliente ya está activo")
+    
+    # Check code not in use
+    existing = await db.clients.find_one({"codigo": codigo, "id": {"$ne": client_id}})
+    if existing:
+        raise HTTPException(status_code=400, detail="El código ya está en uso por otro cliente")
+    
+    # Activate
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {
+            "tipo": "activo",
+            "codigo": codigo,
+            "convertidoAt": datetime.now(timezone.utc).isoformat(),
+            "updatedAt": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    updated = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    return updated
+
+@api_router.post("/clients/{client_id}/link-user")
+async def link_client_to_user(client_id: str, data: dict):
+    """Vincular un cliente a un usuario del sistema"""
+    user_id = data.get("userId", "")
+    
+    # Verify client exists
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    if user_id:
+        # Verify user exists
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Update user with client link
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"linkedClientId": client_id}}
+        )
+    
+    # Update client with user link
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {
+            "usuarioVinculadoId": user_id,
+            "updatedAt": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    updated = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    return updated
+
 @api_router.post("/auth/login")
 async def login(credentials: dict):
     """Iniciar sesión con verificación de password hasheado"""
