@@ -694,7 +694,15 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
            <div className="h-[calc(100%-45px)] overflow-y-auto scrollbar-thin">
               <table className="w-full text-left">
                 <thead className="bg-indigo-950 text-white text-[8px] font-black uppercase sticky top-0 z-20 tracking-widest italic">
-                  <tr><th className="p-4 pl-8">REF. TÉCNICA</th><th className="p-4">NOMBRE COMERCIAL</th><th className="p-4 text-center">PUNTOS BASE</th><th className="p-4 pr-8 text-right">AÑADIR</th></tr>
+                  <tr>
+                    <th className="p-4 pl-8">REF. TÉCNICA</th>
+                    <th className="p-4">NOMBRE COMERCIAL</th>
+                    <th className="p-4 text-center">ANCHO</th>
+                    <th className="p-4 text-center">ALTO</th>
+                    <th className="p-4 text-center">FONDO</th>
+                    <th className="p-4 text-center">PUNTOS</th>
+                    <th className="p-4 pr-8 text-right">AÑADIR</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-indigo-50">
                   {filteredCatalog.map(p => (
@@ -704,6 +712,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                         <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest italic">{p.name}</div>
                         {p.series && <div className="text-[7px] font-black text-orange-600/50 uppercase tracking-tight mt-0.5 border border-orange-600/20 bg-orange-600/5 inline-block px-1 rounded">{p.series}</div>}
                       </td>
+                      <td className="p-4 text-center font-bold text-slate-600 text-[10px]">{p.width || '-'}</td>
+                      <td className="p-4 text-center font-bold text-slate-600 text-[10px]">{p.height || '-'}</td>
+                      <td className="p-4 text-center font-bold text-slate-600 text-[10px]">{p.depth || '-'}</td>
                       <td className="p-4 text-center font-black text-orange-600 italic">
                         {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
                       </td>
