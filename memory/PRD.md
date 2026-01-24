@@ -2,7 +2,7 @@
 
 ## Estado de Correcciones - 24/01/2026
 
-### ✅ COMPLETADO (28/28 tareas)
+### ✅ COMPLETADO (32/32 tareas)
 
 | # | Corrección | Estado | Fecha |
 |---|------------|--------|-------|
@@ -34,6 +34,10 @@
 | 26 | **Copia Seguridad en Maestro** | ✅ | 24/01 |
 | 27 | **Gestión Armazones en pestaña separada** | ✅ | 24/01 |
 | 28 | **Icono corte viga mejorado por línea** | ✅ | 24/01 |
+| 29 | **CRM→Contactos: Convertir a Cliente Potencial** | ✅ | 24/01 |
+| 30 | **Clientes Potenciales vs Activos (naranja/verde)** | ✅ | 24/01 |
+| 31 | **Usuario hereda descuento de cliente vinculado** | ✅ | 24/01 |
+| 32 | **Comercial: Botón "Mis Tiendas" para ver trabajo** | ✅ | 24/01 |
 
 ### 🟢 TODO COMPLETADO
 
