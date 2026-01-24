@@ -530,3 +530,36 @@ export const despieceAPI = {
     return response.json();
   }
 };
+
+// ============================================
+// DIGITALIZADOR DE BORRADORES
+// ============================================
+
+export const digitalizadorAPI = {
+  analyze: async (imageBase64, filename) => {
+    const response = await fetch(`${API_URL}/api/digitalizador/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, filename })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al analizar imagen');
+    }
+    return response.json();
+  },
+
+  exportCSV: async (lines, materialCode = "40-ESTEITEX16", materialThickness = 16.0) => {
+    const response = await fetch(`${API_URL}/api/digitalizador/export-csv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines, materialCode, materialThickness })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al exportar CSV');
+    }
+    return response.json();
+  }
+};
+
