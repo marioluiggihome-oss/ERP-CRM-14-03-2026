@@ -1300,11 +1300,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
                     </div>
                     <div className="bg-orange-50 rounded-xl p-3 text-center">
-                      <p className="text-2xl font-black text-orange-600">{clients.filter(c => c.tipo === 'potencial').length}</p>
+                      <p className="text-2xl font-black text-orange-600">{clients.filter(c => !c.codigo && (c.tipo === 'potencial' || !c.tipo)).length}</p>
                       <p className="text-[10px] font-bold text-orange-400 uppercase">Potenciales</p>
                     </div>
                     <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                      <p className="text-2xl font-black text-emerald-600">{clients.filter(c => c.tipo === 'activo').length}</p>
+                      <p className="text-2xl font-black text-emerald-600">{clients.filter(c => c.codigo || c.tipo === 'activo').length}</p>
                       <p className="text-[10px] font-bold text-emerald-400 uppercase">Activos</p>
                     </div>
                   </div>
