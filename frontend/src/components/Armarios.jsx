@@ -2223,6 +2223,141 @@ const Armarios = ({ state, setState }) => {
           </div>
         </div>
       )}
+
+      {/* ========== MODAL PROYECTOS ========== */}
+      {showProjectsModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            {/* Header Modal */}
+            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white px-8 py-5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-xl">
+                  <FolderOpen size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wider">PROYECTOS DE ARMARIOS</h2>
+                  <p className="text-purple-200 text-xs font-medium mt-0.5">Guardar, cargar y gestionar diseños</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowProjectsModal(false)}
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Nombre del proyecto actual */}
+            <div className="bg-purple-50 px-8 py-4 border-b border-purple-100">
+              <label className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Nombre del Proyecto Actual</label>
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                className="w-full px-3 py-2 mt-1 border border-purple-200 rounded-lg text-sm font-bold focus:outline-none focus:border-purple-400"
+                placeholder="Nombre del proyecto..."
+              />
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={newProject}
+                  className="flex-1 bg-white border border-purple-200 text-purple-700 px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors"
+                >
+                  <Plus size={14} />
+                  NUEVO
+                </button>
+                <button
+                  onClick={saveProject}
+                  disabled={saving}
+                  className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-2 hover:bg-purple-500 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                  GUARDAR
+                </button>
+              </div>
+            </div>
+
+            {/* Lista de proyectos */}
+            <div className="flex-1 overflow-auto px-8 py-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">PROYECTOS GUARDADOS</h3>
+                <button
+                  onClick={loadProjectsList}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <RefreshCw size={14} className={loadingProjects ? 'animate-spin' : ''} />
+                </button>
+              </div>
+
+              {loadingProjects ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw size={24} className="animate-spin text-purple-400" />
+                </div>
+              ) : savedProjects.length === 0 ? (
+                <div className="text-center py-12 text-slate-400">
+                  <FolderOpen size={48} className="mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">No hay proyectos guardados</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {savedProjects.map(project => (
+                    <div 
+                      key={project.id}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                        currentProjectId === project.id
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-slate-200 hover:border-purple-300 hover:bg-purple-50/50'
+                      }`}
+                      onClick={() => loadProject(project)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-bold text-slate-800">{project.name}</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {project.customerName && `${project.customerName} • `}
+                            {project.width}x{project.height}x{project.depth}mm • {project.modules} módulos
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            {new Date(project.updatedAt).toLocaleDateString('es-ES', { 
+                              day: 'numeric', 
+                              month: 'short', 
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {project.totalPrice > 0 && (
+                            <span className="text-sm font-black text-purple-600">
+                              {project.totalPrice.toFixed(0)}€
+                            </span>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteProject(project.id); }}
+                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-8 py-4 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={() => setShowProjectsModal(false)}
+                className="bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-300 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
