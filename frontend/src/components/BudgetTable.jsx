@@ -843,7 +843,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
               <table className="w-full text-left">
                 <thead className="bg-indigo-950 text-white text-[8px] font-black uppercase sticky top-0 z-20 tracking-widest italic">
                   <tr>
-                    <th className="p-4 pl-8">REF. TÉCNICA</th>
+                    <th className="p-2 w-10"></th>
+                    <th className="p-4">REF. TÉCNICA</th>
                     <th className="p-4">NOMBRE COMERCIAL</th>
                     <th className="p-4 text-center">ANCHO</th>
                     <th className="p-4 text-center">ALTO</th>
@@ -855,7 +856,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                 <tbody className="divide-y divide-indigo-50">
                   {filteredCatalog.map(p => (
                     <tr key={p.id} className="hover:bg-indigo-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
-                      <td className="p-4 pl-8 font-black italic text-indigo-900 text-[12px] tracking-tighter">{p.code}</td>
+                      <td className="p-2">
+                        <div 
+                          className="w-8 h-8 flex items-center justify-center text-indigo-500"
+                          dangerouslySetInnerHTML={{ __html: getProductIcon(p.code, p.name) }}
+                        />
+                      </td>
+                      <td className="p-4 font-black italic text-indigo-900 text-[12px] tracking-tighter">{p.code}</td>
                       <td className="p-4">
                         <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest italic">{p.name}</div>
                         {p.series && <div className="text-[7px] font-black text-orange-600/50 uppercase tracking-tight mt-0.5 border border-orange-600/20 bg-orange-600/5 inline-block px-1 rounded">{p.series}</div>}
