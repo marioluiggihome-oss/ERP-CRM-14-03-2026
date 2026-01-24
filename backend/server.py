@@ -1961,7 +1961,7 @@ async def get_digitalizador_history(userId: str = None, search: str = None, limi
 async def get_digitalizador_item(item_id: str):
     """Get a specific digitalizador history item"""
     try:
-        item = db.digitalizador_history.find_one({"id": item_id})
+        item = await db.digitalizador_history.find_one({"id": item_id})
         
         if not item:
             raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
