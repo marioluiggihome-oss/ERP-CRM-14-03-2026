@@ -488,10 +488,25 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
               </section>
               
               <section className="space-y-2 pt-2 border-t border-indigo-50">
-                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">🎨 ACABADO</h4>
-                 <select className="w-full bg-indigo-950 text-white rounded-lg p-2 text-[8px] font-black outline-none cursor-pointer shadow-md" value={state.globalFinish} onChange={e => setState(p => ({...p, globalFinish: e.target.value}))}>
-                    {DOOR_FINISHES.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}
-                 </select>
+                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">🎨 ACABADO / ZONA</h4>
+                 <div className="bg-gradient-to-br from-indigo-950 to-indigo-900 rounded-xl p-3 shadow-lg">
+                   <select 
+                     className="w-full bg-transparent text-white rounded-lg p-2.5 text-[10px] font-black outline-none cursor-pointer border-2 border-indigo-700 focus:border-orange-500" 
+                     value={state.globalFinish} 
+                     onChange={e => setState(p => ({...p, globalFinish: e.target.value}))}
+                   >
+                     {DOOR_FINISHES.map(f => (
+                       <option key={f.name} value={f.name} className="bg-indigo-950 py-2">
+                         {f.name}
+                       </option>
+                     ))}
+                   </select>
+                   <div className="mt-2 flex justify-center">
+                     <span className="px-4 py-1.5 bg-orange-500 text-white rounded-full text-[11px] font-black uppercase tracking-wider shadow-md">
+                       ZONA {DOOR_FINISHES.find(f => f.name === state.globalFinish)?.group || 'Z1'}
+                     </span>
+                   </div>
+                 </div>
               </section>
               
               <section className="space-y-2 pt-2 border-t border-indigo-50">
