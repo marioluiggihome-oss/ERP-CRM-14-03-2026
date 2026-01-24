@@ -359,12 +359,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     setState(prev => ({ ...prev, brandColor: colorInput }));
   };
 
-  const handleLogoUpload = (e) => {
+  const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setState(prev => ({ ...prev, logo: e.target.result }));
+      reader.onload = async (e) => {
+        const logoData = e.target.result;
+        setState(prev => ({ ...prev, logo: logoData }));
+        
+        // Save logo to server
+        try {
+          await settingsAPI.update({ logo: logoData });
+        } catch (err) {
+          console.error('Error saving logo to server:', err);
+        }
       };
       reader.readAsDataURL(file);
     }
