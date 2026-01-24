@@ -738,6 +738,15 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
            </div>
         </div>
       </div>
+
+      {/* Despiece Modal */}
+      <DespieceModal
+        isOpen={isDespieceOpen}
+        onClose={() => setIsDespieceOpen(false)}
+        items={items}
+        catalogs={catalogs}
+        carcassMaterialName={carcassMaterialName}
+      />
     </div>
   );
 };
