@@ -70,6 +70,45 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [existingCodes, setExistingCodes] = useState(new Set());
   const [telemetryResult, setTelemetryResult] = useState(null);
 
+  // Client states
+  const [clients, setClients] = useState([]);
+  const [clientSearch, setClientSearch] = useState('');
+  const [isEditingClient, setIsEditingClient] = useState(false);
+  const [editingClientId, setEditingClientId] = useState(null);
+  const [isSavingClient, setIsSavingClient] = useState(false);
+  const [isImportingClients, setIsImportingClients] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [clientForm, setClientForm] = useState({
+    codigo: '',
+    nombre: '',
+    cif: '',
+    direccion: '',
+    localidad: '',
+    provincia: '',
+    codigoPostal: '',
+    telefono: '',
+    email: '',
+    descuento: 0,
+    activo: true,
+    notas: ''
+  });
+
+  // Load clients when tab is active
+  useEffect(() => {
+    if (isOpen && activeTab === 'clients') {
+      loadClients();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadClients = async () => {
+    try {
+      const data = await clientsAPI.getAll();
+      setClients(data);
+    } catch (err) {
+      console.error('Error loading clients:', err);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen || activeTab !== 'telemetry') return;
     const loadCodes = async () => {
