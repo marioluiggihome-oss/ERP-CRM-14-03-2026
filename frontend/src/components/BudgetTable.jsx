@@ -374,7 +374,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                   onClick={() => setState(p => ({...p, currentModule: 'montada'}))} 
                   className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${state.currentModule === 'montada' ? 'bg-orange-600 text-white shadow-lg' : 'text-indigo-400 hover:bg-white/50'}`}
                 >
-                  Montada
+                  Cocina Montada
                 </button>
               )}
               {hasDespiece && (
@@ -382,7 +382,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                   onClick={() => setState(p => ({...p, currentModule: 'despiece'}))} 
                   className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${state.currentModule === 'despiece' ? 'bg-indigo-700 text-white shadow-lg' : 'text-indigo-400 hover:bg-white/50'}`}
                 >
-                  Despiece
+                  Cocina Despiece
                 </button>
               )}
            </div>
