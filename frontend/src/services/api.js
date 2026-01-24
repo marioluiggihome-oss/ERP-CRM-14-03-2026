@@ -833,6 +833,34 @@ export const armariosAPI = {
       throw new Error(error.detail || 'Error al eliminar proyecto');
     }
     return response.json();
+  },
+
+  // IA: Configurar módulos automáticamente
+  iaConfiguracion: async (instruction, currentConfig = {}) => {
+    const response = await fetch(`${API_URL}/api/armarios/ia/configure`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instruction, current_config: currentConfig })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al configurar con IA');
+    }
+    return response.json();
+  },
+
+  // IA: Generar render realista
+  iaRender: async (config) => {
+    const response = await fetch(`${API_URL}/api/armarios/ia/render`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al generar render');
+    }
+    return response.json();
   }
 };
 
