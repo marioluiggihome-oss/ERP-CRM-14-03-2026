@@ -378,9 +378,28 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
               <section className="space-y-2">
                  <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic flex items-center gap-1">📂 DATOS EXPEDIENTE</h4>
                  <div className="space-y-1.5">
-                    <div className="relative">
-                      <Hash className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-200" size={10} />
-                      <input type="text" value={state.budgetNumber} onChange={e => setState(p => ({...p, budgetNumber: e.target.value}))} placeholder="Nº Expediente" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg py-2 pl-7 pr-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
+                    <div className="relative flex gap-1">
+                      <div className="relative flex-1">
+                        <Hash className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-200" size={10} />
+                        <input type="text" value={state.budgetNumber} onChange={e => setState(p => ({...p, budgetNumber: e.target.value}))} placeholder="Nº Expediente" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg py-2 pl-7 pr-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/expedient/next`);
+                            const data = await response.json();
+                            if (data.success) {
+                              setState(p => ({...p, budgetNumber: data.expedient}));
+                            }
+                          } catch (err) {
+                            console.error('Error getting expedient:', err);
+                          }
+                        }}
+                        className="bg-orange-600 hover:bg-orange-700 text-white px-2 rounded-lg text-[8px] font-black transition-colors"
+                        title="Generar número de expediente automático"
+                      >
+                        AUTO
+                      </button>
                     </div>
                     <div className="relative">
                       <Tag className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-200" size={10} />
