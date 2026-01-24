@@ -1451,6 +1451,126 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </div>
           )}
 
+          {activeTab === 'telemetry' && (
+            <div className="flex gap-6 h-[500px]">
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-xl">
+                    <Zap size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-indigo-950 uppercase">Telemetría IA</h3>
+                    <p className="text-xs text-indigo-400">Sincronización por Reconocimiento Óptico</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  {['montada', 'despiece'].map(mod => (
+                    <button key={mod} onClick={() => setTelemetryModule(mod)} disabled={isProcessingTelemetry}
+                      className={`flex-1 p-3 rounded-xl transition-all border-2 ${telemetryModule === mod ? (mod === 'montada' ? 'bg-orange-500 border-orange-400' : 'bg-indigo-500 border-indigo-400') + ' text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+                      <span className="font-black text-sm uppercase">{mod}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 flex-1 flex flex-col border border-slate-200">
+                  <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-4 cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all min-h-[120px]">
+                    <FileImage size={36} className="text-slate-400 mb-2" />
+                    <p className="text-sm font-black text-slate-700 uppercase">Cargar fichas</p>
+                    <p className="text-xs text-slate-500">JPG, PNG, PDF</p>
+                    <input type="file" multiple accept="image/*,application/pdf" className="hidden" disabled={isProcessingTelemetry}
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files);
+                        setTelemetryFiles(prev => [...prev, ...files.map(f => ({ id: Math.random().toString(36).slice(2), file: f, name: f.name, preview: URL.createObjectURL(f) }))]);
+                      }} />
+                  </label>
+
+                  {telemetryFiles.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="max-h-[80px] overflow-y-auto space-y-1">
+                        {telemetryFiles.map(f => (
+                          <div key={f.id} className="bg-white border border-slate-200 rounded-lg p-2 flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-700 truncate flex-1">{f.name}</span>
+                            <button onClick={() => setTelemetryFiles(prev => prev.filter(x => x.id !== f.id))} className="p-1 hover:bg-red-100 rounded">
+                              <XCircle size={14} className="text-red-500" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button disabled={isProcessingTelemetry} className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 disabled:opacity-50"
+                        onClick={async () => {
+                          setIsProcessingTelemetry(true); setTelemetryResult(null); setTelemetryLog([]);
+                          const addLog = (e) => setTelemetryLog(p => [...p, { ...e, time: new Date().toLocaleTimeString() }]);
+                          addLog({ type: 'info', msg: `Iniciando ${telemetryFiles.length} archivo(s)...` });
+                          try {
+                            const formData = new FormData();
+                            formData.append('module', telemetryModule);
+                            telemetryFiles.forEach(f => formData.append('files', f.file));
+                            const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`, { method: 'POST', body: formData });
+                            const result = await res.json();
+                            if (result.success && result.products) {
+                              addLog({ type: 'info', msg: `IA detectó ${result.products.length} producto(s)` });
+                              const newP = [], dupP = [];
+                              for (let i = 0; i < result.products.length; i++) {
+                                const p = result.products[i];
+                                setTelemetryProgress({ current: i + 1, total: result.products.length });
+                                await new Promise(r => setTimeout(r, 80));
+                                if (existingCodes.has(p.code)) { dupP.push(p); addLog({ type: 'dup', code: p.code, name: p.name, pts: p.points || 0 }); }
+                                else { newP.push(p); addLog({ type: 'new', code: p.code, name: p.name, pts: p.points || 0 }); setExistingCodes(prev => new Set([...prev, p.code])); }
+                              }
+                              if (newP.length > 0) { await productsAPI.bulkCreate(newP); addLog({ type: 'ok', msg: `${newP.length} guardado(s)` }); }
+                              setTelemetryResult({ ok: true, newC: newP.length, dupC: dupP.length });
+                            } else { addLog({ type: 'err', msg: result.error || 'Error' }); }
+                            setTelemetryFiles([]);
+                          } catch (e) { addLog({ type: 'err', msg: e.message }); }
+                          setIsProcessingTelemetry(false);
+                        }}>
+                        {isProcessingTelemetry ? <><Loader size={16} className="animate-spin" /> Procesando...</> : <><Zap size={16} /> Digitalizar</>}
+                      </button>
+                    </div>
+                  )}
+                  {telemetryResult?.ok && (
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded-xl p-3">
+                      <div className="flex items-center gap-2"><CheckCircle size={16} className="text-green-600" /><span className="font-black text-green-800 text-sm">Completado</span></div>
+                      <p className="text-xs text-green-700 mt-1">{telemetryResult.newC} nuevo(s) • {telemetryResult.dupC} duplicado(s)</p>
+                      <button onClick={() => { setTelemetryResult(null); setTelemetryLog([]); }} className="mt-2 w-full bg-indigo-900 text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2"><RefreshCw size={14} /> Nueva</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="w-[280px] bg-indigo-950 rounded-2xl flex flex-col overflow-hidden">
+                <div className="p-3 border-b border-indigo-800 flex items-center gap-2">
+                  <Zap size={14} className="text-orange-500" />
+                  <span className="text-xs font-black text-white uppercase">Log: {telemetryModule}</span>
+                </div>
+                {isProcessingTelemetry && telemetryProgress.total > 0 && (
+                  <div className="px-3 py-2 bg-indigo-900/50">
+                    <div className="h-1 bg-indigo-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-orange-500 transition-all" style={{ width: `${(telemetryProgress.current / telemetryProgress.total) * 100}%` }} />
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 overflow-y-auto p-3 space-y-1 text-xs">
+                  {telemetryLog.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center"><Zap size={20} className="text-indigo-700 mb-2" /><p className="text-indigo-500">Sin actividad</p></div>
+                  ) : telemetryLog.map((e, i) => (
+                    e.type === 'new' || e.type === 'dup' ? (
+                      <div key={i} className="flex items-center gap-2 py-1 px-2 rounded bg-white/5">
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${e.type === 'new' ? 'bg-green-500' : 'bg-orange-500'} text-white`}>{e.type === 'new' ? 'NUEVO' : 'DUP'}</span>
+                        <span className="text-white/80 truncate flex-1">{e.code}</span>
+                        <span className={e.type === 'new' ? 'text-green-400' : 'text-orange-400'}>{e.pts}</span>
+                      </div>
+                    ) : <div key={i} className={`${e.type === 'err' ? 'text-red-400' : e.type === 'ok' ? 'text-green-400' : 'text-white/60'}`}>[{e.time}] {e.msg}</div>
+                  ))}
+                </div>
+                <div className="p-2 border-t border-indigo-800 flex justify-center gap-3 text-[9px]">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Nuevo</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500"></span> Duplicado</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {activeTab === 'identity' && (
             <div className="space-y-6">
