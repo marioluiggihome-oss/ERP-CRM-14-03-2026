@@ -271,40 +271,18 @@ const App = () => {
 
               {/* CRM - Solo visible para Admin o usuarios con canAccessCRM */}
               {(state.currentUser?.isAdmin || state.currentUser?.canAccessCRM) && (
-                <>
-                  {/* Separador visual para CRM */}
-                  <div className="w-10 h-px bg-slate-700 mx-auto my-2"></div>
-
-                  {/* CRM - Dashboard */}
-                  <button 
-                    onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
-                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'crm-dashboard' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                    data-testid="crm-dashboard-nav"
-                  >
-                    <LayoutDashboard size={22}/>
-                    <span className="text-[7px] font-black uppercase tracking-widest">CRM</span>
-                  </button>
-
-                  {/* CRM - Pipeline */}
-                  <button 
-                    onClick={() => setState(p => ({...p, currentTab: 'crm-pipeline'}))} 
-                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'crm-pipeline' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                    data-testid="crm-pipeline-nav"
-                  >
-                    <Target size={22}/>
-                    <span className="text-[7px] font-black uppercase tracking-widest">Pipeline</span>
-                  </button>
-
-                  {/* CRM - Contactos */}
-                  <button 
-                    onClick={() => setState(p => ({...p, currentTab: 'crm-contacts'}))} 
-                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'crm-contacts' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                    data-testid="crm-contacts-nav"
-                  >
-                    <Users size={22}/>
-                    <span className="text-[7px] font-black uppercase tracking-widest">Contactos</span>
-                  </button>
-                </>
+                <button 
+                  onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
+                    state.currentTab?.startsWith('crm-') 
+                      ? 'bg-indigo-600 text-white shadow-xl scale-110' 
+                      : 'text-slate-500 hover:text-white hover:bg-white/10'
+                  }`}
+                  data-testid="crm-dashboard-nav"
+                >
+                  <Target size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">CRM</span>
+                </button>
               )}
             </div>
 
