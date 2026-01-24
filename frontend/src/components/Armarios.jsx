@@ -470,6 +470,23 @@ const Armarios = ({ state, setState }) => {
   const [saving, setSaving] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
+  
+  // Estado para IA
+  const [showIAModal, setShowIAModal] = useState(false);
+  const [iaInstruction, setIaInstruction] = useState('');
+  const [iaLoading, setIaLoading] = useState(false);
+  const [iaError, setIaError] = useState(null);
+  
+  // Estado para render
+  const [showRenderModal, setShowRenderModal] = useState(false);
+  const [renderLoading, setRenderLoading] = useState(false);
+  const [renderImage, setRenderImage] = useState(null);
+  const [renderError, setRenderError] = useState(null);
+  const [roomStyle, setRoomStyle] = useState('moderno');
+  
+  // Estado para edición de accesorios en despiece
+  const [editableAccessories, setEditableAccessories] = useState([]);
+  const [selectedAccessoryIndex, setSelectedAccessoryIndex] = useState(null);
 
   // Ajustar módulos al cambiar el número (en el handler)
   const adjustModules = useCallback((targetCount) => {
