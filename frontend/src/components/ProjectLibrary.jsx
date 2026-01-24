@@ -343,6 +343,18 @@ const ProjectLibrary = ({ state, setState }) => {
                       <Eye size={18} />
                     </button>
                     <button 
+                      onClick={() => toggleArchiveProject(project)}
+                      className={`p-3 rounded-xl transition-all ${
+                        project.status === 'archived'
+                          ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                      title={project.status === 'archived' ? 'Desarchivar proyecto' : 'Archivar proyecto'}
+                      data-testid={`archive-project-${project.id}`}
+                    >
+                      {project.status === 'archived' ? <ArchiveRestore size={18} /> : <Archive size={18} />}
+                    </button>
+                    <button 
                       onClick={() => deleteProject(project.id)}
                       className="p-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-all"
                       title="Eliminar proyecto"
