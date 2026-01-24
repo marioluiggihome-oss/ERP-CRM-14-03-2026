@@ -1386,6 +1386,14 @@ const Armarios = ({ state, setState }) => {
           
           {/* Botones */}
           <button 
+            onClick={() => setShowProjectsModal(true)}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            data-testid="armarios-proyectos-btn"
+          >
+            <FolderOpen size={16} />
+            PROYECTOS
+          </button>
+          <button 
             onClick={() => setShowDespieceModal(true)}
             className="flex items-center gap-2 bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
             data-testid="armarios-despiece-btn"
@@ -1393,14 +1401,32 @@ const Armarios = ({ state, setState }) => {
             <Scissors size={16} />
             DESPIECE
           </button>
-          <button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors">
-            <Save size={16} />
-            GUARDAR
+          <button 
+            onClick={saveProject}
+            disabled={saving}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+            data-testid="armarios-guardar-btn"
+          >
+            {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+            {currentProjectId ? 'ACTUALIZAR' : 'GUARDAR'}
           </button>
-          <button className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-bold text-sm transition-colors">
+          <button 
+            onClick={exportToPDF}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+          >
             <Download size={16} />
             PDF
           </button>
+          
+          {/* Mensaje de guardado */}
+          {saveMessage && (
+            <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold ${
+              saveMessage.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`}>
+              {saveMessage.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
+              {saveMessage.text}
+            </div>
+          )}
         </div>
       </div>
 
