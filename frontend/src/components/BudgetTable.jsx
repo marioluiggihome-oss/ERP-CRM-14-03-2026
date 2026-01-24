@@ -684,13 +684,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                     const specialLabel = specialCuts.length > 0 ? `+ CORTE ESPECIAL ${specialCuts.join(' / ')}` : '';
 
                     return (
-                      <div key={item.id} className={`grid grid-cols-14 gap-1 px-3 py-2 items-center text-indigo-950 hover:bg-indigo-50/50 transition-colors ${isUnknown ? 'bg-red-50 border-l-4 border-red-500' : item.isManual ? 'bg-indigo-50/30' : specialCuts.length > 0 ? 'bg-orange-50/10' : ''}`}>
+                      <div key={item.id} className={`grid grid-cols-12 gap-2 px-4 py-2.5 items-center text-indigo-950 hover:bg-indigo-50/50 transition-colors ${isUnknown ? 'bg-red-50 border-l-4 border-red-500' : item.isManual ? 'bg-indigo-50/30' : specialCuts.length > 0 ? 'bg-orange-50/10' : ''}`}>
                          <div className="col-span-1 text-center flex flex-col items-center">
                             <input type="number" min="1" value={item.quantity} onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)} className="w-8 bg-transparent text-center font-black text-xs italic outline-none no-print" />
                             <span className="print-only font-black text-xs italic">x{item.quantity}</span>
                          </div>
                          
-                         <div className="col-span-2">
+                         <div className="col-span-1">
                             {item.isManual ? (
                                 <>
                                   <input 
