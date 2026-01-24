@@ -26,10 +26,27 @@ const ProjectLibrary = ({ state, setState }) => {
     }
   };
 
-  const filteredProjects = projects.filter(p => 
-    (p.customerName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    (p.budgetNumber?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-  );
+  const filteredProjects = projects.filter(p => {
+    // Primero aplicar filtro de estado (activo/archivado)
+    const statusMatch = viewFilter === 'all' 
+      ? true 
+      : viewFilter === 'archived' 
+        ? p.status === 'archived'
+        : p.status !== 'archived'; // 'active' muestra todo excepto archivados
+    
+    // Luego aplicar filtro de búsqueda
+    const searchMatch = (p.customerName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (p.budgetNumber?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    
+    return statusMatch && searchMatch;
+  });
+
+  // Contar proyectos por estado
+  const projectCounts = {
+    active: projects.filter(p => p.status !== 'archived').length,
+    archived: projects.filter(p => p.status === 'archived').length,
+    all: projects.length
+  };
 
   // Guardar presupuesto actual como proyecto
   const saveCurrentBudget = async () => {
