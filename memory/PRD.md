@@ -269,6 +269,53 @@ codigo;nombre;cif;direccion;localidad;provincia;cp;telefono;email;descuento;acti
 - **Integración:** Vincular eventos a contactos y oportunidades
 - **Funcionalidades:** Crear, editar, eliminar, marcar completado
 
+## Rol Prescriptor Comercial (24/01/2026) ✅ COMPLETADO
+
+### Descripción:
+Nuevo tipo de usuario con acceso **ultra-restringido**. El prescriptor comercial es un colaborador externo que solo puede aportar contactos potenciales (leads) para que el administrador los gestione y asigne.
+
+### Características del Rol:
+- **Acceso limitado:** Al loguearse, ve **SOLO** su agenda de contactos (`PrescriptorAgenda.jsx`)
+- **Sin sidebar:** No tiene acceso a Presupuesto, CRM, Archivo, Digitalizador, Master, etc.
+- **Solo puede:** Añadir, editar y eliminar contactos potenciales que él mismo crea
+- **Contactos siempre "potenciales":** Los contactos creados tienen `source: 'prescriptor'`
+
+### UI del Prescriptor (PrescriptorAgenda.jsx):
+- **Cabecera:** "MI AGENDA DE CONTACTOS" con nombre del prescriptor
+- **Estadísticas:** Total contactos, desglose por segmento
+- **Filtros:** Búsqueda por nombre/empresa/teléfono, filtro por segmento
+- **Lista de contactos:** Con botones editar/eliminar
+- **Modal nuevo contacto:** Nombre*, teléfono, email, empresa, cargo, segmento, dirección, notas
+- **Botón Salir:** Para cerrar sesión
+- **Mensaje informativo:** "Los contactos que añadas aquí son clientes potenciales. El administrador los revisará y los asignará..."
+
+### Segmentos disponibles:
+- PROMOTOR, CONSTRUCTOR, PROMOTOR-CONSTRUCTOR
+- DECORADOR-INTERIORISTA, ESTUDIO DE COCINA
+- TIENDA DE MUEBLES, TIENDA DE COCINA Y BAÑOS, TIENDA DE ARMARIOS
+- ARQUITECTO, REFORMISTA, USUARIO FINAL, OTRO
+
+### Flujo de Trabajo:
+1. **Admin crea prescriptor:** En Maestro → Usuarios → Nuevo usuario con "Prescriptor Comercial" ✓
+2. **Prescriptor inicia sesión:** Ve solo PrescriptorAgenda, no la app completa
+3. **Prescriptor añade contactos:** Con toda la info del lead potencial
+4. **Admin ve contactos en CRM:** Dashboard → Contactos muestra columna "PRESCRIPTOR"
+5. **Admin asigna contacto:** Puede asignar el contacto a un comercial para gestión
+
+### API Endpoints:
+- `GET /api/crm/contacts/by-prescriptor/{prescriptor_id}` - Contactos creados por un prescriptor
+- `GET /api/crm/prescriptors` - Lista de todos los prescriptores activos
+- `GET /api/crm/prescriptors/{id}/stats` - Estadísticas de un prescriptor
+
+### Archivos Implementados:
+- `/app/frontend/src/components/PrescriptorAgenda.jsx` - Componente completo del prescriptor
+- `/app/frontend/src/App.js` - Líneas 219-232: Renderizado condicional para prescriptores
+- `/app/backend/server.py` - Modelo User con `isPrescriptor`, endpoints de prescriptor
+
+### Credenciales de prueba:
+- **Usuario:** PRESCRIPTOR1
+- **Contraseña:** PRESCRIPTOR1
+
 ### Estados del Embudo de Ventas (Pipeline):
 1. Nuevo → 2. Contactado → 3. Presupuesto Enviado → 4. En Negociación → 5. Venta Cerrada / Perdida
 
