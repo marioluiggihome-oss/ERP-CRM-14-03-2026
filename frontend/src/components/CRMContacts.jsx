@@ -231,12 +231,12 @@ const CRMContacts = ({ currentUser }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
           {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white border-2 border-indigo-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
+            className="px-3 py-2 bg-white border-2 border-indigo-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
             data-testid="status-filter"
           >
             <option value="">Todos los estados</option>
@@ -246,8 +246,36 @@ const CRMContacts = ({ currentUser }) => {
             <option value="inactive">Inactivos</option>
           </select>
 
+          {/* Segment Filter */}
+          <select
+            value={segmentFilter}
+            onChange={(e) => setSegmentFilter(e.target.value)}
+            className="px-3 py-2 bg-white border-2 border-indigo-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
+            data-testid="segment-filter"
+          >
+            <option value="">Todos los segmentos</option>
+            {CLIENT_SEGMENTS.map(seg => (
+              <option key={seg} value={seg}>{seg}</option>
+            ))}
+          </select>
+
+          {/* Prescriptor Filter */}
+          {prescriptors.length > 0 && (
+            <select
+              value={prescriptorFilter}
+              onChange={(e) => setPrescriptorFilter(e.target.value)}
+              className="px-3 py-2 bg-white border-2 border-amber-100 rounded-xl text-sm font-bold outline-none focus:border-amber-500"
+              data-testid="prescriptor-filter"
+            >
+              <option value="">Todos los prescriptores</option>
+              {prescriptors.map(p => (
+                <option key={p.id} value={p.id}>{p.clientName}</option>
+              ))}
+            </select>
+          )}
+
           {/* Search */}
-          <div className="relative w-72">
+          <div className="relative w-60">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={16} />
             <input 
               type="text" 
@@ -255,7 +283,7 @@ const CRMContacts = ({ currentUser }) => {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              className="w-full bg-white border-2 border-indigo-100 rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold outline-none focus:border-indigo-500"
+              className="w-full bg-white border-2 border-indigo-100 rounded-xl py-2 pl-10 pr-4 text-sm font-bold outline-none focus:border-indigo-500"
               data-testid="search-contacts"
             />
           </div>
