@@ -1996,6 +1996,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 )}
                               </button>
                             </th>
+                            <th className="p-2 text-center text-[9px] font-black uppercase whitespace-nowrap w-12"></th>
                             <th className="p-3 text-left text-[9px] font-black uppercase whitespace-nowrap">REF</th>
                             <th className="p-3 text-left text-[9px] font-black uppercase min-w-[200px]">NOMBRE</th>
                             {inventoryModule === 'montada' ? (
