@@ -503,6 +503,49 @@ const CRMContacts = ({ currentUser }) => {
                 </div>
               </div>
 
+              {/* Segmento y Prescriptor */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Segmento</label>
+                  <select
+                    value={formData.segment}
+                    onChange={e => setFormData({...formData, segment: e.target.value})}
+                    className="w-full px-4 py-2.5 border-2 border-violet-200 rounded-xl text-sm font-bold outline-none focus:border-violet-500"
+                    data-testid="contact-segment-select"
+                  >
+                    <option value="">Sin segmento</option>
+                    {CLIENT_SEGMENTS.map(seg => (
+                      <option key={seg} value={seg}>{seg}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Prescriptor</label>
+                  <select
+                    value={formData.prescriptorId}
+                    onChange={e => {
+                      const presc = prescriptors.find(p => p.id === e.target.value);
+                      setFormData({
+                        ...formData, 
+                        prescriptorId: e.target.value,
+                        prescriptorName: presc?.clientName || ''
+                      });
+                    }}
+                    className="w-full px-4 py-2.5 border-2 border-amber-200 rounded-xl text-sm font-bold outline-none focus:border-amber-500"
+                    data-testid="contact-prescriptor-select"
+                    disabled={currentUser?.isPrescriptor}
+                  >
+                    <option value="">Sin prescriptor</option>
+                    {prescriptors.map(p => (
+                      <option key={p.id} value={p.id}>{p.clientName}</option>
+                    ))}
+                  </select>
+                  {currentUser?.isPrescriptor && (
+                    <p className="text-[10px] text-amber-600 mt-1">Este contacto será tuyo como prescriptor</p>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dirección</label>
                 <input
