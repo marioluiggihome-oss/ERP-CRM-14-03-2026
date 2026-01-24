@@ -1171,6 +1171,105 @@ async def get_projects(user_id: Optional[str] = None):
     projects = await db.projects.find(query, {"_id": 0}).to_list(1000)
     return projects
 
+@api_router.get("/admin/all-work")
+async def get_all_work_for_admin():
+    """
+    [ADMIN ONLY] Obtener todos los trabajos de todos los usuarios.
+    Incluye proyectos, oportunidades y digitalizaciones.
+    """
+    # Get all projects grouped by user
+    projects = await db.projects.find({}, {"_id": 0}).to_list(5000)
+    
+    # Get all opportunities
+    opportunities = await db.opportunities.find({}, {"_id": 0}).to_list(5000)
+    
+    # Get all digitalizador history
+    digitalizaciones = await db.digitalizador_history.find({}, {"_id": 0}).to_list(5000)
+    
+    # Get all users for reference
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(500)
+    users_map = {u["id"]: u for u in users}
+    
+    # Enrich projects with user info
+    for proj in projects:
+        user = users_map.get(proj.get("userId", ""))
+        proj["userName"] = user.get("username", "Desconocido") if user else "Desconocido"
+        proj["userClientName"] = user.get("clientName", "") if user else ""
+    
+    # Enrich opportunities with user info
+    for opp in opportunities:
+        user = users_map.get(opp.get("assignedTo", ""))
+        opp["userName"] = user.get("username", "Desconocido") if user else "Sin asignar"
+    
+    # Enrich digitalizaciones with user info
+    for dig in digitalizaciones:
+        user = users_map.get(dig.get("createdBy", ""))
+        dig["userName"] = user.get("username", "Desconocido") if user else "Desconocido"
+    
+    return {
+        "projects": projects,
+        "opportunities": opportunities,
+        "digitalizaciones": digitalizaciones,
+        "users": users,
+        "summary": {
+            "totalProjects": len(projects),
+            "totalOpportunities": len(opportunities),
+            "totalDigitalizaciones": len(digitalizaciones),
+            "totalUsers": len(users)
+        }
+    }
+
+@api_router.get("/commercial/my-shops-work")
+async def get_commercial_shops_work(commercial_id: str):
+    """
+    [COMERCIAL ONLY] Obtener todos los trabajos de las tiendas asignadas a este comercial.
+    """
+    # Get users (shops) assigned to this commercial
+    shops = await db.users.find(
+        {"linkedRepresentativeId": commercial_id},
+        {"_id": 0, "password": 0}
+    ).to_list(500)
+    
+    shop_ids = [s["id"] for s in shops]
+    
+    # Get projects from these shops
+    projects = await db.projects.find(
+        {"userId": {"$in": shop_ids}},
+        {"_id": 0}
+    ).to_list(5000)
+    
+    # Get opportunities assigned to or created by these shops
+    opportunities = await db.opportunities.find(
+        {"$or": [
+            {"assignedTo": {"$in": shop_ids}},
+            {"createdBy": {"$in": shop_ids}}
+        ]},
+        {"_id": 0}
+    ).to_list(5000)
+    
+    # Enrich with shop info
+    shops_map = {s["id"]: s for s in shops}
+    
+    for proj in projects:
+        shop = shops_map.get(proj.get("userId", ""))
+        proj["shopName"] = shop.get("clientName", "Desconocido") if shop else "Desconocido"
+        proj["shopUsername"] = shop.get("username", "") if shop else ""
+    
+    for opp in opportunities:
+        shop = shops_map.get(opp.get("assignedTo", ""))
+        opp["shopName"] = shop.get("clientName", "Sin asignar") if shop else "Sin asignar"
+    
+    return {
+        "shops": shops,
+        "projects": projects,
+        "opportunities": opportunities,
+        "summary": {
+            "totalShops": len(shops),
+            "totalProjects": len(projects),
+            "totalOpportunities": len(opportunities)
+        }
+    }
+
 @api_router.get("/projects/{project_id}", response_model=ProjectModel)
 async def get_project(project_id: str):
     """Obtener un proyecto por ID"""
