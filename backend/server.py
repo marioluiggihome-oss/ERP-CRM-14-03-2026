@@ -134,6 +134,7 @@ class UserResponse(BaseModel):
     canViewTechnicalDespiece: bool = False
     canAccessCRM: bool = False
     canUseDigitalizador: bool = False
+    canAccessArmarios: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
