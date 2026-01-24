@@ -1569,6 +1569,251 @@ async def create_opportunity_from_project(project_id: str):
         logger.error(f"Create opportunity from project error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ============================================
+# DESPIECE (BILL OF MATERIALS) API
+# ============================================
+
+class DespieceItemInput(BaseModel):
+    """Input for a single furniture item to calculate despiece"""
+    productId: str
+    productCode: str
+    productName: str
+    width: float  # in mm
+    height: float  # in mm
+    depth: float  # in mm
+    quantity: int = 1
+    category: str = ""  # ALTO, BAJO, COLUMNA, etc.
+
+class DespieceRequest(BaseModel):
+    """Request to calculate despiece for multiple items"""
+    items: List[DespieceItemInput]
+    carcassMaterial: str = "Melamina Blanca"
+    backPanelMaterial: str = "Tablero 3mm"
+    grosor: float = 18  # Thickness in mm for carcass panels
+
+class ComponentPiece(BaseModel):
+    """A single piece/component in the despiece"""
+    id: str
+    name: str  # e.g., "Tapa Superior", "Lateral Izquierdo"
+    nameShort: str  # e.g., "TAPA", "LAT-I"
+    material: str
+    width: float  # in mm
+    height: float  # in mm
+    quantity: int
+    area: float  # in m²
+    notes: str = ""
+
+class FurnitureDespiece(BaseModel):
+    """Despiece for a single furniture piece"""
+    productId: str
+    productCode: str
+    productName: str
+    category: str
+    originalWidth: float
+    originalHeight: float
+    originalDepth: float
+    itemQuantity: int
+    components: List[ComponentPiece]
+    totalPanels: int
+    totalArea: float  # in m²
+
+class DespieceResponse(BaseModel):
+    """Full despiece response"""
+    items: List[FurnitureDespiece]
+    summary: Dict
+    generatedAt: str
+
+def calculate_furniture_despiece(
+    item: DespieceItemInput,
+    carcass_material: str,
+    back_material: str,
+    grosor: float
+) -> FurnitureDespiece:
+    """
+    Calculate the despiece (bill of materials) for a single furniture piece.
+    
+    Standard furniture components:
+    - TAPA SUPERIOR: width x depth (top cover)
+    - TAPA INFERIOR: width x depth (bottom cover) 
+    - LATERAL IZQUIERDO: (height - 2*grosor) x depth
+    - LATERAL DERECHO: (height - 2*grosor) x depth
+    - TRASERA: width x (height - 2*grosor) (back panel, thinner material)
+    - BALDA/ESTANTE: (width - 2*grosor) x (depth - 3mm) - optional shelves
+    
+    For ALTOS (wall cabinets):
+    - Usually no bottom cover (open for mounting)
+    
+    For BAJOS (base cabinets):
+    - Standard configuration with possible kick plate
+    """
+    
+    w = item.width  # Width in mm
+    h = item.height * 10  # Height comes in cm, convert to mm  
+    d = item.depth * 10  # Depth comes in cm, convert to mm
+    g = grosor  # Panel thickness
+    
+    components = []
+    component_id = 0
+    
+    # Determine furniture type
+    is_alto = "ALTO" in item.category.upper() or "ALTO" in item.productName.upper()
+    is_bajo = "BAJO" in item.category.upper() or "BAJO" in item.productName.upper()
+    is_columna = "COLUMNA" in item.category.upper() or "COLUMNA" in item.productName.upper()
+    
+    def add_component(name: str, short: str, material: str, width: float, height: float, qty: int = 1, notes: str = ""):
+        nonlocal component_id
+        component_id += 1
+        area = (width * height * qty) / 1_000_000  # Convert mm² to m²
+        components.append(ComponentPiece(
+            id=f"CMP-{item.productId[:8]}-{component_id:03d}",
+            name=name,
+            nameShort=short,
+            material=material,
+            width=round(width, 1),
+            height=round(height, 1),
+            quantity=qty,
+            area=round(area, 4),
+            notes=notes
+        ))
+    
+    # TAPA SUPERIOR (Top panel)
+    add_component(
+        "TAPA SUPERIOR", "TAPA-S", 
+        carcass_material,
+        w, d, 1,
+        "Canto frontal visto"
+    )
+    
+    # TAPA INFERIOR (Bottom panel) - not always present in ALTOS
+    if not is_alto:
+        add_component(
+            "TAPA INFERIOR", "TAPA-I",
+            carcass_material,
+            w, d, 1,
+            "Canto frontal visto" if is_bajo else ""
+        )
+    else:
+        # ALTOS use a narrower bottom rail
+        add_component(
+            "TRAVESAÑO INFERIOR", "TRAV-I",
+            carcass_material,
+            w - (2 * g), 80, 1,  # 80mm rail
+            "Travesaño de sujeción"
+        )
+    
+    # LATERALES (Side panels)
+    lateral_height = h - (2 * g) if not is_alto else h - g - 80  # Account for rail in ALTOS
+    add_component(
+        "LATERAL IZQUIERDO", "LAT-I",
+        carcass_material,
+        lateral_height, d, 1,
+        "Canto frontal visto"
+    )
+    add_component(
+        "LATERAL DERECHO", "LAT-D",
+        carcass_material,
+        lateral_height, d, 1,
+        "Canto frontal visto"
+    )
+    
+    # TRASERA (Back panel)
+    back_width = w - (2 * g) + 6  # Recessed into grooves (3mm each side)
+    back_height = h - (2 * g) + 6 if not is_alto else h - g - 80 + 6
+    add_component(
+        "TRASERA", "TRAS",
+        back_material,
+        back_width, back_height, 1,
+        "Tablero 3mm encastrado"
+    )
+    
+    # BALDAS / ESTANTES (Shelves) - estimate based on height
+    shelf_count = 0
+    if h >= 700:  # Tall units get more shelves
+        shelf_count = 2 if h < 1200 else 3 if h < 1800 else 4
+    elif h >= 350:
+        shelf_count = 1
+    
+    if shelf_count > 0:
+        shelf_width = w - (2 * g)
+        shelf_depth = d - 20  # Slightly recessed
+        add_component(
+            f"BALDA INTERIOR", "BALDA",
+            carcass_material,
+            shelf_width, shelf_depth, shelf_count,
+            "Regulable con soportes"
+        )
+    
+    # Calculate totals
+    total_panels = sum(c.quantity for c in components)
+    total_area = sum(c.area for c in components)
+    
+    return FurnitureDespiece(
+        productId=item.productId,
+        productCode=item.productCode,
+        productName=item.productName,
+        category=item.category,
+        originalWidth=item.width,
+        originalHeight=item.height,
+        originalDepth=item.depth,
+        itemQuantity=item.quantity,
+        components=components,
+        totalPanels=total_panels,
+        totalArea=round(total_area * item.quantity, 4)
+    )
+
+@api_router.post("/despiece/calculate", response_model=DespieceResponse)
+async def calculate_despiece(request: DespieceRequest):
+    """
+    Calculate the bill of materials (despiece) for a list of furniture items.
+    Returns cutting lists and assembly orders.
+    """
+    try:
+        despiece_items = []
+        
+        for item in request.items:
+            furniture_despiece = calculate_furniture_despiece(
+                item,
+                request.carcassMaterial,
+                request.backPanelMaterial,
+                request.grosor
+            )
+            despiece_items.append(furniture_despiece)
+        
+        # Calculate summary
+        total_pieces = sum(d.totalPanels * d.itemQuantity for d in despiece_items)
+        total_area = sum(d.totalArea for d in despiece_items)
+        total_furniture = sum(d.itemQuantity for d in despiece_items)
+        
+        # Group by material
+        material_summary = {}
+        for d in despiece_items:
+            for comp in d.components:
+                mat = comp.material
+                if mat not in material_summary:
+                    material_summary[mat] = {"pieces": 0, "area": 0}
+                material_summary[mat]["pieces"] += comp.quantity * d.itemQuantity
+                material_summary[mat]["area"] += comp.area * d.itemQuantity
+        
+        # Round areas
+        for mat in material_summary:
+            material_summary[mat]["area"] = round(material_summary[mat]["area"], 3)
+        
+        return DespieceResponse(
+            items=despiece_items,
+            summary={
+                "totalFurniture": total_furniture,
+                "totalPieces": total_pieces,
+                "totalArea": round(total_area, 3),
+                "byMaterial": material_summary
+            },
+            generatedAt=datetime.now(timezone.utc).isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Calculate despiece error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error calculando despiece: {str(e)}")
+
+
 # Include the router in the main app (AFTER all endpoints are defined)
 app.include_router(api_router)
 
