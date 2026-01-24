@@ -89,7 +89,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       notes: '',
       isManual: true,
       manualDescription: '',
-      hasVigaCut: false  // Nuevo campo
+      hasVigaCut: false,
       manualPoints: 0
     };
     setState(prev => ({ ...prev, [budgetKey]: [...prev[budgetKey], newItem] }));
