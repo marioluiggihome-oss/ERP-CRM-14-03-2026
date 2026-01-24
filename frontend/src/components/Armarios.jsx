@@ -1292,8 +1292,245 @@ const Armarios = ({ state, setState }) => {
               <p>• {moduleConfigs.reduce((acc, m) => acc + m.hangingRods, 0)} barras totales</p>
             </div>
           </div>
+
+          {/* Botón para ver despiece */}
+          <button 
+            onClick={() => setShowDespieceModal(true)}
+            className="mt-4 w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-widest py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+            data-testid="armarios-ver-despiece-btn"
+          >
+            <List size={16} />
+            VER DESPIECE PRIVADO
+          </button>
+          <p className="text-[9px] text-purple-400 text-center mt-2">{despieceTotals.totalItems} accesorios numerados</p>
         </div>
       </div>
+
+      {/* ========== MODAL DESPIECE PRIVADO ========== */}
+      {showDespieceModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header Modal */}
+            <div className="bg-gradient-to-r from-orange-600 to-orange-500 text-white px-8 py-5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-xl">
+                  <Scissors size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wider">DESPIECE PRIVADO - ARMARIOS</h2>
+                  <p className="text-orange-100 text-xs font-medium mt-0.5">Lista de Accesorios Numerados para Montaje</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowDespieceModal(false)}
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                data-testid="close-despiece-modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Info Bar */}
+            <div className="bg-orange-50 px-8 py-4 border-b border-orange-100 shrink-0">
+              <div className="grid grid-cols-4 gap-4">
+                <div className="flex items-center gap-2">
+                  <Hash size={16} className="text-orange-400" />
+                  <div>
+                    <label className="text-[9px] font-black text-orange-400 uppercase tracking-widest">Cliente</label>
+                    <p className="text-sm font-bold text-slate-800">{customerName || 'Sin especificar'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileText size={16} className="text-orange-400" />
+                  <div>
+                    <label className="text-[9px] font-black text-orange-400 uppercase tracking-widest">Referencia</label>
+                    <p className="text-sm font-bold text-slate-800">{projectRef || 'Sin referencia'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Box size={16} className="text-orange-400" />
+                  <div>
+                    <label className="text-[9px] font-black text-orange-400 uppercase tracking-widest">Dimensiones</label>
+                    <p className="text-sm font-bold text-slate-800">{wardrobeConfig.width} x {wardrobeConfig.height} x {wardrobeConfig.depth} mm</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Package size={16} className="text-orange-400" />
+                  <div>
+                    <label className="text-[9px] font-black text-orange-400 uppercase tracking-widest">Total Accesorios</label>
+                    <p className="text-sm font-bold text-orange-600">{despieceTotals.totalItems} items</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Resumen por Categoría */}
+            <div className="bg-white px-8 py-4 border-b border-slate-100 shrink-0">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">RESUMEN POR CATEGORÍA</h3>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(despieceTotals.byCategory).map(([cat, data]) => (
+                  <div key={cat} className="bg-slate-100 rounded-lg px-3 py-2 flex items-center gap-2">
+                    <span className="text-xs font-black text-slate-700">{cat}</span>
+                    <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold">{data.items}</span>
+                    <span className="text-[10px] text-slate-500">{data.total.toFixed(2)}€</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tabla de Accesorios */}
+            <div className="flex-1 overflow-auto px-8 py-4">
+              <table className="w-full">
+                <thead className="bg-slate-800 text-white text-xs font-black uppercase tracking-widest sticky top-0">
+                  <tr>
+                    <th className="px-3 py-3 text-center w-12">#</th>
+                    <th className="px-3 py-3 text-center w-20">CÓDIGO</th>
+                    <th className="px-3 py-3 text-left">NOMBRE ACCESORIO</th>
+                    <th className="px-3 py-3 text-left w-32">CATEGORÍA</th>
+                    <th className="px-3 py-3 text-center w-36">DIMENSIONES</th>
+                    <th className="px-3 py-3 text-center w-16">CANT.</th>
+                    <th className="px-3 py-3 text-right w-24">P.UNIT.</th>
+                    <th className="px-3 py-3 text-right w-24">TOTAL</th>
+                    <th className="px-3 py-3 text-left">NOTAS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {generateAccessoriesList.map((acc, idx) => (
+                    <tr key={idx} className={`hover:bg-orange-50 transition-colors ${acc.isCustom ? 'bg-yellow-50' : ''}`}>
+                      <td className="px-3 py-2 text-center">
+                        <span className="w-7 h-7 bg-orange-600 text-white rounded-lg flex items-center justify-center font-black text-xs">
+                          {acc.num}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className="bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-black">
+                          {acc.code}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-sm font-bold text-slate-800">{acc.name}</td>
+                      <td className="px-3 py-2">
+                        <span className={`text-[10px] font-bold uppercase ${
+                          acc.category === 'ESTRUCTURA' ? 'text-blue-600' :
+                          acc.category === 'PUERTAS' ? 'text-purple-600' :
+                          acc.category === 'HERRAJES' ? 'text-gray-600' :
+                          acc.category === 'EXTRAS' ? 'text-green-600' :
+                          acc.category.startsWith('MÓDULO') ? 'text-orange-600' :
+                          'text-yellow-600'
+                        }`}>
+                          {acc.category}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center text-xs text-slate-600 font-mono">{acc.dimensions}</td>
+                      <td className="px-3 py-2 text-center font-black text-orange-600">{acc.quantity}</td>
+                      <td className="px-3 py-2 text-right text-xs text-slate-500">{acc.unitPrice.toFixed(2)}€</td>
+                      <td className="px-3 py-2 text-right font-bold text-slate-800">{acc.totalPrice.toFixed(2)}€</td>
+                      <td className="px-3 py-2 text-xs text-slate-400 italic">{acc.notes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-100 font-black">
+                  <tr>
+                    <td colSpan={5} className="px-3 py-3 text-right uppercase text-xs tracking-widest text-slate-600">TOTAL DESPIECE:</td>
+                    <td className="px-3 py-3 text-center text-orange-600">{generateAccessoriesList.reduce((sum, a) => sum + a.quantity, 0)}</td>
+                    <td className="px-3 py-3"></td>
+                    <td className="px-3 py-3 text-right text-lg text-orange-600">{despieceTotals.grandTotal.toFixed(2)}€</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              {/* Añadir accesorio personalizado */}
+              <div className="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-black text-xs uppercase tracking-widest text-yellow-700">
+                    Accesorios Personalizados
+                  </h4>
+                  <button
+                    onClick={addCustomAccessory}
+                    className="bg-yellow-500 hover:bg-yellow-400 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 transition-colors"
+                    data-testid="add-custom-accessory"
+                  >
+                    <Plus size={14} />
+                    AÑADIR
+                  </button>
+                </div>
+                
+                {customAccessories.length > 0 ? (
+                  <div className="space-y-2">
+                    {customAccessories.map((acc, idx) => (
+                      <div key={idx} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-yellow-200">
+                        <span className="w-8 h-8 bg-yellow-500 text-white rounded flex items-center justify-center font-black text-xs shrink-0">
+                          P{idx + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={acc.name}
+                          onChange={(e) => updateCustomAccessory(idx, 'name', e.target.value)}
+                          placeholder="Nombre del accesorio..."
+                          className="flex-1 px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-yellow-400"
+                        />
+                        <input
+                          type="text"
+                          value={acc.dimensions}
+                          onChange={(e) => updateCustomAccessory(idx, 'dimensions', e.target.value)}
+                          placeholder="Dimensiones"
+                          className="w-28 px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:border-yellow-400"
+                        />
+                        <input
+                          type="number"
+                          value={acc.quantity}
+                          onChange={(e) => updateCustomAccessory(idx, 'quantity', parseInt(e.target.value) || 1)}
+                          className="w-14 px-2 py-1 text-sm border border-slate-200 rounded text-center focus:outline-none focus:border-yellow-400"
+                          min={1}
+                        />
+                        <input
+                          type="number"
+                          value={acc.unitPrice}
+                          onChange={(e) => updateCustomAccessory(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                          placeholder="€"
+                          className="w-20 px-2 py-1 text-sm border border-slate-200 rounded text-right focus:outline-none focus:border-yellow-400"
+                          step={0.01}
+                        />
+                        <span className="text-sm font-bold text-slate-600 w-20 text-right">{acc.totalPrice.toFixed(2)}€</span>
+                        <button
+                          onClick={() => removeCustomAccessory(idx)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-yellow-600 italic">No hay accesorios personalizados. Usa "AÑADIR" para incluir accesorios del dibujo no listados.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Modal */}
+            <div className="bg-slate-50 px-8 py-4 flex justify-between items-center border-t border-slate-200 shrink-0">
+              <div className="text-xs text-slate-500">
+                Generado: {new Date().toLocaleString('es-ES')} • {generateAccessoriesList.length} accesorios
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="bg-white border border-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-colors"
+                >
+                  <Printer size={16} />
+                  Imprimir
+                </button>
+                <button
+                  onClick={() => setShowDespieceModal(false)}
+                  className="bg-orange-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-orange-500 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
