@@ -1334,7 +1334,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <tbody className="divide-y divide-slate-100">
                         {clients
                           .filter(c => {
-                            if (clientFilterType !== 'todos' && c.tipo !== clientFilterType) return false;
+                            // Inferir tipo si no existe: si tiene código es activo
+                            const tipo = c.tipo || (c.codigo ? 'activo' : 'potencial');
+                            if (clientFilterType !== 'todos' && tipo !== clientFilterType) return false;
                             if (clientFilterSegment && c.segmento !== clientFilterSegment) return false;
                             if (!clientSearch) return true;
                             const q = clientSearch.toLowerCase();
@@ -1343,13 +1345,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                    c.cif?.toLowerCase().includes(q) ||
                                    c.localidad?.toLowerCase().includes(q);
                           })
-                          .map(client => (
+                          .map(client => {
+                            // Inferir tipo para clientes antiguos
+                            const clientTipo = client.tipo || (client.codigo ? 'activo' : 'potencial');
+                            return (
                             <tr key={client.id} className="hover:bg-slate-50 transition-colors">
                               <td className="px-3 py-2">
                                 <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
-                                  client.tipo === 'activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
+                                  clientTipo === 'activo' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
                                 }`}>
-                                  {client.tipo === 'activo' ? '🟢 ACTIVO' : '🟠 POTENCIAL'}
+                                  {clientTipo === 'activo' ? '🟢 ACTIVO' : '🟠 POTENCIAL'}
                                 </span>
                               </td>
                               <td className="px-3 py-2">
