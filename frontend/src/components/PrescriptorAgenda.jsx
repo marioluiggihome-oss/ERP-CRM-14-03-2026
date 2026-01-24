@@ -21,7 +21,7 @@ const CLIENT_SEGMENTS = [
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const PrescriptorAgenda = ({ currentUser }) => {
+const PrescriptorAgenda = ({ currentUser, onLogout }) => {
   const [contacts, setContacts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
