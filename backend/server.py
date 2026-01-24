@@ -2051,6 +2051,117 @@ async def get_prescriptor_stats(prescriptor_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================
+# PRESCRIPTOR NOTES (Calendar Notes)
+# ============================================
+
+class PrescriptorNoteCreate(BaseModel):
+    title: str = ""
+    content: str = ""
+    date: str  # YYYY-MM-DD format
+    prescriptorId: str
+    prescriptorName: str = ""
+
+class PrescriptorNoteUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    date: Optional[str] = None
+
+@api_router.get("/prescriptor/notes")
+async def get_prescriptor_notes(
+    prescriptor_id: str,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    view_all: bool = False
+):
+    """Get calendar notes for a prescriptor or all prescriptors (admin)"""
+    try:
+        query = {}
+        
+        # If not viewing all, filter by prescriptor
+        if not view_all:
+            query["prescriptorId"] = prescriptor_id
+        
+        # Date range filter
+        if start and end:
+            query["date"] = {"$gte": start, "$lte": end}
+        
+        notes = await db.prescriptor_notes.find(query, {"_id": 0}).sort("date", 1).to_list(500)
+        return notes
+    except Exception as e:
+        logger.error(f"Get prescriptor notes error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/prescriptor/notes")
+async def create_prescriptor_note(note: PrescriptorNoteCreate):
+    """Create a new calendar note for prescriptor"""
+    try:
+        note_dict = note.model_dump()
+        note_dict["id"] = f"pnote-{uuid.uuid4().hex[:8]}"
+        note_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
+        note_dict["updatedAt"] = datetime.now(timezone.utc).isoformat()
+        
+        await db.prescriptor_notes.insert_one(note_dict)
+        note_dict.pop("_id", None)
+        return note_dict
+    except Exception as e:
+        logger.error(f"Create prescriptor note error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/prescriptor/notes/{note_id}")
+async def update_prescriptor_note(note_id: str, note: PrescriptorNoteUpdate):
+    """Update a prescriptor calendar note"""
+    try:
+        update_data = {k: v for k, v in note.model_dump().items() if v is not None}
+        update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+        
+        result = await db.prescriptor_notes.update_one(
+            {"id": note_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Nota no encontrada")
+        
+        updated = await db.prescriptor_notes.find_one({"id": note_id}, {"_id": 0})
+        return updated
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update prescriptor note error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/prescriptor/notes/{note_id}")
+async def delete_prescriptor_note(note_id: str):
+    """Delete a prescriptor calendar note"""
+    try:
+        result = await db.prescriptor_notes.delete_one({"id": note_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Nota no encontrada")
+        return {"message": "Nota eliminada correctamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete prescriptor note error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/prescriptor/notes/all")
+async def get_all_prescriptor_notes(
+    start: Optional[str] = None,
+    end: Optional[str] = None
+):
+    """Get all prescriptor notes (for admin CRM calendar view)"""
+    try:
+        query = {}
+        if start and end:
+            query["date"] = {"$gte": start, "$lte": end}
+        
+        notes = await db.prescriptor_notes.find(query, {"_id": 0}).sort("date", 1).to_list(1000)
+        return notes
+    except Exception as e:
+        logger.error(f"Get all prescriptor notes error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
 # CRM API ENDPOINTS - Oportunidades
 # ============================================
 
