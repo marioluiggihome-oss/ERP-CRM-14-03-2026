@@ -123,6 +123,24 @@ const CRMCalendar = ({ currentUser }) => {
     }
   };
 
+  const loadPrescriptorNotes = async () => {
+    if (!currentUser?.isAdmin) return;
+    try {
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
+      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      const response = await fetch(
+        `${API_URL}/api/prescriptor/notes/all?start=${format(start, 'yyyy-MM-dd')}&end=${format(end, 'yyyy-MM-dd')}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setPrescriptorNotes(data);
+      }
+    } catch (err) {
+      console.error('Error loading prescriptor notes:', err);
+    }
+  };
+
   const openCreateModal = (date = null) => {
     const targetDate = date || new Date();
     setEditingEvent(null);
