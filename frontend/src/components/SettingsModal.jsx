@@ -59,6 +59,25 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canChangeLogo: false
   });
 
+  // Telemetry states
+  const [telemetryModule, setTelemetryModule] = useState('montada');
+  const [telemetryFiles, setTelemetryFiles] = useState([]);
+  const [isProcessingTelemetry, setIsProcessingTelemetry] = useState(false);
+  const [telemetryLog, setTelemetryLog] = useState([]);
+  const [telemetryProgress, setTelemetryProgress] = useState({ current: 0, total: 0 });
+  const [existingCodes, setExistingCodes] = useState(new Set());
+  const [telemetryResult, setTelemetryResult] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'telemetry') return;
+    const loadCodes = async () => {
+      try {
+        const products = await productsAPI.getAll(telemetryModule);
+        setExistingCodes(new Set(products.map(p => p.code)));
+      } catch (err) { console.error(err); }
+    };
+    loadCodes();
+  }, [telemetryModule, isOpen, activeTab]);
 
   const representatives = useMemo(() => state.users.filter(u => u.isRepresentative), [state.users]);
 
