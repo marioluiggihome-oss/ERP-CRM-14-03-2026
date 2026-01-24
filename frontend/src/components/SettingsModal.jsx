@@ -1024,7 +1024,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             ) : (
                               <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap bg-orange-900">PUNTOS BASE</th>
                             )}
-                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">GESTIÓN</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap sticky right-0 bg-indigo-950 z-10">GESTIÓN</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
