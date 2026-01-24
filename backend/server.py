@@ -96,6 +96,7 @@ class UserModelInternal(BaseModel):
     isActive: bool = True
     isAdmin: bool = False
     isRepresentative: bool = False
+    isPrescriptor: bool = False  # Prescriptor comercial - solo aporta contactos
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
@@ -120,6 +121,7 @@ class UserResponse(BaseModel):
     isActive: bool = True
     isAdmin: bool = False
     isRepresentative: bool = False
+    isPrescriptor: bool = False
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
