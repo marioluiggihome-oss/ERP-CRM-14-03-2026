@@ -681,16 +681,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                </div>
 
                <div className="flex-1">
-                  <div className="grid grid-cols-12 gap-1 px-2 py-2 bg-indigo-950 text-white rounded-t-lg text-[6px] font-black uppercase tracking-widest italic items-center">
-                     <div className="col-span-1 text-center">UD</div>
-                     <div className="col-span-2">REFERENCIA</div>
-                     <div className="col-span-3">DESCRIPCIÓN</div>
-                     <div className="col-span-1 text-center">AN</div>
-                     <div className="col-span-1 text-center">AL</div>
-                     <div className="col-span-1 text-center">FO</div>
-                     <div className="col-span-1 text-center">AP</div>
-                     <div className="col-span-1">OBS</div>
-                     <div className="col-span-1 text-right pr-2">€</div>
+                  {/* Header - usando flex en lugar de grid para mejor control */}
+                  <div className="flex items-center px-2 py-2 bg-indigo-950 text-white rounded-t-lg text-[6px] font-black uppercase tracking-widest italic">
+                     <div className="w-7 text-center shrink-0">V</div>
+                     <div className="w-8 text-center shrink-0">UD</div>
+                     <div className="w-28 shrink-0">REF</div>
+                     <div className="flex-1 min-w-0">DESCRIPCIÓN</div>
+                     <div className="w-10 text-center shrink-0">AN</div>
+                     <div className="w-10 text-center shrink-0">AL</div>
+                     <div className="w-10 text-center shrink-0">FO</div>
+                     <div className="w-8 text-center shrink-0">AP</div>
+                     <div className="w-24 shrink-0">OBS</div>
+                     <div className="w-20 text-right shrink-0 pr-2">€</div>
+                     <div className="w-6 shrink-0 no-print"></div>
                   </div>
                   <div className="divide-y divide-indigo-50 border-x border-b border-indigo-50 rounded-b-lg overflow-hidden">
                   {sortedItems.map((item) => {
@@ -724,125 +727,162 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                         if (Number(item.customHeight) !== Number(product.height)) specialCuts.push("ALTO");
                         if (Number(item.customDepth) !== Number(product.depth)) specialCuts.push("FONDO");
                     }
-                    const specialLabel = specialCuts.length > 0 ? `+ CORTE ESPECIAL ${specialCuts.join(' / ')}` : '';
+                    const specialLabel = specialCuts.length > 0 ? `+ CORTE ${specialCuts.join('/')}` : '';
+                    
+                    // Detectar si es mueble de 2 puertas (no necesita selector D/I)
+                    const isTwoDoor = product.name?.toLowerCase().includes('2 puerta') || 
+                                      product.name?.toLowerCase().includes('2p') ||
+                                      product.code?.includes('2P') ||
+                                      product.visualType === '2P';
 
                     return (
-                      <div key={item.id} className={`grid grid-cols-12 gap-2 px-4 py-2.5 items-center text-indigo-950 hover:bg-indigo-50/50 transition-colors ${isUnknown ? 'bg-red-50 border-l-4 border-red-500' : item.isManual ? 'bg-indigo-50/30' : specialCuts.length > 0 ? 'bg-orange-50/10' : ''}`}>
-                         <div className="col-span-1 text-center flex flex-col items-center">
-                            <input type="number" min="1" value={item.quantity} onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)} className="w-8 bg-transparent text-center font-black text-xs italic outline-none no-print" />
-                            <span className="print-only font-black text-xs italic">x{item.quantity}</span>
+                      <div key={item.id} className={`flex items-center px-2 py-2 text-indigo-950 hover:bg-indigo-50/50 transition-colors ${isUnknown ? 'bg-red-50 border-l-4 border-red-500' : item.isManual ? 'bg-emerald-50/30' : specialCuts.length > 0 ? 'bg-orange-50/20' : ''}`}>
+                         {/* Corte Viga - Primera columna */}
+                         <div className="w-7 shrink-0 flex justify-center">
+                            {!item.isManual ? (
+                              <button
+                                onClick={() => updateItem(item.id, 'hasVigaCut', !item.hasVigaCut)}
+                                className={`no-print p-1 rounded transition-all ${
+                                  item.hasVigaCut 
+                                    ? 'bg-orange-600 text-white shadow-md' 
+                                    : 'bg-slate-100 text-slate-300 hover:bg-orange-100 hover:text-orange-600'
+                                }`}
+                                title={item.hasVigaCut ? 'Quitar corte de viga' : 'Añadir corte de viga (+€)'}
+                              >
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                                  <path d="M4 20L20 4" />
+                                  <path d="M2 12h4" />
+                                  <path d="M18 12h4" />
+                                </svg>
+                              </button>
+                            ) : (
+                              <span className="text-[8px] text-emerald-500 font-black">M</span>
+                            )}
+                            {item.hasVigaCut && <span className="print-only text-[6px] font-black text-orange-600">V</span>}
+                         </div>
+
+                         {/* Cantidad */}
+                         <div className="w-8 shrink-0 text-center">
+                            <input type="number" min="1" value={item.quantity} onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)} className="w-7 bg-transparent text-center font-black text-[10px] italic outline-none no-print" />
+                            <span className="print-only font-black text-[10px] italic">x{item.quantity}</span>
                          </div>
                          
-                         <div className="col-span-1">
+                         {/* Referencia - Más ancha */}
+                         <div className="w-28 shrink-0 pr-1">
                             {item.isManual ? (
                                 <>
                                   <input 
                                     type="text" 
                                     value={item.customReference || ''} 
                                     onChange={e => updateItem(item.id, 'customReference', e.target.value)} 
-                                    placeholder="REF. OPCIONAL" 
-                                    className="w-full bg-white border border-indigo-200 rounded px-1.5 py-1 text-[8px] font-black uppercase text-indigo-800 outline-none focus:border-orange-600 no-print placeholder-indigo-300" 
+                                    placeholder="REF" 
+                                    className="w-full bg-white border border-emerald-200 rounded px-1 py-0.5 text-[7px] font-black uppercase text-indigo-800 outline-none focus:border-emerald-500 no-print placeholder-indigo-300" 
                                   />
-                                  <span className="print-only text-[8px] font-black uppercase italic tracking-tighter text-indigo-900">{item.customReference}</span>
+                                  <span className="print-only text-[7px] font-black uppercase italic text-indigo-900">{item.customReference}</span>
                                 </>
                             ) : (
                                 <>
-                                    <input type="text" value={item.customReference ?? product.code} onChange={e => updateItem(item.id, 'customReference', e.target.value)} className="bg-indigo-50/50 border border-indigo-50 rounded px-1.5 py-0.5 text-[8px] font-black uppercase italic tracking-tighter text-indigo-900 outline-none w-full no-print focus:border-orange-500" />
-                                    <span className="print-only text-[8px] font-black uppercase italic tracking-tighter text-indigo-900">{item.customReference ?? product.code}</span>
+                                    <input type="text" value={item.customReference ?? product.code} onChange={e => updateItem(item.id, 'customReference', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-100 rounded px-1 py-0.5 text-[7px] font-black uppercase italic text-indigo-900 outline-none no-print focus:border-orange-500" />
+                                    <span className="print-only text-[7px] font-black uppercase italic text-indigo-900">{item.customReference ?? product.code}</span>
                                 </>
                             )}
                          </div>
 
+                         {/* Descripción */}
                          {item.isManual ? (
-                             <div className="col-span-6">
+                             <div className="flex-1 min-w-0 pr-2">
                                 <input 
                                     type="text" 
                                     value={item.manualDescription || ''} 
                                     onChange={e => updateItem(item.id, 'manualDescription', e.target.value)}
-                                    placeholder="DESCRIPCIÓN DEL CONCEPTO O SERVICIO..."
-                                    className="w-full bg-white border border-indigo-200 rounded px-2 py-1 text-[9px] font-black uppercase text-indigo-900 outline-none focus:border-orange-600 focus:ring-1 focus:ring-orange-600 placeholder-indigo-300 no-print"
+                                    placeholder="Descripción del concepto..."
+                                    className="w-full bg-white border border-emerald-200 rounded px-2 py-0.5 text-[8px] font-bold uppercase text-indigo-900 outline-none focus:border-emerald-500 placeholder-indigo-300 no-print"
                                 />
-                                <span className="print-only text-[9px] font-black uppercase italic text-indigo-900">{item.manualDescription}</span>
+                                <span className="print-only text-[8px] font-bold uppercase italic text-indigo-900">{item.manualDescription}</span>
                              </div>
                          ) : (
+                            <div className="flex-1 min-w-0 pr-2">
+                                <span className={`text-[8px] font-bold uppercase italic leading-tight block truncate ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}>{product.name}</span>
+                                {specialLabel && <span className="text-[6px] font-black text-orange-600 uppercase tracking-wide">{specialLabel}</span>}
+                            </div>
+                         )}
+
+                         {/* Dimensiones y Apertura - Solo para productos normales */}
+                         {item.isManual ? (
                             <>
-                                <div className="col-span-3 flex flex-col">
-                                    <span className={`text-[8px] font-bold uppercase italic leading-tight ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}>{product.name}</span>
-                                    {specialLabel && <span className="text-[6px] font-black text-orange-600 uppercase mt-0.5 tracking-widest">{specialLabel}</span>}
+                                {/* Espacio vacío para dimensiones */}
+                                <div className="w-10 shrink-0"></div>
+                                <div className="w-10 shrink-0"></div>
+                                <div className="w-10 shrink-0"></div>
+                                <div className="w-8 shrink-0"></div>
+                                {/* Puntos manuales en lugar de OBS */}
+                                <div className="w-24 shrink-0 pr-1">
+                                    <div className="flex items-center gap-1 bg-white border border-emerald-200 rounded px-1 py-0.5 no-print">
+                                        <span className="text-[6px] font-black text-emerald-600">PTS:</span>
+                                        <input 
+                                            type="number" 
+                                            value={item.manualPoints || 0} 
+                                            onChange={e => updateItem(item.id, 'manualPoints', parseFloat(e.target.value) || 0)}
+                                            className="w-full font-black text-[8px] text-orange-600 outline-none bg-transparent"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <span className="print-only text-[7px] font-bold text-emerald-600">{item.manualPoints} pts</span>
                                 </div>
-                                <div className="col-span-1 text-center flex flex-col items-center">
-                                    <input type="number" value={Math.round(item.customWidth / 10)} onChange={e => updateItem(item.id, 'customWidth', (parseInt(e.target.value) || 0) * 10)} className={`w-full bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-600 text-orange-600' : 'border-indigo-50'} no-print`} />
-                                    <span className="print-only font-bold text-[9px]">{item.customWidth ? Math.round(item.customWidth / 10) : '-'}</span>
+                            </>
+                         ) : (
+                            <>
+                                <div className="w-10 shrink-0 text-center">
+                                    <input type="number" value={Math.round(item.customWidth / 10)} onChange={e => updateItem(item.id, 'customWidth', (parseInt(e.target.value) || 0) * 10)} className={`w-9 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[8px]">{item.customWidth ? Math.round(item.customWidth / 10) : '-'}</span>
                                 </div>
-                                <div className="col-span-1 text-center flex flex-col items-center">
-                                    <input type="number" value={item.customHeight} onChange={e => updateItem(item.id, 'customHeight', parseInt(e.target.value) || 0)} className={`w-full bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-600 text-orange-600' : 'border-indigo-50'} no-print`} />
-                                    <span className="print-only font-bold text-[9px]">{item.customHeight || '-'}</span>
+                                <div className="w-10 shrink-0 text-center">
+                                    <input type="number" value={item.customHeight} onChange={e => updateItem(item.id, 'customHeight', parseInt(e.target.value) || 0)} className={`w-9 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[8px]">{item.customHeight || '-'}</span>
                                 </div>
-                                <div className="col-span-1 text-center flex flex-col items-center">
-                                    <input type="number" value={item.customDepth} onChange={e => updateItem(item.id, 'customDepth', parseInt(e.target.value) || 0)} className={`w-full bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product.depth) ? 'border-orange-600 text-orange-600' : 'border-indigo-50'} no-print`} />
-                                    <span className="print-only font-bold text-[9px]">{item.customDepth || '-'}</span>
+                                <div className="w-10 shrink-0 text-center">
+                                    <input type="number" value={item.customDepth} onChange={e => updateItem(item.id, 'customDepth', parseInt(e.target.value) || 0)} className={`w-9 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product.depth) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[8px]">{item.customDepth || '-'}</span>
                                 </div>
-                                <div className="col-span-1 text-center flex flex-col items-center">
-                                    <select value={item.openingDirection || 'Derecha'} onChange={e => updateItem(item.id, 'openingDirection', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-50 rounded py-0.5 text-[7px] font-black uppercase italic outline-none no-print">
-                                    <option value="Derecha">D</option>
-                                    <option value="Izquierda">I</option>
-                                    <option value="N/A">-</option>
-                                    </select>
-                                    <span className="print-only font-black text-[8px] italic uppercase">{item.openingDirection === 'Derecha' ? 'D' : item.openingDirection === 'Izquierda' ? 'I' : '-'}</span>
+                                <div className="w-8 shrink-0 text-center">
+                                    {isTwoDoor ? (
+                                      <>
+                                        <span className="text-[7px] font-black text-indigo-300 no-print">-</span>
+                                        <span className="print-only font-black text-[7px]">-</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <select value={item.openingDirection || 'Derecha'} onChange={e => updateItem(item.id, 'openingDirection', e.target.value)} className="w-7 bg-indigo-50/50 border border-indigo-100 rounded py-0.5 text-[7px] font-black uppercase italic outline-none no-print">
+                                          <option value="Derecha">D</option>
+                                          <option value="Izquierda">I</option>
+                                          <option value="N/A">-</option>
+                                        </select>
+                                        <span className="print-only font-black text-[7px] italic uppercase">{item.openingDirection === 'Derecha' ? 'D' : item.openingDirection === 'Izquierda' ? 'I' : '-'}</span>
+                                      </>
+                                    )}
+                                </div>
+                                {/* Observaciones */}
+                                <div className="w-24 shrink-0 pr-1">
+                                    <input type="text" placeholder="Notas..." value={item.notes || ''} onChange={e => updateItem(item.id, 'notes', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-100 rounded px-1 py-0.5 text-[7px] font-bold text-indigo-400 outline-none focus:border-orange-300 no-print" />
+                                    <p className="print-only text-[7px] font-bold text-indigo-400 italic truncate">{item.notes}</p>
                                 </div>
                             </>
                          )}
 
-                         <div className="col-span-2">
-                            {item.isManual ? (
-                                <div className="flex items-center gap-1 bg-white border border-indigo-200 rounded px-2 py-1 no-print">
-                                    <span className="text-[7px] font-black text-indigo-400">PTS:</span>
-                                    <input 
-                                        type="number" 
-                                        value={item.manualPoints || 0} 
-                                        onChange={e => updateItem(item.id, 'manualPoints', parseFloat(e.target.value) || 0)}
-                                        className="w-full font-black text-[9px] text-orange-600 outline-none"
-                                        placeholder="0"
-                                    />
-                                </div>
-                            ) : (
-                                <>
-                                    <input type="text" placeholder="Notas..." value={item.notes || ''} onChange={e => updateItem(item.id, 'notes', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-50 rounded px-1 py-0.5 text-[7px] font-bold text-indigo-400 outline-none focus:border-orange-300 no-print" />
-                                    <p className="print-only text-[7px] font-bold text-indigo-400 italic truncate">{item.notes}</p>
-                                </>
-                            )}
-                         </div>
-                         <div className="col-span-1 text-right flex items-center justify-end gap-1 relative group/price">
-                            {hasExtras && <Info size={8} className="text-orange-600 no-print" />}
-                            {item.hasVigaCut && <span className="text-[5px] font-black text-orange-600 bg-orange-100 px-0.5 rounded">V</span>}
-                            {item.isManual && <PenTool size={8} className="text-indigo-300 no-print" />}
-                            <span className="text-[10px] font-black italic tracking-tighter">{price.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</span>
-                            
-                            {/* Botón de Corte Viga - Más visible */}
-                            {!item.isManual && (
-                              <button
-                                onClick={() => updateItem(item.id, 'hasVigaCut', !item.hasVigaCut)}
-                                className={`no-print p-1.5 rounded-lg transition-all ml-1 ${
-                                  item.hasVigaCut 
-                                    ? 'bg-orange-600 text-white shadow-md' 
-                                    : 'bg-slate-100 text-slate-400 hover:bg-orange-100 hover:text-orange-600'
-                                }`}
-                                title={item.hasVigaCut ? 'Quitar corte de viga' : 'Añadir corte de viga (+€)'}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                                  <path d="M4 20L20 4" />
-                                  <path d="M2 12h4" />
-                                  <path d="M18 12h4" />
-                                </svg>
-                              </button>
-                            )}
-                            
-                            <button onClick={() => removeItem(item.id)} className="no-print p-1 text-indigo-100 hover:text-red-500 transition-all"><Trash2 size={12}/></button>
+                         {/* Precio - Siempre visible y alineado */}
+                         <div className="w-20 shrink-0 text-right flex items-center justify-end gap-1 relative group/price">
+                            {hasExtras && <Info size={7} className="text-orange-600 no-print" />}
+                            <span className="text-[10px] font-black italic tracking-tight">{price.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</span>
                             
                             <div className="absolute right-0 top-full mt-2 z-50 hidden group-hover/price:block w-64 bg-slate-900 text-white p-4 rounded-xl shadow-2xl text-[9px] font-mono whitespace-pre-wrap text-left border border-indigo-500/30">
                               <div className="absolute -top-1 right-4 w-2 h-2 bg-slate-900 rotate-45 border-t border-l border-indigo-500/30"></div>
                               {breakdown}
                             </div>
+                         </div>
+                         
+                         {/* Botón eliminar */}
+                         <div className="w-6 shrink-0 no-print">
+                            <button onClick={() => removeItem(item.id)} className="p-1 text-indigo-200 hover:text-red-500 transition-all"><Trash2 size={12}/></button>
                          </div>
                       </div>
                     );
