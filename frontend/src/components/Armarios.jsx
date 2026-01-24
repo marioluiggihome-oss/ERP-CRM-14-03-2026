@@ -1637,6 +1637,123 @@ const Armarios = ({ state, setState }) => {
                   <p className="text-xs text-yellow-600 italic">No hay accesorios personalizados. Usa AÑADIR para incluir accesorios del dibujo no listados.</p>
                 )}
               </div>
+
+              {/* ========== SECCIÓN TABLEROS Y METROS CUADRADOS ========== */}
+              <div className="mt-6 p-6 bg-gradient-to-r from-blue-900 to-indigo-900 rounded-xl text-white">
+                <h4 className="font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Layers size={18} />
+                  CÁLCULO DE TABLEROS NECESARIOS
+                </h4>
+                <p className="text-xs text-blue-200 mb-4">
+                  Tablero estándar: {boardsCalculation.boardSize} ({boardsCalculation.boardAreaM2.toFixed(2)} m²)
+                </p>
+                
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  {/* Tablero 18mm Estructura */}
+                  <div className="bg-white/10 rounded-xl p-4">
+                    <h5 className="font-bold text-xs uppercase tracking-widest text-blue-200 mb-3">
+                      Tablero 18mm (Estructura)
+                    </h5>
+                    <div className="space-y-2">
+                      {boardsCalculation.boards.tablero18mm.pieces.map((piece, idx) => (
+                        <div key={idx} className="flex justify-between text-xs">
+                          <span className="text-blue-100">{piece.name} ({piece.quantity}x)</span>
+                          <span className="font-bold">{piece.totalArea.toFixed(3)} m²</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-white/20 pt-2 mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-bold text-blue-100">TOTAL:</span>
+                          <span className="font-black text-yellow-400">{boardsCalculation.boards.tablero18mm.totalArea.toFixed(3)} m²</span>
+                        </div>
+                        <div className="flex justify-between text-xs mt-1">
+                          <span className="text-blue-300">Tableros necesarios (+15%):</span>
+                          <span className="font-black text-lg text-white">{boardsCalculation.boards.tablero18mm.boardsNeeded}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tablero 8mm Trasera */}
+                  <div className="bg-white/10 rounded-xl p-4">
+                    <h5 className="font-bold text-xs uppercase tracking-widest text-blue-200 mb-3">
+                      Tablero 8mm (Trasera)
+                    </h5>
+                    <div className="space-y-2">
+                      {boardsCalculation.boards.tablero8mm.pieces.map((piece, idx) => (
+                        <div key={idx} className="flex justify-between text-xs">
+                          <span className="text-blue-100">{piece.name} ({piece.quantity}x)</span>
+                          <span className="font-bold">{piece.totalArea.toFixed(3)} m²</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-white/20 pt-2 mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-bold text-blue-100">TOTAL:</span>
+                          <span className="font-black text-yellow-400">{boardsCalculation.boards.tablero8mm.totalArea.toFixed(3)} m²</span>
+                        </div>
+                        <div className="flex justify-between text-xs mt-1">
+                          <span className="text-blue-300">Tableros necesarios (+10%):</span>
+                          <span className="font-black text-lg text-white">{boardsCalculation.boards.tablero8mm.boardsNeeded}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tablero Puertas */}
+                  <div className="bg-white/10 rounded-xl p-4">
+                    <h5 className="font-bold text-xs uppercase tracking-widest text-blue-200 mb-3">
+                      Tablero 18mm (Puertas)
+                    </h5>
+                    <div className="space-y-2">
+                      {boardsCalculation.boards.puertasTablero.pieces.map((piece, idx) => (
+                        <div key={idx} className="flex justify-between text-xs">
+                          <span className="text-blue-100">{piece.name} ({piece.quantity}x)</span>
+                          <span className="font-bold">{piece.totalArea.toFixed(3)} m²</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-white/20 pt-2 mt-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-bold text-blue-100">TOTAL:</span>
+                          <span className="font-black text-yellow-400">{boardsCalculation.boards.puertasTablero.totalArea.toFixed(3)} m²</span>
+                        </div>
+                        <div className="flex justify-between text-xs mt-1">
+                          <span className="text-blue-300">Tableros necesarios (+15%):</span>
+                          <span className="font-black text-lg text-white">{boardsCalculation.boards.puertasTablero.boardsNeeded}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resumen Total Tableros */}
+                <div className="bg-yellow-500 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-yellow-900 uppercase tracking-widest">RESUMEN TOTAL TABLEROS</p>
+                    <p className="text-2xl font-black text-yellow-900 mt-1">
+                      {boardsCalculation.totalArea.toFixed(3)} m² totales
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-yellow-900 uppercase tracking-widest">TABLEROS A COMPRAR</p>
+                    <div className="flex items-center gap-4 mt-1">
+                      <div className="text-center">
+                        <p className="text-3xl font-black text-yellow-900">{boardsCalculation.boards.tablero18mm.boardsNeeded + boardsCalculation.boards.puertasTablero.boardsNeeded}</p>
+                        <p className="text-[10px] text-yellow-800">18mm</p>
+                      </div>
+                      <span className="text-yellow-900 font-bold">+</span>
+                      <div className="text-center">
+                        <p className="text-3xl font-black text-yellow-900">{boardsCalculation.boards.tablero8mm.boardsNeeded}</p>
+                        <p className="text-[10px] text-yellow-800">8mm</p>
+                      </div>
+                      <span className="text-yellow-900 font-bold">=</span>
+                      <div className="text-center bg-yellow-900 text-yellow-400 px-4 py-2 rounded-lg">
+                        <p className="text-3xl font-black">{boardsCalculation.totalBoards}</p>
+                        <p className="text-[10px]">TOTAL</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Footer Modal */}
