@@ -1021,6 +1021,50 @@ async def fix_product_heights():
         "message": f"Se corrigieron {fixed_count} productos"
     }
 
+@api_router.post("/products/fix-names")
+async def fix_product_names():
+    """
+    Corregir nombres de productos para unificar unidades a centímetros.
+    - Convierte '580cm' a '58cm', '330cm' a '33cm'
+    - Convierte 'XXXmm' a 'XXcm' en anchos
+    """
+    import re
+    
+    products = await db.products.find({}, {"_id": 0}).to_list(10000)
+    fixed_count = 0
+    
+    for p in products:
+        name = p.get('name', '')
+        original_name = name
+        
+        # Corregir fondos incorrectos (580cm -> 58cm, 330cm -> 33cm)
+        name = re.sub(r'580\s*cm', '58cm', name, flags=re.IGNORECASE)
+        name = re.sub(r'330\s*cm', '33cm', name, flags=re.IGNORECASE)
+        
+        # Convertir anchos de mm a cm (400mm -> 40cm, 350mm -> 35cm, etc.)
+        def mm_to_cm(match):
+            mm_val = int(match.group(1))
+            cm_val = mm_val // 10
+            return f'{cm_val}cm'
+        
+        name = re.sub(r'(\d{3,4})\s*mm', mm_to_cm, name, flags=re.IGNORECASE)
+        
+        # También en el código si tiene unidades
+        code = p.get('code', '')
+        
+        if name != original_name:
+            await db.products.update_one(
+                {"id": p['id']},
+                {"$set": {"name": name}}
+            )
+            fixed_count += 1
+    
+    return {
+        "success": True,
+        "fixed_count": fixed_count,
+        "message": f"Se corrigieron {fixed_count} nombres de productos"
+    }
+
 @api_router.delete("/products/bulk/delete")
 async def delete_products_bulk(product_ids: List[str]):
     """Eliminar múltiples productos"""
