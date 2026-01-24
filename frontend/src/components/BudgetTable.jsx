@@ -50,11 +50,32 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
 
   const filteredCatalog = useMemo(() => {
     const q = searchQuery.toLowerCase();
-    return allProducts.filter(p => {
+    
+    // Orden de categorías en el catálogo
+    const categoryOrder = {
+      'COLUMNA': 1,
+      'SEMICOLUMNA': 2,
+      'ALTO': 3,
+      'BAJO': 4,
+      'ELECTRO': 5,
+      'ACCESORIO': 6,
+      'OTRO': 7
+    };
+    
+    const filtered = allProducts.filter(p => {
       const matchesSearch = p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q);
       const isCorrectModule = catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule;
       const matchesSeries = selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
       return matchesSearch && isCorrectModule && matchesSeries;
+    });
+    
+    // Ordenar por categoría y luego por código
+    return filtered.sort((a, b) => {
+      const catA = categoryOrder[a.category] || 99;
+      const catB = categoryOrder[b.category] || 99;
+      if (catA !== catB) return catA - catB;
+      // Dentro de la misma categoría, ordenar por código
+      return a.code.localeCompare(b.code);
     });
   }, [allProducts, searchQuery, state.currentModule, catalogs, selectedSeries]);
 
