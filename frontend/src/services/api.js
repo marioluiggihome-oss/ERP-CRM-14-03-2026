@@ -506,3 +506,27 @@ export const crmDashboardAPI = {
     return response.json();
   }
 };
+
+// ============================================
+// DESPIECE (BILL OF MATERIALS)
+// ============================================
+
+export const despieceAPI = {
+  calculate: async (items, carcassMaterial = "Melamina Blanca", backPanelMaterial = "Tablero 3mm", grosor = 18) => {
+    const response = await fetch(`${API_URL}/api/despiece/calculate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items,
+        carcassMaterial,
+        backPanelMaterial,
+        grosor
+      })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al calcular despiece');
+    }
+    return response.json();
+  }
+};
