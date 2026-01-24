@@ -921,7 +921,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               <div className="bg-slate-50 p-2 rounded-lg">
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rol</p>
                                 <p className="text-xs font-bold text-slate-900">
-                                  {user.isAdmin ? '🛡️ Admin Maestro' : user.isRepresentative ? '💼 Comercial' : '🏪 Tienda'}
+                                  {user.isAdmin ? '🛡️ Admin Maestro' : user.isRepresentative ? '💼 Comercial' : user.isPrescriptor ? '🤝 Prescriptor' : '🏪 Tienda'}
                                 </p>
                               </div>
                               <div className="bg-slate-50 p-2 rounded-lg">
