@@ -55,6 +55,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canUseAIAnalysis: false,
     canManageArticles: false,
     canViewTechnicalDespiece: false,
+    canAccessCRM: false,
     useCustomBranding: false,
     canChangeLogo: false
   });
