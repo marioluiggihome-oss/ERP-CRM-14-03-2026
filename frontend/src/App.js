@@ -350,6 +350,18 @@ const App = () => {
                 </button>
               )}
               
+              {/* Botón Mis Tiendas - Solo para Comerciales (no Admin) */}
+              {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && (
+                <button 
+                  onClick={() => setShowCommercialWorkView(true)} 
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all text-purple-400 hover:text-white hover:bg-purple-500/30"
+                  data-testid="commercial-panel-nav-btn"
+                >
+                  <Users size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Mis Tiendas</span>
+                </button>
+              )}
+              
               {/* Botón Mantenimiento - Solo para Admin */}
               {state.currentUser?.isAdmin && (
                 <button 
