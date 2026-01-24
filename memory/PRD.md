@@ -402,3 +402,20 @@ El prescriptor tiene un calendario simple donde puede añadir notas en fechas es
 | € | w-20 | Precio |
 | 🗑 | w-6 | Eliminar |
 
+
+## Correcciones Adicionales (24/01/2026)
+
+### 4. Aislamiento de Datos por Usuario
+- **Problema:** Los items del presupuesto se guardaban en localStorage y se compartían entre usuarios
+- **Solución:** Al hacer login (`handleLogin`), se limpian los items del presupuesto local
+- **Archivo:** `/app/frontend/src/App.js`
+
+### 5. Iconos Removidos de Librería Maestra
+- **Cambio:** Los iconos/dibujos de muebles ya NO aparecen en la librería inferior
+- **Nota:** Los iconos pueden usarse en la ficha individual del artículo
+- **Archivo:** `/app/frontend/src/components/BudgetTable.jsx` (removido import y columna de iconos)
+
+### 6. Descripción Línea Manual Expandida
+- El campo de descripción de líneas manuales ahora ocupa el espacio de AN+AL+FO+AP
+- Mayor área para escribir conceptos personalizados
+
