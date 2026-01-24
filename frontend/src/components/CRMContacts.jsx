@@ -185,7 +185,7 @@ const CRMContacts = () => {
             data-testid="status-filter"
           >
             <option value="">Todos los estados</option>
-            <option value="lead">Leads</option>
+            <option value="lead">Nuevos</option>
             <option value="active">Activos</option>
             <option value="customer">Clientes</option>
             <option value="inactive">Inactivos</option>
