@@ -1358,46 +1358,103 @@ const Armarios = ({ state, setState }) => {
           <div className="p-4 border-b border-slate-200">
             <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
               <Palette size={14} />
-              COLORES FINSA
+              COLORES FINSA 2025
             </h3>
+            
+            {/* Selector de categoría */}
+            <div className="mb-3">
+              <select
+                value={colorCategory}
+                onChange={(e) => setColorCategory(e.target.value)}
+                className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs font-bold bg-white"
+              >
+                <option value="all">Todos los colores</option>
+                <option value="blancos">⬜ Blancos</option>
+                <option value="grises">🔘 Grises</option>
+                <option value="cremas">🟨 Cremas y Beiges</option>
+                <option value="verdes">🟢 Verdes</option>
+                <option value="azules">🔵 Azules</option>
+                <option value="calidos">🔴 Rojos y Cálidos</option>
+                <option value="maderas-claras">🪵 Maderas Claras</option>
+                <option value="maderas-medias">🌳 Maderas Medias</option>
+                <option value="maderas-oscuras">🪓 Maderas Oscuras</option>
+                <option value="nogales">🥜 Nogales</option>
+                <option value="cerezos">🍒 Cerezos y Otros</option>
+                <option value="metalizados">⚙️ Metalizados</option>
+                <option value="piedras">🪨 Piedras y Cementos</option>
+                <option value="textiles">🧵 Textiles</option>
+              </select>
+            </div>
             
             <div className="space-y-3">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Exterior</label>
-                <div className="flex flex-wrap gap-1">
-                  {FINSA_COLORS.map(color => (
+                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                  {FINSA_COLORS
+                    .filter(c => colorCategory === 'all' || c.category === colorCategory)
+                    .map(color => (
                     <button
                       key={color.id}
                       onClick={() => updateConfig('exteriorColor', color.id)}
-                      className={`w-6 h-6 rounded border-2 transition-all ${
+                      className={`relative group w-7 h-7 rounded border-2 transition-all ${
                         wardrobeConfig.exteriorColor === color.id
-                          ? 'border-purple-500 scale-110'
-                          : 'border-slate-300 hover:border-purple-300'
+                          ? 'border-purple-500 scale-110 ring-2 ring-purple-300'
+                          : 'border-slate-300 hover:border-purple-300 hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.hex }}
-                      title={color.name}
-                    />
+                      title={`${color.ref} - ${color.name}`}
+                    >
+                      {wardrobeConfig.exteriorColor === color.id && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-[6px]">✓</span>
+                        </span>
+                      )}
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-slate-800 text-white text-[8px] rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">
+                        {color.ref}
+                      </span>
+                    </button>
                   ))}
                 </div>
+                {wardrobeConfig.exteriorColor && (
+                  <p className="text-[9px] text-slate-500 mt-1">
+                    <span className="font-bold">{getColorByName(wardrobeConfig.exteriorColor).ref}</span> - {getColorByName(wardrobeConfig.exteriorColor).name}
+                  </p>
+                )}
               </div>
               
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Interior</label>
-                <div className="flex flex-wrap gap-1">
-                  {FINSA_COLORS.filter(c => c.category === 'basics' || c.category === 'grays').map(color => (
+                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                  {FINSA_COLORS
+                    .filter(c => ['blancos', 'grises', 'cremas'].includes(c.category))
+                    .map(color => (
                     <button
                       key={color.id}
                       onClick={() => updateConfig('interiorColor', color.id)}
-                      className={`w-6 h-6 rounded border-2 transition-all ${
+                      className={`relative group w-7 h-7 rounded border-2 transition-all ${
                         wardrobeConfig.interiorColor === color.id
-                          ? 'border-purple-500 scale-110'
-                          : 'border-slate-300 hover:border-purple-300'
+                          ? 'border-purple-500 scale-110 ring-2 ring-purple-300'
+                          : 'border-slate-300 hover:border-purple-300 hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.hex }}
-                      title={color.name}
-                    />
+                      title={`${color.ref} - ${color.name}`}
+                    >
+                      {wardrobeConfig.interiorColor === color.id && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-[6px]">✓</span>
+                        </span>
+                      )}
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-slate-800 text-white text-[8px] rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">
+                        {color.ref}
+                      </span>
+                    </button>
                   ))}
                 </div>
+                {wardrobeConfig.interiorColor && (
+                  <p className="text-[9px] text-slate-500 mt-1">
+                    <span className="font-bold">{getColorByName(wardrobeConfig.interiorColor).ref}</span> - {getColorByName(wardrobeConfig.interiorColor).name}
+                  </p>
+                )}
               </div>
             </div>
           </div>
