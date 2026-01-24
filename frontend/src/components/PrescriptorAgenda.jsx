@@ -29,6 +29,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const PrescriptorAgenda = ({ currentUser, onLogout }) => {
   const [activeTab, setActiveTab] = useState('contacts');
+  const [systemLogo, setSystemLogo] = useState(null);
   
   // Contacts state
   const [contacts, setContacts] = useState([]);
@@ -52,7 +53,7 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
   const [noteFormData, setNoteFormData] = useState({ title: '', content: '', contactId: '', contactName: '' });
   const [savingNote, setSavingNote] = useState(false);
   const [showNewContactInNote, setShowNewContactInNote] = useState(false);
-  const [newContactInNote, setNewContactInNote] = useState({ name: '', phone: '', company: '' });
+  const [newContactInNote, setNewContactInNote] = useState({ name: '', phone: '', company: '', segment: '' });
 
   useEffect(() => {
     if (currentUser?.id) {
