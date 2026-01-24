@@ -92,6 +92,7 @@ class UserModelInternal(BaseModel):
     username: str
     password: str
     clientName: str
+    linkedClientId: Optional[str] = None  # Vinculación con cliente activo
     isActive: bool = True
     isAdmin: bool = False
     isRepresentative: bool = False
