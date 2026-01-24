@@ -336,6 +336,19 @@ const App = () => {
               )}
               
               {/* Solo Admin puede ver Mantenimiento */}
+              {/* Botón Panel Admin - Solo para Admin */}
+              {state.currentUser?.isAdmin && (
+                <button 
+                  onClick={() => setShowAdminWorkView(true)} 
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all text-slate-500 hover:text-white hover:bg-white/10"
+                  data-testid="admin-panel-nav-btn"
+                >
+                  <Building2 size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Panel Admin</span>
+                </button>
+              )}
+              
+              {/* Botón Mantenimiento - Solo para Admin */}
               {state.currentUser?.isAdmin && (
                 <button 
                   onClick={() => setShowMaintenancePanel(true)} 
