@@ -2,7 +2,7 @@
 
 ## Estado de Correcciones - 24/01/2026
 
-### ✅ COMPLETADO (21/25 tareas)
+### ✅ COMPLETADO (28/28 tareas)
 
 | # | Corrección | Estado | Fecha |
 |---|------------|--------|-------|
@@ -30,28 +30,40 @@
 | 22 | **Botón "Línea Manual" en Presupuesto Técnico** | ✅ | 24/01 |
 | 23 | **Panel Admin: Ver todos los trabajos** | ✅ | 24/01 |
 | 24 | **Endpoints para Comercial: Ver tiendas asignadas** | ✅ | 24/01 |
+| 25 | **Volcado a CRM al guardar presupuesto** | ✅ | 24/01 |
+| 26 | **Copia Seguridad en Maestro** | ✅ | 24/01 |
+| 27 | **Gestión Armazones en pestaña separada** | ✅ | 24/01 |
+| 28 | **Icono corte viga mejorado por línea** | ✅ | 24/01 |
 
-### 🔄 PENDIENTE (4 tareas)
+### 🟢 TODO COMPLETADO
 
-| # | Tarea | Prioridad |
-|---|-------|-----------|
-| 25 | Gestión armazones en pestaña separada | 🟢 Baja |
-| 26 | Ordenación de muebles por catálogo al importar | 🟡 Media |
-| 27 | Copia Seguridad y Mantenimiento en Maestro con permisos | 🟡 Media |
-| 28 | Volcado a CRM al guardar presupuesto | 🟡 Media |
+## Nuevas Funcionalidades Implementadas (24/01/2026)
 
-## Correcciones Hoy (24/01/2026)
+### 1. Volcado Automático a CRM
+- Al guardar un presupuesto, el sistema pregunta si desea crear una oportunidad en el CRM
+- Se crea automáticamente: Contacto + Oportunidad con valor del presupuesto
+- Stage: "proposal", Probabilidad: 50%
+- Tags: ['presupuesto', 'auto']
+- Vinculación directa: linkedProjectId, linkedProjectNumber
 
-### Bug Fixes:
-1. **Botón AUTO solo para Admin** - Los usuarios no-admin tienen presupuestos independientes
-2. **Unidades de semicolumnas** - Corregidas 1457 productos (11→110, 12→120, etc.)
-3. **Líneas manuales estables** - No se alteran al cambiar modo PVP/COSTO
+### 2. Panel de Backups en Maestro
+- Nueva pestaña "BACKUPS" en Panel Maestro (solo Admin)
+- Visualización de todos los backups (manuales, automáticos, pre-update)
+- Botón "CREAR BACKUP MANUAL"
+- Info sobre sistema de backups automáticos
 
-### Nuevas Funcionalidades:
-4. **Botón "+ LÍNEA MANUAL"** en el panel lateral del presupuestador
-5. **Panel Administrador** - Nueva vista para ver todos los trabajos del sistema
-6. **API `/api/admin/all-work`** - Proyectos, oportunidades y digitalizaciones agrupados
-7. **API `/api/commercial/my-shops-work`** - Trabajos de tiendas asignadas a comercial
+### 3. Gestión de Armazones Separada
+- Nueva pestaña "ARMAZONES" en Panel Maestro
+- UI mejorada con tarjetas para cada material
+- Muestra: Nombre, Incremento (€), Grosor (mm)
+- Indicador de material predeterminado
+- Explicación de qué es el incremento
+
+### 4. Icono Corte Viga Mejorado
+- Botón visual por cada línea del presupuesto
+- Color naranja cuando está activo
+- SVG personalizado representando un corte diagonal
+- Tooltip informativo
 
 ## Sistema de Clientes Activos (NUEVO - 24/01/2026)
 
