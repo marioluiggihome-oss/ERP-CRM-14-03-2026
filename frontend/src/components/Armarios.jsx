@@ -1150,6 +1150,30 @@ const Armarios = ({ state, setState }) => {
                 </div>
               </div>
             </div>
+
+            {/* Accesorios extra del módulo */}
+            <div className="mt-4 pt-3 border-t border-purple-200">
+              <h4 className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2">ACCESORIOS MÓDULO</h4>
+              <div className="grid grid-cols-2 gap-1">
+                {[
+                  { key: 'shoesRack', label: '👟 Zapatero', price: 120 },
+                  { key: 'trousersRack', label: '👖 Pantalonero', price: 95 },
+                  { key: 'jewelryTray', label: '💎 Joyero', price: 65 },
+                  { key: 'tieRack', label: '👔 Corbatero', price: 45 },
+                  { key: 'pulloutBasket', label: '🧺 Cesto', price: 75 },
+                ].map(({ key, label, price }) => (
+                  <label key={key} className="flex items-center gap-1 cursor-pointer p-1 rounded hover:bg-purple-100 text-[10px]">
+                    <input
+                      type="checkbox"
+                      checked={moduleConfigs[selectedModule]?.extras?.[key] || false}
+                      onChange={(e) => updateModuleExtra(selectedModule, key, e.target.checked)}
+                      className="w-3 h-3 rounded border-purple-300 text-purple-600"
+                    />
+                    <span className="font-medium text-slate-700">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Extras */}
