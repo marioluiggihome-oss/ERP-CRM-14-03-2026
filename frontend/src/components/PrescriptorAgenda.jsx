@@ -855,7 +855,7 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
                         type="button"
                         onClick={() => {
                           setShowNewContactInNote(false);
-                          setNewContactInNote({ name: '', phone: '', company: '' });
+                          setNewContactInNote({ name: '', phone: '', company: '', segment: '' });
                         }}
                         className="text-slate-400 hover:text-slate-600"
                       >
@@ -885,6 +885,16 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
                         placeholder="Empresa"
                       />
                     </div>
+                    <select
+                      value={newContactInNote.segment}
+                      onChange={(e) => setNewContactInNote({...newContactInNote, segment: e.target.value})}
+                      className="w-full px-3 py-2 border border-violet-200 rounded-lg text-sm font-bold outline-none focus:border-violet-500 bg-white"
+                    >
+                      <option value="">Tipo de negocio...</option>
+                      {CLIENT_SEGMENTS.map(seg => (
+                        <option key={seg} value={seg}>{seg}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
               </div>
