@@ -272,6 +272,18 @@ const App = () => {
                 <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
               </button>
               
+              {/* Digitalizador - Solo Admin o usuarios con permiso */}
+              {(state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && (
+                <button 
+                  onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                  data-testid="digitalizador-nav-btn"
+                >
+                  <ScanLine size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Digitalizador</span>
+                </button>
+              )}
+              
               {/* Solo Admin puede ver Copia de Seguridad */}
               {state.currentUser?.isAdmin && (
                 <button 
