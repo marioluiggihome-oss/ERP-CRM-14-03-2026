@@ -2041,6 +2041,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                     )}
                                   </button>
                                 </td>
+                                <td className="p-2 w-12">
+                                  <div 
+                                    className="w-10 h-10 flex items-center justify-center text-indigo-600"
+                                    dangerouslySetInnerHTML={{ __html: getProductIcon(product.code, product.name) }}
+                                  />
+                                </td>
                                 <td className="p-3 text-xs font-black text-orange-600 uppercase">{product.code}</td>
                                 <td className="p-3 text-xs font-bold text-slate-900">{product.name}</td>
                                 {inventoryModule === 'montada' ? (
