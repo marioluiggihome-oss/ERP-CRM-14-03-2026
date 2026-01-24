@@ -261,9 +261,9 @@ const Armarios = ({ state, setState }) => {
   });
 
   const [moduleConfigs, setModuleConfigs] = useState([
-    { id: 1, components: [], shelves: 4, drawers: 0, hangingRods: 1, hangingHeight: 1200 },
-    { id: 2, components: [], shelves: 6, drawers: 2, hangingRods: 0, hangingHeight: 0 },
-    { id: 3, components: [], shelves: 4, drawers: 0, hangingRods: 2, hangingHeight: 1000 },
+    { id: 1, components: [], shelves: 4, drawers: 0, hangingRods: 1, hangingHeight: 1200, extras: {} },
+    { id: 2, components: [], shelves: 6, drawers: 2, hangingRods: 0, hangingHeight: 0, extras: {} },
+    { id: 3, components: [], shelves: 4, drawers: 0, hangingRods: 2, hangingHeight: 1000, extras: {} },
   ]);
 
   const [extras, setExtras] = useState({
@@ -278,6 +278,11 @@ const Armarios = ({ state, setState }) => {
   const [ivaRate, setIvaRate] = useState(21);
   const [showConfig, setShowConfig] = useState(true);
   const [selectedModule, setSelectedModule] = useState(0);
+  
+  // Estado para el modal de despiece privado
+  const [showDespieceModal, setShowDespieceModal] = useState(false);
+  const [customAccessories, setCustomAccessories] = useState([]);
+  const [nextAccessoryNum, setNextAccessoryNum] = useState(1);
 
   // Ajustar módulos al cambiar el número (en el handler)
   const adjustModules = useCallback((targetCount) => {
