@@ -932,6 +932,7 @@ async def init_data():
             "canUseAIAnalysis": True,
             "canManageArticles": True,
             "canViewTechnicalDespiece": True,
+            "canAccessCRM": True,
             "useCustomBranding": True,
             "canChangeLogo": True
         }
