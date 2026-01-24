@@ -23,13 +23,38 @@
 | 15 | **INCREMENTO POR CORTE VIGA** | ✅ NUEVO |
 | 16 | **CONTADOR CORRELATIVO EXPEDIENTES** | ✅ NUEVO |
 
-### 🔄 PENDIENTE (3/19 tareas)
+### 🔄 PENDIENTE (2/19 tareas)
 
 | # | Tarea | Prioridad |
 |---|-------|-----------|
-| 17 | Conexión Digitalizador → CRM | Baja |
 | 18 | Gestión armazones en pestaña separada | Baja |
 | 19 | Admin ver todos los trabajos | Baja |
+
+### ✅ COMPLETADO HOY (24/01/2026)
+| 17 | **Conexión Digitalizador → CRM** | ✅ COMPLETADO |
+
+## Conexión Digitalizador → CRM (NUEVO)
+
+### Funcionalidad Implementada:
+- **Botón "Crear Oportunidad CRM"** en Digitalizador cuando hay líneas cargadas
+- **Modal de creación** con preview del presupuesto (nombre, valor total, líneas)
+- **Formulario de contacto**: Nombre cliente*, Empresa, Email, Teléfono
+- **Creación automática** de Contacto y Oportunidad en CRM
+- **Estado visual**: Botón cambia a "Oportunidad Creada" (verde) tras éxito
+- **Tags automáticos**: ['digitalizador', 'presupuesto']
+- **Notas detalladas**: Base imponible, IVA, acabados, armazón, costados
+
+### Flujo de Usuario:
+1. Digitalizar presupuesto (subir foto/PDF) o cargar del historial
+2. Editar líneas si es necesario
+3. Click en "Crear Oportunidad CRM" (botón púrpura)
+4. Rellenar datos del contacto en modal
+5. Click en "Crear Oportunidad"
+6. Contacto y Oportunidad creados → aparece en Dashboard CRM
+
+### Archivos Modificados:
+- `/app/frontend/src/components/Digitalizador.jsx` - UI y lógica
+- Test: `/app/backend/tests/test_digitalizador_crm_integration.py`
 
 ## Nuevas Funcionalidades Implementadas
 
