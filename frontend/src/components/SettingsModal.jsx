@@ -1382,8 +1382,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               </td>
                               <td className="px-3 py-2">
                                 <div className="flex justify-center gap-1">
-                                  {/* Activar (solo si es potencial) */}
-                                  {client.tipo === 'potencial' && (
+                                  {/* Activar (solo si es potencial y no tiene código) */}
+                                  {clientTipo === 'potencial' && !client.codigo && (
                                     <button
                                       onClick={() => { setShowActivateModal(client); setActivateCode(''); }}
                                       className="p-1.5 text-orange-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
@@ -1404,7 +1404,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                     onClick={() => {
                                       setIsEditingClient(true);
                                       setEditingClientId(client.id);
-                                      setClientForm({ ...client });
+                                      setClientForm({ ...client, tipo: clientTipo });
                                     }}
                                     className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                                     title="Editar"
