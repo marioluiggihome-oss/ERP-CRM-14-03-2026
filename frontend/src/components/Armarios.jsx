@@ -1617,6 +1617,24 @@ const Armarios = ({ state, setState }) => {
           
           {/* Botones */}
           <button 
+            onClick={() => setShowIAModal(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-violet-500 hover:from-pink-400 hover:to-violet-400 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            data-testid="armarios-ia-config-btn"
+            title="Configurar con IA"
+          >
+            <Sparkles size={16} />
+            IA
+          </button>
+          <button 
+            onClick={() => setShowRenderModal(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            data-testid="armarios-render-btn"
+            title="Generar render 3D"
+          >
+            <Image size={16} />
+            RENDER
+          </button>
+          <button 
             onClick={() => setShowProjectsModal(true)}
             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
             data-testid="armarios-proyectos-btn"
