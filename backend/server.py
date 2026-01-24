@@ -498,6 +498,80 @@ class OpportunityCreate(BaseModel):
 
 class OpportunityUpdate(BaseModel):
     title: Optional[str] = None
+
+# ============================================
+# CALENDAR EVENT MODELS
+# ============================================
+
+class CalendarEventModel(BaseModel):
+    """Modelo para eventos del calendario CRM"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"evt-{uuid.uuid4().hex[:8]}")
+    title: str
+    description: str = ""
+    eventType: str = "cita"  # cita, seguimiento, llamada, reunion, otro
+    startDate: str  # ISO format datetime
+    endDate: str  # ISO format datetime
+    allDay: bool = False
+    # Linked entities
+    contactId: Optional[str] = None
+    contactName: Optional[str] = None
+    opportunityId: Optional[str] = None
+    opportunityTitle: Optional[str] = None
+    # Assignment
+    assignedTo: str  # User ID
+    assignedToName: str = ""
+    createdBy: str
+    createdByName: str = ""
+    # Status
+    completed: bool = False
+    completedAt: Optional[str] = None
+    reminder: Optional[int] = None  # Minutes before event
+    # Metadata
+    color: Optional[str] = None  # Custom color for the event
+    location: Optional[str] = None
+    notes: str = ""
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CalendarEventCreate(BaseModel):
+    title: str
+    description: str = ""
+    eventType: str = "cita"
+    startDate: str
+    endDate: str
+    allDay: bool = False
+    contactId: Optional[str] = None
+    contactName: Optional[str] = None
+    opportunityId: Optional[str] = None
+    opportunityTitle: Optional[str] = None
+    assignedTo: str
+    assignedToName: str = ""
+    reminder: Optional[int] = None
+    color: Optional[str] = None
+    location: Optional[str] = None
+    notes: str = ""
+
+class CalendarEventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    eventType: Optional[str] = None
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    allDay: Optional[bool] = None
+    contactId: Optional[str] = None
+    contactName: Optional[str] = None
+    opportunityId: Optional[str] = None
+    opportunityTitle: Optional[str] = None
+    assignedTo: Optional[str] = None
+    assignedToName: Optional[str] = None
+    completed: Optional[bool] = None
+    reminder: Optional[int] = None
+    color: Optional[str] = None
+    location: Optional[str] = None
+    notes: Optional[str] = None
+
+# Activity model (existing)
     description: Optional[str] = None
     contactId: Optional[str] = None
     contactName: Optional[str] = None
