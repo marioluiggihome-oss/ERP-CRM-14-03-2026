@@ -746,6 +746,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
         items={items}
         catalogs={catalogs}
         carcassMaterialName={carcassMaterialName}
+        customerName={state.customerName || ''}
+        projectReference={state.projectReference || ''}
+        expedientNumber={state.expedientNumber || ''}
       />
     </div>
   );
