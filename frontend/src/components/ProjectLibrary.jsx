@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Trash2, Eye, Calendar, Euro, Search, FileText, Save, Loader, RefreshCw, Plus } from 'lucide-react';
+import { FolderOpen, Trash2, Eye, Calendar, Euro, Search, FileText, Save, Loader, RefreshCw, Plus, Archive, ArchiveRestore, Filter } from 'lucide-react';
 import { projectsAPI } from '../services/api';
 
 const ProjectLibrary = ({ state, setState }) => {
@@ -7,6 +7,7 @@ const ProjectLibrary = ({ state, setState }) => {
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [viewFilter, setViewFilter] = useState('active'); // 'active', 'archived', 'all'
 
   // Cargar proyectos desde MongoDB
   useEffect(() => {
