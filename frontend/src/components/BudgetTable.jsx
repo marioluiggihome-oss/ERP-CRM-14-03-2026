@@ -142,8 +142,11 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
          carcassCost = selectedMaterial?.fixedIncrement || 0;
      }
      
+     // Añadir incremento por corte de viga si está marcado
+     const vigaCost = item.hasVigaCut ? (state.vigaCutIncrement || 0) : 0;
+     
      const pointsCost = usedPoints * pointValue;
-     const unitPrice = pointsCost + cutsCost + carcassCost;
+     const unitPrice = pointsCost + cutsCost + carcassCost + vigaCost;
      
      const discountPct = state.currentUser?.commercialDiscount || 0;
      const discountFactor = state.showDistributorPrice ? (1 - discountPct / 100) : 1;
@@ -159,15 +162,16 @@ DESGLOSE DE PRECIO:
 
 ${!item.isManual ? `EXTRAS APLICADOS:
 • Armazón: +${carcassCost.toFixed(2)}€
-• Cortes Especiales (${cuts.length}): +${cutsCost.toFixed(2)}€` : '• (Artículo Manual / Neto)'}
+• Cortes Especiales (${cuts.length}): +${cutsCost.toFixed(2)}€${vigaCost > 0 ? `
+• Corte Viga: +${vigaCost.toFixed(2)}€` : ''}` : '• (Artículo Manual / Neto)'}
 
 PRECIO UNITARIO: ${unitPrice.toFixed(2)}€
 CANTIDAD: x${item.quantity}
 ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
 `.trim();
 
-     return { total: finalPrice, breakdown, hasExtras: (carcassCost > 0 || cutsCost > 0), usedPoints };
-  }, [state.globalFinish, state.currentModule, state.pointValueMontada, state.pointValueDespiece, state.specialIncrementWidth, state.specialIncrementHeight, state.specialIncrementDepth, state.showDistributorPrice, state.currentUser?.commercialDiscount, state.selectedCarcassMaterialId, state.carcassMaterials]);
+     return { total: finalPrice, breakdown, hasExtras: (carcassCost > 0 || cutsCost > 0 || vigaCost > 0), usedPoints, vigaCost };
+  }, [state.globalFinish, state.currentModule, state.pointValueMontada, state.pointValueDespiece, state.specialIncrementWidth, state.specialIncrementHeight, state.specialIncrementDepth, state.showDistributorPrice, state.currentUser?.commercialDiscount, state.selectedCarcassMaterialId, state.carcassMaterials, state.vigaCutIncrement]);
 
 
   const total = useMemo(() => sortedItems.reduce((acc, item) => {
