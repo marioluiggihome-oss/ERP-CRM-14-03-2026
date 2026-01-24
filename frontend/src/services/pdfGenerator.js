@@ -21,7 +21,10 @@ export const generateBudgetPDF = ({
   carcassMaterialName,
   logo,
   brandColor = '#ea580c',
-  companyName = 'LUIGGI HOME'
+  companyName = 'LUIGGI HOME',
+  globalFinish = '',
+  allProducts = [],
+  calculateLineDetails = null
 }) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -42,7 +45,6 @@ export const generateBudgetPDF = ({
   // Si hay logo, añadirlo
   if (logo && logo.startsWith('data:image')) {
     try {
-      // Añadir logo (máximo 40x40mm)
       const logoSize = 35;
       doc.addImage(logo, 'PNG', margin, yPos - 10, logoSize, logoSize);
       logoWidth = logoSize + 8;
@@ -113,7 +115,7 @@ export const generateBudgetPDF = ({
   // ESPECIFICACIONES
   // ==========================================
   
-  if (doorColorLow || doorColorHigh || carcassMaterialName) {
+  if (doorColorLow || doorColorHigh || carcassMaterialName || globalFinish) {
     doc.setFontSize(9);
     doc.setTextColor(...primaryColor);
     doc.setFont('helvetica', 'bold');
@@ -125,6 +127,7 @@ export const generateBudgetPDF = ({
     doc.setTextColor(71, 85, 105);
     
     const specs = [];
+    if (globalFinish) specs.push(`Acabado: ${globalFinish}`);
     if (doorColorLow) specs.push(`Puerta Bajo: ${doorColorLow}`);
     if (doorColorHigh) specs.push(`Puerta Alto: ${doorColorHigh}`);
     if (doorColorColumns) specs.push(`Columnas: ${doorColorColumns}`);
@@ -136,163 +139,165 @@ export const generateBudgetPDF = ({
   }
 
   // ==========================================
-  // TABLA MONTADA
+  // TABLA DE ARTÍCULOS
   // ==========================================
   
-  if (itemsMontada.length > 0) {
+  // Combinar items de montada y despiece
+  const allItems = [...itemsMontada, ...itemsDespiece];
+  
+  if (allItems.length > 0) {
     doc.setFontSize(10);
     doc.setTextColor(...primaryColor);
     doc.setFont('helvetica', 'bold');
-    doc.text('COCINA MONTADA', margin, yPos);
+    doc.text('DETALLE DEL PRESUPUESTO', margin, yPos);
     yPos += 5;
 
-    const montadaData = itemsMontada.map(item => [
-      item.productCode || '-',
-      item.productName || '-',
-      item.quantity || 1,
-      (item.unitPoints || 0).toFixed(2),
-      (item.totalPoints || 0).toFixed(2),
-      `€${((item.totalPoints || 0) * pointValueMontada).toFixed(2)}`
-    ]);
+    // Preparar datos de la tabla
+    const tableData = allItems.map(item => {
+      // Buscar producto
+      let product = allProducts.find(p => p.id === item.productId);
+      let price = 0;
+      
+      if (item.isManual) {
+        product = {
+          code: item.customReference || 'MANUAL',
+          name: item.manualDescription || 'CONCEPTO MANUAL'
+        };
+        price = (item.manualPoints || 0) * pointValueMontada;
+      } else if (product && calculateLineDetails) {
+        const details = calculateLineDetails(item, product);
+        price = details.total || 0;
+      }
+      
+      const code = item.customReference || product?.code || '-';
+      const name = item.manualDescription || product?.name || '-';
+      const width = item.customWidth ? Math.round(item.customWidth / 10) : '-';
+      const height = item.customHeight || '-';
+      const depth = item.customDepth || '-';
+      const apertura = item.openingDirection === 'Derecha' ? 'D' : item.openingDirection === 'Izquierda' ? 'I' : '-';
+      
+      return [
+        item.quantity || 1,
+        code,
+        name.substring(0, 40),
+        width,
+        height,
+        depth,
+        apertura,
+        `${price.toFixed(2)}€`
+      ];
+    });
 
-    const totalPointsMontada = itemsMontada.reduce((sum, item) => sum + (item.totalPoints || 0), 0);
-    const totalPriceMontada = totalPointsMontada * pointValueMontada;
+    // Calcular total
+    let grandTotal = 0;
+    allItems.forEach(item => {
+      let product = allProducts.find(p => p.id === item.productId);
+      if (item.isManual) {
+        grandTotal += (item.manualPoints || 0) * pointValueMontada * (item.quantity || 1);
+      } else if (product && calculateLineDetails) {
+        const details = calculateLineDetails(item, product);
+        grandTotal += details.total || 0;
+      }
+    });
 
     autoTable(doc, {
       startY: yPos,
-      head: [['REF', 'DESCRIPCIÓN', 'UDS', 'PTS/UD', 'PTS TOTAL', 'IMPORTE']],
-      body: montadaData,
-      foot: [['', '', '', '', 'SUBTOTAL', `€${totalPriceMontada.toFixed(2)}`]],
+      head: [['UD', 'REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'AP', 'IMPORTE']],
+      body: tableData,
       theme: 'striped',
       headStyles: {
         fillColor: primaryColor,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 8
+        fontSize: 7
       },
       bodyStyles: {
-        fontSize: 8
-      },
-      footStyles: {
-        fillColor: accentColor,
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 9
+        fontSize: 7
       },
       columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 'auto' },
-        2: { cellWidth: 15, halign: 'center' },
-        3: { cellWidth: 20, halign: 'right' },
-        4: { cellWidth: 25, halign: 'right' },
-        5: { cellWidth: 25, halign: 'right' }
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 12, halign: 'center' },
+        4: { cellWidth: 12, halign: 'center' },
+        5: { cellWidth: 12, halign: 'center' },
+        6: { cellWidth: 10, halign: 'center' },
+        7: { cellWidth: 22, halign: 'right' }
       },
       margin: { left: margin, right: margin }
     });
 
     yPos = doc.lastAutoTable.finalY + 10;
-  }
 
-  // ==========================================
-  // TABLA DESPIECE
-  // ==========================================
-  
-  if (itemsDespiece.length > 0) {
+    // ==========================================
+    // TOTALES CON IVA
+    // ==========================================
+    
     // Verificar si necesitamos nueva página
     if (yPos > 230) {
       doc.addPage();
       yPos = 20;
     }
 
+    const baseImponible = grandTotal;
+    const iva = grandTotal * 0.21;
+    const totalConIva = grandTotal * 1.21;
+
+    // Caja de totales
+    const boxX = pageWidth - margin - 85;
+    const boxWidth = 85;
+    
+    // Fondo
+    doc.setFillColor(...primaryColor);
+    doc.roundedRect(boxX, yPos, boxWidth, 52, 3, 3, 'F');
+    
+    // BRUTO LÍNEAS
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text('BRUTO LÍNEAS', boxX + 5, yPos + 8);
     doc.setFontSize(10);
-    doc.setTextColor(...primaryColor);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${baseImponible.toFixed(2)}€`, boxX + boxWidth - 5, yPos + 8, { align: 'right' });
+    
+    // BASE IMPONIBLE
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text('BASE IMPONIBLE', boxX + 5, yPos + 18);
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${baseImponible.toFixed(2)}€`, boxX + boxWidth - 5, yPos + 18, { align: 'right' });
+    
+    // IVA
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text('IVA 21%', boxX + 5, yPos + 28);
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${iva.toFixed(2)}€`, boxX + boxWidth - 5, yPos + 28, { align: 'right' });
+    
+    // Línea separadora
+    doc.setDrawColor(...accentColor);
+    doc.setLineWidth(0.5);
+    doc.line(boxX + 5, yPos + 33, boxX + boxWidth - 5, yPos + 33);
+    
+    // TOTAL
+    doc.setFontSize(8);
+    doc.setTextColor(...accentColor);
     doc.setFont('helvetica', 'bold');
-    doc.text('FORMATO DESPIECE', margin, yPos);
-    yPos += 5;
+    doc.text('TOTAL PRESUPUESTO', boxX + 5, yPos + 42);
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${totalConIva.toFixed(2)}€`, boxX + boxWidth - 5, yPos + 48, { align: 'right' });
 
-    const despieceData = itemsDespiece.map(item => [
-      item.productCode || '-',
-      item.productName || '-',
-      item.quantity || 1,
-      (item.unitPoints || 0).toFixed(2),
-      (item.totalPoints || 0).toFixed(2),
-      `€${((item.totalPoints || 0) * pointValueDespiece).toFixed(2)}`
-    ]);
-
-    const totalPointsDespiece = itemsDespiece.reduce((sum, item) => sum + (item.totalPoints || 0), 0);
-    const totalPriceDespiece = totalPointsDespiece * pointValueDespiece;
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [['REF', 'DESCRIPCIÓN', 'UDS', 'PTS/UD', 'PTS TOTAL', 'IMPORTE']],
-      body: despieceData,
-      foot: [['', '', '', '', 'SUBTOTAL', `€${totalPriceDespiece.toFixed(2)}`]],
-      theme: 'striped',
-      headStyles: {
-        fillColor: [100, 116, 139],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 8
-      },
-      bodyStyles: {
-        fontSize: 8
-      },
-      footStyles: {
-        fillColor: [100, 116, 139],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 9
-      },
-      columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 'auto' },
-        2: { cellWidth: 15, halign: 'center' },
-        3: { cellWidth: 20, halign: 'right' },
-        4: { cellWidth: 25, halign: 'right' },
-        5: { cellWidth: 25, halign: 'right' }
-      },
-      margin: { left: margin, right: margin }
-    });
-
-    yPos = doc.lastAutoTable.finalY + 10;
+    yPos += 60;
   }
-
-  // ==========================================
-  // TOTAL GENERAL
-  // ==========================================
-  
-  const totalPointsMontada = itemsMontada.reduce((sum, item) => sum + (item.totalPoints || 0), 0);
-  const totalPointsDespiece = itemsDespiece.reduce((sum, item) => sum + (item.totalPoints || 0), 0);
-  const totalPriceMontada = totalPointsMontada * pointValueMontada;
-  const totalPriceDespiece = totalPointsDespiece * pointValueDespiece;
-  const grandTotal = totalPriceMontada + totalPriceDespiece;
-
-  // Verificar si necesitamos nueva página
-  if (yPos > 250) {
-    doc.addPage();
-    yPos = 20;
-  }
-
-  // Caja de total
-  doc.setFillColor(...primaryColor);
-  doc.roundedRect(pageWidth - margin - 80, yPos, 80, 30, 3, 3, 'F');
-  
-  doc.setFontSize(9);
-  doc.setTextColor(255, 255, 255);
-  doc.text('TOTAL PRESUPUESTO', pageWidth - margin - 40, yPos + 10, { align: 'center' });
-  
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`€${grandTotal.toFixed(2)}`, pageWidth - margin - 40, yPos + 23, { align: 'center' });
-
-  yPos += 45;
 
   // ==========================================
   // PIE DE PÁGINA
   // ==========================================
   
   // Verificar si hay espacio
-  if (yPos > 260) {
+  if (yPos > 265) {
     doc.addPage();
     yPos = 20;
   }
@@ -303,7 +308,7 @@ export const generateBudgetPDF = ({
   
   const footerText = [
     'Este presupuesto tiene una validez de 30 días desde la fecha de emisión.',
-    'Los precios no incluyen IVA ni transporte. Consulte condiciones de montaje.',
+    'Consulte condiciones de montaje y transporte.',
     `Generado con ${companyName} - ${new Date().toLocaleString('es-ES')}`
   ];
   
