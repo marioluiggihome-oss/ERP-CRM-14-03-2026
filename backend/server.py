@@ -3073,7 +3073,7 @@ class DespieceRequest(BaseModel):
     """Request to calculate despiece for multiple items"""
     items: List[DespieceItemInput]
     carcassMaterial: str = "Melamina Blanca"
-    backPanelMaterial: str = "Tablero 3mm"
+    backPanelMaterial: str = "Tablero 8mm"  # Trasera siempre 8mm
     grosor: float = 18  # Thickness in mm for carcass panels
 
 class ComponentPiece(BaseModel):
