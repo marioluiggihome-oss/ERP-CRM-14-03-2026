@@ -2412,6 +2412,66 @@ async def complete_calendar_event(event_id: str):
         raise HTTPException(status_code=404, detail="Evento no encontrado")
     return {"message": "Evento completado", "id": event_id}
 
+@api_router.post("/crm/calendar/create-from-opportunity/{opp_id}")
+async def create_reminder_from_opportunity(
+    opp_id: str,
+    event_type: str = "seguimiento",
+    days_from_now: int = 7,
+    reminder_title: Optional[str] = None,
+    user_id: str = "",
+    user_name: str = ""
+):
+    """
+    Crear recordatorio automático desde una oportunidad.
+    Útil para programar seguimientos de presupuestos enviados.
+    """
+    try:
+        # Get the opportunity
+        opp = await db.opportunities.find_one({"id": opp_id}, {"_id": 0})
+        if not opp:
+            raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+        
+        # Calculate reminder date
+        reminder_date = datetime.now(timezone.utc) + timedelta(days=days_from_now)
+        
+        # Create the calendar event
+        event_data = {
+            "id": f"evt-{uuid.uuid4().hex[:8]}",
+            "title": reminder_title or f"Seguimiento: {opp.get('title', 'Sin título')}",
+            "description": f"Recordatorio automático de seguimiento para oportunidad {opp.get('title')}",
+            "eventType": event_type,
+            "startDate": reminder_date.strftime("%Y-%m-%dT09:00:00"),
+            "endDate": reminder_date.strftime("%Y-%m-%dT10:00:00"),
+            "allDay": False,
+            "contactId": opp.get("contactId"),
+            "contactName": opp.get("contactName"),
+            "opportunityId": opp_id,
+            "opportunityTitle": opp.get("title"),
+            "assignedTo": user_id or opp.get("assignedTo", ""),
+            "assignedToName": user_name or opp.get("assignedToName", ""),
+            "createdBy": user_id,
+            "createdByName": user_name,
+            "completed": False,
+            "location": "",
+            "notes": f"Valor de oportunidad: {opp.get('value', 0)}€\nEtapa: {opp.get('stage', '')}",
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "updatedAt": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.calendar_events.insert_one(event_data)
+        event_data.pop('_id', None)
+        
+        return {
+            "success": True,
+            "message": f"Recordatorio creado para {reminder_date.strftime('%d/%m/%Y')}",
+            "event": event_data
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create reminder from opportunity error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============================================
 # CRM DASHBOARD STATS
 # ============================================
