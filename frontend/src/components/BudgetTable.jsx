@@ -662,7 +662,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                  )}
                </div>
 
-               <div className="flex-1">
+               <div className="flex-1 mb-4">
                   {/* Header - usando flex en lugar de grid para mejor control */}
                   <div className="flex items-center px-2 py-2 bg-indigo-950 text-white rounded-t-lg text-[6px] font-black uppercase tracking-widest italic">
                      <div className="w-7 text-center shrink-0">V</div>
@@ -677,7 +677,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                      <div className="w-20 text-right shrink-0 pr-2">€</div>
                      <div className="w-6 shrink-0 no-print"></div>
                   </div>
-                  <div className="divide-y divide-indigo-50 border-x border-b border-indigo-50 rounded-b-lg overflow-hidden">
+                  <div className="divide-y divide-indigo-50 border-x border-b border-indigo-50 rounded-b-lg overflow-hidden max-h-[300px] overflow-y-auto">
                   {sortedItems.map((item) => {
                     let product = allProducts.find(p => p.id === item.productId);
                     let isUnknown = false;
