@@ -346,6 +346,7 @@ const CRMContacts = ({ currentUser }) => {
                 <tr>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Contacto</th>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Empresa</th>
+                  <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Tipo Negocio</th>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Segmento</th>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Colaborador</th>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Estado</th>
