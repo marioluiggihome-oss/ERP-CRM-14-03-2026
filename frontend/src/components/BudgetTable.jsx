@@ -810,12 +810,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                          {/* Dimensiones y Apertura - Solo para productos normales */}
                          {item.isManual ? (
                             <>
-                                {/* Espacio vacío para dimensiones */}
-                                <div className="w-10 shrink-0"></div>
-                                <div className="w-10 shrink-0"></div>
-                                <div className="w-10 shrink-0"></div>
-                                <div className="w-8 shrink-0"></div>
-                                {/* Puntos manuales en lugar de OBS */}
+                                {/* Para líneas manuales, la descripción ya es más ancha, y ponemos el campo de puntos */}
                                 <div className="w-24 shrink-0 pr-1">
                                     <div className="flex items-center gap-1 bg-white border border-emerald-200 rounded px-1 py-0.5 no-print">
                                         <span className="text-[6px] font-black text-emerald-600">PTS:</span>
