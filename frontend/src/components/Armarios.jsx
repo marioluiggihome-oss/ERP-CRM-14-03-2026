@@ -2202,38 +2202,109 @@ const Armarios = ({ state, setState }) => {
               </div>
             </div>
 
-            {/* Tabla de Accesorios */}
+            {/* Tabla de Accesorios EDITABLE */}
             <div className="flex-1 overflow-auto px-8 py-4">
+              {/* Barra de herramientas */}
+              <div className="flex items-center justify-between mb-4 bg-slate-100 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Edit3 size={16} className="text-slate-500" />
+                  <span className="text-xs font-bold text-slate-600 uppercase">Lista editable - Selecciona un accesorio para editarlo</span>
+                </div>
+                <button
+                  onClick={addNewAccessory}
+                  className="flex items-center gap-1 bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                >
+                  <Plus size={14} />
+                  AÑADIR ACCESORIO
+                </button>
+              </div>
+
               <table className="w-full">
                 <thead className="bg-slate-800 text-white text-xs font-black uppercase tracking-widest sticky top-0">
                   <tr>
-                    <th className="px-3 py-3 text-center w-12">#</th>
-                    <th className="px-3 py-3 text-center w-20">CÓDIGO</th>
-                    <th className="px-3 py-3 text-left">NOMBRE ACCESORIO</th>
-                    <th className="px-3 py-3 text-left w-32">CATEGORÍA</th>
-                    <th className="px-3 py-3 text-center w-36">DIMENSIONES</th>
-                    <th className="px-3 py-3 text-center w-16">CANT.</th>
-                    <th className="px-3 py-3 text-right w-24">P.UNIT.</th>
-                    <th className="px-3 py-3 text-right w-24">TOTAL</th>
-                    <th className="px-3 py-3 text-left">NOTAS</th>
+                    <th className="px-2 py-3 text-center w-8">#</th>
+                    <th className="px-2 py-3 text-center w-16">ACCIÓN</th>
+                    <th className="px-2 py-3 text-center w-16">CÓDIGO</th>
+                    <th className="px-2 py-3 text-left">NOMBRE</th>
+                    <th className="px-2 py-3 text-left w-28">CATEGORÍA</th>
+                    <th className="px-2 py-3 text-center w-28">DIMENSIONES</th>
+                    <th className="px-2 py-3 text-center w-14">CANT.</th>
+                    <th className="px-2 py-3 text-right w-20">P.UNIT.</th>
+                    <th className="px-2 py-3 text-right w-20">TOTAL</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {generateAccessoriesList.map((acc, idx) => (
-                    <tr key={idx} className={`hover:bg-orange-50 transition-colors ${acc.isCustom ? 'bg-yellow-50' : ''}`}>
-                      <td className="px-3 py-2 text-center">
-                        <span className="w-7 h-7 bg-orange-600 text-white rounded-lg flex items-center justify-center font-black text-xs">
+                  {editableAccessories.map((acc, idx) => (
+                    <tr 
+                      key={idx} 
+                      onClick={() => setSelectedAccessoryIndex(idx)}
+                      className={`transition-colors cursor-pointer ${
+                        selectedAccessoryIndex === idx 
+                          ? 'bg-orange-100 ring-2 ring-orange-400' 
+                          : acc.isCustom 
+                            ? 'bg-yellow-50 hover:bg-yellow-100' 
+                            : 'hover:bg-orange-50'
+                      }`}
+                    >
+                      <td className="px-2 py-2 text-center">
+                        <span className="w-6 h-6 bg-orange-600 text-white rounded flex items-center justify-center font-black text-[10px]">
                           {acc.num}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-center">
-                        <span className="bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-black">
+                      <td className="px-2 py-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveAccessoryUp(idx); }}
+                            disabled={idx === 0}
+                            className="p-1 hover:bg-slate-200 rounded disabled:opacity-30"
+                            title="Mover arriba"
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveAccessoryDown(idx); }}
+                            disabled={idx >= editableAccessories.length - 1}
+                            className="p-1 hover:bg-slate-200 rounded disabled:opacity-30"
+                            title="Mover abajo"
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); duplicateAccessory(idx); }}
+                            className="p-1 hover:bg-blue-100 text-blue-600 rounded"
+                            title="Duplicar"
+                          >
+                            <Copy size={12} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteAccessory(idx); }}
+                            className="p-1 hover:bg-red-100 text-red-600 rounded"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[9px] font-black">
                           {acc.code}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-sm font-bold text-slate-800">{acc.name}</td>
-                      <td className="px-3 py-2">
-                        <span className={`text-[10px] font-bold uppercase ${
+                      <td className="px-2 py-2">
+                        {selectedAccessoryIndex === idx ? (
+                          <input
+                            type="text"
+                            value={acc.name}
+                            onChange={(e) => updateAccessory(idx, 'name', e.target.value)}
+                            className="w-full px-2 py-1 text-xs border border-orange-300 rounded focus:outline-none focus:border-orange-500"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span className="text-xs font-bold text-slate-800">{acc.name}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2">
+                        <span className={`text-[9px] font-bold uppercase ${
                           acc.category === 'ESTRUCTURA' ? 'text-blue-600' :
                           acc.category === 'PUERTAS' ? 'text-purple-600' :
                           acc.category === 'HERRAJES' ? 'text-gray-600' :
@@ -2244,20 +2315,57 @@ const Armarios = ({ state, setState }) => {
                           {acc.category}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-center text-xs text-slate-600 font-mono">{acc.dimensions}</td>
-                      <td className="px-3 py-2 text-center font-black text-orange-600">{acc.quantity}</td>
-                      <td className="px-3 py-2 text-right text-xs text-slate-500">{acc.unitPrice.toFixed(2)}€</td>
-                      <td className="px-3 py-2 text-right font-bold text-slate-800">{acc.totalPrice.toFixed(2)}€</td>
-                      <td className="px-3 py-2 text-xs text-slate-400 italic">{acc.notes}</td>
+                      <td className="px-2 py-2 text-center">
+                        {selectedAccessoryIndex === idx ? (
+                          <input
+                            type="text"
+                            value={acc.dimensions}
+                            onChange={(e) => updateAccessory(idx, 'dimensions', e.target.value)}
+                            className="w-full px-2 py-1 text-xs border border-orange-300 rounded text-center focus:outline-none focus:border-orange-500"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span className="text-[10px] text-slate-600 font-mono">{acc.dimensions}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        {selectedAccessoryIndex === idx ? (
+                          <input
+                            type="number"
+                            value={acc.quantity}
+                            onChange={(e) => updateAccessory(idx, 'quantity', parseInt(e.target.value) || 1)}
+                            className="w-14 px-2 py-1 text-xs border border-orange-300 rounded text-center focus:outline-none focus:border-orange-500"
+                            onClick={(e) => e.stopPropagation()}
+                            min={1}
+                          />
+                        ) : (
+                          <span className="font-black text-orange-600">{acc.quantity}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {selectedAccessoryIndex === idx ? (
+                          <input
+                            type="number"
+                            value={acc.unitPrice}
+                            onChange={(e) => updateAccessory(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                            className="w-16 px-2 py-1 text-xs border border-orange-300 rounded text-right focus:outline-none focus:border-orange-500"
+                            onClick={(e) => e.stopPropagation()}
+                            step={0.01}
+                          />
+                        ) : (
+                          <span className="text-[10px] text-slate-500">{acc.unitPrice.toFixed(2)}€</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right font-bold text-slate-800 text-xs">{acc.totalPrice.toFixed(2)}€</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot className="bg-slate-100 font-black">
                   <tr>
-                    <td colSpan={5} className="px-3 py-3 text-right uppercase text-xs tracking-widest text-slate-600">TOTAL DESPIECE:</td>
-                    <td className="px-3 py-3 text-center text-orange-600">{generateAccessoriesList.reduce((sum, a) => sum + a.quantity, 0)}</td>
+                    <td colSpan={6} className="px-3 py-3 text-right uppercase text-xs tracking-widest text-slate-600">TOTAL DESPIECE:</td>
+                    <td className="px-3 py-3 text-center text-orange-600">{editableAccessories.reduce((sum, a) => sum + a.quantity, 0)}</td>
                     <td className="px-3 py-3"></td>
-                    <td className="px-3 py-3 text-right text-lg text-orange-600">{despieceTotals.grandTotal.toFixed(2)}€</td>
+                    <td className="px-3 py-3 text-right text-lg text-orange-600">{editableAccessories.reduce((sum, a) => sum + a.totalPrice, 0).toFixed(2)}€</td>
                     <td></td>
                   </tr>
                 </tfoot>
