@@ -1,13 +1,16 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen } from 'lucide-react';
 import Logo from './Logo';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const Digitalizador = ({ state }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [projectName, setProjectName] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [lines, setLines] = useState([]);
   const [globalDiscount, setGlobalDiscount] = useState(0);
   const [ivaRate, setIvaRate] = useState(21);
@@ -16,7 +19,114 @@ const Digitalizador = ({ state }) => {
   const [costados, setCostados] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
+  const [historySearch, setHistorySearch] = useState('');
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Load history from database
+  const loadHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const userId = state.currentUser?.isAdmin ? null : state.currentUser?.id;
+      const url = userId 
+        ? `${API_URL}/api/digitalizador/history?userId=${userId}${historySearch ? `&search=${historySearch}` : ''}`
+        : `${API_URL}/api/digitalizador/history${historySearch ? `?search=${historySearch}` : ''}`;
+      
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setHistory(data.items || []);
+      }
+    } catch (err) {
+      console.error('Error loading history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Load history when sidebar opens
+  useEffect(() => {
+    if (showHistory) {
+      loadHistory();
+    }
+  }, [showHistory, historySearch]);
+
+  // Save budget to history
+  const handleSaveBudget = async () => {
+    if (lines.length === 0) {
+      setError('No hay líneas para guardar');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_URL}/api/digitalizador/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectName: projectName || 'Sin nombre',
+          customerName,
+          acabado,
+          armazon,
+          costados,
+          lines,
+          globalDiscount,
+          ivaRate,
+          userId: state.currentUser?.id || 'anonymous'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al guardar');
+      }
+
+      const data = await response.json();
+      setSuccessMessage('Presupuesto guardado correctamente');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // Refresh history
+      if (showHistory) {
+        loadHistory();
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Load a budget from history
+  const loadBudgetFromHistory = (item) => {
+    setProjectName(item.projectName || '');
+    setCustomerName(item.customerName || '');
+    setAcabado(item.acabado || '');
+    setArmazon(item.armazon || '');
+    setCostados(item.costados || '');
+    setGlobalDiscount(item.globalDiscount || 0);
+    setIvaRate(item.ivaRate || 21);
+    setLines(item.lines || []);
+    setShowHistory(false);
+  };
+
+  // Delete a budget from history
+  const deleteBudgetFromHistory = async (itemId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('¿Eliminar este presupuesto del historial?')) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/digitalizador/history/${itemId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        loadHistory();
+      }
+    } catch (err) {
+      console.error('Error deleting:', err);
+    }
+  };
 
   // Handle file upload
   const handleFileUpload = async (event) => {
