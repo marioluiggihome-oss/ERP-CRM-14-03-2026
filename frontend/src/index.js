@@ -3,115 +3,78 @@ import ReactDOM from "react-dom/client";
 import "@/index.css";
 import App from "@/App";
 
-// Clear all caches and service workers on load
-const clearAllCaches = async () => {
-  try {
-    // Unregister all service workers
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-        console.log('Service Worker unregistered');
-      }
-    }
-    
-    // Clear all caches
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      for (const cacheName of cacheNames) {
-        await caches.delete(cacheName);
-        console.log('Cache deleted:', cacheName);
-      }
-    }
-  } catch (e) {
-    console.error('Error clearing caches:', e);
+// Patch to handle insertBefore errors caused by browser extensions
+const originalInsertBefore = Node.prototype.insertBefore;
+Node.prototype.insertBefore = function(newNode, referenceNode) {
+  if (referenceNode && referenceNode.parentNode !== this) {
+    // The reference node is not a child of this node, likely due to extension interference
+    // Just append the node instead
+    return this.appendChild(newNode);
   }
+  return originalInsertBefore.call(this, newNode, referenceNode);
 };
 
-// Run cache clearing
-clearAllCaches();
-
-// Error Boundary Component
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
+// Also patch removeChild for similar issues
+const originalRemoveChild = Node.prototype.removeChild;
+Node.prototype.removeChild = function(child) {
+  if (child && child.parentNode !== this) {
+    // The child is not actually a child of this node
+    return child;
   }
+  return originalRemoveChild.call(this, child);
+};
+
+// Clear caches on load
+(async () => {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) await reg.unregister();
+    }
+    if ('caches' in window) {
+      const names = await caches.keys();
+      for (const name of names) await caches.delete(name);
+    }
+  } catch (e) { console.error(e); }
+})();
+
+// Simple Error Boundary
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error, errorInfo) {
-    console.error('Error capturado:', error, errorInfo);
+  componentDidCatch(error, info) {
+    console.error('React Error:', error, info);
   }
 
-  clearEverythingAndReload = async () => {
-    // Clear localStorage
+  clearAndReload = async () => {
     localStorage.clear();
-    // Clear sessionStorage
     sessionStorage.clear();
-    
-    // Clear service workers and caches
-    await clearAllCaches();
-    
-    // Force reload without cache
     window.location.reload(true);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ 
-          padding: '40px', 
-          textAlign: 'center', 
-          fontFamily: 'system-ui',
-          background: '#1e293b',
-          minHeight: '100vh',
-          color: 'white'
-        }}>
-          <h1 style={{ color: '#f97316', marginBottom: '20px' }}>⚠️ Error en la Aplicación</h1>
-          <p style={{ marginBottom: '10px' }}>Ha ocurrido un error debido a datos en caché antiguos.</p>
-          <p style={{ marginBottom: '20px', color: '#94a3b8', fontSize: '14px' }}>
-            Haz clic en el botón verde para limpiar TODO el caché y recargar.
-          </p>
-          
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button 
-              onClick={this.clearEverythingAndReload}
-              style={{
-                background: '#22c55e',
-                color: 'white',
-                border: 'none',
-                padding: '16px 32px',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                fontSize: '16px'
-              }}
-            >
-              🧹 LIMPIAR TODO Y RECARGAR
-            </button>
-          </div>
-          
-          <details style={{ marginTop: '30px', textAlign: 'left', maxWidth: '600px', margin: '30px auto' }}>
-            <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>Detalles del error</summary>
-            <pre style={{ 
-              background: '#0f172a', 
-              padding: '15px', 
-              borderRadius: '8px',
-              overflow: 'auto',
-              fontSize: '11px',
-              color: '#f87171',
-              marginTop: '10px'
-            }}>
+        <div style={{ padding: 40, textAlign: 'center', fontFamily: 'system-ui', background: '#1e293b', minHeight: '100vh', color: 'white' }}>
+          <h1 style={{ color: '#f97316', marginBottom: 20 }}>⚠️ Error en la Aplicación</h1>
+          <p style={{ marginBottom: 10 }}>Este error suele ser causado por extensiones del navegador.</p>
+          <p style={{ marginBottom: 20, color: '#94a3b8' }}>Prueba en modo incógnito o desactiva extensiones como Grammarly, AdBlock, React DevTools.</p>
+          <button onClick={this.clearAndReload} style={{ background: '#22c55e', color: 'white', border: 'none', padding: '14px 28px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: 16 }}>
+            🔄 Recargar Página
+          </button>
+          <details style={{ marginTop: 30, textAlign: 'left', maxWidth: 600, margin: '30px auto' }}>
+            <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>Detalles</summary>
+            <pre style={{ background: '#0f172a', padding: 15, borderRadius: 8, overflow: 'auto', fontSize: 11, color: '#f87171', marginTop: 10 }}>
               {this.state.error?.toString()}
             </pre>
           </details>
         </div>
       );
     }
-
     return this.props.children;
   }
 }
