@@ -1,21 +1,23 @@
 <analysis>**original_problem_statement:**
 The user initially provided a Google AI Studio link to clone. However, they then provided a zip file for an existing application named **LUIGGI HOME**, a comprehensive ERP/CRM for kitchen budgeting. The user wants to build a feature-rich replica of this application.
 
-Feature requests have been provided incrementally through a PowerPoint presentation (), direct image uploads, and chat messages.
+Feature requests have been provided incrementally through a PowerPoint presentation (), direct image uploads, and chat messages. A recent Word document () provided a new batch of critical fixes, new features, and UI improvements.
 
 **PRODUCT REQUIREMENTS:**
 1.  **Clone LUIGGI HOME application:** Replicate the design, layout, and functionality.
 2.  **User Management (Red Distribución):** Implement a hierarchical user system (Administrador, Comercial, Tienda).
-3.  **Inventory Management (Inventario Maestro):** Manage  and  catalogs.
+3.  **Inventory Management (Inventario Maestro):** Manage product catalogs.
 4.  **Master Margins (Márgenes Maestros):** A settings panel to configure prices and costs.
-5.  **AI Catalog Import (Telemetría IA):** A feature to upload product sheets and use AI (Gemini Vision) to auto-populate the inventory.
+5.  **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders.
 6.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets.
 7.  **PDF Export:** Generate a PDF of the current budget.
 8.  **Database Backup System:** Automatic and manual backups.
-9.  **Bulk Product Import:** A robust system to parse and import products from a large PDF catalog.
-10. **Security:** Ensure user passwords are stored securely.
-11. **CRM Integration:** Integrate a full sales CRM with a dashboard, pipeline, contacts, and permissions.
-12. **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders for each furniture piece.
+9.  **Security:** Secure user password storage and implement role-based permissions.
+10. **CRM Integration:** A full sales CRM with a dashboard, pipeline, contacts, and permissions.
+11. **Digitalizador de Borradores (Draft Digitizer):** An OCR/AI tool to upload photos of handwritten budgets, extract line items using Gemini Vision, and create an editable digital version.
+12. **Production Safeguards:** Implement a Maintenance Mode and automatic pre-update backups to ensure data integrity during updates.
+13. **CSV Export for Machinery:** Export the cutting list in a specific CSV format for a cutting machine.
+14. **Correlative Project Numbers:** An automatic, system-wide counter for project/expedient numbers.
 
 **User's preferred language**: es
 
@@ -24,201 +26,180 @@ A full-stack application with a React frontend and a FastAPI backend connected t
 
 The application includes:
 - A complete, hierarchical user and permissions system.
-- An advanced inventory management system with **3,533 unique products**, correctly parsed from PDF catalogs with proper naming, categorization (ALTOS, BAJOS, COLUMNAS), and pricing.
+- An advanced inventory management system with **3,534 unique products**.
 - A settings panel (Master) to manage users, permissions, and system-wide margins.
 - A project library to save, load, delete, and archive budgets.
-- A PDF export feature for budgets.
-- A comprehensive database backup system (automatic and manual).
-- A fully integrated **CRM module** featuring a Dashboard, a Kanban-style sales pipeline, and a contact manager. Access to the CRM is controlled by a new  permission managed by the admin. The CRM UI has been refined to use a clean, tab-based layout.
-- Data integrity has been significantly improved by correcting product names, categories, and dimensions based on user feedback. UI labels have been translated from W, H, D to ANCHO, ALTO, FONDO.
+- A Despiece (Bill of Materials) system with editable Mounting and Cutting lists.
+- A fully integrated **CRM module** with a Dashboard, Kanban pipeline, and contacts.
+- A **Digitalizador de Borradores (Draft Digitizer)** feature using Gemini Vision to extract line items from images, with an editable UI and persistent history.
+- A **Maintenance Mode** system, controllable by admins, that performs automatic backups before activation.
+- An automatic, sequential **project number generator** ().
+- A feature to add a cost increment for **Viga (beam) cuts** in budgets.
+- Comprehensive backup systems (automatic, manual, and pre-update).
 
 **Last working item**:
-- Last item agent was working: The user provided a multi-part request:
-    1.  Reorder the sidebar menu to place PRESUPUESTO below CRM.
-    2.  Fix dimension display inconsistency: convert width from millimeters (e.g., 400) to centimeters (e.g., 40) in the UI for consistency.
-    3.  Implement a major new feature: a despiece (bill of materials) calculator.
-    The agent successfully reordered the menu items in .
+- Last item agent was working: Connecting the Digitalizador de Borradores to the CRM. The goal is to allow a user to save a digitized budget directly as a new Opportunity in the CRM. The agent has implemented the backend logic and the frontend state/functions in  but has not yet added the UI button to trigger the action.
 - Status: IN PROGRESS
 - Agent Testing Done: N
 - Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Inconsistent Product Dimensions Display (P0)**
-    -   **Description:** The user pointed out that dimensions are inconsistent. For example, a width of 400mm is displayed as 400, while the user expects 40 to match the centimeter-based display for height and depth. This needs to be corrected across the UI, specifically in the  component for both the library and the budget view.
-    -   **Attempted fixes:** None yet.
+-   **Issue 1: Finish Digitalizador to CRM Connection (P0)**
+    -   **Description:** The user needs a button in the Digitalizador interface to create a new opportunity in the CRM, using the data from the currently digitized budget (customer name, project name, total value).
+    -   **Attempted fixes:** The  function and associated state have been added to .
     -   **Next debug checklist:**
-        -   Modify .
-        -   Locate where , , and  are rendered in both the budget item list and the product library list.
-        -   Divide the  value by 10 before displaying it. Ensure this doesn't affect the underlying data, only the presentation.
-    -   **Why fix this issue and what will be achieved with the fix?** To ensure all dimensions are displayed consistently in centimeters, improving clarity and usability.
-    -   **Status:** NOT STARTED
+        -   In , add a new button, e.g., Guardar y Crear Oportunidad.
+        -   Wire this button's  event to the existing  function.
+        -   Ensure the API call to create the opportunity is sent with the correct payload (name, value, contact info).
+        -   Provide user feedback upon success or failure (e.g., a toast notification).
+    -   **Why fix this issue and what will be achieved with the fix?** To complete the user's workflow, bridging the gap between quoting (Digitalizador) and sales management (CRM).
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None
-
--   **Issue 2: Critical Frontend Stability (P1)**
-    -   **Description:** The user previously experienced a recurring React DOM crash ( error) that was patched but not fully diagnosed.
-    -   **Current Status:** The issue did not reappear in the last session, but the workaround in  may be masking the root cause. It remains a stability risk.
-    -   **Why fix this issue and what will be achieved with the fix?** A permanent fix is needed for application stability.
-    -   **Status:** USER VERIFICATION PENDING
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None
-
--   **Issue 3: Unreliable AI Telemetry Feature (P2)**
-    -   **Description:** The AI Telemetry feature (Gemini Vision API) for catalog import frequently failed. A robust manual PDF parsing script was created as a workaround.
-    -   **Current Status:** The original AI feature is still considered broken due to external API instability. The manual script is the primary import method.
-    -   **Status:** BLOCKED
-    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** both
-    -   **Blocked on other issue:** Blocked on external Gemini API stability.
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   **Task 1: Reorder Sidebar Menu (P0)**
-    -   **Where to resume:** The agent has already modified  to move the PRESUPUESTO button below the CRM block. This part is complete but needs user verification.
-    -   **What will be achieved with this?** Fulfills the user's UI layout request.
-    -   **Status:** FINISHED
-    -   **Should Test frontend/backend/both after fix?** frontend
+-   **Task 1: Connect Digitalizador to CRM (P0)**
+    -   **Where to resume:** . Resume by adding the UI button that calls the  function.
+    -   **What will be achieved with this?** This will finalize the integration between the new Digitalizador tool and the existing CRM module.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** both
     -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-  - **Implement Despiece (Bill of Materials) System (P0):** This is a major new feature. The user wants to calculate the components of a furniture piece (top cover, bottom cover, back panel, sides, door) with their precise measurements. The output should be two editable views:
-    1.  **Orden de Montaje (Mounting Order):** A list of components for assembly.
-    2.  **Orden de Despiece (Cutting List):** A list of parts with dimensions, ready for production.
-    This will require significant backend logic for calculations and new frontend components for the editable views.
+    - **(P1) Admin: View All User Work:** (From ) Implement a feature for the Admin to view all budgets/projects/opportunities created by any user in the system. This requires a new backend endpoint and a new admin-only UI view.
+    - **(P1) Comercial: See Assigned Shop's Work:** (From ) If a Tienda (Shop) user creates a project, the assigned Comercial (Sales Rep) must automatically see that opportunity. This requires adding a relationship between user models.
+    - **(P2) Separate Armazones Settings:** (From ) Move the Gestión armazones (frames management) settings from the general Márgenes modal into its own dedicated UI section for better clarity.
 
 - **Future Tasks:**
-  - **Implement Remaining PowerPoint Features (P1):** Re-investigate  and  to identify minor unimplemented features, such as a dedicated UI for managing the brand logo (Identidad).
-  - **Project Archiving (ARCHIVO) (P2):** The current implementation is basic. A dedicated, more robust archive section might be needed.
+    - **Re-evaluate original AI Telemetry feature:** The initial feature to import catalogs via AI is still considered unreliable. It could be revisited if the external API becomes more stable.
+    - **Enhance Project Archiving:** The current ARCHIVO feature is basic and could be expanded into a more robust archival system.
 
 **Completed work in this session**
 - List of all completed tasks with file and method name:
-  - **Product Data Overhaul:**
-    - Re-parsed three multi-part PDF catalogs to fix data quality issues.
-    - Successfully imported **3,533 unique products** with correct names, prices, categories, series, and dimensions.
-    - Corrected product heights (e.g., 8cm to 80cm) and categories (e.g., BAJOS were miscategorized as ALTOS).
-  - **CRM Integration (from scratch):**
-    - **Backend:** Added Pydantic models and CRUD API endpoints for Contacts, Opportunities, and Activities in .
-    - **Frontend:** Created new components: , , , and .
-    - **Permissions:** Implemented a  permission flag for users, editable by the Admin in .
-    - **UI Refinement:** Consolidated CRM navigation into a single sidebar button and a tabbed internal layout for a cleaner user experience.
-  - **UI and Data Fixes:**
-    - Changed table headers from W, H, D to **ANCHO, ALTO, FONDO** in  for both the library and budget views.
-    - Corrected product name formatting (e.g., ALTO 350CM to ALTO 35CM).
-    - Ensured products are correctly grouped by series (e.g., BAJOS 70 FONDO ESTANDAR) in the library filter.
+  - **Digitalizador de Borradores (Draft Digitizer) Feature:**
+    - Created new backend endpoint  using  and Gemini Vision.
+    - Created new frontend component  for file upload, editable results table, and calculations.
+    - Implemented a persistent history for digitized budgets with GET/POST/DELETE endpoints and UI.
+    - Fixed multiple bugs related to async DB calls ( constructor error,  iteration).
+  - **Production Safeguards:**
+    - Implemented a **Maintenance Mode** with a middleware in  to block API calls.
+    - Created a UI panel for admins () to toggle maintenance and view **pre-update backups**.
+  - **Corrections from :**
+    - **AI Prompt Improvement:** Updated the prompt in  to better interpret kitchen furniture dimensions.
+    - **Missing Product:** Added product **35A1P350** to the database.
+    - **Digitalizador UI/UX:** Implemented larger logo, new title, wider discount field, editable reference field, and support for both  and  as decimal separators in .
+    - **Despiece Header:** Added customer, project reference, date, and expedient number fields to .
+  - **Budgeting Enhancements:**
+    - **Correlative Expedient Numbers:** Added a backend counter and endpoint  and a UI button in  to fetch a unique, sequential project number.
+    - **Corte Viga (Beam Cut) Increment:** Added a setting and a per-line checkbox in  to apply an additional cost.
+  - **User Management:** Updated the password for the MARIO user.
+
 - Recently completed:
-  - CRM Integration (DONE)
-  - Product Catalog Re-import and Correction (DONE)
-  - UI Data Display Fixes (ANCHO/ALTO/FONDO, categories) (DONE)
+  - Maintenance Mode & Pre-Update Backups (DONE)
+  - Correlative Project Number Generator (DONE)
+  - Viga Cut Cost Increment Feature (DONE)
+  - Multiple UI/UX fixes from user's Word document (DONE)
+  - Persistent History for Digitalizador (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-- The core reliability of the Google Gemini API for the AI Telemetry feature remains unresolved.
+   - **Critical Frontend Stability:** A recurring React DOM crash ( error) was patched in a prior session but the root cause was never fully diagnosed. It remains a potential stability risk.
+   - **Unreliable AI Telemetry Feature:** The original AI Telemetry feature for bulk catalog import remains blocked due to external API instability. The manual PDF parsing script is the effective workaround.
 
 **Known issue recurrence from previous fork**
-- Issue recurrence in previous fork: None
-- Recurrence count: 0
-- Status: NONE
+  - Issue recurrence in previous fork: None.
+  - Recurrence count: 0
+  - Status: NONE
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 - **Frontend:** React, TailwindCSS.
-- **Backend:** Python, FastAPI, Pydantic, .
-- **Database:** MongoDB ().
-- **PDF Parsing:** usage: pymupdf [-h]
-               {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-               ...
-
-------------------------- Basic PyMuPDF Functions -------------------------
-
-options:
-  -h, --help            show this help message and exit
-
-Subcommands:
-  {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-                        Enter 'command -h' for subcommand specific help for text, table, and layout-based data extraction.
-- **Email:** SendGrid.
+- **Backend:** Python, FastAPI, Pydantic.
+- **Database:** MongoDB ( for async operations).
+- **AI/OCR:**  library for accessing Google Gemini Vision.
+- **PDF Generation:**  /  on the frontend.
+- **Background Jobs:**  for database backups.
 
 **key DB schema**
-- : {id, username, password, clientName, permissions: {..., canAccessCRM}}
-- : {id, code, name, category, series, width, height, depth, zonePoints: {Z1-Z12}}
-- : {id, name, customerName, items, status: ('active'|'archived')}
-- : {id, name, company, email, phone, status, ownerId}
-- : {id, name, contactId, stage, value, closeDate, ownerId}
-- : {id, type, subject, dueDate, ownerId, opportunityId, contactId}
+- : {..., : bool}
+- : {id, code, name, category, ...}
+- : {id, name, customerName, : str, ...}
+- : {id, projectName, customerName, lines: [], total, createdBy, createdAt}
+- : {_id: 'status', maintenance_mode: bool, message: str, ...}
+- : {_id: 'expedient_counter', year: int, sequence_value: int}
+- : {id, type: ('manual'|'auto'|'pre-update'), path, createdBy}
 
 **changes in tech stack**
-- No new technologies were added. The existing stack was extended.
+- The  library was introduced to interact with the Google Gemini Vision API.
+- The backend database client was confirmed to be , and all database queries were updated to be fully  with  and .
 
 **All files of reference**
-- : Significantly extended with models and over 15 new API endpoints for the CRM functionality. Now over 1200 lines long.
-- : Heavily modified to integrate the CRM components, add conditional rendering based on  permission, and reorder the main navigation.
-- : Modified to display ANCHO, ALTO, FONDO headers and to fix product categorization.
-- : Modified to add the Acceso al CRM toggle in the user permissions form.
-- : Extended with API functions for all CRM operations.
-- **New Files Created:**
-  - 
-  - 
-  - 
-  - 
+- : Heavily modified. Added endpoints for Despiece, Digitalizador (analyze, history CRUD), Maintenance mode (status, toggle, backups), and the correlative expedient number generator. Fixed async DB query patterns.
+- : New file. Contains the full UI and logic for the Draft Digitizer feature, including file upload, editable results table, calculations, and history panel.
+- : Modified to add the Corte Viga feature and the Auto expedient number button.
+- : New file. Contains the UI for the Bill of Materials modal, now with project/customer info.
+- : Modified to integrate the Digitalizador view, the Maintenance Mode screen, and the admin panel for maintenance.
+- : Extended with API functions for all new features.
+-  & : New files for the maintenance mode feature.
 
 **Areas that need refactoring**:
-- **Monolithic Backend:**  is now extremely large and handles everything (users, products, backups, CRM, etc.). It urgently needs to be refactored into a proper FastAPI project structure, with API routers, Pydantic models, and database services organized into separate directories (e.g., , ).
+- **Monolithic Backend:**  is critically oversized (now over 2200 lines). It urgently needs to be refactored into a proper FastAPI project structure with routers, models, and services in separate directories.
+- **Large Frontend Components:**  and  are growing complex and could be broken down into smaller, more manageable child components.
 
 **key api endpoints**
-- : (GET) Aggregated CRM data.
-- : (GET, POST) CRUD for contacts.
-- : (GET, POST) CRUD for opportunities.
-- : (GET, POST) CRUD for activities.
-- : (PUT) Updated to handle the  permission.
+- : (POST) Calculates bill of materials.
+- : (POST) Analyzes an image with Gemini Vision.
+- : (GET, POST) Manages the Digitalizador's persistent history.
+- : (GET) Checks if maintenance mode is active.
+- : (POST) Activates/deactivates maintenance mode.
+- : (GET) Fetches the next available sequential project number.
 
 **Critical Info for New Agent**
-- **User's Next Priority:** The user's most important upcoming task is the **despiece (Bill of Materials) system**. This is a complex feature requiring careful planning.
-- **Dimension Units:** The user wants all dimensions displayed in **centimeters**. Width is currently stored in millimeters and must be converted for display.
-- **Backend Refactoring:** The  file is unmanageably large. Propose a refactoring plan to the user to break it down into a scalable structure before adding more complex features like the despiece system.
+- The user's current priority is to complete the features listed in the  document. The immediate next step is to finalize the Digitalizador-to-CRM connection.
+- Data integrity and production readiness are now major user concerns. The new Maintenance Mode and Pre-update Backup features are very important to the user.
+- **All database operations in  MUST be **. The agent fixed several bugs caused by mixing synchronous  patterns with the  client. Use  for queries.
+- The backend file  is extremely large. Propose a refactoring plan after the current list of user requests is completed.
 
 **documents and test reports created in this job**
 - 
 - 
--  (Updated)
+-  (Updated with new features and completed tasks)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to integrate a CRM from a given URL. (COMPLETED)
-2.  **User:** Confirms the integration plan and asks to delete example CRM data. (COMPLETED)
-3.  **User:** Asks if the CRM is managed by permissions. (COMPLETED)
-4.  **User:** Specifies permission logic: Admin sees everything and can grant access to Comerciales. (COMPLETED)
-5.  **User:** Reports the sidebar menu design looks bad with the new CRM buttons. (COMPLETED - Redesigned with a tabbed layout).
-6.  **User:** Reports that product data is incorrect: height is 8 instead of 80 and table headers are W, H, D. (COMPLETED)
-7.  **User:** Reports that BAJOS products are grouped under GENERAL instead of their own categories. (COMPLETED)
-8.  **User:** Clarifies that the W, H, D headers are wrong in the main budget table, not just the library. (COMPLETED)
-9.  **User:** Requests to move PRESUPUESTO below CRM in the sidebar. (IN PROGRESS - code changed, pending verification)
-10. **User:** Adds new requests: convert width display to cm and create the despiece (bill of materials) system. (PENDING)
+1. **User:** Asks to implement all requests from the  file. (IN PROGRESS)
+2. **User:** Approves the agent's prioritized plan to tackle the requests. (COMPLETED)
+3. **User:** Asks to continue but first check for a missing product from an image. (COMPLETED - Product  was found missing and added).
+4. **User:** Asks two questions: 1. Is the tool ready for distributors? 2. Are data preserved during updates? (COMPLETED - Agent provided detailed answers).
+5. **User:** Approves the agent's suggestion to implement Maintenance Mode and Pre-update Backups. (COMPLETED)
+6. **User:** Instructs agent to set the  user password to  and continue with pending tasks. (COMPLETED)
+7. **User:** Asks agent to proceed with the remaining pending tasks. (IN PROGRESS)
+8. **User:** Uploaded  with a list of fixes and features. (IN PROGRESS)
+9. **User:** Tested the Digitalizador with real images and found AI prompt issues. (COMPLETED - Prompt fixed).
+10. **User:** Provided a CSV file showing the required format for the cutting machine export. (COMPLETED - Agent noted the format).
 
 **Project Health Check:**
 - **Broken:**
-    - The frontend stability is still a potential risk due to the un-diagnosed DOM error from a previous session.
-    - Product dimension display is inconsistent (mm vs cm), which the user has flagged as a bug.
+    - The Digitalizador-to-CRM workflow is incomplete.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Google Gemini Vision:** Via  for AI catalog import. Uses Emergent LLM Key. (Unreliable, workaround in place).
+- **Google Gemini Vision:** Via  for the Digitalizador de Borradores feature. Uses Emergent LLM Key. (Now working reliably after bug fixes).
 - **SendGrid:** For sending database backups. Requires a User API Key.
 - **jspdf / html2canvas:** For PDF generation on the frontend.
 
 **Testing status**
-- Testing agent used after significant changes: YES (after CRM integration and again after data fixes).
+- Testing agent used after significant changes: YES, after implementing the Despiece and Digitalizador features. Reports generated.
 - Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: The testing agent created and ran new test suites, available in the reports.
-- Known regressions: None.
+- Test files created: Test reports are available at .
+- Known regressions: A frontend syntax error was introduced and fixed during development, causing a blank screen. The build process now passes.
 
 **Credentials to test flow:**
 - **User:** MARIO
 - **Password:** MARIO
 
 **What agent forgot to execute**
-- The agent was in the middle of implementing the user's latest set of requests. The following items are pending:
-    1.  **Dimension Conversion:** Convert the display of product width from millimeters to centimeters across the UI.
-    2.  **Despiece System:** The major feature request to create a bill of materials calculator has not been started.</analysis>
+- The agent was in the middle of a multi-step implementation. The primary item not yet finished is adding the UI button in  to trigger the creation of a CRM opportunity, which is the final piece of the Connect Digitalizador to CRM task.</analysis>
