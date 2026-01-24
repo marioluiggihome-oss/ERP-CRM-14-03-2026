@@ -868,13 +868,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
 
                          {/* Precio - Siempre visible y alineado */}
                          <div className="w-20 shrink-0 text-right flex items-center justify-end gap-1 relative group/price">
-                            {hasExtras && <Info size={7} className="text-orange-600 no-print" />}
+                            {hasExtras && state.currentUser?.isAdmin && <Info size={7} className="text-orange-600 no-print" />}
                             <span className="text-[10px] font-black italic tracking-tight">{price.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</span>
                             
-                            <div className="absolute right-0 top-full mt-2 z-50 hidden group-hover/price:block w-64 bg-slate-900 text-white p-4 rounded-xl shadow-2xl text-[9px] font-mono whitespace-pre-wrap text-left border border-indigo-500/30">
-                              <div className="absolute -top-1 right-4 w-2 h-2 bg-slate-900 rotate-45 border-t border-l border-indigo-500/30"></div>
-                              {breakdown}
-                            </div>
+                            {/* Desglose solo visible para admin */}
+                            {state.currentUser?.isAdmin && (
+                              <div className="absolute right-0 top-full mt-2 z-50 hidden group-hover/price:block w-64 bg-slate-900 text-white p-4 rounded-xl shadow-2xl text-[9px] font-mono whitespace-pre-wrap text-left border border-indigo-500/30">
+                                <div className="absolute -top-1 right-4 w-2 h-2 bg-slate-900 rotate-45 border-t border-l border-indigo-500/30"></div>
+                                {breakdown}
+                              </div>
+                            )}
                          </div>
                          
                          {/* Botón eliminar */}
