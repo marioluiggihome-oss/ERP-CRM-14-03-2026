@@ -377,6 +377,22 @@ const CRMContacts = ({ currentUser }) => {
                       <span className="text-sm text-slate-600">{contact.company || '-'}</span>
                     </td>
                     <td className="py-3 px-4">
+                      <div className="flex flex-wrap gap-1">
+                        {contact.tags && contact.tags.length > 0 ? (
+                          contact.tags.map(tagId => {
+                            const bt = BUSINESS_TYPES.find(b => b.id === tagId);
+                            return bt ? (
+                              <span key={tagId} className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${bt.color}`}>
+                                {bt.name}
+                              </span>
+                            ) : null;
+                          })
+                        ) : (
+                          <span className="text-xs text-slate-300">-</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
                       {contact.segment ? (
                         <span className="text-[10px] px-2 py-1 bg-violet-100 text-violet-700 rounded-full font-bold">
                           {contact.segment}
