@@ -37,9 +37,7 @@ const App = () => {
         { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: [], module: 'despiece' }
       ], 
       activeCatalogIds: ['cat-m-base', 'cat-d-base'],
-      users: [], 
-      carcassMaterials: INITIAL_CARCASS_MATERIALS,
-      selectedCarcassMaterialId: INITIAL_CARCASS_MATERIALS[0].id,
+      users: [],
       customerName: '', customerAddress: '', 
       budgetNumber: `EXP-2026-001`, 
       internalReference: '', logo: null,
