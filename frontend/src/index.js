@@ -3,6 +3,34 @@ import ReactDOM from "react-dom/client";
 import "@/index.css";
 import App from "@/App";
 
+// Clear all caches and service workers on load
+const clearAllCaches = async () => {
+  try {
+    // Unregister all service workers
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+        console.log('Service Worker unregistered');
+      }
+    }
+    
+    // Clear all caches
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      for (const cacheName of cacheNames) {
+        await caches.delete(cacheName);
+        console.log('Cache deleted:', cacheName);
+      }
+    }
+  } catch (e) {
+    console.error('Error clearing caches:', e);
+  }
+};
+
+// Run cache clearing
+clearAllCaches();
+
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -18,13 +46,17 @@ class ErrorBoundary extends React.Component {
     console.error('Error capturado:', error, errorInfo);
   }
 
-  clearCacheAndReload = () => {
-    // Clear all localStorage
+  clearEverythingAndReload = async () => {
+    // Clear localStorage
     localStorage.clear();
     // Clear sessionStorage
     sessionStorage.clear();
-    // Reload
-    window.location.reload();
+    
+    // Clear service workers and caches
+    await clearAllCaches();
+    
+    // Force reload without cache
+    window.location.reload(true);
   }
 
   render() {
@@ -39,39 +71,26 @@ class ErrorBoundary extends React.Component {
           color: 'white'
         }}>
           <h1 style={{ color: '#f97316', marginBottom: '20px' }}>⚠️ Error en la Aplicación</h1>
-          <p style={{ marginBottom: '20px' }}>Ha ocurrido un error debido a datos en caché antiguos.</p>
+          <p style={{ marginBottom: '10px' }}>Ha ocurrido un error debido a datos en caché antiguos.</p>
+          <p style={{ marginBottom: '20px', color: '#94a3b8', fontSize: '14px' }}>
+            Haz clic en el botón verde para limpiar TODO el caché y recargar.
+          </p>
           
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button 
-              onClick={this.clearCacheAndReload}
+              onClick={this.clearEverythingAndReload}
               style={{
                 background: '#22c55e',
                 color: 'white',
                 border: 'none',
-                padding: '14px 28px',
+                padding: '16px 32px',
                 borderRadius: '8px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontSize: '14px'
+                fontSize: '16px'
               }}
             >
-              🧹 Limpiar Caché y Recargar
-            </button>
-            
-            <button 
-              onClick={() => window.location.reload()} 
-              style={{
-                background: '#6b7280',
-                color: 'white',
-                border: 'none',
-                padding: '14px 28px',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              🔄 Solo Recargar
+              🧹 LIMPIAR TODO Y RECARGAR
             </button>
           </div>
           
