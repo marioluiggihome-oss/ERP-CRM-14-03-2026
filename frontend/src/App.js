@@ -188,11 +188,29 @@ const App = () => {
   }, [state.currentUser]);
 
   const handleLogin = (user) => {
+    // Al hacer login, limpiar los items del presupuesto para evitar 
+    // que un usuario vea los datos de otro usuario
     setState(prev => ({ 
       ...prev, 
       currentUser: user,
-      currentModule: user.allowedModules?.[0] || 'montada'
+      currentModule: user.allowedModules?.[0] || 'montada',
+      // Limpiar presupuesto actual al cambiar de usuario
+      budgetItemsMontada: [],
+      budgetItemsDespiece: [],
+      customerName: '',
+      customerAddress: '',
+      internalReference: '',
+      doorColorLow: '',
+      doorColorHigh: '',
+      doorColorColumns: '',
+      sideColor: ''
     }));
+    // Limpiar localStorage también
+    try {
+      localStorage.removeItem('luiggi_budget_data');
+    } catch (e) {
+      console.error("Error clearing localStorage:", e);
+    }
   };
 
   // Loading screen
