@@ -96,7 +96,7 @@ class UserModelInternal(BaseModel):
     isActive: bool = True
     isAdmin: bool = False
     isRepresentative: bool = False
-    isPrescriptor: bool = False  # Prescriptor comercial - solo aporta contactos
+    isPrescriptor: bool = False  # Colaborador comercial - solo aporta contactos
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
@@ -108,6 +108,7 @@ class UserModelInternal(BaseModel):
     canViewTechnicalDespiece: bool = False
     canAccessCRM: bool = False
     canUseDigitalizador: bool = False
+    canAccessArmarios: bool = False  # Acceso a sección de Armarios
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
