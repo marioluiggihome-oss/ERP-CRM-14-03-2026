@@ -1,22 +1,22 @@
 <analysis>**original_problem_statement:**
 The user initially provided a Google AI Studio link to clone. However, they then provided a zip file for an existing application named **LUIGGI HOME**, a comprehensive ERP/CRM for kitchen budgeting. The user wants to build a feature-rich replica of this application.
 
-Feature requests have been provided incrementally through a PowerPoint presentation (), direct image uploads, and chat messages. A recent Word document () provided a new batch of critical fixes, new features, and UI improvements.
+Feature requests have been provided incrementally through a PowerPoint presentation (), direct image uploads, and chat messages. Two Word documents ( and ) provided a new batch of critical fixes, new features, and UI improvements.
 
 **PRODUCT REQUIREMENTS:**
 1.  **Clone LUIGGI HOME application:** Replicate the design, layout, and functionality.
 2.  **User Management (Red Distribución):** Implement a hierarchical user system (Administrador, Comercial, Tienda).
-3.  **Inventory Management (Inventario Maestro):** Manage product catalogs.
-4.  **Master Margins (Márgenes Maestros):** A settings panel to configure prices and costs.
-5.  **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders.
-6.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets.
-7.  **PDF Export:** Generate a PDF of the current budget.
-8.  **Database Backup System:** Automatic and manual backups.
-9.  **Security:** Secure user password storage and implement role-based permissions.
-10. **CRM Integration:** A full sales CRM with a dashboard, pipeline, contacts, and permissions.
-11. **Digitalizador de Borradores (Draft Digitizer):** An OCR/AI tool to upload photos of handwritten budgets, extract line items using Gemini Vision, and create an editable digital version.
-12. **Production Safeguards:** Implement a Maintenance Mode and automatic pre-update backups to ensure data integrity during updates.
-13. **CSV Export for Machinery:** Export the cutting list in a specific CSV format for a cutting machine.
+3.  **Client Management:** Differentiate between Clientes Potenciales (Leads) and Clientes Activos, with the ability to convert leads into active clients and assign a custom code. Add segmentation for clients (e.g., Decorators, Builders).
+4.  **Inventory Management (Inventario Maestro):** Manage product catalogs.
+5.  **Master Margins (Márgenes Maestros):** A settings panel to configure prices and costs.
+6.  **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders.
+7.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets.
+8.  **PDF Export:** Generate a PDF of the current budget.
+9.  **Database Backup System:** Automatic and manual backups.
+10. **Security:** Secure user password storage and implement role-based permissions.
+11. **CRM Integration:** A full sales CRM with a dashboard, pipeline, contacts, and permissions.
+12. **Digitalizador de Borradores (Draft Digitizer):** An OCR/AI tool to upload photos of handwritten budgets, extract line items using Gemini Vision, and create an editable digital version.
+13. **Production Safeguards:** Implement a Maintenance Mode and automatic pre-update backups.
 14. **Correlative Project Numbers:** An automatic, system-wide counter for project/expedient numbers.
 
 **User's preferred language**: es
@@ -26,87 +26,81 @@ A full-stack application with a React frontend and a FastAPI backend connected t
 
 The application includes:
 - A complete, hierarchical user and permissions system.
-- An advanced inventory management system with **3,534 unique products**.
-- A settings panel (Master) to manage users, permissions, and system-wide margins.
+- An advanced inventory management system with **3,534 unique products** (data has been cleaned and corrected).
+- A settings panel (Maestro) to manage users, clients, permissions, inventory, margins, frame materials, and backups.
 - A project library to save, load, delete, and archive budgets.
-- A Despiece (Bill of Materials) system with editable Mounting and Cutting lists.
+- A Despiece (Bill of Materials) system.
 - A fully integrated **CRM module** with a Dashboard, Kanban pipeline, and contacts.
-- A **Digitalizador de Borradores (Draft Digitizer)** feature using Gemini Vision to extract line items from images, with an editable UI and persistent history.
-- A **Maintenance Mode** system, controllable by admins, that performs automatic backups before activation.
+- A **Digitalizador de Borradores** feature using Gemini Vision, now fully integrated with the CRM to create opportunities.
+- A **Client Management System** differentiating between Potential and Active clients, with segmentation.
+- An **Admin Panel** to view all work (projects, opportunities, etc.) across all users.
+- A **Maintenance Mode** system with automatic pre-update backups.
 - An automatic, sequential **project number generator** ().
-- A feature to add a cost increment for **Viga (beam) cuts** in budgets.
-- Comprehensive backup systems (automatic, manual, and pre-update).
+- Budgeting enhancements like Viga Cut costs and manual line items.
 
 **Last working item**:
-- Last item agent was working: Connecting the Digitalizador de Borradores to the CRM. The goal is to allow a user to save a digitized budget directly as a new Opportunity in the CRM. The agent has implemented the backend logic and the frontend state/functions in  but has not yet added the UI button to trigger the action.
+- Last item agent was working: Implementing an enhanced client management system to differentiate between Clientes Potenciales (Leads) and Clientes Activos, including segmentation. The agent added the backend models/endpoints and attempted to implement the frontend UI in . However, this resulted in leaving a large block of duplicated, old code in the file, which needs to be removed.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? both
+- Which testing method agent to use? frontend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Finish Digitalizador to CRM Connection (P0)**
-    -   **Description:** The user needs a button in the Digitalizador interface to create a new opportunity in the CRM, using the data from the currently digitized budget (customer name, project name, total value).
-    -   **Attempted fixes:** The  function and associated state have been added to .
+-   **Issue 1: Fix and Test the new Client Management System (P0)**
+    -   **Description:** The agent implemented the new client management system but left duplicated code in . This makes the Maestro panel unstable and must be fixed before proceeding.
+    -   **Attempted fixes:** The agent identified the presence of duplicated code but the last edit was not precise enough, leaving the file in a broken state.
     -   **Next debug checklist:**
-        -   In , add a new button, e.g., Guardar y Crear Oportunidad.
-        -   Wire this button's  event to the existing  function.
-        -   Ensure the API call to create the opportunity is sent with the correct payload (name, value, contact info).
-        -   Provide user feedback upon success or failure (e.g., a toast notification).
-    -   **Why fix this issue and what will be achieved with the fix?** To complete the user's workflow, bridging the gap between quoting (Digitalizador) and sales management (CRM).
+        1.  Carefully examine  to identify the exact line numbers of the duplicated code block (an old version of the client form).
+        2.  Use  to remove the redundant code block without affecting the new implementation.
+        3.  Run yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. and yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. to ensure the file is clean and the app compiles.
+        4.  Take a screenshot of the Maestro -> Clientes tab to visually verify the new filters (Potenciales / Activos), search bar, and client table are rendering correctly.
+        5.  Test the Nuevo Cliente and Editar Cliente modals to ensure the new fields (, ) are present and working.
+    -   **Why fix this issue and what will be achieved with the fix?** The  is a critical admin component. Fixing it will unblock the user's requested client management feature and restore stability to the settings panel.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** both
+    -   **Should Test frontend/backend/both after fix?** frontend
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   **Task 1: Connect Digitalizador to CRM (P0)**
-    -   **Where to resume:** . Resume by adding the UI button that calls the  function.
-    -   **What will be achieved with this?** This will finalize the integration between the new Digitalizador tool and the existing CRM module.
-    -   **Status:** IN PROGRESS
+-   **Task 1: Finalize Client Management System Implementation (P0)**
+    -   **Where to resume:** Resume by fixing  as described in Issue 1.
+    -   **What will be achieved with this?** A complete system for managing Clientes Potenciales and Clientes Activos with segmentation, as requested by the user.
+    -   **Status:** BLOCKED
     -   **Should Test frontend/backend/both after fix?** both
-    -   **Blocked on something:** None
+    -   **Blocked on something:** Issue 1: Fix and Test the new Client Management System
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **(P1) Admin: View All User Work:** (From ) Implement a feature for the Admin to view all budgets/projects/opportunities created by any user in the system. This requires a new backend endpoint and a new admin-only UI view.
-    - **(P1) Comercial: See Assigned Shop's Work:** (From ) If a Tienda (Shop) user creates a project, the assigned Comercial (Sales Rep) must automatically see that opportunity. This requires adding a relationship between user models.
-    - **(P2) Separate Armazones Settings:** (From ) Move the Gestión armazones (frames management) settings from the general Márgenes modal into its own dedicated UI section for better clarity.
-
+  - **(P1) Review Despieces:** The user mentioned revisa bien por otro lado, los despieces. This is an open-ended request. The next agent must ask for clarification: What specific problem or improvement is needed for the Bill of Materials?
+  - **(P2) Comercial: See Assigned Shop's Work:** (From ) If a Tienda (Shop) user creates a project, the assigned Comercial (Sales Rep) must automatically see that opportunity.
 - **Future Tasks:**
-    - **Re-evaluate original AI Telemetry feature:** The initial feature to import catalogs via AI is still considered unreliable. It could be revisited if the external API becomes more stable.
-    - **Enhance Project Archiving:** The current ARCHIVO feature is basic and could be expanded into a more robust archival system.
+  - **CRM Enhancements:**
+    - Saber qué clientes llevan más de 30 días sin oferta (Know which clients haven't had a quote in over 30 days).
+    - Qué clientes no compran desde hace 60/90 días (Which clients haven't purchased in 60/90 days).
+  - **Re-evaluate original AI Telemetry feature:** The initial feature to import catalogs via AI is still considered unreliable.
+  - **Enhance Project Archiving:** The current ARCHIVO feature is basic and could be expanded.
+  - **Mobile App:** For consulting budgets on-site.
 
 **Completed work in this session**
-- List of all completed tasks with file and method name:
-  - **Digitalizador de Borradores (Draft Digitizer) Feature:**
-    - Created new backend endpoint  using  and Gemini Vision.
-    - Created new frontend component  for file upload, editable results table, and calculations.
-    - Implemented a persistent history for digitized budgets with GET/POST/DELETE endpoints and UI.
-    - Fixed multiple bugs related to async DB calls ( constructor error,  iteration).
-  - **Production Safeguards:**
-    - Implemented a **Maintenance Mode** with a middleware in  to block API calls.
-    - Created a UI panel for admins () to toggle maintenance and view **pre-update backups**.
-  - **Corrections from :**
-    - **AI Prompt Improvement:** Updated the prompt in  to better interpret kitchen furniture dimensions.
-    - **Missing Product:** Added product **35A1P350** to the database.
-    - **Digitalizador UI/UX:** Implemented larger logo, new title, wider discount field, editable reference field, and support for both  and  as decimal separators in .
-    - **Despiece Header:** Added customer, project reference, date, and expedient number fields to .
-  - **Budgeting Enhancements:**
-    - **Correlative Expedient Numbers:** Added a backend counter and endpoint  and a UI button in  to fetch a unique, sequential project number.
-    - **Corte Viga (Beam Cut) Increment:** Added a setting and a per-line checkbox in  to apply an additional cost.
-  - **User Management:** Updated the password for the MARIO user.
-
-- Recently completed:
-  - Maintenance Mode & Pre-Update Backups (DONE)
-  - Correlative Project Number Generator (DONE)
-  - Viga Cut Cost Increment Feature (DONE)
-  - Multiple UI/UX fixes from user's Word document (DONE)
-  - Persistent History for Digitalizador (DONE)
+- **Digitalizador → CRM Connection:** Implemented the full workflow to create a CRM Opportunity from a digitized budget, including UI button, modal, API call, and backend logic. Tested and verified.
+- **Multiple Bug Fixes:**
+  - **Admin-only AUTO button:** The correlative number button is now only visible to Admins.
+  - **Data Correction (Product Heights):** Corrected product heights in the database for semicolumns and other furniture (e.g., 11 -> 110).
+  - **Data Correction (Product Names & Units):** Corrected thousands of product names to unify units to  (e.g., 400mm -> 40cm, 580cm -> 58cm).
+  - **Manual Line Pricing:** Fixed bug where manual line prices were incorrectly altered when switching between PVP/Costo views.
+- **Feature Enhancements:**
+  - **Admin Work View:** Created a new Panel Admin for administrators to view all projects, opportunities, and digitalizations across all users.
+  - **Lineas Manuales in Budget:** Added a button to add manual line items directly in the main budget table.
+  - **Catalog Sorting:** Implemented sorting in the master product library to match the user's PDF catalog order (ALTOS → BAJOS → SEMICOLUMNAS → COLUMNAS).
+- **UI/UX Refinements (Maestro Panel):**
+  - Moved **Gestión Armazones** to its own dedicated tab.
+  - Moved **Backup/Mantenimiento** into its own tab.
 
 **Earlier issues found/mentioned but not fixed**
    - **Critical Frontend Stability:** A recurring React DOM crash ( error) was patched in a prior session but the root cause was never fully diagnosed. It remains a potential stability risk.
-   - **Unreliable AI Telemetry Feature:** The original AI Telemetry feature for bulk catalog import remains blocked due to external API instability. The manual PDF parsing script is the effective workaround.
+   - **Unreliable AI Telemetry Feature:** The original AI Telemetry feature for bulk catalog import remains blocked due to external API instability.
 
 **Known issue recurrence from previous fork**
   - Issue recurrence in previous fork: None.
@@ -125,81 +119,80 @@ The application includes:
 - **Background Jobs:**  for database backups.
 
 **key DB schema**
-- : {..., : bool}
-- : {id, code, name, category, ...}
+- : {..., : Optional[str], : bool}
+- : {..., uid=0(root) gid=0(root) groups=0(root): str, : Optional[str], : ('potencial' | 'activo'), : ('activo' | 'inactivo'), : str}
+- : {id, code, name, category, height, width, depth, ...}
 - : {id, name, customerName, : str, ...}
+- : {..., : Optional[str], : Optional[str]}
 - : {id, projectName, customerName, lines: [], total, createdBy, createdAt}
-- : {_id: 'status', maintenance_mode: bool, message: str, ...}
-- : {_id: 'expedient_counter', year: int, sequence_value: int}
-- : {id, type: ('manual'|'auto'|'pre-update'), path, createdBy}
 
 **changes in tech stack**
-- The  library was introduced to interact with the Google Gemini Vision API.
-- The backend database client was confirmed to be , and all database queries were updated to be fully  with  and .
+- None in this session.
 
 **All files of reference**
-- : Heavily modified. Added endpoints for Despiece, Digitalizador (analyze, history CRUD), Maintenance mode (status, toggle, backups), and the correlative expedient number generator. Fixed async DB query patterns.
-- : New file. Contains the full UI and logic for the Draft Digitizer feature, including file upload, editable results table, calculations, and history panel.
-- : Modified to add the Corte Viga feature and the Auto expedient number button.
-- : New file. Contains the UI for the Bill of Materials modal, now with project/customer info.
-- : Modified to integrate the Digitalizador view, the Maintenance Mode screen, and the admin panel for maintenance.
-- : Extended with API functions for all new features.
--  & : New files for the maintenance mode feature.
+- : Heavily modified. Added endpoints for client CRUD, segmentation, activation, admin work summary, and temporary data correction scripts. Updated Pydantic models for User and Client.
+- : Heavily modified and **currently in a broken state due to duplicated code**. UI for client management, backups, and armazones was added.
+- : Modified to add a manual line button, fix pricing bugs, and implement catalog sorting.
+- : Modified to add the Panel Admin button and modal view for administrators.
+- : New file. A dashboard for admins to see all system activity.
+- : Extended with API functions for the new client and admin endpoints.
+- : Modified to add the Create Opportunity workflow.
 
 **Areas that need refactoring**:
-- **Monolithic Backend:**  is critically oversized (now over 2200 lines). It urgently needs to be refactored into a proper FastAPI project structure with routers, models, and services in separate directories.
-- **Large Frontend Components:**  and  are growing complex and could be broken down into smaller, more manageable child components.
+- **Monolithic Backend:**  is critically oversized and complex. It urgently needs to be refactored into a proper FastAPI project structure.
+- **Massive Frontend Component:**  is now over 2000 lines and contains duplicated code. It is unstable and extremely difficult to maintain. It must be broken down into smaller child components for each tab.
 
 **key api endpoints**
-- : (POST) Calculates bill of materials.
-- : (POST) Analyzes an image with Gemini Vision.
-- : (GET, POST) Manages the Digitalizador's persistent history.
-- : (GET) Checks if maintenance mode is active.
-- : (POST) Activates/deactivates maintenance mode.
-- : (GET) Fetches the next available sequential project number.
+- : (GET, POST) CRUD for clients.
+- : (PUT, DELETE) CRUD for clients.
+- : (GET) Returns the list of possible client segments.
+- : (POST) Converts a potential client to an active one and assigns a code.
+- : (GET) Provides a global view of all work for the admin panel.
+- : (POST) Creates a CRM opportunity.
+- : (POST) Temporary endpoint used to fix DB data.
+- : (POST) Temporary endpoint used to fix DB data.
 
 **Critical Info for New Agent**
-- The user's current priority is to complete the features listed in the  document. The immediate next step is to finalize the Digitalizador-to-CRM connection.
-- Data integrity and production readiness are now major user concerns. The new Maintenance Mode and Pre-update Backup features are very important to the user.
-- **All database operations in  MUST be **. The agent fixed several bugs caused by mixing synchronous  patterns with the  client. Use  for queries.
-- The backend file  is extremely large. Propose a refactoring plan after the current list of user requests is completed.
+- Your **immediate priority (P0)** is to fix . The file contains a large block of duplicated code that is preventing the new Client Management feature from working and likely breaking other parts of the Maestro panel. Do not proceed with any other task until this is resolved and tested.
+- After fixing the modal, you must ask the user for clarification on the revisa bien... los despieces request. Do not make assumptions.
+- Propose a plan to refactor  into smaller components after the current user requests are completed, as it has become a major technical debt liability.
 
 **documents and test reports created in this job**
-- 
 - 
 -  (Updated with new features and completed tasks)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1. **User:** Asks to implement all requests from the  file. (IN PROGRESS)
-2. **User:** Approves the agent's prioritized plan to tackle the requests. (COMPLETED)
-3. **User:** Asks to continue but first check for a missing product from an image. (COMPLETED - Product  was found missing and added).
-4. **User:** Asks two questions: 1. Is the tool ready for distributors? 2. Are data preserved during updates? (COMPLETED - Agent provided detailed answers).
-5. **User:** Approves the agent's suggestion to implement Maintenance Mode and Pre-update Backups. (COMPLETED)
-6. **User:** Instructs agent to set the  user password to  and continue with pending tasks. (COMPLETED)
-7. **User:** Asks agent to proceed with the remaining pending tasks. (IN PROGRESS)
-8. **User:** Uploaded  with a list of fixes and features. (IN PROGRESS)
-9. **User:** Tested the Digitalizador with real images and found AI prompt issues. (COMPLETED - Prompt fixed).
-10. **User:** Provided a CSV file showing the required format for the cutting machine export. (COMPLETED - Agent noted the format).
+1.  **User:** Asks to order the product library like the PDF catalog. (COMPLETED)
+2.  **User:** Confirms the new catalog order is correct for now. (COMPLETED)
+3.  **User:** Asks for a summary of the day's work. (COMPLETED)
+4.  **User:** Points out that units are still mixed (mm and cm). (IN PROGRESS - Names fixed, but needs final verification).
+5.  **User:** Requests a distinction between clientes activos (active clients) and pre-clientes/clientes potenciales (leads), with a workflow to convert them and assign codes manually. (IN PROGRESS)
+6.  **User:** Agrees with the agent's proposed plan for client management. (COMPLETED)
+7.  **User:** Adds a requirement for client segmentation (Decorators, Builders, etc.). (IN PROGRESS)
+8.  **User:** Uploads Word documents with a list of bugs and feature requests. (IN PROGRESS)
+9.  **User:** Asks for Option A (fix bugs) and then Option B (admin visibility). (COMPLETED)
+10. **User:** Asks the agent to proceed with the proposed plan. (COMPLETED)
 
 **Project Health Check:**
 - **Broken:**
-    - The Digitalizador-to-CRM workflow is incomplete.
+    - The Maestro panel () is very likely broken or unstable due to duplicated code. The new Client Management UI is not functional.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Google Gemini Vision:** Via  for the Digitalizador de Borradores feature. Uses Emergent LLM Key. (Now working reliably after bug fixes).
+- **Google Gemini Vision:** Via  for the Digitalizador de Borradores feature. Uses Emergent LLM Key.
 - **SendGrid:** For sending database backups. Requires a User API Key.
 - **jspdf / html2canvas:** For PDF generation on the frontend.
 
 **Testing status**
-- Testing agent used after significant changes: YES, after implementing the Despiece and Digitalizador features. Reports generated.
+- Testing agent used after significant changes: YES, for the Digitalizador->CRM feature.
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: Test reports are available at .
-- Known regressions: A frontend syntax error was introduced and fixed during development, causing a blank screen. The build process now passes.
+- Known regressions: None identified, but the  breakage is a major regression.
 
 **Credentials to test flow:**
 - **User:** MARIO
 - **Password:** MARIO
 
 **What agent forgot to execute**
-- The agent was in the middle of a multi-step implementation. The primary item not yet finished is adding the UI button in  to trigger the creation of a CRM opportunity, which is the final piece of the Connect Digitalizador to CRM task.</analysis>
+- The agent failed to properly remove old, duplicated code from  after implementing a new version of the client form, leaving the component in a broken state.
+- The agent did not ask for clarification on the user's vague request to review the despieces and instead finished the session.</analysis>
