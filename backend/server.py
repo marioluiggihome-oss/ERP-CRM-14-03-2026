@@ -805,6 +805,11 @@ async def get_clients(activo: Optional[bool] = None, search: Optional[str] = Non
     
     return clients
 
+@api_router.get("/clients/segments")
+async def get_client_segments():
+    """Obtener lista de segmentos de clientes disponibles"""
+    return {"segments": CLIENT_SEGMENTS}
+
 @api_router.get("/clients/{client_id}")
 async def get_client(client_id: str):
     """Obtener un cliente por ID"""
