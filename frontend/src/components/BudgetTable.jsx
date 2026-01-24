@@ -51,15 +51,15 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const filteredCatalog = useMemo(() => {
     const q = searchQuery.toLowerCase();
     
-    // Orden de categorías en el catálogo
+    // Orden de categorías en el catálogo (con variantes de nombres)
     const categoryOrder = {
-      'COLUMNA': 1,
-      'SEMICOLUMNA': 2,
-      'ALTO': 3,
-      'BAJO': 4,
-      'ELECTRO': 5,
-      'ACCESORIO': 6,
-      'OTRO': 7
+      'COLUMNA': 1, 'COLUMNAS': 1,
+      'SEMICOLUMNA': 2, 'SEMICOLUMNAS': 2,
+      'ALTO': 3, 'ALTOS': 3,
+      'BAJO': 4, 'BAJOS': 4,
+      'ELECTRO': 5, 'ELECTRODOMESTICOS': 5,
+      'ACCESORIO': 6, 'ACCESORIOS': 6,
+      'OTRO': 7, 'OTROS': 7
     };
     
     const filtered = allProducts.filter(p => {
@@ -71,8 +71,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     
     // Ordenar por categoría y luego por código
     return filtered.sort((a, b) => {
-      const catA = categoryOrder[a.category] || 99;
-      const catB = categoryOrder[b.category] || 99;
+      const catA = categoryOrder[a.category?.toUpperCase()] || 99;
+      const catB = categoryOrder[b.category?.toUpperCase()] || 99;
       if (catA !== catB) return catA - catB;
       // Dentro de la misma categoría, ordenar por código
       return a.code.localeCompare(b.code);
