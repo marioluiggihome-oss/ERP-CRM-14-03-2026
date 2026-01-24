@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Plus, Phone, Mail, Building2, Save, X, Loader2,
   Search, Edit2, Trash2, CheckCircle, LogOut, Calendar,
-  ChevronLeft, ChevronRight, StickyNote
+  ChevronLeft, ChevronRight, StickyNote, Briefcase, UserPlus
 } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
