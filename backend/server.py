@@ -428,14 +428,19 @@ class ContactModel(BaseModel):
     address: str = ""
     notes: str = ""
     tags: List[str] = []
-    source: str = ""  # web, referral, cold_call, etc.
+    source: str = ""  # web, referral, cold_call, prescriptor, etc.
     status: str = "active"  # active, inactive, lead, customer
+    segment: str = ""  # Segmento: PROMOTOR, CONSTRUCTOR, etc.
+    prescriptorId: str = ""  # ID del prescriptor que refirió este contacto
+    prescriptorName: str = ""  # Nombre del prescriptor
     totalValue: float = 0  # Valor total de oportunidades ganadas
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     createdBy: str = ""
     # Link to project for kitchen budgets
     linkedProjectIds: List[str] = []
+    # Flag para indicar si fue convertido a cliente
+    convertedToClientId: Optional[str] = None
 
 class ContactCreate(BaseModel):
     name: str
