@@ -45,6 +45,7 @@ const App = () => {
       specialIncrementWidth: 45,
       specialIncrementHeight: 45,
       specialIncrementDepth: 45,
+      ivaRate: 21, // IVA editable (por defecto 21%)
       catalogs: [
         { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: [], module: 'montada' },
         { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: [], module: 'despiece' }
