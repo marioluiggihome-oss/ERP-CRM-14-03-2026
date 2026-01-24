@@ -711,7 +711,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                          </div>
 
                          {item.isManual ? (
-                             <div className="col-span-7">
+                             <div className="col-span-6">
                                 <input 
                                     type="text" 
                                     value={item.manualDescription || ''} 
@@ -741,16 +741,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                                 </div>
                                 <div className="col-span-1 text-center flex flex-col items-center">
                                     <select value={item.openingDirection || 'Derecha'} onChange={e => updateItem(item.id, 'openingDirection', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-50 rounded py-0.5 text-[7px] font-black uppercase italic outline-none no-print">
-                                    <option value="Derecha">DER</option>
-                                    <option value="Izquierda">IZQ</option>
-                                    <option value="N/A">N/A</option>
+                                    <option value="Derecha">D</option>
+                                    <option value="Izquierda">I</option>
+                                    <option value="N/A">-</option>
                                     </select>
-                                    <span className="print-only font-black text-[8px] italic uppercase">{item.openingDirection === 'Derecha' ? 'DER' : item.openingDirection === 'Izquierda' ? 'IZQ' : 'N/A'}</span>
+                                    <span className="print-only font-black text-[8px] italic uppercase">{item.openingDirection === 'Derecha' ? 'D' : item.openingDirection === 'Izquierda' ? 'I' : '-'}</span>
                                 </div>
                             </>
                          )}
 
-                         <div className="col-span-3">
+                         <div className="col-span-2">
                             {item.isManual ? (
                                 <div className="flex items-center gap-1 bg-white border border-indigo-200 rounded px-2 py-1 no-print">
                                     <span className="text-[7px] font-black text-indigo-400">PTS:</span>
@@ -764,16 +764,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                                 </div>
                             ) : (
                                 <>
-                                    <input type="text" placeholder="Notas técnicas..." value={item.notes || ''} onChange={e => updateItem(item.id, 'notes', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-50 rounded px-2 py-0.5 text-[8px] font-bold text-indigo-400 outline-none focus:border-orange-300 no-print" />
-                                    <p className="print-only text-[8px] font-bold text-indigo-400 italic truncate">{item.notes}</p>
+                                    <input type="text" placeholder="Notas..." value={item.notes || ''} onChange={e => updateItem(item.id, 'notes', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-50 rounded px-1 py-0.5 text-[7px] font-bold text-indigo-400 outline-none focus:border-orange-300 no-print" />
+                                    <p className="print-only text-[7px] font-bold text-indigo-400 italic truncate">{item.notes}</p>
                                 </>
                             )}
                          </div>
                          <div className="col-span-2 text-right flex items-center justify-end gap-1 relative group/price">
                             {hasExtras && <Info size={10} className="text-orange-600 no-print animate-pulse" />}
-                            {item.hasVigaCut && <span className="text-[7px] font-black text-orange-600 bg-orange-100 px-1 rounded">VIGA</span>}
-                            {item.isManual && <PenTool size={10} className="text-indigo-300 no-print mr-1" />}
-                            <span className="text-xs font-black italic tracking-tighter cursor-help border-b border-dotted border-indigo-300">{price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
+                            {item.hasVigaCut && <span className="text-[6px] font-black text-orange-600 bg-orange-100 px-1 rounded">V</span>}
+                            {item.isManual && <PenTool size={8} className="text-indigo-300 no-print" />}
+                            <span className="text-[11px] font-black italic tracking-tighter cursor-help">{price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
                             
                             {/* Botón de Corte Viga - Más visible */}
                             {!item.isManual && (
