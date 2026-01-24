@@ -388,7 +388,7 @@ const App = () => {
             {state.currentTab === 'digitalizador' && <Digitalizador state={state} />}
             
             {/* CRM - Single Component with internal navigation */}
-            {state.currentTab?.startsWith('crm') && <CRMLayout />}
+            {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} />}
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />
