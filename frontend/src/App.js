@@ -227,7 +227,7 @@ const App = () => {
       <div className="min-h-screen bg-slate-950">
         <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
         <PrescriptorAgenda 
-          currentUser={state.currentUser} 
+          currentUser={{...state.currentUser, companyLogo: state.logo}} 
           onLogout={() => setState(prev => ({ ...prev, currentUser: null }))}
         />
       </div>
