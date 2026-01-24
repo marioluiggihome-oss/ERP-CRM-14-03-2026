@@ -873,9 +873,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                   </div>
                </div>
 
-               <div className="mt-auto pt-4 border-t-4 border-indigo-950">
+               <div className="pt-4 border-t-4 border-indigo-950">
                   {/* Sección de totales */}
-                  <div className="flex justify-between items-end mb-4">
+                  <div className="flex justify-between items-end">
                      <div className="flex flex-col gap-0.5">
                         <div className="text-[7px] font-black text-indigo-200 italic uppercase tracking-[0.15em]">Luiggi Home Master Design v2026</div>
                         <div className="text-[7px] font-black text-indigo-300 uppercase italic">PRESUPUESTO TÉCNICO</div>
