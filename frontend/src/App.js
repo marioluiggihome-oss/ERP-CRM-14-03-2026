@@ -398,6 +398,37 @@ const App = () => {
             state={state} 
             setState={setState} 
           />
+
+          {/* Maintenance Panel Modal - ADMIN ONLY */}
+          {showMaintenancePanel && state.currentUser?.isAdmin && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="bg-indigo-950 text-white px-8 py-5 flex justify-between items-center shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-orange-600 rounded-xl">
+                      <Wrench size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black uppercase tracking-wider">Panel de Mantenimiento</h2>
+                      <p className="text-indigo-300 text-xs font-medium mt-0.5">Gestión de actualizaciones y backups</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowMaintenancePanel(false)}
+                    className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex-1 overflow-auto p-6">
+                  <MaintenancePanel 
+                    currentUser={state.currentUser} 
+                    onClose={() => setShowMaintenancePanel(false)} 
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
