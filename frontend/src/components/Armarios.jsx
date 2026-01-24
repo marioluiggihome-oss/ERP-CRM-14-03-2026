@@ -1924,16 +1924,16 @@ const Armarios = ({ state, setState }) => {
                       {boardsCalculation.boards.tablero18mm.pieces.map((piece, idx) => (
                         <div key={idx} className="flex justify-between text-xs">
                           <span className="text-blue-100">{piece.name} ({piece.quantity}x)</span>
-                          <span className="font-bold">{piece.totalArea.toFixed(3)} m²</span>
+                          <span className="font-bold">{piece.totalArea.toFixed(2)} m²</span>
                         </div>
                       ))}
                       <div className="border-t border-white/20 pt-2 mt-2">
                         <div className="flex justify-between text-sm">
                           <span className="font-bold text-blue-100">TOTAL:</span>
-                          <span className="font-black text-yellow-400">{boardsCalculation.boards.tablero18mm.totalArea.toFixed(3)} m²</span>
+                          <span className="font-black text-yellow-400">{boardsCalculation.boards.tablero18mm.totalArea.toFixed(2)} m²</span>
                         </div>
                         <div className="flex justify-between text-xs mt-1">
-                          <span className="text-blue-300">Tableros necesarios (+15%):</span>
+                          <span className="text-blue-300">Tableros (+15%):</span>
                           <span className="font-black text-lg text-white">{boardsCalculation.boards.tablero18mm.boardsNeeded}</span>
                         </div>
                       </div>
@@ -1949,16 +1949,16 @@ const Armarios = ({ state, setState }) => {
                       {boardsCalculation.boards.tablero8mm.pieces.map((piece, idx) => (
                         <div key={idx} className="flex justify-between text-xs">
                           <span className="text-blue-100">{piece.name} ({piece.quantity}x)</span>
-                          <span className="font-bold">{piece.totalArea.toFixed(3)} m²</span>
+                          <span className="font-bold">{piece.totalArea.toFixed(2)} m²</span>
                         </div>
                       ))}
                       <div className="border-t border-white/20 pt-2 mt-2">
                         <div className="flex justify-between text-sm">
                           <span className="font-bold text-blue-100">TOTAL:</span>
-                          <span className="font-black text-yellow-400">{boardsCalculation.boards.tablero8mm.totalArea.toFixed(3)} m²</span>
+                          <span className="font-black text-yellow-400">{boardsCalculation.boards.tablero8mm.totalArea.toFixed(2)} m²</span>
                         </div>
                         <div className="flex justify-between text-xs mt-1">
-                          <span className="text-blue-300">Tableros necesarios (+10%):</span>
+                          <span className="text-blue-300">Tableros (+10%):</span>
                           <span className="font-black text-lg text-white">{boardsCalculation.boards.tablero8mm.boardsNeeded}</span>
                         </div>
                       </div>
@@ -1974,16 +1974,16 @@ const Armarios = ({ state, setState }) => {
                       {boardsCalculation.boards.puertasTablero.pieces.map((piece, idx) => (
                         <div key={idx} className="flex justify-between text-xs">
                           <span className="text-blue-100">{piece.name} ({piece.quantity}x)</span>
-                          <span className="font-bold">{piece.totalArea.toFixed(3)} m²</span>
+                          <span className="font-bold">{piece.totalArea.toFixed(2)} m²</span>
                         </div>
                       ))}
                       <div className="border-t border-white/20 pt-2 mt-2">
                         <div className="flex justify-between text-sm">
                           <span className="font-bold text-blue-100">TOTAL:</span>
-                          <span className="font-black text-yellow-400">{boardsCalculation.boards.puertasTablero.totalArea.toFixed(3)} m²</span>
+                          <span className="font-black text-yellow-400">{boardsCalculation.boards.puertasTablero.totalArea.toFixed(2)} m²</span>
                         </div>
                         <div className="flex justify-between text-xs mt-1">
-                          <span className="text-blue-300">Tableros necesarios (+15%):</span>
+                          <span className="text-blue-300">Tableros (+15%):</span>
                           <span className="font-black text-lg text-white">{boardsCalculation.boards.puertasTablero.boardsNeeded}</span>
                         </div>
                       </div>
@@ -1996,7 +1996,7 @@ const Armarios = ({ state, setState }) => {
                   <div>
                     <p className="text-xs font-bold text-yellow-900 uppercase tracking-widest">RESUMEN TOTAL TABLEROS</p>
                     <p className="text-2xl font-black text-yellow-900 mt-1">
-                      {boardsCalculation.totalArea.toFixed(3)} m² totales
+                      {boardsCalculation.totalArea.toFixed(2)} m² totales
                     </p>
                   </div>
                   <div className="text-right">
