@@ -562,6 +562,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             Red Distribución
           </button>
           
+          {/* Tab Clientes - Solo Admin */}
+          {state.currentUser?.isAdmin && (
+            <button
+              onClick={() => setActiveTab('clients')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'clients' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+              data-testid="clients-tab"
+            >
+              <Building2 size={16} />
+              Clientes
+            </button>
+          )}
+          
           {/* Solo Admin y Comerciales con permiso canManageArticles pueden ver Inventario */}
           {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
             <button
