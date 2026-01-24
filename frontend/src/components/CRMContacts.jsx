@@ -20,6 +20,13 @@ const CLIENT_SEGMENTS = [
   "OTRO"
 ];
 
+// Tipos de negocio para etiquetas
+const BUSINESS_TYPES = [
+  { id: 'cocina-montada', name: 'Cocina Montada', color: 'bg-orange-100 text-orange-700 border-orange-300' },
+  { id: 'cocina-despiece', name: 'Cocina Despiece', color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
+  { id: 'armarios', name: 'Armarios', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+];
+
 const CRMContacts = ({ currentUser }) => {
   const [contacts, setContacts] = useState([]);
   const [prescriptors, setPrescriptors] = useState([]);
