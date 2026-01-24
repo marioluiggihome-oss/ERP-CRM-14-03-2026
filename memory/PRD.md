@@ -32,8 +32,41 @@
 
 ### ✅ COMPLETADO HOY (24/01/2026)
 | 17 | **Conexión Digitalizador → CRM** | ✅ COMPLETADO |
+| 20 | **Sistema Clientes Activos** | ✅ COMPLETADO |
 
-## Conexión Digitalizador → CRM (NUEVO)
+## Sistema de Clientes Activos (NUEVO - 24/01/2026)
+
+### Funcionalidad Implementada:
+- **Nueva pestaña "CLIENTES"** en Panel Maestro (solo Admin)
+- **CRUD completo**: Crear, ver, editar y eliminar clientes
+- **Importación masiva CSV**: Subir archivo con múltiples clientes
+- **Vinculación Usuario ↔ Cliente**: Asociar usuarios a clientes empresariales
+
+### Campos del Cliente:
+| Campo | Descripción |
+|-------|-------------|
+| `codigo` | Código del programa de gestión (único) |
+| `nombre` | Nombre comercial / Razón social |
+| `cif` | CIF/NIF |
+| `direccion`, `localidad`, `provincia`, `codigoPostal` | Dirección completa |
+| `telefono`, `email` | Contacto |
+| `descuento` | Descuento personalizado (%) |
+| `activo` | Estado activo/inactivo |
+| `notas` | Observaciones |
+
+### API Endpoints:
+- `GET /api/clients` - Listar clientes
+- `POST /api/clients` - Crear cliente
+- `PUT /api/clients/{id}` - Actualizar cliente
+- `DELETE /api/clients/{id}` - Eliminar cliente
+- `POST /api/clients/import-csv` - Importar desde CSV
+
+### Formato CSV para importación:
+```
+codigo;nombre;cif;direccion;localidad;provincia;cp;telefono;email;descuento;activo;notas
+```
+
+## Conexión Digitalizador → CRM (24/01/2026)
 
 ### Funcionalidad Implementada:
 - **Botón "Crear Oportunidad CRM"** en Digitalizador cuando hay líneas cargadas
