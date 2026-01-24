@@ -2145,11 +2145,15 @@ class PrescriptorNoteCreate(BaseModel):
     date: str  # YYYY-MM-DD format
     prescriptorId: str
     prescriptorName: str = ""
+    contactId: Optional[str] = None
+    contactName: Optional[str] = None
 
 class PrescriptorNoteUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     date: Optional[str] = None
+    contactId: Optional[str] = None
+    contactName: Optional[str] = None
 
 @api_router.get("/prescriptor/notes")
 async def get_prescriptor_notes(
