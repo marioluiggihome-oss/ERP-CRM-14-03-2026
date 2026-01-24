@@ -96,6 +96,77 @@ export const usersAPI = {
 };
 
 // ============================================
+// CLIENTS (Clientes Activos)
+// ============================================
+
+export const clientsAPI = {
+  getAll: async (activo = null, search = null) => {
+    let url = `${API_URL}/api/clients`;
+    const params = new URLSearchParams();
+    if (activo !== null) params.append('activo', activo);
+    if (search) params.append('search', search);
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener clientes');
+    return response.json();
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_URL}/api/clients/${id}`);
+    if (!response.ok) throw new Error('Cliente no encontrado');
+    return response.json();
+  },
+
+  create: async (client) => {
+    const response = await fetch(`${API_URL}/api/clients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(client)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al crear cliente');
+    }
+    return response.json();
+  },
+
+  update: async (id, client) => {
+    const response = await fetch(`${API_URL}/api/clients/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(client)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al actualizar cliente');
+    }
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/clients/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al eliminar cliente');
+    }
+    return response.json();
+  },
+
+  importCSV: async (clients) => {
+    const response = await fetch(`${API_URL}/api/clients/import-csv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clients })
+    });
+    if (!response.ok) throw new Error('Error al importar clientes');
+    return response.json();
+  }
+};
+
+// ============================================
 // PRODUCTS
 // ============================================
 
