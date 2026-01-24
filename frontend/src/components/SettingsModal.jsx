@@ -58,7 +58,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessCRM: false,
     canUseDigitalizador: false,
     useCustomBranding: false,
-    canChangeLogo: false
+    canChangeLogo: false,
+    linkedClientId: ''
   });
 
   // Telemetry states
