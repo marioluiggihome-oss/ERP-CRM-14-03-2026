@@ -770,3 +770,69 @@ export const digitalizadorAPI = {
   }
 };
 
+// ============================================
+// ARMARIOS - PROYECTOS
+// ============================================
+
+export const armariosAPI = {
+  // Crear proyecto
+  create: async (project, userId = "") => {
+    const response = await fetch(`${API_URL}/api/armarios/projects?userId=${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al crear proyecto');
+    }
+    return response.json();
+  },
+
+  // Obtener lista de proyectos
+  getAll: async (userId = "") => {
+    const response = await fetch(`${API_URL}/api/armarios/projects?userId=${userId}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener proyectos');
+    }
+    return response.json();
+  },
+
+  // Obtener un proyecto específico
+  get: async (projectId) => {
+    const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener proyecto');
+    }
+    return response.json();
+  },
+
+  // Actualizar proyecto
+  update: async (projectId, updates) => {
+    const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al actualizar proyecto');
+    }
+    return response.json();
+  },
+
+  // Eliminar proyecto
+  delete: async (projectId) => {
+    const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al eliminar proyecto');
+    }
+    return response.json();
+  }
+};
+
