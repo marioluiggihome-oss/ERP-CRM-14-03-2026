@@ -444,6 +444,13 @@ const App = () => {
               </div>
             </div>
           )}
+
+          {/* Admin Work View Modal - ADMIN ONLY */}
+          <AdminWorkView 
+            isOpen={showAdminWorkView}
+            onClose={() => setShowAdminWorkView(false)}
+            currentUser={state.currentUser}
+          />
         </>
       )}
     </div>
