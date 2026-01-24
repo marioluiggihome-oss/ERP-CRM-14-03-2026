@@ -638,16 +638,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                </div>
 
                <div className="flex-1">
-                  <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-indigo-950 text-white rounded-t-lg text-[6px] font-black uppercase tracking-widest italic items-center">
+                  <div className="grid grid-cols-16 gap-1 px-4 py-2 bg-indigo-950 text-white rounded-t-lg text-[6px] font-black uppercase tracking-widest italic items-center">
                      <div className="col-span-1 text-center">CANT</div>
-                     <div className="col-span-2">REFERENCIA</div>
-                     <div className="col-span-2">NOMBRE MUEBLE</div>
+                     <div className="col-span-2">REF</div>
+                     <div className="col-span-3">NOMBRE MUEBLE</div>
                      <div className="col-span-1 text-center">ANCHO</div>
                      <div className="col-span-1 text-center">ALTO</div>
                      <div className="col-span-1 text-center">FONDO</div>
                      <div className="col-span-1 text-center">MANO</div>
-                     <div className="col-span-2">OBSERVACIONES</div>
-                     <div className="col-span-1 text-right">SUBTOTAL</div>
+                     <div className="col-span-3">OBSERVACIONES</div>
+                     <div className="col-span-2 text-right">SUBTOTAL</div>
                   </div>
                   <div className="divide-y divide-indigo-50 border-x border-b border-indigo-50 rounded-b-lg overflow-hidden">
                   {sortedItems.map((item) => {
