@@ -33,6 +33,51 @@ code {
     span.print-only {
         display: inline !important;
     }
+    
+    /* Ocultar elementos de navegación e interfaz durante impresión */
+    aside,
+    nav,
+    header,
+    #sidebar,
+    .sidebar,
+    [class*="sidebar"],
+    [class*="no-print"],
+    button:not([data-print="true"]),
+    select.no-print,
+    input.no-print {
+        display: none !important;
+    }
+    
+    /* Mostrar solo el contenido del presupuesto */
+    body {
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+    
+    /* El contenedor del PDF debe ocupar toda la página */
+    #budget-pdf {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 10mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-inside: avoid;
+    }
+    
+    /* Ajustar contenedor principal */
+    .flex-1.overflow-y-auto {
+        overflow: visible !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+    
+    /* Ocultar catálogo inferior */
+    [class*="absolute"][class*="bottom-0"] {
+        display: none !important;
+    }
 }
 
 @layer base {
