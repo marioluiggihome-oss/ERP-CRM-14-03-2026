@@ -316,6 +316,38 @@ Nuevo tipo de usuario con acceso **ultra-restringido**. El prescriptor comercial
 - **Usuario:** PRESCRIPTOR1
 - **Contraseña:** PRESCRIPTOR1
 
+## Calendario del Prescriptor (24/01/2026) ✅ COMPLETADO
+
+### Descripción:
+El prescriptor tiene un calendario simple donde puede añadir notas en fechas específicas para gestionar sus citas y recordatorios. El administrador puede ver todas las notas de prescriptores desde el calendario del CRM.
+
+### Funcionalidades:
+- **Vista de pestañas:** "Contactos" y "Calendario" en la agenda del prescriptor
+- **Calendario mensual:** Navegación mes a mes, resaltado del día actual
+- **Notas por fecha:** Click en cualquier día para crear/editar notas
+- **Contador de notas:** Muestra "X notas este mes"
+
+### Modal de Nota:
+- **Campos:** Título, Contenido
+- **Acciones:** Guardar, Cancelar, Eliminar (solo edición)
+- **Fecha:** Muestra la fecha seleccionada
+
+### Visibilidad Admin:
+- El admin puede ver notas de prescriptores en el CRM → Calendario
+- **Toggle "Notas Prescriptores"** para activar/desactivar visualización
+- Las notas aparecen en **color ámbar** para diferenciarse de eventos normales
+- Al pasar el ratón muestra el nombre del prescriptor
+
+### API Endpoints:
+- `GET /api/prescriptor/notes?prescriptor_id=X&start=Y&end=Z` - Notas del prescriptor
+- `GET /api/prescriptor/notes/all?start=Y&end=Z` - Todas las notas (admin)
+- `POST /api/prescriptor/notes` - Crear nota
+- `PUT /api/prescriptor/notes/{id}` - Actualizar nota
+- `DELETE /api/prescriptor/notes/{id}` - Eliminar nota
+
+### Colección MongoDB:
+- **prescriptor_notes:** {id, title, content, date, prescriptorId, prescriptorName, createdAt, updatedAt}
+
 ### Estados del Embudo de Ventas (Pipeline):
 1. Nuevo → 2. Contactado → 3. Presupuesto Enviado → 4. En Negociación → 5. Venta Cerrada / Perdida
 
