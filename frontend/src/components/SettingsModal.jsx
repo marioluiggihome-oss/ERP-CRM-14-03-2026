@@ -171,6 +171,107 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
   };
 
+  // Load maintenance status when tab is active
+  useEffect(() => {
+    if (isOpen && activeTab === 'maintenance') {
+      loadMaintenanceStatus();
+      loadMaintenanceBackups();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadMaintenanceStatus = async () => {
+    setMaintenanceLoading(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/status`);
+      const data = await response.json();
+      setMaintenanceStatus(data);
+    } catch (err) {
+      console.error('Error loading maintenance status:', err);
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const loadMaintenanceBackups = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/backups`);
+      const data = await response.json();
+      setMaintenanceBackups(data.backups || []);
+    } catch (err) {
+      console.error('Error loading maintenance backups:', err);
+    }
+  };
+
+  const handleActivateMaintenance = async () => {
+    if (!window.confirm('¿Activar modo mantenimiento? Los usuarios no podrán acceder al sistema.')) return;
+    
+    setMaintenanceActivating(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/activate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: maintenanceMessage,
+          estimatedMinutes: maintenanceMinutes,
+          adminUserId: state.currentUser?.id,
+          createBackup: maintenanceCreateBackup
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert('✅ Modo mantenimiento activado' + (maintenanceCreateBackup ? '\n📦 Backup de seguridad creado' : ''));
+        loadMaintenanceStatus();
+        loadMaintenanceBackups();
+      } else {
+        alert('Error: ' + (data.detail || 'No se pudo activar'));
+      }
+    } catch (err) {
+      alert('Error al activar modo mantenimiento');
+    } finally {
+      setMaintenanceActivating(false);
+    }
+  };
+
+  const handleDeactivateMaintenance = async () => {
+    if (!window.confirm('¿Desactivar modo mantenimiento? El sistema volverá a estar operativo.')) return;
+    
+    setMaintenanceDeactivating(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/deactivate?adminUserId=${state.currentUser?.id}`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert('✅ Sistema operativo. Modo mantenimiento desactivado.');
+        loadMaintenanceStatus();
+      } else {
+        alert('Error: ' + (data.detail || 'No se pudo desactivar'));
+      }
+    } catch (err) {
+      alert('Error al desactivar modo mantenimiento');
+    } finally {
+      setMaintenanceDeactivating(false);
+    }
+  };
+
+  const handleDownloadMaintenanceBackup = async (backupId) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/backups/${backupId}/download`);
+      const data = await response.json();
+      if (data.success) {
+        const blob = new Blob([JSON.stringify(data.backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${backupId}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      alert('Error al descargar backup');
+    }
+  };
+
   const createManualBackup = async () => {
     setCreatingBackup(true);
     try {
