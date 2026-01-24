@@ -787,18 +787,21 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                             )}
                          </div>
 
-                         {/* Descripción */}
+                         {/* Descripción - para líneas manuales, ocupar todo el espacio de descripción + medidas */}
                          {item.isManual ? (
-                             <div className="flex-1 min-w-0 pr-2">
-                                <input 
-                                    type="text" 
-                                    value={item.manualDescription || ''} 
-                                    onChange={e => updateItem(item.id, 'manualDescription', e.target.value)}
-                                    placeholder="Descripción del concepto..."
-                                    className="w-full bg-white border border-emerald-200 rounded px-2 py-0.5 text-[8px] font-bold uppercase text-indigo-900 outline-none focus:border-emerald-500 placeholder-indigo-300 no-print"
-                                />
-                                <span className="print-only text-[8px] font-bold uppercase italic text-indigo-900">{item.manualDescription}</span>
-                             </div>
+                             <>
+                               {/* Descripción extendida que ocupa: flex-1 + w-10*3 + w-8 = todo el espacio hasta PTS */}
+                               <div className="flex-1 min-w-0 flex items-center gap-2">
+                                  <input 
+                                      type="text" 
+                                      value={item.manualDescription || ''} 
+                                      onChange={e => updateItem(item.id, 'manualDescription', e.target.value)}
+                                      placeholder="Descripción del concepto o servicio..."
+                                      className="flex-1 bg-white border border-emerald-200 rounded px-2 py-0.5 text-[8px] font-bold uppercase text-indigo-900 outline-none focus:border-emerald-500 placeholder-indigo-300 no-print"
+                                  />
+                                  <span className="print-only text-[8px] font-bold uppercase italic text-indigo-900 flex-1">{item.manualDescription}</span>
+                               </div>
+                             </>
                          ) : (
                             <div className="flex-1 min-w-0 pr-2">
                                 <span className={`text-[8px] font-bold uppercase italic leading-tight block truncate ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}>{product.name}</span>
@@ -809,7 +812,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                          {/* Dimensiones y Apertura - Solo para productos normales */}
                          {item.isManual ? (
                             <>
-                                {/* Para líneas manuales, la descripción ya es más ancha, y ponemos el campo de puntos */}
+                                {/* Para líneas manuales, solo el campo de puntos alineado con OBS */}
                                 <div className="w-24 shrink-0 pr-1">
                                     <div className="flex items-center gap-1 bg-white border border-emerald-200 rounded px-1 py-0.5 no-print">
                                         <span className="text-[6px] font-black text-emerald-600">PTS:</span>
