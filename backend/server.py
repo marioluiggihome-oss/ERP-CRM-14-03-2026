@@ -160,6 +160,7 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     clientName: Optional[str] = None
+    linkedClientId: Optional[str] = None
     isActive: Optional[bool] = None
     isAdmin: Optional[bool] = None
     isRepresentative: Optional[bool] = None
