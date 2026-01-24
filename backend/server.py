@@ -1942,7 +1942,8 @@ async def get_digitalizador_history(userId: str = None, search: str = None, limi
                 {"customerName": {"$regex": search, "$options": "i"}}
             ]
         
-        items = list(db.digitalizador_history.find(query).sort("createdAt", -1).limit(limit))
+        cursor = db.digitalizador_history.find(query).sort("createdAt", -1).limit(limit)
+        items = await cursor.to_list(length=limit)
         
         for item in items:
             item.pop('_id', None)
