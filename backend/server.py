@@ -1860,29 +1860,45 @@ async def analyze_draft(request: DigitalizadorRequest):
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         
-        # Prepare the prompt for Gemini Vision
+        # Prepare the prompt for Gemini Vision - IMPROVED for correct dimension reading
         extraction_prompt = """Analiza esta imagen de un presupuesto o boceto de cocina/muebles.
-        
+
+IMPORTANTE - CONTEXTO DE MEDIDAS DE MUEBLES DE COCINA:
+- Los muebles ALTOS suelen medir entre 30-90 cm de alto (típico: 70-80 cm)
+- Los muebles BAJOS suelen medir entre 70-90 cm de alto
+- Las COLUMNAS y SEMICOLUMNAS miden entre 110-220 cm de alto (típico: 200-220 cm)
+- Los COSTADOS suelen medir entre 30-220 cm de alto según el tipo de mueble
+- El ANCHO típico es 30-120 cm
+- El FONDO típico es 30-65 cm
+
+REGLAS DE INTERPRETACIÓN:
+- Si ves "70x45" o "70 x 45", son centímetros (70cm x 45cm)
+- Si ves "110" o "220" solos, probablemente son ALTURAS en centímetros (110cm, 220cm), NO 11cm o 22cm
+- Si ves medidas como "35.5" o "69.8", son centímetros con decimales
+- Las medidas escritas a mano pueden parecer que les falta un dígito - usa el contexto para interpretar
+
 Extrae TODAS las líneas que encuentres, incluyendo:
 - Piezas de muebles con dimensiones (ej: "Costado 113 x 60", "Pieza 69.8 x 44.7")
-- Referencias de productos (ej: "Factory 01", "Asa Mallorca Inox")
+- Referencias de productos (ej: "Factory 01", "HB514AER4")
 - Cualquier artículo con medidas o descripciones
+- Electrodomésticos con sus códigos y descripciones
 
 Para cada línea encontrada, devuelve en formato JSON:
 {
-  "projectName": "nombre del proyecto si lo encuentras",
+  "projectName": "nombre del proyecto o cliente si lo encuentras",
   "lines": [
     {
       "quantity": 1,
       "reference": "referencia o código si existe",
-      "description": "descripción completa del artículo incluyendo medidas"
+      "description": "descripción completa del artículo incluyendo medidas CORRECTAS en centímetros"
     }
   ]
 }
 
-Si encuentras medidas como "113 x 60", inclúyelas en la descripción.
-Si hay un nombre de cliente o proyecto, ponlo en projectName.
-Responde SOLO con el JSON, sin texto adicional."""
+IMPORTANTE: 
+- Incluye las medidas en la descripción tal como aparecen (ej: "Costado 110 x 60")
+- Si hay un nombre de cliente o proyecto, ponlo en projectName
+- Responde SOLO con el JSON, sin texto adicional ni explicaciones"""
 
         # Initialize Gemini Vision chat
         llm_key = os.environ.get('EMERGENT_LLM_KEY')
