@@ -769,11 +769,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                                 </>
                             )}
                          </div>
-                         <div className="col-span-2 text-right flex items-center justify-end gap-1 relative group/price">
-                            {hasExtras && <Info size={10} className="text-orange-600 no-print animate-pulse" />}
-                            {item.hasVigaCut && <span className="text-[6px] font-black text-orange-600 bg-orange-100 px-1 rounded">V</span>}
+                         <div className="col-span-1 text-right flex items-center justify-end gap-1 relative group/price">
+                            {hasExtras && <Info size={8} className="text-orange-600 no-print" />}
+                            {item.hasVigaCut && <span className="text-[5px] font-black text-orange-600 bg-orange-100 px-0.5 rounded">V</span>}
                             {item.isManual && <PenTool size={8} className="text-indigo-300 no-print" />}
-                            <span className="text-[11px] font-black italic tracking-tighter cursor-help">{price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
+                            <span className="text-[10px] font-black italic tracking-tighter">{price.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</span>
                             
                             {/* Botón de Corte Viga - Más visible */}
                             {!item.isManual && (
