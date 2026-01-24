@@ -897,18 +897,30 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                              {total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                            </span>
                         </div>
-                        {/* Fila: IVA */}
+                        {/* Fila: IVA EDITABLE */}
                         <div className="flex justify-between items-center px-6 py-2 border-b border-indigo-800/50">
-                           <span className="text-[8px] font-bold uppercase tracking-wide text-indigo-400 mr-8">IVA 21%</span>
+                           <div className="flex items-center gap-1">
+                             <span className="text-[8px] font-bold uppercase tracking-wide text-indigo-400">IVA</span>
+                             <input 
+                               type="number" 
+                               min="0" 
+                               max="100" 
+                               value={state.ivaRate || 21}
+                               onChange={e => setState(prev => ({...prev, ivaRate: parseFloat(e.target.value) || 0}))}
+                               className="w-10 bg-indigo-800 border border-indigo-700 rounded px-1 py-0.5 text-[10px] font-black text-white text-center outline-none focus:border-orange-500 no-print"
+                             />
+                             <span className="text-[8px] font-bold text-indigo-400 print-only">{state.ivaRate || 21}</span>
+                             <span className="text-[8px] font-bold text-indigo-400">%</span>
+                           </div>
                            <span className="text-[14px] font-black italic tracking-tight text-white">
-                             {(total * 0.21).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+                             {(total * (state.ivaRate || 21) / 100).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                            </span>
                         </div>
                         {/* Fila: TOTAL */}
                         <div className="flex justify-between items-center px-6 py-3 bg-orange-600">
                            <span className="text-[9px] font-black uppercase tracking-wide text-white mr-8">TOTAL PRESUPUESTO</span>
                            <span className="text-2xl font-black italic tracking-tight text-white">
-                             {(total * 1.21).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+                             {(total * (1 + (state.ivaRate || 21) / 100)).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                            </span>
                         </div>
                      </div>
