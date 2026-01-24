@@ -82,15 +82,16 @@ def determine_category(code):
     if 'CL' in code_upper or 'COL' in code_upper or 'CP' in code_upper or code_upper.startswith('C2'):
         return 'COLUMNA'
     
-    # ALTOS
+    # ALTOS GOLA (G7A, G8A, G9A, etc.)
+    if re.match(r'^G\d+A', code_upper):
+        return 'ALTO GOLA'
+    
+    # ALTOS estándar
     if code_upper.startswith('A'):
-        # Verificar si es GOLA
-        if 'GOLA' in code_upper:
-            return 'ALTO GOLA'
         return 'ALTO'
     
-    # BAJOS GOLA
-    if code_upper.startswith('G') and 'B' in code_upper:
+    # BAJOS GOLA (G7B, G8B, etc.)
+    if re.match(r'^G\d+B', code_upper):
         return 'BAJO GOLA'
     
     # BAJOS estándar
