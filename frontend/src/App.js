@@ -332,6 +332,7 @@ const App = () => {
             {state.currentTab === 'visualizer' && <Visualizer images={state.uploadedImages} state={state} setState={setState} />}
             {state.currentTab === 'library' && <ProjectLibrary state={state} setState={setState} />}
             {state.currentTab === 'backup' && <BackupManager />}
+            {state.currentTab === 'digitalizador' && <Digitalizador state={state} />}
             
             {/* CRM - Single Component with internal navigation */}
             {state.currentTab?.startsWith('crm') && <CRMLayout />}
