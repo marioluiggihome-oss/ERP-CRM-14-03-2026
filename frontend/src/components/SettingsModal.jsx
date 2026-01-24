@@ -223,9 +223,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       }
     }
     
+    // Load clients if not already loaded
+    if (clients.length === 0) {
+      loadClients();
+    }
+    
     setIsEditingUser(true);
     setEditingUserId(user.id);
-    setUserForm({ ...user });
+    setUserForm({ ...user, linkedClientId: user.linkedClientId || '' });
   };
 
   const handleSaveUser = async () => {
