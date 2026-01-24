@@ -67,10 +67,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [telemetryProgress, setTelemetryProgress] = useState({ current: 0, total: 0 });
   const [existingCodes, setExistingCodes] = useState(new Set());
   const [telemetryResult, setTelemetryResult] = useState(null);
-  const logContainerRef = useRef(null);
 
-  // Load existing codes for telemetry duplicate detection
+  // Load existing codes for telemetry duplicate detection - only when modal is open AND on telemetry tab
   useEffect(() => {
+    if (!isOpen || activeTab !== 'telemetry') return;
+    
     const loadCodes = async () => {
       try {
         const products = await productsAPI.getAll(telemetryModule);
@@ -79,15 +80,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         console.error('Error loading codes:', err);
       }
     };
-    if (isOpen) loadCodes();
-  }, [telemetryModule, isOpen]);
-
-  // Auto-scroll telemetry log
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [telemetryLog]);
+    loadCodes();
+  }, [telemetryModule, isOpen, activeTab]);
 
   const representatives = useMemo(() => state.users.filter(u => u.isRepresentative), [state.users]);
 
