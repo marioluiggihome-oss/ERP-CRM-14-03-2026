@@ -1915,7 +1915,7 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
             "createdAt": datetime.now(timezone.utc).isoformat()
         }
         
-        db.digitalizador_history.insert_one(history_item)
+        await db.digitalizador_history.insert_one(history_item)
         history_item.pop('_id', None)
         
         return {
