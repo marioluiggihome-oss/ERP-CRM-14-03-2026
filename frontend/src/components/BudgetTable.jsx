@@ -890,18 +890,45 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                   </div>
                </div>
 
-               <div className="mt-auto pt-4 border-t-4 border-indigo-950 flex justify-between items-end">
-                  <div className="flex flex-col gap-0.5">
-                     <div className="text-[7px] font-black text-indigo-200 italic uppercase tracking-[0.15em]">Luiggi Home Master Design v2026</div>
-                     <div className="text-[7px] font-black text-indigo-300 uppercase italic">IVA NO INCLUIDO EN TOTALES</div>
-                  </div>
-                  <div className="bg-indigo-950 text-white px-8 py-4 rounded-xl text-right border-r-[8px] border-orange-600 shadow-lg">
-                     <p className={`text-[7px] font-black uppercase tracking-[0.2em] mb-0.5 italic ${state.showDistributorPrice ? 'text-white/70' : 'text-indigo-400'}`}>
-                       TOTAL PROYECTO ({state.showDistributorPrice ? 'NETO' : 'PVP'}) - IVA NO INC.
-                     </p>
-                     <p className={`text-3xl font-black italic tracking-tighter ${state.showDistributorPrice ? 'text-white' : 'text-orange-600'}`}>
-                       {total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                     </p>
+               <div className="mt-auto pt-4 border-t-4 border-indigo-950">
+                  {/* Sección de totales */}
+                  <div className="flex justify-between items-end mb-4">
+                     <div className="flex flex-col gap-0.5">
+                        <div className="text-[7px] font-black text-indigo-200 italic uppercase tracking-[0.15em]">Luiggi Home Master Design v2026</div>
+                        <div className="text-[7px] font-black text-indigo-300 uppercase italic">PRESUPUESTO TÉCNICO</div>
+                     </div>
+                     
+                     {/* Caja de totales con desglose */}
+                     <div className="bg-indigo-950 text-white rounded-xl border-r-[8px] border-orange-600 shadow-lg overflow-hidden">
+                        {/* Fila: BRUTO LÍNEAS */}
+                        <div className="flex justify-between items-center px-6 py-2 border-b border-indigo-800/50">
+                           <span className="text-[8px] font-bold uppercase tracking-wide text-indigo-400 mr-8">BRUTO LÍNEAS</span>
+                           <span className="text-[14px] font-black italic tracking-tight text-white">
+                             {total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+                           </span>
+                        </div>
+                        {/* Fila: BASE IMPONIBLE */}
+                        <div className="flex justify-between items-center px-6 py-2 border-b border-indigo-800/50">
+                           <span className="text-[8px] font-bold uppercase tracking-wide text-indigo-400 mr-8">BASE IMPONIBLE NETO</span>
+                           <span className="text-[14px] font-black italic tracking-tight text-white">
+                             {total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+                           </span>
+                        </div>
+                        {/* Fila: IVA */}
+                        <div className="flex justify-between items-center px-6 py-2 border-b border-indigo-800/50">
+                           <span className="text-[8px] font-bold uppercase tracking-wide text-indigo-400 mr-8">IVA 21%</span>
+                           <span className="text-[14px] font-black italic tracking-tight text-white">
+                             {(total * 0.21).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+                           </span>
+                        </div>
+                        {/* Fila: TOTAL */}
+                        <div className="flex justify-between items-center px-6 py-3 bg-orange-600">
+                           <span className="text-[9px] font-black uppercase tracking-wide text-white mr-8">TOTAL PRESUPUESTO</span>
+                           <span className="text-2xl font-black italic tracking-tight text-white">
+                             {(total * 1.21).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+                           </span>
+                        </div>
+                     </div>
                   </div>
                </div>
             </div>
