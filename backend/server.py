@@ -3836,6 +3836,78 @@ async def download_pre_update_backup(backup_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/products/fix-data")
+async def fix_product_data():
+    """
+    Fix product data:
+    1. Semicolumnas series: 11 -> 110, 12 -> 120, etc.
+    2. Bajos fondo: 33 -> 58 (para muebles bajos estándar)
+    """
+    try:
+        results = {
+            "series_fixed": 0,
+            "depth_fixed": 0,
+            "errors": []
+        }
+        
+        # 1. Fix semicolumnas series names
+        series_mapping = {
+            "SEMICOLUMNAS 11 FONDO ESTANDAR": "SEMICOLUMNAS 110 FONDO ESTANDAR",
+            "SEMICOLUMNAS 12 FONDO ESTANDAR": "SEMICOLUMNAS 120 FONDO ESTANDAR",
+            "SEMICOLUMNAS 13 FONDO ESTANDAR": "SEMICOLUMNAS 130 FONDO ESTANDAR",
+            "SEMICOLUMNAS 14 FONDO ESTANDAR": "SEMICOLUMNAS 140 FONDO ESTANDAR",
+            "SEMICOLUMNAS 16 FONDO ESTANDAR": "SEMICOLUMNAS 160 FONDO ESTANDAR",
+            "GOLA - SEMICOLUMNAS 11 FONDO ESTANDAR": "GOLA - SEMICOLUMNAS 110 FONDO ESTANDAR",
+            "GOLA - SEMICOLUMNAS 12 FONDO ESTANDAR": "GOLA - SEMICOLUMNAS 120 FONDO ESTANDAR",
+            "GOLA - SEMICOLUMNAS 13 FONDO ESTANDAR": "GOLA - SEMICOLUMNAS 130 FONDO ESTANDAR",
+            "GOLA - SEMICOLUMNAS 14 FONDO ESTANDAR": "GOLA - SEMICOLUMNAS 140 FONDO ESTANDAR",
+            "GOLA - SEMICOLUMNAS 16 FONDO ESTANDAR": "GOLA - SEMICOLUMNAS 160 FONDO ESTANDAR",
+        }
+        
+        for old_series, new_series in series_mapping.items():
+            result = await db.products.update_many(
+                {"series": old_series},
+                {"$set": {"series": new_series}}
+            )
+            results["series_fixed"] += result.modified_count
+            logger.info(f"Fixed series: {old_series} -> {new_series} ({result.modified_count} products)")
+        
+        # 2. Fix bajos fondo - Muebles BAJOS con fondo 33 -> 58
+        # Pero NO los ALTOS que tienen fondo 33 correctamente
+        # Criteria: codigo empieza con 7B, 8B (bajos 70cm, 80cm) y NO son ALTOS
+        bajo_codes = ["7B", "8B"]  # Códigos que empiezan con estos son BAJOS
+        
+        for code_prefix in bajo_codes:
+            result = await db.products.update_many(
+                {
+                    "code": {"$regex": f"^{code_prefix}"},
+                    "depth": 33.0
+                },
+                {"$set": {"depth": 58.0}}
+            )
+            results["depth_fixed"] += result.modified_count
+            logger.info(f"Fixed depth for {code_prefix}* products: {result.modified_count}")
+        
+        # También buscar productos con "Bajo" en el nombre que tengan fondo 33
+        result = await db.products.update_many(
+            {
+                "name": {"$regex": "^Bajo", "$options": "i"},
+                "depth": 33.0
+            },
+            {"$set": {"depth": 58.0}}
+        )
+        results["depth_fixed"] += result.modified_count
+        
+        return {
+            "success": True,
+            "message": "Datos de productos corregidos",
+            "results": results
+        }
+    except Exception as e:
+        logger.error(f"Error fixing product data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include the router in the main app (AFTER all endpoints are defined)
 app.include_router(api_router)
 
