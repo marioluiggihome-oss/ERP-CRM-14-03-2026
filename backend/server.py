@@ -2126,7 +2126,7 @@ async def get_backup_status():
 
 @api_router.get("/crm/contacts")
 async def get_contacts(status: Optional[str] = None, search: Optional[str] = None):
-    """Get all contacts with optional filters"""
+    """Get all contacts with optional filters, including total value from opportunities"""
     try:
         query = {}
         if status:
@@ -2139,6 +2139,29 @@ async def get_contacts(status: Optional[str] = None, search: Optional[str] = Non
             ]
         
         contacts = await db.contacts.find(query, {"_id": 0}).sort("createdAt", -1).to_list(1000)
+        
+        # Calcular totalValue para cada contacto basado en sus oportunidades
+        if contacts:
+            contact_ids = [c.get("id") for c in contacts]
+            # Obtener todas las oportunidades de estos contactos
+            opportunities = await db.opportunities.find(
+                {"contactId": {"$in": contact_ids}},
+                {"_id": 0, "contactId": 1, "value": 1}
+            ).to_list(5000)
+            
+            # Agrupar valores por contactId
+            values_by_contact = {}
+            for opp in opportunities:
+                cid = opp.get("contactId")
+                if cid:
+                    if cid not in values_by_contact:
+                        values_by_contact[cid] = 0
+                    values_by_contact[cid] += opp.get("value", 0)
+            
+            # Añadir totalValue a cada contacto
+            for contact in contacts:
+                contact["totalValue"] = values_by_contact.get(contact.get("id"), 0)
+        
         return contacts
     except Exception as e:
         logger.error(f"Get contacts error: {e}")
