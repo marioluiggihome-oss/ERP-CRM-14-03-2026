@@ -47,6 +47,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isActive: true,
     isAdmin: false,
     isRepresentative: false,
+    isPrescriptor: false,
     linkedRepresentativeId: '',
     allowedModules: ['montada'],
     commercialDiscount: 0,
