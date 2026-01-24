@@ -2715,6 +2715,228 @@ const Armarios = ({ state, setState }) => {
           </div>
         </div>
       )}
+
+      {/* ========== MODAL CONFIGURACIÓN IA ========== */}
+      {showIAModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-pink-500 to-violet-500 text-white px-8 py-5 flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-xl">
+                  <Sparkles size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wider">CONFIGURAR CON IA</h2>
+                  <p className="text-pink-100 text-xs font-medium mt-0.5">Describe qué necesitas y la IA configurará tu armario</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowIAModal(false)}
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-8">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                ¿Qué necesitas en tu armario?
+              </label>
+              <textarea
+                value={iaInstruction}
+                onChange={(e) => setIaInstruction(e.target.value)}
+                placeholder="Ej: Quiero un armario para una pareja con mucha ropa de colgar, 4 cajones para ropa interior, un zapatero y espacio para bolsos..."
+                className="w-full mt-2 px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-violet-400 h-32 resize-none"
+              />
+
+              {/* Ejemplos rápidos */}
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Ejemplos rápidos:</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    'Armario para una persona soltera con mucha ropa',
+                    'Vestidor para pareja con zapatos y accesorios',
+                    'Armario infantil con baldas y cajones',
+                    'Armario minimalista con máximo espacio para colgar'
+                  ].map((example, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setIaInstruction(example)}
+                      className="text-[10px] bg-slate-100 hover:bg-violet-100 text-slate-600 hover:text-violet-700 px-2 py-1 rounded transition-colors"
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {iaError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs">
+                  <AlertCircle size={14} className="inline mr-2" />
+                  {iaError}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-8 py-4 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowIAModal(false)}
+                className="bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={configureWithIA}
+                disabled={iaLoading || !iaInstruction.trim()}
+                className="bg-gradient-to-r from-pink-500 to-violet-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:from-pink-400 hover:to-violet-400 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {iaLoading ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} />
+                    Configurar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== MODAL RENDER 3D ========== */}
+      {showRenderModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-8 py-5 flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-xl">
+                  <Image size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wider">RENDER REALISTA</h2>
+                  <p className="text-cyan-100 text-xs font-medium mt-0.5">Genera una imagen fotorrealista de tu armario</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowRenderModal(false)}
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-8">
+              {/* Configuración del render */}
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Estilo de habitación</label>
+                  <select
+                    value={roomStyle}
+                    onChange={(e) => setRoomStyle(e.target.value)}
+                    className="w-full mt-2 px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-cyan-400"
+                  >
+                    <option value="moderno">Moderno</option>
+                    <option value="clasico">Clásico</option>
+                    <option value="nordico">Nórdico</option>
+                    <option value="minimalista">Minimalista</option>
+                    <option value="industrial">Industrial</option>
+                    <option value="rustico">Rústico</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Configuración actual</label>
+                  <div className="mt-2 bg-slate-100 rounded-xl p-3 text-xs space-y-1">
+                    <p><span className="font-bold">Dimensiones:</span> {wardrobeConfig.width} x {wardrobeConfig.height} x {wardrobeConfig.depth}mm</p>
+                    <p><span className="font-bold">Color:</span> {getColorByName(wardrobeConfig.exteriorColor).name}</p>
+                    <p><span className="font-bold">Puerta:</span> {wardrobeConfig.doorType === 'sliding' ? 'Corredera' : wardrobeConfig.doorType === 'folding' ? 'Plegable' : 'Abatible'}</p>
+                    <p><span className="font-bold">Módulos:</span> {wardrobeConfig.modules}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Área de render */}
+              <div className="bg-slate-100 rounded-xl min-h-[400px] flex items-center justify-center">
+                {renderLoading ? (
+                  <div className="text-center">
+                    <RefreshCw size={48} className="animate-spin text-cyan-500 mx-auto mb-4" />
+                    <p className="text-slate-500 font-bold">Generando render...</p>
+                    <p className="text-slate-400 text-xs mt-1">Esto puede tardar unos segundos</p>
+                  </div>
+                ) : renderImage ? (
+                  <img 
+                    src={renderImage} 
+                    alt="Render del armario" 
+                    className="max-w-full max-h-[400px] rounded-lg shadow-lg"
+                  />
+                ) : renderError ? (
+                  <div className="text-center">
+                    <AlertCircle size={48} className="text-red-400 mx-auto mb-4" />
+                    <p className="text-red-600 font-bold">Error al generar render</p>
+                    <p className="text-red-400 text-xs mt-1">{renderError}</p>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Image size={64} className="text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-400 font-bold">Pulsa "Generar" para crear el render</p>
+                    <p className="text-slate-300 text-xs mt-1">La IA creará una imagen fotorrealista de tu armario</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-8 py-4 border-t border-slate-200 flex justify-between items-center">
+              <div className="text-xs text-slate-400">
+                Generado con IA • Los renders son aproximaciones visuales
+              </div>
+              <div className="flex gap-3">
+                {renderImage && (
+                  <a
+                    href={renderImage}
+                    download="armario_render.png"
+                    className="bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-500 transition-colors flex items-center gap-2"
+                  >
+                    <Download size={14} />
+                    Descargar
+                  </a>
+                )}
+                <button
+                  onClick={() => setShowRenderModal(false)}
+                  className="bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-300 transition-colors"
+                >
+                  Cerrar
+                </button>
+                <button
+                  onClick={generateRender}
+                  disabled={renderLoading}
+                  className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:from-cyan-400 hover:to-blue-400 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {renderLoading ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} />
+                      Generar Render
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
