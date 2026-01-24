@@ -51,12 +51,16 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const filteredCatalog = useMemo(() => {
     const q = searchQuery.toLowerCase();
     
-    // Orden de categorías en el catálogo (con variantes de nombres)
+    // Orden según el catálogo PDF TARIFA-TECNICA-ZONACOCINAS
+    // 1. ALTOS (primero en parte 1)
+    // 2. BAJOS (parte 2, páginas 1-27)
+    // 3. SEMICOLUMNAS (parte 2, páginas 33-77)
+    // 4. COLUMNAS (parte 2, páginas 78-125)
     const categoryOrder = {
-      'COLUMNA': 1, 'COLUMNAS': 1,
-      'SEMICOLUMNA': 2, 'SEMICOLUMNAS': 2,
-      'ALTO': 3, 'ALTOS': 3,
-      'BAJO': 4, 'BAJOS': 4,
+      'ALTO': 1, 'ALTOS': 1,
+      'BAJO': 2, 'BAJOS': 2,
+      'SEMICOLUMNA': 3, 'SEMICOLUMNAS': 3,
+      'COLUMNA': 4, 'COLUMNAS': 4,
       'ELECTRO': 5, 'ELECTRODOMESTICOS': 5,
       'ACCESORIO': 6, 'ACCESORIOS': 6,
       'OTRO': 7, 'OTROS': 7
