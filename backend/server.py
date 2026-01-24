@@ -1818,6 +1818,189 @@ async def calculate_despiece(request: DespieceRequest):
         raise HTTPException(status_code=500, detail=f"Error calculando despiece: {str(e)}")
 
 
+# ============================================
+# DIGITALIZADOR DE BORRADORES API
+# ============================================
+
+class DigitalizadorLine(BaseModel):
+    """A single line extracted from the draft"""
+    id: str
+    quantity: int = 1
+    reference: str = ""
+    description: str
+    price: float = 0
+    discount: float = 0
+    isManual: bool = False
+
+class DigitalizadorRequest(BaseModel):
+    """Request to analyze a draft image"""
+    imageBase64: str
+    filename: str = "draft.jpg"
+
+class DigitalizadorResponse(BaseModel):
+    """Response with extracted lines"""
+    success: bool
+    projectName: str = ""
+    lines: List[DigitalizadorLine]
+    rawText: str = ""
+    error: Optional[str] = None
+
+class DigitalizadorExportRequest(BaseModel):
+    """Request to export to CSV for cutting machine"""
+    lines: List[DigitalizadorLine]
+    materialCode: str = "40-ESTEITEX16"
+    materialThickness: float = 16.0
+
+@api_router.post("/digitalizador/analyze")
+async def analyze_draft(request: DigitalizadorRequest):
+    """
+    Analyze a draft image using Gemini Vision to extract budget lines.
+    Returns structured data with quantities, descriptions, and dimensions.
+    """
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        
+        # Prepare the prompt for Gemini Vision
+        extraction_prompt = """Analiza esta imagen de un presupuesto o boceto de cocina/muebles.
+        
+Extrae TODAS las líneas que encuentres, incluyendo:
+- Piezas de muebles con dimensiones (ej: "Costado 113 x 60", "Pieza 69.8 x 44.7")
+- Referencias de productos (ej: "Factory 01", "Asa Mallorca Inox")
+- Cualquier artículo con medidas o descripciones
+
+Para cada línea encontrada, devuelve en formato JSON:
+{
+  "projectName": "nombre del proyecto si lo encuentras",
+  "lines": [
+    {
+      "quantity": 1,
+      "reference": "referencia o código si existe",
+      "description": "descripción completa del artículo incluyendo medidas"
+    }
+  ]
+}
+
+Si encuentras medidas como "113 x 60", inclúyelas en la descripción.
+Si hay un nombre de cliente o proyecto, ponlo en projectName.
+Responde SOLO con el JSON, sin texto adicional."""
+
+        # Initialize Gemini Vision chat
+        llm_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not llm_key:
+            raise HTTPException(status_code=500, detail="API key not configured")
+        
+        chat = LlmChat(
+            api_key=llm_key,
+            model="gemini-2.0-flash"
+        )
+        
+        # Create image content
+        image_content = ImageContent(
+            base64_data=request.imageBase64,
+            media_type="image/jpeg"
+        )
+        
+        # Send request
+        response = await chat.send_message_async(
+            UserMessage(
+                content=[extraction_prompt, image_content]
+            )
+        )
+        
+        response_text = response.content.strip()
+        
+        # Try to parse JSON from response
+        try:
+            # Clean up response - remove markdown code blocks if present
+            if response_text.startswith("```"):
+                response_text = response_text.split("```")[1]
+                if response_text.startswith("json"):
+                    response_text = response_text[4:]
+            response_text = response_text.strip()
+            
+            parsed = json.loads(response_text)
+            
+            # Build response lines
+            extracted_lines = []
+            for idx, line in enumerate(parsed.get("lines", [])):
+                extracted_lines.append(DigitalizadorLine(
+                    id=f"LINE-{uuid.uuid4().hex[:8]}",
+                    quantity=line.get("quantity", 1),
+                    reference=line.get("reference", ""),
+                    description=line.get("description", ""),
+                    price=line.get("price", 0),
+                    discount=0,
+                    isManual=False
+                ))
+            
+            return DigitalizadorResponse(
+                success=True,
+                projectName=parsed.get("projectName", ""),
+                lines=extracted_lines,
+                rawText=response_text
+            )
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Gemini response: {response_text}")
+            # Return raw text if parsing fails
+            return DigitalizadorResponse(
+                success=False,
+                projectName="",
+                lines=[],
+                rawText=response_text,
+                error=f"Error parsing response: {str(e)}"
+            )
+            
+    except Exception as e:
+        logger.error(f"Digitalizador analyze error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error analizando imagen: {str(e)}")
+
+
+@api_router.post("/digitalizador/export-csv")
+async def export_digitalizador_csv(request: DigitalizadorExportRequest):
+    """
+    Export digitalizador lines to CSV format for cutting machine.
+    Format: "CODE";THICKNESS;"DESCRIPTION";WIDTH;HEIGHT;ORIENTATION;0;0;"CODE"
+    """
+    try:
+        import re
+        
+        csv_lines = []
+        
+        for line in request.lines:
+            # Try to extract dimensions from description
+            # Pattern: "NNN x NNN" or "NNN.N x NNN.N"
+            dim_match = re.search(r'(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)', line.description)
+            
+            if dim_match:
+                width = int(float(dim_match.group(1)))
+                height = int(float(dim_match.group(2)))
+            else:
+                width = 0
+                height = 0
+            
+            # Build CSV line
+            # Format: "CODE";THICKNESS;"DESCRIPTION";WIDTH;HEIGHT;ORIENTATION;0;0;"CODE"
+            thickness_str = f"{request.materialThickness:.1f}".replace(".", ",")
+            csv_line = f'"{request.materialCode}";{thickness_str};"{line.description}";{width};{height};1;0;0;"{request.materialCode}"'
+            
+            # Add line for each quantity
+            for _ in range(line.quantity):
+                csv_lines.append(csv_line)
+        
+        csv_content = "\n".join(csv_lines)
+        
+        return {
+            "success": True,
+            "csv": csv_content,
+            "lineCount": len(csv_lines)
+        }
+        
+    except Exception as e:
+        logger.error(f"Export CSV error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error exportando CSV: {str(e)}")
+
+
 # Include the router in the main app (AFTER all endpoints are defined)
 app.include_router(api_router)
 
