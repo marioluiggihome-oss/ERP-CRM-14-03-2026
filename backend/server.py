@@ -138,6 +138,7 @@ class UserCreate(BaseModel):
     username: str
     password: str
     clientName: str
+    linkedClientId: Optional[str] = None
     isActive: bool = True
     isAdmin: bool = False
     isRepresentative: bool = False
