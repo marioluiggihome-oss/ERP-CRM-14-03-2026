@@ -835,6 +835,29 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               </select>
                             </div>
                           )}
+
+                          {/* Vincular a Cliente Activo */}
+                          {state.currentUser?.isAdmin && clients.length > 0 && (
+                            <div>
+                              <label className="text-xs font-black text-slate-600 uppercase mb-2 block">
+                                <Building2 size={12} className="inline mr-1" />
+                                Vincular a Cliente
+                              </label>
+                              <select
+                                value={userForm.linkedClientId || ''}
+                                onChange={(e) => setUserForm({...userForm, linkedClientId: e.target.value})}
+                                className="w-full bg-white border border-emerald-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-emerald-500"
+                              >
+                                <option value="">Sin cliente vinculado</option>
+                                {clients.filter(c => c.activo).map(client => (
+                                  <option key={client.id} value={client.id}>
+                                    {client.codigo} - {client.nombre}
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-[10px] text-slate-400 mt-1">El usuario pertenecerá a esta empresa/tienda</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
