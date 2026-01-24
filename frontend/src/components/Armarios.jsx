@@ -80,28 +80,36 @@ const Armarios = ({ state, setState }) => {
 
   // Actualizar módulos cuando cambia el número
   useEffect(() => {
-    const currentCount = moduleConfigs.length;
-    const targetCount = wardrobeConfig.modules;
+    setModuleConfigs(prevModules => {
+      const currentCount = prevModules.length;
+      const targetCount = wardrobeConfig.modules;
+      
+      if (targetCount > currentCount) {
+        const newModules = [...prevModules];
+        for (let i = currentCount; i < targetCount; i++) {
+          newModules.push({
+            id: i + 1,
+            components: [],
+            shelves: 4,
+            drawers: 0,
+            hangingRods: 1,
+            hangingHeight: 1200
+          });
+        }
+        return newModules;
+      } else if (targetCount < currentCount) {
+        return prevModules.slice(0, targetCount);
+      }
+      return prevModules;
+    });
     
-    if (targetCount > currentCount) {
-      const newModules = [...moduleConfigs];
-      for (let i = currentCount; i < targetCount; i++) {
-        newModules.push({
-          id: i + 1,
-          components: [],
-          shelves: 4,
-          drawers: 0,
-          hangingRods: 1,
-          hangingHeight: 1200
-        });
+    // Ajustar módulo seleccionado si es necesario
+    setSelectedModule(prev => {
+      if (prev >= wardrobeConfig.modules) {
+        return Math.max(0, wardrobeConfig.modules - 1);
       }
-      setModuleConfigs(newModules);
-    } else if (targetCount < currentCount) {
-      setModuleConfigs(moduleConfigs.slice(0, targetCount));
-      if (selectedModule >= targetCount) {
-        setSelectedModule(targetCount - 1);
-      }
-    }
+      return prev;
+    });
   }, [wardrobeConfig.modules]);
 
   // Calcular precios
