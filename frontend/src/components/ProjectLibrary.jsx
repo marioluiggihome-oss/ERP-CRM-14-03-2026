@@ -166,6 +166,17 @@ const ProjectLibrary = ({ state, setState }) => {
     }
   };
 
+  const createOpportunityFromProject = async (project) => {
+    if (window.confirm(`¿Crear una oportunidad en el CRM para "${project.customerName || project.budgetNumber}"?`)) {
+      try {
+        const result = await crmOpportunitiesAPI.createFromProject(project.id);
+        alert(`✅ Oportunidad creada: "${result.opportunity.title}"\nValor: ${result.opportunity.value.toLocaleString('es-ES')}€\nContacto: ${result.contact.name}`);
+      } catch (err) {
+        alert('Error al crear oportunidad: ' + err.message);
+      }
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
     try {
