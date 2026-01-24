@@ -56,6 +56,7 @@ const CRMLayout = ({ currentUser }) => {
         )}
         {activeTab === 'pipeline' && <CRMPipeline />}
         {activeTab === 'contacts' && <CRMContacts />}
+        {activeTab === 'calendar' && <CRMCalendar currentUser={currentUser} />}
       </div>
     </div>
   );
