@@ -352,7 +352,7 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
             )}
             <div>
               <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Agenda de Negocios</h1>
-              <p className="text-sm text-amber-600 font-bold">{currentUser?.clientName} · Prescriptor Comercial</p>
+              <p className="text-sm text-amber-600 font-bold">{currentUser?.clientName} · Colaborador Comercial</p>
             </div>
           </div>
           
