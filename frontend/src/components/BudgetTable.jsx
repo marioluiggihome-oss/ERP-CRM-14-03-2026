@@ -500,22 +500,6 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                  </select>
               </section>
 
-              <section className="space-y-2 pt-2 border-t border-indigo-50">
-                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">🪵 INCREMENTO CORTE VIGA</h4>
-                 <div className="flex items-center gap-2">
-                    <input 
-                      type="number" 
-                      value={state.vigaCutIncrement || 0} 
-                      onChange={e => setState(p => ({...p, vigaCutIncrement: parseFloat(e.target.value) || 0}))} 
-                      className="flex-1 bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-black outline-none focus:border-orange-500 text-center" 
-                      placeholder="0"
-                      step="0.5"
-                    />
-                    <span className="text-[9px] font-bold text-indigo-400">€</span>
-                 </div>
-                 <p className="text-[7px] text-indigo-300 italic">Se añade al total si hay corte de viga</p>
-              </section>
-
               {/* Botón para añadir línea manual */}
               <section className="pt-2 border-t border-indigo-50">
                 <button 
