@@ -4096,6 +4096,188 @@ async def delete_armario_project(project_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================
+# ARMARIOS - IA CONFIGURACIÓN Y RENDER
+# ============================================
+
+class IAConfigRequest(BaseModel):
+    """Solicitud para configurar armario con IA"""
+    instruction: str  # Ej: "Quiero un armario para una pareja con mucha ropa de colgar"
+    current_config: Dict = {}
+
+class IARenderRequest(BaseModel):
+    """Solicitud para generar render del armario"""
+    width: int
+    height: int
+    depth: int
+    modules: int
+    doorType: str
+    exteriorColorName: str
+    exteriorColorHex: str
+    interiorColorName: str
+    handleColorName: str
+    moduleConfigs: List[Dict] = []
+    roomStyle: str = "moderno"  # moderno, clásico, nórdico, minimalista
+
+@api_router.post("/armarios/ia/configure")
+async def ia_configure_armario(request: IAConfigRequest):
+    """Usar IA para configurar la distribución de módulos del armario"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Clave de IA no configurada")
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"armario-config-{uuid.uuid4()}",
+            system_message="""Eres un diseñador experto en armarios empotrados. Tu trabajo es configurar la distribución óptima de módulos de un armario basándote en las necesidades del usuario.
+
+DEBES responder SIEMPRE en formato JSON con esta estructura exacta:
+{
+  "modules": 3,
+  "doorType": "sliding",
+  "moduleConfigs": [
+    {"id": 1, "shelves": 4, "drawers": 0, "hangingRods": 1, "hangingHeight": 1200, "extras": {}},
+    {"id": 2, "shelves": 6, "drawers": 3, "hangingRods": 0, "hangingHeight": 0, "extras": {"jewelryTray": true}},
+    {"id": 3, "shelves": 2, "drawers": 0, "hangingRods": 2, "hangingHeight": 1000, "extras": {"shoesRack": true}}
+  ],
+  "extras": {"softClose": true, "led": true, "mirror": false},
+  "explanation": "Descripción breve de la configuración"
+}
+
+Tipos de puerta: "sliding" (corredera), "hinged" (abatible), "folding" (plegable)
+Extras por módulo: shoesRack, trousersRack, jewelryTray, tieRack, pulloutBasket
+Extras generales: softClose, led, mirror, antiFingerprint
+
+Considera:
+- Ropa de colgar larga (vestidos, abrigos): barras a 1600mm
+- Ropa de colgar corta (camisas): barras a 1000-1200mm
+- Barras dobles para maximizar espacio: hangingRods: 2, hangingHeight: 1000
+- Cajones para ropa interior, calcetines, etc.
+- Baldas para ropa doblada, bolsos
+- Zapatero para zapatos
+- Pantalonero para pantalones"""
+        )
+        
+        chat.with_model("gemini", "gemini-3-flash")
+        
+        # Construir prompt
+        prompt = f"""El usuario quiere configurar un armario con estas instrucciones:
+
+"{request.instruction}"
+
+Configuración actual del armario:
+- Ancho: {request.current_config.get('width', 2400)}mm
+- Alto: {request.current_config.get('height', 2400)}mm
+- Fondo: {request.current_config.get('depth', 600)}mm
+- Módulos actuales: {request.current_config.get('modules', 3)}
+
+Genera la configuración óptima en formato JSON."""
+
+        msg = UserMessage(text=prompt)
+        response = await chat.send_message(msg)
+        
+        # Parsear respuesta JSON
+        import json
+        import re
+        
+        # Extraer JSON de la respuesta
+        json_match = re.search(r'\{[\s\S]*\}', response)
+        if json_match:
+            config = json.loads(json_match.group())
+            return {"success": True, "config": config}
+        else:
+            return {"success": False, "error": "No se pudo generar configuración", "raw_response": response}
+            
+    except Exception as e:
+        logger.error(f"Error en IA configuración: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/armarios/ia/render")
+async def ia_render_armario(request: IARenderRequest):
+    """Generar render realista del armario usando IA"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import base64
+        
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Clave de IA no configurada")
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"armario-render-{uuid.uuid4()}",
+            system_message="You are a professional interior designer creating photorealistic renders of wardrobes."
+        )
+        
+        chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
+        
+        # Construir descripción del armario
+        door_type_desc = {
+            "sliding": "puertas correderas de panel completo",
+            "hinged": "puertas abatibles con tiradores",
+            "folding": "puertas plegables"
+        }.get(request.doorType, "puertas correderas")
+        
+        # Describir interior
+        interior_desc = []
+        for i, mod in enumerate(request.moduleConfigs[:3]):
+            items = []
+            if mod.get('hangingRods', 0) > 0:
+                items.append(f"{mod['hangingRods']} barra(s) para colgar ropa")
+            if mod.get('shelves', 0) > 0:
+                items.append(f"{mod['shelves']} baldas")
+            if mod.get('drawers', 0) > 0:
+                items.append(f"{mod['drawers']} cajones")
+            if items:
+                interior_desc.append(f"Módulo {i+1}: {', '.join(items)}")
+        
+        prompt = f"""Create a photorealistic interior design render of a modern built-in wardrobe/closet with the following specifications:
+
+DIMENSIONS: {request.width}mm width x {request.height}mm height x {request.depth}mm depth
+
+EXTERIOR:
+- Color: {request.exteriorColorName} (hex: {request.exteriorColorHex})
+- Door type: {door_type_desc}
+- Handle color: {request.handleColorName}
+- {request.modules} modules/sections
+
+INTERIOR CONFIGURATION:
+{chr(10).join(interior_desc) if interior_desc else "Multiple shelves and hanging rods"}
+
+STYLE: {request.roomStyle} bedroom style, soft natural lighting, high-end quality materials
+
+The wardrobe should be shown with doors partially open to reveal the interior organization. Include realistic materials like melamine, soft-close drawers, and chrome hanging rods. The image should look like a professional interior design photograph, not a 3D render or sketch.
+
+Generate a single high-quality photorealistic image."""
+
+        msg = UserMessage(text=prompt)
+        text_response, images = await chat.send_message_multimodal_response(msg)
+        
+        if images and len(images) > 0:
+            # Devolver la imagen en base64
+            return {
+                "success": True,
+                "image": {
+                    "data": images[0]["data"],
+                    "mime_type": images[0].get("mime_type", "image/png")
+                },
+                "description": text_response[:500] if text_response else None
+            }
+        else:
+            return {
+                "success": False,
+                "error": "No se pudo generar la imagen",
+                "text_response": text_response
+            }
+            
+    except Exception as e:
+        logger.error(f"Error en IA render: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include the router in the main app (AFTER all endpoints are defined)
 app.include_router(api_router)
 
