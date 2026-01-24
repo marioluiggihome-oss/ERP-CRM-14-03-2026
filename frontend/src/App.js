@@ -156,6 +156,32 @@ const App = () => {
     return state.brandColor || DEFAULT_BRAND_COLOR;
   }, [state.brandColor]);
 
+  // Check maintenance mode
+  const checkMaintenanceMode = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/maintenance/status`);
+      const data = await response.json();
+      
+      // Only block non-admin users
+      if (data.active && state.currentUser && !state.currentUser.isAdmin) {
+        setIsInMaintenance(true);
+      } else {
+        setIsInMaintenance(false);
+      }
+    } catch (err) {
+      console.error('Error checking maintenance:', err);
+    }
+  };
+
+  // Check maintenance periodically
+  useEffect(() => {
+    if (state.currentUser) {
+      checkMaintenanceMode();
+      const interval = setInterval(checkMaintenanceMode, 30000); // Check every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [state.currentUser]);
+
   const handleLogin = (user) => {
     setState(prev => ({ 
       ...prev, 
@@ -183,6 +209,11 @@ const App = () => {
             <Login onLogin={handleLogin} customLogo={state.logo} />
         </>
     );
+  }
+
+  // Maintenance screen for non-admin users
+  if (isInMaintenance && !state.currentUser?.isAdmin) {
+    return <MaintenanceScreen onCheckAgain={checkMaintenanceMode} />;
   }
 
   const carcassMaterialName = state.carcassMaterials?.find(m => m.id === state.selectedCarcassMaterialId)?.name || 'Blanco';
