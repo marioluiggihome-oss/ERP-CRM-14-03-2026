@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2 } from 'lucide-react';
 import "./App.css";
 import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
@@ -12,6 +12,7 @@ import CRMLayout from './components/CRMLayout';
 import Digitalizador from './components/Digitalizador';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import MaintenancePanel from './components/MaintenancePanel';
+import AdminWorkView from './components/AdminWorkView';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI } from './services/api';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 
@@ -22,6 +23,7 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isInMaintenance, setIsInMaintenance] = useState(false);
   const [showMaintenancePanel, setShowMaintenancePanel] = useState(false);
+  const [showAdminWorkView, setShowAdminWorkView] = useState(false);
   
   const [state, setState] = useState(() => {
     const defaultState = {
