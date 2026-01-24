@@ -67,7 +67,10 @@ const CRMCalendar = ({ currentUser }) => {
 
   useEffect(() => {
     loadContactsAndOpportunities();
-  }, []);
+    if (currentUser?.isAdmin) {
+      loadPrescriptorNotes();
+    }
+  }, [currentDate]);
 
   const loadData = async () => {
     setIsLoading(true);
