@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Target, TrendingUp, Euro, Phone, Calendar, Clock, 
-  ArrowUpRight, ArrowDownRight, CheckCircle2, Loader2
+  ArrowUpRight, ArrowDownRight, CheckCircle2, Loader2, AlertTriangle, UserX, ShoppingCart
 } from 'lucide-react';
-import { crmDashboardAPI } from '../services/api';
+import { crmDashboardAPI, crmAnalyticsAPI } from '../services/api';
 
 const CRMDashboard = ({ onNavigate }) => {
   const [dashboard, setDashboard] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState('30d');
 
