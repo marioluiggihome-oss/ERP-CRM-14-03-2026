@@ -11,125 +11,110 @@ Feature requests have been provided incrementally through a PowerPoint presentat
 5.  **AI Catalog Import (Telemetría IA):** A feature to upload product sheets and use AI (Gemini Vision) to auto-populate the inventory.
 6.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets.
 7.  **PDF Export:** Generate a PDF of the current budget.
-8.  **Database Backup System:**
-    *   Automatic backups emailed twice daily to .
-    *   Manual backup and restore functionality from the UI.
+8.  **Database Backup System:** Automatic and manual backups.
 9.  **Bulk Product Import:** A robust system to parse and import products from a large PDF catalog.
 10. **Security:** Ensure user passwords are stored securely.
+11. **CRM Integration:** Integrate a full sales CRM with a dashboard, pipeline, contacts, and permissions.
+12. **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders for each furniture piece.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack application with a React frontend and a FastAPI backend connected to a MongoDB database. All data persistence has been successfully migrated from  to the database.
+A full-stack application with a React frontend and a FastAPI backend connected to a MongoDB database.
 
 The application includes:
-- A FastAPI backend with CRUD APIs for users, products, materials, projects, and settings.
-- A React frontend fully integrated with the backend API.
-- A complete, hierarchical user and permissions system with  password hashing.
-- An advanced inventory management system with over 2,000 products, bulk-delete, and a sticky management column to ensure edit/delete buttons are always visible.
-- A settings panel (Master) that now includes the **AI Telemetry** feature as a tab.
-- A working AI Telemetry feature for catalog import using Gemini Vision, with a UI that indicates new vs. duplicate items. (Note: The Gemini API has proven unreliable).
-- A project library to save, load, and delete budgets.
-- A completed PDF export feature for budgets.
-- A comprehensive database backup system that emails a JSON backup automatically twice a day (via SendGrid and APScheduler) and allows for manual backups/restores through a dedicated UI ().
-- A sophisticated PDF parsing script was developed to bulk-import 1,999 products from a 479-page catalog.
+- A complete, hierarchical user and permissions system.
+- An advanced inventory management system with **3,533 unique products**, correctly parsed from PDF catalogs with proper naming, categorization (ALTOS, BAJOS, COLUMNAS), and pricing.
+- A settings panel (Master) to manage users, permissions, and system-wide margins.
+- A project library to save, load, delete, and archive budgets.
+- A PDF export feature for budgets.
+- A comprehensive database backup system (automatic and manual).
+- A fully integrated **CRM module** featuring a Dashboard, a Kanban-style sales pipeline, and a contact manager. Access to the CRM is controlled by a new  permission managed by the admin. The CRM UI has been refined to use a clean, tab-based layout.
+- Data integrity has been significantly improved by correcting product names, categories, and dimensions based on user feedback. UI labels have been translated from W, H, D to ANCHO, ALTO, FONDO.
 
 **Last working item**:
-- Last item agent was working: The agent just completed a bulk import of 1,999 products from a large PDF catalog. The user's last instruction was to verify that no duplicate articles were created during this process.
-- Status: NOT STARTED
+- Last item agent was working: The user provided a multi-part request:
+    1.  Reorder the sidebar menu to place PRESUPUESTO below CRM.
+    2.  Fix dimension display inconsistency: convert width from millimeters (e.g., 400) to centimeters (e.g., 40) in the UI for consistency.
+    3.  Implement a major new feature: a despiece (bill of materials) calculator.
+    The agent successfully reordered the menu items in .
+- Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? backend testing agent
+- Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Critical Frontend Stability (P0)**
-    -   **Description:** The user experienced a recurring React DOM crash ( error) that prevented them from using the app in a normal browser session (it only worked in incognito).
-    -   **Attempted fixes:** The agent implemented several workarounds:
-        1.  Added an  with an aggressive cache-clearing button (, , Service Workers, browser cache).
-        2.  Added a monkey-patch in  to catch / errors, which are often caused by browser extensions.
-        3.  Removed .
-        4.  Added code to clear the root DOM node before mounting the React app.
-    -   **Current Status:** The issue appears to be resolved for the user, but the root cause was not definitively identified (suspected browser cache or extension conflict). The fix is a workaround, and the issue could recur.
-    -   **Next debug checklist:** If the issue reappears, the next agent should investigate potential conflicts between third-party scripts (like PostHog, found in ) and React's DOM rendering.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical blocker that prevents the user from accessing the application. A permanent fix is needed for stability.
+-   **Issue 1: Inconsistent Product Dimensions Display (P0)**
+    -   **Description:** The user pointed out that dimensions are inconsistent. For example, a width of 400mm is displayed as 400, while the user expects 40 to match the centimeter-based display for height and depth. This needs to be corrected across the UI, specifically in the  component for both the library and the budget view.
+    -   **Attempted fixes:** None yet.
+    -   **Next debug checklist:**
+        -   Modify .
+        -   Locate where , , and  are rendered in both the budget item list and the product library list.
+        -   Divide the  value by 10 before displaying it. Ensure this doesn't affect the underlying data, only the presentation.
+    -   **Why fix this issue and what will be achieved with the fix?** To ensure all dimensions are displayed consistently in centimeters, improving clarity and usability.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** frontend
+    -   **Blocked on other issue:** None
+
+-   **Issue 2: Critical Frontend Stability (P1)**
+    -   **Description:** The user previously experienced a recurring React DOM crash ( error) that was patched but not fully diagnosed.
+    -   **Current Status:** The issue did not reappear in the last session, but the workaround in  may be masking the root cause. It remains a stability risk.
+    -   **Why fix this issue and what will be achieved with the fix?** A permanent fix is needed for application stability.
     -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** frontend
     -   **Blocked on other issue:** None
 
--   **Issue 2: Unreliable AI Telemetry Feature (P2)**
-    -   **Description:** The AI Telemetry feature, which relies on the Gemini Vision API, frequently failed during the session with 502 Bad Gateway errors and timeouts.
-    -   **Attempted fixes:** The agent created a workaround by developing a robust server-side PDF parsing script using usage: pymupdf [-h]
-               {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-               ...
-
-------------------------- Basic PyMuPDF Functions -------------------------
-
-options:
-  -h, --help            show this help message and exit
-
-Subcommands:
-  {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-                        Enter 'command -h' for subcommand specific help to import products, bypassing the Gemini API.
-    -   **Next debug checklist:** Investigate the  errors. Check if a smaller payload or a different region for the API call improves reliability. The feature may need to be redesigned with better error handling, retries, or to process smaller chunks.
-    -   **Why fix this issue and what will be achieved with the fix?** The AI import is a core requested feature. Fixing it would restore the intended functionality and provide a better user experience than manual parsing.
+-   **Issue 3: Unreliable AI Telemetry Feature (P2)**
+    -   **Description:** The AI Telemetry feature (Gemini Vision API) for catalog import frequently failed. A robust manual PDF parsing script was created as a workaround.
+    -   **Current Status:** The original AI feature is still considered broken due to external API instability. The manual script is the primary import method.
     -   **Status:** BLOCKED
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** both
     -   **Blocked on other issue:** Blocked on external Gemini API stability.
 
 **In progress Task List**:
--   **Task 1: Verify for Duplicate Products in Inventory (P0)**
-    -   **Where to resume:** The user requested verification that the recent bulk import of 1,999 products did not create duplicates. The next agent should write a script or use the MongoDB shell to query the  collection for documents with identical  fields.
-    -   **What will be achieved with this?** This will ensure data integrity in the product catalog and fulfill the user's direct request.
-    -   **Status:** NOT STARTED
-    -   **Should Test frontend/backend/both after fix?** backend
+-   **Task 1: Reorder Sidebar Menu (P0)**
+    -   **Where to resume:** The agent has already modified  to move the PRESUPUESTO button below the CRM block. This part is complete but needs user verification.
+    -   **What will be achieved with this?** Fulfills the user's UI layout request.
+    -   **Status:** FINISHED
+    -   **Should Test frontend/backend/both after fix?** frontend
     -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-  - **Implement Remaining PowerPoint Features (P1):** Re-investigate the  file to identify and implement any remaining unimplemented sections.
+  - **Implement Despiece (Bill of Materials) System (P0):** This is a major new feature. The user wants to calculate the components of a furniture piece (top cover, bottom cover, back panel, sides, door) with their precise measurements. The output should be two editable views:
+    1.  **Orden de Montaje (Mounting Order):** A list of components for assembly.
+    2.  **Orden de Despiece (Cutting List):** A list of parts with dimensions, ready for production.
+    This will require significant backend logic for calculations and new frontend components for the editable views.
+
 - **Future Tasks:**
-  - **Project Archiving (ARCHIVO) (P2):** Implement a dedicated archive status or section for completed or old projects.
+  - **Implement Remaining PowerPoint Features (P1):** Re-investigate  and  to identify minor unimplemented features, such as a dedicated UI for managing the brand logo (Identidad).
+  - **Project Archiving (ARCHIVO) (P2):** The current implementation is basic. A dedicated, more robust archive section might be needed.
 
 **Completed work in this session**
 - List of all completed tasks with file and method name:
-  - **PDF Export Feature:** Completed the implementation and fixed bugs related to  versioning in .
-  - **Automatic Email Backup System:**
-    - Implemented a scheduler () in  to run twice daily.
-    - Integrated SendGrid to email database backups.
-    - Created backend endpoints () for manual control.
-    - Built a frontend UI in a new  component.
-  - **Bulk Product Import from PDF:**
-    - Created a sophisticated script using usage: pymupdf [-h]
-               {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-               ...
-
-------------------------- Basic PyMuPDF Functions -------------------------
-
-options:
-  -h, --help            show this help message and exit
-
-Subcommands:
-  {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-                        Enter 'command -h' for subcommand specific help to parse a 479-page PDF, extracting 1,999 products with their prices and attributes.
-    - Successfully imported all products into the database.
-  - **Critical Stability Fix:** Resolved a recurring React DOM error by implementing aggressive cache clearing and workarounds in .
-  - **UI/UX Improvements:**
-    - Moved the Telemetría IA feature into the Master settings modal ().
-    - Fixed a table layout bug by making the GESTIÓN column sticky, ensuring edit/delete buttons are always visible.
-  - **Bug Fixes:**
-    - Corrected an API call in the Telemetry feature (using  instead of the non-existent ).
-
+  - **Product Data Overhaul:**
+    - Re-parsed three multi-part PDF catalogs to fix data quality issues.
+    - Successfully imported **3,533 unique products** with correct names, prices, categories, series, and dimensions.
+    - Corrected product heights (e.g., 8cm to 80cm) and categories (e.g., BAJOS were miscategorized as ALTOS).
+  - **CRM Integration (from scratch):**
+    - **Backend:** Added Pydantic models and CRUD API endpoints for Contacts, Opportunities, and Activities in .
+    - **Frontend:** Created new components: , , , and .
+    - **Permissions:** Implemented a  permission flag for users, editable by the Admin in .
+    - **UI Refinement:** Consolidated CRM navigation into a single sidebar button and a tabbed internal layout for a cleaner user experience.
+  - **UI and Data Fixes:**
+    - Changed table headers from W, H, D to **ANCHO, ALTO, FONDO** in  for both the library and budget views.
+    - Corrected product name formatting (e.g., ALTO 350CM to ALTO 35CM).
+    - Ensured products are correctly grouped by series (e.g., BAJOS 70 FONDO ESTANDAR) in the library filter.
 - Recently completed:
-  - Bulk import of 1,999 products (DONE)
-  - Critical frontend stability patch (DONE)
-  - GESTIÓN column UI fix (DONE)
-  - Automatic backup via email (DONE)
-  - PDF Export feature (DONE)
+  - CRM Integration (DONE)
+  - Product Catalog Re-import and Correction (DONE)
+  - UI Data Display Fixes (ANCHO/ALTO/FONDO, categories) (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-- The core reliability of the Google Gemini API remains an issue. The agent created a successful workaround but did not fix the underlying API timeout/error problem.
+- The core reliability of the Google Gemini API for the AI Telemetry feature remains unresolved.
 
 **Known issue recurrence from previous fork**
 - Issue recurrence in previous fork: None
@@ -140,9 +125,9 @@ Subcommands:
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, , .
-- **Backend:** Python, FastAPI, Pydantic,  (for scheduled tasks).
-- **Database:** MongoDB (via ).
+- **Frontend:** React, TailwindCSS.
+- **Backend:** Python, FastAPI, Pydantic, .
+- **Database:** MongoDB ().
 - **PDF Parsing:** usage: pymupdf [-h]
                {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
                ...
@@ -154,96 +139,79 @@ options:
 
 Subcommands:
   {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-                        Enter 'command -h' for subcommand specific help for advanced table and text extraction.
-- **Email:** SendGrid for transactional emails.
-- **AI Integration:**  library for Google Gemini Vision (currently unreliable).
+                        Enter 'command -h' for subcommand specific help for text, table, and layout-based data extraction.
+- **Email:** SendGrid.
 
 **key DB schema**
-- : {id, username, password (hashed), clientName, isAdmin, permissions...}
-- : {id, code, name, module, category, series, visualType, width, height, depth, price_zones (p1-p12)...}
-- : {id, name, fixedIncrement, thickness}
-- : {id, name, customerName, items: [BudgetItem]}
-- : {id, pointValueMontada, pointValueDespiece, brandColor...}
+- : {id, username, password, clientName, permissions: {..., canAccessCRM}}
+- : {id, code, name, category, series, width, height, depth, zonePoints: {Z1-Z12}}
+- : {id, name, customerName, items, status: ('active'|'archived')}
+- : {id, name, company, email, phone, status, ownerId}
+- : {id, name, contactId, stage, value, closeDate, ownerId}
+- : {id, type, subject, dueDate, ownerId, opportunityId, contactId}
 
 **changes in tech stack**
--  added to the backend for job scheduling.
--  added to the backend for sending emails.
-- usage: pymupdf [-h]
-               {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-               ...
-
-------------------------- Basic PyMuPDF Functions -------------------------
-
-options:
-  -h, --help            show this help message and exit
-
-Subcommands:
-  {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-                        Enter 'command -h' for subcommand specific help was used extensively for PDF parsing, though not added as a permanent dependency.
+- No new technologies were added. The existing stack was extended.
 
 **All files of reference**
-- : Heavily modified to include the backup scheduler, email logic, and new backup API endpoints.
-- : Critically modified to add an ErrorBoundary, aggressive cache-clearing functions, and a patch for browser extension compatibility.
-- : Refactored to integrate the Telemetry AI feature as a tab and to fix the inventory table's sticky column.
-- : New component created for the backup management UI.
-- : Modified to integrate the  component and remove the old Telemetry UI links.
-- : Updated with functions to call the new backend backup endpoints.
+- : Significantly extended with models and over 15 new API endpoints for the CRM functionality. Now over 1200 lines long.
+- : Heavily modified to integrate the CRM components, add conditional rendering based on  permission, and reorder the main navigation.
+- : Modified to display ANCHO, ALTO, FONDO headers and to fix product categorization.
+- : Modified to add the Acceso al CRM toggle in the user permissions form.
+- : Extended with API functions for all CRM operations.
+- **New Files Created:**
+  - 
+  - 
+  - 
+  - 
+
+**Areas that need refactoring**:
+- **Monolithic Backend:**  is now extremely large and handles everything (users, products, backups, CRM, etc.). It urgently needs to be refactored into a proper FastAPI project structure, with API routers, Pydantic models, and database services organized into separate directories (e.g., , ).
 
 **key api endpoints**
-- : (GET) Checks the status of the backup scheduler.
-- : (POST) Triggers a manual backup to be sent via email.
-- : (POST) Restores the database from an uploaded JSON file.
-- : (POST) Used for the mass import of products.
-- All previous endpoints for users, products, projects, etc., still exist.
+- : (GET) Aggregated CRM data.
+- : (GET, POST) CRUD for contacts.
+- : (GET, POST) CRUD for opportunities.
+- : (GET, POST) CRUD for activities.
+- : (PUT) Updated to handle the  permission.
 
 **Critical Info for New Agent**
-- **Frontend Stability is Fragile:** The application was plagued by a critical React DOM error. While a patch is in place in , the root cause is not fully understood. Be cautious when modifying the DOM structure or introducing new libraries. If the user reports the error, instruct them to use the Limpiar Caché button on the error screen first.
-- **AI Telemetry API is Unreliable:** The Gemini Vision API failed repeatedly. The agent successfully pivoted to a manual usage: pymupdf [-h]
-               {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-               ...
-
-------------------------- Basic PyMuPDF Functions -------------------------
-
-options:
-  -h, --help            show this help message and exit
-
-Subcommands:
-  {show,clean,join,extract,embed-info,embed-add,embed-del,embed-upd,embed-extract,embed-copy,gettext,internal}
-                        Enter 'command -h' for subcommand specific help script for the large catalog import. Do not rely on the AI feature for large imports until the underlying API instability is resolved.
-- **Backup System:** A complete, automated email backup system is now in place using SendGrid. The API key is in .
+- **User's Next Priority:** The user's most important upcoming task is the **despiece (Bill of Materials) system**. This is a complex feature requiring careful planning.
+- **Dimension Units:** The user wants all dimensions displayed in **centimeters**. Width is currently stored in millimeters and must be converted for display.
+- **Backend Refactoring:** The  file is unmanageably large. Propose a refactoring plan to the user to break it down into a scalable structure before adding more complex features like the despiece system.
 
 **documents and test reports created in this job**
 - 
 - 
-- : Updated multiple times.
-- : The full 479-page product catalog.
-- : The result of the successful PDF parsing, containing 1,999 products.
+-  (Updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests to import all products from a large PDF catalog, paying close attention to details. (IN PROGRESS)
-2.  **User:** Asks to verify that no duplicate articles were created after the bulk import. (PENDING)
-3.  **User:** Reports no me deja editar ni borrar aquí (can't edit/delete) and no funciona la subida de artículos por telemetría ia (telemetry upload doesn't work). (COMPLETED - Both issues were fixed).
-4.  **User:** Reports no funciona after a fix attempt for the main crash. (ADDRESSED)
-5.  **User:** Reports sigue pasando lo mismo (still happening) after a cache-clearing suggestion. (ADDRESSED)
-6.  **User:** Confirms the app works in incognito mode and asks to keep Telemetry in the master panel. (ADDRESSED)
-7.  **User:** Reports the app is crashing on login. (ADDRESSED)
-8.  **User:** Asks to move the Telemetry IA feature into the Master panel. (COMPLETED)
-9.  **User:** Reports the app is still crashing, provides a screenshot of the Error Boundary. (ADDRESSED)
-10. **User:** Reports the app is still crashing. (ADDRESSED)
+1.  **User:** Asks to integrate a CRM from a given URL. (COMPLETED)
+2.  **User:** Confirms the integration plan and asks to delete example CRM data. (COMPLETED)
+3.  **User:** Asks if the CRM is managed by permissions. (COMPLETED)
+4.  **User:** Specifies permission logic: Admin sees everything and can grant access to Comerciales. (COMPLETED)
+5.  **User:** Reports the sidebar menu design looks bad with the new CRM buttons. (COMPLETED - Redesigned with a tabbed layout).
+6.  **User:** Reports that product data is incorrect: height is 8 instead of 80 and table headers are W, H, D. (COMPLETED)
+7.  **User:** Reports that BAJOS products are grouped under GENERAL instead of their own categories. (COMPLETED)
+8.  **User:** Clarifies that the W, H, D headers are wrong in the main budget table, not just the library. (COMPLETED)
+9.  **User:** Requests to move PRESUPUESTO below CRM in the sidebar. (IN PROGRESS - code changed, pending verification)
+10. **User:** Adds new requests: convert width display to cm and create the despiece (bill of materials) system. (PENDING)
 
 **Project Health Check:**
-- **Broken:** The frontend stability is a high risk. While patched, the root cause of the React DOM error is unknown and could resurface.
+- **Broken:**
+    - The frontend stability is still a potential risk due to the un-diagnosed DOM error from a previous session.
+    - Product dimension display is inconsistent (mm vs cm), which the user has flagged as a bug.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Google Gemini Vision:** Used via  for AI catalog import. Uses Emergent LLM Key. (Currently unreliable).
-- **SendGrid:** Used for sending automatic database backups via email. Requires a User API Key (provided and stored in ).
-- **jspdf / html2canvas:** Frontend libraries for generating PDF files.
+- **Google Gemini Vision:** Via  for AI catalog import. Uses Emergent LLM Key. (Unreliable, workaround in place).
+- **SendGrid:** For sending database backups. Requires a User API Key.
+- **jspdf / html2canvas:** For PDF generation on the frontend.
 
 **Testing status**
-- Testing agent used after significant changes: YES (for Telemetry UI changes).
+- Testing agent used after significant changes: YES (after CRM integration and again after data fixes).
 - Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None in this session.
+- Test files created: The testing agent created and ran new test suites, available in the reports.
 - Known regressions: None.
 
 **Credentials to test flow:**
@@ -251,4 +219,6 @@ Subcommands:
 - **Password:** MARIO
 
 **What agent forgot to execute**
-- The agent was about to execute the user's final request to check for duplicate products after the bulk import but the session ended. This is the highest priority pending task.</analysis>
+- The agent was in the middle of implementing the user's latest set of requests. The following items are pending:
+    1.  **Dimension Conversion:** Convert the display of product width from millimeters to centimeters across the UI.
+    2.  **Despiece System:** The major feature request to create a bill of materials calculator has not been started.</analysis>
