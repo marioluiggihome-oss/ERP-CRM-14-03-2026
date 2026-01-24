@@ -125,7 +125,8 @@ const CRMContacts = ({ currentUser }) => {
         source: contact.source || '',
         segment: contact.segment || '',
         prescriptorId: contact.prescriptorId || '',
-        prescriptorName: contact.prescriptorName || ''
+        prescriptorName: contact.prescriptorName || '',
+        tags: contact.tags || []
       });
     } else {
       setEditingContact(null);
@@ -141,7 +142,8 @@ const CRMContacts = ({ currentUser }) => {
         source: '',
         segment: '',
         prescriptorId: currentUser?.isPrescriptor ? currentUser?.id : '',
-        prescriptorName: currentUser?.isPrescriptor ? currentUser?.clientName : ''
+        prescriptorName: currentUser?.isPrescriptor ? currentUser?.clientName : '',
+        tags: []
       });
     }
     setShowModal(true);
