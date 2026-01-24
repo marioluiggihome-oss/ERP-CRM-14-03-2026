@@ -116,6 +116,7 @@ class UserResponse(BaseModel):
     id: str
     username: str
     clientName: str
+    linkedClientId: Optional[str] = None
     isActive: bool = True
     isAdmin: bool = False
     isRepresentative: bool = False
