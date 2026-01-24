@@ -144,6 +144,7 @@ class UserCreate(BaseModel):
     isActive: bool = True
     isAdmin: bool = False
     isRepresentative: bool = False
+    isPrescriptor: bool = False
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
@@ -166,6 +167,7 @@ class UserUpdate(BaseModel):
     isActive: Optional[bool] = None
     isAdmin: Optional[bool] = None
     isRepresentative: Optional[bool] = None
+    isPrescriptor: Optional[bool] = None
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
     allowedCatalogIds: Optional[List[str]] = None
