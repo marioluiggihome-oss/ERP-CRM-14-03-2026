@@ -35,6 +35,7 @@ const CRMContacts = ({ currentUser }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('');
   const [prescriptorFilter, setPrescriptorFilter] = useState('');
+  const [businessTypeFilter, setBusinessTypeFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [formData, setFormData] = useState({
