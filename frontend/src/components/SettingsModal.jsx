@@ -103,6 +103,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     notas: ''
   });
 
+  // Maintenance states
+  const [maintenanceStatus, setMaintenanceStatus] = useState(null);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [maintenanceActivating, setMaintenanceActivating] = useState(false);
+  const [maintenanceDeactivating, setMaintenanceDeactivating] = useState(false);
+  const [maintenanceBackups, setMaintenanceBackups] = useState([]);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('Sistema en actualización. Volvemos pronto.');
+  const [maintenanceMinutes, setMaintenanceMinutes] = useState(30);
+  const [maintenanceCreateBackup, setMaintenanceCreateBackup] = useState(true);
+
   // Load clients and segments when tab is active
   useEffect(() => {
     if (isOpen && activeTab === 'clients') {
