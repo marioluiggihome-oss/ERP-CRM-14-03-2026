@@ -234,15 +234,46 @@ codigo;nombre;cif;direccion;localidad;provincia;cp;telefono;email;descuento;acti
 
 ## Base de Datos
 - Total productos: **3,534**
-- Colecciones principales: users, products, projects, contacts, opportunities, digitalizador_history, system_counters, system_backups, system_settings
+- Colecciones principales: users, products, projects, contacts, opportunities, digitalizador_history, system_counters, system_backups, system_settings, calendar_events
 
 ## Menú Lateral (Admin)
-1. CRM
+1. CRM (Gestión Comercial)
 2. PRESUPUESTO
 3. IA LAB
 4. ARCHIVO
 5. DIGITALIZADOR
-6. COPIA SEGURIDAD
-7. **MANTENIMIENTO** (nuevo)
-8. MASTER
-9. SALIR
+6. PANEL ADMIN
+7. MASTER (incluye Backups y Mantenimiento)
+8. SALIR
+
+## CRM - Gestión Comercial (24/01/2026)
+
+### Pestañas del CRM:
+1. **Resumen** - Dashboard con estadísticas, alertas de clientes inactivos
+2. **Oportunidades** - Embudo de ventas (Kanban)
+3. **Contactos** - Gestión de contactos con conversión a clientes
+4. **Calendario** - Planificación de citas, seguimientos, llamadas
+
+### Calendario CRM:
+- **Vistas:** Mensual, Semanal, Diaria (tipo Google Calendar)
+- **Tipos de eventos:** Cita/Visita, Seguimiento, Llamada, Reunión, Otro
+- **Visibilidad:**
+  - Usuario normal: Solo sus eventos
+  - Admin: Todos los eventos (con checkbox "Ver todos")
+  - Comercial: Eventos de sus tiendas asignadas
+- **Integración:** Vincular eventos a contactos y oportunidades
+- **Funcionalidades:** Crear, editar, eliminar, marcar completado
+
+### Estados del Embudo de Ventas (Pipeline):
+1. Nuevo → 2. Contactado → 3. Presupuesto Enviado → 4. En Negociación → 5. Venta Cerrada / Perdida
+
+### Estados de Contactos:
+- Nuevo, Activo, Cliente, Inactivo
+
+### Endpoints del Calendario:
+- `GET /api/crm/calendar/event-types` - Tipos de eventos
+- `GET /api/crm/calendar/events` - Listar eventos (con filtros)
+- `POST /api/crm/calendar/events` - Crear evento
+- `PUT /api/crm/calendar/events/{id}` - Actualizar evento
+- `DELETE /api/crm/calendar/events/{id}` - Eliminar evento
+- `POST /api/crm/calendar/events/{id}/complete` - Marcar completado
