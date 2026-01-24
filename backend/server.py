@@ -3935,6 +3935,167 @@ async def fix_product_data():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================
+# ARMARIOS - PROYECTOS
+# ============================================
+
+class ArmarioModuleConfig(BaseModel):
+    """Configuración de un módulo de armario"""
+    id: int
+    shelves: int = 4
+    drawers: int = 0
+    hangingRods: int = 1
+    hangingHeight: int = 1200
+    extras: Dict = {}
+
+class ArmarioProject(BaseModel):
+    """Proyecto de armario completo"""
+    name: str
+    customerName: str = ""
+    projectRef: str = ""
+    width: int = 2400
+    height: int = 2400
+    depth: int = 600
+    modules: int = 3
+    doorType: str = "sliding"
+    exteriorColor: str = "010"
+    interiorColor: str = "010"
+    handleColor: str = "231"
+    endLeft: str = "standard"
+    endRight: str = "standard"
+    moduleConfigs: List[ArmarioModuleConfig] = []
+    extras: Dict = {}
+    ivaRate: float = 21.0
+    customAccessories: List[Dict] = []
+    totalPrice: float = 0.0
+    totalArea: float = 0.0
+
+class ArmarioProjectCreate(ArmarioProject):
+    pass
+
+class ArmarioProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    customerName: Optional[str] = None
+    projectRef: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    depth: Optional[int] = None
+    modules: Optional[int] = None
+    doorType: Optional[str] = None
+    exteriorColor: Optional[str] = None
+    interiorColor: Optional[str] = None
+    handleColor: Optional[str] = None
+    endLeft: Optional[str] = None
+    endRight: Optional[str] = None
+    moduleConfigs: Optional[List[ArmarioModuleConfig]] = None
+    extras: Optional[Dict] = None
+    ivaRate: Optional[float] = None
+    customAccessories: Optional[List[Dict]] = None
+    totalPrice: Optional[float] = None
+    totalArea: Optional[float] = None
+
+@api_router.post("/armarios/projects")
+async def create_armario_project(project: ArmarioProjectCreate, userId: str = ""):
+    """Crear nuevo proyecto de armario"""
+    try:
+        project_dict = project.model_dump()
+        project_dict["id"] = str(uuid.uuid4())
+        project_dict["userId"] = userId
+        project_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
+        project_dict["updatedAt"] = datetime.now(timezone.utc).isoformat()
+        
+        await db.armario_projects.insert_one(project_dict)
+        
+        # Remover _id de MongoDB
+        project_dict.pop("_id", None)
+        
+        return {"success": True, "project": project_dict}
+    except Exception as e:
+        logger.error(f"Error creating armario project: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/armarios/projects")
+async def get_armario_projects(userId: str = ""):
+    """Obtener lista de proyectos de armarios"""
+    try:
+        query = {}
+        if userId:
+            query["userId"] = userId
+        
+        projects = await db.armario_projects.find(
+            query,
+            {"_id": 0}
+        ).sort("updatedAt", -1).to_list(100)
+        
+        return {"success": True, "projects": projects}
+    except Exception as e:
+        logger.error(f"Error getting armario projects: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/armarios/projects/{project_id}")
+async def get_armario_project(project_id: str):
+    """Obtener un proyecto de armario específico"""
+    try:
+        project = await db.armario_projects.find_one(
+            {"id": project_id},
+            {"_id": 0}
+        )
+        
+        if not project:
+            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+        
+        return {"success": True, "project": project}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting armario project: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/armarios/projects/{project_id}")
+async def update_armario_project(project_id: str, update: ArmarioProjectUpdate):
+    """Actualizar un proyecto de armario"""
+    try:
+        update_dict = {k: v for k, v in update.model_dump().items() if v is not None}
+        update_dict["updatedAt"] = datetime.now(timezone.utc).isoformat()
+        
+        result = await db.armario_projects.update_one(
+            {"id": project_id},
+            {"$set": update_dict}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+        
+        # Obtener proyecto actualizado
+        project = await db.armario_projects.find_one(
+            {"id": project_id},
+            {"_id": 0}
+        )
+        
+        return {"success": True, "project": project}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating armario project: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/armarios/projects/{project_id}")
+async def delete_armario_project(project_id: str):
+    """Eliminar un proyecto de armario"""
+    try:
+        result = await db.armario_projects.delete_one({"id": project_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+        
+        return {"success": True, "message": "Proyecto eliminado"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting armario project: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include the router in the main app (AFTER all endpoints are defined)
 app.include_router(api_router)
 
