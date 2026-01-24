@@ -545,6 +545,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </button>
           )}
           
+          {state.currentUser?.isAdmin && (
+            <button
+              onClick={() => setActiveTab('telemetry')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'telemetry' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+            >
+              <Zap size={16} />
+              Telemetría IA
+            </button>
+          )}
+          
           <button
             onClick={() => setActiveTab('identity')}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
