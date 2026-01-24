@@ -69,32 +69,72 @@
 - SVG personalizado representando un corte diagonal
 - Tooltip informativo
 
-## Sistema de Clientes Activos (NUEVO - 24/01/2026)
+## Sistema de Clientes Potenciales y Activos (24/01/2026)
 
 ### Funcionalidad Implementada:
 - **Nueva pestaña "CLIENTES"** en Panel Maestro (solo Admin)
+- **Dos tipos de cliente**: Potenciales (🟠 naranja) y Activos (🟢 verde)
+- **Flujo de conversión**: Potencial → Activo asignando código del programa de gestión
+- **Estadísticas**: Total, Potenciales, Activos en cards superiores
+- **Filtros avanzados**: Por tipo, por segmento, búsqueda de texto
+- **Segmentos disponibles**: DECORADORES-INTERIORISTAS, PROMOTORES, CONSTRUCTORES, GRANDES CLIENTES, REVENDEDORES, ESTUDIOS DE COCINA Y BAÑOS, TIENDAS DE ARMARIOS, USUARIOS FINALES
 - **CRUD completo**: Crear, ver, editar y eliminar clientes
 - **Importación masiva CSV**: Subir archivo con múltiples clientes
 - **Vinculación Usuario ↔ Cliente**: Asociar usuarios a clientes empresariales
 
+### CRM → Contactos: Convertir a Cliente Potencial
+- **Botón "Convertir a Cliente Potencial"** (icono UserCheck naranja) en cada contacto no convertido
+- Copia automáticamente datos del contacto a la BD de clientes como potencial
+- El contacto muestra etiqueta "CONVERTIDO" (verde) después de la conversión
+- Actualiza el campo `convertedToClientId` en el contacto
+- Se puede gestionar el cliente desde Maestro → Clientes
+
+### Activación de Clientes
+- **Botón "Activar"** (✓ verde) visible solo para clientes potenciales sin código
+- Modal para asignar código único del programa de gestión
+- El cliente pasa de tipo "potencial" a "activo"
+- Se registra fecha de conversión (`convertidoAt`)
+
+### Vinculación Usuario ↔ Cliente
+- Al editar usuario, dropdown "Vincular a Cliente" con todos los clientes activos
+- **Herencia de descuento**: El usuario hereda automáticamente el descuento del cliente vinculado
+- Texto de ayuda explica la funcionalidad
+
+### Vista para Comerciales: "Mis Tiendas"
+- **Botón "MIS TIENDAS"** en sidebar (solo visible para comerciales, no admin)
+- Muestra tiendas asignadas al comercial
+- Lista proyectos creados por esas tiendas
+- Lista oportunidades CRM de esas tiendas
+- Filtros por tienda y búsqueda de texto
+
 ### Campos del Cliente:
 | Campo | Descripción |
 |-------|-------------|
-| `codigo` | Código del programa de gestión (único) |
+| `tipo` | 'potencial' o 'activo' |
+| `codigo` | Código del programa de gestión (único, asignado al activar) |
 | `nombre` | Nombre comercial / Razón social |
 | `cif` | CIF/NIF |
+| `segmento` | Categoría del cliente |
 | `direccion`, `localidad`, `provincia`, `codigoPostal` | Dirección completa |
 | `telefono`, `email` | Contacto |
 | `descuento` | Descuento personalizado (%) |
 | `activo` | Estado activo/inactivo |
 | `notas` | Observaciones |
+| `origenCrmContactId` | ID del contacto CRM si fue convertido |
+| `usuarioVinculadoId` | ID del usuario vinculado |
+| `convertidoAt` | Fecha de activación |
 
 ### API Endpoints:
-- `GET /api/clients` - Listar clientes
+- `GET /api/clients` - Listar clientes (con filtros ?tipo=, ?segmento=)
+- `GET /api/clients/segments` - Lista de segmentos disponibles
 - `POST /api/clients` - Crear cliente
 - `PUT /api/clients/{id}` - Actualizar cliente
 - `DELETE /api/clients/{id}` - Eliminar cliente
+- `POST /api/clients/from-contact/{contact_id}` - Crear cliente potencial desde contacto CRM
+- `POST /api/clients/{id}/activate` - Activar cliente potencial (body: {codigo: "..."})
+- `POST /api/clients/{id}/link-user` - Vincular cliente a usuario
 - `POST /api/clients/import-csv` - Importar desde CSV
+- `GET /api/commercial/my-shops-work` - Ver trabajo de tiendas asignadas (para comerciales)
 
 ### Formato CSV para importación:
 ```
