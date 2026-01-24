@@ -1,103 +1,88 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas
 
-## Estado Actual (Enero 2025)
+## Descripción del Producto
+Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriales, incluyendo catálogo de productos, cálculo de precios por zonas geográficas, gestión de usuarios jerárquica, y sistema de backup automatizado.
 
-### ✅ Completado
-1. **MongoDB Integration** - Todos los datos persisten en base de datos
-2. **Seguridad** - Contraseñas bcrypt, sin password en respuestas API
-3. **Biblioteca de Proyectos** - Guardar/cargar presupuestos desde MongoDB
-4. **Exportar PDF** - Botón "EXPORTAR PDF" genera y descarga presupuesto profesional
-5. **Línea Manual** - Añadir conceptos manuales a presupuestos
-6. **Telemetría IA** - Importar catálogos con Gemini Vision (API poco fiable)
-7. **Sistema de Backup Automático**
-   - Backups automáticos 2 veces al día (8:00 y 20:00)
-   - Envío por email con SendGrid a marioluiggihome@gmail.com
-   - Interfaz "Archivo Maestro" para backup manual
-8. **Importación Masiva de Catálogo** - 1,929 productos únicos importados
-   - Verificados y sin duplicados
-   - Todos con 12 zonas de precio (Z1-Z12) correctamente configuradas
-9. **Sistema de Archivo de Proyectos (NUEVO)**
-   - Filtros: Activos / Archivados / Todos
-   - Botón para archivar/desarchivar proyectos
-   - Contador de proyectos por estado
-10. **Márgenes Maestros Completos**
-    - Valores de Punto (Montada/Despiece)
-    - Incrementos Cortes Especiales (Ancho/Alto/Fondo)
-    - Gestión de Armazones/Cascos
+## Características Implementadas ✅
 
-### Endpoints API
-```
-POST /api/auth/login        # Autenticación (bcrypt)
-CRUD /api/users             # Usuarios
-CRUD /api/products          # Productos (incluye bulk delete y bulk create)
-CRUD /api/materials         # Materiales
-CRUD /api/projects          # Proyectos/Presupuestos (con status: draft/completed/archived)
-GET/PUT /api/settings       # Configuración
-POST /api/analyze-product-sheets  # Telemetría IA
-POST /api/backup/manual     # Backup manual por email
-GET  /api/backup/download   # Descargar backup JSON
-POST /api/backup/restore    # Restaurar desde JSON
-GET  /api/backup/history    # Historial de backups
-GET  /api/backup/status     # Estado scheduler
-```
+### 1. Autenticación y Usuarios
+- Login con credenciales (usuario/contraseña)
+- Sistema de roles jerárquico: Administrador > Comercial > Tienda
+- Permisos granulares por rol
+- Contraseñas hasheadas con bcrypt
 
-### Productos Importados
-- **Total:** 1,929 productos únicos (verificados sin duplicados)
-- **Categorías:** Altos, Bajos, Columnas, Semicolumnas
-- **Series:** Múltiples fondos y configuraciones
-- **Zonas de Precio:** Z1-Z12 completas para todos los productos
+### 2. Inventario Maestro (3,533 productos)
+- **Catálogo completo** importado desde PDF del fabricante
+- **12 zonas de precio** (Z1-Z12) por producto
+- **Categorías**: ALTOS (2175), BAJOS (608), COLUMNAS (585), SEMICOLUMNAS (163)
+- **Tipos**: Programa Estándar, Programa GOLA
+- Filtros por serie/familia y búsqueda
+- CRUD completo de productos
+- Eliminación masiva
 
-## Credenciales
-- **Admin:** MARIO / MARIO
-- **Email backup:** marioluiggihome@gmail.com
+### 3. Márgenes Maestros
+- Valor de punto configurable (Montada/Despiece)
+- Incrementos por corte (Ancho, Alto, Fondo)
+- Gestión de armazones/cascos
 
-## Secciones Implementadas (según PowerPoint)
-| Slide | Sección | Estado |
-|-------|---------|--------|
-| 1 | RED DISTRIBUCIÓN | ✅ |
-| 2 | INVENTARIO MAESTRO | ✅ |
-| 3 | MÁRGENES MAESTROS | ✅ |
-| 4 | TELEMETRÍA IA | ✅ |
-| 5 | IDENTIDAD | ✅ |
-| 6 | ARCHIVO MAESTRO (Backup) | ✅ |
-| 7 | LIBRERÍA MAESTRA | ✅ |
-| 8 | MONTADA (Mesa de trabajo) | ✅ |
-| 9 | PRESUPUESTO TÉCNICO | ✅ |
+### 4. Sistema de Presupuestos
+- Mesa de trabajo interactiva
+- Librería de 3,533 muebles con precios por zona
+- Cálculo automático de totales
+- Selector de acabado y armazón
+- Línea manual para items personalizados
 
-## Próximas Tareas (P1)
-1. Mejorar estabilidad de Telemetría IA (API Gemini poco fiable)
-2. Auto-guardar borrador cada 5 minutos
-3. Duplicar proyecto existente
+### 5. Sistema de Archivo de Proyectos
+- Guardar/cargar presupuestos
+- **Filtros**: Activos, Archivados, Todos
+- Archivar/desarchivar proyectos
+- Búsqueda por nombre/número
 
-## Futuras/Backlog (P2)
-1. Historial de versiones de presupuestos
-2. Exportar múltiples formatos (Excel)
-3. Dashboard de estadísticas
+### 6. Exportación PDF
+- Generación de informe técnico
+- Detalle de presupuesto completo
 
-## Arquitectura
-```
-/app
-├── backend
-│   ├── .env
-│   ├── requirements.txt
-│   └── server.py         # FastAPI app con scheduler
-└── frontend
-    ├── src
-    │   ├── components
-    │   │   ├── App.js
-    │   │   ├── BackupManager.jsx
-    │   │   ├── BudgetTable.jsx
-    │   │   ├── Login.jsx
-    │   │   ├── ProjectLibrary.jsx  # ACTUALIZADO con filtros archivo
-    │   │   └── SettingsModal.jsx
-    │   ├── services
-    │   │   ├── api.js
-    │   │   └── pdfGenerator.js
-    │   └── index.js
-    └── package.json
-```
+### 7. Sistema de Backup
+- **Backups automáticos** por email (8:00 y 20:00)
+- Email destino: marioluiggihome@gmail.com
+- Backup manual por email
+- Descarga de backup JSON
+- Restauración desde archivo JSON
+- Historial de backups
 
-## Notas Técnicas
-- **Frontend Stability:** Parche aplicado en index.js para errores de React DOM
-- **AI Telemetry:** API Gemini puede fallar - usar importación manual como alternativa
-- **Backup:** SendGrid configurado, scheduler APScheduler funcionando
+### 8. Telemetría IA
+- Importación de catálogos mediante Gemini Vision
+- Detección de productos nuevos vs duplicados
+- (API externa puede ser inestable)
+
+## Stack Técnico
+- **Frontend**: React, TailwindCSS, Lucide Icons
+- **Backend**: Python, FastAPI, Pydantic
+- **Database**: MongoDB (pymongo)
+- **Email**: SendGrid
+- **PDF**: jspdf, html2canvas, pymupdf
+- **Scheduler**: APScheduler
+
+## Credenciales de Prueba
+- **Usuario**: MARIO
+- **Contraseña**: MARIO (Admin)
+
+## Estructura de Base de Datos
+- **products**: 3,533 documentos (código, nombre, categoría, serie, dimensiones, zonePoints Z1-Z12)
+- **users**: 3 usuarios (admin + comerciales)
+- **projects**: Presupuestos guardados
+- **materials**: Materiales/armazones
+- **settings**: Configuración del sistema
+
+## Últimas Actualizaciones (24/01/2026)
+- ✅ Reimportación completa de 3,533 productos desde catálogo PDF
+- ✅ Nombres descriptivos correctos (ej: "Alto 35cm 1 Puerta 400mm Fondo Estándar")
+- ✅ Precios por 12 zonas verificados
+- ✅ Sistema de archivo de proyectos con filtros
+- ✅ Testing completo: 25/25 backend tests passed
+
+## Próximas Tareas (Backlog)
+1. **Mejorar fiabilidad Telemetría IA** - Investigar errores API Gemini
+2. **Historial de versiones** - Versionar cambios en presupuestos
+3. **Dashboard de estadísticas** - Resumen de ventas/proyectos
+4. **Notificaciones** - Alertas de sistema
