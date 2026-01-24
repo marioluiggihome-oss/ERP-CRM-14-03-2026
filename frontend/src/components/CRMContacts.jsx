@@ -219,11 +219,16 @@ const CRMContacts = ({ currentUser }) => {
     }).format(value);
   };
 
-  const filteredContacts = contacts.filter(c => 
-    c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredContacts = contacts.filter(c => {
+    const matchesSearch = c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesBusinessType = !businessTypeFilter || 
+      (c.tags && c.tags.includes(businessTypeFilter));
+    
+    return matchesSearch && matchesBusinessType;
+  });
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
