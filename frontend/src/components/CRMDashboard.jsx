@@ -208,12 +208,12 @@ const CRMDashboard = ({ onNavigate }) => {
         {/* Upcoming Activities */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-black text-slate-900 uppercase text-sm">Próximas Actividades</h2>
+            <h2 className="font-black text-slate-900 uppercase text-sm">Próximos Seguimientos</h2>
             <button 
               onClick={() => onNavigate && onNavigate('activities')}
               className="text-xs text-indigo-600 font-bold hover:underline flex items-center gap-1"
             >
-              Ver todas <ArrowUpRight className="w-3 h-3" />
+              Ver todos <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
           <div className="divide-y divide-slate-100">
