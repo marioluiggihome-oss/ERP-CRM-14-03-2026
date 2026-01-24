@@ -925,6 +925,14 @@ const Armarios = ({ state, setState }) => {
           </div>
           
           {/* Botones */}
+          <button 
+            onClick={() => setShowDespieceModal(true)}
+            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            data-testid="armarios-despiece-btn"
+          >
+            <Scissors size={16} />
+            DESPIECE
+          </button>
           <button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors">
             <Save size={16} />
             GUARDAR
