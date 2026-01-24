@@ -658,6 +658,138 @@ const Armarios = ({ state, setState }) => {
     return accessories;
   }, [wardrobeConfig, moduleConfigs, extras, customAccessories]);
 
+  // ========== CALCULAR TABLEROS Y METROS CUADRADOS ==========
+  const boardsCalculation = useMemo(() => {
+    const { width, height, depth, modules, doorType } = wardrobeConfig;
+    const moduleWidth = width / modules;
+    
+    // Tablero estándar: 2440mm x 1220mm = 2.9768 m²
+    const BOARD_WIDTH = 2440; // mm
+    const BOARD_HEIGHT = 1220; // mm
+    const BOARD_AREA = (BOARD_WIDTH / 1000) * (BOARD_HEIGHT / 1000); // m²
+    
+    const boards = {
+      tablero18mm: { pieces: [], totalArea: 0, boardsNeeded: 0, material: 'Tablero Melamina 18mm' },
+      tablero8mm: { pieces: [], totalArea: 0, boardsNeeded: 0, material: 'Tablero Trasera 8mm' },
+      puertasTablero: { pieces: [], totalArea: 0, boardsNeeded: 0, material: 'Tablero Puertas 18mm' }
+    };
+    
+    // ====== TABLERO 18mm (ESTRUCTURA + INTERIOR) ======
+    
+    // Laterales (2 piezas)
+    const lateralArea = (height / 1000) * (depth / 1000) * 2;
+    boards.tablero18mm.pieces.push({
+      name: 'Laterales',
+      dimensions: `${height} x ${depth}`,
+      quantity: 2,
+      areaUnit: (height / 1000) * (depth / 1000),
+      totalArea: lateralArea
+    });
+    
+    // Tapa superior e inferior (2 piezas)
+    const tapaArea = ((width - 36) / 1000) * (depth / 1000) * 2;
+    boards.tablero18mm.pieces.push({
+      name: 'Tapas Sup/Inf',
+      dimensions: `${width - 36} x ${depth}`,
+      quantity: 2,
+      areaUnit: ((width - 36) / 1000) * (depth / 1000),
+      totalArea: tapaArea
+    });
+    
+    // Divisores verticales
+    if (modules > 1) {
+      const divArea = ((height - 36) / 1000) * ((depth - 20) / 1000) * (modules - 1);
+      boards.tablero18mm.pieces.push({
+        name: 'Divisores',
+        dimensions: `${height - 36} x ${depth - 20}`,
+        quantity: modules - 1,
+        areaUnit: ((height - 36) / 1000) * ((depth - 20) / 1000),
+        totalArea: divArea
+      });
+    }
+    
+    // Baldas por módulo
+    let totalBaldas = 0;
+    moduleConfigs.forEach((mod, idx) => {
+      if (mod.shelves > 0) {
+        totalBaldas += mod.shelves;
+      }
+    });
+    if (totalBaldas > 0) {
+      const baldaWidth = (moduleWidth - 4) / 1000;
+      const baldaDepth = (depth - 20) / 1000;
+      const baldasArea = baldaWidth * baldaDepth * totalBaldas;
+      boards.tablero18mm.pieces.push({
+        name: 'Baldas',
+        dimensions: `${Math.round(moduleWidth - 4)} x ${depth - 20}`,
+        quantity: totalBaldas,
+        areaUnit: baldaWidth * baldaDepth,
+        totalArea: baldasArea
+      });
+    }
+    
+    // Frentes de cajón
+    let totalCajones = 0;
+    moduleConfigs.forEach(mod => {
+      if (mod.drawers > 0) {
+        totalCajones += mod.drawers;
+      }
+    });
+    if (totalCajones > 0) {
+      const frenteArea = ((moduleWidth - 8) / 1000) * 0.15 * totalCajones; // 150mm alto frente
+      boards.tablero18mm.pieces.push({
+        name: 'Frentes Cajón',
+        dimensions: `${Math.round(moduleWidth - 8)} x 150`,
+        quantity: totalCajones,
+        areaUnit: ((moduleWidth - 8) / 1000) * 0.15,
+        totalArea: frenteArea
+      });
+    }
+    
+    boards.tablero18mm.totalArea = boards.tablero18mm.pieces.reduce((sum, p) => sum + p.totalArea, 0);
+    boards.tablero18mm.boardsNeeded = Math.ceil((boards.tablero18mm.totalArea * 1.15) / BOARD_AREA); // 15% desperdicio
+    
+    // ====== TABLERO 8mm (TRASERA) ======
+    const traseraArea = ((width - 36) / 1000) * ((height - 36) / 1000);
+    boards.tablero8mm.pieces.push({
+      name: 'Trasera',
+      dimensions: `${width - 36} x ${height - 36}`,
+      quantity: 1,
+      areaUnit: traseraArea,
+      totalArea: traseraArea
+    });
+    boards.tablero8mm.totalArea = traseraArea;
+    boards.tablero8mm.boardsNeeded = Math.ceil((traseraArea * 1.1) / BOARD_AREA); // 10% desperdicio
+    
+    // ====== TABLERO PUERTAS 18mm ======
+    const numDoors = doorType === DoorType.SLIDING ? 2 : modules;
+    const doorHeight = height - 4;
+    const doorWidth = doorType === DoorType.SLIDING ? width / 2 : moduleWidth;
+    const puertasArea = (doorHeight / 1000) * (doorWidth / 1000) * numDoors;
+    
+    boards.puertasTablero.pieces.push({
+      name: doorType === DoorType.SLIDING ? 'Puertas Correderas' : doorType === DoorType.FOLDING ? 'Puertas Plegables' : 'Puertas Abatibles',
+      dimensions: `${doorHeight} x ${Math.round(doorWidth)}`,
+      quantity: numDoors,
+      areaUnit: (doorHeight / 1000) * (doorWidth / 1000),
+      totalArea: puertasArea
+    });
+    boards.puertasTablero.totalArea = puertasArea;
+    boards.puertasTablero.boardsNeeded = Math.ceil((puertasArea * 1.15) / BOARD_AREA);
+    
+    // Total general
+    const totalArea = boards.tablero18mm.totalArea + boards.tablero8mm.totalArea + boards.puertasTablero.totalArea;
+    const totalBoards = boards.tablero18mm.boardsNeeded + boards.tablero8mm.boardsNeeded + boards.puertasTablero.boardsNeeded;
+    
+    return {
+      boards,
+      totalArea,
+      totalBoards,
+      boardSize: `${BOARD_WIDTH} x ${BOARD_HEIGHT}mm`,
+      boardAreaM2: BOARD_AREA
+    };
+  }, [wardrobeConfig, moduleConfigs]);
+
   // Calcular totales del despiece
   const despieceTotals = useMemo(() => {
     const byCategory = {};
