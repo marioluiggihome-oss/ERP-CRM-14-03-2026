@@ -7,11 +7,11 @@ import {
 import { crmOpportunitiesAPI, crmContactsAPI } from '../services/api';
 
 const STAGES = [
-  { id: 'lead', name: 'Nuevo Lead', color: 'bg-blue-500', lightColor: 'bg-blue-50 border-blue-200' },
+  { id: 'lead', name: 'Nuevo', color: 'bg-blue-500', lightColor: 'bg-blue-50 border-blue-200' },
   { id: 'contacted', name: 'Contactado', color: 'bg-yellow-500', lightColor: 'bg-yellow-50 border-yellow-200' },
-  { id: 'proposal', name: 'Propuesta', color: 'bg-purple-500', lightColor: 'bg-purple-50 border-purple-200' },
-  { id: 'negotiation', name: 'Negociación', color: 'bg-orange-500', lightColor: 'bg-orange-50 border-orange-200' },
-  { id: 'won', name: 'Ganada', color: 'bg-green-500', lightColor: 'bg-green-50 border-green-200' },
+  { id: 'proposal', name: 'Presupuesto Enviado', color: 'bg-purple-500', lightColor: 'bg-purple-50 border-purple-200' },
+  { id: 'negotiation', name: 'En Negociación', color: 'bg-orange-500', lightColor: 'bg-orange-50 border-orange-200' },
+  { id: 'won', name: 'Venta Cerrada', color: 'bg-green-500', lightColor: 'bg-green-50 border-green-200' },
   { id: 'lost', name: 'Perdida', color: 'bg-red-500', lightColor: 'bg-red-50 border-red-200' }
 ];
 
