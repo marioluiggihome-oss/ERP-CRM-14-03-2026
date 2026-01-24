@@ -167,6 +167,31 @@ codigo;nombre;cif;direccion;localidad;provincia;cp;telefono;email;descuento;acti
 - `/app/frontend/src/components/Digitalizador.jsx` - UI y lógica
 - Test: `/app/backend/tests/test_digitalizador_crm_integration.py`
 
+## CRM Analytics: Alertas de Clientes Inactivos (24/01/2026)
+
+### Funcionalidad Implementada:
+- **Dashboard CRM ampliado** con dos nuevas secciones de alertas:
+  - 🟠 **Sin Oferta +30 días**: Contactos que no han recibido una oferta/presupuesto en más de 30 días
+  - 🔴 **Sin Compra +60/90 días**: Contactos que no han realizado una compra (oportunidad ganada) en más de 60 días
+
+### Características:
+- Listado de contactos ordenados por días de inactividad (mayor primero)
+- Muestra nombre, empresa, días sin actividad
+- Indicador visual de última oferta/compra
+- Estadísticas resumidas en cabecera
+
+### API Endpoint:
+- `GET /api/crm/analytics/inactive-clients?days_without_offer=30&days_without_purchase=60`
+- Devuelve:
+  - `withoutRecentOffer`: Lista de contactos sin ofertas recientes (max 50)
+  - `withoutRecentPurchase`: Lista de contactos sin compras recientes (max 50)
+  - `summary`: Totales (30 días sin oferta, 60 días sin compra, 90 días sin compra)
+
+### Archivos Modificados:
+- `/app/backend/server.py` - Nuevo endpoint de analytics
+- `/app/frontend/src/services/api.js` - Nueva función `crmAnalyticsAPI`
+- `/app/frontend/src/components/CRMDashboard.jsx` - UI de alertas
+
 ## Nuevas Funcionalidades Implementadas
 
 ### 1. Incremento por Corte de Viga
