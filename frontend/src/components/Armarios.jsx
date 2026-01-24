@@ -380,14 +380,22 @@ const Armarios = ({ state, setState }) => {
               <label className="text-[10px] font-bold text-slate-500 uppercase">Nº Módulos</label>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => updateConfig('modules', Math.max(1, wardrobeConfig.modules - 1))}
+                  onClick={() => {
+                    const newCount = Math.max(1, wardrobeConfig.modules - 1);
+                    updateConfig('modules', newCount);
+                    adjustModules(newCount);
+                  }}
                   className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded"
                 >
                   <Minus size={14} />
                 </button>
                 <span className="font-black text-lg text-slate-800 w-8 text-center">{wardrobeConfig.modules}</span>
                 <button
-                  onClick={() => updateConfig('modules', Math.min(8, wardrobeConfig.modules + 1))}
+                  onClick={() => {
+                    const newCount = Math.min(8, wardrobeConfig.modules + 1);
+                    updateConfig('modules', newCount);
+                    adjustModules(newCount);
+                  }}
                   className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded"
                 >
                   <Plus size={14} />
