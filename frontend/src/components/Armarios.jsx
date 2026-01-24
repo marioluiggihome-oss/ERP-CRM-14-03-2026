@@ -785,7 +785,18 @@ const Armarios = ({ state, setState }) => {
     });
   };
 
-  const getColorByName = (colorId) => {
+  const updateModuleExtra = (moduleIndex, extraKey, value) => {
+    setModuleConfigs(prev => {
+      const updated = [...prev];
+      updated[moduleIndex] = { 
+        ...updated[moduleIndex], 
+        extras: { ...updated[moduleIndex].extras, [extraKey]: value }
+      };
+      return updated;
+    });
+  };
+
+  const getColorByIdFn = (colorId) => {
     return FINSA_COLORS.find(c => c.id === colorId) || FINSA_COLORS[0];
   };
 
