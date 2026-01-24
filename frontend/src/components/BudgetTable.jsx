@@ -586,8 +586,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                                     {specialLabel && <span className="text-[6px] font-black text-orange-600 uppercase mt-0.5 tracking-widest">{specialLabel}</span>}
                                 </div>
                                 <div className="col-span-1 text-center flex flex-col items-center">
-                                    <input type="number" value={item.customWidth} onChange={e => updateItem(item.id, 'customWidth', parseInt(e.target.value) || 0)} className={`w-full bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-600 text-orange-600' : 'border-indigo-50'} no-print`} />
-                                    <span className="print-only font-bold text-[9px]">{item.customWidth || '-'}</span>
+                                    <input type="number" value={Math.round(item.customWidth / 10)} onChange={e => updateItem(item.id, 'customWidth', (parseInt(e.target.value) || 0) * 10)} className={`w-full bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-600 text-orange-600' : 'border-indigo-50'} no-print`} />
+                                    <span className="print-only font-bold text-[9px]">{item.customWidth ? Math.round(item.customWidth / 10) : '-'}</span>
                                 </div>
                                 <div className="col-span-1 text-center flex flex-col items-center">
                                     <input type="number" value={item.customHeight} onChange={e => updateItem(item.id, 'customHeight', parseInt(e.target.value) || 0)} className={`w-full bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-600 text-orange-600' : 'border-indigo-50'} no-print`} />
