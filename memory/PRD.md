@@ -39,6 +39,8 @@
 | 31 | **Usuario hereda descuento de cliente vinculado** | ✅ | 24/01 |
 | 32 | **Comercial: Botón "Mis Tiendas" para ver trabajo** | ✅ | 24/01 |
 | 33 | **COPIA SEGURIDAD y MANTENIMIENTO movidos dentro de Master** | ✅ | 24/01 |
+| 34 | **CRM: Alertas clientes sin oferta en 30+ días** | ✅ | 24/01 |
+| 35 | **CRM: Alertas clientes sin compra en 60/90 días** | ✅ | 24/01 |
 
 ### 🟢 TODO COMPLETADO
 
