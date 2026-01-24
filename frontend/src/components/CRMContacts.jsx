@@ -408,7 +408,7 @@ const CRMContacts = () => {
                     className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
                     data-testid="contact-status-select"
                   >
-                    <option value="lead">Lead</option>
+                    <option value="lead">Nuevo</option>
                     <option value="active">Activo</option>
                     <option value="customer">Cliente</option>
                     <option value="inactive">Inactivo</option>
