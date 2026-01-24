@@ -1052,19 +1052,21 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             </div>
                           </label>
 
-                          {/* Checkbox Prescriptor */}
-                          <label className="flex items-center gap-3 cursor-pointer p-3 bg-amber-50 rounded-xl border border-amber-200">
-                            <input
-                              type="checkbox"
-                              checked={userForm.isPrescriptor}
-                              onChange={(e) => setUserForm({...userForm, isPrescriptor: e.target.checked, isRepresentative: false})}
-                              className="w-5 h-5 rounded border-2 border-amber-300"
-                            />
-                            <div>
-                              <span className="text-sm font-black text-slate-900">Prescriptor Comercial</span>
-                              <p className="text-xs text-slate-500">Solo aporta contactos/clientes potenciales</p>
-                            </div>
-                          </label>
+                          {/* Checkbox Prescriptor - Solo visible para Admin */}
+                          {state.currentUser?.isAdmin && (
+                            <label className="flex items-center gap-3 cursor-pointer p-3 bg-amber-50 rounded-xl border border-amber-200">
+                              <input
+                                type="checkbox"
+                                checked={userForm.isPrescriptor}
+                                onChange={(e) => setUserForm({...userForm, isPrescriptor: e.target.checked, isRepresentative: false})}
+                                className="w-5 h-5 rounded border-2 border-amber-300"
+                              />
+                              <div>
+                                <span className="text-sm font-black text-slate-900">Prescriptor Comercial</span>
+                                <p className="text-xs text-slate-500">Solo aporta contactos/clientes potenciales (gestionado por Admin)</p>
+                              </div>
+                            </label>
+                          )}
 
                           {!userForm.isAdmin && !userForm.isRepresentative && !userForm.isPrescriptor && representatives.length > 0 && (
                             <div>
