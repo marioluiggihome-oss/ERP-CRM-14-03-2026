@@ -1350,6 +1350,43 @@ async def fix_product_heights():
         "message": f"Se corrigieron {fixed_count} productos"
     }
 
+@api_router.post("/products/fix-semicolumna-names")
+async def fix_semicolumna_names():
+    """
+    Corregir nombres de semicolumnas: 11cm -> 110cm, 12cm -> 120cm, etc.
+    """
+    fixes = {
+        "Semicolumna 11cm": "Semicolumna 110cm",
+        "Semicolumna 12cm": "Semicolumna 120cm",
+        "Semicolumna 13cm": "Semicolumna 130cm",
+        "Semicolumna 14cm": "Semicolumna 140cm",
+        "Semicolumna 16cm": "Semicolumna 160cm",
+        "Semicolumna 20cm": "Semicolumna 200cm",
+        "Semicolumna 22cm": "Semicolumna 220cm",
+        "Semicolumna 24cm": "Semicolumna 240cm",
+    }
+    
+    fixed_count = 0
+    for wrong, correct in fixes.items():
+        # Find products with wrong name pattern
+        cursor = db.products.find({"name": {"$regex": wrong, "$options": "i"}})
+        products = await cursor.to_list(1000)
+        
+        for p in products:
+            new_name = p['name'].replace(wrong, correct)
+            await db.products.update_one(
+                {"id": p['id']},
+                {"$set": {"name": new_name}}
+            )
+            fixed_count += 1
+            logger.info(f"Fixed: {p['code']}: {p['name']} -> {new_name}")
+    
+    return {
+        "success": True,
+        "fixed_count": fixed_count,
+        "message": f"Se corrigieron {fixed_count} nombres de semicolumnas"
+    }
+
 @api_router.post("/products/fix-names")
 async def fix_product_names():
     """
