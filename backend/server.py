@@ -300,6 +300,160 @@ class SettingsUpdate(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+# ============================================
+# CRM MODELS - Contactos, Oportunidades, Actividades
+# ============================================
+
+class ContactModel(BaseModel):
+    """Modelo para contactos/clientes del CRM"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"contact-{uuid.uuid4().hex[:8]}")
+    name: str
+    email: str = ""
+    phone: str = ""
+    company: str = ""
+    position: str = ""
+    address: str = ""
+    notes: str = ""
+    tags: List[str] = []
+    source: str = ""  # web, referral, cold_call, etc.
+    status: str = "active"  # active, inactive, lead, customer
+    totalValue: float = 0  # Valor total de oportunidades ganadas
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    createdBy: str = ""
+    # Link to project for kitchen budgets
+    linkedProjectIds: List[str] = []
+
+class ContactCreate(BaseModel):
+    name: str
+    email: str = ""
+    phone: str = ""
+    company: str = ""
+    position: str = ""
+    address: str = ""
+    notes: str = ""
+    tags: List[str] = []
+    source: str = ""
+    status: str = "lead"
+
+class ContactUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    position: Optional[str] = None
+    address: Optional[str] = None
+    notes: Optional[str] = None
+    tags: Optional[List[str]] = None
+    source: Optional[str] = None
+    status: Optional[str] = None
+    totalValue: Optional[float] = None
+    linkedProjectIds: Optional[List[str]] = None
+
+class OpportunityModel(BaseModel):
+    """Modelo para oportunidades de venta (pipeline)"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"opp-{uuid.uuid4().hex[:8]}")
+    title: str
+    description: str = ""
+    contactId: str  # Link to contact
+    contactName: str = ""
+    company: str = ""
+    value: float = 0  # Valor en euros
+    probability: int = 20  # Probabilidad de cierre (0-100)
+    stage: str = "lead"  # lead, contacted, proposal, negotiation, won, lost
+    expectedCloseDate: Optional[str] = None
+    notes: str = ""
+    tags: List[str] = []
+    assignedTo: str = ""  # User assigned
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    closedAt: Optional[datetime] = None
+    createdBy: str = ""
+    # Link to project/budget
+    linkedProjectId: Optional[str] = None
+    linkedProjectNumber: Optional[str] = None
+
+class OpportunityCreate(BaseModel):
+    title: str
+    description: str = ""
+    contactId: str
+    contactName: str = ""
+    company: str = ""
+    value: float = 0
+    probability: int = 20
+    stage: str = "lead"
+    expectedCloseDate: Optional[str] = None
+    notes: str = ""
+    tags: List[str] = []
+    assignedTo: str = ""
+    linkedProjectId: Optional[str] = None
+    linkedProjectNumber: Optional[str] = None
+
+class OpportunityUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    contactId: Optional[str] = None
+    contactName: Optional[str] = None
+    company: Optional[str] = None
+    value: Optional[float] = None
+    probability: Optional[int] = None
+    stage: Optional[str] = None
+    expectedCloseDate: Optional[str] = None
+    notes: Optional[str] = None
+    tags: Optional[List[str]] = None
+    assignedTo: Optional[str] = None
+    linkedProjectId: Optional[str] = None
+    linkedProjectNumber: Optional[str] = None
+
+class ActivityModel(BaseModel):
+    """Modelo para actividades y tareas del CRM"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"act-{uuid.uuid4().hex[:8]}")
+    type: str  # call, meeting, email, task, note
+    title: str
+    description: str = ""
+    contactId: Optional[str] = None
+    contactName: str = ""
+    opportunityId: Optional[str] = None
+    opportunityTitle: str = ""
+    dueDate: Optional[str] = None
+    dueTime: Optional[str] = None
+    completed: bool = False
+    completedAt: Optional[datetime] = None
+    priority: str = "medium"  # low, medium, high
+    assignedTo: str = ""
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    createdBy: str = ""
+
+class ActivityCreate(BaseModel):
+    type: str
+    title: str
+    description: str = ""
+    contactId: Optional[str] = None
+    contactName: str = ""
+    opportunityId: Optional[str] = None
+    opportunityTitle: str = ""
+    dueDate: Optional[str] = None
+    dueTime: Optional[str] = None
+    priority: str = "medium"
+    assignedTo: str = ""
+
+class ActivityUpdate(BaseModel):
+    type: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    contactId: Optional[str] = None
+    contactName: Optional[str] = None
+    opportunityId: Optional[str] = None
+    opportunityTitle: Optional[str] = None
+    dueDate: Optional[str] = None
+    dueTime: Optional[str] = None
+    completed: Optional[bool] = None
+    priority: Optional[str] = None
+    assignedTo: Optional[str] = None
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
