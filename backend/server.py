@@ -1889,25 +1889,25 @@ Responde SOLO con el JSON, sin texto adicional."""
         if not llm_key:
             raise HTTPException(status_code=500, detail="API key not configured")
         
+        # Initialize chat with correct syntax - use with_model()
         chat = LlmChat(
             api_key=llm_key,
-            model="gemini-2.0-flash"
-        )
+            session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
+            system_message="Eres un asistente experto en extraer información de imágenes de presupuestos de cocinas."
+        ).with_model("gemini", "gemini-2.0-flash")
         
-        # Create image content
+        # Create image content using ImageContent with image_base64
         image_content = ImageContent(
-            base64_data=request.imageBase64,
-            media_type="image/jpeg"
+            image_base64=request.imageBase64
         )
         
-        # Send request
-        response = await chat.send_message_async(
-            UserMessage(
-                content=[extraction_prompt, image_content]
-            )
-        )
+        # Send request with UserMessage that contains text and file_contents
+        response = await chat.send_message(UserMessage(
+            text=extraction_prompt,
+            file_contents=[image_content]
+        ))
         
-        response_text = response.content.strip()
+        response_text = response.strip() if isinstance(response, str) else str(response)
         
         # Try to parse JSON from response
         try:
