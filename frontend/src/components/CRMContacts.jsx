@@ -290,6 +290,22 @@ const CRMContacts = () => {
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center justify-center gap-2">
+                        {/* Convertir a Cliente Potencial - Solo si no está convertido */}
+                        {!contact.convertedToClientId && (
+                          <button
+                            onClick={() => handleConvertToClient(contact)}
+                            className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Convertir a Cliente Potencial"
+                            data-testid={`convert-contact-${contact.id}`}
+                          >
+                            <UserCheck size={16} />
+                          </button>
+                        )}
+                        {contact.convertedToClientId && (
+                          <span className="text-[10px] text-emerald-600 font-bold px-2 py-1 bg-emerald-50 rounded">
+                            CONVERTIDO
+                          </span>
+                        )}
                         <button
                           onClick={() => openModal(contact)}
                           className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
