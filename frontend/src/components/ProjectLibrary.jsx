@@ -149,6 +149,23 @@ const ProjectLibrary = ({ state, setState }) => {
     }
   };
 
+  const toggleArchiveProject = async (project) => {
+    const isCurrentlyArchived = project.status === 'archived';
+    const action = isCurrentlyArchived ? 'desarchivar' : 'archivar';
+    
+    if (window.confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} el proyecto "${project.customerName || project.budgetNumber}"?`)) {
+      try {
+        const newStatus = isCurrentlyArchived ? 'draft' : 'archived';
+        await projectsAPI.update(project.id, { status: newStatus });
+        setProjects(prev => prev.map(p => 
+          p.id === project.id ? { ...p, status: newStatus } : p
+        ));
+      } catch (err) {
+        alert(`Error al ${action} proyecto: ` + err.message);
+      }
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
     try {
