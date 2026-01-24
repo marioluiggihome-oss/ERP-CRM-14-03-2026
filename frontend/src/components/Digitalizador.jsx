@@ -408,9 +408,13 @@ const Digitalizador = ({ state }) => {
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`text-xs font-bold uppercase ${line.isManual ? 'text-orange-600' : 'text-indigo-400'}`}>
-                            {line.reference || (line.isManual ? 'MANUAL' : 'AUTO')}
-                          </span>
+                          {/* Campo REF ahora es EDITABLE */}
+                          <input
+                            type="text"
+                            value={line.reference || (line.isManual ? 'MANUAL' : 'AUTO')}
+                            onChange={(e) => updateLine(line.id, 'reference', e.target.value)}
+                            className={`w-20 bg-transparent text-center text-xs font-bold uppercase outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 ${line.isManual ? 'text-orange-600' : 'text-indigo-400'}`}
+                          />
                         </td>
                         <td className="px-4 py-3">
                           <input
@@ -421,29 +425,31 @@ const Digitalizador = ({ state }) => {
                           />
                         </td>
                         <td className="px-4 py-3 text-center">
+                          {/* Input de texto para permitir punto y coma como decimal */}
                           <input
-                            type="number"
+                            type="text"
                             value={line.price}
-                            onChange={(e) => updateLine(line.id, 'price', parseFloat(e.target.value) || 0)}
-                            className="w-20 bg-transparent text-center font-bold text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
-                            step="0.01"
+                            onChange={(e) => {
+                              // Permitir punto y coma como separador decimal
+                              const value = e.target.value.replace(',', '.');
+                              updateLine(line.id, 'price', parseFloat(value) || 0);
+                            }}
+                            className="w-24 bg-transparent text-center font-bold text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                            placeholder="0.00"
                           />
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`font-bold ${line.isManual ? 'text-orange-600' : (globalDiscount > line.discount ? 'text-orange-600' : 'text-indigo-600')}`}>
-                            {line.isManual ? (
-                              <input
-                                type="number"
-                                value={line.discount}
-                                onChange={(e) => updateLine(line.id, 'discount', parseFloat(e.target.value) || 0)}
-                                className="w-12 bg-transparent text-center font-bold text-orange-600 outline-none border-b border-transparent hover:border-orange-200 focus:border-orange-500"
-                                min="0"
-                                max="100"
-                              />
-                            ) : (
-                              Math.max(line.discount, globalDiscount)
-                            )}
-                          </span>
+                          {/* Descuento SIEMPRE editable - casilla más ancha */}
+                          <input
+                            type="text"
+                            value={line.isManual ? line.discount : (line.discount > 0 ? line.discount : (globalDiscount > 0 ? globalDiscount : ''))}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(',', '.');
+                              updateLine(line.id, 'discount', parseFloat(value) || 0);
+                            }}
+                            placeholder={line.isManual ? "0" : (globalDiscount > 0 ? String(globalDiscount) : "0")}
+                            className={`w-16 bg-indigo-50 rounded px-2 py-1 text-center font-bold outline-none border border-transparent hover:border-indigo-200 focus:border-orange-500 ${line.isManual ? 'text-orange-600 bg-orange-50' : (line.discount > 0 ? 'text-orange-600' : 'text-indigo-600')}`}
+                          />
                         </td>
                         <td className="px-4 py-3 text-right font-black text-indigo-950">
                           {getLineNet(line).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
