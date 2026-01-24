@@ -680,6 +680,110 @@ async def get_status_checks():
     
     return status_checks
 
+@api_router.post("/ia-lab/analyze-kitchen-plan")
+async def analyze_kitchen_plan(file: UploadFile = File(...)):
+    """
+    Analiza un plano de cocina usando Gemini Vision y detecta los muebles.
+    Devuelve una lista de muebles con sus códigos estimados.
+    """
+    try:
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        
+        # Read the image
+        file_content = await file.read()
+        base64_image = base64.b64encode(file_content).decode('utf-8')
+        mime_type = file.content_type or 'image/png'
+        
+        analysis_prompt = """Analiza este plano/diseño de cocina y detecta TODOS los muebles visibles.
+
+IDENTIFICA:
+1. Muebles ALTOS (armarios de pared superiores)
+2. Muebles BAJOS (armarios de base con encimera)
+3. COLUMNAS (muebles de altura completa - despensas, hornos)
+4. SEMICOLUMNAS (muebles de media altura)
+5. Electrodomésticos integrados (horno, microondas, nevera)
+
+Para cada mueble detectado, proporciona:
+- tipo: ALTO/BAJO/COLUMNA/SEMICOLUMNA/ELECTRODOMESTICO
+- subtipo: 1_PUERTA, 2_PUERTAS, CAJON, VITRINA, HORNO, FREGADERO, etc.
+- ancho_estimado: ancho en mm (300, 350, 400, 450, 500, 600, 800, 900, etc.)
+- alto_estimado: altura en cm (35, 40, 45, 60, 70, 80, 90, 110, 130, etc.)
+- fondo_estimado: fondo en cm (33, 58, 60)
+- posicion: descripción de ubicación (ej: "esquina izquierda", "sobre fregadero")
+- codigo_sugerido: código de referencia estimado (ej: "35A1P400" para Alto 35cm 1 Puerta 40cm)
+- confianza: ALTA/MEDIA/BAJA
+
+Responde SOLO con JSON válido:
+{
+  "muebles_detectados": [
+    {
+      "tipo": "ALTO",
+      "subtipo": "1_PUERTA",
+      "ancho_estimado": 400,
+      "alto_estimado": 35,
+      "fondo_estimado": 33,
+      "posicion": "sobre fregadero",
+      "codigo_sugerido": "35A1P400",
+      "confianza": "ALTA"
+    }
+  ],
+  "resumen": {
+    "total_altos": 0,
+    "total_bajos": 0,
+    "total_columnas": 0,
+    "total_semicolumnas": 0,
+    "metros_lineales_estimados": 0
+  },
+  "observaciones": "Notas adicionales sobre el plano"
+}"""
+
+        # Use Gemini Vision
+        chat = LlmChat(
+            api_key=api_key,
+            model="gemini/gemini-2.0-flash",
+            session_id=f"kitchen-plan-{uuid.uuid4().hex[:8]}",
+            system_prompt="Eres un experto en diseño de cocinas. Analiza planos y detecta muebles con precisión."
+        )
+        
+        image_content = ImageContent(
+            data=base64_image,
+            media_type=mime_type
+        )
+        
+        response = await chat.send_message_async(
+            UserMessage(content=[analysis_prompt, image_content])
+        )
+        
+        # Parse response
+        response_text = response.content if hasattr(response, 'content') else str(response)
+        
+        # Clean JSON from markdown
+        if '```json' in response_text:
+            response_text = response_text.split('```json')[1].split('```')[0]
+        elif '```' in response_text:
+            response_text = response_text.split('```')[1].split('```')[0]
+        
+        response_text = response_text.strip()
+        
+        try:
+            data = json.loads(response_text)
+        except json.JSONDecodeError:
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            if json_match:
+                data = json.loads(json_match.group())
+            else:
+                data = {"error": "No se pudo analizar el plano", "raw_response": response_text[:500]}
+        
+        logger.info(f"Kitchen plan analyzed: {len(data.get('muebles_detectados', []))} furniture items detected")
+        return {"success": True, "analysis": data}
+        
+    except Exception as e:
+        logger.error(f"Kitchen plan analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/analyze-product-sheets")
 async def analyze_product_sheets(
     module: str = Form(...),
