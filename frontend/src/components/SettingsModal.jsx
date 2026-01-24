@@ -386,6 +386,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       isActive: true,
       isAdmin: false,
       isRepresentative: false,
+      isPrescriptor: false,
       linkedRepresentativeId: isCommercial ? state.currentUser.id : '',
       allowedModules: ['montada'],
       allowedCatalogIds: state.catalogs.map(c => c.id),
