@@ -8,9 +8,7 @@ import SettingsModal from './components/SettingsModal';
 import ManufacturingReport from './components/ManufacturingReport';
 import Login from './components/Login';
 import BackupManager from './components/BackupManager';
-import CRMDashboard from './components/CRMDashboard';
-import CRMContacts from './components/CRMContacts';
-import CRMPipeline from './components/CRMPipeline';
+import CRMLayout from './components/CRMLayout';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI } from './services/api';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 
