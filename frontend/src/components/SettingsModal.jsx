@@ -59,6 +59,36 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canChangeLogo: false
   });
 
+  // Telemetry AI states
+  const [telemetryModule, setTelemetryModule] = useState('montada');
+  const [telemetryFiles, setTelemetryFiles] = useState([]);
+  const [isProcessingTelemetry, setIsProcessingTelemetry] = useState(false);
+  const [telemetryLog, setTelemetryLog] = useState([]);
+  const [telemetryProgress, setTelemetryProgress] = useState({ current: 0, total: 0 });
+  const [existingCodes, setExistingCodes] = useState(new Set());
+  const [telemetryResult, setTelemetryResult] = useState(null);
+  const logContainerRef = useRef(null);
+
+  // Load existing codes for telemetry duplicate detection
+  useEffect(() => {
+    const loadCodes = async () => {
+      try {
+        const products = await productsAPI.getAll(telemetryModule);
+        setExistingCodes(new Set(products.map(p => p.code)));
+      } catch (err) {
+        console.error('Error loading codes:', err);
+      }
+    };
+    if (isOpen) loadCodes();
+  }, [telemetryModule, isOpen]);
+
+  // Auto-scroll telemetry log
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [telemetryLog]);
+
   const representatives = useMemo(() => state.users.filter(u => u.isRepresentative), [state.users]);
 
   // Filtrar usuarios según el rol del usuario actual
