@@ -709,7 +709,7 @@ const Digitalizador = ({ state }) => {
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-6 flex justify-center gap-4 no-print">
+            <div className="mt-6 flex justify-center gap-4 no-print flex-wrap">
               <button
                 onClick={handleReset}
                 className="flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-indigo-50 transition-colors border border-indigo-200"
@@ -724,6 +724,33 @@ const Digitalizador = ({ state }) => {
               >
                 {isSaving ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
                 Guardar en Historial
+              </button>
+              <button
+                onClick={openCRMModal}
+                disabled={isCreatingOpportunity || opportunityCreated}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-colors shadow-lg ${
+                  opportunityCreated 
+                    ? 'bg-emerald-500 text-white cursor-default' 
+                    : 'bg-purple-600 text-white hover:bg-purple-700 disabled:bg-purple-400'
+                }`}
+                data-testid="create-crm-opportunity-btn"
+              >
+                {opportunityCreated ? (
+                  <>
+                    <CheckCircle size={18} />
+                    Oportunidad Creada
+                  </>
+                ) : isCreatingOpportunity ? (
+                  <>
+                    <Loader size={18} className="animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <Briefcase size={18} />
+                    Crear Oportunidad CRM
+                  </>
+                )}
               </button>
               <button
                 onClick={handleExportCSV}
