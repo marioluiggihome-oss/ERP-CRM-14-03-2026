@@ -1,84 +1,85 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas
 
-## Descripción del Producto
-Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriales.
+## Estado de Correcciones - 24/01/2026
 
-## Estado de Correcciones (POR CORREGIR.docx) - 24/01/2026
-
-### ✅ COMPLETADO (14/19 tareas)
+### ✅ COMPLETADO (16/19 tareas del documento POR CORREGIR.docx)
 
 | # | Corrección | Estado |
 |---|------------|--------|
-| 1 | **Prompt IA mejorado** (alturas 110cm, 220cm) | ✅ HECHO |
-| 2 | **Producto faltante 35A1P350** añadido | ✅ HECHO |
-| 3 | **Logo más grande** en Digitalizador | ✅ HECHO |
-| 4 | **"BUDGET SYSTEM" → "PRESUPUESTO TÉCNICO"** | ✅ HECHO |
-| 5 | **Campo REF (AUTO) editable** | ✅ HECHO |
-| 6 | **Casilla descuento más ancha** y editable | ✅ HECHO |
-| 7 | **Decimales con punto y coma** | ✅ HECHO |
-| 8 | **Despiece: cliente, referencia, fecha, expediente** | ✅ HECHO |
-| 9 | **Historial persistente** (guardado en BD) | ✅ HECHO |
-| 10 | **Búsqueda en historial** por proyecto/cliente | ✅ HECHO |
-| 11 | **Modo Mantenimiento** | ✅ HECHO |
-| 12 | **Backup Pre-Actualización automático** | ✅ HECHO |
-| 13 | **Panel de control para Admin** | ✅ HECHO |
-| 14 | **Pantalla de "Sistema en actualización"** | ✅ HECHO |
+| 1 | Prompt IA mejorado (alturas 110cm, 220cm) | ✅ |
+| 2 | Producto faltante 35A1P350 añadido | ✅ |
+| 3 | Logo más grande en Digitalizador | ✅ |
+| 4 | "BUDGET SYSTEM" → "PRESUPUESTO TÉCNICO" | ✅ |
+| 5 | Campo REF (AUTO) editable | ✅ |
+| 6 | Casilla descuento más ancha y editable | ✅ |
+| 7 | Decimales con punto y coma | ✅ |
+| 8 | Despiece: cliente, referencia, fecha, expediente | ✅ |
+| 9 | Historial persistente (guardado en BD) | ✅ |
+| 10 | Búsqueda en historial | ✅ |
+| 11 | Modo Mantenimiento | ✅ |
+| 12 | Backup Pre-Actualización automático | ✅ |
+| 13 | Panel de control para Admin | ✅ |
+| 14 | Pantalla "Sistema en actualización" | ✅ |
+| 15 | **INCREMENTO POR CORTE VIGA** | ✅ NUEVO |
+| 16 | **CONTADOR CORRELATIVO EXPEDIENTES** | ✅ NUEVO |
 
-### 🔄 PENDIENTE (5/19 tareas)
+### 🔄 PENDIENTE (3/19 tareas)
 
 | # | Tarea | Prioridad |
 |---|-------|-----------|
-| 15 | Incremento por corte viga | Media |
-| 16 | Contador correlativo de expedientes | Media |
 | 17 | Conexión Digitalizador → CRM | Baja |
 | 18 | Gestión armazones en pestaña separada | Baja |
 | 19 | Admin ver todos los trabajos | Baja |
 
-## Sistema de Mantenimiento (NUEVO)
+## Nuevas Funcionalidades Implementadas
 
-### Funcionalidades:
-1. **Panel de Mantenimiento** (solo Admin)
-   - Activar/desactivar modo mantenimiento
-   - Mensaje personalizable para usuarios
-   - Tiempo estimado configurable
-   - Opción de backup automático
+### 1. Incremento por Corte de Viga
+- Campo configurable en el panel lateral: "INCREMENTO CORTE VIGA"
+- Se puede especificar un valor en € que se añadirá al precio
+- Cada línea del presupuesto tiene checkbox "V" para aplicar el incremento
+- Se muestra etiqueta "VIGA" junto al precio cuando está activado
+- El incremento se refleja en el desglose de precio
 
-2. **Backup Pre-Actualización**
-   - Se crea automáticamente al activar mantenimiento
-   - Guarda: usuarios, productos, proyectos, contactos, oportunidades, etc.
-   - Descargable en formato JSON
-   - Histórico de todos los backups
+### 2. Contador Correlativo de Expedientes
+- Formato: EXP-AAAA-NNNNN (ej: EXP-2026-00001)
+- Botón "AUTO" naranja junto al campo de expediente
+- Genera números únicos secuenciales para TODOS los usuarios
+- Se reinicia cada año (2026, 2027, etc.)
+- Guardado en colección `system_counters`
 
-3. **Pantalla de Mantenimiento**
-   - Solo para usuarios NO admin
-   - Muestra mensaje, tiempo estimado
-   - Indica si hay backup de seguridad
-   - Se actualiza automáticamente cada 30s
+### APIs de Expedientes:
+- `GET /api/expedient/next` - Obtener y reservar siguiente número
+- `GET /api/expedient/current` - Info del contador actual
 
-### APIs de Mantenimiento:
-- `GET /api/maintenance/status` - Estado actual
-- `POST /api/maintenance/activate` - Activar (con backup opcional)
-- `POST /api/maintenance/deactivate` - Desactivar
-- `GET /api/maintenance/backups` - Lista de backups
-- `GET /api/maintenance/backups/{id}/download` - Descargar backup
+## Sistema de Mantenimiento
 
-## Credenciales de Prueba
-- Usuario: MARIO
-- Contraseña: MARIO
+### Panel de Control (solo Admin):
+- Activar/desactivar modo mantenimiento
+- Mensaje personalizable
+- Tiempo estimado configurable
+- Backup automático antes de actualización
 
-## Productos en Base de Datos
-- Total: **3,534 productos**
+### Pantalla de Bloqueo (usuarios no-admin):
+- Muestra mensaje de mantenimiento
+- Tiempo estimado restante
+- Indicador de backup de seguridad
+- Se actualiza automáticamente cada 30s
 
-## Colecciones en MongoDB:
-- users
-- products
-- projects
-- materials
-- settings
-- contacts
-- opportunities
-- activities
-- catalogs
-- digitalizador_history
-- system_settings (modo mantenimiento)
-- system_backups (backups pre-actualización)
+## Credenciales
+- **Usuario**: MARIO
+- **Contraseña**: MARIO
+
+## Base de Datos
+- Total productos: **3,534**
+- Colecciones principales: users, products, projects, contacts, opportunities, digitalizador_history, system_counters, system_backups, system_settings
+
+## Menú Lateral (Admin)
+1. CRM
+2. PRESUPUESTO
+3. IA LAB
+4. ARCHIVO
+5. DIGITALIZADOR
+6. COPIA SEGURIDAD
+7. **MANTENIMIENTO** (nuevo)
+8. MASTER
+9. SALIR
