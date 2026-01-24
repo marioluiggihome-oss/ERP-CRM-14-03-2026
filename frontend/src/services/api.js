@@ -641,6 +641,18 @@ export const crmDashboardAPI = {
 };
 
 // ============================================
+// CRM - ANALYTICS (Clientes Inactivos)
+// ============================================
+
+export const crmAnalyticsAPI = {
+  getInactiveClients: async (daysWithoutOffer = 30, daysWithoutPurchase = 60) => {
+    const response = await fetch(`${API_URL}/api/crm/analytics/inactive-clients?days_without_offer=${daysWithoutOffer}&days_without_purchase=${daysWithoutPurchase}`);
+    if (!response.ok) throw new Error('Error al obtener análisis de clientes');
+    return response.json();
+  }
+};
+
+// ============================================
 // DESPIECE (BILL OF MATERIALS)
 // ============================================
 
