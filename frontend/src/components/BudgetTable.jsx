@@ -149,7 +149,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
      const unitPrice = pointsCost + cutsCost + carcassCost + vigaCost;
      
      const discountPct = state.currentUser?.commercialDiscount || 0;
-     const discountFactor = state.showDistributorPrice ? (1 - discountPct / 100) : 1;
+     // Las líneas manuales NO se afectan por el cambio de modo PVP/COSTO
+     const discountFactor = (state.showDistributorPrice && !item.isManual) ? (1 - discountPct / 100) : 1;
      
      const finalPrice = (unitPrice * item.quantity) * discountFactor;
 
