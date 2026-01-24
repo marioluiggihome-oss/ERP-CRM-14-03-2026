@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus } from 'lucide-react';
+import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle } from 'lucide-react';
 import Logo from './Logo';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +25,11 @@ const Digitalizador = ({ state }) => {
   const [historySearch, setHistorySearch] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showCRMModal, setShowCRMModal] = useState(false);
+  const [crmContactName, setCrmContactName] = useState('');
+  const [crmContactEmail, setCrmContactEmail] = useState('');
+  const [crmContactPhone, setCrmContactPhone] = useState('');
+  const [crmCompany, setCrmCompany] = useState('');
+  const [opportunityCreated, setOpportunityCreated] = useState(null);
   const fileInputRef = useRef(null);
 
   // Load history from database
