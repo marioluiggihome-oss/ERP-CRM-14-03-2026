@@ -1425,6 +1425,38 @@ const Armarios = ({ state, setState }) => {
             </div>
           </div>
 
+          {/* Resumen Tableros */}
+          <div className="mt-4 pt-4 border-t border-purple-700">
+            <h4 className="text-[10px] font-bold text-purple-300 uppercase tracking-widest mb-2 flex items-center gap-1">
+              <Layers size={12} />
+              TABLEROS NECESARIOS
+            </h4>
+            <div className="bg-purple-800/50 rounded-lg p-3 space-y-2">
+              <div className="flex justify-between text-[10px]">
+                <span className="text-purple-300">18mm Estructura:</span>
+                <span className="font-bold text-white">{boardsCalculation.boards.tablero18mm.totalArea.toFixed(2)} m²</span>
+              </div>
+              <div className="flex justify-between text-[10px]">
+                <span className="text-purple-300">8mm Trasera:</span>
+                <span className="font-bold text-white">{boardsCalculation.boards.tablero8mm.totalArea.toFixed(2)} m²</span>
+              </div>
+              <div className="flex justify-between text-[10px]">
+                <span className="text-purple-300">18mm Puertas:</span>
+                <span className="font-bold text-white">{boardsCalculation.boards.puertasTablero.totalArea.toFixed(2)} m²</span>
+              </div>
+              <div className="border-t border-purple-600 pt-2 mt-2">
+                <div className="flex justify-between text-xs">
+                  <span className="font-bold text-purple-200">TOTAL:</span>
+                  <span className="font-black text-orange-400">{boardsCalculation.totalArea.toFixed(2)} m²</span>
+                </div>
+                <div className="flex justify-between text-[10px] mt-1">
+                  <span className="text-purple-300">Tableros:</span>
+                  <span className="font-bold text-white">{boardsCalculation.totalBoards} uds</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Botón para ver despiece */}
           <button 
             onClick={() => setShowDespieceModal(true)}
