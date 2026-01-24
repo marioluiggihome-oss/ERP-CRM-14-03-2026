@@ -839,6 +839,66 @@ async def delete_material(material_id: str):
 # SETTINGS ENDPOINTS
 # ============================================
 
+@api_router.get("/expedient/next")
+async def get_next_expedient_number():
+    """
+    Obtener el siguiente número de expediente correlativo.
+    Formato: EXP-AAAA-NNNNN (ej: EXP-2026-00001)
+    """
+    try:
+        year = datetime.now().year
+        
+        # Obtener o crear el contador de expedientes
+        counter = await db.system_counters.find_one({"key": f"expedient_{year}"})
+        
+        if not counter:
+            # Crear contador para el año actual empezando en 1
+            counter = {
+                "key": f"expedient_{year}",
+                "value": 0,
+                "year": year
+            }
+            await db.system_counters.insert_one(counter)
+        
+        # Incrementar el contador atómicamente
+        result = await db.system_counters.find_one_and_update(
+            {"key": f"expedient_{year}"},
+            {"$inc": {"value": 1}},
+            return_document=True
+        )
+        
+        next_number = result["value"]
+        expedient = f"EXP-{year}-{next_number:05d}"
+        
+        return {
+            "success": True,
+            "expedient": expedient,
+            "number": next_number,
+            "year": year
+        }
+    except Exception as e:
+        logger.error(f"Error getting next expedient: {e}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo número de expediente: {str(e)}")
+
+@api_router.get("/expedient/current")
+async def get_current_expedient_info():
+    """Obtener información del contador de expedientes actual"""
+    try:
+        year = datetime.now().year
+        counter = await db.system_counters.find_one({"key": f"expedient_{year}"})
+        
+        current = counter["value"] if counter else 0
+        
+        return {
+            "success": True,
+            "year": year,
+            "currentCount": current,
+            "nextExpedient": f"EXP-{year}-{current + 1:05d}"
+        }
+    except Exception as e:
+        logger.error(f"Error getting expedient info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/settings", response_model=SettingsModel)
 async def get_settings():
     """Obtener configuración global"""
