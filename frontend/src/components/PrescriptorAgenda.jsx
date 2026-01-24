@@ -280,11 +280,20 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
       <div className="bg-white border-b border-amber-200 px-6 py-4 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-amber-500 rounded-2xl shadow-lg">
-              <Users size={28} className="text-white" />
-            </div>
+            {/* Logo from Identity */}
+            {currentUser?.companyLogo ? (
+              <img 
+                src={currentUser.companyLogo} 
+                alt="Logo" 
+                className="h-14 w-auto object-contain"
+              />
+            ) : (
+              <div className="p-3 bg-amber-500 rounded-2xl shadow-lg">
+                <Briefcase size={28} className="text-white" />
+              </div>
+            )}
             <div>
-              <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Mi Agenda</h1>
+              <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Agenda de Negocios</h1>
               <p className="text-sm text-amber-600 font-bold">{currentUser?.clientName} · Prescriptor Comercial</p>
             </div>
           </div>
