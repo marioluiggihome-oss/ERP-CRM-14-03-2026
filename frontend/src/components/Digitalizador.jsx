@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen } from 'lucide-react';
+import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus } from 'lucide-react';
 import Logo from './Logo';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -7,10 +7,13 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const Digitalizador = ({ state }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreatingOpportunity, setIsCreatingOpportunity] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [projectName, setProjectName] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [lines, setLines] = useState([]);
   const [globalDiscount, setGlobalDiscount] = useState(0);
   const [ivaRate, setIvaRate] = useState(21);
@@ -21,6 +24,7 @@ const Digitalizador = ({ state }) => {
   const [history, setHistory] = useState([]);
   const [historySearch, setHistorySearch] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showCRMModal, setShowCRMModal] = useState(false);
   const fileInputRef = useRef(null);
 
   // Load history from database
