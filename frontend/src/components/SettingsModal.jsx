@@ -1684,7 +1684,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 )}
 
                 {/* Log Content */}
-                <div ref={logContainerRef} className="flex-1 overflow-y-auto p-3 space-y-1">
+                <div className="flex-1 overflow-y-auto p-3 space-y-1">
                   {telemetryLog.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center">
                       <Zap size={24} className="text-indigo-700 mb-2" />
