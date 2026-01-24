@@ -1238,6 +1238,91 @@ async def delete_product(product_id: str):
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return {"message": "Producto eliminado"}
 
+@api_router.post("/catalog/extract-products")
+async def extract_products_from_catalog(file: UploadFile = File(...)):
+    """
+    Extraer productos de una imagen de catálogo/tarifa usando Gemini Vision.
+    """
+    try:
+        # Read the image
+        file_content = await file.read()
+        base64_image = base64.b64encode(file_content).decode('utf-8')
+        
+        # Detect mime type
+        mime_type = file.content_type or 'image/png'
+        
+        # Create prompt for extraction
+        extraction_prompt = """Analiza esta imagen de un catálogo/tarifa de muebles de cocina.
+        
+Extrae TODOS los productos visibles con la siguiente información:
+- codigo_referencia: el código del producto (ej: 35A1P350, 7B1PX300, PTA_ZC89X290)
+- nombre: descripción del producto
+- puntos_por_zona: objeto con las zonas Z1 a Z12 y sus puntos correspondientes
+
+Responde SOLO con un JSON válido en este formato:
+{
+  "products": [
+    {
+      "codigo_referencia": "CODIGO",
+      "nombre": "Descripción del mueble",
+      "puntos_por_zona": {
+        "Z1": 60, "Z2": 62, "Z3": 66, "Z4": 69, "Z5": 76, "Z6": 87,
+        "Z7": 93, "Z8": 96, "Z9": 101, "Z10": 122, "Z11": 129, "Z12": 158
+      }
+    }
+  ]
+}
+
+Si no hay 12 zonas, incluye solo las que aparezcan. Extrae TODOS los productos de la tabla."""
+
+        # Use Gemini Vision
+        chat = LlmChat(
+            api_key=os.environ.get('EMERGENT_LLM_KEY'),
+            model="gemini/gemini-2.0-flash",
+            session_id=f"catalog-extract-{uuid.uuid4().hex[:8]}",
+            system_prompt="Eres un extractor de datos de catálogos de muebles. Responde SOLO con JSON válido."
+        )
+        
+        image_content = ImageContent(
+            data=base64_image,
+            media_type=mime_type
+        )
+        
+        response = await chat.send_message_async(
+            UserMessage(content=[extraction_prompt, image_content])
+        )
+        
+        # Parse response
+        response_text = response.content if hasattr(response, 'content') else str(response)
+        
+        # Clean JSON from markdown
+        if '```json' in response_text:
+            response_text = response_text.split('```json')[1].split('```')[0]
+        elif '```' in response_text:
+            response_text = response_text.split('```')[1].split('```')[0]
+        
+        response_text = response_text.strip()
+        
+        try:
+            data = json.loads(response_text)
+            products = data.get('products', [])
+        except json.JSONDecodeError:
+            # Try to find JSON in response
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            if json_match:
+                data = json.loads(json_match.group())
+                products = data.get('products', [])
+            else:
+                products = []
+        
+        logger.info(f"Extracted {len(products)} products from catalog image")
+        return {"success": True, "products": products}
+        
+    except Exception as e:
+        logger.error(f"Catalog extraction error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/products/fix-heights")
 async def fix_product_heights():
     """
