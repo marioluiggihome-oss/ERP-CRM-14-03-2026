@@ -18,6 +18,15 @@ class ErrorBoundary extends React.Component {
     console.error('Error capturado:', error, errorInfo);
   }
 
+  clearCacheAndReload = () => {
+    // Clear all localStorage
+    localStorage.clear();
+    // Clear sessionStorage
+    sessionStorage.clear();
+    // Reload
+    window.location.reload();
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -30,29 +39,52 @@ class ErrorBoundary extends React.Component {
           color: 'white'
         }}>
           <h1 style={{ color: '#f97316', marginBottom: '20px' }}>⚠️ Error en la Aplicación</h1>
-          <p style={{ marginBottom: '20px' }}>Ha ocurrido un error. Por favor, recarga la página.</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{
-              background: '#f97316',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            Recargar Página
-          </button>
-          <details style={{ marginTop: '20px', textAlign: 'left', maxWidth: '600px', margin: '20px auto' }}>
-            <summary style={{ cursor: 'pointer' }}>Detalles del error</summary>
+          <p style={{ marginBottom: '20px' }}>Ha ocurrido un error debido a datos en caché antiguos.</p>
+          
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button 
+              onClick={this.clearCacheAndReload}
+              style={{
+                background: '#22c55e',
+                color: 'white',
+                border: 'none',
+                padding: '14px 28px',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              🧹 Limpiar Caché y Recargar
+            </button>
+            
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{
+                background: '#6b7280',
+                color: 'white',
+                border: 'none',
+                padding: '14px 28px',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              🔄 Solo Recargar
+            </button>
+          </div>
+          
+          <details style={{ marginTop: '30px', textAlign: 'left', maxWidth: '600px', margin: '30px auto' }}>
+            <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>Detalles del error</summary>
             <pre style={{ 
               background: '#0f172a', 
               padding: '15px', 
               borderRadius: '8px',
               overflow: 'auto',
-              fontSize: '12px'
+              fontSize: '11px',
+              color: '#f87171',
+              marginTop: '10px'
             }}>
               {this.state.error?.toString()}
             </pre>
