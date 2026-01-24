@@ -259,7 +259,7 @@ const CRMContacts = ({ currentUser }) => {
             ))}
           </select>
 
-          {/* Prescriptor Filter */}
+          {/* Colaborador Filter */}
           {prescriptors.length > 0 && (
             <select
               value={prescriptorFilter}
@@ -503,7 +503,7 @@ const CRMContacts = ({ currentUser }) => {
                 </div>
               </div>
 
-              {/* Segmento y Prescriptor */}
+              {/* Segmento y Colaborador */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Segmento</label>

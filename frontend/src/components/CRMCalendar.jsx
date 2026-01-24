@@ -377,7 +377,7 @@ const CRMCalendar = ({ currentUser }) => {
                 onChange={(e) => setShowPrescriptorNotes(e.target.checked)}
                 className="w-4 h-4 rounded accent-amber-500"
               />
-              <span className="text-xs font-bold text-amber-600">Notas Prescriptores</span>
+              <span className="text-xs font-bold text-amber-600">Notas Colaboradores</span>
             </label>
           )}
 
