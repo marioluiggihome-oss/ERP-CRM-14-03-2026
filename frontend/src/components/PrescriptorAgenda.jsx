@@ -209,8 +209,40 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
     }
     setSavingNote(true);
     try {
+      let contactId = noteFormData.contactId;
+      let contactName = noteFormData.contactName;
+
+      // If creating a new contact from the note modal
+      if (showNewContactInNote && newContactInNote.name.trim()) {
+        const contactData = {
+          name: newContactInNote.name,
+          phone: newContactInNote.phone,
+          company: newContactInNote.company,
+          status: 'lead',
+          source: 'prescriptor',
+          prescriptorId: currentUser.id,
+          prescriptorName: currentUser.clientName
+        };
+
+        const contactResponse = await fetch(`${API_URL}/api/crm/contacts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contactData)
+        });
+
+        if (contactResponse.ok) {
+          const newContact = await contactResponse.json();
+          contactId = newContact.id;
+          contactName = newContact.name;
+          // Refresh contacts list
+          loadContacts();
+        }
+      }
+
       const noteData = {
         ...noteFormData,
+        contactId,
+        contactName,
         date: format(selectedDate, 'yyyy-MM-dd'),
         prescriptorId: currentUser.id,
         prescriptorName: currentUser.clientName
