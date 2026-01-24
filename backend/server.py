@@ -326,16 +326,31 @@ class StatusCheckCreate(BaseModel):
     client_name: str
 
 # ============================================
-# CLIENT MODELS - Clientes Activos (Empresas/Tiendas)
+# CLIENT MODELS - Clientes (Potenciales y Activos)
 # ============================================
 
+# Segmentos de clientes
+CLIENT_SEGMENTS = [
+    "DECORADORES-INTERIORISTAS",
+    "PROMOTORES",
+    "CONSTRUCTORES",
+    "PROMOTORES & CONSTRUCTORES",
+    "ESTUDIOS DE COCINA",
+    "TIENDAS DE MUEBLES EN GENERAL",
+    "TIENDAS DE COCINA Y BAÑOS",
+    "TIENDAS DE ARMARIOS",
+    "USUARIOS FINALES"
+]
+
 class ClientModel(BaseModel):
-    """Modelo para clientes activos (empresas/tiendas que compran)"""
+    """Modelo para clientes (potenciales y activos)"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: f"cli-{uuid.uuid4().hex[:8]}")
-    codigo: str  # Código del programa de gestión
+    tipo: str = "potencial"  # 'potencial' o 'activo'
+    codigo: str = ""  # Código del programa de gestión (vacío si potencial)
     nombre: str  # Nombre comercial / Razón social
     cif: str = ""  # CIF/NIF
+    segmento: str = ""  # Segmento de cliente (ver CLIENT_SEGMENTS)
     direccion: str = ""
     localidad: str = ""
     provincia: str = ""
@@ -345,13 +360,20 @@ class ClientModel(BaseModel):
     descuento: float = 0  # Descuento personalizado (%)
     activo: bool = True
     notas: str = ""
+    # Vinculaciones
+    origenCrmContactId: str = ""  # ID del contacto CRM original (si viene del CRM)
+    usuarioVinculadoId: str = ""  # ID del usuario del sistema (si tiene acceso)
+    # Metadata
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    convertidoAt: Optional[datetime] = None  # Fecha de conversión a activo
 
 class ClientCreate(BaseModel):
-    codigo: str
+    tipo: str = "potencial"
+    codigo: str = ""
     nombre: str
     cif: str = ""
+    segmento: str = ""
     direccion: str = ""
     localidad: str = ""
     provincia: str = ""
@@ -361,11 +383,15 @@ class ClientCreate(BaseModel):
     descuento: float = 0
     activo: bool = True
     notas: str = ""
+    origenCrmContactId: str = ""
+    usuarioVinculadoId: str = ""
 
 class ClientUpdate(BaseModel):
+    tipo: Optional[str] = None
     codigo: Optional[str] = None
     nombre: Optional[str] = None
     cif: Optional[str] = None
+    segmento: Optional[str] = None
     direccion: Optional[str] = None
     localidad: Optional[str] = None
     provincia: Optional[str] = None
@@ -375,6 +401,9 @@ class ClientUpdate(BaseModel):
     descuento: Optional[float] = None
     activo: Optional[bool] = None
     notas: Optional[str] = None
+    origenCrmContactId: Optional[str] = None
+    usuarioVinculadoId: Optional[str] = None
+    convertidoAt: Optional[datetime] = None
 
 # ============================================
 # CRM MODELS - Contactos, Oportunidades, Actividades
