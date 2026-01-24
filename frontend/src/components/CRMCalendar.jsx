@@ -403,6 +403,10 @@ const CRMCalendar = ({ currentUser }) => {
                   {monthDays.map((day, idx) => {
                     const dayEvents = getEventsForDate(day);
                     const isCurrentMonth = isSameMonth(day, currentDate);
+                    // Get prescriptor notes for this day (admin only)
+                    const dayPrescriptorNotes = showPrescriptorNotes ? prescriptorNotes.filter(
+                      n => n.date === format(day, 'yyyy-MM-dd')
+                    ) : [];
                     return (
                       <div
                         key={idx}
@@ -417,7 +421,7 @@ const CRMCalendar = ({ currentUser }) => {
                           {format(day, 'd')}
                         </div>
                         <div className="space-y-0.5">
-                          {dayEvents.slice(0, 3).map(evt => (
+                          {dayEvents.slice(0, 2).map(evt => (
                             <div
                               key={evt.id}
                               onClick={(e) => { e.stopPropagation(); openEditModal(evt); }}
@@ -426,9 +430,19 @@ const CRMCalendar = ({ currentUser }) => {
                               {evt.title}
                             </div>
                           ))}
-                          {dayEvents.length > 3 && (
+                          {/* Prescriptor Notes (amber/orange) */}
+                          {dayPrescriptorNotes.slice(0, 2).map(note => (
+                            <div
+                              key={note.id}
+                              className="text-[10px] px-1.5 py-0.5 rounded truncate bg-amber-100 text-amber-800 border border-amber-200"
+                              title={`${note.prescriptorName}: ${note.title || note.content}`}
+                            >
+                              📋 {note.title || note.content?.substring(0, 15)}
+                            </div>
+                          ))}
+                          {(dayEvents.length + dayPrescriptorNotes.length) > 4 && (
                             <div className="text-[10px] text-slate-400 font-bold pl-1">
-                              +{dayEvents.length - 3} más
+                              +{(dayEvents.length + dayPrescriptorNotes.length) - 4} más
                             </div>
                           )}
                         </div>
