@@ -801,7 +801,8 @@ async def create_client(client: ClientCreate):
     await db.clients.insert_one(client_data)
     
     # Return without _id
-    del client_data["_id"] if "_id" in client_data else None
+    if "_id" in client_data:
+        del client_data["_id"]
     return client_data
 
 @api_router.put("/clients/{client_id}")
