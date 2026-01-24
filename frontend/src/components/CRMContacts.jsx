@@ -81,13 +81,19 @@ const CRMContacts = ({ currentUser }) => {
       console.error('Error loading prescriptors:', err);
     }
   };
-  };
 
   const handleSearch = async () => {
     setIsLoading(true);
     try {
       const data = await crmContactsAPI.getAll(statusFilter || null, searchQuery || null);
-      setContacts(data);
+      let filtered = data;
+      if (segmentFilter) {
+        filtered = filtered.filter(c => c.segment === segmentFilter);
+      }
+      if (prescriptorFilter) {
+        filtered = filtered.filter(c => c.prescriptorId === prescriptorFilter);
+      }
+      setContacts(filtered);
     } catch (err) {
       console.error('Error searching contacts:', err);
     } finally {
@@ -107,7 +113,10 @@ const CRMContacts = ({ currentUser }) => {
         address: contact.address || '',
         notes: contact.notes || '',
         status: contact.status || 'lead',
-        source: contact.source || ''
+        source: contact.source || '',
+        segment: contact.segment || '',
+        prescriptorId: contact.prescriptorId || '',
+        prescriptorName: contact.prescriptorName || ''
       });
     } else {
       setEditingContact(null);
@@ -120,7 +129,10 @@ const CRMContacts = ({ currentUser }) => {
         address: '',
         notes: '',
         status: 'lead',
-        source: ''
+        source: '',
+        segment: '',
+        prescriptorId: currentUser?.isPrescriptor ? currentUser?.id : '',
+        prescriptorName: currentUser?.isPrescriptor ? currentUser?.clientName : ''
       });
     }
     setShowModal(true);
