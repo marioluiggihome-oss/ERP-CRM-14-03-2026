@@ -1971,6 +1971,140 @@ async def delete_opportunity(opp_id: str):
     return {"message": "Oportunidad eliminada", "id": opp_id}
 
 # ============================================
+# CRM API ENDPOINTS - Análisis de Clientes Inactivos
+# ============================================
+
+@api_router.get("/crm/analytics/inactive-clients")
+async def get_inactive_clients(days_without_offer: int = 30, days_without_purchase: int = 60):
+    """
+    Analiza clientes/contactos sin actividad reciente.
+    - Sin oferta: Contactos sin oportunidades nuevas en X días
+    - Sin compra: Contactos sin oportunidades 'won' en Y días
+    """
+    from datetime import datetime, timedelta, timezone
+    
+    now = datetime.now(timezone.utc)
+    offer_cutoff = now - timedelta(days=days_without_offer)
+    purchase_cutoff = now - timedelta(days=days_without_purchase)
+    
+    # Get all contacts
+    contacts = await db.contacts.find({}, {"_id": 0}).to_list(5000)
+    
+    # Get all opportunities
+    opportunities = await db.opportunities.find({}, {"_id": 0}).to_list(5000)
+    
+    # Create lookup maps
+    # Last offer (any opportunity) per contact
+    last_offer_by_contact = {}
+    # Last purchase (won opportunity) per contact  
+    last_purchase_by_contact = {}
+    
+    for opp in opportunities:
+        contact_id = opp.get("contactId")
+        if not contact_id:
+            continue
+            
+        created_at_str = opp.get("createdAt", "")
+        try:
+            if isinstance(created_at_str, str):
+                created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+            else:
+                created_at = created_at_str
+        except:
+            continue
+        
+        # Track last offer (any opportunity)
+        if contact_id not in last_offer_by_contact or created_at > last_offer_by_contact[contact_id]["date"]:
+            last_offer_by_contact[contact_id] = {"date": created_at, "opp": opp}
+        
+        # Track last purchase (won opportunities only)
+        if opp.get("stage") == "won":
+            won_at_str = opp.get("updatedAt", opp.get("createdAt", ""))
+            try:
+                if isinstance(won_at_str, str):
+                    won_at = datetime.fromisoformat(won_at_str.replace('Z', '+00:00'))
+                else:
+                    won_at = won_at_str
+            except:
+                continue
+                
+            if contact_id not in last_purchase_by_contact or won_at > last_purchase_by_contact[contact_id]["date"]:
+                last_purchase_by_contact[contact_id] = {"date": won_at, "opp": opp}
+    
+    # Build result lists
+    without_recent_offer = []
+    without_recent_purchase = []
+    
+    for contact in contacts:
+        contact_id = contact.get("id")
+        contact_info = {
+            "id": contact_id,
+            "name": contact.get("name", ""),
+            "company": contact.get("company", ""),
+            "email": contact.get("email", ""),
+            "phone": contact.get("phone", ""),
+            "status": contact.get("status", "")
+        }
+        
+        # Check without offer
+        if contact_id in last_offer_by_contact:
+            last_offer = last_offer_by_contact[contact_id]
+            if last_offer["date"] < offer_cutoff:
+                days_ago = (now - last_offer["date"]).days
+                contact_info["lastOfferDate"] = last_offer["date"].isoformat()
+                contact_info["lastOfferTitle"] = last_offer["opp"].get("title", "")
+                contact_info["daysWithoutOffer"] = days_ago
+                without_recent_offer.append(contact_info.copy())
+        else:
+            # Never had an offer
+            contact_created = contact.get("createdAt", "")
+            if contact_created:
+                try:
+                    if isinstance(contact_created, str):
+                        created = datetime.fromisoformat(contact_created.replace('Z', '+00:00'))
+                    else:
+                        created = contact_created
+                    days_since_created = (now - created).days
+                    if days_since_created >= days_without_offer:
+                        contact_info["lastOfferDate"] = None
+                        contact_info["lastOfferTitle"] = "Nunca"
+                        contact_info["daysWithoutOffer"] = days_since_created
+                        without_recent_offer.append(contact_info.copy())
+                except:
+                    pass
+        
+        # Check without purchase
+        if contact_id in last_purchase_by_contact:
+            last_purchase = last_purchase_by_contact[contact_id]
+            if last_purchase["date"] < purchase_cutoff:
+                days_ago = (now - last_purchase["date"]).days
+                contact_info["lastPurchaseDate"] = last_purchase["date"].isoformat()
+                contact_info["lastPurchaseValue"] = last_purchase["opp"].get("value", 0)
+                contact_info["daysWithoutPurchase"] = days_ago
+                without_recent_purchase.append(contact_info.copy())
+        else:
+            # Never purchased - only include if they've had at least one offer
+            if contact_id in last_offer_by_contact:
+                contact_info["lastPurchaseDate"] = None
+                contact_info["lastPurchaseValue"] = 0
+                contact_info["daysWithoutPurchase"] = 9999  # Never purchased
+                without_recent_purchase.append(contact_info.copy())
+    
+    # Sort by days without activity (descending)
+    without_recent_offer.sort(key=lambda x: x.get("daysWithoutOffer", 0), reverse=True)
+    without_recent_purchase.sort(key=lambda x: x.get("daysWithoutPurchase", 0), reverse=True)
+    
+    return {
+        "withoutRecentOffer": without_recent_offer[:50],  # Top 50
+        "withoutRecentPurchase": without_recent_purchase[:50],  # Top 50
+        "summary": {
+            "totalWithoutOffer30Days": len([c for c in without_recent_offer if c.get("daysWithoutOffer", 0) >= 30]),
+            "totalWithoutPurchase60Days": len([c for c in without_recent_purchase if c.get("daysWithoutPurchase", 0) >= 60]),
+            "totalWithoutPurchase90Days": len([c for c in without_recent_purchase if c.get("daysWithoutPurchase", 0) >= 90])
+        }
+    }
+
+# ============================================
 # CRM API ENDPOINTS - Actividades
 # ============================================
 
