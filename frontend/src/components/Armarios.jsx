@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Plus, Minus, Save, Download, Box, Palette, Layers, Settings, ChevronDown, ChevronUp, Trash2, Copy, Move, GripVertical, RotateCcw, Eye, EyeOff, Calculator, FileText } from 'lucide-react';
+import { Plus, Minus, Save, Download, Box, Palette, Layers, Settings, ChevronDown, ChevronUp, Trash2, Copy, Move, GripVertical, RotateCcw, Eye, EyeOff, Calculator, FileText, List, Package, Scissors, X, Edit3, Hash, Printer } from 'lucide-react';
 
 // ========== TIPOS Y CONSTANTES ==========
 
@@ -30,6 +30,207 @@ const FINSA_COLORS = [
   { id: 'lino', name: 'Lino', hex: '#E8DCC4', category: 'textures' },
   { id: 'cemento', name: 'Cemento', hex: '#9B9B9B', category: 'textures' },
 ];
+
+// ========== CATÁLOGO DE ACCESORIOS CON CÓDIGOS ==========
+const ACCESSORIES_CATALOG = {
+  // Estructura
+  panels: {
+    id: 'PAN',
+    name: 'Panel Lateral',
+    category: 'estructura',
+    price: 45,
+    unit: 'ud',
+    description: 'Panel lateral 18mm melamina'
+  },
+  backPanel: {
+    id: 'TRA',
+    name: 'Trasera',
+    category: 'estructura',
+    price: 25,
+    unit: 'ud',
+    description: 'Panel trasero 8mm'
+  },
+  topBottom: {
+    id: 'TSI',
+    name: 'Tapa Superior/Inferior',
+    category: 'estructura',
+    price: 40,
+    unit: 'ud',
+    description: 'Tapa horizontal 18mm'
+  },
+  divider: {
+    id: 'DIV',
+    name: 'Divisor Vertical',
+    category: 'estructura',
+    price: 35,
+    unit: 'ud',
+    description: 'Divisor interior vertical'
+  },
+  // Interior
+  shelves: {
+    id: 'BAL',
+    name: 'Balda',
+    category: 'interior',
+    price: 25,
+    unit: 'ud',
+    description: 'Balda 18mm ajustable'
+  },
+  drawers: {
+    id: 'CAJ',
+    name: 'Cajón',
+    category: 'interior',
+    price: 85,
+    unit: 'ud',
+    description: 'Cajón con guías soft-close'
+  },
+  hangingRods: {
+    id: 'BAR',
+    name: 'Barra de Colgar',
+    category: 'interior',
+    price: 35,
+    unit: 'ud',
+    description: 'Barra cromada oval'
+  },
+  shoesRack: {
+    id: 'ZAP',
+    name: 'Zapatero Extraíble',
+    category: 'interior',
+    price: 120,
+    unit: 'ud',
+    description: 'Zapatero basculante'
+  },
+  trousersRack: {
+    id: 'PTL',
+    name: 'Pantalonero',
+    category: 'interior',
+    price: 95,
+    unit: 'ud',
+    description: 'Pantalonero extraíble 12 barras'
+  },
+  jewelryTray: {
+    id: 'JOY',
+    name: 'Bandeja Joyero',
+    category: 'interior',
+    price: 65,
+    unit: 'ud',
+    description: 'Bandeja forrada terciopelo'
+  },
+  tieRack: {
+    id: 'COR',
+    name: 'Corbatero',
+    category: 'interior',
+    price: 45,
+    unit: 'ud',
+    description: 'Corbatero giratorio'
+  },
+  pulloutBasket: {
+    id: 'CES',
+    name: 'Cesto Extraíble',
+    category: 'interior',
+    price: 75,
+    unit: 'ud',
+    description: 'Cesto metálico extraíble'
+  },
+  // Puertas
+  hingeDoor: {
+    id: 'PAB',
+    name: 'Puerta Abatible',
+    category: 'puertas',
+    price: 120,
+    unit: 'ud',
+    description: 'Puerta abatible con bisagras'
+  },
+  slidingDoor: {
+    id: 'PCO',
+    name: 'Puerta Corredera',
+    category: 'puertas',
+    price: 180,
+    unit: 'ud',
+    description: 'Puerta corredera con sistema aluminio'
+  },
+  foldingDoor: {
+    id: 'PPL',
+    name: 'Puerta Plegable',
+    category: 'puertas',
+    price: 220,
+    unit: 'ud',
+    description: 'Puerta plegable sistema bi-fold'
+  },
+  // Herrajes
+  hinge: {
+    id: 'BIS',
+    name: 'Bisagra',
+    category: 'herrajes',
+    price: 8,
+    unit: 'ud',
+    description: 'Bisagra 110° soft-close'
+  },
+  slidingSystem: {
+    id: 'SIS',
+    name: 'Sistema Corredera',
+    category: 'herrajes',
+    price: 150,
+    unit: 'kit',
+    description: 'Kit guía superior + inferior'
+  },
+  handle: {
+    id: 'TIR',
+    name: 'Tirador',
+    category: 'herrajes',
+    price: 15,
+    unit: 'ud',
+    description: 'Tirador aluminio 128mm'
+  },
+  shelfSupport: {
+    id: 'SOP',
+    name: 'Soporte Balda',
+    category: 'herrajes',
+    price: 0.5,
+    unit: 'ud',
+    description: 'Soporte metálico para balda'
+  },
+  drawerGuide: {
+    id: 'GUI',
+    name: 'Guía Cajón',
+    category: 'herrajes',
+    price: 25,
+    unit: 'par',
+    description: 'Guías extracción total soft-close'
+  },
+  // Extras
+  mirror: {
+    id: 'ESP',
+    name: 'Espejo',
+    category: 'extras',
+    price: 150,
+    unit: 'ud',
+    description: 'Espejo pegado a puerta'
+  },
+  led: {
+    id: 'LED',
+    name: 'Tira LED',
+    category: 'extras',
+    price: 60,
+    unit: 'ml',
+    description: 'Iluminación LED con sensor'
+  },
+  ledSensor: {
+    id: 'SEN',
+    name: 'Sensor Movimiento LED',
+    category: 'extras',
+    price: 25,
+    unit: 'ud',
+    description: 'Sensor para activar LED'
+  },
+  softClose: {
+    id: 'SFC',
+    name: 'Cierre Suave',
+    category: 'extras',
+    price: 12,
+    unit: 'ud',
+    description: 'Sistema soft-close puerta'
+  }
+};
 
 const DEFAULT_INTERIOR_COMPONENTS = {
   shelves: { name: 'Baldas', price: 25, icon: '📏' },
