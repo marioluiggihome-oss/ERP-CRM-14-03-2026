@@ -1851,7 +1851,150 @@ class DigitalizadorExportRequest(BaseModel):
     materialCode: str = "40-ESTEITEX16"
     materialThickness: float = 16.0
 
-@api_router.post("/digitalizador/analyze")
+# Modelo para guardar presupuesto digitalizado en historial
+class DigitalizadorSaveRequest(BaseModel):
+    """Request to save a digitalized budget to history"""
+    projectName: str
+    customerName: str = ""
+    acabado: str = ""
+    armazon: str = ""
+    costados: str = ""
+    lines: List[DigitalizadorLine]
+    globalDiscount: float = 0
+    ivaRate: float = 21
+    userId: str
+    
+class DigitalizadorHistoryItem(BaseModel):
+    """A saved digitalized budget"""
+    id: str
+    projectName: str
+    customerName: str
+    acabado: str
+    armazon: str
+    costados: str
+    lines: List[DigitalizadorLine]
+    globalDiscount: float
+    ivaRate: float
+    totalBruto: float
+    totalNeto: float
+    totalConIva: float
+    userId: str
+    createdAt: str
+    filename: str = ""
+
+@api_router.post("/digitalizador/save")
+async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
+    """Save a digitalized budget to history"""
+    try:
+        # Calculate totals
+        total_bruto = sum(line.price * line.quantity for line in request.lines)
+        
+        total_neto = 0
+        for line in request.lines:
+            line_price = line.price * line.quantity
+            line_discount = line.discount if line.isManual else max(line.discount, request.globalDiscount)
+            total_neto += line_price * (1 - line_discount / 100)
+        
+        total_con_iva = total_neto * (1 + request.ivaRate / 100)
+        
+        # Create history item
+        history_item = {
+            "id": f"digi-{uuid.uuid4().hex[:12]}",
+            "projectName": request.projectName,
+            "customerName": request.customerName,
+            "acabado": request.acabado,
+            "armazon": request.armazon,
+            "costados": request.costados,
+            "lines": [line.model_dump() for line in request.lines],
+            "globalDiscount": request.globalDiscount,
+            "ivaRate": request.ivaRate,
+            "totalBruto": round(total_bruto, 2),
+            "totalNeto": round(total_neto, 2),
+            "totalConIva": round(total_con_iva, 2),
+            "userId": request.userId,
+            "createdAt": datetime.now(timezone.utc).isoformat()
+        }
+        
+        db.digitalizador_history.insert_one(history_item)
+        history_item.pop('_id', None)
+        
+        return {
+            "success": True,
+            "message": "Presupuesto guardado en historial",
+            "item": history_item
+        }
+    except Exception as e:
+        logger.error(f"Save digitalizador budget error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error guardando presupuesto: {str(e)}")
+
+@api_router.get("/digitalizador/history")
+async def get_digitalizador_history(userId: str = None, search: str = None, limit: int = 50):
+    """Get digitalizador history, optionally filtered by user or search term"""
+    try:
+        query = {}
+        
+        if userId:
+            query["userId"] = userId
+        
+        if search:
+            query["$or"] = [
+                {"projectName": {"$regex": search, "$options": "i"}},
+                {"customerName": {"$regex": search, "$options": "i"}}
+            ]
+        
+        items = list(db.digitalizador_history.find(query).sort("createdAt", -1).limit(limit))
+        
+        for item in items:
+            item.pop('_id', None)
+        
+        return {
+            "success": True,
+            "items": items,
+            "count": len(items)
+        }
+    except Exception as e:
+        logger.error(f"Get digitalizador history error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo historial: {str(e)}")
+
+@api_router.get("/digitalizador/history/{item_id}")
+async def get_digitalizador_item(item_id: str):
+    """Get a specific digitalizador history item"""
+    try:
+        item = db.digitalizador_history.find_one({"id": item_id})
+        
+        if not item:
+            raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+        
+        item.pop('_id', None)
+        
+        return {
+            "success": True,
+            "item": item
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get digitalizador item error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo presupuesto: {str(e)}")
+
+@api_router.delete("/digitalizador/history/{item_id}")
+async def delete_digitalizador_item(item_id: str):
+    """Delete a digitalizador history item"""
+    try:
+        result = db.digitalizador_history.delete_one({"id": item_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+        
+        return {
+            "success": True,
+            "message": "Presupuesto eliminado"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete digitalizador item error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error eliminando presupuesto: {str(e)}")
 async def analyze_draft(request: DigitalizadorRequest):
     """
     Analyze a draft image using Gemini Vision to extract budget lines.
