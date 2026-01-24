@@ -517,3 +517,25 @@ El prescriptor tiene un calendario simple donde puede añadir notas en fechas es
 - `/app/frontend/src/components/Armarios.jsx`
 - Backend: Campo `canAccessArmarios` en UserModel
 
+
+## Etiquetas Tipo de Negocio en CRM (24/01/2026)
+
+### Funcionalidad
+- Nueva columna "TIPO NEGOCIO" en la tabla de contactos
+- Nuevo filtro "Todos los negocios" en el header
+- Tipos disponibles:
+  - **Cocina Montada** (naranja)
+  - **Cocina Despiece** (índigo)
+  - **Armarios** (púrpura)
+- Etiquetas seleccionables en el formulario de contacto (multi-select)
+- Se guardan en el campo `tags` del contacto
+
+### Persistencia del Logo
+- El logo se guarda automáticamente al subirlo via PUT /api/settings
+- Se carga al iniciar la aplicación desde GET /api/settings
+- Campo: `logo` (base64 string)
+
+### Archivos Modificados
+- `/app/frontend/src/components/CRMContacts.jsx`
+- `/app/frontend/src/App.js` (carga logo desde settings)
+
