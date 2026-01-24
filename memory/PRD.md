@@ -1,7 +1,7 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas
 
 ## Descripción del Producto
-Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriales, ahora integrado con un CRM de ventas completo. Incluye catálogo de productos, cálculo de precios por zonas geográficas, gestión de usuarios jerárquica, sistema de backup automatizado, y pipeline de ventas.
+Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriales, integrado con CRM de ventas y sistema de despiece para producción.
 
 ## Características Implementadas ✅
 
@@ -19,6 +19,7 @@ Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriale
 - Filtros por serie/familia y búsqueda
 - CRUD completo de productos
 - Eliminación masiva
+- **Dimensiones mostradas en cm** (ancho convertido de mm a cm)
 
 ### 3. Márgenes Maestros
 - Valor de punto configurable (Montada/Despiece)
@@ -31,13 +32,14 @@ Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriale
 - Cálculo automático de totales
 - Selector de acabado y armazón
 - Línea manual para items personalizados
+- **Dimensiones en cm** (ANCHO, ALTO, FONDO)
 
 ### 5. Sistema de Archivo de Proyectos
 - Guardar/cargar presupuestos
 - **Filtros**: Activos, Archivados, Todos
 - Archivar/desarchivar proyectos
 - Búsqueda por nombre/número
-- **Vincular presupuestos con oportunidades CRM**
+- Vincular presupuestos con oportunidades CRM
 
 ### 6. Exportación PDF
 - Generación de informe técnico
@@ -50,7 +52,7 @@ Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriale
 - Descarga de backup JSON
 - Restauración desde archivo JSON
 
-### 8. 🆕 CRM de Ventas (INTEGRADO)
+### 8. CRM de Ventas
 #### Dashboard CRM
 - Métricas en tiempo real: Contactos, Oportunidades, Pipeline
 - Top oportunidades
@@ -75,7 +77,30 @@ Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriale
 - Prioridad (baja, media, alta)
 - Estado completado/pendiente
 
-### 9. Telemetría IA
+### 9. 🆕 Sistema de Despiece (Bill of Materials) - NUEVO
+#### Orden de Montaje
+- Cálculo automático de componentes por mueble:
+  - **TAPA SUPERIOR**: Tapa del mueble
+  - **TAPA INFERIOR / TRAVESAÑO**: Base o travesaño de sujeción
+  - **LATERALES**: Izquierdo y derecho
+  - **TRASERA**: Panel posterior (tablero 3mm)
+  - **BALDAS**: Estantes interiores (cantidad según altura)
+- Dimensiones editables por componente
+- Vista expandible por mueble
+- Notas técnicas (cantos vistos, etc.)
+
+#### Lista de Corte
+- Lista plana de todas las piezas a cortar
+- Columnas: #, Mueble, Pieza, Material, Largo, Ancho, Cantidad, Cantos
+- Cálculo automático de canteado (1L = un lado)
+- Ideal para enviar a producción/corte
+
+#### Resumen de Materiales
+- Área total en m²
+- Desglose por tipo de material
+- Conteo de piezas por material
+
+### 10. Telemetría IA
 - Importación de catálogos mediante Gemini Vision
 - Detección de productos nuevos vs duplicados
 - (API externa puede ser inestable)
@@ -102,7 +127,12 @@ Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriale
 - **opportunities**: Oportunidades de venta
 - **activities**: Actividades y tareas CRM
 
-## APIs del CRM
+## APIs Principales
+
+### Despiece (nuevo)
+- `POST /api/despiece/calculate` - Calcula bill of materials para múltiples muebles
+
+### CRM
 - `GET/POST /api/crm/contacts` - Gestión de contactos
 - `GET/POST /api/crm/opportunities` - Pipeline de ventas
 - `POST /api/crm/opportunities/from-project/{id}` - Crear oportunidad desde presupuesto
@@ -110,15 +140,25 @@ Sistema ERP/CRM completo para la gestión de presupuestos de cocinas industriale
 - `GET /api/crm/dashboard` - Métricas del dashboard
 
 ## Últimas Actualizaciones (24/01/2026)
-- ✅ Integración completa del CRM de ventas
-- ✅ Dashboard CRM con métricas en tiempo real
-- ✅ Pipeline Kanban con 5 etapas
-- ✅ Gestión de contactos con filtros y búsqueda
-- ✅ Vinculación presupuestos → oportunidades
-- ✅ Testing completo: 16/16 tests CRM passed
+- ✅ Implementación del Sistema de Despiece completo
+- ✅ Corrección de visualización de dimensiones (mm → cm)
+- ✅ Nuevo modal con Orden de Montaje y Lista de Corte
+- ✅ API de cálculo de despiece funcional
+- ✅ Testing completo: 8/8 tests passed
 
 ## Próximas Tareas (Backlog)
-1. **Calendario CRM** - Vista de calendario para actividades
-2. **Informes CRM** - Dashboard de estadísticas de ventas
-3. **Notificaciones** - Alertas de actividades pendientes
-4. **Mejorar fiabilidad Telemetría IA** - Investigar errores API Gemini
+1. **Exportar Despiece a PDF** - Generar PDF de la lista de corte
+2. **Exportar Despiece a Excel** - Para importar en sistemas de corte CNC
+3. **Calendario CRM** - Vista de calendario para actividades
+4. **Informes CRM** - Dashboard de estadísticas de ventas
+5. **Notificaciones** - Alertas de actividades pendientes
+6. **Refactorizar Backend** - Separar server.py en módulos (routers, models, services)
+
+## Menú Lateral (orden actual)
+1. CRM (Admin y usuarios con permiso)
+2. PRESUPUESTO
+3. IA LAB (Admin y usuarios con permiso)
+4. ARCHIVO
+5. COPIA SEGURIDAD (Admin)
+6. MASTER (Admin y Comerciales)
+7. SALIR
