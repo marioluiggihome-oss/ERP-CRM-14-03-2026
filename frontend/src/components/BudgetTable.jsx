@@ -213,98 +213,141 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
       return;
     }
 
-    const nextCount = state.budgetCount + 1;
-    const nextBudgetNumber = `EXP-2026-${nextCount.toString().padStart(3, '0')}`;
-
     const itemsMontadaCopy = [...state.budgetItemsMontada];
     const itemsDespieceCopy = [...state.budgetItemsDespiece];
 
-    const newProject = {
-      id: `PRJ-${Date.now()}`,
-      name: state.customerName || 'Cliente sin nombre',
-      date: new Date().toISOString(),
-      totalPvp: total,
-      itemsMontada: itemsMontadaCopy,
-      itemsDespiece: itemsDespieceCopy,
-      finish: state.globalFinish,
-      carcassColorLow: carcassMaterialName,
-      carcassColorHigh: carcassMaterialName,
-      doorColorLow: state.doorColorLow,
-      doorColorHigh: state.doorColorHigh,
-      doorColorColumns: state.doorColorColumns,
-      sideColor: state.sideColor,
-      module: state.currentModule,
-      customerName: state.customerName,
-      customerAddress: state.customerAddress,
-      budgetNumber: state.budgetNumber,
-      internalReference: state.internalReference,
-      userId: state.currentUser.id
-    };
+    try {
+      // GUARDAR EN BACKEND - Persistir en MongoDB
+      const projectData = {
+        budgetNumber: state.budgetNumber,
+        customerName: state.customerName || 'Cliente sin nombre',
+        customerAddress: state.customerAddress || '',
+        internalReference: state.internalReference || '',
+        itemsMontada: itemsMontadaCopy,
+        itemsDespiece: itemsDespieceCopy,
+        doorColorLow: state.doorColorLow || '',
+        doorColorHigh: state.doorColorHigh || '',
+        doorColorColumns: state.doorColorColumns || '',
+        sideColor: state.sideColor || '',
+        selectedCarcassMaterialId: state.selectedCarcassMaterialId,
+        status: 'activo'
+      };
 
-    setState(prev => ({
-      ...prev,
-      projects: [newProject, ...prev.projects],
-      budgetCount: nextCount,
-      budgetNumber: nextBudgetNumber,
-      budgetItemsMontada: [],
-      budgetItemsDespiece: [],
-      customerName: '',
-      internalReference: '',
-      customerAddress: '',
-      doorColorLow: '',
-      doorColorHigh: '',
-      doorColorColumns: '',
-      sideColor: ''
-    }));
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects?user_id=${state.currentUser.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData)
+      });
 
-    // Preguntar si quiere crear oportunidad en CRM
-    if (state.currentUser?.canAccessCRM && total > 0) {
-      const createOpp = window.confirm(
-        `EXPEDIENTE ${newProject.budgetNumber} ARCHIVADO.\n\n¿Desea crear una OPORTUNIDAD en el CRM?\n\nCliente: ${newProject.customerName}\nValor: ${total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`
-      );
-      
-      if (createOpp) {
-        try {
-          // Create contact first
-          const contactRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/contacts`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: newProject.customerName || 'Cliente sin nombre',
-              type: 'lead',
-              source: 'presupuesto',
-              notes: `Contacto creado desde presupuesto ${newProject.budgetNumber}`
-            })
-          });
-          const contact = await contactRes.json();
-
-          // Create opportunity
-          await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/opportunities`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: `${newProject.budgetNumber} - ${newProject.customerName}`,
-              description: `Presupuesto generado automáticamente\nAcabado: ${newProject.finish}\nMódulo: ${newProject.module}`,
-              contactId: contact.id,
-              contactName: contact.name,
-              value: total,
-              probability: 50,
-              stage: 'proposal',
-              tags: ['presupuesto', 'auto'],
-              assignedTo: state.currentUser.id,
-              linkedProjectId: newProject.id,
-              linkedProjectNumber: newProject.budgetNumber
-            })
-          });
-          
-          alert(`✅ Oportunidad creada en CRM para ${newProject.customerName}`);
-        } catch (err) {
-          console.error('Error creating CRM opportunity:', err);
-          alert('Presupuesto guardado, pero hubo un error al crear la oportunidad CRM.');
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al guardar el proyecto');
       }
-    } else {
-      alert(`EXPEDIENTE ${newProject.budgetNumber} ARCHIVADO CORRECTAMENTE.`);
+
+      const savedProject = await response.json();
+
+      // Obtener siguiente número de expediente
+      let nextBudgetNumber = state.budgetNumber;
+      try {
+        const expResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/expedient/next`);
+        const expData = await expResponse.json();
+        if (expData.success) {
+          nextBudgetNumber = expData.expedient;
+        }
+      } catch (err) {
+        console.error('Error getting next expedient:', err);
+      }
+
+      // Crear proyecto local para la lista
+      const newProject = {
+        id: savedProject.id,
+        name: savedProject.customerName,
+        date: savedProject.createdAt,
+        totalPvp: total,
+        itemsMontada: itemsMontadaCopy,
+        itemsDespiece: itemsDespieceCopy,
+        finish: state.globalFinish,
+        carcassColorLow: carcassMaterialName,
+        carcassColorHigh: carcassMaterialName,
+        doorColorLow: state.doorColorLow,
+        doorColorHigh: state.doorColorHigh,
+        doorColorColumns: state.doorColorColumns,
+        sideColor: state.sideColor,
+        module: state.currentModule,
+        customerName: state.customerName,
+        customerAddress: state.customerAddress,
+        budgetNumber: state.budgetNumber,
+        internalReference: state.internalReference,
+        userId: state.currentUser.id
+      };
+
+      setState(prev => ({
+        ...prev,
+        projects: [newProject, ...prev.projects],
+        budgetNumber: nextBudgetNumber,
+        budgetItemsMontada: [],
+        budgetItemsDespiece: [],
+        customerName: '',
+        internalReference: '',
+        customerAddress: '',
+        doorColorLow: '',
+        doorColorHigh: '',
+        doorColorColumns: '',
+        sideColor: ''
+      }));
+
+      // Preguntar si quiere crear oportunidad en CRM
+      if (state.currentUser?.canAccessCRM && total > 0) {
+        const createOpp = window.confirm(
+          `✅ EXPEDIENTE ${newProject.budgetNumber} GUARDADO EN BASE DE DATOS.\n\n¿Desea crear una OPORTUNIDAD en el CRM?\n\nCliente: ${newProject.customerName}\nValor: ${total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`
+        );
+        
+        if (createOpp) {
+          try {
+            // Create contact first
+            const contactRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/contacts`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: newProject.customerName || 'Cliente sin nombre',
+                type: 'lead',
+                source: 'presupuesto',
+                notes: `Contacto creado desde presupuesto ${newProject.budgetNumber}`
+              })
+            });
+            const contact = await contactRes.json();
+
+            // Create opportunity
+            await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/opportunities`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: `${newProject.budgetNumber} - ${newProject.customerName}`,
+                description: `Presupuesto generado automáticamente\nAcabado: ${newProject.finish}\nMódulo: ${newProject.module}`,
+                contactId: contact.id,
+                contactName: contact.name,
+                value: total,
+                probability: 50,
+                stage: 'proposal',
+                tags: ['presupuesto', 'auto'],
+                assignedTo: state.currentUser.id,
+                linkedProjectId: newProject.id,
+                linkedProjectNumber: newProject.budgetNumber
+              })
+            });
+            
+            alert(`✅ Oportunidad creada en CRM para ${newProject.customerName}`);
+          } catch (err) {
+            console.error('Error creating CRM opportunity:', err);
+            alert('Presupuesto guardado, pero hubo un error al crear la oportunidad CRM.');
+          }
+        }
+      } else {
+        alert(`✅ EXPEDIENTE ${newProject.budgetNumber} GUARDADO CORRECTAMENTE.`);
+      }
+    } catch (error) {
+      console.error('Error saving project:', error);
+      alert(`❌ Error al guardar el proyecto: ${error.message}`);
     }
   };
 
