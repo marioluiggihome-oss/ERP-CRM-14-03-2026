@@ -9,6 +9,7 @@ const CRM_TABS = [
   { id: 'dashboard', name: 'Resumen', icon: LayoutDashboard },
   { id: 'pipeline', name: 'Oportunidades', icon: Target },
   { id: 'contacts', name: 'Contactos', icon: Users },
+  { id: 'calendar', name: 'Calendario', icon: CalendarDays },
 ];
 
 const CRMLayout = () => {
