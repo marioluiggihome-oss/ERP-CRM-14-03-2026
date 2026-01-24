@@ -366,30 +366,26 @@ const CRMContacts = ({ currentUser }) => {
                       ) : (
                         <span className="text-xs text-slate-300">-</span>
                       )}
-                            {contact.phone}
-                          </div>
-                        )}
-                      </div>
                     </td>
-                    <td className="py-4 px-6">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(contact.status)}`}>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusColor(contact.status)}`}>
                         {getStatusName(contact.status)}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right">
-                      <span className="font-bold text-slate-900">{formatCurrency(contact.totalValue || 0)}</span>
+                    <td className="py-3 px-4 text-right">
+                      <span className="font-bold text-slate-900 text-sm">{formatCurrency(contact.totalValue || 0)}</span>
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center justify-center gap-1">
                         {/* Convertir a Cliente Potencial - Solo si no está convertido */}
                         {!contact.convertedToClientId && (
                           <button
                             onClick={() => handleConvertToClient(contact)}
-                            className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                            className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
                             title="Convertir a Cliente Potencial"
                             data-testid={`convert-contact-${contact.id}`}
                           >
-                            <UserCheck size={16} />
+                            <UserCheck size={14} />
                           </button>
                         )}
                         {contact.convertedToClientId && (
@@ -399,14 +395,14 @@ const CRMContacts = ({ currentUser }) => {
                         )}
                         <button
                           onClick={() => openModal(contact)}
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                           data-testid={`edit-contact-${contact.id}`}
                         >
-                          <Edit2 size={16} />
+                          <Edit2 size={14} />
                         </button>
                         <button
                           onClick={() => handleDelete(contact.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           data-testid={`delete-contact-${contact.id}`}
                         >
                           <Trash2 size={16} />
