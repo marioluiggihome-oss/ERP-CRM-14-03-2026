@@ -3,6 +3,7 @@ import { LayoutDashboard, Target, Users, CalendarDays, FileBarChart } from 'luci
 import CRMDashboard from './CRMDashboard';
 import CRMPipeline from './CRMPipeline';
 import CRMContacts from './CRMContacts';
+import CRMCalendar from './CRMCalendar';
 
 const CRM_TABS = [
   { id: 'dashboard', name: 'Resumen', icon: LayoutDashboard },
