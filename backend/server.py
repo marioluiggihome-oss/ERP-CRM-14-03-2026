@@ -182,6 +182,7 @@ class UserUpdate(BaseModel):
     canViewTechnicalDespiece: Optional[bool] = None
     canAccessCRM: Optional[bool] = None
     canUseDigitalizador: Optional[bool] = None
+    canAccessArmarios: Optional[bool] = None
     useCustomBranding: Optional[bool] = None
     canChangeLogo: Optional[bool] = None
 
