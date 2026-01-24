@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Script completo para importar TODOS los productos desde la tarifa técnica.
+Incluye ALTOS, BAJOS, COLUMNAS, series GOLA y estándar.
 """
 import re
 import asyncio
@@ -14,46 +15,58 @@ DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
 def extract_dimensions_from_code(code):
     """Extrae dimensiones del código del producto."""
     width = 0
-    height = 80  # Default para bajos
-    depth = 58   # Default estándar
+    height = 80
+    depth = 58
     
-    # Extraer ancho del final del código (3 o 4 dígitos)
+    # Extraer ancho - puede tener formato especial como 60300 (60cm fondo, 300 ancho)
+    # Primero buscar los últimos 3-4 dígitos
     width_match = re.search(r'(\d{3,4})$', code)
     if width_match:
-        width = int(width_match.group(1))
+        w = int(width_match.group(1))
+        # Si el ancho parece incluir el fondo (ej: 60300 = fondo 60, ancho 300)
+        if w > 1000 and w < 100000:
+            width = w % 1000  # Tomar los últimos 3 dígitos
+        else:
+            width = w
     
     # Determinar alto basado en código
-    # Altos: A35, A45, A70, A80, A90, A13 (130cm)
-    if code.startswith('A13'):
+    code_upper = code.upper()
+    
+    # ALTOS - detectar por prefijo
+    if code_upper.startswith('A13'):
         height = 130
-    elif code.startswith('A22'):
-        height = 220  # Columna despensero
-    elif code.startswith('A35'):
+    elif code_upper.startswith('A22'):
+        height = 220
+    elif code_upper.startswith('A35'):
         height = 35
-    elif code.startswith('A45'):
+    elif code_upper.startswith('A45'):
         height = 45
-    elif code.startswith('A70'):
+    elif code_upper.startswith('A7') or code_upper.startswith('A70'):
         height = 70
-    elif code.startswith('A80') or 'A8' in code:
+    elif code_upper.startswith('A8') or code_upper.startswith('A80'):
         height = 80
-    elif code.startswith('A90') or 'A9' in code:
+    elif code_upper.startswith('A9') or code_upper.startswith('A90'):
         height = 90
-    # Bajos
-    elif code.startswith('B8') or 'G8B' in code:
+    # BAJOS
+    elif 'G8B' in code_upper or code_upper.startswith('B8'):
         height = 80
-    elif code.startswith('B7') or 'G7B' in code:
+    elif 'G7B' in code_upper or code_upper.startswith('B7'):
         height = 70
-    elif code.startswith('B6') or 'G6B' in code:
+    elif 'G6B' in code_upper or code_upper.startswith('B6'):
         height = 60
-    # Columnas
-    elif 'CL' in code or 'COL' in code or 'CP' in code or code.startswith('C'):
+    # COLUMNAS
+    elif 'CL' in code_upper or 'COL' in code_upper or 'CP' in code_upper:
+        height = 220
+    elif code_upper.startswith('C22') or code_upper.startswith('C20'):
         height = 220
     
-    # Fondo para altos y columnas
-    if code.startswith('A') and not code.startswith('A22'):
+    # FONDO
+    if code_upper.startswith('A') and not code_upper.startswith('A22'):
         depth = 33
-    elif 'CL' in code or 'COL' in code:
-        depth = 58
+    elif 'F60' in code_upper or '60' in code_upper[:6]:
+        depth = 60
+    elif 'F35' in code_upper:
+        depth = 35
     
     return width, height, depth
 
@@ -61,25 +74,26 @@ def determine_category(code):
     """Determina la categoría basándose en el código."""
     code_upper = code.upper()
     
-    # Columnas
-    if code_upper.startswith('A22'):
+    # COLUMNAS
+    if code_upper.startswith('A22') or code_upper.startswith('C22'):
         return 'COLUMNA DESPENSERO'
-    if 'CL' in code_upper or 'COL' in code_upper or 'CP' in code_upper:
-        if code_upper.startswith('G'):
-            return 'COLUMNA GOLA'
+    if code_upper.startswith('GC') or (code_upper.startswith('G') and ('CL' in code_upper or 'COL' in code_upper)):
+        return 'COLUMNA GOLA'
+    if 'CL' in code_upper or 'COL' in code_upper or 'CP' in code_upper or code_upper.startswith('C2'):
         return 'COLUMNA'
     
-    # Altos
+    # ALTOS
     if code_upper.startswith('A'):
-        if 'GOLA' in code_upper or code_upper.startswith('GA'):
+        # Verificar si es GOLA
+        if 'GOLA' in code_upper:
             return 'ALTO GOLA'
         return 'ALTO'
     
-    # Bajos GOLA
+    # BAJOS GOLA
     if code_upper.startswith('G') and 'B' in code_upper:
         return 'BAJO GOLA'
     
-    # Bajos estándar
+    # BAJOS estándar
     if code_upper.startswith('B'):
         return 'BAJO'
     
@@ -90,56 +104,53 @@ def generate_product_name(code, category):
     width, height, depth = extract_dimensions_from_code(code)
     
     features = []
+    code_upper = code.upper()
     
     # Puertas
-    puertas_match = re.search(r'(\d)P', code)
+    puertas_match = re.search(r'(\d)P(?!ABL)', code_upper)
     if puertas_match:
-        num = puertas_match.group(1)
-        features.append(f"{num} puerta{'s' if int(num) > 1 else ''}")
+        num = int(puertas_match.group(1))
+        features.append(f"{num} puerta{'s' if num > 1 else ''}")
     
     # Cajones
-    cajones_match = re.search(r'(\d)C(?![LHOP])', code)
-    if cajones_match:
-        num = cajones_match.group(1)
-        features.append(f"{num} cajón{'es' if int(num) > 1 else ''}")
+    if '4C' in code_upper:
+        features.append("4 cajones")
+    elif '3C' in code_upper:
+        features.append("3 cajones")
+    elif '2C' in code_upper:
+        features.append("2 cajones")
+    elif re.search(r'1C(?![LHOP])', code_upper):
+        features.append("1 cajón")
     
     # Tipos especiales
-    special_types = {
-        'CE': 'ciego',
-        'RI': 'rinconero',
-        'RIN': 'rinconero',
-        'FR': 'fregadero',
-        'FRE': 'fregadero',
-        'HO': 'horno',
-        'HOR': 'horno',
-        'MI': 'microondas',
-        'MIC': 'microondas',
-        'ESC': 'escobero',
-        'AB': 'abatible',
-        'BI': 'bifacial',
-        'EX': 'extraíble',
-        'SC': 'semicolumna',
-        'CD': 'columna despensa',
-        'CH': 'columna horno',
-        'GL': 'gavetero lateral',
-        'GM': 'gavetero medio',
-        'VIT': 'vitrina',
-        'CAM': 'campana',
-        '1CB': '1 cajón bajo',
-        '1CL': '1 cajón lateral',
-    }
-    
-    for key, desc in special_types.items():
-        if key in code.upper():
-            if desc not in features:
-                features.append(desc)
-    
-    # Serie
-    serie = "GOLA" if 'G' in code[:2] else ""
+    if 'ABL' in code_upper or 'AB' in code_upper:
+        features.append("abatible")
+    if 'SC' in code_upper:
+        features.append("semicolumna")
+    if 'CD' in code_upper:
+        features.append("despensa")
+    if 'CH' in code_upper:
+        features.append("horno")
+    if 'CM' in code_upper or 'CHM' in code_upper:
+        features.append("horno+micro")
+    if 'GL' in code_upper:
+        features.append("gavetero")
+    if 'CE' in code_upper:
+        features.append("ciego")
+    if 'RI' in code_upper:
+        features.append("rinconero")
+    if 'FR' in code_upper:
+        features.append("fregadero")
+    if 'HO' in code_upper and 'CHO' not in code_upper:
+        features.append("horno")
+    if 'MIC' in code_upper or 'MI' in code_upper:
+        features.append("microondas")
+    if 'VIT' in code_upper or 'V' == code_upper[-4:-3]:
+        features.append("vitrina")
     
     name = category
     if features:
-        name += f" {' '.join(features[:3])}"  # Max 3 features
+        name += f" {' '.join(features[:3])}"
     if width > 0:
         name += f" {width}"
     
@@ -162,27 +173,32 @@ async def import_products():
     # Patrones de códigos de productos
     patterns = [
         # GOLA Bajos: G8B1P300, G7B2V600
-        re.compile(r'^(G[0-9][AB][A-Z0-9]+\d{3,4})$'),
+        (re.compile(r'^(G[0-9][AB][A-Z0-9]+\d{3,4})$'), 'GOLA'),
         # GOLA Columnas: GCL, GCP, GCOL
-        re.compile(r'^(GC[LOPR][A-Z0-9]*\d{3,4})$'),
-        # Altos estándar: A45A1P300, A80A2P600, A13SC1P400
-        re.compile(r'^(A\d{2}[A-Z0-9]+\d{3,4})$'),
-        # Bajos estándar: B8B1P300
-        re.compile(r'^(B[0-9][A-Z0-9]+\d{3,4})$'),
-        # Columnas estándar: CL, CP
-        re.compile(r'^(C[LOP][A-Z0-9]*\d{3,4})$'),
+        (re.compile(r'^(GC[LOPR][A-Z0-9]*\d{3,4})$'), 'GOLA'),
+        # Altos: A7A1P300, A8A2P600, A45A1P300, A13SC1P400
+        (re.compile(r'^(A\d{1,2}[A-Z0-9]+\d{3,4})$'), 'TIRADOR'),
+        # Bajos: B8B1P300, B71P400
+        (re.compile(r'^(B[0-9][A-Z0-9]+\d{3,4})$'), 'TIRADOR'),
+        # Columnas: C22, C20
+        (re.compile(r'^(C\d{2}[A-Z0-9]*\d{3,4})$'), 'TIRADOR'),
     ]
     
     i = 0
     while i < len(lines):
         line = lines[i].strip()
         
+        # Limpiar línea de caracteres extraños
+        line = re.sub(r'\s+', '', line)
+        
         # Buscar código de producto
         matched_code = None
-        for pattern in patterns:
+        serie = 'TIRADOR'
+        for pattern, s in patterns:
             match = pattern.match(line)
             if match:
                 matched_code = match.group(1)
+                serie = s
                 break
         
         if matched_code:
@@ -195,7 +211,7 @@ async def import_products():
                     next_line = lines[i + j].strip()
                     try:
                         price = float(next_line.replace(',', '.'))
-                        if price > 0:
+                        if price > 0 and price < 10000:  # Precio razonable
                             break
                     except:
                         continue
@@ -204,9 +220,8 @@ async def import_products():
             width, height, depth = extract_dimensions_from_code(code)
             
             # Solo productos con dimensiones válidas
-            if width > 0 and width < 2000:
+            if width > 0 and width < 2000 and height > 0:
                 name = generate_product_name(code, category)
-                serie = "GOLA" if code.startswith('G') else "TIRADOR"
                 
                 products_to_import.append({
                     'code': code,
@@ -265,6 +280,13 @@ async def import_products():
     # Total en BD
     total_in_db = await products_collection.count_documents({})
     print(f"\nTotal productos en base de datos: {total_in_db}")
+    
+    # Ejemplos por categoría
+    print("\nEjemplos por categoría:")
+    for cat in sorted(categories.keys()):
+        examples = [p for p in products_to_import if p['category'] == cat][:3]
+        for p in examples:
+            print(f"  {p['code']}: {p['name']} - {p['width']}x{p['height']}x{p['depth']} - {p['price']}€")
     
     client.close()
     return len(products_to_import)
