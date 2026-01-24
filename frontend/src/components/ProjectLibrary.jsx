@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Trash2, Eye, Calendar, Euro, Search, FileText, Save, Loader, RefreshCw, Plus, Archive, ArchiveRestore, Filter } from 'lucide-react';
-import { projectsAPI } from '../services/api';
+import { FolderOpen, Trash2, Eye, Calendar, Euro, Search, FileText, Save, Loader, RefreshCw, Plus, Archive, ArchiveRestore, Filter, Target } from 'lucide-react';
+import { projectsAPI, crmOpportunitiesAPI } from '../services/api';
 
 const ProjectLibrary = ({ state, setState }) => {
   const [searchQuery, setSearchQuery] = useState('');
