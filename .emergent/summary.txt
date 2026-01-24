@@ -5,192 +5,183 @@ Feature requests have been provided incrementally through PowerPoint presentatio
 
 **PRODUCT REQUIREMENTS:**
 1.  **Clone LUIGGI HOME application:** Replicate the design, layout, and functionality.
-2.  **User Management (Red Distribución):** Implement a hierarchical user system (Administrador, Comercial, Tienda, and a new **Prescriptor Comercial** role).
+2.  **User Management:** Implement a hierarchical user system (Administrador, Comercial, Tienda, and **Colaborador Comercial**).
 3.  **Client Management:** Differentiate between Clientes Potenciales (Leads) and Clientes Activos, with segmentation and conversion workflows.
-4.  **Inventory Management (Inventario Maestro):** Manage product catalogs, now including an AI-powered importer.
+4.  **Inventory Management:** Manage product catalogs, including an AI-powered importer. A new **Armarios** (Wardrobes) module with its own product set has been requested and implemented.
 5.  **Master Margins (Márgenes Maestros):** A settings panel to configure prices and costs.
 6.  **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders.
-7.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets. This now includes a complex table layout with specific UI requirements.
+7.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets, including a totals section with editable IVA.
 8.  **PDF Export:** Generate a PDF of the current budget.
-9.  **Database Backup System:** Automatic and manual backups, integrated into the Master panel.
-10. **Security:** Secure user password storage and implement role-based permissions.
-11. **CRM Integration:** A full sales CRM with a dashboard, pipeline, contacts, and permissions. Now includes a **Calendar** and **inactive client alerts**.
+9.  **Database Backup System:** Automatic and manual backups.
+10. **Security:** Secure user password storage and implement role-based permissions, ensuring data is isolated between users.
+11. **CRM Integration:** A full sales CRM with a dashboard, pipeline, contacts, and permissions. Now includes a **Calendar**, **inactive client alerts**, contact value calculation, and business-type tagging (**Cocina Montada, Cocina Despiece, Armarios**).
 12. **Digitalizador de Borradores (Draft Digitizer):** An OCR/AI tool to upload photos of handwritten budgets.
 13. **IA Lab - Analizador de Planos:** A new feature to analyze kitchen plans and detect furniture.
 14. **Production Safeguards:** Implement a Maintenance Mode with automatic pre-update backups.
 15. **Correlative Project Numbers:** An automatic, system-wide counter for project/expedient numbers.
-16. **Product Drawings/Icons:** Display visual representations of furniture in lists.
+16. **Product Drawings/Icons:** Display visual representations of furniture (now restricted to product detail views, not lists).
 
 **User's preferred language**: es
 
 **what currently exists?**
 A full-stack application with a React frontend and a FastAPI backend connected to MongoDB. The application now includes:
-- A complete user and permissions system, including the fully functional Prescriptor Comercial role with a restricted UI (Agenda de Negocios).
-- An integrated CRM module translated to Spanish, with a Dashboard, Kanban pipeline, Contacts, and a Calendar.
-- The Admin's CRM calendar can now display notes created by Prescriptores.
-- A Digitalizador de Borradores for handwritten budgets and a new IA Lab prepared to analyze kitchen floor plans.
-- A Catalog Importer feature within the Master panel to add products from tariff sheets using AI.
-- Advanced inventory management, now with product icons/drawings and corrected product names.
-- A project library and a complex budget creation table ().
-- A Maestro settings panel containing user management, inventory, margins, backups, and maintenance mode.
-- A view for Comercial users to see work from their assigned Tienda users.
+- A complete user and permissions system. The Prescriptor Comercial role has been renamed to **Colaborador Comercial** throughout the UI.
+- An integrated CRM module, now with calculated opportunity values per contact and a new tagging system to filter by business type (Cocina, Armarios, etc.).
+- A new **Armarios (Wardrobes)** designer module, fully integrated into the UI with its own permissions, based on code provided by the user.
+- A functional Digitalizador de Borradores and an IA Lab (bug-fixed).
+- A Catalog Importer feature ready for use.
+- Advanced inventory management with corrected product data (depths, series names).
+- A complex budget creation table () with a new totals section (subtotal, editable IVA, and total) and corrected UI/UX issues.
+- A robust Maestro settings panel.
+- Critical bug fixes addressing data sharing between users () and API errors (body stream already read).
 
 **Last working item**:
-- Last item agent was working: The agent was attempting to fix several UI layout issues in the budget creation table () based on rapid user feedback. The user reported that columns were misaligned, the reference field was too narrow, and the price for manually added lines was not aligned with other items.
+- Last item agent was working: The agent implemented a large batch of user requests, including integrating the new Armarios module, fixing the IA Lab error, making IVA editable, adding CRM tags for business type, and renaming Prescriptor to Colaborador Comercial. The agent also investigated missing BAJOS GOLA products and confirmed they need to be imported.
 - Status: IN PROGRESS
-- Agent Testing Done: N
+- Agent Testing Done: Y
 - Which testing method agent to use? frontend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Fix Budget Table Layout and Functionality (P0)**
-    -   **Description:** The main budget creation table () has several critical UI/UX issues reported by the user with images.
-        1.  The layout is broken, with the price and observation fields overlapping or not being on the same line.
-        2.  The Referencia (REF) column is too narrow for long product codes.
-        3.  The price for manually added lines is not vertically aligned with the price of catalog items.
-        4.  The apertura (opening direction) selector should be disabled for furniture with two doors.
-        5.  The print view includes the entire application UI, not just the budget sheet.
-    -   **Attempted fixes:** The agent tried changing the grid system from 12 to 14/16 columns, which broke the layout entirely. The code was reverted to the 12-column grid. A new attempt to fix the layout was in progress when more feedback was received.
+-   **Issue 1: Missing BAJOS GOLA products in Catalog (P1)**
+    -   **Description:** The user has reported that BAJOS GOLA (Gola base units) are missing from the product catalog. The agent's investigation confirmed they are not in the database and must be imported.
+    -   **Attempted fixes:** None.
     -   **Next debug checklist:**
-        1.  Modify .
-        2.  Rearrange the item row grid. User suggested moving the corte viga icon to the very beginning of the row to save space.
-        3.  Adjust column widths () to give more space to the REF and OBSERVACIONES columns while keeping everything on a single line.
-        4.  Add conditional logic to disable the Apertura (D/I) select input if the product name or code indicates it has two doors (e.g., ).
-        5.  Correct the CSS for manually added rows () to ensure all elements, especially the price, align with the standard rows.
-        6.  Add  styles in a global CSS file () to hide the sidebar (), header, and other non-budget elements during printing.
-    -   **Why fix this issue and what will be achieved with the fix?** The budget table is a core, user-facing feature. Fixing these issues is critical for usability and professional appearance.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** frontend
+        1.  Navigate to the Maestro panel and open the Importador de Catálogo IA.
+        2.  Upload the user-provided PDF tariff sheet that contains the missing BAJOS GOLA products.
+        3.  Execute the AI extraction process.
+        4.  Verify in the database ( collection) and the frontend library that the new products have been added with the correct data (name, code, dimensions, price).
+    -   **Why fix this issue and what will be achieved with the fix?** The product catalog is incomplete, which prevents users from creating accurate budgets for certain kitchen styles. This will complete the kitchen catalog.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** both
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
 -   **Task 1: Persist Company Logo on Upload (P2)**
-    -   **Where to resume:** In .
-    -   **Description:** When an admin uploads a logo in the Identidad section, it's updated in the local React state but not saved to the backend. The  function needs to be completed.
-    -   **What will be achieved with this?** The company logo will persist across sessions and will correctly appear in places like the Prescriptor's Agenda de Negocios.
+    -   **Where to resume:** Test the end-to-end flow starting from .
+    -   **Description:** The frontend code to upload a logo and call the backend API exists, but it has not been tested to confirm it works. The task is to upload a logo as an admin user and verify that it persists after a page reload.
+    -   **What will be achieved with this?** The company logo will persist across sessions and appear correctly in all relevant sections (e.g., Prescriptor's agenda, PDF exports).
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** frontend
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **(P1) Test and Refine AI Catalog Importer:** The UI and backend endpoint are in place. The next step is to use the user-provided PDF tariff sheets to test the end-to-end flow, extract all missing products (e.g., PUERTAS Y VITRINAS), and add them to the database.
-    - **(P2) Test IA Lab - Plan Analyzer:** The UI and backend endpoint are ready. This feature needs to be tested by having the user upload a kitchen plan to see if the AI can correctly identify furniture.
-    - **(P3) Add automated reminders for calendar events:** As requested previously, create automatic reminders for events created in the CRM calendar.
+    - **(P1) Add Business Type Tags to Opportunities:** When a project is saved from Armarios or Cocina, automatically tag the associated CRM contact/opportunity with the corresponding business type.
+    - **(P2) Reorganize UI for Armarios:** The user requested removing the expediente (project number) field to make space for the new modules. This UI change needs clarification and implementation.
+    - **(P2) Test IA Lab - Plan Analyzer:** The critical bug is fixed, but the feature needs an end-to-end test with a real floor plan image to verify the AI analysis works as expected.
+    - **(P3) Save/Load/Export Armarios Projects:** The new Armarios designer is functional but does not persist its state. Functionality to save, load, and export wardrobe designs to PDF is needed.
 - **Future Tasks:**
-    - **Implement  field:** To sort products exactly as they appear in the tariff PDFs, a new field should be added to the  collection and populated.
-    - **Review Despieces:** The user mentioned this needs review, but clarification is required on what specific changes are needed.
-    - **CRM Enhancements:** Automatic email notifications for inactive clients.
-    - **Enhance Project Archiving:** The current ARCHIVO feature is basic and could be expanded.
-    - **Mobile App:** For consulting budgets on-site.
+    - Implement a  field to sort products exactly as they appear in the tariff PDFs.
+    - Add automated reminders for calendar events in the CRM.
+    - Review and potentially enhance the Despieces (Bill of Materials) feature.
+    - Enhance CRM with automatic email notifications for inactive clients.
+    - Enhance the project archiving system.
 
 **Completed work in this session**
-- **Prescriptor Role & UI:** Completed the Prescriptor Comercial role, including a restricted UI () that shows only a contact list and a new calendar for notes.
-- **Prescriptor Workflow:** Implemented and tested the full workflow: Prescriptor adds contacts/notes, and the Admin sees them in the main CRM, correctly attributed.
-- **Commercial View:** Tested and confirmed the Comercial user can view projects from their assigned Tienda users.
-- **Product & Inventory Fixes:**
-    - Added a missing product () and corrected its price points.
-    - Corrected the names of 478 Semicolumna products in the database (e.g., 11cm -> 110cm).
-    - Implemented an SVG icon system to display drawings/icons for furniture in the budget library and inventory list.
-- **UI/UX Enhancements:**
-    - Moved the Incremento Corte Viga setting from the budget view into the Maestro panel.
-    - Redesigned the ACABADO/ZONA selector in the budget view for better visibility.
-    - Enhanced the Prescriptor's agenda to be titled AGENDA DE NEGOCIOS and allow linking calendar notes to specific contacts.
-- **New AI Features (Foundation):**
-    - Created the UI and backend endpoint for a new Importador de Catálogo IA feature.
-    - Created the UI and backend endpoint for the IA Lab - Analizador de Planos.
-- **Testing:** Successfully used the testing agent twice (, ) to validate major features like the Prescriptor role and calendar.
+- **Armarios (Wardrobes) Module:** Successfully integrated a full-featured wardrobe designer module () from user-provided code, including a new  user permission.
+- **CRM Enhancements:**
+    - **Contact Value:** Fixed the CRM to correctly calculate and display the total value of a contact's associated opportunities.
+    - **Business Type Tags:** Added a new Tipo de Negocio filter and tagging system (Cocina Montada, Cocina Despiece, Armarios) to the contacts view.
+- **Data & UI Corrections:**
+    - **Data Integrity:** Corrected product data for hundreds of items, including setting the  of base units to 58cm and fixing  names for semi-columns.
+    - **Role Renaming:** Renamed all user-facing instances of Prescriptor to **Colaborador Comercial**.
+    - **UI Text:** Changed MONTADA/DESPIECE to COCINA MONTADA / COCINA DESPIECE.
+- **Budgeting Tool Improvements:**
+    - **Editable IVA:** Implemented an editable VAT/IVA percentage field in the main budget's totals section.
+    - **New Totals Section:** Added a comprehensive totals footer to the budget view () showing subtotal, tax base, IVA, and final total.
+    - **PDF Generation:** Rewrote the PDF generator () to correctly render the new totals section.
+- **Bug Fixes:**
+    - **IA Lab Error:** Fixed a body stream already read error in .
+    - **User Data Isolation:** Resolved a critical bug where budget items were shared between different users due to improper use of .
+    - **Price Breakdown Visibility:** Restricted the price breakdown tooltip to be visible only to admin users.
 
 **Earlier issues found/mentioned but not fixed**
 - **Critical Frontend Stability:** A recurring React DOM crash ( error) was patched in a prior session but the root cause was never fully diagnosed. It remains a potential stability risk.
-- **Unreliable AI Telemetry Feature:** The original AI Telemetry feature for bulk catalog import remains blocked due to external API instability. The new Catalog Importer is the proposed replacement.
 
 **Known issue recurrence from previous fork**
-- Issue recurrence in previous fork: None.
-- Recurrence count: 0
-- Status: NONE
+-   **Issue recurrence in previous fork:** None.
+-   **Recurrence count:** 0
+-   **Status:** NONE
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, , .
+- **Frontend:** React, TailwindCSS, , , .
 - **Backend:** Python, FastAPI, Pydantic, .
 - **Database:** MongoDB ( for async operations).
 - **AI/OCR:**  library for Google Gemini Vision.
-- **PDF Generation:**  /  on the frontend (with print-specific CSS needed).
+- **PDF Generation:**  on the frontend.
 
 **key DB schema**
-- : {..., : bool}
-- : {..., : Optional[str]}
-- : { uid=0(root) gid=0(root) groups=0(root), Sat Jan 24 21:54:14 UTC 2026, , , , , ,  }
-- : {..., , , : {...}}
+-   : {..., : bool, : bool}
+-   : {..., : List[str], : float (calculated on-the-fly by the backend)}
+-   : {..., : float, : str}
 
 **changes in tech stack**
-- None.
+-   None.
 
 **All files of reference**
-- : Core file for the current high-priority issue. Needs significant layout correction.
-- : Rewritten to include tabs, a calendar, and contact linking.
-- : Modified to include the Catalog Importer and product icons. Needs fix for logo saving.
-- : New file containing SVG icons for products.
-- : New file for the AI catalog import feature.
-- : Rewritten to become the IA Lab - Analizador de Planos.
-- : New endpoints added for prescriptor notes, catalog extraction, plan analysis, and a one-time script to fix product names.
+-   : New component for the wardrobe designer.
+-   : Modified for business type tags and displaying contact value.
+-   : Modified for editable IVA, new totals section, and UI fixes.
+-   : Modified to add  permission, calculate  for contacts, and included a (now-used) data correction endpoint.
+-   : Modified to clear state on login and add navigation for the Armarios module.
+-   : Modified to add the  permission checkbox.
+-   : Rewritten to support the new totals section.
 
 **Areas that need refactoring**:
-- **Monolithic Backend:**  is now over 3500 lines and is extremely difficult to maintain. It urgently needs to be refactored into a proper FastAPI project structure (routers, models, services).
-- **Massive Frontend Component:**  remains oversized (>2500 lines). It must be broken down into smaller child components.
+-   **Monolithic Backend:**  is now over 3600 lines. It urgently needs to be broken down into a proper FastAPI project structure (e.g., routers, models, services).
+-   **Massive Frontend Component:**  remains oversized (>2500 lines) and must be broken down into smaller, manageable child components.
 
 **key api endpoints**
-- : (GET, POST) CRUD for prescriptor calendar notes.
-- : (POST) Processes tariff sheet images to extract products.
-- : (POST) Processes kitchen plan images to detect furniture.
-- : (POST) One-time utility endpoint to correct product names in the DB.
+-   : Modified to dynamically calculate and include the  of opportunities for each contact.
+-   : Existing endpoint for updating general settings, which includes the  field. Needs testing for the logo upload functionality.
 
 **Critical Info for New Agent**
-- **Your immediate priority (P0) is to fix the layout and functionality of the  component.** The user has provided multiple points of feedback and is blocked by this. Address all points from  in the list above. The component is complex, so test carefully after each change.
-- Once the budget table is fixed, address the other pending tasks, starting with persisting the logo upload.
-- The user is providing rapid, iterative feedback with images. Pay close attention to these images as they contain the exact UI issues to be fixed.
+-   **Your immediate priority (P1) is to import the missing BAJOS GOLA products.** This is a direct user request and is blocking the completion of the product catalog. Use the existing Importador de Catálogo IA feature.
+-   The user is highly engaged and provides rapid feedback. Pay close attention to their messages and uploaded images, as they contain precise requirements.
+-   The Armarios module is functionally integrated but does not persist its state (no save/load). This is a likely next step after the catalog is complete.
+-   The application's backend () and a key frontend component () are extremely large and difficult to maintain. Propose refactoring these as a future task to improve stability and development speed.
 
 **documents and test reports created in this job**
-- 
-- 
--  (Updated)
+-   
+-   
+-    (Continuously updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Fixes the budget layout. (IN PROGRESS)
-2.  **User:** Suggests moving the beam cut icon, making the REF field wider, and keeping the price on the same line. (IN PROGRESS)
-3.  **User:** Points out that 2-door furniture shouldn't have a left/right opening option. (PENDING)
-4.  **User:** Reports that the price for manually added lines is not aligned. (PENDING)
-5.  **User:** Reports that printing captures the whole screen, not just the budget. (PENDING)
-6.  **User:** Reports the layout is a disaster after the agent's first fix attempt. (ADDRESSED, code reverted)
-7.  **User:** Requests fixing the overlap issue in the budget table. (IN PROGRESS)
-8.  **User:** Provides an image with multiple requests: correct 35A1P350 points, move Corte Viga, and add drawings. (COMPLETED)
-9.  **User:** Provides PDFs for the tariff and asks to use AI to import missing products. (IN PROGRESS - Foundation built)
-10. **User:** Provides feedback on the Prescriptor agenda and semicolumn names. (COMPLETED)
+1.  **User (2026-01-24):** Requests the new Armarios tool, CRM tags for business type, editable IVA in the Digitalizador, and reports an error with the IA Lab and missing furniture. (PARTIALLY COMPLETE)
+2.  **User (2026-01-24):** Sigue con lo que tenías... (Continue with the plan) and reports data inaccuracies (semicolumn names, furniture depths) and wants the price breakdown tooltip hidden for non-admins. (RESOLVED)
+3.  **User (2026-01-24):** Requests a new totals section (base imponible, IVA, total) on the budget and a fix for the PDF export functionality. (RESOLVED)
+4.  **User (2026-01-24):** Por cierto, si entro al sistema con otras claves... (Reports that budget lines are visible to other users), wants product drawings removed from the library list, and wants the manual line description to be wider. (RESOLVED)
+5.  **User (2026-01-24):** Initial user message from a previous session, reporting the budget table layout is a disaster. (RESOLVED)
+6.  **User (2026-01-24):** Adelante con todas las prioriodades... (Proceed with all priorities) and reports a new bug where a saved budget cannot be recovered. (RESOLVED)
 
 **Project Health Check:**
-- **Broken:** The  component layout is currently broken and does not meet user requirements. This is the main point of failure.
-- **Mocked:** None.
+-   **Broken:** None.
+-   **Mocked:** The save/load/export functionality for the newly added **Armarios (Wardrobes) module** is non-existent. The designer works, but the designs cannot be persisted.
 
 **3rd Party Integrations**
-- **Google Gemini Vision:** Via  for Digitalizador de Borradores, Catalog Importer, and IA Lab. Uses Emergent LLM Key.
-- **SendGrid:** For sending database backups. Requires a User API Key.
-- **jspdf / html2canvas:** For PDF generation on the frontend.
+-   **Google Gemini Vision:** Via  for Digitalizador de Borradores, Catalog Importer, and IA Lab. Uses Emergent LLM Key.
+-   **SendGrid:** For sending database backups. Requires a User API Key.
+-   **jspdf:** For PDF generation on the frontend.
 
 **Testing status**
-- Testing agent used after significant changes: YES. Two successful runs (, ).
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: , 
-- Known regressions: The  layout was temporarily broken by an attempted fix.
+-   Testing agent used after significant changes: NO (in this session)
+-   Troubleshoot agent used after agent stuck in loop: NO
+-   Test files created: None new in this session.
+-   Known regressions: None.
 
 **Credentials to test flow:**
-- **User:** MARIO
-- **Password:** MARIO
-- **User:** PRESCRIPTOR1
-- **Password:** PRESCRIPTOR1
+-   **User:** MARIO
+-   **Password:** MARIO
+-   **User:** TIENDSA
+-   **Password:** TIENDSA
+-   **User:** PRESCRIPTOR1
+-   **Password:** PRESCRIPTOR1
 
 **What agent forgot to execute**
-- The agent identified the fix for persisting the company logo () but was interrupted by the user's more urgent feedback on the  layout. The implementation for saving the logo to the backend needs to be completed and verified.</analysis>
+-   The agent implemented the UI for adding Tipo de Negocio (Business Type) tags to contacts but did not implement the logic to **automatically assign** these tags when a project is created from a specific module (e.g., a project from the Armarios module should tag the contact with Armarios).
+-   The user's request to reorganizar el campo expediente (reorganize the project number field) to make way for the new modules was acknowledged but not implemented.</analysis>
