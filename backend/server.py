@@ -115,6 +115,7 @@ class UserResponse(BaseModel):
     canManageArticles: bool = False
     canViewTechnicalDespiece: bool = False
     canAccessCRM: bool = False
+    canUseDigitalizador: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
@@ -135,6 +136,7 @@ class UserCreate(BaseModel):
     canManageArticles: bool = False
     canViewTechnicalDespiece: bool = False
     canAccessCRM: bool = False
+    canUseDigitalizador: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
