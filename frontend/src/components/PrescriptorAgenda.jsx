@@ -337,12 +337,12 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
       <div className="bg-white border-b border-amber-200 px-6 py-4 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Logo from Identity */}
-            {currentUser?.companyLogo ? (
+            {/* Logo from System Settings */}
+            {(systemLogo || currentUser?.companyLogo) ? (
               <img 
-                src={currentUser.companyLogo} 
+                src={systemLogo || currentUser.companyLogo} 
                 alt="Logo" 
-                className="h-14 w-auto object-contain"
+                className="h-16 w-auto object-contain"
               />
             ) : (
               <div className="p-3 bg-amber-500 rounded-2xl shadow-lg">
