@@ -354,6 +354,14 @@ const ProjectLibrary = ({ state, setState }) => {
                       <Eye size={18} />
                     </button>
                     <button 
+                      onClick={() => createOpportunityFromProject(project)}
+                      className="p-3 bg-purple-100 text-purple-600 rounded-xl hover:bg-purple-200 transition-all"
+                      title="Crear oportunidad en CRM"
+                      data-testid={`create-opp-${project.id}`}
+                    >
+                      <Target size={18} />
+                    </button>
+                    <button 
                       onClick={() => toggleArchiveProject(project)}
                       className={`p-3 rounded-xl transition-all ${
                         project.status === 'archived'
