@@ -798,12 +798,87 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
                 />
               </div>
 
+              {/* Contact selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                  👤 Contacto Asociado (opcional)
+                </label>
+                {!showNewContactInNote ? (
+                  <div className="flex gap-2">
+                    <select
+                      value={noteFormData.contactId}
+                      onChange={(e) => {
+                        const selectedContact = contacts.find(c => c.id === e.target.value);
+                        setNoteFormData({
+                          ...noteFormData, 
+                          contactId: e.target.value,
+                          contactName: selectedContact?.name || ''
+                        });
+                      }}
+                      className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-amber-500"
+                    >
+                      <option value="">Sin contacto asociado</option>
+                      {contacts.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} {c.company ? `(${c.company})` : ''}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewContactInNote(true)}
+                      className="px-4 py-3 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-sm hover:bg-emerald-200 flex items-center gap-2"
+                      title="Crear nuevo contacto"
+                    >
+                      <UserPlus size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-emerald-700 uppercase">Nuevo Contacto</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNewContactInNote(false);
+                          setNewContactInNote({ name: '', phone: '', company: '' });
+                        }}
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={newContactInNote.name}
+                      onChange={(e) => setNewContactInNote({...newContactInNote, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-emerald-200 rounded-lg text-sm font-bold outline-none focus:border-emerald-500"
+                      placeholder="Nombre del contacto *"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="tel"
+                        value={newContactInNote.phone}
+                        onChange={(e) => setNewContactInNote({...newContactInNote, phone: e.target.value})}
+                        className="px-3 py-2 border border-emerald-200 rounded-lg text-sm font-bold outline-none focus:border-emerald-500"
+                        placeholder="Teléfono"
+                      />
+                      <input
+                        type="text"
+                        value={newContactInNote.company}
+                        onChange={(e) => setNewContactInNote({...newContactInNote, company: e.target.value})}
+                        className="px-3 py-2 border border-emerald-200 rounded-lg text-sm font-bold outline-none focus:border-emerald-500"
+                        placeholder="Empresa"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Contenido</label>
                 <textarea
                   value={noteFormData.content}
                   onChange={(e) => setNoteFormData({...noteFormData, content: e.target.value})}
-                  rows={4}
+                  rows={3}
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-amber-500 resize-none"
                   placeholder="Escribe aquí los detalles de la nota..."
                 />
