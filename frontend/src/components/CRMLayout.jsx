@@ -5,8 +5,8 @@ import CRMPipeline from './CRMPipeline';
 import CRMContacts from './CRMContacts';
 
 const CRM_TABS = [
-  { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
-  { id: 'pipeline', name: 'Pipeline', icon: Target },
+  { id: 'dashboard', name: 'Resumen', icon: LayoutDashboard },
+  { id: 'pipeline', name: 'Oportunidades', icon: Target },
   { id: 'contacts', name: 'Contactos', icon: Users },
 ];
 
@@ -21,7 +21,7 @@ const CRMLayout = () => {
           <div className="p-2 bg-indigo-600 rounded-xl">
             <Target size={18} className="text-white" />
           </div>
-          <span className="text-lg font-black text-slate-900 uppercase">CRM</span>
+          <span className="text-lg font-black text-slate-900 uppercase">Gestión Comercial</span>
         </div>
         
         <div className="flex gap-1">
