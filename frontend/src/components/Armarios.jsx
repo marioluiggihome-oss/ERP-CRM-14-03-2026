@@ -298,7 +298,8 @@ const Armarios = ({ state, setState }) => {
             shelves: 4,
             drawers: 0,
             hangingRods: 1,
-            hangingHeight: 1200
+            hangingHeight: 1200,
+            extras: {}
           });
         }
         return newModules;
@@ -315,6 +316,400 @@ const Armarios = ({ state, setState }) => {
       return prev;
     });
   }, []);
+
+  // ========== GENERAR LISTA DE ACCESORIOS AUTOMÁTICA ==========
+  const generateAccessoriesList = useMemo(() => {
+    const accessories = [];
+    let itemNum = 1;
+    const { width, height, depth, modules, doorType, endLeft, endRight } = wardrobeConfig;
+    const moduleWidth = width / modules;
+    const exteriorColorName = getColorByName(wardrobeConfig.exteriorColor).name;
+    const interiorColorName = getColorByName(wardrobeConfig.interiorColor).name;
+
+    // 1. ESTRUCTURA BASE
+    // Laterales (siempre 2)
+    accessories.push({
+      num: itemNum++,
+      code: ACCESSORIES_CATALOG.panels.id,
+      name: `${ACCESSORIES_CATALOG.panels.name} ${exteriorColorName}`,
+      category: 'ESTRUCTURA',
+      dimensions: `${height} x ${depth} x 18`,
+      quantity: 2,
+      unitPrice: ACCESSORIES_CATALOG.panels.price,
+      totalPrice: 2 * ACCESSORIES_CATALOG.panels.price,
+      notes: 'Laterales exteriores armario'
+    });
+
+    // Tapa superior e inferior
+    accessories.push({
+      num: itemNum++,
+      code: ACCESSORIES_CATALOG.topBottom.id,
+      name: `${ACCESSORIES_CATALOG.topBottom.name} ${exteriorColorName}`,
+      category: 'ESTRUCTURA',
+      dimensions: `${width - 36} x ${depth} x 18`,
+      quantity: 2,
+      unitPrice: ACCESSORIES_CATALOG.topBottom.price,
+      totalPrice: 2 * ACCESSORIES_CATALOG.topBottom.price,
+      notes: 'Tapa superior + inferior'
+    });
+
+    // Trasera
+    accessories.push({
+      num: itemNum++,
+      code: ACCESSORIES_CATALOG.backPanel.id,
+      name: ACCESSORIES_CATALOG.backPanel.name,
+      category: 'ESTRUCTURA',
+      dimensions: `${width - 36} x ${height - 36} x 8`,
+      quantity: 1,
+      unitPrice: ACCESSORIES_CATALOG.backPanel.price * (width * height / 1000000),
+      totalPrice: Math.round(ACCESSORIES_CATALOG.backPanel.price * (width * height / 1000000)),
+      notes: 'Panel trasero'
+    });
+
+    // Divisores verticales (módulos - 1)
+    if (modules > 1) {
+      accessories.push({
+        num: itemNum++,
+        code: ACCESSORIES_CATALOG.divider.id,
+        name: `${ACCESSORIES_CATALOG.divider.name} ${interiorColorName}`,
+        category: 'ESTRUCTURA',
+        dimensions: `${height - 36} x ${depth - 20} x 18`,
+        quantity: modules - 1,
+        unitPrice: ACCESSORIES_CATALOG.divider.price,
+        totalPrice: (modules - 1) * ACCESSORIES_CATALOG.divider.price,
+        notes: 'Divisores entre módulos'
+      });
+    }
+
+    // 2. PUERTAS
+    const doorAccessory = doorType === DoorType.SLIDING 
+      ? ACCESSORIES_CATALOG.slidingDoor 
+      : doorType === DoorType.FOLDING 
+        ? ACCESSORIES_CATALOG.foldingDoor 
+        : ACCESSORIES_CATALOG.hingeDoor;
+    
+    const numDoors = doorType === DoorType.SLIDING ? 2 : modules;
+    const doorHeight = height - 4;
+    const doorWidth = doorType === DoorType.SLIDING ? width / 2 : moduleWidth;
+
+    accessories.push({
+      num: itemNum++,
+      code: doorAccessory.id,
+      name: `${doorAccessory.name} ${exteriorColorName}`,
+      category: 'PUERTAS',
+      dimensions: `${doorHeight} x ${Math.round(doorWidth)} x 18`,
+      quantity: numDoors,
+      unitPrice: doorAccessory.price,
+      totalPrice: numDoors * doorAccessory.price,
+      notes: doorAccessory.description
+    });
+
+    // Sistema corredera si aplica
+    if (doorType === DoorType.SLIDING) {
+      accessories.push({
+        num: itemNum++,
+        code: ACCESSORIES_CATALOG.slidingSystem.id,
+        name: ACCESSORIES_CATALOG.slidingSystem.name,
+        category: 'HERRAJES',
+        dimensions: `${width} mm`,
+        quantity: 1,
+        unitPrice: ACCESSORIES_CATALOG.slidingSystem.price,
+        totalPrice: ACCESSORIES_CATALOG.slidingSystem.price,
+        notes: 'Kit guía superior + inferior aluminio'
+      });
+    } else {
+      // Bisagras para puertas abatibles/plegables
+      const hingesPerDoor = Math.ceil(doorHeight / 500);
+      accessories.push({
+        num: itemNum++,
+        code: ACCESSORIES_CATALOG.hinge.id,
+        name: `${ACCESSORIES_CATALOG.hinge.name} 110° Soft-close`,
+        category: 'HERRAJES',
+        dimensions: '-',
+        quantity: numDoors * hingesPerDoor,
+        unitPrice: ACCESSORIES_CATALOG.hinge.price,
+        totalPrice: numDoors * hingesPerDoor * ACCESSORIES_CATALOG.hinge.price,
+        notes: `${hingesPerDoor} bisagras por puerta`
+      });
+    }
+
+    // Tiradores
+    accessories.push({
+      num: itemNum++,
+      code: ACCESSORIES_CATALOG.handle.id,
+      name: `${ACCESSORIES_CATALOG.handle.name} ${getColorByName(wardrobeConfig.handleColor).name}`,
+      category: 'HERRAJES',
+      dimensions: '128mm c/c',
+      quantity: numDoors,
+      unitPrice: ACCESSORIES_CATALOG.handle.price,
+      totalPrice: numDoors * ACCESSORIES_CATALOG.handle.price,
+      notes: 'Tirador por puerta'
+    });
+
+    // 3. INTERIOR POR MÓDULO
+    moduleConfigs.forEach((mod, idx) => {
+      const modNum = idx + 1;
+
+      // Baldas
+      if (mod.shelves > 0) {
+        accessories.push({
+          num: itemNum++,
+          code: ACCESSORIES_CATALOG.shelves.id,
+          name: `${ACCESSORIES_CATALOG.shelves.name} ${interiorColorName}`,
+          category: `MÓDULO ${modNum}`,
+          dimensions: `${Math.round(moduleWidth - 4)} x ${depth - 20} x 18`,
+          quantity: mod.shelves,
+          unitPrice: ACCESSORIES_CATALOG.shelves.price,
+          totalPrice: mod.shelves * ACCESSORIES_CATALOG.shelves.price,
+          notes: `Baldas módulo ${modNum}`
+        });
+
+        // Soportes de balda (4 por balda)
+        accessories.push({
+          num: itemNum++,
+          code: ACCESSORIES_CATALOG.shelfSupport.id,
+          name: ACCESSORIES_CATALOG.shelfSupport.name,
+          category: `MÓDULO ${modNum}`,
+          dimensions: '-',
+          quantity: mod.shelves * 4,
+          unitPrice: ACCESSORIES_CATALOG.shelfSupport.price,
+          totalPrice: mod.shelves * 4 * ACCESSORIES_CATALOG.shelfSupport.price,
+          notes: '4 soportes por balda'
+        });
+      }
+
+      // Cajones
+      if (mod.drawers > 0) {
+        accessories.push({
+          num: itemNum++,
+          code: ACCESSORIES_CATALOG.drawers.id,
+          name: `${ACCESSORIES_CATALOG.drawers.name} ${interiorColorName}`,
+          category: `MÓDULO ${modNum}`,
+          dimensions: `${Math.round(moduleWidth - 8)} x ${depth - 50} x 150`,
+          quantity: mod.drawers,
+          unitPrice: ACCESSORIES_CATALOG.drawers.price,
+          totalPrice: mod.drawers * ACCESSORIES_CATALOG.drawers.price,
+          notes: `Cajón con frente ${exteriorColorName}`
+        });
+
+        // Guías de cajón
+        accessories.push({
+          num: itemNum++,
+          code: ACCESSORIES_CATALOG.drawerGuide.id,
+          name: ACCESSORIES_CATALOG.drawerGuide.name,
+          category: `MÓDULO ${modNum}`,
+          dimensions: `${depth - 50}mm`,
+          quantity: mod.drawers,
+          unitPrice: ACCESSORIES_CATALOG.drawerGuide.price,
+          totalPrice: mod.drawers * ACCESSORIES_CATALOG.drawerGuide.price,
+          notes: 'Par guías extracción total'
+        });
+      }
+
+      // Barras de colgar
+      if (mod.hangingRods > 0) {
+        accessories.push({
+          num: itemNum++,
+          code: ACCESSORIES_CATALOG.hangingRods.id,
+          name: ACCESSORIES_CATALOG.hangingRods.name,
+          category: `MÓDULO ${modNum}`,
+          dimensions: `${Math.round(moduleWidth - 10)}mm`,
+          quantity: mod.hangingRods,
+          unitPrice: ACCESSORIES_CATALOG.hangingRods.price,
+          totalPrice: mod.hangingRods * ACCESSORIES_CATALOG.hangingRods.price,
+          notes: mod.hangingRods > 1 ? 'Barras dobles altura' : 'Barra altura normal'
+        });
+      }
+
+      // Extras del módulo
+      if (mod.extras) {
+        if (mod.extras.shoesRack) {
+          accessories.push({
+            num: itemNum++,
+            code: ACCESSORIES_CATALOG.shoesRack.id,
+            name: ACCESSORIES_CATALOG.shoesRack.name,
+            category: `MÓDULO ${modNum}`,
+            dimensions: `${Math.round(moduleWidth - 10)}mm`,
+            quantity: 1,
+            unitPrice: ACCESSORIES_CATALOG.shoesRack.price,
+            totalPrice: ACCESSORIES_CATALOG.shoesRack.price,
+            notes: 'Zapatero basculante'
+          });
+        }
+        if (mod.extras.trousersRack) {
+          accessories.push({
+            num: itemNum++,
+            code: ACCESSORIES_CATALOG.trousersRack.id,
+            name: ACCESSORIES_CATALOG.trousersRack.name,
+            category: `MÓDULO ${modNum}`,
+            dimensions: `${Math.round(moduleWidth - 10)}mm`,
+            quantity: 1,
+            unitPrice: ACCESSORIES_CATALOG.trousersRack.price,
+            totalPrice: ACCESSORIES_CATALOG.trousersRack.price,
+            notes: 'Pantalonero 12 barras'
+          });
+        }
+        if (mod.extras.jewelryTray) {
+          accessories.push({
+            num: itemNum++,
+            code: ACCESSORIES_CATALOG.jewelryTray.id,
+            name: ACCESSORIES_CATALOG.jewelryTray.name,
+            category: `MÓDULO ${modNum}`,
+            dimensions: `${Math.round(moduleWidth - 20)} x ${depth - 60}mm`,
+            quantity: 1,
+            unitPrice: ACCESSORIES_CATALOG.jewelryTray.price,
+            totalPrice: ACCESSORIES_CATALOG.jewelryTray.price,
+            notes: 'Bandeja forrada terciopelo'
+          });
+        }
+        if (mod.extras.tieRack) {
+          accessories.push({
+            num: itemNum++,
+            code: ACCESSORIES_CATALOG.tieRack.id,
+            name: ACCESSORIES_CATALOG.tieRack.name,
+            category: `MÓDULO ${modNum}`,
+            dimensions: '-',
+            quantity: 1,
+            unitPrice: ACCESSORIES_CATALOG.tieRack.price,
+            totalPrice: ACCESSORIES_CATALOG.tieRack.price,
+            notes: 'Corbatero giratorio'
+          });
+        }
+        if (mod.extras.pulloutBasket) {
+          accessories.push({
+            num: itemNum++,
+            code: ACCESSORIES_CATALOG.pulloutBasket.id,
+            name: ACCESSORIES_CATALOG.pulloutBasket.name,
+            category: `MÓDULO ${modNum}`,
+            dimensions: `${Math.round(moduleWidth - 20)} x ${depth - 50}mm`,
+            quantity: 1,
+            unitPrice: ACCESSORIES_CATALOG.pulloutBasket.price,
+            totalPrice: ACCESSORIES_CATALOG.pulloutBasket.price,
+            notes: 'Cesto metálico extraíble'
+          });
+        }
+      }
+    });
+
+    // 4. EXTRAS GENERALES
+    if (extras.softClose && doorType !== DoorType.SLIDING) {
+      accessories.push({
+        num: itemNum++,
+        code: ACCESSORIES_CATALOG.softClose.id,
+        name: ACCESSORIES_CATALOG.softClose.name,
+        category: 'EXTRAS',
+        dimensions: '-',
+        quantity: modules,
+        unitPrice: ACCESSORIES_CATALOG.softClose.price,
+        totalPrice: modules * ACCESSORIES_CATALOG.softClose.price,
+        notes: 'Cierre suave por puerta'
+      });
+    }
+
+    if (extras.led) {
+      const ledMeters = Math.ceil(width / 1000) * modules;
+      accessories.push({
+        num: itemNum++,
+        code: ACCESSORIES_CATALOG.led.id,
+        name: ACCESSORIES_CATALOG.led.name,
+        category: 'EXTRAS',
+        dimensions: `${ledMeters}ml`,
+        quantity: ledMeters,
+        unitPrice: ACCESSORIES_CATALOG.led.price,
+        totalPrice: ledMeters * ACCESSORIES_CATALOG.led.price,
+        notes: 'Tira LED por módulo'
+      });
+
+      accessories.push({
+        num: itemNum++,
+        code: ACCESSORIES_CATALOG.ledSensor.id,
+        name: ACCESSORIES_CATALOG.ledSensor.name,
+        category: 'EXTRAS',
+        dimensions: '-',
+        quantity: modules,
+        unitPrice: ACCESSORIES_CATALOG.ledSensor.price,
+        totalPrice: modules * ACCESSORIES_CATALOG.ledSensor.price,
+        notes: 'Sensor movimiento por módulo'
+      });
+    }
+
+    if (extras.mirror) {
+      accessories.push({
+        num: itemNum++,
+        code: ACCESSORIES_CATALOG.mirror.id,
+        name: ACCESSORIES_CATALOG.mirror.name,
+        category: 'EXTRAS',
+        dimensions: `${height - 100} x ${Math.round(width / modules) - 50}mm`,
+        quantity: 1,
+        unitPrice: ACCESSORIES_CATALOG.mirror.price,
+        totalPrice: ACCESSORIES_CATALOG.mirror.price,
+        notes: 'Espejo pegado interior puerta'
+      });
+    }
+
+    // Añadir accesorios personalizados
+    customAccessories.forEach(acc => {
+      accessories.push({
+        ...acc,
+        num: itemNum++,
+      });
+    });
+
+    return accessories;
+  }, [wardrobeConfig, moduleConfigs, extras, customAccessories]);
+
+  // Calcular totales del despiece
+  const despieceTotals = useMemo(() => {
+    const byCategory = {};
+    let grandTotal = 0;
+
+    generateAccessoriesList.forEach(acc => {
+      if (!byCategory[acc.category]) {
+        byCategory[acc.category] = { items: 0, total: 0 };
+      }
+      byCategory[acc.category].items += acc.quantity;
+      byCategory[acc.category].total += acc.totalPrice;
+      grandTotal += acc.totalPrice;
+    });
+
+    return { byCategory, grandTotal, totalItems: generateAccessoriesList.length };
+  }, [generateAccessoriesList]);
+
+  // Función helper para obtener color
+  function getColorByName(colorId) {
+    return FINSA_COLORS.find(c => c.id === colorId) || FINSA_COLORS[0];
+  }
+
+  // Añadir accesorio personalizado
+  const addCustomAccessory = () => {
+    const newAcc = {
+      num: nextAccessoryNum,
+      code: `PERS-${nextAccessoryNum.toString().padStart(3, '0')}`,
+      name: '',
+      category: 'PERSONALIZADO',
+      dimensions: '',
+      quantity: 1,
+      unitPrice: 0,
+      totalPrice: 0,
+      notes: '',
+      isCustom: true
+    };
+    setCustomAccessories([...customAccessories, newAcc]);
+    setNextAccessoryNum(nextAccessoryNum + 1);
+  };
+
+  const updateCustomAccessory = (index, field, value) => {
+    const updated = [...customAccessories];
+    updated[index] = { ...updated[index], [field]: value };
+    if (field === 'quantity' || field === 'unitPrice') {
+      updated[index].totalPrice = updated[index].quantity * updated[index].unitPrice;
+    }
+    setCustomAccessories(updated);
+  };
+
+  const removeCustomAccessory = (index) => {
+    setCustomAccessories(customAccessories.filter((_, i) => i !== index));
+  };
 
   // Calcular precios
   const pricing = useMemo(() => {
