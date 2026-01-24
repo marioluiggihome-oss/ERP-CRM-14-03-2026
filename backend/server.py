@@ -1982,7 +1982,7 @@ async def get_digitalizador_item(item_id: str):
 async def delete_digitalizador_item(item_id: str):
     """Delete a digitalizador history item"""
     try:
-        result = db.digitalizador_history.delete_one({"id": item_id})
+        result = await db.digitalizador_history.delete_one({"id": item_id})
         
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
