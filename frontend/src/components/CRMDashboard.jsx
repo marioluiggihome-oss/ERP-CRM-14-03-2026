@@ -60,11 +60,11 @@ const CRMDashboard = ({ onNavigate }) => {
 
   const getStageName = (stage) => {
     const names = {
-      lead: 'Nuevo Lead',
+      lead: 'Nuevo',
       contacted: 'Contactado',
-      proposal: 'Propuesta',
-      negotiation: 'Negociación',
-      won: 'Ganada',
+      proposal: 'Presupuesto Enviado',
+      negotiation: 'En Negociación',
+      won: 'Venta Cerrada',
       lost: 'Perdida'
     };
     return names[stage] || stage;
