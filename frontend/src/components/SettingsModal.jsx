@@ -902,9 +902,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <div className={`p-2 rounded-lg ${user.isAdmin ? 'bg-orange-100' : user.isRepresentative ? 'bg-purple-100' : 'bg-indigo-100'}`}>
+                              <div className={`p-2 rounded-lg ${user.isAdmin ? 'bg-orange-100' : user.isRepresentative ? 'bg-purple-100' : user.isPrescriptor ? 'bg-amber-100' : 'bg-indigo-100'}`}>
                                 {user.isAdmin ? <Shield size={20} className="text-orange-600" /> : 
                                  user.isRepresentative ? <Briefcase size={20} className="text-purple-600" /> :
+                                 user.isPrescriptor ? <UserPlus size={20} className="text-amber-600" /> :
                                  <Store size={20} className="text-indigo-600" />}
                               </div>
                               <div>
