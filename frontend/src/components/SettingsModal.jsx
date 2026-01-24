@@ -1004,6 +1004,409 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </div>
           )}
 
+          {/* Tab Clientes */}
+          {activeTab === 'clients' && (
+            <div className="space-y-6">
+              {!isEditingClient ? (
+                <>
+                  {/* Header with search and add button */}
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Buscar cliente..."
+                          value={clientSearch}
+                          onChange={(e) => setClientSearch(e.target.value)}
+                          className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 w-64"
+                        />
+                      </div>
+                      <span className="text-sm text-slate-500 font-medium">
+                        {clients.length} clientes
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      {/* Import CSV button */}
+                      <label className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors">
+                        <Upload size={14} />
+                        Importar CSV
+                        <input
+                          type="file"
+                          accept=".csv,.xlsx,.xls"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            
+                            setIsImportingClients(true);
+                            setImportResult(null);
+                            
+                            try {
+                              const text = await file.text();
+                              const lines = text.split('\n').filter(l => l.trim());
+                              const headers = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase());
+                              
+                              const clientsData = lines.slice(1).map(line => {
+                                const values = line.split(/[,;]/);
+                                const client = {};
+                                headers.forEach((h, i) => {
+                                  const key = h === 'cp' ? 'codigoPostal' : h;
+                                  client[key] = values[i]?.trim() || '';
+                                });
+                                return client;
+                              });
+                              
+                              const result = await clientsAPI.importCSV(clientsData);
+                              setImportResult(result);
+                              loadClients();
+                            } catch (err) {
+                              setImportResult({ error: err.message });
+                            } finally {
+                              setIsImportingClients(false);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                      </label>
+                      
+                      <button
+                        onClick={() => {
+                          setIsEditingClient(true);
+                          setEditingClientId(null);
+                          setClientForm({
+                            codigo: '',
+                            nombre: '',
+                            cif: '',
+                            direccion: '',
+                            localidad: '',
+                            provincia: '',
+                            codigoPostal: '',
+                            telefono: '',
+                            email: '',
+                            descuento: 0,
+                            activo: true,
+                            notas: ''
+                          });
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors"
+                        data-testid="add-client-btn"
+                      >
+                        <Plus size={14} />
+                        Nuevo Cliente
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Import result message */}
+                  {importResult && (
+                    <div className={`p-4 rounded-xl text-sm font-medium ${importResult.error ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      {importResult.error ? (
+                        `Error: ${importResult.error}`
+                      ) : (
+                        `Importación completada: ${importResult.imported} nuevos, ${importResult.updated} actualizados${importResult.errors?.length ? `, ${importResult.errors.length} errores` : ''}`
+                      )}
+                      <button onClick={() => setImportResult(null)} className="ml-2 underline">Cerrar</button>
+                    </div>
+                  )}
+
+                  {/* Loading state */}
+                  {isImportingClients && (
+                    <div className="flex items-center gap-2 text-emerald-600">
+                      <Loader size={16} className="animate-spin" />
+                      <span className="text-sm font-medium">Importando clientes...</span>
+                    </div>
+                  )}
+
+                  {/* Clients table */}
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Código</th>
+                          <th className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Nombre</th>
+                          <th className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">CIF</th>
+                          <th className="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Localidad</th>
+                          <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">Dto%</th>
+                          <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">Estado</th>
+                          <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {clients
+                          .filter(c => {
+                            if (!clientSearch) return true;
+                            const q = clientSearch.toLowerCase();
+                            return c.codigo?.toLowerCase().includes(q) ||
+                                   c.nombre?.toLowerCase().includes(q) ||
+                                   c.cif?.toLowerCase().includes(q) ||
+                                   c.localidad?.toLowerCase().includes(q);
+                          })
+                          .map(client => (
+                            <tr key={client.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-4 py-3">
+                                <span className="font-mono font-bold text-emerald-600">{client.codigo}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="font-bold text-slate-900">{client.nombre}</span>
+                              </td>
+                              <td className="px-4 py-3 text-slate-600 text-sm">{client.cif || '-'}</td>
+                              <td className="px-4 py-3 text-slate-600 text-sm">{client.localidad || '-'}</td>
+                              <td className="px-4 py-3 text-center">
+                                {client.descuento > 0 ? (
+                                  <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-bold">{client.descuento}%</span>
+                                ) : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${client.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                  {client.activo ? 'Activo' : 'Inactivo'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex justify-center gap-1">
+                                  <button
+                                    onClick={() => {
+                                      setIsEditingClient(true);
+                                      setEditingClientId(client.id);
+                                      setClientForm({ ...client });
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                    title="Editar"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (!window.confirm(`¿Eliminar cliente "${client.nombre}"?`)) return;
+                                      try {
+                                        await clientsAPI.delete(client.id);
+                                        loadClients();
+                                      } catch (err) {
+                                        alert(err.message);
+                                      }
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    
+                    {clients.length === 0 && (
+                      <div className="p-8 text-center text-slate-400">
+                        <Building2 size={40} className="mx-auto mb-3 opacity-50" />
+                        <p className="font-medium">No hay clientes registrados</p>
+                        <p className="text-sm">Añade clientes manualmente o importa desde CSV</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CSV Format info */}
+                  <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600">
+                    <p className="font-bold text-slate-700 mb-2">Formato CSV para importación:</p>
+                    <code className="text-xs bg-white px-2 py-1 rounded border">
+                      codigo;nombre;cif;direccion;localidad;provincia;cp;telefono;email;descuento;activo;notas
+                    </code>
+                  </div>
+                </>
+              ) : (
+                /* Client Edit Form */
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-black text-slate-900 uppercase">
+                      {editingClientId ? 'Editar Cliente' : 'Nuevo Cliente'}
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setIsEditingClient(false);
+                        setEditingClientId(null);
+                      }}
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Código *</label>
+                      <input
+                        type="text"
+                        value={clientForm.codigo}
+                        onChange={(e) => setClientForm(p => ({ ...p, codigo: e.target.value.toUpperCase() }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono font-bold focus:outline-none focus:border-emerald-500"
+                        placeholder="CLI001"
+                        data-testid="client-codigo"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">CIF/NIF</label>
+                      <input
+                        type="text"
+                        value={clientForm.cif}
+                        onChange={(e) => setClientForm(p => ({ ...p, cif: e.target.value.toUpperCase() }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="B12345678"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Nombre / Razón Social *</label>
+                      <input
+                        type="text"
+                        value={clientForm.nombre}
+                        onChange={(e) => setClientForm(p => ({ ...p, nombre: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-emerald-500"
+                        placeholder="Cocinas Pérez S.L."
+                        data-testid="client-nombre"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Dirección</label>
+                      <input
+                        type="text"
+                        value={clientForm.direccion}
+                        onChange={(e) => setClientForm(p => ({ ...p, direccion: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="Calle Mayor, 123"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Localidad</label>
+                      <input
+                        type="text"
+                        value={clientForm.localidad}
+                        onChange={(e) => setClientForm(p => ({ ...p, localidad: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="Madrid"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Provincia</label>
+                        <input
+                          type="text"
+                          value={clientForm.provincia}
+                          onChange={(e) => setClientForm(p => ({ ...p, provincia: e.target.value }))}
+                          className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                          placeholder="Madrid"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">C.P.</label>
+                        <input
+                          type="text"
+                          value={clientForm.codigoPostal}
+                          onChange={(e) => setClientForm(p => ({ ...p, codigoPostal: e.target.value }))}
+                          className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                          placeholder="28001"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Teléfono</label>
+                      <input
+                        type="text"
+                        value={clientForm.telefono}
+                        onChange={(e) => setClientForm(p => ({ ...p, telefono: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="+34 600 000 000"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Email</label>
+                      <input
+                        type="email"
+                        value={clientForm.email}
+                        onChange={(e) => setClientForm(p => ({ ...p, email: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        placeholder="info@empresa.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Descuento (%)</label>
+                      <input
+                        type="number"
+                        value={clientForm.descuento}
+                        onChange={(e) => setClientForm(p => ({ ...p, descuento: parseFloat(e.target.value) || 0 }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 pt-6">
+                      <button
+                        onClick={() => setClientForm(p => ({ ...p, activo: !p.activo }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${clientForm.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
+                      >
+                        {clientForm.activo ? <CheckSquare size={16} /> : <Square size={16} />}
+                        {clientForm.activo ? 'Activo' : 'Inactivo'}
+                      </button>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Notas</label>
+                      <textarea
+                        value={clientForm.notas}
+                        onChange={(e) => setClientForm(p => ({ ...p, notas: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+                        rows={2}
+                        placeholder="Observaciones..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Save/Cancel buttons */}
+                  <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-slate-200">
+                    <button
+                      onClick={() => {
+                        setIsEditingClient(false);
+                        setEditingClientId(null);
+                      }}
+                      className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-bold transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!clientForm.codigo || !clientForm.nombre) {
+                          alert('Código y Nombre son obligatorios');
+                          return;
+                        }
+                        
+                        setIsSavingClient(true);
+                        try {
+                          if (editingClientId) {
+                            await clientsAPI.update(editingClientId, clientForm);
+                          } else {
+                            await clientsAPI.create(clientForm);
+                          }
+                          loadClients();
+                          setIsEditingClient(false);
+                          setEditingClientId(null);
+                        } catch (err) {
+                          alert(err.message);
+                        } finally {
+                          setIsSavingClient(false);
+                        }
+                      }}
+                      disabled={isSavingClient}
+                      className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg text-sm font-bold transition-colors"
+                      data-testid="save-client-btn"
+                    >
+                      {isSavingClient ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
+                      {editingClientId ? 'Guardar Cambios' : 'Crear Cliente'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'inventory' && (
             <div className="space-y-6">
               {!isEditingProduct ? (
