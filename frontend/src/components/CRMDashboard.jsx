@@ -13,6 +13,7 @@ const CRMDashboard = ({ onNavigate }) => {
 
   useEffect(() => {
     loadDashboard();
+    loadAnalytics();
   }, []);
 
   const loadDashboard = async () => {
@@ -24,6 +25,15 @@ const CRMDashboard = ({ onNavigate }) => {
       console.error('Error loading CRM dashboard:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAnalytics = async () => {
+    try {
+      const data = await crmAnalyticsAPI.getInactiveClients(30, 60);
+      setAnalytics(data);
+    } catch (err) {
+      console.error('Error loading CRM analytics:', err);
     }
   };
 
