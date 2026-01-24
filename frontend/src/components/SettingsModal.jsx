@@ -949,17 +949,26 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               </label>
                               <select
                                 value={userForm.linkedClientId || ''}
-                                onChange={(e) => setUserForm({...userForm, linkedClientId: e.target.value})}
+                                onChange={(e) => {
+                                  const selectedClientId = e.target.value;
+                                  const selectedClient = clients.find(c => c.id === selectedClientId);
+                                  setUserForm({
+                                    ...userForm, 
+                                    linkedClientId: selectedClientId,
+                                    // Heredar descuento del cliente si está vinculado
+                                    commercialDiscount: selectedClient?.descuento || userForm.commercialDiscount
+                                  });
+                                }}
                                 className="w-full bg-white border border-emerald-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-emerald-500"
                               >
                                 <option value="">Sin cliente vinculado</option>
                                 {clients.filter(c => c.activo).map(client => (
                                   <option key={client.id} value={client.id}>
-                                    {client.codigo} - {client.nombre}
+                                    {client.codigo} - {client.nombre} {client.descuento > 0 ? `(Dto: ${client.descuento}%)` : ''}
                                   </option>
                                 ))}
                               </select>
-                              <p className="text-[10px] text-slate-400 mt-1">El usuario pertenecerá a esta empresa/tienda</p>
+                              <p className="text-[10px] text-slate-400 mt-1">El usuario heredará el descuento del cliente vinculado</p>
                             </div>
                           )}
                         </div>
