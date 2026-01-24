@@ -12,7 +12,7 @@ const CRM_TABS = [
   { id: 'calendar', name: 'Calendario', icon: CalendarDays },
 ];
 
-const CRMLayout = () => {
+const CRMLayout = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   return (
