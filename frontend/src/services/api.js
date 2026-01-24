@@ -163,6 +163,50 @@ export const clientsAPI = {
     });
     if (!response.ok) throw new Error('Error al importar clientes');
     return response.json();
+  },
+
+  getSegments: async () => {
+    const response = await fetch(`${API_URL}/api/clients/segments`);
+    if (!response.ok) throw new Error('Error al obtener segmentos');
+    return response.json();
+  },
+
+  createFromContact: async (contactId) => {
+    const response = await fetch(`${API_URL}/api/clients/from-contact/${contactId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al convertir contacto');
+    }
+    return response.json();
+  },
+
+  activate: async (id, codigo) => {
+    const response = await fetch(`${API_URL}/api/clients/${id}/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigo })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al activar cliente');
+    }
+    return response.json();
+  },
+
+  linkUser: async (id, userId) => {
+    const response = await fetch(`${API_URL}/api/clients/${id}/link-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al vincular usuario');
+    }
+    return response.json();
   }
 };
 
