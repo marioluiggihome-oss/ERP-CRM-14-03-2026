@@ -133,7 +133,7 @@ const CRMDashboard = ({ onNavigate }) => {
             </span>
           </div>
           <p className="text-2xl font-black text-slate-900">{dashboard?.activeOpportunities || 0}</p>
-          <p className="text-xs text-slate-500 uppercase font-bold">Oportunidades Activas</p>
+          <p className="text-xs text-slate-500 uppercase font-bold">Oportunidades Abiertas</p>
         </div>
 
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
@@ -146,7 +146,7 @@ const CRMDashboard = ({ onNavigate }) => {
             </span>
           </div>
           <p className="text-2xl font-black text-slate-900">{dashboard?.wonThisMonth || 0}</p>
-          <p className="text-xs text-slate-500 uppercase font-bold">Ganadas este Mes</p>
+          <p className="text-xs text-slate-500 uppercase font-bold">Ventas Este Mes</p>
         </div>
 
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
@@ -159,7 +159,7 @@ const CRMDashboard = ({ onNavigate }) => {
             </span>
           </div>
           <p className="text-2xl font-black text-slate-900">{formatCurrency(dashboard?.pipelineValue || 0)}</p>
-          <p className="text-xs text-slate-500 uppercase font-bold">Ingresos Pipeline</p>
+          <p className="text-xs text-slate-500 uppercase font-bold">Valor en Curso</p>
         </div>
       </div>
 
@@ -168,7 +168,7 @@ const CRMDashboard = ({ onNavigate }) => {
         {/* Top Opportunities */}
         <div className="col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-black text-slate-900 uppercase text-sm">Top Oportunidades</h2>
+            <h2 className="font-black text-slate-900 uppercase text-sm">Mejores Oportunidades</h2>
             <button 
               onClick={() => onNavigate && onNavigate('pipeline')}
               className="text-xs text-indigo-600 font-bold hover:underline flex items-center gap-1"
