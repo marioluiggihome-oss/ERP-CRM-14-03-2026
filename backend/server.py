@@ -354,42 +354,50 @@ async def analyze_product_sheets(
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"product-analysis-{uuid.uuid4()}",
-                system_message="""Eres un experto en digitalización de fichas técnicas de muebles de cocina.
-Analiza la imagen de la ficha técnica y extrae TODA la información visible con máximo detalle y precisión.
+                system_message="""Eres un experto en digitalización de tarifas técnicas de muebles de cocina.
+Tu tarea es extraer TODOS los productos visibles en la imagen de forma estructurada.
 
-INSTRUCCIONES CRÍTICAS:
-1. Lee TODO el texto visible en la imagen (OCR completo)
-2. Identifica la estructura de la ficha (tablas, columnas, secciones)
-3. Extrae TODOS los datos numéricos y códigos
-4. Si ves una tabla de zonas (Z1-Z12), extrae TODOS los valores exactos
-5. Si no ves zonas, solo extrae el punto base
+INFORMACIÓN A IDENTIFICAR DE CADA PÁGINA:
+1. ENCABEZADO DE PÁGINA: Busca texto como "PROGRAMA ESTANDAR - MODULOS [TIPO] - [SERIE]"
+   - Tipo: ALTOS, BAJOS, COLUMNAS, SEMICOLUMNAS, etc.
+   - Serie: ALTOS 35 FONDO 58, BAJOS 70 FONDO ESTÁNDAR, etc.
 
-Debes responder ÚNICAMENTE con un objeto JSON válido (sin markdown, sin comillas extras).
-Formato exacto:
-{
-  "code": "CÓDIGO_EXACTO",
-  "name": "Nombre completo del producto",
-  "width": número_en_cm,
-  "height": número_en_cm,
-  "depth": número_en_cm,
-  "category": "Categoría detectada",
-  "series": "Serie o familia",
-  "visualType": "Tipo visual (1P, 2P, HK-TOP, etc)",
-  "points": número_base,
-  "zonePoints": {
-    "Z1": número, "Z2": número, "Z3": número, "Z4": número,
-    "Z5": número, "Z6": número, "Z7": número, "Z8": número,
-    "Z9": número, "Z10": número, "Z11": número, "Z12": número
+2. CATEGORÍAS DE PRODUCTOS: Identifica los grupos como:
+   - "Alto 1 puerta", "Alto 2 puertas", "Alto 1 Vitrina", etc.
+   - "Bajo 1 puerta", "Bajo fregadero", etc.
+
+3. REFERENCIAS Y ZONAS DE PRECIO:
+   - Las referencias son códigos como: 35A1P58350, 7B1P300, 45A2V58600
+   - Cada producto tiene 12 zonas de precio (Z1 a Z12)
+   - Los precios van en orden horizontal para cada producto
+
+FORMATO DE RESPUESTA - Array JSON con TODOS los productos:
+[
+  {
+    "code": "CÓDIGO_EXACTO",
+    "name": "Nombre descriptivo completo",
+    "category": "ALTO/BAJO/COLUMNA/SEMICOLUMNA",
+    "series": "Serie completa (ej: ALTOS 35 FONDO 58)",
+    "visualType": "1P/2P/1V/2V/ABATIBLE/etc",
+    "width": ancho_en_mm,
+    "height": alto_en_cm,
+    "depth": fondo_en_cm,
+    "points": valor_Z1,
+    "zonePoints": {"Z1": n, "Z2": n, "Z3": n, "Z4": n, "Z5": n, "Z6": n, "Z7": n, "Z8": n, "Z9": n, "Z10": n, "Z11": n, "Z12": n}
   }
-}
+]
 
-Si no encuentras zonas (para despiece), usa el mismo valor en todas las zonas.
-IMPORTANTE: Responde SOLO el JSON, sin texto adicional."""
+REGLAS CRÍTICAS:
+- Extrae TODOS los productos visibles, no solo el primero
+- Respeta el orden de las filas (Z1 es el primer precio de cada fila)
+- El ancho (width) se extrae del final del código: 35A1P58350 = 350mm, 35A1P581200 = 1200mm
+- La altura se extrae del prefijo: 35 = 35cm, 40 = 40cm, 7B = 70cm (bajo)
+- Responde SOLO con el array JSON, sin explicaciones adicionales"""
             ).with_model("gemini", "gemini-2.5-pro")
             
             # Create message with image
             user_message = UserMessage(
-                text="Analiza esta ficha técnica de producto y extrae toda la información en el formato JSON especificado. Sé exhaustivo y preciso con todos los números y códigos.",
+                text="Analiza esta página de tarifa técnica de cocina. Extrae TODOS los productos visibles con sus 12 zonas de precio. Responde SOLO con el array JSON de productos.",
                 file_contents=[ImageContent(image_base64=base64_image)]
             )
             
@@ -406,15 +414,23 @@ IMPORTANTE: Responde SOLO el JSON, sin texto adicional."""
                         clean_response = clean_response[4:]
                 clean_response = clean_response.strip()
                 
-                product_data = json.loads(clean_response)
+                parsed_data = json.loads(clean_response)
                 
-                # Add metadata
-                product_data['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
-                product_data['manufacturer'] = 'Luiggi Home Master'
-                product_data['importedAt'] = datetime.utcnow().isoformat()
-                product_data['originalFilename'] = file.filename
+                # Handle both single object and array
+                if isinstance(parsed_data, list):
+                    product_list = parsed_data
+                else:
+                    product_list = [parsed_data]
                 
-                products.append(product_data)
+                for product_data in product_list:
+                    # Add metadata
+                    product_data['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
+                    product_data['manufacturer'] = 'Zona Cocinas'
+                    product_data['module'] = module
+                    product_data['importedAt'] = datetime.now(timezone.utc).isoformat()
+                    product_data['originalFilename'] = file.filename
+                    
+                    products.append(product_data)
                 
             except json.JSONDecodeError as e:
                 logger.error(f"Error parsing JSON from Gemini: {e}. Response: {response}")
