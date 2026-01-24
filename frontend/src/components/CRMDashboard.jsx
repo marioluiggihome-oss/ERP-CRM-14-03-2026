@@ -244,8 +244,8 @@ const CRMDashboard = ({ onNavigate }) => {
             ) : (
               <div className="p-8 text-center text-slate-400">
                 <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p className="font-bold">Sin actividades</p>
-                <p className="text-xs">Programa tu primera actividad</p>
+                <p className="font-bold">Sin seguimientos</p>
+                <p className="text-xs">Programa tu primer seguimiento</p>
               </div>
             )}
           </div>
@@ -255,7 +255,7 @@ const CRMDashboard = ({ onNavigate }) => {
       {/* Recent Activity */}
       <div className="mt-6 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100">
-          <h2 className="font-black text-slate-900 uppercase text-sm">Actividad Reciente</h2>
+          <h2 className="font-black text-slate-900 uppercase text-sm">Historial Reciente</h2>
         </div>
         <div className="divide-y divide-slate-100">
           {dashboard?.recentActivities?.length > 0 ? (
