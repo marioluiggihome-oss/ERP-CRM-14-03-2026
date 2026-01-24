@@ -750,17 +750,23 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                             {item.isManual && <PenTool size={10} className="text-indigo-300 no-print mr-1" />}
                             <span className="text-xs font-black italic tracking-tighter cursor-help border-b border-dotted border-indigo-300">{price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
                             
-                            {/* Checkbox de Corte Viga */}
+                            {/* Botón de Corte Viga - Más visible */}
                             {!item.isManual && (
-                              <label className="no-print flex items-center gap-1 cursor-pointer ml-1" title="Añadir incremento por corte de viga">
-                                <input 
-                                  type="checkbox"
-                                  checked={item.hasVigaCut || false}
-                                  onChange={(e) => updateItem(item.id, 'hasVigaCut', e.target.checked)}
-                                  className="w-3 h-3 rounded accent-orange-600"
-                                />
-                                <span className="text-[7px] font-bold text-indigo-400">V</span>
-                              </label>
+                              <button
+                                onClick={() => updateItem(item.id, 'hasVigaCut', !item.hasVigaCut)}
+                                className={`no-print p-1.5 rounded-lg transition-all ml-1 ${
+                                  item.hasVigaCut 
+                                    ? 'bg-orange-600 text-white shadow-md' 
+                                    : 'bg-slate-100 text-slate-400 hover:bg-orange-100 hover:text-orange-600'
+                                }`}
+                                title={item.hasVigaCut ? 'Quitar corte de viga' : 'Añadir corte de viga (+€)'}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                                  <path d="M4 20L20 4" />
+                                  <path d="M2 12h4" />
+                                  <path d="M18 12h4" />
+                                </svg>
+                              </button>
                             )}
                             
                             <button onClick={() => removeItem(item.id)} className="no-print p-1 text-indigo-100 hover:text-red-500 transition-all"><Trash2 size={12}/></button>
