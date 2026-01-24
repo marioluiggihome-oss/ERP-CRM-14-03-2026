@@ -288,6 +288,107 @@ const CRMDashboard = ({ onNavigate }) => {
           )}
         </div>
       </div>
+
+      {/* Alertas de Clientes Inactivos */}
+      {analytics && (
+        <div className="mt-6 grid grid-cols-2 gap-6">
+          {/* Sin Oferta en 30+ días */}
+          <div className="bg-white rounded-xl border border-orange-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-orange-100 bg-orange-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-orange-500 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-black text-orange-900 uppercase text-sm">Sin Oferta +30 días</h2>
+                  <p className="text-xs text-orange-600">{analytics.summary?.totalWithoutOffer30Days || 0} contactos</p>
+                </div>
+              </div>
+            </div>
+            <div className="divide-y divide-orange-50 max-h-64 overflow-y-auto">
+              {analytics.withoutRecentOffer?.length > 0 ? (
+                analytics.withoutRecentOffer.slice(0, 8).map(contact => (
+                  <div key={contact.id} className="p-3 hover:bg-orange-50/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <UserX className="w-4 h-4 text-orange-500" />
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm">{contact.name}</p>
+                          <p className="text-xs text-slate-500">{contact.company || contact.email}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                          {contact.daysWithoutOffer} días
+                        </span>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          {contact.lastOfferTitle === 'Nunca' ? 'Sin ofertas' : `Última: ${contact.lastOfferTitle?.substring(0,20)}...`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-6 text-center text-orange-400">
+                  <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="font-bold text-sm">¡Todos al día!</p>
+                  <p className="text-xs">No hay contactos sin ofertas recientes</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sin Compra en 60+ días */}
+          <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-red-100 bg-red-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-red-500 rounded-lg">
+                  <ShoppingCart className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-black text-red-900 uppercase text-sm">Sin Compra +60 días</h2>
+                  <p className="text-xs text-red-600">
+                    {analytics.summary?.totalWithoutPurchase60Days || 0} contactos (60d) · {analytics.summary?.totalWithoutPurchase90Days || 0} contactos (90d)
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="divide-y divide-red-50 max-h-64 overflow-y-auto">
+              {analytics.withoutRecentPurchase?.length > 0 ? (
+                analytics.withoutRecentPurchase.slice(0, 8).map(contact => (
+                  <div key={contact.id} className="p-3 hover:bg-red-50/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <UserX className="w-4 h-4 text-red-500" />
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm">{contact.name}</p>
+                          <p className="text-xs text-slate-500">{contact.company || contact.email}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                          contact.daysWithoutPurchase >= 90 ? 'text-red-700 bg-red-100' : 'text-orange-600 bg-orange-100'
+                        }`}>
+                          {contact.daysWithoutPurchase === 9999 ? 'Nunca' : `${contact.daysWithoutPurchase} días`}
+                        </span>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          {contact.lastPurchaseValue > 0 ? formatCurrency(contact.lastPurchaseValue) : 'Sin compras'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-6 text-center text-red-400">
+                  <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="font-bold text-sm">¡Excelente!</p>
+                  <p className="text-xs">Todos los contactos con compras recientes</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
