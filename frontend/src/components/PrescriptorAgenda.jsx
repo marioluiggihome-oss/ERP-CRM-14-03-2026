@@ -49,8 +49,10 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
-  const [noteFormData, setNoteFormData] = useState({ title: '', content: '' });
+  const [noteFormData, setNoteFormData] = useState({ title: '', content: '', contactId: '', contactName: '' });
   const [savingNote, setSavingNote] = useState(false);
+  const [showNewContactInNote, setShowNewContactInNote] = useState(false);
+  const [newContactInNote, setNewContactInNote] = useState({ name: '', phone: '', company: '' });
 
   useEffect(() => {
     if (currentUser?.id) {
