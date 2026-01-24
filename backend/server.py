@@ -979,10 +979,11 @@ async def create_client_from_contact(contact_id: str):
     # Update contact to mark as converted
     await db.contacts.update_one(
         {"id": contact_id},
-        {"$set": {"convertedToClientId": client_data["id"], "type": "customer"}}
+        {"$set": {"convertedToClientId": client_data["id"], "status": "customer"}}
     )
     
-    del client_data["_id"] if "_id" in client_data else None
+    if "_id" in client_data:
+        del client_data["_id"]
     return client_data
 
 @api_router.post("/clients/{client_id}/activate")
