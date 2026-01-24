@@ -994,6 +994,33 @@ async def delete_product(product_id: str):
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return {"message": "Producto eliminado"}
 
+@api_router.post("/products/fix-heights")
+async def fix_product_heights():
+    """
+    Corregir alturas de productos que están en decímetros en vez de centímetros.
+    Multiplica por 10 las alturas que son <= 30 (11, 12, 13, 14, 16, 20, 22, 24)
+    """
+    # Alturas que deberían multiplicarse por 10
+    heights_to_fix = [11, 12, 13, 14, 16, 20, 22, 24]
+    
+    fixed_count = 0
+    for h in heights_to_fix:
+        result = await db.products.update_many(
+            {"height": h},
+            {"$mul": {"height": 10}}
+        )
+        fixed_count += result.modified_count
+        logger.info(f"Fixed {result.modified_count} products with height {h} -> {h*10}")
+    
+    # También corregir fondos si es necesario (33 -> 330 sería incorrecto, pero 33cm es normal)
+    # Los fondos de 33 parecen correctos (330mm = 33cm)
+    
+    return {
+        "success": True,
+        "fixed_count": fixed_count,
+        "message": f"Se corrigieron {fixed_count} productos"
+    }
+
 @api_router.delete("/products/bulk/delete")
 async def delete_products_bulk(product_ids: List[str]):
     """Eliminar múltiples productos"""
