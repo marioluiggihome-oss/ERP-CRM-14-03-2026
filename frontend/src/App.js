@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2 } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box } from 'lucide-react';
 import "./App.css";
 import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
@@ -15,6 +15,7 @@ import MaintenancePanel from './components/MaintenancePanel';
 import AdminWorkView from './components/AdminWorkView';
 import CommercialWorkView from './components/CommercialWorkView';
 import PrescriptorAgenda from './components/PrescriptorAgenda';
+import Armarios from './components/Armarios';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI } from './services/api';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
 
