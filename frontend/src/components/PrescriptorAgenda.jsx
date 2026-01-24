@@ -202,7 +202,7 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
   const openNoteModal = (date, note = null) => {
     setSelectedDate(date);
     setShowNewContactInNote(false);
-    setNewContactInNote({ name: '', phone: '', company: '' });
+    setNewContactInNote({ name: '', phone: '', company: '', segment: '' });
     if (note) {
       setEditingNote(note);
       setNoteFormData({ 
@@ -234,6 +234,7 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
           name: newContactInNote.name,
           phone: newContactInNote.phone,
           company: newContactInNote.company,
+          segment: newContactInNote.segment,
           status: 'lead',
           source: 'prescriptor',
           prescriptorId: currentUser.id,
