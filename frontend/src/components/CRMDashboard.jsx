@@ -82,7 +82,7 @@ const CRMDashboard = ({ onNavigate }) => {
     <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Dashboard CRM</h1>
+        <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Resumen Comercial</h1>
         <p className="text-sm text-slate-500">Resumen de tu actividad comercial</p>
       </div>
 
