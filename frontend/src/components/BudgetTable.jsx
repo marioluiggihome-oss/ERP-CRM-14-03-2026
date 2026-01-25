@@ -892,10 +892,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                <div className="pt-4 mt-auto border-t-4 border-indigo-950 mb-4">
                   {/* Sección de totales */}
                   <div className="flex flex-col gap-2">
-                     <div className="flex gap-0.5">
-                        <div className="text-[7px] font-black text-indigo-200 italic uppercase tracking-[0.15em]">Luiggi Home Master Design v2026</div>
-                        <span className="text-[7px] text-indigo-300">•</span>
-                        <div className="text-[7px] font-black text-indigo-300 uppercase italic">PRESUPUESTO TÉCNICO</div>
+                     <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">
+                        PRESUPUESTO TÉCNICO
                      </div>
                      
                      {/* Caja de totales en HORIZONTAL - ANCHO COMPLETO */}
