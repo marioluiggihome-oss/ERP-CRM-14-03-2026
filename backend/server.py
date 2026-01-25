@@ -458,6 +458,8 @@ class ContactModel(BaseModel):
     linkedProjectIds: List[str] = []
     # Flag para indicar si fue convertido a cliente
     convertedToClientId: Optional[str] = None
+    # Business types associated: cocina, armarios
+    businessTypes: List[str] = []
 
 class ContactCreate(BaseModel):
     name: str
