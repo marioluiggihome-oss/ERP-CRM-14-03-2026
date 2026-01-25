@@ -218,11 +218,41 @@ const CRMPipeline = ({ currentUser }) => {
           </div>
           <div>
             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Embudo de Ventas</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{opportunities.length} oportunidades activas</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {businessTypeFilter === 'all' 
+                ? `${opportunities.length} oportunidades activas`
+                : `${opportunities.filter(o => o.businessType === businessTypeFilter).length} oportunidades de ${businessTypeFilter}`
+              }
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Filtro por tipo de negocio */}
+          <div className="flex items-center gap-1 bg-white rounded-xl p-1 shadow border border-slate-200">
+            {BUSINESS_TYPES.map(type => {
+              const Icon = type.icon;
+              const isActive = businessTypeFilter === type.id;
+              return (
+                <button
+                  key={type.id}
+                  onClick={() => setBusinessTypeFilter(type.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
+                    isActive 
+                      ? type.id === 'all' 
+                        ? 'bg-slate-700 text-white' 
+                        : `${type.color} text-white`
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                  data-testid={`filter-${type.id}`}
+                >
+                  <Icon size={14} />
+                  {type.name}
+                </button>
+              );
+            })}
+          </div>
+
           <label className="flex items-center gap-2 text-sm font-bold text-slate-600">
             <input
               type="checkbox"
