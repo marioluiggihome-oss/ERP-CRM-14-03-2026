@@ -1,6 +1,6 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 25/01/2026 (v3)
+## Última Actualización: 25/01/2026 (v4)
 
 ---
 
@@ -9,88 +9,63 @@
 LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y armarios, con:
 - Jerarquía de usuarios: **Director Comercial > Responsable Delegación > Comercial > Tienda/Punto de Venta > Colaborador**
 - **Panel de Métricas** para Director Comercial con ventas, pipeline, conversión, top performers
+- **Gráficos de tendencias** con recharts (ventas mensuales, oportunidades, distribución, embudo)
 - Presupuestador técnico con cálculo automático de precios
 - Módulo de Armarios con diseñador visual, despiece e IA
-- CRM completo con calendario y aislamiento de datos por usuario
+- CRM completo con calendario, filtros por tipo de negocio y aislamiento de datos
 - Digitalizador de borradores con IA
 - Importador de catálogo IA
 - Sistema de backups automáticos
 
 ---
 
-## NUEVA FUNCIONALIDAD - PANEL MÉTRICAS DIRECTOR COMERCIAL
+## COMPLETADO EN ESTA SESIÓN (25/01/2026)
 
-### ✅ Implementado y Probado (100% Backend + 100% Frontend)
+### ✅ P1 - Etiquetado de Oportunidades por Tipo de Negocio
 
-#### Endpoint: GET /api/admin/metrics
-```json
-{
-  "global": {
-    "totalValue": 0,
-    "pipelineValue": 7056,
-    "conversionRate": 0,
-    "totalContacts": 6,
-    "totalProjects": 3,
-    "totalTiendas": 1,
-    "totalComerciales": 2,
-    "totalResponsables": 0
-  },
-  "byUser": [...],
-  "topPerformers": [...],
-  "roleBreakdown": {...}
-}
-```
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **Backend** | ✅ | Campo `businessType` en OpportunityModel y ContactModel |
+| **API Filtrado** | ✅ | `GET /api/crm/opportunities?businessType=cocina\|armarios` |
+| **Endpoint Armarios** | ✅ | `POST /api/crm/opportunities/from-armario/{project_id}` |
+| **Frontend Filtros** | ✅ | Botones TODOS/COCINA/ARMARIOS en CRM Pipeline |
+| **Badges** | ✅ | Etiquetas de tipo en tarjetas de oportunidades (amber/emerald) |
+| **Auto-etiquetado** | ✅ | Al guardar proyecto cocina/armarios, se etiqueta oportunidad |
 
-#### UI Components
-| Componente | Descripción |
-|------------|-------------|
-| **Tabs** | Métricas (default) / Trabajos |
-| **Cards Globales** | Ventas Cerradas, Pipeline, Conversión, Contactos, Red Distribución |
-| **Top Performers** | Ranking de comerciales con métricas |
-| **Tabla Detallada** | Usuario, Rol, Ventas, Pipeline, Conv., Opps, Contactos, Tiendas |
+### ✅ P2 - Panel de Métricas con Gráficos
+
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **Endpoint Tendencias** | ✅ | `GET /api/admin/metrics/trends` con datos mensuales |
+| **Gráfico Ventas** | ✅ | BarChart de ventas mensuales (€) |
+| **Gráfico Opps** | ✅ | LineChart de oportunidades creadas/ganadas/perdidas |
+| **Distribución** | ✅ | PieChart de Cocina vs Armarios |
+| **Embudo** | ✅ | Barra horizontal de conversión por etapa |
 
 ---
 
-## CORRECCIONES ANTERIORES
-
-### PDF Mejoras
-- Texto "PRESUPUESTO" más pequeño (7pt)
-- Nombres capitalizados con `capitalizeName()`
-- Especificaciones al final en formato horizontal
-
-### Nuevos Roles
-- Director Comercial (antes Administrador)
-- Responsable Delegación (nuevo)
-- Tiendas vinculadas a Comercial (no a Cliente)
-
-### UI
-- "Selección de artículos" (no "muebles")
-- Iconos quitados del Panel Maestro
-- Aislamiento CRM por usuario
-
----
-
-## ARQUITECTURA
+## ARQUITECTURA ACTUAL
 
 ```
 /app
 ├── backend/
-│   ├── server.py (~4700 líneas)
-│   │   ├── GET /api/admin/metrics (nuevo)
-│   │   ├── UserModel (isResponsableDelegacion, canAuthorizePermissions)
-│   │   └── CRM endpoints con filtrado
+│   ├── server.py (~5100 líneas)
+│   │   ├── OpportunityModel + businessType
+│   │   ├── ContactModel + businessTypes[]
+│   │   ├── GET /api/admin/metrics/trends (nuevo)
+│   │   ├── POST /api/crm/opportunities/from-armario (nuevo)
+│   │   └── GET /api/crm/opportunities?businessType (actualizado)
 │   └── tests/
-│       ├── test_admin_metrics.py (nuevo)
-│       ├── test_crm_isolation_roles.py
-│       └── test_armarios_ia.py
+│       └── test_p1_p2_features.py (nuevo)
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── AdminWorkView.jsx (métricas + trabajos)
-│       │   ├── SettingsModal.jsx (nuevos roles)
-│       │   └── BudgetTable.jsx (texto "artículos")
+│       │   ├── AdminWorkView.jsx (gráficos recharts)
+│       │   ├── CRMPipeline.jsx (filtros businessType)
+│       │   ├── BudgetTable.jsx (auto-etiquetado cocina)
+│       │   └── Armarios.jsx (auto-etiquetado armarios)
 │       └── services/
-│           └── pdfGenerator.js (capitalizeName)
+│           └── api.js (adminMetricsAPI, createFromArmario)
 └── memory/
     └── PRD.md
 ```
@@ -99,19 +74,15 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 ## PRÓXIMAS TAREAS
 
-### P1 - Próximo Sprint
-- [ ] Probar IA Lab - Analizador de Planos con imagen real
-- [ ] Auto-etiquetar CRM al guardar proyecto (tipo de negocio)
-- [ ] Exportar secciones a ventana emergente
-
 ### P2 - Media Prioridad
+- [ ] Probar IA Lab - Analizador de Planos con imagen real
 - [ ] Personalizar datos a quitar del PDF
 - [ ] Reorganizar UI campo "expediente"
 - [ ] Filtros temporales en métricas (mes, trimestre, año)
 
-### P3 - Refactorización
-- [ ] Separar server.py en routers
-- [ ] Separar componentes grandes (Armarios.jsx)
+### P3 - Refactorización (URGENTE)
+- [ ] Separar server.py en routers/models/services
+- [ ] Separar componentes grandes (Armarios.jsx, SettingsModal.jsx)
 
 ---
 
@@ -119,6 +90,7 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 | Test File | Coverage |
 |-----------|----------|
+| test_p1_p2_features.py | 100% |
 | test_admin_metrics.py | 100% |
 | test_crm_isolation_roles.py | 100% |
 | test_armarios_ia.py | 91% |
@@ -134,3 +106,18 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 | TIENDSA | TIENDSA | Tienda/Punto de Venta |
 | COMSA | COMERCIAL | Comercial |
 | PRESCRIPTOR1 | PRESCRIPTOR1 | Colaborador Comercial |
+
+---
+
+## PROBLEMA CONOCIDO (P2)
+
+**Estabilidad del Frontend**: Error recurrente de React DOM (`insertBefore`) que podría causar crashes aleatorios. El root cause no ha sido diagnosticado completamente.
+
+---
+
+## INTEGRACIONES
+
+- **Google Gemini** (via emergentintegrations): gemini-3-flash-preview para texto, gemini-3-pro-image-preview para imágenes
+- **SendGrid**: Envío de backups por email
+- **jspdf**: Generación de PDFs en frontend
+- **recharts**: Gráficos de métricas
