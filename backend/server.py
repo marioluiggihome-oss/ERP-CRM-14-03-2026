@@ -150,7 +150,8 @@ class UserCreate(BaseModel):
     clientName: str
     linkedClientId: Optional[str] = None
     isActive: bool = True
-    isAdmin: bool = False
+    isAdmin: bool = False  # Director Comercial
+    isResponsableDelegacion: bool = False  # Responsable Delegación
     isRepresentative: bool = False
     isPrescriptor: bool = False
     isTienda: bool = False  # Tienda/Punto de Venta
@@ -166,6 +167,7 @@ class UserCreate(BaseModel):
     canAccessCRM: bool = False
     canUseDigitalizador: bool = False
     canAccessArmarios: bool = False
+    canAuthorizePermissions: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
@@ -175,7 +177,8 @@ class UserUpdate(BaseModel):
     clientName: Optional[str] = None
     linkedClientId: Optional[str] = None
     isActive: Optional[bool] = None
-    isAdmin: Optional[bool] = None
+    isAdmin: Optional[bool] = None  # Director Comercial
+    isResponsableDelegacion: Optional[bool] = None  # Responsable Delegación
     isRepresentative: Optional[bool] = None
     isPrescriptor: Optional[bool] = None
     isTienda: Optional[bool] = None  # Tienda/Punto de Venta
@@ -191,6 +194,7 @@ class UserUpdate(BaseModel):
     canAccessCRM: Optional[bool] = None
     canUseDigitalizador: Optional[bool] = None
     canAccessArmarios: Optional[bool] = None
+    canAuthorizePermissions: Optional[bool] = None
     useCustomBranding: Optional[bool] = None
     canChangeLogo: Optional[bool] = None
 
