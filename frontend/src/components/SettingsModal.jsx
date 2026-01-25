@@ -1073,29 +1073,53 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             </div>
                           </label>
 
-                          {/* Checkbox Colaborador Comercial - Solo visible para Admin */}
+                          {/* Checkbox Responsable Delegación - Solo visible para Director Comercial */}
                           {state.currentUser?.isAdmin && (
-                            <label className="flex items-center gap-3 cursor-pointer p-3 bg-amber-50 rounded-xl border border-amber-200">
+                            <label className="flex items-center gap-3 cursor-pointer p-3 bg-red-50 rounded-xl border border-red-200">
                               <input
                                 type="checkbox"
-                                checked={userForm.isPrescriptor}
-                                onChange={(e) => setUserForm({...userForm, isPrescriptor: e.target.checked, isRepresentative: false, isTienda: false})}
-                                className="w-5 h-5 rounded border-2 border-amber-300"
+                                checked={userForm.isResponsableDelegacion}
+                                onChange={(e) => setUserForm({
+                                  ...userForm, 
+                                  isResponsableDelegacion: e.target.checked, 
+                                  isRepresentative: false, 
+                                  isPrescriptor: false, 
+                                  isTienda: false,
+                                  isAdmin: false,
+                                  canAuthorizePermissions: e.target.checked // Por defecto puede autorizar
+                                })}
+                                className="w-5 h-5 rounded border-2 border-red-300"
                               />
                               <div>
-                                <span className="text-sm font-black text-slate-900">Colaborador Comercial</span>
-                                <p className="text-xs text-slate-500">Solo aporta contactos/clientes potenciales (gestionado por Admin)</p>
+                                <span className="text-sm font-black text-slate-900">Responsable de Delegación</span>
+                                <p className="text-xs text-slate-500">Reporta al Director Comercial. Puede autorizar permisos a comerciales.</p>
                               </div>
                             </label>
                           )}
 
-                          {/* Checkbox Tienda/Punto de Venta - Solo visible para Admin */}
-                          {state.currentUser?.isAdmin && (
+                          {/* Checkbox Colaborador Comercial - Solo visible para Admin/Responsable */}
+                          {(state.currentUser?.isAdmin || state.currentUser?.isResponsableDelegacion) && (
+                            <label className="flex items-center gap-3 cursor-pointer p-3 bg-amber-50 rounded-xl border border-amber-200">
+                              <input
+                                type="checkbox"
+                                checked={userForm.isPrescriptor}
+                                onChange={(e) => setUserForm({...userForm, isPrescriptor: e.target.checked, isRepresentative: false, isTienda: false, isAdmin: false, isResponsableDelegacion: false})}
+                                className="w-5 h-5 rounded border-2 border-amber-300"
+                              />
+                              <div>
+                                <span className="text-sm font-black text-slate-900">Colaborador Comercial</span>
+                                <p className="text-xs text-slate-500">Solo aporta contactos/clientes potenciales</p>
+                              </div>
+                            </label>
+                          )}
+
+                          {/* Checkbox Tienda/Punto de Venta - Solo visible para Admin/Responsable */}
+                          {(state.currentUser?.isAdmin || state.currentUser?.isResponsableDelegacion || state.currentUser?.canAuthorizePermissions) && (
                             <label className="flex items-center gap-3 cursor-pointer p-3 bg-green-50 rounded-xl border border-green-200">
                               <input
                                 type="checkbox"
                                 checked={userForm.isTienda}
-                                onChange={(e) => setUserForm({...userForm, isTienda: e.target.checked, isRepresentative: false, isPrescriptor: false, isAdmin: false})}
+                                onChange={(e) => setUserForm({...userForm, isTienda: e.target.checked, isRepresentative: false, isPrescriptor: false, isAdmin: false, isResponsableDelegacion: false})}
                                 className="w-5 h-5 rounded border-2 border-green-300"
                               />
                               <div>
@@ -1105,24 +1129,28 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             </label>
                           )}
 
-                          {!userForm.isAdmin && !userForm.isRepresentative && !userForm.isPrescriptor && !userForm.isTienda && representatives.length > 0 && (
+                          {/* Vincular Tienda a Comercial/Responsable/Director - Para roles Tienda */}
+                          {userForm.isTienda && representatives.length > 0 && (
                             <div>
-                              <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Asignar a Comercial / Representante</label>
+                              <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Vincular a Comercial / Responsable / Director</label>
                               <select
                                 value={userForm.linkedRepresentativeId || ''}
                                 onChange={(e) => setUserForm({...userForm, linkedRepresentativeId: e.target.value})}
                                 className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm font-bold outline-none"
                               >
-                                <option value="">Sin comercial asignado</option>
+                                <option value="">Sin vincular</option>
                                 {representatives.map(rep => (
-                                  <option key={rep.id} value={rep.id}>{rep.clientName}</option>
+                                  <option key={rep.id} value={rep.id}>
+                                    {rep.clientName} ({rep.isAdmin ? 'Director' : rep.isResponsableDelegacion ? 'Resp. Deleg.' : 'Comercial'})
+                                  </option>
                                 ))}
                               </select>
+                              <p className="text-[10px] text-slate-400 mt-1">La tienda quedará bajo la gestión de este usuario</p>
                             </div>
                           )}
 
-                          {/* Vincular a Cliente Activo */}
-                          {state.currentUser?.isAdmin && clients.length > 0 && (
+                          {/* Vincular a Cliente Activo - Ya no se usa para tiendas */}
+                          {state.currentUser?.isAdmin && !userForm.isTienda && clients.length > 0 && (
                             <div>
                               <label className="text-xs font-black text-slate-600 uppercase mb-2 block">
                                 <Building2 size={12} className="inline mr-1" />
