@@ -971,6 +971,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                  <div className="relative">
                     <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
                     <select 
+                      value={selectedCategory} 
+                      onChange={e => setSelectedCategory(e.target.value)}
+                      className="bg-white border border-indigo-100 rounded-xl py-1.5 pl-9 pr-8 text-[9px] font-black uppercase text-indigo-800 outline-none focus:border-orange-600 shadow-sm appearance-none cursor-pointer hover:bg-indigo-50"
+                      data-testid="category-filter"
+                    >
+                       <option value="TODAS">TODAS LAS CATEGORÍAS</option>
+                       {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none" size={12} />
+                 </div>
+                 <div className="relative">
+                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
+                    <select 
                       value={selectedSeries} 
                       onChange={e => setSelectedSeries(e.target.value)}
                       className="bg-white border border-indigo-100 rounded-xl py-1.5 pl-9 pr-8 text-[9px] font-black uppercase text-indigo-800 outline-none focus:border-orange-600 shadow-sm appearance-none cursor-pointer hover:bg-indigo-50"
