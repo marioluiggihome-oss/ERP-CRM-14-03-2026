@@ -52,9 +52,9 @@ const CRMLayout = ({ currentUser }) => {
       {/* CRM Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'dashboard' && (
-          <CRMDashboard onNavigate={(tab) => setActiveTab(tab)} />
+          <CRMDashboard onNavigate={(tab) => setActiveTab(tab)} currentUser={currentUser} />
         )}
-        {activeTab === 'pipeline' && <CRMPipeline />}
+        {activeTab === 'pipeline' && <CRMPipeline currentUser={currentUser} />}
         {activeTab === 'contacts' && <CRMContacts currentUser={currentUser} />}
         {activeTab === 'calendar' && <CRMCalendar currentUser={currentUser} />}
       </div>
