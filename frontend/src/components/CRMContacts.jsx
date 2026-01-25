@@ -616,6 +616,27 @@ const CRMContacts = ({ currentUser }) => {
                 </div>
               </div>
 
+              {/* Asignar a Comercial / Representante - Solo visible para Admin */}
+              {currentUser?.isAdmin && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Asignar a Comercial / Representante</label>
+                  <select
+                    value={formData.assignedTo || ''}
+                    onChange={e => setFormData({...formData, assignedTo: e.target.value})}
+                    className="w-full px-4 py-2.5 border-2 border-indigo-200 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
+                    data-testid="contact-assignedto-select"
+                  >
+                    <option value="">Sin asignar</option>
+                    {representatives.map(rep => (
+                      <option key={rep.id} value={rep.id}>
+                        {rep.clientName} {rep.isAdmin ? '(Admin)' : '(Comercial)'}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">El comercial asignado podrá ver y gestionar este contacto</p>
+                </div>
+              )}
+
               {/* Tipo de Negocio (Tags) */}
               <div className="col-span-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo de Negocio</label>
