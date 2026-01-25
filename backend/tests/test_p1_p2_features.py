@@ -139,7 +139,9 @@ class TestP1CreateFromArmario:
         }
         response = requests.post(f"{BASE_URL}/api/armarios/projects", json=project_data)
         if response.status_code == 200:
-            project = response.json()
+            data = response.json()
+            # Response structure is {"success": true, "project": {...}}
+            project = data.get("project", data)
             yield project
             # Cleanup
             requests.delete(f"{BASE_URL}/api/armarios/projects/{project['id']}")
