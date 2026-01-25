@@ -15,7 +15,7 @@ const STAGES = [
   { id: 'lost', name: 'Perdida', color: 'bg-red-500', lightColor: 'bg-red-50 border-red-200' }
 ];
 
-const CRMPipeline = () => {
+const CRMPipeline = ({ currentUser }) => {
   const [opportunities, setOpportunities] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,14 +38,21 @@ const CRMPipeline = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentUser]);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
+      // Determinar si es admin para filtrar datos
+      const isAdmin = currentUser?.isAdmin === true;
+      const options = isAdmin ? {} : {
+        assignedTo: currentUser?.id,
+        isAdmin: false
+      };
+      
       const [oppsData, contactsData] = await Promise.all([
-        crmOpportunitiesAPI.getAll(),
-        crmContactsAPI.getAll()
+        crmOpportunitiesAPI.getAll(null, null, options),
+        crmContactsAPI.getAll(null, null, options)
       ]);
       setOpportunities(oppsData);
       setContacts(contactsData);
