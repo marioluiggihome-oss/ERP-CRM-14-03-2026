@@ -1,6 +1,6 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 25/01/2026 (v2)
+## Última Actualización: 25/01/2026 (v3)
 
 ---
 
@@ -8,6 +8,7 @@
 
 LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y armarios, con:
 - Jerarquía de usuarios: **Director Comercial > Responsable Delegación > Comercial > Tienda/Punto de Venta > Colaborador**
+- **Panel de Métricas** para Director Comercial con ventas, pipeline, conversión, top performers
 - Presupuestador técnico con cálculo automático de precios
 - Módulo de Armarios con diseñador visual, despiece e IA
 - CRM completo con calendario y aislamiento de datos por usuario
@@ -17,75 +18,55 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 ---
 
-## CORRECCIONES IMPLEMENTADAS - 25/01/2026 (Segunda Tanda)
+## NUEVA FUNCIONALIDAD - PANEL MÉTRICAS DIRECTOR COMERCIAL
 
-### ✅ PDF Mejoras
-| Corrección | Estado | Descripción |
-|------------|--------|-------------|
-| Texto "PRESUPUESTO" más pequeño | ✅ COMPLETADO | Reducido de 9pt a 7pt |
-| Nombres capitalizados | ✅ COMPLETADO | Función `capitalizeName()` para nombres y direcciones |
-| Especificaciones al final | ✅ COMPLETADO | Movidas abajo en formato horizontal compacto |
-| Campo Armazón | ✅ YA EXISTÍA | Se muestra en especificaciones |
+### ✅ Implementado y Probado (100% Backend + 100% Frontend)
 
-### ✅ Nuevos Roles Jerárquicos
-| Rol | Descripción | Permisos |
-|-----|-------------|----------|
-| **Director Comercial** | Antes "Administrador" | Control total del sistema |
-| **Responsable Delegación** | NUEVO | Reporta al Director. Puede autorizar permisos a comerciales |
-| **Comercial/Representante** | Sin cambios | Gestiona sus clientes y tiendas asignadas |
-| **Tienda/Punto de Venta** | Sin cambios | Solo acceso al presupuestador |
-| **Colaborador Comercial** | Sin cambios | Solo aporta contactos |
+#### Endpoint: GET /api/admin/metrics
+```json
+{
+  "global": {
+    "totalValue": 0,
+    "pipelineValue": 7056,
+    "conversionRate": 0,
+    "totalContacts": 6,
+    "totalProjects": 3,
+    "totalTiendas": 1,
+    "totalComerciales": 2,
+    "totalResponsables": 0
+  },
+  "byUser": [...],
+  "topPerformers": [...],
+  "roleBreakdown": {...}
+}
+```
 
-### ✅ Vinculación de Tiendas
-| Corrección | Estado | Descripción |
-|------------|--------|-------------|
-| Vincular Tienda a Comercial | ✅ COMPLETADO | Antes se vinculaba a Cliente, ahora a Comercial/Responsable/Director |
-| Selector actualizado | ✅ COMPLETADO | Muestra rol entre paréntesis: "(Director)", "(Resp. Deleg.)", "(Comercial)" |
-
-### ✅ Cambios de Texto
-| Corrección | Estado | Descripción |
-|------------|--------|-------------|
-| "Selección de artículos" | ✅ COMPLETADO | Cambiado de "Selección de muebles" |
-| "Añade artículos" | ✅ COMPLETADO | Cambiado de "Añade muebles" |
-| "ARTÍCULOS" en librería | ✅ COMPLETADO | Cambiado de "MUEBLES" |
+#### UI Components
+| Componente | Descripción |
+|------------|-------------|
+| **Tabs** | Métricas (default) / Trabajos |
+| **Cards Globales** | Ventas Cerradas, Pipeline, Conversión, Contactos, Red Distribución |
+| **Top Performers** | Ranking de comerciales con métricas |
+| **Tabla Detallada** | Usuario, Rol, Ventas, Pipeline, Conv., Opps, Contactos, Tiendas |
 
 ---
 
-## JERARQUÍA DE ROLES
+## CORRECCIONES ANTERIORES
 
-```
-Director Comercial (isAdmin)
-    │
-    ├── Responsable Delegación (isResponsableDelegacion)
-    │       │
-    │       ├── Comercial (isRepresentative)
-    │       │       │
-    │       │       └── Tienda/PdV (isTienda) [linkedRepresentativeId]
-    │       │
-    │       └── Tienda/PdV (isTienda) [linkedRepresentativeId]
-    │
-    ├── Comercial (isRepresentative)
-    │       │
-    │       └── Tienda/PdV (isTienda) [linkedRepresentativeId]
-    │
-    └── Colaborador Comercial (isPrescriptor)
-```
+### PDF Mejoras
+- Texto "PRESUPUESTO" más pequeño (7pt)
+- Nombres capitalizados con `capitalizeName()`
+- Especificaciones al final en formato horizontal
 
----
+### Nuevos Roles
+- Director Comercial (antes Administrador)
+- Responsable Delegación (nuevo)
+- Tiendas vinculadas a Comercial (no a Cliente)
 
-## CAMPOS NUEVOS EN MODELO USUARIO
-
-```python
-# Backend: server.py
-class UserModel:
-    isAdmin: bool = False  # Director Comercial
-    isResponsableDelegacion: bool = False  # Responsable de Delegación
-    isRepresentative: bool = False  # Comercial
-    isPrescriptor: bool = False  # Colaborador Comercial
-    isTienda: bool = False  # Tienda/Punto de Venta
-    linkedRepresentativeId: Optional[str] = None  # ID del Comercial/Responsable/Director
-    canAuthorizePermissions: bool = False  # Puede autorizar permisos (Resp. Delegación)
-```
+### UI
+- "Selección de artículos" (no "muebles")
+- Iconos quitados del Panel Maestro
+- Aislamiento CRM por usuario
 
 ---
 
@@ -94,24 +75,22 @@ class UserModel:
 ```
 /app
 ├── backend/
-│   ├── server.py (~4500 líneas)
-│   │   ├── UserModel (nuevos campos: isResponsableDelegacion, canAuthorizePermissions)
-│   │   ├── ContactModel (assignedTo)
-│   │   └── CRM endpoints con filtrado por usuario
+│   ├── server.py (~4700 líneas)
+│   │   ├── GET /api/admin/metrics (nuevo)
+│   │   ├── UserModel (isResponsableDelegacion, canAuthorizePermissions)
+│   │   └── CRM endpoints con filtrado
 │   └── tests/
+│       ├── test_admin_metrics.py (nuevo)
 │       ├── test_crm_isolation_roles.py
-│       ├── test_armarios_ia.py
-│       └── test_new_roles_features.py
+│       └── test_armarios_ia.py
 ├── frontend/
 │   └── src/
-│       ├── App.js (sidebar con permisos por rol)
 │       ├── components/
-│       │   ├── BudgetTable.jsx (texto "artículos")
-│       │   ├── SettingsModal.jsx (nuevos roles en formulario)
-│       │   └── CRM*.jsx (filtrado por usuario)
+│       │   ├── AdminWorkView.jsx (métricas + trabajos)
+│       │   ├── SettingsModal.jsx (nuevos roles)
+│       │   └── BudgetTable.jsx (texto "artículos")
 │       └── services/
-│           ├── api.js (CRM API con filtrado)
-│           └── pdfGenerator.js (capitalizeName, layout compacto)
+│           └── pdfGenerator.js (capitalizeName)
 └── memory/
     └── PRD.md
 ```
@@ -123,19 +102,31 @@ class UserModel:
 ### P1 - Próximo Sprint
 - [ ] Probar IA Lab - Analizador de Planos con imagen real
 - [ ] Auto-etiquetar CRM al guardar proyecto (tipo de negocio)
-- [ ] Exportar secciones a ventana emergente/pantalla completa
+- [ ] Exportar secciones a ventana emergente
 
 ### P2 - Media Prioridad
-- [ ] Quitar datos innecesarios del PDF (personalizable)
+- [ ] Personalizar datos a quitar del PDF
 - [ ] Reorganizar UI campo "expediente"
+- [ ] Filtros temporales en métricas (mes, trimestre, año)
 
 ### P3 - Refactorización
-- [ ] Separar server.py en routers (>4500 líneas)
-- [ ] Separar Armarios.jsx en componentes (>2700 líneas)
+- [ ] Separar server.py en routers
+- [ ] Separar componentes grandes (Armarios.jsx)
 
 ---
 
-## CREDENCIALES DE PRUEBA
+## TESTS
+
+| Test File | Coverage |
+|-----------|----------|
+| test_admin_metrics.py | 100% |
+| test_crm_isolation_roles.py | 100% |
+| test_armarios_ia.py | 91% |
+| test_new_roles_features.py | 100% |
+
+---
+
+## CREDENCIALES
 
 | Usuario | Contraseña | Rol |
 |---------|------------|-----|
@@ -143,26 +134,3 @@ class UserModel:
 | TIENDSA | TIENDSA | Tienda/Punto de Venta |
 | COMSA | COMERCIAL | Comercial |
 | PRESCRIPTOR1 | PRESCRIPTOR1 | Colaborador Comercial |
-
----
-
-## TESTS CREADOS
-
-- `/app/backend/tests/test_new_roles_features.py` - Tests nuevos roles
-- `/app/backend/tests/test_crm_isolation_roles.py` - Tests aislamiento CRM
-- `/app/backend/tests/test_armarios_ia.py` - Tests funciones IA Armarios
-- `/app/test_reports/iteration_14.json` - Último reporte: 100% backend, 100% frontend
-
----
-
-## NOTAS TÉCNICAS
-
-### PDF Generator
-- `capitalizeName()` - Capitaliza nombres correctamente (Primera Letra Mayúscula)
-- Especificaciones en formato horizontal al final: `Acabado • Bajo • Alto • Columnas • Costados • Armazón`
-- "PRESUPUESTO" reducido a 7pt
-
-### Permisos Responsable Delegación
-- `canAuthorizePermissions: true` por defecto cuando se crea
-- Puede ver y editar Comerciales y Tiendas de su delegación
-- No puede crear otros Responsables ni Director Comercial
