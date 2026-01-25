@@ -71,15 +71,17 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       'SEMICOLUMNA': 3, 'SEMICOLUMNAS': 3,
       'COLUMNA': 4, 'COLUMNAS': 4,
       'ELECTRO': 5, 'ELECTRODOMESTICOS': 5,
-      'ACCESORIO': 6, 'ACCESORIOS': 6,
-      'OTRO': 7, 'OTROS': 7
+      'PUERTAS': 6, 'PUERTAS Y VITRINAS': 6,
+      'ACCESORIO': 7, 'ACCESORIOS': 7,
+      'OTRO': 8, 'OTROS': 8
     };
     
     const filtered = allProducts.filter(p => {
       const matchesSearch = p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q);
       const isCorrectModule = catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule;
       const matchesSeries = selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
-      return matchesSearch && isCorrectModule && matchesSeries;
+      const matchesCategory = selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
+      return matchesSearch && isCorrectModule && matchesSeries && matchesCategory;
     });
     
     // Ordenar por categoría y luego por código
@@ -90,7 +92,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       // Dentro de la misma categoría, ordenar por código
       return a.code.localeCompare(b.code);
     });
-  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedSeries]);
+  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedSeries, selectedCategory]);
 
   const budgetKey = state.currentModule === 'montada' ? 'budgetItemsMontada' : 'budgetItemsDespiece';
 
