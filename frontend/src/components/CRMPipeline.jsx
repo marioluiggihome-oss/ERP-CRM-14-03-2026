@@ -92,7 +92,9 @@ const CRMPipeline = ({ currentUser }) => {
       let matchesType = true;
       
       if (businessTypeFilter !== 'all') {
-        if (businessTypeFilter === 'cocina_montada') {
+        if (businessTypeFilter === 'cocina_all') {
+          matchesType = opp.businessType === 'cocina';
+        } else if (businessTypeFilter === 'cocina_montada') {
           matchesType = opp.businessType === 'cocina' && opp.moduleType === 'montada';
         } else if (businessTypeFilter === 'cocina_despiece') {
           matchesType = opp.businessType === 'cocina' && opp.moduleType === 'despiece';
