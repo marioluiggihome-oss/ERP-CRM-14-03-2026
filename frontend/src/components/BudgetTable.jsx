@@ -603,41 +603,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                   </div>
                   <div className="text-right">
                      <h1 className="text-2xl font-black italic uppercase text-indigo-950 tracking-tighter leading-none">PRESUPUESTO TÉCNICO</h1>
-                     <div className="mt-2 flex items-center justify-end gap-2">
-                        {/* Pestañas COCINA / ARMARIOS */}
-                        <button
-                          onClick={() => setState(p => ({...p, currentTab: 'budget'}))}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${
-                            state.currentTab === 'budget' || !state.currentTab?.includes('armarios')
-                              ? 'bg-indigo-950 text-white shadow-lg'
-                              : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                          }`}
-                          data-testid="tab-cocina"
-                        >
-                          🍳 Cocina
-                        </button>
-                        {/* Pestaña Armarios - Solo si tiene permiso */}
-                        {(state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
-                          <button
-                            onClick={() => setState(p => ({...p, currentTab: 'armarios'}))}
-                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${
-                              state.currentTab === 'armarios'
-                                ? 'bg-purple-600 text-white shadow-lg'
-                                : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
-                            }`}
-                            data-testid="tab-armarios"
-                          >
-                            🚪 Armarios
-                          </button>
-                        )}
-                        {/* Número de referencia más pequeño */}
-                        {state.internalReference && (
-                          <span className="text-[7px] font-bold text-indigo-400 ml-2">
-                            REF: {state.internalReference}
-                          </span>
-                        )}
+                     <div className="mt-2 space-y-0.5">
+                        <p className="text-[9px] font-black text-indigo-300 uppercase">Nº EXP: <span className="text-indigo-950">{state.budgetNumber}</span></p>
+                        {state.internalReference && <p className="text-[8px] font-black text-indigo-300 uppercase">REF: <span className="text-orange-600">{state.internalReference}</span></p>}
+                        {state.customerName && <p className="text-[8px] font-black text-indigo-950 uppercase italic tracking-widest">CLIENTE: {state.customerName}</p>}
                      </div>
-                     {state.customerName && <p className="text-[8px] font-black text-indigo-950 uppercase italic tracking-widest mt-1">CLIENTE: {state.customerName}</p>}
                   </div>
                </div>
 
