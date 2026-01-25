@@ -59,7 +59,11 @@ const CommercialWorkView = ({ isOpen, onClose, currentUser }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
+        isFullScreen 
+          ? 'w-full h-full max-w-none max-h-none rounded-none' 
+          : 'w-full max-w-5xl max-h-[90vh]'
+      }`}>
         {/* Header */}
         <div className="bg-purple-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
@@ -69,9 +73,19 @@ const CommercialWorkView = ({ isOpen, onClose, currentUser }) => {
               <p className="text-purple-300 text-xs">Trabajo de tiendas asignadas a {currentUser?.clientName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Botón Pantalla Completa */}
+            <button 
+              onClick={() => setIsFullScreen(!isFullScreen)} 
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              title={isFullScreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
+            >
+              {isFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Summary Cards */}
