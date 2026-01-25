@@ -370,35 +370,43 @@ const CRMPipeline = ({ currentUser }) => {
                     </div>
 
                     {opp.linkedProjectNumber && (
-                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
+                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
                         <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">
                           Presupuesto #{opp.linkedProjectNumber}
                         </span>
-                        {opp.businessType && (
+                        {opp.businessType === 'cocina' && (
                           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                            opp.businessType === 'cocina' 
+                            opp.moduleType === 'montada' 
                               ? 'bg-amber-100 text-amber-700' 
-                              : opp.businessType === 'armarios' 
-                                ? 'bg-emerald-100 text-emerald-700' 
-                                : 'bg-slate-100 text-slate-600'
+                              : 'bg-orange-100 text-orange-700'
                           }`}>
-                            {opp.businessType === 'cocina' ? 'Cocina' : opp.businessType === 'armarios' ? 'Armarios' : opp.businessType}
+                            {opp.moduleType === 'montada' ? 'Cocina Montada' : opp.moduleType === 'despiece' ? 'Cocina Despiece' : 'Cocina'}
+                          </span>
+                        )}
+                        {opp.businessType === 'armarios' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-700">
+                            Armarios
                           </span>
                         )}
                       </div>
                     )}
                     
                     {!opp.linkedProjectNumber && opp.businessType && (
-                      <div className="mt-2 pt-2 border-t border-slate-100">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                          opp.businessType === 'cocina' 
-                            ? 'bg-amber-100 text-amber-700' 
-                            : opp.businessType === 'armarios' 
-                              ? 'bg-emerald-100 text-emerald-700' 
-                              : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {opp.businessType === 'cocina' ? 'Cocina' : opp.businessType === 'armarios' ? 'Armarios' : opp.businessType}
-                        </span>
+                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2">
+                        {opp.businessType === 'cocina' && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                            opp.moduleType === 'montada' 
+                              ? 'bg-amber-100 text-amber-700' 
+                              : 'bg-orange-100 text-orange-700'
+                          }`}>
+                            {opp.moduleType === 'montada' ? 'Cocina Montada' : opp.moduleType === 'despiece' ? 'Cocina Despiece' : 'Cocina'}
+                          </span>
+                        )}
+                        {opp.businessType === 'armarios' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-700">
+                            Armarios
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
