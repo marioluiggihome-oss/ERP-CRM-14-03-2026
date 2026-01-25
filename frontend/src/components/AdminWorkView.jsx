@@ -440,6 +440,8 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
             </>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );
