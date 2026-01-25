@@ -62,7 +62,14 @@ const CRMContacts = ({ currentUser }) => {
   const loadContacts = async () => {
     setIsLoading(true);
     try {
-      const data = await crmContactsAPI.getAll(statusFilter || null, null);
+      // Determinar si es admin para filtrar datos
+      const isAdmin = currentUser?.isAdmin === true;
+      const options = isAdmin ? {} : {
+        assignedTo: currentUser?.id,
+        isAdmin: false
+      };
+      
+      const data = await crmContactsAPI.getAll(statusFilter || null, null, options);
       // Apply local filters for segment and prescriptor
       let filtered = data;
       if (segmentFilter) {
