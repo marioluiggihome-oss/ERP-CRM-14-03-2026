@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Building2, User, Calendar, Euro, ChevronDown, ChevronUp, TrendingUp, Target, Award, Store, UserCheck, BarChart3 } from 'lucide-react';
+import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Building2, User, Calendar, Euro, ChevronDown, ChevronUp, TrendingUp, Target, Award, Store, UserCheck, BarChart3, Maximize2, Minimize2 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -9,6 +9,7 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
   const [metrics, setMetrics] = useState(null);
   const [activeTab, setActiveTab] = useState('metrics'); // 'metrics' or 'work'
   const [searchTerm, setSearchTerm] = useState('');
+  const [isFullScreen, setIsFullScreen] = useState(false); // Pantalla completa
   const [expandedSections, setExpandedSections] = useState({
     projects: true,
     opportunities: true,
