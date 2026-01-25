@@ -229,7 +229,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
         doorColorColumns: state.doorColorColumns || '',
         sideColor: state.sideColor || '',
         selectedCarcassMaterialId: state.selectedCarcassMaterialId,
-        status: 'activo'
+        status: 'activo',
+        totalPvp: total // Incluir el total del presupuesto
       };
 
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects?user_id=${state.currentUser.id}`, {
