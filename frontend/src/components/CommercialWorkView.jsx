@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Store, User, Calendar, Euro, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Store, User, Calendar, Euro, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -7,6 +7,7 @@ const CommercialWorkView = ({ isOpen, onClose, currentUser }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isFullScreen, setIsFullScreen] = useState(false); // Pantalla completa
   const [expandedSections, setExpandedSections] = useState({
     projects: true,
     opportunities: true
