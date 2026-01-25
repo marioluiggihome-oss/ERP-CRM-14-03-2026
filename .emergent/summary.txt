@@ -19,39 +19,45 @@ Feature requests have been provided incrementally through PowerPoint presentatio
 13. **IA Lab - Analizador de Planos:** A new feature to analyze kitchen plans and detect furniture.
 14. **Production Safeguards:** Implement a Maintenance Mode with automatic pre-update backups.
 15. **Correlative Project Numbers:** An automatic, system-wide counter for project/expedient numbers.
-16. **Product Drawings/Icons:** Display visual representations of furniture (now restricted to product detail views, not lists).
+16. **Product Drawings/Icons:** Display visual representations of furniture.
+17. **Advanced Armarios Module:**
+    *   Editable bill of materials (Despiece).
+    *   AI-powered layout generation from text descriptions.
+    *   AI-powered realistic rendering of the designed wardrobe.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack application with a React frontend and a FastAPI backend connected to MongoDB. The application now includes:
-- A complete user and permissions system. The Prescriptor Comercial role has been renamed to **Colaborador Comercial** throughout the UI.
-- An integrated CRM module, now with calculated opportunity values per contact and a new tagging system to filter by business type (Cocina, Armarios, etc.).
-- A new **Armarios (Wardrobes)** designer module, fully integrated into the UI with its own permissions, based on code provided by the user.
-- A functional Digitalizador de Borradores and an IA Lab (bug-fixed).
-- A Catalog Importer feature ready for use.
-- Advanced inventory management with corrected product data (depths, series names).
-- A complex budget creation table () with a new totals section (subtotal, editable IVA, and total) and corrected UI/UX issues.
-- A robust Maestro settings panel.
-- Critical bug fixes addressing data sharing between users () and API errors (body stream already read).
+A full-stack application with a React frontend and a FastAPI backend connected to MongoDB. The application includes a complete user and permissions system, an integrated CRM, and budgeting tools.
+
+A major focus has been the **Armarios (Wardrobes)** module, which has been significantly enhanced. It now features:
+- A detailed Despiece Privado (private bill of materials) with automatic calculation of required boards (m²).
+- A full, categorized Finsa color catalog with over 150 colors.
+- Functionality to Save, Load, Update, and Export projects to PDF.
+- The backend and frontend scaffolding for advanced AI features (layout generation and realistic rendering) and an editable despiece table have been added but are untested.
+
+A massive product import was just performed, adding over 1,000 new products (including the previously missing BAJOS GOLA and ALTOS GOLA) from a technical PDF using a custom Python script. Critical bugs related to data sharing and API errors have been resolved.
 
 **Last working item**:
-- Last item agent was working: The agent implemented a large batch of user requests, including integrating the new Armarios module, fixing the IA Lab error, making IVA editable, adding CRM tags for business type, and renaming Prescriptor to Colaborador Comercial. The agent also investigated missing BAJOS GOLA products and confirmed they need to be imported.
+- Last item agent was working: Implementing advanced AI capabilities for the **Armarios (Wardrobes) module** as requested by the user. This included:
+    1.  Correcting product data in the database (fixing heights of ALTOS GOLA).
+    2.  Adding backend endpoints (, ) to handle AI-based layout generation and rendering using Gemini.
+    3.  Modifying the frontend to include UI elements (modals, buttons) to trigger these AI functions.
+    4.  Making the Despiece Privado (Bill of Materials) table editable to allow for adding, moving, and deleting accessories.
 - Status: IN PROGRESS
-- Agent Testing Done: Y
-- Which testing method agent to use? frontend testing agent
+- Agent Testing Done: N
+- Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Missing BAJOS GOLA products in Catalog (P1)**
-    -   **Description:** The user has reported that BAJOS GOLA (Gola base units) are missing from the product catalog. The agent's investigation confirmed they are not in the database and must be imported.
+-   **Issue 1: Test and Debug Advanced AI Features in Armarios Module (P0)**
+    -   **Description:** The code for three major features has been added but is completely untested: an editable despiece table, an AI layout generator, and an AI realistic renderer. The user explicitly requested these, and they are expected to be the next focus.
     -   **Attempted fixes:** None.
     -   **Next debug checklist:**
-        1.  Navigate to the Maestro panel and open the Importador de Catálogo IA.
-        2.  Upload the user-provided PDF tariff sheet that contains the missing BAJOS GOLA products.
-        3.  Execute the AI extraction process.
-        4.  Verify in the database ( collection) and the frontend library that the new products have been added with the correct data (name, code, dimensions, price).
-    -   **Why fix this issue and what will be achieved with the fix?** The product catalog is incomplete, which prevents users from creating accurate budgets for certain kitchen styles. This will complete the kitchen catalog.
+        1.  **Editable Despiece:** Open the Despiece Privado modal. Attempt to add a new custom accessory, change the quantity of an existing one, reorder items, and delete an item. Verify that the totals update correctly.
+        2.  **AI Layout Generator:** Open the Diseño IA modal in the Armarios module. Enter a text prompt (e.g., un módulo con 3 cajones y una barra para colgar). Click Generar and verify the backend endpoint () is called and returns a valid configuration. Check that the visual designer updates according to the AI's response.
+        3.  **AI Renderer:** Click the Render IA button. Verify the backend endpoint () is called with the current wardrobe configuration. Ensure an image is generated by Gemini Nano Banana and displayed in the Render Realista modal.
+    -   **Why fix this issue and what will be achieved with the fix?** This will complete the latest and most advanced set of user requests, delivering significant new value to the Armarios module.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** both
@@ -71,34 +77,30 @@ A full-stack application with a React frontend and a FastAPI backend connected t
     - **(P1) Add Business Type Tags to Opportunities:** When a project is saved from Armarios or Cocina, automatically tag the associated CRM contact/opportunity with the corresponding business type.
     - **(P2) Reorganize UI for Armarios:** The user requested removing the expediente (project number) field to make space for the new modules. This UI change needs clarification and implementation.
     - **(P2) Test IA Lab - Plan Analyzer:** The critical bug is fixed, but the feature needs an end-to-end test with a real floor plan image to verify the AI analysis works as expected.
-    - **(P3) Save/Load/Export Armarios Projects:** The new Armarios designer is functional but does not persist its state. Functionality to save, load, and export wardrobe designs to PDF is needed.
 - **Future Tasks:**
     - Implement a  field to sort products exactly as they appear in the tariff PDFs.
     - Add automated reminders for calendar events in the CRM.
-    - Review and potentially enhance the Despieces (Bill of Materials) feature.
+    - Review and potentially enhance the Despieces (Bill of Materials) feature for kitchen cabinets.
     - Enhance CRM with automatic email notifications for inactive clients.
     - Enhance the project archiving system.
 
 **Completed work in this session**
-- **Armarios (Wardrobes) Module:** Successfully integrated a full-featured wardrobe designer module () from user-provided code, including a new  user permission.
-- **CRM Enhancements:**
-    - **Contact Value:** Fixed the CRM to correctly calculate and display the total value of a contact's associated opportunities.
-    - **Business Type Tags:** Added a new Tipo de Negocio filter and tagging system (Cocina Montada, Cocina Despiece, Armarios) to the contacts view.
-- **Data & UI Corrections:**
-    - **Data Integrity:** Corrected product data for hundreds of items, including setting the  of base units to 58cm and fixing  names for semi-columns.
-    - **Role Renaming:** Renamed all user-facing instances of Prescriptor to **Colaborador Comercial**.
-    - **UI Text:** Changed MONTADA/DESPIECE to COCINA MONTADA / COCINA DESPIECE.
-- **Budgeting Tool Improvements:**
-    - **Editable IVA:** Implemented an editable VAT/IVA percentage field in the main budget's totals section.
-    - **New Totals Section:** Added a comprehensive totals footer to the budget view () showing subtotal, tax base, IVA, and final total.
-    - **PDF Generation:** Rewrote the PDF generator () to correctly render the new totals section.
-- **Bug Fixes:**
-    - **IA Lab Error:** Fixed a body stream already read error in .
-    - **User Data Isolation:** Resolved a critical bug where budget items were shared between different users due to improper use of .
-    - **Price Breakdown Visibility:** Restricted the price breakdown tooltip to be visible only to admin users.
+- **Massive Product Catalog Import:** Successfully imported **1,027 unique products** from a 64MB PDF file using a custom script (). This resolved the user's request to add missing BAJOS GOLA, ALTOS GOLA, and other kitchen furniture series.
+- **Armarios Module - Core Functionality:**
+    - Implemented **Save, Load, and Update** functionality for wardrobe projects, with a new  model and corresponding backend endpoints.
+    - Created a Proyectos modal to list, load, and manage saved wardrobe designs.
+    - Implemented robust **PDF export** for both the main design summary and the detailed Despiece Privado.
+- **Armarios Module - Advanced Features & UI:**
+    - Integrated a complete, categorized **Finsa color catalog** with over 150 colors, swatches, and a filtering system.
+    - Implemented automatic calculation of **required boards (m²)** based on the design, displayed in the UI and the despiece modal.
+    - Added backend and frontend scaffolding for **advanced AI features** (AI layout, AI render) and an **editable despiece table**.
+- **Data Integrity & Bug Fixes:**
+    - Corrected the back panel thickness to **8mm** for all cabinets (kitchens and wardrobes) in both frontend and backend logic.
+    - Fixed hundreds of product records in the database, correcting names and heights (e.g., 11CM -> 110CM).
+    - Resolved bugs reported by the user related to saving projects and PDF generation in the Armarios module.
 
 **Earlier issues found/mentioned but not fixed**
-- **Critical Frontend Stability:** A recurring React DOM crash ( error) was patched in a prior session but the root cause was never fully diagnosed. It remains a potential stability risk.
+-   **Issue 1: Critical Frontend Stability:** A recurring React DOM crash ( error) was patched in a prior session but the root cause was never fully diagnosed. It remains a potential stability risk.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** None.
@@ -109,69 +111,78 @@ A full-stack application with a React frontend and a FastAPI backend connected t
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, , , .
+- **Frontend:** React, TailwindCSS, , .
 - **Backend:** Python, FastAPI, Pydantic, .
 - **Database:** MongoDB ( for async operations).
-- **AI/OCR:**  library for Google Gemini Vision.
+- **Data Extraction:**  CLI tool for parsing large PDFs.
+- **AI/OCR:**  library for Google Gemini (using  for text generation and  for image generation).
 - **PDF Generation:**  on the frontend.
 
 **key DB schema**
 -   : {..., : bool, : bool}
--   : {..., : List[str], : float (calculated on-the-fly by the backend)}
--   : {..., : float, : str}
+-   : {..., : List[str], : float}
+-   : {..., : int, : str}
+-   ****: { : str, : str, : str, : Dict, : Dict, : datetime, : datetime }
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
--   : New component for the wardrobe designer.
--   : Modified for business type tags and displaying contact value.
--   : Modified for editable IVA, new totals section, and UI fixes.
--   : Modified to add  permission, calculate  for contacts, and included a (now-used) data correction endpoint.
--   : Modified to clear state on login and add navigation for the Armarios module.
--   : Modified to add the  permission checkbox.
--   : Rewritten to support the new totals section.
+-   : Heavily modified to add save/load/PDF, color catalog, board calculation, and AI feature scaffolding.
+-   : Heavily modified to add Armarios project endpoints, AI endpoints, and product data correction logic.
+-   : Updated with new functions for Armarios projects and AI calls.
+-   : Updated with new functions to generate PDFs for Armarios designs and their despiece.
+-   : New script created and used for the one-time import of products from PDF.
+-   : Modified to reflect the 8mm back panel change for kitchen cabinets.
 
 **Areas that need refactoring**:
--   **Monolithic Backend:**  is now over 3600 lines. It urgently needs to be broken down into a proper FastAPI project structure (e.g., routers, models, services).
--   **Massive Frontend Component:**  remains oversized (>2500 lines) and must be broken down into smaller, manageable child components.
+-   **Monolithic Backend:**  is now over 4100 lines and is critically difficult to maintain. It urgently needs to be broken down into a proper FastAPI project structure (routers, models, services).
+-   **Massive Frontend Components:**  has grown to over 2700 lines and should be broken into smaller, manageable child components (e.g., for modals, configuration panels, and the visual designer).  also remains a candidate for refactoring.
 
 **key api endpoints**
--   : Modified to dynamically calculate and include the  of opportunities for each contact.
--   : Existing endpoint for updating general settings, which includes the  field. Needs testing for the logo upload functionality.
+-   : Saves a new wardrobe project.
+-   : Updates an existing wardrobe project.
+-   : Retrieves all wardrobe projects for the current user.
+-   : (New, Untested) Sends a text prompt to an AI to generate a module configuration.
+-   : (New, Untested) Sends a wardrobe configuration to an AI to generate a realistic image render.
 
 **Critical Info for New Agent**
--   **Your immediate priority (P1) is to import the missing BAJOS GOLA products.** This is a direct user request and is blocking the completion of the product catalog. Use the existing Importador de Catálogo IA feature.
--   The user is highly engaged and provides rapid feedback. Pay close attention to their messages and uploaded images, as they contain precise requirements.
--   The Armarios module is functionally integrated but does not persist its state (no save/load). This is a likely next step after the catalog is complete.
--   The application's backend () and a key frontend component () are extremely large and difficult to maintain. Propose refactoring these as a future task to improve stability and development speed.
+-   Your immediate priority (P0) is to **test and debug the newly added advanced AI features** in the Armarios module. The code has been written, but its functionality is unverified.
+-   The user is highly engaged and expects rapid progress on complex features. Pay close attention to their requests for AI functionality and interactive editing.
+-   The massive product import has been completed, resolving the BAJOS GOLA issue. You can confirm this with the user and move on.
+-   The backend () and the main wardrobe component () are now extremely large. Be cautious when making changes. Proposing a refactoring task for these files is highly recommended for future stability.
 
 **documents and test reports created in this job**
--   
--   
 -    (Continuously updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (2026-01-24):** Requests the new Armarios tool, CRM tags for business type, editable IVA in the Digitalizador, and reports an error with the IA Lab and missing furniture. (PARTIALLY COMPLETE)
-2.  **User (2026-01-24):** Sigue con lo que tenías... (Continue with the plan) and reports data inaccuracies (semicolumn names, furniture depths) and wants the price breakdown tooltip hidden for non-admins. (RESOLVED)
-3.  **User (2026-01-24):** Requests a new totals section (base imponible, IVA, total) on the budget and a fix for the PDF export functionality. (RESOLVED)
-4.  **User (2026-01-24):** Por cierto, si entro al sistema con otras claves... (Reports that budget lines are visible to other users), wants product drawings removed from the library list, and wants the manual line description to be wider. (RESOLVED)
-5.  **User (2026-01-24):** Initial user message from a previous session, reporting the budget table layout is a disaster. (RESOLVED)
-6.  **User (2026-01-24):** Adelante con todas las prioriodades... (Proceed with all priorities) and reports a new bug where a saved budget cannot be recovered. (RESOLVED)
+1.  **User (Latest):** Requests major new AI features for the Armarios module: editable despiece (add/move/delete accessories), AI to generate module layouts from text, and a realistic AI render of the final wardrobe. Also reports that ALTOS GOLA heights are wrong (e.g., 11 instead of 110).
+2.  **User:** Reports that PDF generation and saving in the Armarios module are not working correctly. Provides screenshots.
+3.  **User:** Requests a massive product import, stating many items from pages 336-479 of the technical tariff PDF are missing. Also asks for more features for the Armarios module.
+4.  **User:** Notes that back panels for kitchen cabinets () should also be 8mm. Asks for the full Finsa color catalog to be added, organized, and for decimals to be reduced in the board calculations.
+5.  **User:** Asks agent to improve the Armarios module further. States the back panel should always be 8mm thick and requests calculation of necessary boards (m²).
+6.  **Agent:** Finishes implementation of the despiece and board calculation features.
+7.  **User:** Asks to improve the Armarios section by capturing accessory names and numbering them to generate a despiece privado (private cutting list).
+8.  **Agent:** Analyzes the request and existing code for the Armarios module.
+9.  **User:** Asks to improve the armarios section and uploads a document with requirements.
+10. **Agent:** Sends initial plan for user approval.
 
 **Project Health Check:**
 -   **Broken:** None.
--   **Mocked:** The save/load/export functionality for the newly added **Armarios (Wardrobes) module** is non-existent. The designer works, but the designs cannot be persisted.
+-   **Mocked:**
+    -   The AI layout generation feature () is coded but untested.
+    -   The AI realistic rendering feature () is coded but untested.
+    -   The editable despiece table in the UI is coded but untested.
 
 **3rd Party Integrations**
--   **Google Gemini Vision:** Via  for Digitalizador de Borradores, Catalog Importer, and IA Lab. Uses Emergent LLM Key.
+-   **Google Gemini:** Via . Uses  for AI-powered text generation (Armarios layout) and  for image generation (Armarios render). Utilizes the Emergent LLM Key.
 -   **SendGrid:** For sending database backups. Requires a User API Key.
 -   **jspdf:** For PDF generation on the frontend.
 
 **Testing status**
--   Testing agent used after significant changes: NO (in this session)
+-   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: None new in this session.
+-   Test files created: None.
 -   Known regressions: None.
 
 **Credentials to test flow:**
@@ -183,5 +194,6 @@ A full-stack application with a React frontend and a FastAPI backend connected t
 -   **Password:** PRESCRIPTOR1
 
 **What agent forgot to execute**
--   The agent implemented the UI for adding Tipo de Negocio (Business Type) tags to contacts but did not implement the logic to **automatically assign** these tags when a project is created from a specific module (e.g., a project from the Armarios module should tag the contact with Armarios).
--   The user's request to reorganizar el campo expediente (reorganize the project number field) to make way for the new modules was acknowledged but not implemented.</analysis>
+-   The agent implemented a massive number of features but did not test the final, most complex AI-driven ones. The core functionality is unverified.
+-   The task to automatically assign Tipo de Negocio tags to CRM contacts when a project is saved from a specific module (e.g., Armarios) is still pending.
+-   The user's request to reorganizar el campo expediente (reorganize the project number field) to make space for the new modules was acknowledged but not implemented.</analysis>
