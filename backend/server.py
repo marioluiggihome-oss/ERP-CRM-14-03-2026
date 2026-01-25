@@ -911,11 +911,32 @@ REGLAS CRÍTICAS:
             try:
                 # Clean response (remove markdown code blocks if present)
                 clean_response = response.strip()
-                if clean_response.startswith('```'):
-                    clean_response = clean_response.split('```')[1]
-                    if clean_response.startswith('json'):
-                        clean_response = clean_response[4:]
-                clean_response = clean_response.strip()
+                
+                # Handle markdown code blocks more robustly
+                if '```json' in clean_response:
+                    # Extract content between ```json and ```
+                    start = clean_response.find('```json') + 7
+                    end = clean_response.find('```', start)
+                    if end == -1:
+                        # No closing ```, take everything after ```json
+                        clean_response = clean_response[start:].strip()
+                    else:
+                        clean_response = clean_response[start:end].strip()
+                elif '```' in clean_response:
+                    # Generic code block
+                    start = clean_response.find('```') + 3
+                    end = clean_response.find('```', start)
+                    if end == -1:
+                        clean_response = clean_response[start:].strip()
+                    else:
+                        clean_response = clean_response[start:end].strip()
+                
+                # Try to find JSON object or array
+                import re
+                if not clean_response.startswith('{') and not clean_response.startswith('['):
+                    json_match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', clean_response)
+                    if json_match:
+                        clean_response = json_match.group(1)
                 
                 parsed_data = json.loads(clean_response)
                 
