@@ -766,9 +766,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className={`bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
+        isFullScreen 
+          ? 'w-full h-full max-w-none max-h-none rounded-none' 
+          : 'w-full max-w-5xl max-h-[90vh]'
+      }`}>
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-950 to-indigo-900">
+        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-950 to-indigo-900 shrink-0">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/10 rounded-xl">
               <SettingsIcon size={24} className="text-white" />
@@ -778,13 +782,27 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Configuración Industrial</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-all">
-            <X size={24} className="text-white" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Botón Pantalla Completa */}
+            <button 
+              onClick={() => setIsFullScreen(!isFullScreen)} 
+              className="p-2 hover:bg-white/10 rounded-xl transition-all"
+              title={isFullScreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
+            >
+              {isFullScreen ? (
+                <Minimize2 size={20} className="text-white" />
+              ) : (
+                <Maximize2 size={20} className="text-white" />
+              )}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-all">
+              <X size={24} className="text-white" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto">
+        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto shrink-0">
           <button
             onClick={() => setActiveTab('users')}
             className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
