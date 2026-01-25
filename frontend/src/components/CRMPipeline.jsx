@@ -138,7 +138,8 @@ const CRMPipeline = ({ currentUser }) => {
         stage: 'lead',
         expectedCloseDate: '',
         notes: '',
-        businessType: 'cocina'
+        businessType: 'cocina',
+        moduleType: 'montada'
       });
     }
     setShowModal(true);
