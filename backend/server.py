@@ -4192,7 +4192,7 @@ Genera la configuración óptima en formato JSON."""
             config = json.loads(json_match.group())
             return {"success": True, "config": config}
         else:
-            return {"success": False, "error": "No se pudo generar configuración", "raw_response": response}
+            return {"success": False, "error": "No se pudo generar configuración", "raw_response": response_text}
             
     except Exception as e:
         logger.error(f"Error en IA configuración: {e}")
