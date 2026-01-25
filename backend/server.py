@@ -441,6 +441,7 @@ class ContactModel(BaseModel):
     segment: str = ""  # Segmento: PROMOTOR, CONSTRUCTOR, etc.
     prescriptorId: str = ""  # ID del prescriptor que refirió este contacto
     prescriptorName: str = ""  # Nombre del prescriptor
+    assignedTo: str = ""  # ID del comercial/representante asignado
     totalValue: float = 0  # Valor total de oportunidades ganadas
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -464,6 +465,7 @@ class ContactCreate(BaseModel):
     segment: str = ""
     prescriptorId: str = ""
     prescriptorName: str = ""
+    assignedTo: str = ""  # ID del comercial/representante asignado
 
 class ContactUpdate(BaseModel):
     name: Optional[str] = None
@@ -479,6 +481,7 @@ class ContactUpdate(BaseModel):
     segment: Optional[str] = None
     prescriptorId: Optional[str] = None
     prescriptorName: Optional[str] = None
+    assignedTo: Optional[str] = None  # ID del comercial/representante asignado
     totalValue: Optional[float] = None
     linkedProjectIds: Optional[List[str]] = None
 
