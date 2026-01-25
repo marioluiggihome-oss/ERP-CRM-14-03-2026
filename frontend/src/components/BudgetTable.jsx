@@ -9,6 +9,7 @@ import DespieceModal from './DespieceModal';
 const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpenManufacturing }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeries, setSelectedSeries] = useState('TODAS');
+  const [selectedCategory, setSelectedCategory] = useState('TODAS');
   const [isCatalogOpen, setIsCatalogOpen] = useState(true);
   const [isConfigOpen, setIsConfigOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(300);
@@ -22,6 +23,14 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       .filter(c => activeCatalogIds.includes(c.id))
       .flatMap(c => c.products.map(p => ({ ...p, catalogId: c.id })));
   }, [catalogs, activeCatalogIds]);
+
+  const uniqueCategories = useMemo(() => {
+    const currentModuleProducts = allProducts.filter(p => 
+      catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule
+    );
+    const categories = new Set(currentModuleProducts.map(p => p.category || 'OTROS'));
+    return Array.from(categories).sort();
+  }, [allProducts, state.currentModule, catalogs]);
 
   const uniqueSeries = useMemo(() => {
     const currentModuleProducts = allProducts.filter(p => 
