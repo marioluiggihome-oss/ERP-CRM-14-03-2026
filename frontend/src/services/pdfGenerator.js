@@ -29,7 +29,7 @@ export const generateBudgetPDF = ({
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
-  let yPos = 20;
+  let yPos = 15; // Reducido para aprovechar mejor el espacio superior
 
   // Colores
   const primaryColor = [30, 41, 59]; // slate-800
@@ -37,45 +37,62 @@ export const generateBudgetPDF = ({
   const lightGray = [241, 245, 249]; // slate-100
 
   // ==========================================
-  // CABECERA CON LOGO
+  // CABECERA CON LOGO (PROPORCIONADO)
   // ==========================================
   
   let logoWidth = 0;
+  const maxLogoHeight = 25; // Altura máxima del logo
+  const maxLogoWidth = 50;  // Ancho máximo del logo
   
-  // Si hay logo, añadirlo
+  // Si hay logo, añadirlo manteniendo proporciones
   if (logo && logo.startsWith('data:image')) {
     try {
-      const logoSize = 35;
-      doc.addImage(logo, 'PNG', margin, yPos - 10, logoSize, logoSize);
-      logoWidth = logoSize + 8;
+      // Crear imagen temporal para obtener dimensiones reales
+      const img = new Image();
+      img.src = logo;
+      
+      // Calcular dimensiones proporcionales
+      let imgWidth = maxLogoWidth;
+      let imgHeight = maxLogoHeight;
+      
+      // El logo se ajusta al espacio disponible manteniendo proporciones
+      // Por defecto usamos un ratio 2:1 (ancho:alto) si no podemos calcularlo
+      const aspectRatio = 2;
+      if (imgWidth / aspectRatio > maxLogoHeight) {
+        imgHeight = maxLogoHeight;
+        imgWidth = imgHeight * aspectRatio;
+      }
+      
+      doc.addImage(logo, 'AUTO', margin, yPos - 5, imgWidth, imgHeight);
+      logoWidth = imgWidth + 5;
     } catch (e) {
       console.error('Error adding logo to PDF:', e);
     }
   }
   
   // Título de la empresa
-  doc.setFontSize(22);
+  doc.setFontSize(20);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
-  doc.text(companyName, margin + logoWidth, yPos);
+  doc.text(companyName, margin + logoWidth, yPos + 3);
   
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(...accentColor);
-  doc.text('PRESUPUESTO DE COCINA', margin + logoWidth, yPos + 7);
+  doc.text('PRESUPUESTO DE COCINA', margin + logoWidth, yPos + 9);
   
-  // Número de expediente (derecha)
-  doc.setFontSize(12);
+  // Número de expediente (derecha) - más compacto
+  doc.setFontSize(11);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
   doc.text(`Nº ${budgetNumber || 'SIN NÚMERO'}`, pageWidth - margin, yPos, { align: 'right' });
   
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin, yPos + 6, { align: 'right' });
+  doc.text(`${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin, yPos + 5, { align: 'right' });
   
   if (internalReference) {
-    doc.text(`Ref: ${internalReference}`, pageWidth - margin, yPos + 11, { align: 'right' });
+    doc.text(`Ref: ${internalReference}`, pageWidth - margin, yPos + 9, { align: 'right' });
   }
 
   yPos += 25;
