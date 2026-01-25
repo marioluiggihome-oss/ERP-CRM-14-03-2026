@@ -30,6 +30,7 @@ const BUSINESS_TYPES = [
 const CRMContacts = ({ currentUser }) => {
   const [contacts, setContacts] = useState([]);
   const [prescriptors, setPrescriptors] = useState([]);
+  const [representatives, setRepresentatives] = useState([]); // Comerciales/Representantes para asignar
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -51,12 +52,14 @@ const CRMContacts = ({ currentUser }) => {
     segment: '',
     prescriptorId: '',
     prescriptorName: '',
+    assignedTo: '',
     tags: [] // Etiquetas de tipo de negocio
   });
 
   useEffect(() => {
     loadContacts();
     loadPrescriptors();
+    loadRepresentatives();
   }, [statusFilter, segmentFilter, prescriptorFilter]);
 
   const loadContacts = async () => {
