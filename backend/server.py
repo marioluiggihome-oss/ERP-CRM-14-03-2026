@@ -4183,8 +4183,18 @@ Genera la configuración óptima en formato JSON."""
         import json
         import re
         
-        # Get text content from response
-        response_text = response.content if hasattr(response, 'content') else str(response)
+        # Get text content from response - handle different response types
+        if response is None:
+            return {"success": False, "error": "La IA no generó respuesta"}
+        
+        if isinstance(response, str):
+            response_text = response
+        elif hasattr(response, 'content'):
+            response_text = response.content
+        else:
+            response_text = str(response)
+        
+        logger.info(f"IA response type: {type(response)}, text: {response_text[:200] if response_text else 'None'}")
         
         # Extraer JSON de la respuesta
         json_match = re.search(r'\{[\s\S]*\}', response_text)
