@@ -123,7 +123,8 @@ const CRMPipeline = ({ currentUser }) => {
         probability: 20,
         stage: 'lead',
         expectedCloseDate: '',
-        notes: ''
+        notes: '',
+        businessType: 'cocina'
       });
     }
     setShowModal(true);
