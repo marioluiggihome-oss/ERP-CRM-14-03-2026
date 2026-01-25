@@ -2134,8 +2134,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   {/* Catalog Importer - AI */}
                   <CatalogImporter 
                     onProductsImported={() => {
-                      // Refresh catalog after import
-                      loadCatalogs();
+                      // Los catálogos se actualizan automáticamente al recargar la página
+                      // El usuario puede cerrar el panel y volver a abrirlo para ver los cambios
+                      console.log('Productos importados - refrescar catálogos');
                     }}
                   />
                 </>
