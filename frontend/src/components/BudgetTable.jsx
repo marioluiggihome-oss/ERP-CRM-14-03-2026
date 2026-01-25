@@ -889,7 +889,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                   </div>
                </div>
 
-               <div className="pt-4 border-t-4 border-indigo-950">
+               <div className="pt-4 mt-auto border-t-4 border-indigo-950 mb-4">
                   {/* Sección de totales */}
                   <div className="flex flex-col gap-2">
                      <div className="flex gap-0.5">
@@ -899,45 +899,45 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                      </div>
                      
                      {/* Caja de totales en HORIZONTAL - ANCHO COMPLETO */}
-                     <div className="bg-indigo-950 text-white rounded-xl shadow-lg overflow-hidden w-full">
+                     <div className="bg-indigo-950 text-white rounded-xl shadow-lg w-full">
                         <div className="flex w-full">
                            {/* BRUTO LÍNEAS */}
-                           <div className="flex-1 px-4 py-2 border-r border-indigo-800/50">
-                              <div className="text-[6px] font-bold uppercase tracking-wide text-indigo-400">BRUTO LÍNEAS</div>
-                              <div className="text-[12px] font-black italic tracking-tight text-white">
+                           <div className="flex-1 px-4 py-3 border-r border-indigo-800/50">
+                              <div className="text-[7px] font-bold uppercase tracking-wide text-indigo-400">BRUTO LÍNEAS</div>
+                              <div className="text-sm font-black italic tracking-tight text-white">
                                 {total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                               </div>
                            </div>
                            {/* BASE IMPONIBLE */}
-                           <div className="flex-1 px-4 py-2 border-r border-indigo-800/50">
-                              <div className="text-[6px] font-bold uppercase tracking-wide text-indigo-400">BASE IMPONIBLE</div>
-                              <div className="text-[12px] font-black italic tracking-tight text-white">
+                           <div className="flex-1 px-4 py-3 border-r border-indigo-800/50">
+                              <div className="text-[7px] font-bold uppercase tracking-wide text-indigo-400">BASE IMPONIBLE</div>
+                              <div className="text-sm font-black italic tracking-tight text-white">
                                 {total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                               </div>
                            </div>
                            {/* IVA EDITABLE */}
-                           <div className="flex-1 px-4 py-2 border-r border-indigo-800/50">
+                           <div className="flex-1 px-4 py-3 border-r border-indigo-800/50">
                               <div className="flex items-center gap-1">
-                                <span className="text-[6px] font-bold uppercase tracking-wide text-indigo-400">IVA</span>
+                                <span className="text-[7px] font-bold uppercase tracking-wide text-indigo-400">IVA</span>
                                 <input 
                                   type="number" 
                                   min="0" 
                                   max="100" 
                                   value={state.ivaRate || 21}
                                   onChange={e => setState(prev => ({...prev, ivaRate: parseFloat(e.target.value) || 0}))}
-                                  className="w-8 bg-indigo-800 border border-indigo-700 rounded px-1 py-0.5 text-[8px] font-black text-white text-center outline-none focus:border-orange-500 no-print"
+                                  className="w-10 bg-indigo-800 border border-indigo-700 rounded px-1 py-0.5 text-xs font-black text-white text-center outline-none focus:border-orange-500 no-print"
                                 />
-                                <span className="text-[6px] font-bold text-indigo-400 print-only">{state.ivaRate || 21}</span>
-                                <span className="text-[6px] font-bold text-indigo-400">%</span>
+                                <span className="text-[7px] font-bold text-indigo-400 print-only">{state.ivaRate || 21}</span>
+                                <span className="text-[7px] font-bold text-indigo-400">%</span>
                               </div>
-                              <div className="text-[12px] font-black italic tracking-tight text-white">
+                              <div className="text-sm font-black italic tracking-tight text-white">
                                 {(total * (state.ivaRate || 21) / 100).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                               </div>
                            </div>
                            {/* TOTAL */}
-                           <div className="flex-1 px-4 py-2 bg-orange-600">
-                              <div className="text-[6px] font-black uppercase tracking-wide text-orange-200">TOTAL PRESUPUESTO</div>
-                              <div className="text-[14px] font-black italic tracking-tight text-white text-right">
+                           <div className="flex-1 px-4 py-3 bg-orange-600 rounded-r-xl">
+                              <div className="text-[7px] font-black uppercase tracking-wide text-orange-200">TOTAL PRESUPUESTO</div>
+                              <div className="text-lg font-black italic tracking-tight text-white text-right">
                                 {(total * (1 + (state.ivaRate || 21) / 100)).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                               </div>
                            </div>
