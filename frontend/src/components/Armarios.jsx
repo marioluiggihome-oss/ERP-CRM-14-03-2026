@@ -1177,19 +1177,71 @@ const Armarios = ({ state, setState }) => {
         totalArea: boardsCalculation.totalArea
       };
 
+      let savedProjectId = currentProjectId;
+      
       if (currentProjectId) {
         // Actualizar proyecto existente
         await armariosAPI.update(currentProjectId, projectData);
         setSaveMessage({ type: 'success', text: 'Proyecto actualizado correctamente' });
       } else {
         // Crear nuevo proyecto
-        const result = await armariosAPI.create(projectData);
-        setCurrentProjectId(result.project.id);
+        const result = await armariosAPI.create(projectData, state?.currentUser?.id || '');
+        savedProjectId = result.project.id;
+        setCurrentProjectId(savedProjectId);
         setSaveMessage({ type: 'success', text: 'Proyecto guardado correctamente' });
       }
 
       // Recargar lista
       loadProjectsList();
+      
+      // Preguntar si quiere crear oportunidad en CRM (solo si tiene acceso y es proyecto nuevo)
+      if (state?.currentUser?.canAccessCRM && pricing.total > 0 && !currentProjectId) {
+        const createOpp = window.confirm(
+          `✅ PROYECTO DE ARMARIOS GUARDADO.\n\n¿Desea crear una OPORTUNIDAD en el CRM?\n\nCliente: ${customerName || projectName}\nValor: ${pricing.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`
+        );
+        
+        if (createOpp) {
+          try {
+            // Crear contacto primero
+            const contactRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/contacts`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: customerName || projectName || 'Cliente Armarios',
+                type: 'lead',
+                source: 'presupuesto',
+                notes: `Contacto creado desde proyecto de armarios: ${projectName}`
+              })
+            });
+            const contact = await contactRes.json();
+
+            // Crear oportunidad con businessType: armarios
+            await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/opportunities`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: `Presupuesto Armarios - ${customerName || projectName}`,
+                description: `Armario ${wardrobeConfig.width}x${wardrobeConfig.height}cm - ${wardrobeConfig.modules} módulos - ${wardrobeConfig.doorType === 'sliding' ? 'Puertas correderas' : 'Puertas batientes'}`,
+                contactId: contact.id,
+                contactName: contact.name,
+                value: pricing.total,
+                probability: 50,
+                stage: 'proposal',
+                tags: ['presupuesto', 'auto', 'armarios'],
+                assignedTo: state?.currentUser?.id || '',
+                linkedProjectId: savedProjectId,
+                linkedProjectNumber: projectName,
+                businessType: 'armarios'
+              })
+            });
+            
+            alert(`✅ Oportunidad de ARMARIOS creada en CRM para ${customerName || projectName}`);
+          } catch (err) {
+            console.error('Error creating CRM opportunity:', err);
+            alert('No se pudo crear la oportunidad en el CRM');
+          }
+        }
+      }
     } catch (error) {
       console.error('Error guardando proyecto:', error);
       setSaveMessage({ type: 'error', text: 'Error al guardar proyecto' });
