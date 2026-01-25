@@ -34,9 +34,10 @@ class TestAuthentication:
         })
         assert response.status_code == 200, f"Admin login failed: {response.text}"
         data = response.json()
-        assert data.get("isAdmin") == True, "Admin user should have isAdmin=True"
-        print(f"✓ Admin login successful: {data.get('username')}")
-        return data
+        # Response structure is {"success": true, "user": {...}}
+        user = data.get("user", data)
+        assert user.get("isAdmin") == True, f"Admin user should have isAdmin=True, got: {user}"
+        print(f"✓ Admin login successful: {user.get('username')}")
     
     def test_comercial_login(self):
         """Test comercial user can login"""
@@ -46,10 +47,10 @@ class TestAuthentication:
         })
         assert response.status_code == 200, f"Comercial login failed: {response.text}"
         data = response.json()
-        assert data.get("isRepresentative") == True or data.get("canAccessCRM") == True, \
-            "Comercial user should have isRepresentative or canAccessCRM"
-        print(f"✓ Comercial login successful: {data.get('username')}, isRepresentative={data.get('isRepresentative')}")
-        return data
+        user = data.get("user", data)
+        assert user.get("isRepresentative") == True or user.get("canAccessCRM") == True, \
+            f"Comercial user should have isRepresentative or canAccessCRM, got: {user}"
+        print(f"✓ Comercial login successful: {user.get('username')}, isRepresentative={user.get('isRepresentative')}, canAccessCRM={user.get('canAccessCRM')}")
     
     def test_tienda_login(self):
         """Test tienda user can login"""
@@ -63,9 +64,9 @@ class TestAuthentication:
             pytest.skip("Tienda user does not exist")
         assert response.status_code == 200, f"Tienda login failed: {response.text}"
         data = response.json()
-        assert data.get("isTienda") == True, "Tienda user should have isTienda=True"
-        print(f"✓ Tienda login successful: {data.get('username')}, isTienda={data.get('isTienda')}")
-        return data
+        user = data.get("user", data)
+        assert user.get("isTienda") == True, f"Tienda user should have isTienda=True, got: {user}"
+        print(f"✓ Tienda login successful: {user.get('username')}, isTienda={user.get('isTienda')}")
 
 
 class TestCRMDataIsolation:
@@ -79,7 +80,8 @@ class TestCRMDataIsolation:
             "password": ADMIN_PASSWORD
         })
         assert response.status_code == 200
-        return response.json()
+        data = response.json()
+        return data.get("user", data)
     
     @pytest.fixture
     def comercial_user(self):
@@ -90,7 +92,8 @@ class TestCRMDataIsolation:
         })
         if response.status_code != 200:
             pytest.skip("Comercial user not available")
-        return response.json()
+        data = response.json()
+        return data.get("user", data)
     
     def test_admin_sees_all_contacts(self, admin_user):
         """Admin should see all contacts (no filtering)"""
@@ -330,7 +333,8 @@ class TestCRMContactAssignment:
         })
         if response.status_code != 200:
             pytest.skip("Comercial user not available")
-        return response.json()
+        data = response.json()
+        return data.get("user", data)
     
     def test_create_contact_assigned_to_comercial(self, comercial_user):
         """Create a contact assigned to the comercial user"""
