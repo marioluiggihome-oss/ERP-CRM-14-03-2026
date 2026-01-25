@@ -768,14 +768,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         </div>
 
         {/* Tabs */}
-        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-3 overflow-x-auto">
+        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+            className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
               activeTab === 'users' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
             }`}
           >
-            <Users size={16} />
             Red Distribución
           </button>
           
@@ -783,12 +782,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           {state.currentUser?.isAdmin && (
             <button
               onClick={() => setActiveTab('clients')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
                 activeTab === 'clients' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
               }`}
               data-testid="clients-tab"
             >
-              <Building2 size={16} />
               Clientes
             </button>
           )}
@@ -797,11 +795,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
             <button
               onClick={() => setActiveTab('inventory')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
                 activeTab === 'inventory' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
               }`}
             >
-              <Package size={16} />
               Inventario
             </button>
           )}
