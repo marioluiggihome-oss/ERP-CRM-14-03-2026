@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Building2, User, Calendar, Euro, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Building2, User, Calendar, Euro, ChevronDown, ChevronUp, TrendingUp, Target, Award, Store, UserCheck, BarChart3 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
+  const [metrics, setMetrics] = useState(null);
+  const [activeTab, setActiveTab] = useState('metrics'); // 'metrics' or 'work'
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedSections, setExpandedSections] = useState({
     projects: true,
@@ -17,6 +19,7 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
   useEffect(() => {
     if (isOpen) {
       loadData();
+      loadMetrics();
     }
   }, [isOpen]);
 
@@ -33,10 +36,29 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
     }
   };
 
+  const loadMetrics = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/metrics`);
+      const result = await response.json();
+      setMetrics(result);
+    } catch (err) {
+      console.error('Error loading metrics:', err);
+    }
+  };
+
   if (!isOpen) return null;
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value || 0);
   };
 
   const filteredProjects = data?.projects?.filter(p => {
