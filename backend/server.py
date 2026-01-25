@@ -900,7 +900,7 @@ REGLAS CRÍTICAS:
             
             # Create message with image
             user_message = UserMessage(
-                text="Analiza esta página de tarifa técnica de cocina. Extrae TODOS los productos visibles con sus 12 zonas de precio. Responde SOLO con el array JSON de productos.",
+                text="Analiza esta página de tarifa técnica. Detecta la CATEGORÍA desde el encabezado y extrae TODOS los productos visibles con sus 12 zonas de precio. Responde SOLO con el JSON estructurado.",
                 file_contents=[ImageContent(image_base64=base64_image)]
             )
             
@@ -919,11 +919,24 @@ REGLAS CRÍTICAS:
                 
                 parsed_data = json.loads(clean_response)
                 
-                # Handle both single object and array
-                if isinstance(parsed_data, list):
+                # Handle new format with detectedCategory
+                if isinstance(parsed_data, dict) and 'products' in parsed_data:
+                    # New format with category detection
+                    file_category = parsed_data.get('detectedCategory', 'OTROS')
+                    file_subcategory = parsed_data.get('detectedSubcategory', '')
+                    product_list = parsed_data.get('products', [])
+                    detected_categories.add(file_category)
+                    logger.info(f"Detected category: {file_category}, subcategory: {file_subcategory}")
+                elif isinstance(parsed_data, list):
+                    # Old format - array of products
                     product_list = parsed_data
+                    file_category = None
+                    file_subcategory = None
                 else:
+                    # Single product
                     product_list = [parsed_data]
+                    file_category = parsed_data.get('category', 'OTROS')
+                    file_subcategory = None
                 
                 for product_data in product_list:
                     # Add metadata
@@ -932,6 +945,12 @@ REGLAS CRÍTICAS:
                     product_data['module'] = module
                     product_data['importedAt'] = datetime.now(timezone.utc).isoformat()
                     product_data['originalFilename'] = file.filename
+                    
+                    # Apply detected category if product doesn't have one
+                    if file_category and not product_data.get('category'):
+                        product_data['category'] = file_category
+                    if file_subcategory and not product_data.get('series'):
+                        product_data['series'] = file_subcategory
                     
                     products.append(product_data)
                 
@@ -945,7 +964,8 @@ REGLAS CRÍTICAS:
         return {
             "success": True,
             "count": len(products),
-            "products": products
+            "products": products,
+            "detectedCategories": list(detected_categories)
         }
         
     except Exception as e:
