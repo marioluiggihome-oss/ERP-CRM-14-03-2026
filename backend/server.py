@@ -94,11 +94,12 @@ class UserModelInternal(BaseModel):
     clientName: str
     linkedClientId: Optional[str] = None  # Vinculación con cliente activo
     isActive: bool = True
-    isAdmin: bool = False
+    isAdmin: bool = False  # Director Comercial (antes Administrador)
+    isResponsableDelegacion: bool = False  # Responsable de Delegación - reporta al Director Comercial
     isRepresentative: bool = False  # Comercial/Representante
     isPrescriptor: bool = False  # Colaborador comercial - solo aporta contactos
     isTienda: bool = False  # Tienda/Punto de Venta - solo acceso al presupuestador
-    linkedRepresentativeId: Optional[str] = None
+    linkedRepresentativeId: Optional[str] = None  # Para tiendas: vinculado a Comercial/Responsable/Director
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
     commercialDiscount: float = 0
@@ -110,6 +111,7 @@ class UserModelInternal(BaseModel):
     canAccessCRM: bool = False
     canUseDigitalizador: bool = False
     canAccessArmarios: bool = False  # Acceso a sección de Armarios
+    canAuthorizePermissions: bool = False  # Responsable Delegación puede autorizar permisos
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
@@ -121,7 +123,8 @@ class UserResponse(BaseModel):
     clientName: str
     linkedClientId: Optional[str] = None
     isActive: bool = True
-    isAdmin: bool = False
+    isAdmin: bool = False  # Director Comercial
+    isResponsableDelegacion: bool = False  # Responsable Delegación
     isRepresentative: bool = False
     isPrescriptor: bool = False
     isTienda: bool = False  # Tienda/Punto de Venta
@@ -137,6 +140,7 @@ class UserResponse(BaseModel):
     canAccessCRM: bool = False
     canUseDigitalizador: bool = False
     canAccessArmarios: bool = False
+    canAuthorizePermissions: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
 
