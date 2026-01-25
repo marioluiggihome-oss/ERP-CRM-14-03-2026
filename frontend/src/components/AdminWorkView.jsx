@@ -91,7 +91,11 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
+        isFullScreen 
+          ? 'w-full h-full max-w-none max-h-none rounded-none' 
+          : 'w-full max-w-6xl max-h-[90vh]'
+      }`}>
         {/* Header */}
         <div className="bg-indigo-950 text-white px-6 py-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
