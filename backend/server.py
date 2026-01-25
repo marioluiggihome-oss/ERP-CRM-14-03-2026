@@ -2950,39 +2950,60 @@ async def create_reminder_from_opportunity(
 # ============================================
 
 @api_router.get("/crm/dashboard")
-async def get_crm_dashboard():
-    """Get CRM dashboard statistics"""
+async def get_crm_dashboard(assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True):
+    """Get CRM dashboard statistics
+    
+    Para usuarios NO admin (comerciales/representantes), solo muestra datos de sus contactos y oportunidades.
+    """
     try:
-        # Count totals
-        total_contacts = await db.contacts.count_documents({})
-        active_opportunities = await db.opportunities.count_documents({"stage": {"$nin": ["won", "lost"]}})
-        won_this_month = await db.opportunities.count_documents({
+        # Filtro base según permisos
+        base_filter = {}
+        if not isAdmin and assignedTo:
+            base_filter["assignedTo"] = assignedTo
+        
+        # Count totals (filtrado por usuario si aplica)
+        total_contacts = await db.contacts.count_documents(base_filter)
+        
+        opp_filter = {**base_filter, "stage": {"$nin": ["won", "lost"]}}
+        active_opportunities = await db.opportunities.count_documents(opp_filter)
+        
+        won_filter = {
+            **base_filter,
             "stage": "won",
             "closedAt": {"$gte": datetime.now(timezone.utc).replace(day=1).isoformat()}
-        })
+        }
+        won_this_month = await db.opportunities.count_documents(won_filter)
         
-        # Calculate pipeline value
+        # Calculate pipeline value (filtrado)
+        pipeline_filter = {**base_filter, "stage": {"$nin": ["won", "lost"]}}
         pipeline_opps = await db.opportunities.find(
-            {"stage": {"$nin": ["won", "lost"]}},
+            pipeline_filter,
             {"value": 1, "_id": 0}
         ).to_list(1000)
         pipeline_value = sum(opp.get("value", 0) for opp in pipeline_opps)
         
-        # Top opportunities
+        # Top opportunities (filtrado)
+        top_filter = {**base_filter, "stage": {"$nin": ["lost"]}}
         top_opportunities = await db.opportunities.find(
-            {"stage": {"$nin": ["lost"]}},
+            top_filter,
             {"_id": 0}
         ).sort("value", -1).limit(5).to_list(5)
         
-        # Upcoming activities
+        # Upcoming activities (filtrado por usuario si aplica)
+        activity_filter = {"completed": False}
+        if not isAdmin and assignedTo:
+            activity_filter["userId"] = assignedTo
         upcoming_activities = await db.activities.find(
-            {"completed": False},
+            activity_filter,
             {"_id": 0}
         ).sort("dueDate", 1).limit(5).to_list(5)
         
-        # Recent activity log
+        # Recent activity log (filtrado)
+        recent_filter = {}
+        if not isAdmin and assignedTo:
+            recent_filter["userId"] = assignedTo
         recent_activities = await db.activities.find(
-            {},
+            recent_filter,
             {"_id": 0}
         ).sort("createdAt", -1).limit(10).to_list(10)
         
