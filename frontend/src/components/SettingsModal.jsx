@@ -1065,7 +1065,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               className="w-5 h-5 rounded border-2 border-orange-300"
                             />
                             <div>
-                              <span className="text-sm font-black text-slate-900">Administrador Maestro</span>
+                              <span className="text-sm font-black text-slate-900">Director Comercial</span>
                               <p className="text-xs text-slate-500">Control total del sistema</p>
                             </div>
                           </label>
