@@ -517,31 +517,44 @@ const CRMPipeline = ({ currentUser }) => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Negocio</label>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setFormData({...formData, businessType: 'cocina'})}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${
-                      formData.businessType === 'cocina' 
+                    onClick={() => setFormData({...formData, businessType: 'cocina', moduleType: 'montada'})}
+                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl border-2 font-bold text-xs transition-all ${
+                      formData.businessType === 'cocina' && formData.moduleType === 'montada'
                         ? 'bg-amber-500 text-white border-amber-500' 
                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
-                    data-testid="business-type-cocina"
+                    data-testid="business-type-cocina-montada"
                   >
-                    <UtensilsCrossed size={16} />
-                    Cocina
+                    <Hammer size={14} />
+                    Cocina Montada
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFormData({...formData, businessType: 'armarios'})}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${
+                    onClick={() => setFormData({...formData, businessType: 'cocina', moduleType: 'despiece'})}
+                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl border-2 font-bold text-xs transition-all ${
+                      formData.businessType === 'cocina' && formData.moduleType === 'despiece'
+                        ? 'bg-orange-500 text-white border-orange-500' 
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                    data-testid="business-type-cocina-despiece"
+                  >
+                    <Scissors size={14} />
+                    Cocina Despiece
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, businessType: 'armarios', moduleType: ''})}
+                    className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl border-2 font-bold text-xs transition-all ${
                       formData.businessType === 'armarios' 
                         ? 'bg-emerald-500 text-white border-emerald-500' 
                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                     data-testid="business-type-armarios"
                   >
-                    <DoorOpen size={16} />
+                    <DoorOpen size={14} />
                     Armarios
                   </button>
                 </div>
