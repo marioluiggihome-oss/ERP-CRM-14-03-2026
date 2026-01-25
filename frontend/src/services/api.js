@@ -473,11 +473,14 @@ export const backupAPI = {
 // ============================================
 
 export const crmContactsAPI = {
-  getAll: async (status = null, search = null) => {
+  getAll: async (status = null, search = null, options = {}) => {
     let url = `${API_URL}/api/crm/contacts`;
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (search) params.append('search', search);
+    // Filtrado por comercial asignado (para usuarios no-admin)
+    if (options.assignedTo) params.append('assignedTo', options.assignedTo);
+    if (options.isAdmin !== undefined) params.append('isAdmin', options.isAdmin);
     if (params.toString()) url += `?${params.toString()}`;
     
     const response = await fetch(url);
@@ -525,11 +528,14 @@ export const crmContactsAPI = {
 // ============================================
 
 export const crmOpportunitiesAPI = {
-  getAll: async (stage = null, contactId = null) => {
+  getAll: async (stage = null, contactId = null, options = {}) => {
     let url = `${API_URL}/api/crm/opportunities`;
     const params = new URLSearchParams();
     if (stage) params.append('stage', stage);
     if (contactId) params.append('contactId', contactId);
+    // Filtrado por comercial asignado (para usuarios no-admin)
+    if (options.assignedTo) params.append('assignedTo', options.assignedTo);
+    if (options.isAdmin !== undefined) params.append('isAdmin', options.isAdmin);
     if (params.toString()) url += `?${params.toString()}`;
     
     const response = await fetch(url);
