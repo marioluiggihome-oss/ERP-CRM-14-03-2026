@@ -518,8 +518,10 @@ class OpportunityModel(BaseModel):
     # Link to project/budget
     linkedProjectId: Optional[str] = None
     linkedProjectNumber: Optional[str] = None
-    # Business type: cocina, armarios, mixto
+    # Business type: cocina, armarios
     businessType: str = "cocina"
+    # Module type for cocina: montada, despiece
+    moduleType: str = ""
 
 class OpportunityCreate(BaseModel):
     title: str
@@ -537,6 +539,7 @@ class OpportunityCreate(BaseModel):
     linkedProjectId: Optional[str] = None
     linkedProjectNumber: Optional[str] = None
     businessType: str = "cocina"
+    moduleType: str = ""
 
 class OpportunityUpdate(BaseModel):
     title: Optional[str] = None
