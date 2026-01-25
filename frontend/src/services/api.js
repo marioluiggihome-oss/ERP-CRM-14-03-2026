@@ -536,8 +536,9 @@ export const crmOpportunitiesAPI = {
     // Filtrado por comercial asignado (para usuarios no-admin)
     if (options.assignedTo) params.append('assignedTo', options.assignedTo);
     if (options.isAdmin !== undefined) params.append('isAdmin', options.isAdmin);
-    // Filtrado por tipo de negocio
+    // Filtrado por tipo de negocio y módulo
     if (options.businessType) params.append('businessType', options.businessType);
+    if (options.moduleType) params.append('moduleType', options.moduleType);
     if (params.toString()) url += `?${params.toString()}`;
     
     const response = await fetch(url);
