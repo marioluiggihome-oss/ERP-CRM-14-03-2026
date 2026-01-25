@@ -283,6 +283,126 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
                 </table>
               </div>
             </div>
+
+            {/* Charts Section */}
+            {trends && (
+              <div className="mt-6 space-y-6">
+                <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                  <BarChart3 className="text-blue-500" size={20} />
+                  Análisis y Tendencias
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Monthly Sales Chart */}
+                  <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <h4 className="font-bold text-slate-700 mb-4">Ventas Mensuales (€)</h4>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={trends.monthly}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                          <Tooltip 
+                            formatter={(value) => formatCurrency(value)} 
+                            labelStyle={{ fontWeight: 'bold' }}
+                          />
+                          <Bar dataKey="wonValue" fill="#22c55e" name="Ventas Cerradas" radius={[4,4,0,0]} />
+                          <Bar dataKey="createdValue" fill="#3b82f6" name="Creadas" radius={[4,4,0,0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Opportunities Count Chart */}
+                  <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <h4 className="font-bold text-slate-700 mb-4">Oportunidades por Mes</h4>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={trends.monthly}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <Tooltip />
+                          <Line type="monotone" dataKey="created" stroke="#6366f1" strokeWidth={2} name="Creadas" dot={{ r: 4 }} />
+                          <Line type="monotone" dataKey="won" stroke="#22c55e" strokeWidth={2} name="Ganadas" dot={{ r: 4 }} />
+                          <Line type="monotone" dataKey="lost" stroke="#ef4444" strokeWidth={2} name="Perdidas" dot={{ r: 4 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Business Type Distribution */}
+                  <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <h4 className="font-bold text-slate-700 mb-4">Distribución por Tipo de Negocio</h4>
+                    <div className="h-64 flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPie>
+                          <Pie
+                            data={[
+                              { name: 'Cocina', value: trends.byBusinessType?.cocina?.value || 0, count: trends.byBusinessType?.cocina?.count || 0 },
+                              { name: 'Armarios', value: trends.byBusinessType?.armarios?.value || 0, count: trends.byBusinessType?.armarios?.count || 0 }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          >
+                            <Cell fill="#f59e0b" />
+                            <Cell fill="#10b981" />
+                          </Pie>
+                          <Tooltip formatter={(value) => formatCurrency(value)} />
+                          <Legend />
+                        </RechartsPie>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg">
+                        <UtensilsCrossed className="text-amber-600" size={16} />
+                        <div>
+                          <p className="text-xs text-amber-600 font-bold">Cocina</p>
+                          <p className="text-sm font-black text-amber-800">{trends.byBusinessType?.cocina?.count || 0} opps</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg">
+                        <DoorOpen className="text-emerald-600" size={16} />
+                        <div>
+                          <p className="text-xs text-emerald-600 font-bold">Armarios</p>
+                          <p className="text-sm font-black text-emerald-800">{trends.byBusinessType?.armarios?.count || 0} opps</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Funnel */}
+                  <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <h4 className="font-bold text-slate-700 mb-4">Embudo de Conversión</h4>
+                    <div className="space-y-2">
+                      {trends.funnel?.map((stage, idx) => {
+                        const maxCount = Math.max(...trends.funnel.map(s => s.count));
+                        const width = maxCount > 0 ? (stage.count / maxCount) * 100 : 0;
+                        const colors = ['bg-blue-500', 'bg-yellow-500', 'bg-purple-500', 'bg-orange-500'];
+                        return (
+                          <div key={stage.stage} className="flex items-center gap-3">
+                            <span className="w-24 text-xs font-bold text-slate-600 text-right">{stage.name}</span>
+                            <div className="flex-1 h-8 bg-slate-100 rounded-lg overflow-hidden relative">
+                              <div 
+                                className={`h-full ${colors[idx]} transition-all duration-500`}
+                                style={{ width: `${width}%` }}
+                              />
+                              <span className="absolute inset-0 flex items-center justify-center text-xs font-black text-slate-700">
+                                {stage.count} ({formatCurrency(stage.value)})
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
