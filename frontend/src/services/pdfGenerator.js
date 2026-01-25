@@ -146,36 +146,18 @@ export const generateBudgetPDF = ({
   yPos += 35;
 
   // ==========================================
-  // ESPECIFICACIONES
-  // ==========================================
-  
-  if (doorColorLow || doorColorHigh || carcassMaterialName || globalFinish) {
-    doc.setFontSize(9);
-    doc.setTextColor(...primaryColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ESPECIFICACIONES:', margin, yPos);
-    yPos += 6;
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    
-    const specs = [];
-    if (globalFinish) specs.push(`Acabado: ${globalFinish}`);
-    if (doorColorLow) specs.push(`Puerta Bajo: ${doorColorLow}`);
-    if (doorColorHigh) specs.push(`Puerta Alto: ${doorColorHigh}`);
-    if (doorColorColumns) specs.push(`Columnas: ${doorColorColumns}`);
-    if (sideColor) specs.push(`Costados: ${sideColor}`);
-    if (carcassMaterialName) specs.push(`Armazón: ${carcassMaterialName}`);
-    
-    doc.text(specs.join('  |  '), margin, yPos);
-    yPos += 12;
-  }
-
-  // ==========================================
   // TABLA DE ARTÍCULOS
   // ==========================================
   
+  // Guardar especificaciones para mostrar al final
+  const specs = [];
+  if (globalFinish) specs.push(`Acabado: ${globalFinish}`);
+  if (doorColorLow) specs.push(`Bajo: ${doorColorLow}`);
+  if (doorColorHigh) specs.push(`Alto: ${doorColorHigh}`);
+  if (doorColorColumns) specs.push(`Columnas: ${doorColorColumns}`);
+  if (sideColor) specs.push(`Costados: ${sideColor}`);
+  if (carcassMaterialName) specs.push(`Armazón: ${carcassMaterialName}`);
+
   // Combinar items de montada y despiece
   const allItems = [...itemsMontada, ...itemsDespiece];
   
