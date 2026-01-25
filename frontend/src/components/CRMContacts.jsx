@@ -133,6 +133,7 @@ const CRMContacts = ({ currentUser }) => {
         segment: contact.segment || '',
         prescriptorId: contact.prescriptorId || '',
         prescriptorName: contact.prescriptorName || '',
+        assignedTo: contact.assignedTo || '',
         tags: contact.tags || []
       });
     } else {
@@ -150,6 +151,8 @@ const CRMContacts = ({ currentUser }) => {
         segment: '',
         prescriptorId: currentUser?.isPrescriptor ? currentUser?.id : '',
         prescriptorName: currentUser?.isPrescriptor ? currentUser?.clientName : '',
+        // Auto-assign to current user if they are a comercial
+        assignedTo: currentUser?.isRepresentative ? currentUser?.id : '',
         tags: []
       });
     }
