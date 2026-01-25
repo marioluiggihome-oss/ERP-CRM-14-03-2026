@@ -822,6 +822,7 @@ async def analyze_product_sheets(
     """
     Analiza fichas de productos usando Gemini Vision API.
     Extrae: código, nombre, dimensiones, puntos por zona, categoría, serie.
+    Detecta AUTOMÁTICAMENTE nuevas categorías desde el encabezado de la página.
     """
     try:
         api_key = os.environ.get('EMERGENT_LLM_KEY')
@@ -829,6 +830,7 @@ async def analyze_product_sheets(
             return {"error": "EMERGENT_LLM_KEY not configured"}
         
         products = []
+        detected_categories = set()
         
         for file in files:
             # Read file content
@@ -842,42 +844,58 @@ async def analyze_product_sheets(
                 system_message="""Eres un experto en digitalización de tarifas técnicas de muebles de cocina.
 Tu tarea es extraer TODOS los productos visibles en la imagen de forma estructurada.
 
-INFORMACIÓN A IDENTIFICAR DE CADA PÁGINA:
-1. ENCABEZADO DE PÁGINA: Busca texto como "PROGRAMA ESTANDAR - MODULOS [TIPO] - [SERIE]"
-   - Tipo: ALTOS, BAJOS, COLUMNAS, SEMICOLUMNAS, etc.
-   - Serie: ALTOS 35 FONDO 58, BAJOS 70 FONDO ESTÁNDAR, etc.
+PASO 1 - DETECTAR CATEGORÍA DESDE ENCABEZADO:
+Lee el título/encabezado de la página para identificar la CATEGORÍA PRINCIPAL.
+Ejemplos de encabezados y sus categorías:
+- "PUERTAS Y VITRINAS - PUERTAS" → category: "PUERTAS", subcategory: "PUERTAS"
+- "PUERTAS Y VITRINAS - VITRINAS" → category: "PUERTAS Y VITRINAS", subcategory: "VITRINAS"  
+- "PROGRAMA ESTANDAR - MODULOS ALTOS" → category: "ALTOS"
+- "MODULOS BAJOS 70" → category: "BAJOS"
+- "COLUMNAS Y SEMICOLUMNAS" → category: "COLUMNAS"
+- "ACCESORIOS" → category: "ACCESORIOS"
+- "TIRADORES Y HERRAJES" → category: "TIRADORES"
+- "ENCIMERAS" → category: "ENCIMERAS"
+- "ZOCALOS Y CORNISAS" → category: "ZOCALOS"
+- Cualquier otro título → Usa el texto principal como categoría
 
-2. CATEGORÍAS DE PRODUCTOS: Identifica los grupos como:
-   - "Alto 1 puerta", "Alto 2 puertas", "Alto 1 Vitrina", etc.
-   - "Bajo 1 puerta", "Bajo fregadero", etc.
+PASO 2 - EXTRAER PRODUCTOS:
+Para cada fila de productos en la tabla:
 
 3. REFERENCIAS Y ZONAS DE PRECIO:
-   - Las referencias son códigos como: 35A1P58350, 7B1P300, 45A2V58600
+   - Las referencias son códigos como: PTA_ZC898X298, 35A1P58350, 7B1P300
    - Cada producto tiene 12 zonas de precio (Z1 a Z12)
    - Los precios van en orden horizontal para cada producto
 
-FORMATO DE RESPUESTA - Array JSON con TODOS los productos:
-[
-  {
-    "code": "CÓDIGO_EXACTO",
-    "name": "Nombre descriptivo completo",
-    "category": "ALTO/BAJO/COLUMNA/SEMICOLUMNA",
-    "series": "Serie completa (ej: ALTOS 35 FONDO 58)",
-    "visualType": "1P/2P/1V/2V/ABATIBLE/etc",
-    "width": ancho_en_mm,
-    "height": alto_en_cm,
-    "depth": fondo_en_cm,
-    "points": valor_Z1,
-    "zonePoints": {"Z1": n, "Z2": n, "Z3": n, "Z4": n, "Z5": n, "Z6": n, "Z7": n, "Z8": n, "Z9": n, "Z10": n, "Z11": n, "Z12": n}
-  }
-]
+FORMATO DE RESPUESTA - JSON con categorías detectadas y productos:
+{
+  "detectedCategory": "CATEGORÍA_DEL_ENCABEZADO",
+  "detectedSubcategory": "SUBCATEGORÍA_SI_EXISTE",
+  "products": [
+    {
+      "code": "CÓDIGO_EXACTO_DE_LA_TABLA",
+      "name": "Nombre descriptivo basado en código y categoría",
+      "category": "CATEGORÍA_DETECTADA",
+      "series": "Serie o subcategoría si existe",
+      "visualType": "Tipo visual (PUERTA/VITRINA/1P/2P/etc)",
+      "width": ancho_en_mm_del_código,
+      "height": alto_en_mm_del_código,
+      "depth": fondo_en_cm_estimado,
+      "points": valor_Z1,
+      "zonePoints": {"Z1": n, "Z2": n, "Z3": n, "Z4": n, "Z5": n, "Z6": n, "Z7": n, "Z8": n, "Z9": n, "Z10": n, "Z11": n, "Z12": n}
+    }
+  ]
+}
+
+REGLAS PARA EXTRAER DIMENSIONES DE CÓDIGOS:
+- PTA_ZC898X298: ZC=serie, 898=ancho(mm), 298=alto(mm) → width:898, height:298
+- PTA_ZC1198X498: width:1198, height:498
+- 35A1P58350: 35=altura(cm), A=alto, 1P=1puerta, 58=fondo, 350=ancho(mm)
 
 REGLAS CRÍTICAS:
+- Detecta la categoría EXACTA del encabezado de la página
 - Extrae TODOS los productos visibles, no solo el primero
 - Respeta el orden de las filas (Z1 es el primer precio de cada fila)
-- El ancho (width) se extrae del final del código: 35A1P58350 = 350mm, 35A1P581200 = 1200mm
-- La altura se extrae del prefijo: 35 = 35cm, 40 = 40cm, 7B = 70cm (bajo)
-- Responde SOLO con el array JSON, sin explicaciones adicionales"""
+- Responde SOLO con el JSON estructurado, sin explicaciones"""
             ).with_model("gemini", "gemini-2.5-pro")
             
             # Create message with image
