@@ -253,36 +253,98 @@ const CRMPipeline = ({ currentUser }) => {
                   ? `${opportunities.filter(o => o.businessType === 'cocina' && o.moduleType === 'montada').length} cocinas montadas`
                   : businessTypeFilter === 'cocina_despiece'
                     ? `${opportunities.filter(o => o.businessType === 'cocina' && o.moduleType === 'despiece').length} cocinas despiece`
-                    : `${opportunities.filter(o => o.businessType === 'armarios').length} armarios`
+                    : businessTypeFilter === 'cocina_all'
+                      ? `${opportunities.filter(o => o.businessType === 'cocina').length} cocinas (todas)`
+                      : `${opportunities.filter(o => o.businessType === 'armarios').length} armarios`
               }
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Filtro por tipo de negocio */}
+          {/* Filtro por tipo de negocio - Agrupado */}
           <div className="flex items-center gap-1 bg-white rounded-xl p-1 shadow border border-slate-200">
-            {BUSINESS_TYPES.map(type => {
-              const Icon = type.icon;
-              const isActive = businessTypeFilter === type.id;
-              return (
-                <button
-                  key={type.id}
-                  onClick={() => setBusinessTypeFilter(type.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
-                    isActive 
-                      ? type.id === 'all' 
-                        ? 'bg-slate-700 text-white' 
-                        : `${type.color} text-white`
-                      : 'text-slate-500 hover:bg-slate-100'
-                  }`}
-                  data-testid={`filter-${type.id}`}
-                >
-                  <Icon size={14} />
-                  {type.name}
-                </button>
-              );
-            })}
+            {/* TODOS */}
+            <button
+              onClick={() => setBusinessTypeFilter('all')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
+                businessTypeFilter === 'all' 
+                  ? 'bg-slate-700 text-white' 
+                  : 'text-slate-500 hover:bg-slate-100'
+              }`}
+              data-testid="filter-all"
+            >
+              <Filter size={14} />
+              Todos
+            </button>
+
+            {/* COCINAS - Con submenú */}
+            <div className="relative" ref={cocinaMenuRef}>
+              <button
+                onClick={() => setShowCocinaSubmenu(!showCocinaSubmenu)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
+                  businessTypeFilter.startsWith('cocina') 
+                    ? 'bg-amber-500 text-white' 
+                    : 'text-slate-500 hover:bg-slate-100'
+                }`}
+                data-testid="filter-cocinas"
+              >
+                <UtensilsCrossed size={14} />
+                Cocinas
+                <ChevronDown size={12} className={`transition-transform ${showCocinaSubmenu ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Submenú de Cocinas */}
+              {showCocinaSubmenu && (
+                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 min-w-[160px]">
+                  <button
+                    onClick={() => { setBusinessTypeFilter('cocina_all'); setShowCocinaSubmenu(false); }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase hover:bg-slate-50 ${
+                      businessTypeFilter === 'cocina_all' ? 'bg-amber-50 text-amber-700' : 'text-slate-600'
+                    }`}
+                    data-testid="filter-cocina-all"
+                  >
+                    <UtensilsCrossed size={14} />
+                    Todas las Cocinas
+                  </button>
+                  <div className="border-t border-slate-100 my-1"></div>
+                  <button
+                    onClick={() => { setBusinessTypeFilter('cocina_montada'); setShowCocinaSubmenu(false); }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase hover:bg-slate-50 ${
+                      businessTypeFilter === 'cocina_montada' ? 'bg-amber-50 text-amber-700' : 'text-slate-600'
+                    }`}
+                    data-testid="filter-cocina-montada"
+                  >
+                    <Hammer size={14} />
+                    Montada
+                  </button>
+                  <button
+                    onClick={() => { setBusinessTypeFilter('cocina_despiece'); setShowCocinaSubmenu(false); }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase hover:bg-slate-50 ${
+                      businessTypeFilter === 'cocina_despiece' ? 'bg-orange-50 text-orange-700' : 'text-slate-600'
+                    }`}
+                    data-testid="filter-cocina-despiece"
+                  >
+                    <Scissors size={14} />
+                    Despiece
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ARMARIOS */}
+            <button
+              onClick={() => setBusinessTypeFilter('armarios')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
+                businessTypeFilter === 'armarios' 
+                  ? 'bg-emerald-500 text-white' 
+                  : 'text-slate-500 hover:bg-slate-100'
+              }`}
+              data-testid="filter-armarios"
+            >
+              <DoorOpen size={14} />
+              Armarios
+            </button>
           </div>
 
           <label className="flex items-center gap-2 text-sm font-bold text-slate-600">
