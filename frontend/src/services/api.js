@@ -639,8 +639,15 @@ export const crmActivitiesAPI = {
 // ============================================
 
 export const crmDashboardAPI = {
-  get: async () => {
-    const response = await fetch(`${API_URL}/api/crm/dashboard`);
+  get: async (options = {}) => {
+    let url = `${API_URL}/api/crm/dashboard`;
+    const params = new URLSearchParams();
+    // Filtrado por comercial asignado (para usuarios no-admin)
+    if (options.assignedTo) params.append('assignedTo', options.assignedTo);
+    if (options.isAdmin !== undefined) params.append('isAdmin', options.isAdmin);
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Error al obtener dashboard CRM');
     return response.json();
   }
