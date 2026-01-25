@@ -3153,7 +3153,7 @@ async def get_crm_dashboard(assignedTo: Optional[str] = None, isAdmin: Optional[
 # ============================================
 
 @api_router.post("/crm/opportunities/from-project/{project_id}")
-async def create_opportunity_from_project(project_id: str):
+async def create_opportunity_from_project(project_id: str, businessType: str = "cocina"):
     """Create a CRM opportunity from an existing project/budget"""
     try:
         # Get the project
@@ -3185,9 +3185,12 @@ async def create_opportunity_from_project(project_id: str):
         
         contact_id = contact.get("id")
         
+        # Determine business type label for title
+        type_label = "Cocina" if businessType == "cocina" else "Armarios" if businessType == "armarios" else "Cocina/Armarios"
+        
         # Create opportunity
         opp = OpportunityModel(
-            title=f"Presupuesto Cocina - {customer_name}",
+            title=f"Presupuesto {type_label} - {customer_name}",
             description=f"Presupuesto #{project.get('budgetNumber', '')}",
             contactId=contact_id,
             contactName=customer_name,
@@ -3195,7 +3198,8 @@ async def create_opportunity_from_project(project_id: str):
             probability=50,
             stage="proposal",
             linkedProjectId=project_id,
-            linkedProjectNumber=project.get("budgetNumber", "")
+            linkedProjectNumber=project.get("budgetNumber", ""),
+            businessType=businessType
         ).model_dump()
         opp['createdAt'] = opp['createdAt'].isoformat()
         opp['updatedAt'] = opp['updatedAt'].isoformat()
@@ -3206,6 +3210,12 @@ async def create_opportunity_from_project(project_id: str):
         await db.contacts.update_one(
             {"id": contact_id},
             {"$addToSet": {"linkedProjectIds": project_id}}
+        )
+        
+        # Update contact with businessTypes
+        await db.contacts.update_one(
+            {"id": contact_id},
+            {"$addToSet": {"businessTypes": businessType}}
         )
         
         opp.pop('_id', None)
