@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Building2, User, Calendar, Euro, ChevronDown, ChevronUp, TrendingUp, Target, Award, Store, UserCheck, BarChart3, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Building2, User, Calendar, Euro, ChevronDown, ChevronUp, TrendingUp, Target, Award, Store, UserCheck, BarChart3, Maximize2, Minimize2, PieChart, UtensilsCrossed, DoorOpen } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend, FunnelChart, Funnel, LabelList } from 'recharts';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
