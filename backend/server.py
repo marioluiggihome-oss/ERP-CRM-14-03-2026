@@ -1752,6 +1752,116 @@ async def get_all_work_for_admin():
         }
     }
 
+@api_router.get("/admin/metrics")
+async def get_admin_metrics():
+    """
+    [DIRECTOR COMERCIAL ONLY] Métricas completas del sistema por delegación y comercial.
+    Incluye ventas, oportunidades, rendimiento de comerciales, etc.
+    """
+    from datetime import timedelta
+    
+    # Get all users
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(500)
+    users_map = {u["id"]: u for u in users}
+    
+    # Separar usuarios por rol
+    directores = [u for u in users if u.get("isAdmin")]
+    responsables = [u for u in users if u.get("isResponsableDelegacion")]
+    comerciales = [u for u in users if u.get("isRepresentative")]
+    tiendas = [u for u in users if u.get("isTienda")]
+    colaboradores = [u for u in users if u.get("isPrescriptor")]
+    
+    # Get all opportunities
+    opportunities = await db.opportunities.find({}, {"_id": 0}).to_list(5000)
+    
+    # Get all projects
+    projects = await db.projects.find({}, {"_id": 0}).to_list(5000)
+    
+    # Get all contacts
+    contacts = await db.contacts.find({}, {"_id": 0}).to_list(5000)
+    
+    # Calcular métricas por comercial/responsable
+    metrics_by_user = {}
+    
+    for user in comerciales + responsables:
+        user_id = user["id"]
+        
+        # Oportunidades asignadas a este usuario
+        user_opps = [o for o in opportunities if o.get("assignedTo") == user_id]
+        won_opps = [o for o in user_opps if o.get("stage") == "won"]
+        active_opps = [o for o in user_opps if o.get("stage") not in ["won", "lost"]]
+        
+        # Valor total
+        total_value = sum(o.get("value", 0) for o in won_opps)
+        pipeline_value = sum(o.get("value", 0) for o in active_opps)
+        
+        # Contactos asignados
+        user_contacts = [c for c in contacts if c.get("assignedTo") == user_id]
+        
+        # Tiendas bajo su gestión
+        user_shops = [t for t in tiendas if t.get("linkedRepresentativeId") == user_id]
+        
+        # Proyectos de sus tiendas
+        shop_ids = [s["id"] for s in user_shops]
+        user_projects = [p for p in projects if p.get("userId") in shop_ids or p.get("userId") == user_id]
+        
+        metrics_by_user[user_id] = {
+            "userId": user_id,
+            "userName": user.get("clientName", user.get("username", "Desconocido")),
+            "role": "Resp. Delegación" if user.get("isResponsableDelegacion") else "Comercial",
+            "totalOpportunities": len(user_opps),
+            "wonOpportunities": len(won_opps),
+            "activeOpportunities": len(active_opps),
+            "totalValue": total_value,
+            "pipelineValue": pipeline_value,
+            "conversionRate": round(len(won_opps) / len(user_opps) * 100, 1) if user_opps else 0,
+            "totalContacts": len(user_contacts),
+            "totalShops": len(user_shops),
+            "totalProjects": len(user_projects),
+            "shops": [{"id": s["id"], "name": s.get("clientName", s.get("username"))} for s in user_shops]
+        }
+    
+    # Métricas globales
+    all_won = [o for o in opportunities if o.get("stage") == "won"]
+    all_active = [o for o in opportunities if o.get("stage") not in ["won", "lost"]]
+    
+    global_metrics = {
+        "totalUsers": len(users),
+        "totalDirectores": len(directores),
+        "totalResponsables": len(responsables),
+        "totalComerciales": len(comerciales),
+        "totalTiendas": len(tiendas),
+        "totalColaboradores": len(colaboradores),
+        "totalOpportunities": len(opportunities),
+        "wonOpportunities": len(all_won),
+        "activeOpportunities": len(all_active),
+        "totalValue": sum(o.get("value", 0) for o in all_won),
+        "pipelineValue": sum(o.get("value", 0) for o in all_active),
+        "totalProjects": len(projects),
+        "totalContacts": len(contacts),
+        "conversionRate": round(len(all_won) / len(opportunities) * 100, 1) if opportunities else 0
+    }
+    
+    # Top performers (ordenados por valor total)
+    top_performers = sorted(
+        metrics_by_user.values(), 
+        key=lambda x: x["totalValue"], 
+        reverse=True
+    )[:10]
+    
+    return {
+        "global": global_metrics,
+        "byUser": list(metrics_by_user.values()),
+        "topPerformers": top_performers,
+        "roleBreakdown": {
+            "directores": len(directores),
+            "responsables": len(responsables),
+            "comerciales": len(comerciales),
+            "tiendas": len(tiendas),
+            "colaboradores": len(colaboradores)
+        }
+    }
+
 @api_router.get("/commercial/my-shops-work")
 async def get_commercial_shops_work(commercial_id: str):
     """
