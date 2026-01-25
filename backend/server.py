@@ -174,6 +174,7 @@ class UserUpdate(BaseModel):
     isAdmin: Optional[bool] = None
     isRepresentative: Optional[bool] = None
     isPrescriptor: Optional[bool] = None
+    isTienda: Optional[bool] = None  # Tienda/Punto de Venta
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
     allowedCatalogIds: Optional[List[str]] = None
