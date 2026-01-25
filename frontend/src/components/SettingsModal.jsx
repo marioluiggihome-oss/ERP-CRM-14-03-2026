@@ -928,7 +928,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               {!isEditingUser ? (
                 <>
                   {/* Header with search and add button */}
-                  <div className="flex justify-between items-center mb-6">
+                  <div className="flex justify-between items-center mb-4">
                     <div className="relative flex-1 max-w-md">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                       <input
@@ -946,6 +946,61 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <UserPlus size={18} />
                       {state.currentUser?.isAdmin ? 'Nuevo Usuario' : 'Nueva Tienda'}
                     </button>
+                  </div>
+
+                  {/* Filtro por rol - Deslizable */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                    <span className="text-xs font-black text-slate-500 uppercase whitespace-nowrap">Filtrar por rol:</span>
+                    <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+                      <button
+                        onClick={() => setUserRoleFilter('all')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'all' ? 'bg-slate-700 text-white shadow' : 'text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        Todos ({visibleUsers.length})
+                      </button>
+                      <button
+                        onClick={() => setUserRoleFilter('director')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'director' ? 'bg-orange-500 text-white shadow' : 'text-slate-600 hover:bg-orange-100'
+                        }`}
+                      >
+                        🛡️ Director ({visibleUsers.filter(u => u.isAdmin).length})
+                      </button>
+                      <button
+                        onClick={() => setUserRoleFilter('responsable')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'responsable' ? 'bg-red-500 text-white shadow' : 'text-slate-600 hover:bg-red-100'
+                        }`}
+                      >
+                        📍 Resp. Delegación ({visibleUsers.filter(u => u.isResponsableDelegacion).length})
+                      </button>
+                      <button
+                        onClick={() => setUserRoleFilter('comercial')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'comercial' ? 'bg-purple-500 text-white shadow' : 'text-slate-600 hover:bg-purple-100'
+                        }`}
+                      >
+                        💼 Comercial ({visibleUsers.filter(u => u.isRepresentative && !u.isAdmin && !u.isResponsableDelegacion).length})
+                      </button>
+                      <button
+                        onClick={() => setUserRoleFilter('tienda')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'tienda' ? 'bg-green-500 text-white shadow' : 'text-slate-600 hover:bg-green-100'
+                        }`}
+                      >
+                        🏪 Punto de Venta ({visibleUsers.filter(u => u.isTienda).length})
+                      </button>
+                      <button
+                        onClick={() => setUserRoleFilter('colaborador')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'colaborador' ? 'bg-amber-500 text-white shadow' : 'text-slate-600 hover:bg-amber-100'
+                        }`}
+                      >
+                        🤝 Colaborador ({visibleUsers.filter(u => u.isPrescriptor).length})
+                      </button>
+                    </div>
                   </div>
 
                   {/* Users List */}
