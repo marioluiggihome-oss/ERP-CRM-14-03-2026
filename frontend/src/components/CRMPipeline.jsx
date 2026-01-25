@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Target, Plus, Euro, Calendar, User, Building2, FileText,
   Edit2, Trash2, X, Save, Loader2, GripVertical, ArrowRight,
-  TrendingUp, ChevronDown, UtensilsCrossed, DoorOpen, Filter
+  TrendingUp, ChevronDown, UtensilsCrossed, DoorOpen, Filter, Hammer, Scissors
 } from 'lucide-react';
 import { crmOpportunitiesAPI, crmContactsAPI } from '../services/api';
 
@@ -17,7 +17,8 @@ const STAGES = [
 
 const BUSINESS_TYPES = [
   { id: 'all', name: 'Todos', icon: Filter },
-  { id: 'cocina', name: 'Cocina', icon: UtensilsCrossed, color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-100' },
+  { id: 'cocina_montada', name: 'Cocina Montada', icon: Hammer, color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-100' },
+  { id: 'cocina_despiece', name: 'Cocina Despiece', icon: Scissors, color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-100' },
   { id: 'armarios', name: 'Armarios', icon: DoorOpen, color: 'bg-emerald-500', textColor: 'text-emerald-700', bgLight: 'bg-emerald-100' }
 ];
 
@@ -41,7 +42,8 @@ const CRMPipeline = ({ currentUser }) => {
     stage: 'lead',
     expectedCloseDate: '',
     notes: '',
-    businessType: 'cocina'
+    businessType: 'cocina',
+    moduleType: 'montada'
   });
 
   useEffect(() => {
