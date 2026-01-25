@@ -887,3 +887,20 @@ export const armariosAPI = {
   }
 };
 
+// ============================================
+// ADMIN METRICS
+// ============================================
+
+export const adminMetricsAPI = {
+  get: async () => {
+    const response = await fetch(`${API_URL}/api/admin/metrics`);
+    if (!response.ok) throw new Error('Error al obtener métricas');
+    return response.json();
+  },
+
+  getTrends: async () => {
+    const response = await fetch(`${API_URL}/api/admin/metrics/trends`);
+    if (!response.ok) throw new Error('Error al obtener tendencias');
+    return response.json();
+  }
+};
