@@ -305,8 +305,8 @@ const App = () => {
             </div>
             
             <div className="flex flex-col gap-6 flex-1 w-full px-2">
-              {/* CRM - Solo visible para Admin o usuarios con canAccessCRM */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canAccessCRM) && (
+              {/* CRM - Solo visible para Admin o usuarios con canAccessCRM (NO para Tienda/Punto de Venta) */}
+              {(state.currentUser?.isAdmin || state.currentUser?.canAccessCRM) && !state.currentUser?.isTienda && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
                   className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
@@ -329,8 +329,8 @@ const App = () => {
                 <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
               </button>
               
-              {/* Solo Admin y usuarios con canUseAIAnalysis pueden ver IA Lab */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canUseAIAnalysis) && (
+              {/* Solo Admin y usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
+              {(state.currentUser?.isAdmin || state.currentUser?.canUseAIAnalysis) && !state.currentUser?.isTienda && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
                   className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -339,15 +339,19 @@ const App = () => {
                   <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
                 </button>
               )}
-              <button 
-                onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
-                className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-              >
-                <FolderOpen size={22}/>
-                <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
-              </button>
               
-              {/* Digitalizador - Solo Admin o usuarios con permiso */}
+              {/* Archivo - NO visible para Tienda/Punto de Venta */}
+              {!state.currentUser?.isTienda && (
+                <button 
+                  onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                >
+                  <FolderOpen size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
+                </button>
+              )}
+              
+              {/* Digitalizador - Solo Admin o usuarios con permiso (NO para Tienda) */}
               {(state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
