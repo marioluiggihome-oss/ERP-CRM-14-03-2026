@@ -236,7 +236,11 @@ const CRMPipeline = ({ currentUser }) => {
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               {businessTypeFilter === 'all' 
                 ? `${opportunities.length} oportunidades activas`
-                : `${opportunities.filter(o => o.businessType === businessTypeFilter).length} oportunidades de ${businessTypeFilter}`
+                : businessTypeFilter === 'cocina_montada'
+                  ? `${opportunities.filter(o => o.businessType === 'cocina' && o.moduleType === 'montada').length} cocinas montadas`
+                  : businessTypeFilter === 'cocina_despiece'
+                    ? `${opportunities.filter(o => o.businessType === 'cocina' && o.moduleType === 'despiece').length} cocinas despiece`
+                    : `${opportunities.filter(o => o.businessType === 'armarios').length} armarios`
               }
             </p>
           </div>
