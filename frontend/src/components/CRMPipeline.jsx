@@ -76,7 +76,18 @@ const CRMPipeline = ({ currentUser }) => {
   const getOpportunitiesByStage = (stageId) => {
     return opportunities.filter(opp => {
       const matchesStage = opp.stage === stageId;
-      const matchesType = businessTypeFilter === 'all' || opp.businessType === businessTypeFilter;
+      let matchesType = true;
+      
+      if (businessTypeFilter !== 'all') {
+        if (businessTypeFilter === 'cocina_montada') {
+          matchesType = opp.businessType === 'cocina' && opp.moduleType === 'montada';
+        } else if (businessTypeFilter === 'cocina_despiece') {
+          matchesType = opp.businessType === 'cocina' && opp.moduleType === 'despiece';
+        } else if (businessTypeFilter === 'armarios') {
+          matchesType = opp.businessType === 'armarios';
+        }
+      }
+      
       return matchesStage && matchesType;
     });
   };
