@@ -936,7 +936,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
               <div className="flex items-center gap-3">
                 <LayoutPanelTop size={18} className="text-orange-600"/>
                 <h3 className="text-[10px] font-black uppercase tracking-[0.4em] italic text-indigo-900">
-                  LIBRERÍA MAESTRA <span className="text-orange-600">({filteredCatalog.length} MUEBLES)</span>
+                  LIBRERÍA MAESTRA <span className="text-orange-600">({filteredCatalog.length} ARTÍCULOS)</span>
                 </h3>
               </div>
               <div className="flex items-center gap-4" onClick={e => e.stopPropagation()}>
