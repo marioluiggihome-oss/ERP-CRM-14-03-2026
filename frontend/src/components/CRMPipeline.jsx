@@ -108,7 +108,8 @@ const CRMPipeline = ({ currentUser }) => {
         probability: opp.probability || 20,
         stage: opp.stage || 'lead',
         expectedCloseDate: opp.expectedCloseDate || '',
-        notes: opp.notes || ''
+        notes: opp.notes || '',
+        businessType: opp.businessType || 'cocina'
       });
     } else {
       setEditingOpp(null);
