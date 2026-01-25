@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Target, Plus, Euro, Calendar, User, Building2, FileText,
   Edit2, Trash2, X, Save, Loader2, GripVertical, ArrowRight,
-  TrendingUp, ChevronDown, UtensilsCrossed, DoorOpen, Filter, Hammer, Scissors
+  TrendingUp, ChevronDown, UtensilsCrossed, DoorOpen, Filter, Hammer, Scissors, ChevronRight
 } from 'lucide-react';
 import { crmOpportunitiesAPI, crmContactsAPI } from '../services/api';
 
