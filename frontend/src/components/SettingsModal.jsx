@@ -12,6 +12,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [editingUserId, setEditingUserId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false); // Estado para pantalla completa
+  const [userRoleFilter, setUserRoleFilter] = useState('all'); // Filtro por rol de usuario
   
   // Inventory states
   const [inventoryModule, setInventoryModule] = useState('montada');
