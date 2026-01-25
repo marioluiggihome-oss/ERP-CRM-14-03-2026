@@ -976,11 +976,48 @@ REGLAS CRÍTICAS:
                     products.append(product_data)
                 
             except json.JSONDecodeError as e:
-                logger.error(f"Error parsing JSON from Gemini: {e}. Response: {response}")
-                products.append({
-                    "error": f"No se pudo parsear la respuesta para {file.filename}",
-                    "raw_response": response[:500]
-                })
+                # Try to repair truncated JSON
+                logger.warning(f"JSON parse error, attempting repair: {e}")
+                try:
+                    # Try to extract complete products from truncated response
+                    import re
+                    # Find all complete product objects
+                    product_pattern = r'\{\s*"code":\s*"[^"]+",\s*"name":\s*"[^"]*",\s*"category":\s*"[^"]*"[^}]*"zonePoints":\s*\{[^}]+\}\s*\}'
+                    found_products = re.findall(product_pattern, clean_response)
+                    
+                    if found_products:
+                        logger.info(f"Recovered {len(found_products)} products from truncated response")
+                        # Extract category from response
+                        cat_match = re.search(r'"detectedCategory":\s*"([^"]+)"', clean_response)
+                        file_category = cat_match.group(1) if cat_match else 'OTROS'
+                        detected_categories.add(file_category)
+                        
+                        for prod_json in found_products:
+                            try:
+                                prod = json.loads(prod_json)
+                                prod['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
+                                prod['manufacturer'] = 'Zona Cocinas'
+                                prod['module'] = module
+                                prod['importedAt'] = datetime.now(timezone.utc).isoformat()
+                                prod['originalFilename'] = file.filename
+                                if not prod.get('category'):
+                                    prod['category'] = file_category
+                                products.append(prod)
+                            except:
+                                pass
+                    else:
+                        # Could not recover
+                        logger.error(f"Could not repair JSON: {response[:500]}")
+                        products.append({
+                            "error": f"No se pudo parsear la respuesta para {file.filename}",
+                            "raw_response": response[:500]
+                        })
+                except Exception as repair_error:
+                    logger.error(f"Error repairing JSON: {repair_error}. Original response: {response[:500]}")
+                    products.append({
+                        "error": f"No se pudo parsear la respuesta para {file.filename}",
+                        "raw_response": response[:500]
+                    })
         
         return {
             "success": True,
