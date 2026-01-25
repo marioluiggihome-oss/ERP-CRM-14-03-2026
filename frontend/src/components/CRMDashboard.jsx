@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { crmDashboardAPI, crmAnalyticsAPI } from '../services/api';
 
-const CRMDashboard = ({ onNavigate }) => {
+const CRMDashboard = ({ onNavigate, currentUser }) => {
   const [dashboard, setDashboard] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -14,12 +14,19 @@ const CRMDashboard = ({ onNavigate }) => {
   useEffect(() => {
     loadDashboard();
     loadAnalytics();
-  }, []);
+  }, [currentUser]);
 
   const loadDashboard = async () => {
     setIsLoading(true);
     try {
-      const data = await crmDashboardAPI.get();
+      // Determinar si es admin para filtrar datos
+      const isAdmin = currentUser?.isAdmin === true;
+      const options = isAdmin ? {} : {
+        assignedTo: currentUser?.id,
+        isAdmin: false
+      };
+      
+      const data = await crmDashboardAPI.get(options);
       setDashboard(data);
     } catch (err) {
       console.error('Error loading CRM dashboard:', err);
