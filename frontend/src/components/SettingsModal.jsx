@@ -50,6 +50,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isAdmin: false,
     isRepresentative: false,
     isPrescriptor: false,
+    isTienda: false,  // Tienda/Punto de Venta
     linkedRepresentativeId: '',
     allowedModules: ['montada'],
     commercialDiscount: 0,
