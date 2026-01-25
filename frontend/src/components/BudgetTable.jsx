@@ -391,10 +391,17 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
               {isConfigOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
            </button>
            
-           <div className="ml-4 flex items-center gap-2 px-4 py-2 bg-green-50 rounded-lg border border-green-100">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-[9px] font-black text-green-700 uppercase tracking-widest italic">Expediente: {state.budgetNumber}</span>
-           </div>
+           {/* Pestaña ARMARIOS - Solo para usuarios con permiso */}
+           {(state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
+             <button 
+               onClick={() => setState(p => ({...p, currentTab: 'armarios'}))} 
+               className="ml-4 flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg border border-purple-200 transition-all"
+               data-testid="armarios-tab-btn"
+             >
+               <Box size={14} className="text-purple-600" />
+               <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">Armarios</span>
+             </button>
+           )}
         </div>
         
         <div className="flex gap-4 items-center">
