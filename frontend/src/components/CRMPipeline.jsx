@@ -15,13 +15,6 @@ const STAGES = [
   { id: 'lost', name: 'Perdida', color: 'bg-red-500', lightColor: 'bg-red-50 border-red-200' }
 ];
 
-const BUSINESS_TYPES = [
-  { id: 'all', name: 'Todos', icon: Filter },
-  { id: 'cocina_montada', name: 'Cocina Montada', icon: Hammer, color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-100' },
-  { id: 'cocina_despiece', name: 'Cocina Despiece', icon: Scissors, color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-100' },
-  { id: 'armarios', name: 'Armarios', icon: DoorOpen, color: 'bg-emerald-500', textColor: 'text-emerald-700', bgLight: 'bg-emerald-100' }
-];
-
 const CRMPipeline = ({ currentUser }) => {
   const [opportunities, setOpportunities] = useState([]);
   const [contacts, setContacts] = useState([]);
