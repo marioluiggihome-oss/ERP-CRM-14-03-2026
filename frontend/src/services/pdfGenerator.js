@@ -2,6 +2,20 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 /**
+ * Capitaliza correctamente un nombre (primera letra mayúscula de cada palabra)
+ * @param {string} name - El nombre a capitalizar
+ * @returns {string} - Nombre capitalizado
+ */
+const capitalizeName = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+/**
  * Genera un PDF del presupuesto actual
  * @param {Object} params - Parámetros del presupuesto
  */
