@@ -297,8 +297,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
 
       // Preguntar si quiere crear oportunidad en CRM
       if (state.currentUser?.canAccessCRM && total > 0) {
+        // Determinar el tipo de módulo basado en qué pestaña tiene más elementos
+        const montadaCount = state.budgetItemsMontada?.length || 0;
+        const despieceCount = state.budgetItemsDespiece?.length || 0;
+        const moduleType = despieceCount > 0 && montadaCount === 0 ? 'despiece' : 'montada';
+        const moduleLabel = moduleType === 'montada' ? 'COCINA MONTADA' : 'COCINA DESPIECE';
+        
         const createOpp = window.confirm(
-          `✅ EXPEDIENTE ${newProject.budgetNumber} GUARDADO EN BASE DE DATOS.\n\n¿Desea crear una OPORTUNIDAD en el CRM?\n\nCliente: ${newProject.customerName}\nValor: ${total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`
+          `✅ EXPEDIENTE ${newProject.budgetNumber} GUARDADO EN BASE DE DATOS.\n\n¿Desea crear una OPORTUNIDAD de ${moduleLabel} en el CRM?\n\nCliente: ${newProject.customerName}\nValor: ${total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`
         );
         
         if (createOpp) {
@@ -316,27 +322,28 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
             });
             const contact = await contactRes.json();
 
-            // Create opportunity with businessType: cocina
+            // Create opportunity with businessType: cocina and moduleType
             await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/opportunities`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                title: `Presupuesto Cocina - ${newProject.customerName}`,
+                title: `Presupuesto ${moduleLabel} - ${newProject.customerName}`,
                 description: `Presupuesto generado automáticamente\nAcabado: ${newProject.finish}\nMódulo: ${newProject.module}`,
                 contactId: contact.id,
                 contactName: contact.name,
                 value: total,
                 probability: 50,
                 stage: 'proposal',
-                tags: ['presupuesto', 'auto', 'cocina'],
+                tags: ['presupuesto', 'auto', 'cocina', moduleType],
                 assignedTo: state.currentUser.id,
                 linkedProjectId: newProject.id,
                 linkedProjectNumber: newProject.budgetNumber,
-                businessType: 'cocina'
+                businessType: 'cocina',
+                moduleType: moduleType
               })
             });
             
-            alert(`✅ Oportunidad de COCINA creada en CRM para ${newProject.customerName}`);
+            alert(`✅ Oportunidad de ${moduleLabel} creada en CRM para ${newProject.customerName}`);
           } catch (err) {
             console.error('Error creating CRM opportunity:', err);
             alert('Presupuesto guardado, pero hubo un error al crear la oportunidad CRM.');
