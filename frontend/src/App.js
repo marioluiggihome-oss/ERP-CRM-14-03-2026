@@ -352,7 +352,7 @@ const App = () => {
               )}
               
               {/* Digitalizador - Solo Admin o usuarios con permiso (NO para Tienda) */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && (
+              {(state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && !state.currentUser?.isTienda && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
                   className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -363,7 +363,7 @@ const App = () => {
                 </button>
               )}
               
-              {/* Armarios - Solo Admin o usuarios con permiso */}
+              {/* Armarios - Solo Admin o usuarios con permiso canAccessArmarios */}
               {(state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'armarios'}))} 
@@ -387,8 +387,8 @@ const App = () => {
                 </button>
               )}
               
-              {/* Botón Mis Tiendas - Solo para Comerciales (no Admin) */}
-              {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && (
+              {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
+              {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
                 <button 
                   onClick={() => setShowCommercialWorkView(true)} 
                   className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all text-purple-400 hover:text-white hover:bg-purple-500/30"
@@ -401,8 +401,8 @@ const App = () => {
             </div>
 
             <div className="mt-auto flex flex-col gap-6 w-full px-2">
-              {/* Solo mostrar Panel Maestro si es Admin o Comercial */}
-              {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && (
+              {/* Solo mostrar Panel Maestro si es Admin o Comercial (NO para Tienda) */}
+              {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && !state.currentUser?.isTienda && (
                 <button 
                     onClick={() => setState(p => ({...p, showSettings: true}))} 
                     className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
