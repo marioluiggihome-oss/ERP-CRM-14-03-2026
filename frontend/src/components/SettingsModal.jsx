@@ -346,11 +346,22 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
   const filteredUsers = useMemo(() => {
     const query = userSearch.toLowerCase();
-    return visibleUsers.filter(u => 
-      u.username.toLowerCase().includes(query) || 
-      u.clientName.toLowerCase().includes(query)
-    );
-  }, [visibleUsers, userSearch]);
+    return visibleUsers.filter(u => {
+      // Filtro por búsqueda
+      const matchesSearch = u.username.toLowerCase().includes(query) || 
+        u.clientName.toLowerCase().includes(query);
+      
+      // Filtro por rol
+      if (userRoleFilter === 'all') return matchesSearch;
+      if (userRoleFilter === 'director' && u.isAdmin) return matchesSearch;
+      if (userRoleFilter === 'responsable' && u.isResponsableDelegacion) return matchesSearch;
+      if (userRoleFilter === 'comercial' && u.isRepresentative && !u.isAdmin && !u.isResponsableDelegacion) return matchesSearch;
+      if (userRoleFilter === 'tienda' && u.isTienda) return matchesSearch;
+      if (userRoleFilter === 'colaborador' && u.isPrescriptor) return matchesSearch;
+      
+      return false;
+    });
+  }, [visibleUsers, userSearch, userRoleFilter]);
 
   // Product management  
   const currentCatalog = useMemo(() => {
