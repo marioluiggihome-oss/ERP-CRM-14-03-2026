@@ -1867,6 +1867,121 @@ async def get_admin_metrics():
         }
     }
 
+
+@api_router.get("/admin/metrics/trends")
+async def get_admin_metrics_trends():
+    """
+    [DIRECTOR COMERCIAL ONLY] Métricas de tendencias mensuales.
+    Devuelve datos agrupados por mes para gráficos de ventas y pipeline.
+    """
+    from datetime import timedelta
+    from collections import defaultdict
+    
+    # Get all opportunities
+    opportunities = await db.opportunities.find({}, {"_id": 0}).to_list(5000)
+    
+    # Agrupar por mes
+    monthly_data = defaultdict(lambda: {
+        "won": 0,
+        "wonValue": 0,
+        "lost": 0,
+        "lostValue": 0,
+        "created": 0,
+        "createdValue": 0,
+        "cocina": 0,
+        "cocinaValue": 0,
+        "armarios": 0,
+        "armariosValue": 0
+    })
+    
+    for opp in opportunities:
+        # Extraer mes de creación
+        created_at = opp.get("createdAt", "")
+        if isinstance(created_at, str) and len(created_at) >= 7:
+            month_key = created_at[:7]  # YYYY-MM
+        else:
+            continue
+        
+        value = opp.get("value", 0)
+        stage = opp.get("stage", "")
+        business_type = opp.get("businessType", "cocina")
+        
+        monthly_data[month_key]["created"] += 1
+        monthly_data[month_key]["createdValue"] += value
+        
+        if stage == "won":
+            monthly_data[month_key]["won"] += 1
+            monthly_data[month_key]["wonValue"] += value
+        elif stage == "lost":
+            monthly_data[month_key]["lost"] += 1
+            monthly_data[month_key]["lostValue"] += value
+        
+        # Por tipo de negocio
+        if business_type == "cocina":
+            monthly_data[month_key]["cocina"] += 1
+            monthly_data[month_key]["cocinaValue"] += value
+        elif business_type == "armarios":
+            monthly_data[month_key]["armarios"] += 1
+            monthly_data[month_key]["armariosValue"] += value
+    
+    # Convertir a lista ordenada
+    trends = []
+    for month, data in sorted(monthly_data.items()):
+        trends.append({
+            "month": month,
+            "monthLabel": get_month_label(month),
+            **data
+        })
+    
+    # Tomar los últimos 12 meses
+    trends = trends[-12:] if len(trends) > 12 else trends
+    
+    # Pipeline por etapa (embudo)
+    stage_counts = defaultdict(lambda: {"count": 0, "value": 0})
+    for opp in opportunities:
+        stage = opp.get("stage", "lead")
+        if stage not in ["won", "lost"]:
+            stage_counts[stage]["count"] += 1
+            stage_counts[stage]["value"] += opp.get("value", 0)
+    
+    funnel_data = [
+        {"stage": "lead", "name": "Nuevo", "count": stage_counts["lead"]["count"], "value": stage_counts["lead"]["value"]},
+        {"stage": "contacted", "name": "Contactado", "count": stage_counts["contacted"]["count"], "value": stage_counts["contacted"]["value"]},
+        {"stage": "proposal", "name": "Propuesta", "count": stage_counts["proposal"]["count"], "value": stage_counts["proposal"]["value"]},
+        {"stage": "negotiation", "name": "Negociación", "count": stage_counts["negotiation"]["count"], "value": stage_counts["negotiation"]["value"]}
+    ]
+    
+    # Distribución por tipo de negocio
+    business_type_data = {
+        "cocina": {"count": 0, "value": 0, "won": 0, "wonValue": 0},
+        "armarios": {"count": 0, "value": 0, "won": 0, "wonValue": 0}
+    }
+    for opp in opportunities:
+        bt = opp.get("businessType", "cocina")
+        if bt in business_type_data:
+            business_type_data[bt]["count"] += 1
+            business_type_data[bt]["value"] += opp.get("value", 0)
+            if opp.get("stage") == "won":
+                business_type_data[bt]["won"] += 1
+                business_type_data[bt]["wonValue"] += opp.get("value", 0)
+    
+    return {
+        "monthly": trends,
+        "funnel": funnel_data,
+        "byBusinessType": business_type_data
+    }
+
+
+def get_month_label(month_str: str) -> str:
+    """Convierte YYYY-MM a etiqueta legible como 'Ene 25'"""
+    months_es = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    try:
+        year, month = month_str.split("-")
+        return f"{months_es[int(month)-1]} {year[2:]}"
+    except:
+        return month_str
+
+
 @api_router.get("/commercial/my-shops-work")
 async def get_commercial_shops_work(commercial_id: str):
     """
