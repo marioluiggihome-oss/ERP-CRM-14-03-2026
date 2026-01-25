@@ -47,7 +47,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     password: '',
     clientName: '',
     isActive: true,
-    isAdmin: false,
+    isAdmin: false,  // Director Comercial
+    isResponsableDelegacion: false,  // Responsable Delegación
     isRepresentative: false,
     isPrescriptor: false,
     isTienda: false,  // Tienda/Punto de Venta
@@ -62,6 +63,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessCRM: false,
     canUseDigitalizador: false,
     canAccessArmarios: false,
+    canAuthorizePermissions: false,
     useCustomBranding: false,
     canChangeLogo: false,
     linkedClientId: ''
