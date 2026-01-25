@@ -96,15 +96,173 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
           <div className="flex items-center gap-3">
             <Building2 size={24} />
             <div>
-              <h2 className="font-black text-lg uppercase tracking-wider">Panel Administrador</h2>
-              <p className="text-indigo-300 text-xs">Todos los trabajos del sistema</p>
+              <h2 className="font-black text-lg uppercase tracking-wider">Panel Director Comercial</h2>
+              <p className="text-indigo-300 text-xs">Métricas y trabajos del sistema</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Tabs */}
+            <button 
+              onClick={() => setActiveTab('metrics')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'metrics' ? 'bg-orange-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}
+            >
+              <BarChart3 size={16} className="inline mr-2" />
+              Métricas
+            </button>
+            <button 
+              onClick={() => setActiveTab('work')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'work' ? 'bg-orange-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}
+            >
+              <FolderOpen size={16} className="inline mr-2" />
+              Trabajos
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors ml-4">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
+        {/* METRICS TAB */}
+        {activeTab === 'metrics' && metrics && (
+          <div className="flex-1 overflow-auto p-6">
+            {/* Global Summary Cards */}
+            <div className="grid grid-cols-5 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <Euro size={20} />
+                  <span className="text-xs font-bold uppercase opacity-80">Ventas Cerradas</span>
+                </div>
+                <p className="text-3xl font-black">{formatCurrency(metrics.global.totalValue)}</p>
+                <p className="text-xs opacity-80 mt-1">{metrics.global.wonOpportunities} oportunidades ganadas</p>
+              </div>
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target size={20} />
+                  <span className="text-xs font-bold uppercase opacity-80">Pipeline</span>
+                </div>
+                <p className="text-3xl font-black">{formatCurrency(metrics.global.pipelineValue)}</p>
+                <p className="text-xs opacity-80 mt-1">{metrics.global.activeOpportunities} oportunidades activas</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp size={20} />
+                  <span className="text-xs font-bold uppercase opacity-80">Conversión</span>
+                </div>
+                <p className="text-3xl font-black">{metrics.global.conversionRate}%</p>
+                <p className="text-xs opacity-80 mt-1">de {metrics.global.totalOpportunities} totales</p>
+              </div>
+              <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-4 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users size={20} />
+                  <span className="text-xs font-bold uppercase opacity-80">Contactos</span>
+                </div>
+                <p className="text-3xl font-black">{metrics.global.totalContacts}</p>
+                <p className="text-xs opacity-80 mt-1">{metrics.global.totalProjects} proyectos</p>
+              </div>
+              <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl p-4 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <Store size={20} />
+                  <span className="text-xs font-bold uppercase opacity-80">Red Distribución</span>
+                </div>
+                <p className="text-3xl font-black">{metrics.global.totalTiendas}</p>
+                <p className="text-xs opacity-80 mt-1">
+                  {metrics.global.totalComerciales} comerciales, {metrics.global.totalResponsables} responsables
+                </p>
+              </div>
+            </div>
+
+            {/* Top Performers */}
+            <div className="mb-6">
+              <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                <Award className="text-orange-500" size={20} />
+                Top Performers
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                {metrics.topPerformers.slice(0, 6).map((user, index) => (
+                  <div key={user.userId} className={`bg-white rounded-xl p-4 border-2 ${index === 0 ? 'border-yellow-400' : index === 1 ? 'border-slate-300' : index === 2 ? 'border-orange-400' : 'border-slate-100'}`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-white ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-slate-400' : index === 2 ? 'bg-orange-500' : 'bg-indigo-500'}`}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-black text-slate-900">{user.userName}</p>
+                        <p className="text-xs text-slate-500">{user.role}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-green-50 rounded-lg p-2">
+                        <p className="text-green-600 font-bold">Ventas</p>
+                        <p className="font-black text-green-800">{formatCurrency(user.totalValue)}</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-lg p-2">
+                        <p className="text-blue-600 font-bold">Pipeline</p>
+                        <p className="font-black text-blue-800">{formatCurrency(user.pipelineValue)}</p>
+                      </div>
+                      <div className="bg-purple-50 rounded-lg p-2">
+                        <p className="text-purple-600 font-bold">Conversión</p>
+                        <p className="font-black text-purple-800">{user.conversionRate}%</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-lg p-2">
+                        <p className="text-slate-600 font-bold">Tiendas</p>
+                        <p className="font-black text-slate-800">{user.totalShops}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Detailed Table */}
+            <div>
+              <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                <UserCheck className="text-indigo-500" size={20} />
+                Detalle por Comercial / Responsable
+              </h3>
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left p-3 font-black text-slate-600">Usuario</th>
+                      <th className="text-left p-3 font-black text-slate-600">Rol</th>
+                      <th className="text-right p-3 font-black text-slate-600">Ventas</th>
+                      <th className="text-right p-3 font-black text-slate-600">Pipeline</th>
+                      <th className="text-center p-3 font-black text-slate-600">Conv.</th>
+                      <th className="text-center p-3 font-black text-slate-600">Opps</th>
+                      <th className="text-center p-3 font-black text-slate-600">Contactos</th>
+                      <th className="text-center p-3 font-black text-slate-600">Tiendas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.byUser.map((user) => (
+                      <tr key={user.userId} className="border-t border-slate-100 hover:bg-slate-50">
+                        <td className="p-3 font-bold text-slate-900">{user.userName}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.role === 'Resp. Delegación' ? 'bg-red-100 text-red-700' : 'bg-purple-100 text-purple-700'}`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right font-black text-green-600">{formatCurrency(user.totalValue)}</td>
+                        <td className="p-3 text-right font-bold text-blue-600">{formatCurrency(user.pipelineValue)}</td>
+                        <td className="p-3 text-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-black ${user.conversionRate >= 50 ? 'bg-green-100 text-green-700' : user.conversionRate >= 25 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                            {user.conversionRate}%
+                          </span>
+                        </td>
+                        <td className="p-3 text-center font-bold">{user.wonOpportunities}/{user.totalOpportunities}</td>
+                        <td className="p-3 text-center font-bold">{user.totalContacts}</td>
+                        <td className="p-3 text-center font-bold">{user.totalShops}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* WORK TAB - Original content */}
+        {activeTab === 'work' && (
+          <>
         {/* Summary Cards */}
         {data?.summary && (
           <div className="p-4 bg-slate-50 border-b grid grid-cols-4 gap-4">
