@@ -315,13 +315,22 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     loadCodes();
   }, [telemetryModule, isOpen, activeTab]);
 
-  const representatives = useMemo(() => state.users.filter(u => u.isRepresentative), [state.users]);
+  // Lista de usuarios que pueden tener tiendas asignadas (Director, Responsable, Comercial)
+  const representatives = useMemo(() => state.users.filter(u => u.isAdmin || u.isResponsableDelegacion || u.isRepresentative), [state.users]);
 
   // Filtrar usuarios según el rol del usuario actual
   const visibleUsers = useMemo(() => {
     if (state.currentUser?.isAdmin) {
-      // Admins ven todos los usuarios
+      // Director Comercial ve todos los usuarios
       return state.users;
+    } else if (state.currentUser?.isResponsableDelegacion || state.currentUser?.canAuthorizePermissions) {
+      // Responsable Delegación ve comerciales y tiendas de su delegación
+      return state.users.filter(u => 
+        u.id === state.currentUser.id || 
+        u.linkedRepresentativeId === state.currentUser.id ||
+        u.isRepresentative ||
+        u.isTienda
+      );
     } else if (state.currentUser?.isRepresentative) {
       // Comerciales solo ven sus tiendas asignadas + a sí mismos
       return state.users.filter(u => 
