@@ -11,92 +11,113 @@ Feature requests have been provided incrementally through PowerPoint presentatio
 5.  **Master Margins (Márgenes Maestros):** A settings panel to configure prices and costs.
 6.  **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders.
 7.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets, including a totals section with editable IVA.
-8.  **PDF Export:** Generate a PDF of the current budget with specific layout requirements.
+8.  **PDF Export:** Generate a PDF of the current budget with specific layout requirements, including multipage support, A4 formatting, and custom headers/footers.
 9.  **Database Backup System:** Automatic and manual backups.
-10. **Security & Data Isolation:** Secure user password storage and implement strict role-based permissions, ensuring data is isolated between users (e.g., a Comercial can only see their own CRM data).
-11. **CRM Integration:** A full sales CRM with a dashboard, pipeline, contacts, and permissions, including a Calendar and inactive client alerts.
+10. **Security & Data Isolation:** Secure user password storage and implement strict role-based permissions.
+11. **CRM Integration:** A full sales CRM with a dashboard, pipeline, contacts, and permissions.
 12. **Digitalizador de Borradores (Draft Digitizer):** An OCR/AI tool to upload photos of handwritten budgets.
-13. **IA Lab - Analizador de Planos:** A new feature to analyze kitchen plans and detect furniture.
-14. **Advanced Armarios Module:**
-    *   Editable bill of materials (Despiece).
-    *   AI-powered layout generation from text descriptions.
-    *   AI-powered realistic rendering of the designed wardrobe.
-15. **UI/UX:** Implement features like fullscreen modals for master panels and reorganize the main interface to improve workflow (e.g., move Armarios to a main tab).
+13. **IA Lab - Analizador de Planos:** A feature to analyze kitchen plans and detect furniture.
+14. **Advanced Armarios Module:** Editable bill of materials, AI-powered layout generation, and AI-powered realistic rendering.
+15. **UI/UX:** Continuous UI improvements based on user feedback, including fullscreen modals, reorganized navigation, and specific layout adjustments.
 
 **User's preferred language**: es
 
 **what currently exists?**
 A full-stack application with a React frontend and a FastAPI backend connected to MongoDB. The application includes a complete user and permissions system, an integrated CRM, and budgeting tools for both kitchens and wardrobes.
 
-Major accomplishments in this session include:
-- **Advanced AI Features:** The Armarios module's AI layout generator, AI renderer, and editable bill of materials were fully tested and debugged. They are now functional.
-- **Permissions Overhaul:** A comprehensive update to user roles and permissions was completed. This includes a new Tienda (Store) role with limited access, new Director Comercial and Responsable Delegación roles, and critical data isolation for Comercial users in the CRM.
-- **New Feature - Director's Dashboard:** A new metrics dashboard was built for the Director Comercial to track sales performance, pipeline value, and team productivity.
-- **UI/UX Enhancements:** Based on user feedback from Word documents, several UI changes were implemented:
-    - PDF layouts were corrected (logo aspect ratio, text size, data position).
-    - Fullscreen pop-up functionality was added to the main admin panels.
-    - The Armarios module was moved from the sidebar to a primary tab in the main budgeter header, replacing the old project number display.
+In this session, the agent implemented several key features and fixes:
+- **CRM Opportunity Tagging:** Opportunities are now automatically tagged by business type (, , ). The CRM Pipeline UI has been updated with a grouped dropdown menu to filter by these types.
+- **Director's Dashboard Enhancement:** The metrics panel was enhanced with several charts using  to show sales trends, opportunity pipelines, and business type distribution.
+- **Budget Preview and PDF Generator Overhaul:** The agent performed multiple, iterative fixes on both the live budget preview and the PDF export functionality based on rapid user feedback. This included removing scrollbars, implementing a horizontal full-width totals section, and ensuring it was always visible.
+- **UI Bug Fixes:** A role-based filter was added to the user management panel, and a critical bug preventing the total project value () from being saved for new projects was fixed.
 
 **Last working item**:
-- Last item agent was working: Implementing the user's request to reorganize the main budgeter interface. This involved removing the Armarios button from the left sidebar and adding it as a primary tab in the main header, next to Cocina Montada and Cocina Despiece.
-- Status: USER VERIFICATION PENDING
-- Agent Testing Done: Y
-- Which testing method agent to use? The change was verified visually with the screenshot tool. The next step is user confirmation.
+- Last item agent was working: The user provided new, specific instructions for UI changes:
+    1.  **PDF Aesthetics:** The PDF header needs to match an uploaded image, Luiggi Master Design text removed, PRESUPUESTO TÉCNICO text enlarged, and the logo re-proportioned. The A4 format with totals at the very bottom of the page must be maintained, even for short budgets.
+    2.  **Permissions UI:** The permission checkbox for the Armarios module needs to be moved to a different location within the user settings panel.
+- Status: IN PROGRESS
+- Agent Testing Done: N
+- Which testing method agent to use? After implementing the changes, use the screenshot tool to verify the new permissions UI layout in . For the PDF, generate a test PDF and visually inspect it to ensure it matches the user's requirements.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Critical Frontend Stability (P2)**
-    -   **Description:** A recurring React DOM crash ( error) was patched in a prior session but the root cause was never fully diagnosed. It remains a potential stability risk.
-    -   **Attempted fixes:** None in this session.
-    -   **Next debug checklist:**
-        1.  Analyze the components that are frequently mounted/unmounted, especially around the main  layout and conditional rendering logic.
-        2.  Investigate if any libraries are manipulating the DOM outside of React's lifecycle.
-        3.  Try to reproduce the error through rapid navigation between different sections of the app.
-    -   **Why fix this issue and what will be achieved with the fix?** To prevent random application crashes and improve overall stability.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None
+-   **Issue 1: PDF and Permissions UI Refinement (P0)**
+    -   Description: This is the 
+wtmp begins Sun Jan 25 18:59:02 2026. The agent must finish implementing the user's latest feedback on PDF aesthetics and the placement of the Armarios permission checkbox.
+    -   Status: IN PROGRESS
+-   **Issue 2:  for Existing Projects (P1)**
+    -   Description: The bug preventing  from being saved was fixed for *new* projects, but all projects saved before the fix still show 0,00 € in the project library.
+    -   Next debug checklist: Create a one-time backend script or endpoint that iterates through all existing projects in the database, recalculates their total value from their items, and updates the  field.
+    -   Why fix this issue and what will be achieved with the fix? To ensure historical data is accurate and the project library is useful.
+    -   Status: NOT STARTED
+-   **Issue 3: Overlapping UI Fields (Campos superpuestos) (P1)**
+    -   Description: The user reported overlapping fields via an image, but the agent was unable to reproduce or locate the issue in the  product editor.
+    -   Attempted fixes: The agent inspected multiple related components but could not find the source of the visual bug.
+    -   Next debug checklist: Ask the user for the exact steps, screen, and component (e.g., in Master Panel - - editing a product) to reproduce the overlapping fields.
+    -   Status: BLOCKED (User input required)
+-   **Issue 4: Critical Frontend Stability (P2)**
+    -   Description: A recurring React DOM crash ( error) was noted in the previous handoff but was not addressed. It remains a potential stability risk.
+    -   Next debug checklist:
+        1.  Analyze components with heavy conditional rendering, such as , , and .
+        2.  Investigate for any direct DOM manipulation outside of React's lifecycle.
+    -   Why fix this issue and what will be achieved with the fix? To prevent random application crashes and improve overall stability.
+    -   Status: NOT STARTED
+    -   Is recurring issue? Y
 
 **In progress Task List**:
--   None. All in-progress tasks from the previous handoff were completed.
+-   **Task 1: PDF and Permissions UI Refinement**
+    -   Where to resume:
+        1.  Continue modifying  to align with the design from the user's provided PDF and image (), focusing on the header, text sizes, and placing totals at the absolute bottom of the A4 page.
+        2.  Modify  to move the Armarios module permission checkbox to the location specified in image .
+    -   What will be achieved with this? The PDF output and user settings UI will match the user's latest, specific requirements.
+    -   Status: IN PROGRESS
+    -   Should Test frontend/backend/both after fix? frontend
+    -   Blocked on something: No
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **(P1) Add Business Type Tags to Opportunities:** When a project is saved from Armarios or Cocina, automatically tag the associated CRM contact/opportunity with the corresponding business type.
-    - **(P2) Test IA Lab - Plan Analyzer:** The feature was built in a previous session but needs an end-to-end test with a real floor plan image to verify the AI analysis works as expected.
-    - **(P2) Enhance Director's Metrics Panel:** Add charts and graphs for trend analysis (e.g., sales per month, conversion funnel), as suggested by the agent and approved by the user.
+    - (P1) **Migrate  for Existing Projects:** Create a backend script to update the  field for all historical projects.
+    - (P2) **Test IA Lab - Plan Analyzer:** The feature was built in a previous session but needs an end-to-end test with a real floor plan image to verify functionality.
 
 - **Future Tasks:**
-    - **(P3) Refactor Backend and Frontend:**
-        - Break down the monolithic  (now ~5000 lines) into a proper FastAPI project structure (routers, models, services).
-        - Decompose massive frontend components like  (>2700 lines) and  (>2000 lines) into smaller, manageable child components.
-    - Implement a  field to sort products exactly as they appear in the tariff PDFs.
+    - (P3) **Refactor Backend and Frontend:**
+        - Break down the monolithic  into a proper FastAPI project structure (routers, models, services).
+        - Decompose massive frontend components like , ,  and .
+    - Implement a  field to sort products.
     - Add automated reminders for calendar events in the CRM.
     - Enhance the kitchen Despieces (Bill of Materials) feature.
     - Enhance the project archiving system.
     - Enhance CRM with automatic email notifications for inactive clients.
 
 **Completed work in this session**
-- **AI Features for Armarios (P0 Task):** Successfully tested, debugged, and verified the AI Layout Generator, AI Realistic Renderer, and editable Despiece modal.
-- **Comprehensive User Roles & Permissions:**
-    - Implemented strict CRM data isolation for Comercial users.
-    - Added new roles: Tienda (Store), Director Comercial, and Responsable Delegación.
-- **New Feature: Director Comercial Metrics Panel:** Built a new dashboard with KPIs and performance leaderboards.
-- **UI/UX Enhancements (per user documents):**
-    - Implemented fullscreen pop-up mode for all administrative panels.
-    - Reorganized the main header to include Armarios as a primary tab, removing it from the sidebar.
-    - Corrected multiple PDF layout issues (logo, text size, data position).
-    - Cleaned up UI text and element spacing in the Master Panel.
-- **Bug Fixes:** Resolved a critical backend bug in  (missing  field) and a frontend  error, both confirmed via linting and the testing agent.
+- **CRM Opportunity Tagging & Filtering:**
+    - Added  ('cocina', 'armarios') and  ('montada', 'despiece') to backend models.
+    - Implemented a grouped dropdown filter in the CRM Pipeline UI ().
+    - Ensured opportunities created from  and  are correctly tagged.
+- **Director's Dashboard Enhancement:**
+    - Created a new endpoint  to serve historical data.
+    - Added several charts (Bar, Line, Pie, Funnel) to  using .
+- **Iterative UI/UX Fixes:**
+    - **PDF Generator ():** Rewrote the component multiple times to support multipage A4 layouts with horizontal totals at the bottom.
+    - **Budget Preview ():** Removed the item list scrollbar, fixed the layout of the totals section to be horizontal and full-width, and ensured it remains visible at the bottom of the content.
+    - **User Management ():** Added a role-based filter to the Red Distribución tab.
+- **Bug Fixes:**
+    - Fixed a critical bug where  was not being saved for new projects by updating  and the  function in .
+    - Resolved a runtime error in  by adding the missing  function to .
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Critical Frontend Stability**
     -   A recurring React DOM crash ( error) remains a potential stability risk. The root cause has not been diagnosed.
-    -   **Debug checklist:** Investigate components with heavy conditional rendering; check for direct DOM manipulation outside of React.
-    -   **Why to solve this issue and what will be achieved with this?** To prevent random application crashes.
-    -   **Should Test frontend/backend/both after fix:** frontend
-    -   **Is recurring issue?** Y
+    -   Debug checklist: Investigate components with heavy conditional rendering; check for direct DOM manipulation outside of React.
+    -   Why to solve this issue and what will be achieved with this? To prevent random application crashes.
+    -   Should Test frontend/backend/both after fix: frontend
+    -   Is recurring issue? Y
+-   **Issue 2: Overlapping UI Fields**
+    -   The user reported overlapping fields in an image, but the agent could not identify the location.
+    -   Debug checklist: Ask the user for specific steps to reproduce the visual bug.
+    -   Why to solve this issue and what will be achieved with this? To fix a UI bug reported by the user.
+    -   Should Test frontend/backend/both after fix: frontend
+    -   Is recurring issue? N
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** None.
@@ -107,78 +128,80 @@ Major accomplishments in this session include:
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, , .
+- **Frontend:** React, TailwindCSS, , , .
 - **Backend:** Python, FastAPI, Pydantic, .
 - **Database:** MongoDB ( for async operations).
-- **AI/OCR:**  library for Google Gemini ( for text,  for image).
-- **Permissions:** Heavily expanded Role-Based Access Control (RBAC) in both frontend and backend.
+- **AI/OCR:**  library for Google Gemini.
+- **Permissions:** Role-Based Access Control (RBAC).
 
 **key DB schema**
--   **User**: {..., : bool, : bool, : bool, : bool, : str }
--   **Contact**: {..., : str }
--   **ArmarioProject**: { : str, : str, ... }
+-   **OpportunityModel**: {..., : str, : str}
+-   **ProjectModel**: {..., : float}
+-   **ContactModel**: {..., : Optional[List[str]]}
 
 **changes in tech stack**
--   None.
+-   None.  was already a dependency and was utilized in this session.
 
 **All files of reference**
--   : Heavily modified for new roles, permissions logic, and the new metrics endpoint.
--   : Modified to handle new role permissions and UI layout changes (sidebar).
--   : Modified for new user roles, permissions checkboxes, and fullscreen functionality.
--   : Modified to replace the project number display with the new Cocina/Armarios tabs.
--   : New component for the Director Comercial's metrics dashboard.
--   : Modified to implement data isolation and the Assign to dropdown.
--   : Modified to correct PDF layout issues.
--   : Updated with new filtered endpoints for CRM and the metrics dashboard.
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Areas that need refactoring**:
--   **Monolithic Backend:**  is critically overgrown (~5000 lines) and must be broken down into a standard FastAPI project structure (e.g., , , ).
--   **Massive Frontend Components:** , , and  are all very large and complex, making maintenance difficult.
+-   **Monolithic Backend:**  is critically overgrown and must be broken down.
+-   **Massive Frontend Components:** , , , and  are all large, complex, and difficult to maintain.
 
 **key api endpoints**
--   : (New) Fetches aggregated data for the Director Comercial dashboard.
--   , , : All have been updated to filter results based on the current user's role and ID, enforcing data isolation.
--   , : Tested and confirmed to be working.
+-   : (New) Fetches historical data for director's dashboard charts.
+-   : (New) Creates a CRM opportunity from a wardrobe project.
+-   : (Updated) Now accepts  and  query parameters.
+-   : (Updated) Now accepts a  field in the request body.
 
 **Critical Info for New Agent**
--   Your first action should be to confirm with the user that the latest UI change (moving the Armarios tab to the header) works as expected. This was the very last thing implemented.
--   The user provides critical feedback and new requirements through  files. Always extract and analyze these carefully.
--   The application's technical debt is high. The monolithic backend () and several massive React components urgently need refactoring. Proposing this as a dedicated task is highly recommended for future stability and development speed.
--   The P0 task from the last handoff (testing AI features) is complete. The next feature priorities are testing the IA Lab and implementing automatic CRM tagging.
+-   **Resume Immediately:** The highest priority (P0) is to continue the 
+wtmp begins Sun Jan 25 18:59:02 2026: implementing the user's latest feedback on PDF aesthetics and the Armarios permission UI from messages #466, #467 and #475.
+-   **User Feedback is Key:** The user provides frequent, specific feedback via chat and image uploads. Analyze these artifacts carefully before acting.
+-   **Data Migration Needed:** A one-time script is required to fix the  value for all existing projects in the database. This is the next priority after the current UI fixes.
+-   **Blocked Issue:** The overlapping fields bug is blocked pending user clarification. You will need to ask the user for the exact steps to reproduce it.
+-   **Technical Debt:** The backend monolith and several large frontend components are a significant risk to future development speed and stability. Proposing a refactoring phase is highly recommended once current high-priority tasks are complete.
 
 **documents and test reports created in this job**
--    (Continuously updated)
--   
--   
--   
+-    (Updated)
 -   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (Latest):** Asks if the agent has moved the Armarios section and uploads a new document () reinforcing this request.
-2.  **Agent:** Confirms the new fullscreen/pop-up feature is implemented and provides a plan for next steps.
-3.  **User:** Asks if the agent has implemented the fullscreen ventanas emergentes for the master panels.
-4.  **Agent:** Confirms review of the  file, provides a checklist of completed items, and asks for confirmation to proceed with the next set of tasks.
-5.  **User:** Uploads the same  file again, asking if the agent reviewed it.
-6.  **Agent:** Finishes implementation of the Director's Metrics panel and suggests enhancing it with charts as a potential improvement.
-7.  **User:** Approves the suggested improvement (metrics panel) and re-uploads a  file, asking if it has been reviewed.
-8.  **Agent:** Finishes the second round of corrections and suggests a new feature: a metrics panel for the Director Comercial.
-9.  **User:** Approves the agent's plan to work on the next set of corrections from a new  file.
-10. **Agent:** Summarizes the extracted points from the new document and asks for approval to start implementing the corrections.
+1.  **User (Latest):** Provides new requirements for PDF aesthetics (header, text, logo) and requests moving the Armarios permission checkbox, uploading two images for reference.
+2.  **Agent:** Acknowledges the request and starts working on it.
+3.  **User:** Asks for the PDF to maintain A4 size with totals at the bottom, remove specific text, and resize other elements. Uploads a sample PDF and an image.
+4.  **Agent:** Acknowledges and provides a summary of completed work, asking for the next steps.
+5.  **User:** States that the totals section in the budget preview should occupy the full width. Uploads an image.
+6.  **Agent:** Fixes the totals section width and confirms the fix with a screenshot showing it's working correctly.
+7.  **User:** Reports that the budget preview has a scrollbar instead of showing all lines. Uploads an image.
+8.  **Agent:** Removes the scrollbar from the preview and confirms it's fixed.
+9.  **User:** Reports an error when trying to export a PDF from the Armarios module. Uploads an image of the error.
+10. **Agent:** Identifies the error as a missing function, fixes it, and confirms the app compiles successfully.
 
 **Project Health Check:**
 -   **Broken:** None.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Google Gemini:** Via . Uses  for AI-powered text generation (Armarios layout) and  for image generation (Armarios render). Utilizes the Emergent LLM Key.
--   **SendGrid:** For sending database backups. Requires a User API Key.
--   **jspdf:** For PDF generation on the frontend.
+-   **Google Gemini:** Via . Uses  and . (Emergent LLM Key)
+-   **SendGrid:** For sending database backups. (User API Key)
+-   **jspdf:** For PDF generation.
+-   **recharts:** For data visualization charts.
 
 **Testing status**
--   Testing agent used after significant changes: YES
+-   Testing agent used after significant changes: YES, one successful run after P1/P2 tasks were completed.
 -   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: Yes, the testing agent created files to verify CRM permissions.
--   Known regressions: None.
+-   Test files created: No new test files were created in this session.
+-   Known regressions: A runtime error related to PDF generation was introduced and subsequently fixed.
 
 **Credentials to test flow:**
 -   **User:** MARIO (Director Comercial)
@@ -189,4 +212,5 @@ Major accomplishments in this session include:
 -   **Password:** TIENDSA
 
 **What agent forgot to execute**
--   The agent initially missed two key requests from the user's documents: implementing the fullscreen modals (ventanas emergentes) and moving the Armarios tab. In both cases, the user had to remind the agent, who then implemented the features correctly. This highlights the importance of thoroughly reviewing all user-provided artifacts at the beginning of a task.</analysis>
+-   The agent has not yet created the data migration script to fix the  field for existing projects.
+-   The agent was unable to resolve the overlapping fields UI bug due to a lack of information and will need to follow up with the user.</analysis>
