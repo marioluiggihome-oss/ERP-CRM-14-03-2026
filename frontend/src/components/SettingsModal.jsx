@@ -3124,6 +3124,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`, { method: 'POST', body: formData });
                             const result = await res.json();
                             if (result.success && result.products) {
+                              // Show detected categories
+                              if (result.detectedCategories && result.detectedCategories.length > 0) {
+                                addLog({ type: 'info', msg: `📁 Categorías: ${result.detectedCategories.join(', ')}` });
+                              }
                               addLog({ type: 'info', msg: `IA detectó ${result.products.length} producto(s)` });
                               const newP = [], dupP = [];
                               for (let i = 0; i < result.products.length; i++) {
