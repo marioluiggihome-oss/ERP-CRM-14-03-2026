@@ -316,26 +316,27 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
             });
             const contact = await contactRes.json();
 
-            // Create opportunity
+            // Create opportunity with businessType: cocina
             await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/opportunities`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                title: `${newProject.budgetNumber} - ${newProject.customerName}`,
+                title: `Presupuesto Cocina - ${newProject.customerName}`,
                 description: `Presupuesto generado automáticamente\nAcabado: ${newProject.finish}\nMódulo: ${newProject.module}`,
                 contactId: contact.id,
                 contactName: contact.name,
                 value: total,
                 probability: 50,
                 stage: 'proposal',
-                tags: ['presupuesto', 'auto'],
+                tags: ['presupuesto', 'auto', 'cocina'],
                 assignedTo: state.currentUser.id,
                 linkedProjectId: newProject.id,
-                linkedProjectNumber: newProject.budgetNumber
+                linkedProjectNumber: newProject.budgetNumber,
+                businessType: 'cocina'
               })
             });
             
-            alert(`✅ Oportunidad creada en CRM para ${newProject.customerName}`);
+            alert(`✅ Oportunidad de COCINA creada en CRM para ${newProject.customerName}`);
           } catch (err) {
             console.error('Error creating CRM opportunity:', err);
             alert('Presupuesto guardado, pero hubo un error al crear la oportunidad CRM.');
