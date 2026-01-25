@@ -4177,13 +4177,15 @@ Configuración actual del armario:
 Genera la configuración óptima en formato JSON."""
 
         msg = UserMessage(text=prompt)
-        response = await chat.send_message_async(msg)
+        response = await chat.send_message(msg)
         
         # Parsear respuesta JSON
         import json
         import re
         
         # Get text content from response - handle different response types
+        logger.info(f"IA raw response: {response}, type: {type(response)}")
+        
         if response is None:
             return {"success": False, "error": "La IA no generó respuesta"}
         
@@ -4197,7 +4199,7 @@ Genera la configuración óptima en formato JSON."""
         if not response_text or response_text == "None":
             return {"success": False, "error": "La IA no generó respuesta válida"}
         
-        logger.info(f"IA response type: {type(response)}, text: {response_text[:200] if response_text else 'None'}")
+        logger.info(f"IA response text: {response_text[:200] if response_text else 'None'}")
         
         # Extraer JSON de la respuesta
         json_match = re.search(r'\{[\s\S]*\}', response_text)
