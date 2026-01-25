@@ -2562,12 +2562,13 @@ async def get_all_prescriptor_notes(
 # ============================================
 
 @api_router.get("/crm/opportunities")
-async def get_opportunities(stage: Optional[str] = None, contactId: Optional[str] = None, assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True):
+async def get_opportunities(stage: Optional[str] = None, contactId: Optional[str] = None, assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True, businessType: Optional[str] = None):
     """Get all opportunities with optional filters
     
     Para usuarios NO admin (comerciales/representantes), solo devuelve oportunidades asignadas a ellos.
     assignedTo: ID del usuario comercial para filtrar sus oportunidades
     isAdmin: Si es False, solo devuelve oportunidades del comercial asignado
+    businessType: cocina, armarios o None para todos
     """
     try:
         query = {}
@@ -2575,6 +2576,8 @@ async def get_opportunities(stage: Optional[str] = None, contactId: Optional[str
             query["stage"] = stage
         if contactId:
             query["contactId"] = contactId
+        if businessType:
+            query["businessType"] = businessType
         
         # IMPORTANTE: Si NO es admin y tiene assignedTo, filtrar solo sus oportunidades
         if not isAdmin and assignedTo:
