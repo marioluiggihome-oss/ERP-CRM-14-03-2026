@@ -4273,6 +4273,73 @@ async def delete_armario_project(project_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/crm/opportunities/from-armario/{project_id}")
+async def create_opportunity_from_armario(project_id: str):
+    """Create a CRM opportunity from an armario project"""
+    try:
+        # Get the armario project
+        project = await db.armario_projects.find_one({"id": project_id}, {"_id": 0})
+        if not project:
+            raise HTTPException(status_code=404, detail="Proyecto de armario no encontrado")
+        
+        # Calculate project total value from despiece if available
+        total_value = project.get("totalPrice", 0)
+        
+        # Use customer name or project name
+        customer_name = project.get("customerName", project.get("name", "Cliente sin nombre"))
+        
+        # Check if contact exists or create one
+        contact = await db.contacts.find_one({"name": customer_name}, {"_id": 0})
+        
+        if not contact:
+            # Create new contact
+            contact = ContactModel(
+                name=customer_name,
+                status="customer"
+            ).model_dump()
+            contact['createdAt'] = contact['createdAt'].isoformat()
+            contact['updatedAt'] = contact['updatedAt'].isoformat()
+            await db.contacts.insert_one(contact)
+        
+        contact_id = contact.get("id")
+        
+        # Create opportunity
+        opp = OpportunityModel(
+            title=f"Presupuesto Armarios - {customer_name}",
+            description=f"Proyecto: {project.get('name', '')} - {project.get('width', 0)}x{project.get('height', 0)}cm",
+            contactId=contact_id,
+            contactName=customer_name,
+            value=total_value,
+            probability=50,
+            stage="proposal",
+            linkedProjectId=project_id,
+            linkedProjectNumber=project.get("name", ""),
+            businessType="armarios"
+        ).model_dump()
+        opp['createdAt'] = opp['createdAt'].isoformat()
+        opp['updatedAt'] = opp['updatedAt'].isoformat()
+        
+        await db.opportunities.insert_one(opp)
+        
+        # Update contact with businessTypes
+        await db.contacts.update_one(
+            {"id": contact_id},
+            {"$addToSet": {"businessTypes": "armarios"}}
+        )
+        
+        opp.pop('_id', None)
+        return {
+            "opportunity": opp,
+            "contact": contact,
+            "message": "Oportunidad de armarios creada"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create opportunity from armario error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================
 # ARMARIOS - IA CONFIGURACIÓN Y RENDER
 # ============================================
