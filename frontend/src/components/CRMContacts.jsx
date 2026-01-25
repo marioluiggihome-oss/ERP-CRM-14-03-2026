@@ -101,6 +101,17 @@ const CRMContacts = ({ currentUser }) => {
     }
   };
 
+  const loadRepresentatives = async () => {
+    try {
+      const users = await usersAPI.getAll();
+      // Filtrar solo usuarios que sean comerciales/representantes
+      const reps = users.filter(u => u.isRepresentative || u.isAdmin);
+      setRepresentatives(reps);
+    } catch (err) {
+      console.error('Error loading representatives:', err);
+    }
+  };
+
   const handleSearch = async () => {
     setIsLoading(true);
     try {
