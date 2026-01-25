@@ -918,10 +918,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <div className={`p-2 rounded-lg ${user.isAdmin ? 'bg-orange-100' : user.isRepresentative ? 'bg-purple-100' : user.isPrescriptor ? 'bg-amber-100' : 'bg-indigo-100'}`}>
+                              <div className={`p-2 rounded-lg ${user.isAdmin ? 'bg-orange-100' : user.isRepresentative ? 'bg-purple-100' : user.isPrescriptor ? 'bg-amber-100' : user.isTienda ? 'bg-green-100' : 'bg-indigo-100'}`}>
                                 {user.isAdmin ? <Shield size={20} className="text-orange-600" /> : 
                                  user.isRepresentative ? <Briefcase size={20} className="text-purple-600" /> :
                                  user.isPrescriptor ? <UserPlus size={20} className="text-amber-600" /> :
+                                 user.isTienda ? <Store size={20} className="text-green-600" /> :
                                  <Store size={20} className="text-indigo-600" />}
                               </div>
                               <div>
@@ -937,7 +938,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               <div className="bg-slate-50 p-2 rounded-lg">
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rol</p>
                                 <p className="text-xs font-bold text-slate-900">
-                                  {user.isAdmin ? '🛡️ Admin Maestro' : user.isRepresentative ? '💼 Comercial' : user.isPrescriptor ? '🤝 Colaborador' : '🏪 Tienda'}
+                                  {user.isAdmin ? '🛡️ Admin Maestro' : user.isRepresentative ? '💼 Comercial/Rep.' : user.isPrescriptor ? '🤝 Colaborador' : user.isTienda ? '🏪 Punto de Venta' : '🏪 Tienda'}
                                 </p>
                               </div>
                               <div className="bg-slate-50 p-2 rounded-lg">
@@ -954,6 +955,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
                             {/* Capabilities badges */}
                             <div className="flex flex-wrap gap-1 mt-3">
+                              {user.canAccessArmarios && <span className="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-[9px] font-black">ARMARIOS</span>}
                               {user.canUseAIAnalysis && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-[9px] font-black">IA LAB</span>}
                               {user.canSeeCost && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">VER COSTO</span>}
                               {user.canViewTechnicalDespiece && <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-[9px] font-black">INFORMES</span>}
