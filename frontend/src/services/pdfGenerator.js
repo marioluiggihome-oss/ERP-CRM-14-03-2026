@@ -309,6 +309,24 @@ export const generateBudgetPDF = ({
   }
 
   // ==========================================
+  // ESPECIFICACIONES (al final, horizontal, compacto)
+  // ==========================================
+  
+  if (specs.length > 0) {
+    // Verificar si hay espacio
+    if (yPos > 250) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(6);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text(specs.join('  •  '), pageWidth / 2, yPos, { align: 'center' });
+    yPos += 6;
+  }
+
+  // ==========================================
   // PIE DE PÁGINA
   // ==========================================
   
@@ -318,14 +336,13 @@ export const generateBudgetPDF = ({
     yPos = 20;
   }
 
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setTextColor(148, 163, 184);
   doc.setFont('helvetica', 'normal');
   
   const footerText = [
-    'Este presupuesto tiene una validez de 30 días desde la fecha de emisión.',
-    'Consulte condiciones de montaje y transporte.',
-    `Generado con ${companyName} - ${new Date().toLocaleString('es-ES')}`
+    'Presupuesto válido 30 días. Consulte condiciones de montaje y transporte.',
+    `${companyName} - ${new Date().toLocaleString('es-ES')}`
   ];
   
   footerText.forEach((text, i) => {
