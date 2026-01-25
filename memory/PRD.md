@@ -7,79 +7,78 @@
 ## RESUMEN DEL SISTEMA
 
 LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y armarios, incluyendo:
-- Gestión de usuarios con roles (Admin, Comercial, Tienda, Colaborador Comercial)
+- Gestión de usuarios con roles (Admin, Comercial/Representante, Tienda/Punto de Venta, Colaborador Comercial)
 - Presupuestador técnico con cálculo automático de precios
 - Módulo de Armarios con diseñador visual, despiece e IA
-- CRM completo con calendario, contactos y oportunidades
+- CRM completo con calendario, contactos y oportunidades (con aislamiento de datos por comercial)
 - Digitalizador de borradores con IA
 - Importador de catálogo IA
 - Sistema de backups automáticos
 
 ---
 
-## ESTADO ACTUAL - 25/01/2026
+## CORRECCIONES IMPLEMENTADAS - 25/01/2026
 
-### ✅ COMPLETADO HOY (Funciones IA Armarios)
+### ✅ P0 - Aislamiento de Datos CRM (Seguridad)
+| Corrección | Estado | Descripción |
+|------------|--------|-------------|
+| Backend filtering | ✅ COMPLETADO | Endpoints `/api/crm/contacts`, `/api/crm/opportunities`, `/api/crm/dashboard` ahora aceptan `assignedTo` e `isAdmin` |
+| ContactModel.assignedTo | ✅ COMPLETADO | Campo añadido para asignar contactos a comerciales |
+| Frontend CRM filtering | ✅ COMPLETADO | Componentes CRM filtran datos según el usuario |
 
-| # | Funcionalidad | Estado | Descripción |
-|---|--------------|--------|-------------|
-| 1 | **IA Configuración** | ✅ PROBADO | Modal para describir necesidades y la IA configura el armario automáticamente |
-| 2 | **IA Render Realista** | ✅ PROBADO | Genera imágenes fotorrealistas del armario usando Gemini Nano Banana |
-| 3 | **Despiece Editable** | ✅ PROBADO | Tabla con botones mover arriba/abajo, duplicar, eliminar accesorios |
-| 4 | **Añadir Accesorio** | ✅ PROBADO | Botón "+ AÑADIR ACCESORIO" para agregar filas personalizadas |
-| 5 | **PDF Despiece** | ✅ PROBADO | Exportar lista de materiales a PDF |
-| 6 | **Guardar/Cargar Proyectos** | ✅ PROBADO | API completa para gestión de proyectos de armarios |
+### ✅ P1 - Nuevo Rol Tienda/Punto de Venta
+| Corrección | Estado | Descripción |
+|------------|--------|-------------|
+| Campo isTienda | ✅ COMPLETADO | Añadido a UserModel, UserCreate, UserUpdate, UserResponse |
+| Sidebar visibility | ✅ COMPLETADO | Usuarios Tienda solo ven "Presupuesto" y "Salir" |
+| No acceso a CRM | ✅ COMPLETADO | Tienda no puede ver CRM, IA Lab, Digitalizador, Master |
 
-### ✅ COMPLETADO ANTERIORMENTE
+### ✅ P2 - Permisos Armarios
+| Corrección | Estado | Descripción |
+|------------|--------|-------------|
+| canAccessArmarios | ✅ YA EXISTÍA | Permiso para acceso al módulo Armarios |
+| Selector en usuario | ✅ COMPLETADO | Checkbox visible en formulario de creación de usuario |
 
-| # | Funcionalidad | Descripción |
-|---|--------------|-------------|
-| 1 | **Importación masiva de productos** | 1,027 productos importados desde tarifa técnica |
-| 2 | **BAJOS GOLA** | 291 productos BAJO GOLA importados |
-| 3 | **ALTOS GOLA** | 465 productos ALTO GOLA importados |
-| 4 | **COLUMNAS GOLA** | 107 productos COLUMNA GOLA importados |
-| 5 | **Colores FINSA 2025** | 150+ colores del catálogo oficial organizados en 14 categorías |
-| 6 | **Trasera 8mm** | Corregido en Armarios y Muebles de cocina |
-| 7 | **Persistencia Logo** | Logo de empresa se guarda correctamente en settings |
+### ✅ P2 - UI Panel Maestro
+| Corrección | Estado | Descripción |
+|------------|--------|-------------|
+| Quitar iconos | ✅ COMPLETADO | Pestañas del Panel Maestro sin iconos (más espacio) |
+| Texto "Asignar a Comercial / Representante" | ✅ COMPLETADO | Cambiado de "Asignar a Comercial" |
 
----
-
-## MÓDULO ARMARIOS - FUNCIONES IA
-
-### Configuración IA (gemini-3-flash-preview)
-- Modal con campo de texto para describir necesidades
-- Ejemplos rápidos predefinidos
-- Genera configuración JSON con módulos, puertas, accesorios
-- Aplica automáticamente al diseñador visual
-
-### Render Realista IA (gemini-3-pro-image-preview - Nano Banana)
-- Selección de estilo de habitación (Moderno, Clásico, Nórdico, Minimalista, Industrial, Rústico)
-- Muestra configuración actual
-- Genera imagen fotorrealista descargable
-- Botón para descargar la imagen
-
-### Despiece Editable
-- Lista numerada de todos los componentes
-- Botones de acción por fila: mover arriba/abajo, duplicar, eliminar
-- Botón "+ AÑADIR ACCESORIO" para filas personalizadas
-- Edición inline de campos
-- Cálculo automático de totales
-- Exportación a PDF
+### ✅ P2 - PDF Mejoras
+| Corrección | Estado | Descripción |
+|------------|--------|-------------|
+| Logo proporcional | ✅ COMPLETADO | Logo mantiene aspect ratio, max 50x25px |
+| Espacio superior | ✅ COMPLETADO | yPos reducido de 20 a 15, layout más compacto |
+| Cabecera compacta | ✅ COMPLETADO | Tamaños de fuente optimizados |
 
 ---
 
-## API ENDPOINTS
+## ROLES DE USUARIO
 
-### Armarios - IA
-- `POST /api/armarios/ia/configure` - Configurar armario con IA
-- `POST /api/armarios/ia/render` - Generar render realista
+| Rol | Acceso | Descripción |
+|-----|--------|-------------|
+| **Admin Maestro** | Todo | Control total del sistema |
+| **Comercial/Representante** | CRM (solo sus datos), Presupuesto, Armarios*, Master | Gestiona sus propios clientes y tiendas |
+| **Tienda/Punto de Venta** | Solo Presupuesto | Acceso limitado solo al presupuestador |
+| **Colaborador Comercial** | Agenda, Aportar contactos | Solo puede aportar contactos al CRM |
 
-### Armarios - Proyectos
-- `POST /api/armarios/projects` - Crear proyecto
-- `GET /api/armarios/projects` - Listar proyectos
-- `GET /api/armarios/projects/{id}` - Obtener proyecto
-- `PUT /api/armarios/projects/{id}` - Actualizar proyecto
-- `DELETE /api/armarios/projects/{id}` - Eliminar proyecto
+*Armarios requiere permiso `canAccessArmarios`
+
+---
+
+## API ENDPOINTS (CRM con filtrado)
+
+### Contactos
+- `GET /api/crm/contacts?assignedTo={userId}&isAdmin={bool}` - Lista contactos filtrados
+- `POST /api/crm/contacts` - Crear contacto (incluye campo assignedTo)
+- `PUT /api/crm/contacts/{id}` - Actualizar contacto
+
+### Oportunidades  
+- `GET /api/crm/opportunities?assignedTo={userId}&isAdmin={bool}` - Lista oportunidades filtradas
+
+### Dashboard
+- `GET /api/crm/dashboard?assignedTo={userId}&isAdmin={bool}` - Estadísticas filtradas
 
 ---
 
@@ -88,20 +87,23 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 ```
 /app
 ├── backend/
-│   ├── server.py (~4300 líneas)
-│   ├── tests/
-│   │   └── test_armarios_ia.py
-│   └── requirements.txt
+│   ├── server.py (~4400 líneas)
+│   │   ├── UserModel (isTienda, canAccessArmarios)
+│   │   ├── ContactModel (assignedTo)
+│   │   └── CRM endpoints con filtrado
+│   └── tests/
+│       └── test_crm_isolation_roles.py
 ├── frontend/
 │   └── src/
+│       ├── App.js (sidebar con permisos isTienda)
 │       ├── components/
-│       │   ├── Armarios.jsx (~2700 líneas)
-│       │   ├── BudgetTable.jsx
-│       │   ├── CRMContacts.jsx
-│       │   └── DespieceModal.jsx
+│       │   ├── CRMContacts.jsx (filtrado por usuario)
+│       │   ├── CRMPipeline.jsx (filtrado por usuario)
+│       │   ├── CRMDashboard.jsx (filtrado por usuario)
+│       │   └── SettingsModal.jsx (tabs sin iconos, isTienda checkbox)
 │       └── services/
-│           ├── api.js
-│           └── pdfGenerator.js
+│           ├── api.js (CRM API con options)
+│           └── pdfGenerator.js (logo proporcional)
 └── memory/
     └── PRD.md
 ```
@@ -110,19 +112,18 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 ## PRÓXIMAS TAREAS
 
-### P1 - Alta Prioridad
-- [ ] Auto-etiquetar CRM cuando se guarde proyecto de Armarios/Cocina (tipo de negocio)
+### P1 - Próximo Sprint
+- [ ] Auto-etiquetar CRM con tipo de negocio al guardar proyecto
 - [ ] Probar IA Lab - Analizador de Planos con imagen real
+- [ ] Exportar secciones a ventana emergente/pantalla completa
 
 ### P2 - Media Prioridad
-- [ ] Reorganizar UI "expediente" para nuevos módulos
-- [ ] Campo `catalogOrder` para ordenar productos como en PDF
+- [ ] Quitar datos innecesarios de PDF exportado (personalizable)
+- [ ] Reorganizar UI campo "expediente" para módulos nuevos
 
-### P3 - Baja Prioridad / Refactorización
-- [ ] Refactorizar `server.py` (>4300 líneas) - Separar en routers
-- [ ] Refactorizar `Armarios.jsx` (>2700 líneas) - Separar componentes
-- [ ] Notificaciones automáticas CRM por email
-- [ ] Recordatorios calendario
+### P3 - Refactorización
+- [ ] Separar server.py en routers (>4400 líneas)
+- [ ] Separar Armarios.jsx en componentes (>2700 líneas)
 
 ---
 
@@ -132,34 +133,28 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 |---------|------------|-----|
 | MARIO | MARIO | Admin |
 | TIENDSA | TIENDSA | Tienda |
+| COMSA | COMERCIAL | Comercial |
 | PRESCRIPTOR1 | PRESCRIPTOR1 | Colaborador Comercial |
-
----
-
-## INTEGRACIONES
-
-- **Google Gemini** - Via emergentintegrations:
-  - `gemini-3-flash-preview` - Configuración IA texto
-  - `gemini-3-pro-image-preview` (Nano Banana) - Render realista
-- **SendGrid** - Envío de backups por email
-- **jsPDF** - Generación de PDF en frontend
-- **MongoDB** - Base de datos principal
 
 ---
 
 ## TESTS
 
-- `/app/backend/tests/test_armarios_ia.py` - Tests para funciones IA
-- `/app/test_reports/iteration_12.json` - Último reporte de testing
+- `/app/backend/tests/test_crm_isolation_roles.py` - Tests aislamiento CRM
+- `/app/backend/tests/test_armarios_ia.py` - Tests funciones IA Armarios
+- `/app/test_reports/iteration_13.json` - Último reporte de testing
 
 ---
 
 ## NOTAS TÉCNICAS
 
-### Modelos Gemini Correctos
-- Texto: `gemini-3-flash-preview` (NO `gemini-3-flash`)
-- Imágenes: `gemini-3-pro-image-preview` (Nano Banana)
+### Filtrado CRM
+Los endpoints CRM filtran por `assignedTo` cuando:
+- `isAdmin` = false
+- `assignedTo` tiene valor
 
-### Emergent LLM Key
-- Usar `EMERGENT_LLM_KEY` del archivo `.env`
-- Clave universal para OpenAI, Anthropic, Gemini
+Los usuarios Admin siempre ven todos los datos.
+
+### Modelos Gemini
+- Texto: `gemini-3-flash-preview`
+- Imágenes: `gemini-3-pro-image-preview` (Nano Banana)
