@@ -586,7 +586,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
             <div className="h-full flex flex-col items-center justify-center opacity-20">
                <FileText size={120} strokeWidth={0.5} className="text-indigo-900 mb-6" />
                <p className="text-sm font-black uppercase tracking-[0.5em] text-indigo-950">Presupuesto vacío</p>
-               <p className="text-[10px] font-bold text-indigo-400 mt-2 italic uppercase">Selecciona muebles de la librería inferior o añade líneas manuales</p>
+               <p className="text-[10px] font-bold text-indigo-400 mt-2 italic uppercase">Selecciona artículos de la librería inferior o añade líneas manuales</p>
             </div>
           ) : (
             <div id="budget-pdf" className="w-[210mm] mx-auto bg-white shadow-2xl p-[10mm] min-h-[297mm] flex flex-col rounded-sm border-t-[8px] border-indigo-950">
