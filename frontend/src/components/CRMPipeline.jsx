@@ -72,7 +72,11 @@ const CRMPipeline = ({ currentUser }) => {
   };
 
   const getOpportunitiesByStage = (stageId) => {
-    return opportunities.filter(opp => opp.stage === stageId);
+    return opportunities.filter(opp => {
+      const matchesStage = opp.stage === stageId;
+      const matchesType = businessTypeFilter === 'all' || opp.businessType === businessTypeFilter;
+      return matchesStage && matchesType;
+    });
   };
 
   const getStageTotals = (stageId) => {
