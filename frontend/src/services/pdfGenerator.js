@@ -90,9 +90,10 @@ export const generateBudgetPDF = ({
   doc.setFont('helvetica', 'bold');
   doc.text(companyName, margin + logoWidth, yPos + 3);
   
-  doc.setFontSize(9);
+  // Subtítulo "Presupuesto" más pequeño
+  doc.setFontSize(7);
   doc.setTextColor(...accentColor);
-  doc.text('PRESUPUESTO DE COCINA', margin + logoWidth, yPos + 9);
+  doc.text('PRESUPUESTO', margin + logoWidth, yPos + 8);
   
   // Número de expediente (derecha) - más compacto
   doc.setFontSize(11);
@@ -132,12 +133,14 @@ export const generateBudgetPDF = ({
   doc.setFontSize(11);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
-  doc.text(customerName || 'Sin especificar', margin + 5, yPos + 14);
+  // Capitalizar nombre del cliente correctamente
+  doc.text(capitalizeName(customerName) || 'Sin especificar', margin + 5, yPos + 14);
   
   if (customerAddress) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(customerAddress, margin + 5, yPos + 20);
+    // Capitalizar dirección también
+    doc.text(capitalizeName(customerAddress), margin + 5, yPos + 20);
   }
 
   yPos += 35;
