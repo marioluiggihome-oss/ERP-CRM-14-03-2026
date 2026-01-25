@@ -289,6 +289,7 @@ class ProjectModel(BaseModel):
     doorColorColumns: str = ""
     sideColor: str = ""
     selectedCarcassMaterialId: Optional[str] = None
+    totalPvp: float = 0.0  # Total del presupuesto
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: str = "draft"  # draft, completed, archived
@@ -305,6 +306,7 @@ class ProjectCreate(BaseModel):
     doorColorColumns: str = ""
     sideColor: str = ""
     selectedCarcassMaterialId: Optional[str] = None
+    totalPvp: float = 0.0  # Total del presupuesto
     status: str = "draft"
 
 class ProjectUpdate(BaseModel):
@@ -319,6 +321,7 @@ class ProjectUpdate(BaseModel):
     doorColorColumns: Optional[str] = None
     sideColor: Optional[str] = None
     selectedCarcassMaterialId: Optional[str] = None
+    totalPvp: Optional[float] = None  # Total del presupuesto
     status: Optional[str] = None
 
 # Settings Model
