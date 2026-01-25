@@ -2129,8 +2129,13 @@ async def get_backup_status():
 # ============================================
 
 @api_router.get("/crm/contacts")
-async def get_contacts(status: Optional[str] = None, search: Optional[str] = None):
-    """Get all contacts with optional filters, including total value from opportunities"""
+async def get_contacts(status: Optional[str] = None, search: Optional[str] = None, assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True):
+    """Get all contacts with optional filters, including total value from opportunities
+    
+    Para usuarios NO admin (comerciales/representantes), solo devuelve contactos asignados a ellos.
+    assignedTo: ID del usuario comercial para filtrar sus contactos asignados
+    isAdmin: Si es False, solo devuelve contactos del comercial asignado
+    """
     try:
         query = {}
         if status:
@@ -2141,6 +2146,10 @@ async def get_contacts(status: Optional[str] = None, search: Optional[str] = Non
                 {"company": {"$regex": search, "$options": "i"}},
                 {"email": {"$regex": search, "$options": "i"}}
             ]
+        
+        # IMPORTANTE: Si NO es admin y tiene assignedTo, filtrar solo sus contactos
+        if not isAdmin and assignedTo:
+            query["assignedTo"] = assignedTo
         
         contacts = await db.contacts.find(query, {"_id": 0}).sort("createdAt", -1).to_list(1000)
         
