@@ -363,17 +363,7 @@ const App = () => {
                 </button>
               )}
               
-              {/* Armarios - Solo Admin o usuarios con permiso canAccessArmarios */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'armarios'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'armarios' ? 'bg-purple-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                  data-testid="armarios-nav-btn"
-                >
-                  <Box size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Armarios</span>
-                </button>
-              )}
+              {/* Armarios ahora está en la barra del presupuesto, no aquí */}
               
               {/* Botón Panel Admin - Solo para Admin */}
               {state.currentUser?.isAdmin && (
