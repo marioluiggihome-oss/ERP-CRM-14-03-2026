@@ -31,6 +31,8 @@ const CRMPipeline = ({ currentUser }) => {
   const [draggedOpp, setDraggedOpp] = useState(null);
   const [showLost, setShowLost] = useState(false);
   const [businessTypeFilter, setBusinessTypeFilter] = useState('all');
+  const [showCocinaSubmenu, setShowCocinaSubmenu] = useState(false);
+  const cocinaMenuRef = useRef(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -45,6 +47,17 @@ const CRMPipeline = ({ currentUser }) => {
     businessType: 'cocina',
     moduleType: 'montada'
   });
+
+  // Close submenu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (cocinaMenuRef.current && !cocinaMenuRef.current.contains(event.target)) {
+        setShowCocinaSubmenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     loadData();
