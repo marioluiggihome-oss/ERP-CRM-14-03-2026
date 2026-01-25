@@ -1,84 +1,91 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 25/01/2026
+## Última Actualización: 25/01/2026 (v2)
 
 ---
 
 ## RESUMEN DEL SISTEMA
 
-LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y armarios, incluyendo:
-- Gestión de usuarios con roles (Admin, Comercial/Representante, Tienda/Punto de Venta, Colaborador Comercial)
+LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y armarios, con:
+- Jerarquía de usuarios: **Director Comercial > Responsable Delegación > Comercial > Tienda/Punto de Venta > Colaborador**
 - Presupuestador técnico con cálculo automático de precios
 - Módulo de Armarios con diseñador visual, despiece e IA
-- CRM completo con calendario, contactos y oportunidades (con aislamiento de datos por comercial)
+- CRM completo con calendario y aislamiento de datos por usuario
 - Digitalizador de borradores con IA
 - Importador de catálogo IA
 - Sistema de backups automáticos
 
 ---
 
-## CORRECCIONES IMPLEMENTADAS - 25/01/2026
+## CORRECCIONES IMPLEMENTADAS - 25/01/2026 (Segunda Tanda)
 
-### ✅ P0 - Aislamiento de Datos CRM (Seguridad)
+### ✅ PDF Mejoras
 | Corrección | Estado | Descripción |
 |------------|--------|-------------|
-| Backend filtering | ✅ COMPLETADO | Endpoints `/api/crm/contacts`, `/api/crm/opportunities`, `/api/crm/dashboard` ahora aceptan `assignedTo` e `isAdmin` |
-| ContactModel.assignedTo | ✅ COMPLETADO | Campo añadido para asignar contactos a comerciales |
-| Frontend CRM filtering | ✅ COMPLETADO | Componentes CRM filtran datos según el usuario |
+| Texto "PRESUPUESTO" más pequeño | ✅ COMPLETADO | Reducido de 9pt a 7pt |
+| Nombres capitalizados | ✅ COMPLETADO | Función `capitalizeName()` para nombres y direcciones |
+| Especificaciones al final | ✅ COMPLETADO | Movidas abajo en formato horizontal compacto |
+| Campo Armazón | ✅ YA EXISTÍA | Se muestra en especificaciones |
 
-### ✅ P1 - Nuevo Rol Tienda/Punto de Venta
+### ✅ Nuevos Roles Jerárquicos
+| Rol | Descripción | Permisos |
+|-----|-------------|----------|
+| **Director Comercial** | Antes "Administrador" | Control total del sistema |
+| **Responsable Delegación** | NUEVO | Reporta al Director. Puede autorizar permisos a comerciales |
+| **Comercial/Representante** | Sin cambios | Gestiona sus clientes y tiendas asignadas |
+| **Tienda/Punto de Venta** | Sin cambios | Solo acceso al presupuestador |
+| **Colaborador Comercial** | Sin cambios | Solo aporta contactos |
+
+### ✅ Vinculación de Tiendas
 | Corrección | Estado | Descripción |
 |------------|--------|-------------|
-| Campo isTienda | ✅ COMPLETADO | Añadido a UserModel, UserCreate, UserUpdate, UserResponse |
-| Sidebar visibility | ✅ COMPLETADO | Usuarios Tienda solo ven "Presupuesto" y "Salir" |
-| No acceso a CRM | ✅ COMPLETADO | Tienda no puede ver CRM, IA Lab, Digitalizador, Master |
+| Vincular Tienda a Comercial | ✅ COMPLETADO | Antes se vinculaba a Cliente, ahora a Comercial/Responsable/Director |
+| Selector actualizado | ✅ COMPLETADO | Muestra rol entre paréntesis: "(Director)", "(Resp. Deleg.)", "(Comercial)" |
 
-### ✅ P2 - Permisos Armarios
+### ✅ Cambios de Texto
 | Corrección | Estado | Descripción |
 |------------|--------|-------------|
-| canAccessArmarios | ✅ YA EXISTÍA | Permiso para acceso al módulo Armarios |
-| Selector en usuario | ✅ COMPLETADO | Checkbox visible en formulario de creación de usuario |
-
-### ✅ P2 - UI Panel Maestro
-| Corrección | Estado | Descripción |
-|------------|--------|-------------|
-| Quitar iconos | ✅ COMPLETADO | Pestañas del Panel Maestro sin iconos (más espacio) |
-| Texto "Asignar a Comercial / Representante" | ✅ COMPLETADO | Cambiado de "Asignar a Comercial" |
-
-### ✅ P2 - PDF Mejoras
-| Corrección | Estado | Descripción |
-|------------|--------|-------------|
-| Logo proporcional | ✅ COMPLETADO | Logo mantiene aspect ratio, max 50x25px |
-| Espacio superior | ✅ COMPLETADO | yPos reducido de 20 a 15, layout más compacto |
-| Cabecera compacta | ✅ COMPLETADO | Tamaños de fuente optimizados |
+| "Selección de artículos" | ✅ COMPLETADO | Cambiado de "Selección de muebles" |
+| "Añade artículos" | ✅ COMPLETADO | Cambiado de "Añade muebles" |
+| "ARTÍCULOS" en librería | ✅ COMPLETADO | Cambiado de "MUEBLES" |
 
 ---
 
-## ROLES DE USUARIO
+## JERARQUÍA DE ROLES
 
-| Rol | Acceso | Descripción |
-|-----|--------|-------------|
-| **Admin Maestro** | Todo | Control total del sistema |
-| **Comercial/Representante** | CRM (solo sus datos), Presupuesto, Armarios*, Master | Gestiona sus propios clientes y tiendas |
-| **Tienda/Punto de Venta** | Solo Presupuesto | Acceso limitado solo al presupuestador |
-| **Colaborador Comercial** | Agenda, Aportar contactos | Solo puede aportar contactos al CRM |
-
-*Armarios requiere permiso `canAccessArmarios`
+```
+Director Comercial (isAdmin)
+    │
+    ├── Responsable Delegación (isResponsableDelegacion)
+    │       │
+    │       ├── Comercial (isRepresentative)
+    │       │       │
+    │       │       └── Tienda/PdV (isTienda) [linkedRepresentativeId]
+    │       │
+    │       └── Tienda/PdV (isTienda) [linkedRepresentativeId]
+    │
+    ├── Comercial (isRepresentative)
+    │       │
+    │       └── Tienda/PdV (isTienda) [linkedRepresentativeId]
+    │
+    └── Colaborador Comercial (isPrescriptor)
+```
 
 ---
 
-## API ENDPOINTS (CRM con filtrado)
+## CAMPOS NUEVOS EN MODELO USUARIO
 
-### Contactos
-- `GET /api/crm/contacts?assignedTo={userId}&isAdmin={bool}` - Lista contactos filtrados
-- `POST /api/crm/contacts` - Crear contacto (incluye campo assignedTo)
-- `PUT /api/crm/contacts/{id}` - Actualizar contacto
-
-### Oportunidades  
-- `GET /api/crm/opportunities?assignedTo={userId}&isAdmin={bool}` - Lista oportunidades filtradas
-
-### Dashboard
-- `GET /api/crm/dashboard?assignedTo={userId}&isAdmin={bool}` - Estadísticas filtradas
+```python
+# Backend: server.py
+class UserModel:
+    isAdmin: bool = False  # Director Comercial
+    isResponsableDelegacion: bool = False  # Responsable de Delegación
+    isRepresentative: bool = False  # Comercial
+    isPrescriptor: bool = False  # Colaborador Comercial
+    isTienda: bool = False  # Tienda/Punto de Venta
+    linkedRepresentativeId: Optional[str] = None  # ID del Comercial/Responsable/Director
+    canAuthorizePermissions: bool = False  # Puede autorizar permisos (Resp. Delegación)
+```
 
 ---
 
@@ -87,23 +94,24 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 ```
 /app
 ├── backend/
-│   ├── server.py (~4400 líneas)
-│   │   ├── UserModel (isTienda, canAccessArmarios)
+│   ├── server.py (~4500 líneas)
+│   │   ├── UserModel (nuevos campos: isResponsableDelegacion, canAuthorizePermissions)
 │   │   ├── ContactModel (assignedTo)
-│   │   └── CRM endpoints con filtrado
+│   │   └── CRM endpoints con filtrado por usuario
 │   └── tests/
-│       └── test_crm_isolation_roles.py
+│       ├── test_crm_isolation_roles.py
+│       ├── test_armarios_ia.py
+│       └── test_new_roles_features.py
 ├── frontend/
 │   └── src/
-│       ├── App.js (sidebar con permisos isTienda)
+│       ├── App.js (sidebar con permisos por rol)
 │       ├── components/
-│       │   ├── CRMContacts.jsx (filtrado por usuario)
-│       │   ├── CRMPipeline.jsx (filtrado por usuario)
-│       │   ├── CRMDashboard.jsx (filtrado por usuario)
-│       │   └── SettingsModal.jsx (tabs sin iconos, isTienda checkbox)
+│       │   ├── BudgetTable.jsx (texto "artículos")
+│       │   ├── SettingsModal.jsx (nuevos roles en formulario)
+│       │   └── CRM*.jsx (filtrado por usuario)
 │       └── services/
-│           ├── api.js (CRM API con options)
-│           └── pdfGenerator.js (logo proporcional)
+│           ├── api.js (CRM API con filtrado)
+│           └── pdfGenerator.js (capitalizeName, layout compacto)
 └── memory/
     └── PRD.md
 ```
@@ -113,16 +121,16 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 ## PRÓXIMAS TAREAS
 
 ### P1 - Próximo Sprint
-- [ ] Auto-etiquetar CRM con tipo de negocio al guardar proyecto
 - [ ] Probar IA Lab - Analizador de Planos con imagen real
+- [ ] Auto-etiquetar CRM al guardar proyecto (tipo de negocio)
 - [ ] Exportar secciones a ventana emergente/pantalla completa
 
 ### P2 - Media Prioridad
-- [ ] Quitar datos innecesarios de PDF exportado (personalizable)
-- [ ] Reorganizar UI campo "expediente" para módulos nuevos
+- [ ] Quitar datos innecesarios del PDF (personalizable)
+- [ ] Reorganizar UI campo "expediente"
 
 ### P3 - Refactorización
-- [ ] Separar server.py en routers (>4400 líneas)
+- [ ] Separar server.py en routers (>4500 líneas)
 - [ ] Separar Armarios.jsx en componentes (>2700 líneas)
 
 ---
@@ -131,30 +139,30 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 | Usuario | Contraseña | Rol |
 |---------|------------|-----|
-| MARIO | MARIO | Admin |
-| TIENDSA | TIENDSA | Tienda |
+| MARIO | MARIO | Director Comercial |
+| TIENDSA | TIENDSA | Tienda/Punto de Venta |
 | COMSA | COMERCIAL | Comercial |
 | PRESCRIPTOR1 | PRESCRIPTOR1 | Colaborador Comercial |
 
 ---
 
-## TESTS
+## TESTS CREADOS
 
+- `/app/backend/tests/test_new_roles_features.py` - Tests nuevos roles
 - `/app/backend/tests/test_crm_isolation_roles.py` - Tests aislamiento CRM
 - `/app/backend/tests/test_armarios_ia.py` - Tests funciones IA Armarios
-- `/app/test_reports/iteration_13.json` - Último reporte de testing
+- `/app/test_reports/iteration_14.json` - Último reporte: 100% backend, 100% frontend
 
 ---
 
 ## NOTAS TÉCNICAS
 
-### Filtrado CRM
-Los endpoints CRM filtran por `assignedTo` cuando:
-- `isAdmin` = false
-- `assignedTo` tiene valor
+### PDF Generator
+- `capitalizeName()` - Capitaliza nombres correctamente (Primera Letra Mayúscula)
+- Especificaciones en formato horizontal al final: `Acabado • Bajo • Alto • Columnas • Costados • Armazón`
+- "PRESUPUESTO" reducido a 7pt
 
-Los usuarios Admin siempre ven todos los datos.
-
-### Modelos Gemini
-- Texto: `gemini-3-flash-preview`
-- Imágenes: `gemini-3-pro-image-preview` (Nano Banana)
+### Permisos Responsable Delegación
+- `canAuthorizePermissions: true` por defecto cuando se crea
+- Puede ver y editar Comerciales y Tiendas de su delegación
+- No puede crear otros Responsables ni Director Comercial
