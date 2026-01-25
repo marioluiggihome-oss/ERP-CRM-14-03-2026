@@ -489,6 +489,38 @@ const CRMPipeline = ({ currentUser }) => {
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Negocio</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, businessType: 'cocina'})}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${
+                      formData.businessType === 'cocina' 
+                        ? 'bg-amber-500 text-white border-amber-500' 
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                    data-testid="business-type-cocina"
+                  >
+                    <UtensilsCrossed size={16} />
+                    Cocina
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, businessType: 'armarios'})}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 font-bold text-sm transition-all ${
+                      formData.businessType === 'armarios' 
+                        ? 'bg-emerald-500 text-white border-emerald-500' 
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                    data-testid="business-type-armarios"
+                  >
+                    <DoorOpen size={16} />
+                    Armarios
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
                 <textarea
                   value={formData.description}
