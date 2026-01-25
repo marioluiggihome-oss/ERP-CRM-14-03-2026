@@ -401,6 +401,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       linkedClientId: '',
       isActive: true,
       isAdmin: false,
+      isResponsableDelegacion: false,
       isRepresentative: false,
       isPrescriptor: false,
       isTienda: false,
@@ -416,18 +417,21 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessCRM: false,
       canUseDigitalizador: false,
       canAccessArmarios: false,
+      canAuthorizePermissions: false,
       useCustomBranding: false,
       canChangeLogo: false
     });
   };
 
   const handleEditUser = (user) => {
-    // Comerciales solo pueden editar tiendas asignadas a ellos
-    if (!state.currentUser?.isAdmin && state.currentUser?.isRepresentative) {
-      if (user.linkedRepresentativeId !== state.currentUser.id && user.id !== state.currentUser.id) {
-        alert('No tienes permisos para editar este usuario');
-        return;
-      }
+    // Director Comercial, Responsable Delegación o comercial pueden editar tiendas
+    const canEdit = state.currentUser?.isAdmin || 
+                    state.currentUser?.isResponsableDelegacion ||
+                    (state.currentUser?.isRepresentative && (user.linkedRepresentativeId === state.currentUser.id || user.id === state.currentUser.id));
+    
+    if (!canEdit) {
+      alert('No tienes permisos para editar este usuario');
+      return;
     }
     
     // Load clients if not already loaded
