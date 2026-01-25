@@ -4161,7 +4161,7 @@ Considera:
 - Pantalonero para pantalones"""
         )
         
-        chat.with_model("gemini", "gemini-3-flash")
+        chat.with_model("gemini", "gemini-3-flash-preview")
         
         # Construir prompt
         prompt = f"""El usuario quiere configurar un armario con estas instrucciones:
@@ -4212,7 +4212,7 @@ async def ia_render_armario(request: IARenderRequest):
             system_message="You are a professional interior designer creating photorealistic renders of wardrobes."
         )
         
-        chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
+        chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])  # Nano Banana model
         
         # Construir descripción del armario
         door_type_desc = {
