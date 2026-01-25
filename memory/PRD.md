@@ -1,6 +1,6 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 25/01/2026 (v4)
+## Última Actualización: 25/01/2026 (v4.1)
 
 ---
 
@@ -12,7 +12,7 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 - **Gráficos de tendencias** con recharts (ventas mensuales, oportunidades, distribución, embudo)
 - Presupuestador técnico con cálculo automático de precios
 - Módulo de Armarios con diseñador visual, despiece e IA
-- CRM completo con calendario, filtros por tipo de negocio y aislamiento de datos
+- CRM completo con calendario, **filtros por tipo de negocio (Cocina Montada/Despiece/Armarios)** y aislamiento de datos
 - Digitalizador de borradores con IA
 - Importador de catálogo IA
 - Sistema de backups automáticos
@@ -25,12 +25,12 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 | Componente | Estado | Descripción |
 |------------|--------|-------------|
-| **Backend** | ✅ | Campo `businessType` en OpportunityModel y ContactModel |
-| **API Filtrado** | ✅ | `GET /api/crm/opportunities?businessType=cocina\|armarios` |
+| **Backend** | ✅ | Campo `businessType` y `moduleType` en OpportunityModel |
+| **API Filtrado** | ✅ | `GET /api/crm/opportunities?businessType=cocina&moduleType=montada` |
 | **Endpoint Armarios** | ✅ | `POST /api/crm/opportunities/from-armario/{project_id}` |
-| **Frontend Filtros** | ✅ | Botones TODOS/COCINA/ARMARIOS en CRM Pipeline |
-| **Badges** | ✅ | Etiquetas de tipo en tarjetas de oportunidades (amber/emerald) |
-| **Auto-etiquetado** | ✅ | Al guardar proyecto cocina/armarios, se etiqueta oportunidad |
+| **Frontend Filtros** | ✅ | **4 botones: TODOS / COCINA MONTADA / COCINA DESPIECE / ARMARIOS** |
+| **Badges** | ✅ | Etiquetas de tipo en tarjetas (amber=montada, orange=despiece, emerald=armarios) |
+| **Auto-etiquetado** | ✅ | Al guardar proyecto cocina/armarios, se etiqueta oportunidad correctamente |
 
 ### ✅ P2 - Panel de Métricas con Gráficos
 
