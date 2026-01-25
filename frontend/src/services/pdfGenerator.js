@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 /**
- * Capitaliza correctamente un nombre (primera letra mayúscula de cada palabra)
+ * Capitaliza correctamente un nombre
  */
 const capitalizeName = (name) => {
   if (!name) return '';
@@ -26,7 +26,7 @@ function hexToRgb(hex) {
 }
 
 /**
- * Genera un PDF del presupuesto actual - Formato A4 optimizado
+ * Genera un PDF del presupuesto - Formato A4 con totales al final de página
  */
 export const generateBudgetPDF = ({
   budgetNumber,
@@ -50,19 +50,17 @@ export const generateBudgetPDF = ({
   calculateLineDetails = null,
   ivaRate = 21
 }) => {
-  // Crear documento A4
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4'
   });
   
-  const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
-  const pageHeight = doc.internal.pageSize.getHeight(); // 297mm
+  const pageWidth = 210;
+  const pageHeight = 297;
   const margin = 12;
   const contentWidth = pageWidth - margin * 2;
   
-  // Colores
   const primaryColor = [30, 41, 59];
   const accentColor = hexToRgb(brandColor);
   const lightGray = [241, 245, 249];
@@ -113,7 +111,7 @@ export const generateBudgetPDF = ({
     return [
       item.quantity || 1,
       code,
-      name.length > 45 ? name.substring(0, 45) + '...' : name,
+      name.length > 50 ? name.substring(0, 50) + '...' : name,
       width,
       height,
       depth,
@@ -122,7 +120,7 @@ export const generateBudgetPDF = ({
     ];
   });
 
-  // Guardar especificaciones
+  // Especificaciones
   const specs = [];
   if (globalFinish) specs.push(`Acabado: ${globalFinish}`);
   if (doorColorLow) specs.push(`Bajo: ${doorColorLow}`);
@@ -131,64 +129,74 @@ export const generateBudgetPDF = ({
   if (sideColor) specs.push(`Costados: ${sideColor}`);
   if (carcassMaterialName) specs.push(`Armazón: ${carcassMaterialName}`);
 
+  // Calcular paginación
+  const headerHeight = 50;
+  const totalsHeight = 35;
+  const footerHeight = 15;
+  const rowHeight = 6;
+  const availableForRows = pageHeight - headerHeight - totalsHeight - footerHeight - 20;
+  const maxRowsPerPage = Math.floor(availableForRows / rowHeight);
+  
+  const totalPages = Math.max(1, Math.ceil(tableData.length / maxRowsPerPage));
+
   // ==========================================
-  // FUNCIÓN PARA DIBUJAR ENCABEZADO
+  // DIBUJAR ENCABEZADO
   // ==========================================
-  const drawHeader = (pageNum, totalPages) => {
-    let yPos = 10;
+  const drawHeader = (pageNum) => {
+    let yPos = margin;
     
-    // Logo
-    let logoWidth = 0;
-    const maxLogoHeight = 18;
-    const maxLogoWidth = 40;
-    
+    // Logo proporcionado (máximo 45mm ancho, mantener proporción)
+    let logoEndX = margin;
     if (logo && logo.startsWith('data:image')) {
       try {
-        const aspectRatio = 2;
+        const maxLogoWidth = 45;
+        const maxLogoHeight = 18;
+        // Asumimos proporción 2.5:1 para el logo de Luiggi
         let imgWidth = maxLogoWidth;
-        let imgHeight = imgWidth / aspectRatio;
+        let imgHeight = imgWidth / 2.5;
         if (imgHeight > maxLogoHeight) {
           imgHeight = maxLogoHeight;
-          imgWidth = imgHeight * aspectRatio;
+          imgWidth = imgHeight * 2.5;
         }
         doc.addImage(logo, 'AUTO', margin, yPos, imgWidth, imgHeight);
-        logoWidth = imgWidth + 5;
+        logoEndX = margin + imgWidth + 5;
       } catch (e) {
         console.error('Error adding logo:', e);
       }
     }
     
-    // Título empresa
-    doc.setFontSize(16);
+    // Nombre empresa y PRESUPUESTO TÉCNICO
+    doc.setFontSize(14);
     doc.setTextColor(...primaryColor);
     doc.setFont('helvetica', 'bold');
-    doc.text(companyName, margin + logoWidth, yPos + 6);
+    doc.text(companyName, logoEndX, yPos + 6);
     
-    // Subtítulo
-    doc.setFontSize(7);
+    // PRESUPUESTO TÉCNICO más grande
+    doc.setFontSize(9);
     doc.setTextColor(...accentColor);
-    doc.text('PRESUPUESTO TÉCNICO', margin + logoWidth, yPos + 11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRESUPUESTO TÉCNICO', logoEndX, yPos + 12);
     
     // Número de expediente (derecha)
     doc.setFontSize(10);
     doc.setTextColor(...primaryColor);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Nº ${budgetNumber || 'SIN NÚMERO'}`, pageWidth - margin, yPos + 3, { align: 'right' });
+    doc.text(`Nº ${budgetNumber || 'SIN NÚMERO'}`, pageWidth - margin, yPos + 4, { align: 'right' });
     
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...textGray);
-    doc.text(`${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin, yPos + 8, { align: 'right' });
+    doc.text(new Date().toLocaleDateString('es-ES'), pageWidth - margin, yPos + 10, { align: 'right' });
     
     if (internalReference) {
-      doc.text(`Ref: ${internalReference}`, pageWidth - margin, yPos + 12, { align: 'right' });
+      doc.text(`Ref: ${internalReference}`, pageWidth - margin, yPos + 15, { align: 'right' });
     }
     
     // Página
-    doc.setFontSize(6);
-    doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth - margin, yPos + 16, { align: 'right' });
+    doc.setFontSize(7);
+    doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth - margin, yPos + 20, { align: 'right' });
     
-    yPos += 22;
+    yPos += 24;
     
     // Línea separadora
     doc.setDrawColor(...accentColor);
@@ -197,253 +205,188 @@ export const generateBudgetPDF = ({
     
     yPos += 6;
     
-    // Datos del cliente (solo en primera página o más compacto en siguientes)
-    if (pageNum === 1) {
-      doc.setFillColor(...lightGray);
-      doc.roundedRect(margin, yPos, contentWidth, 18, 2, 2, 'F');
-      
+    // Datos del cliente
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(margin, yPos, contentWidth, 14, 2, 2, 'F');
+    
+    doc.setFontSize(7);
+    doc.setTextColor(...textGray);
+    doc.text('CLIENTE', margin + 4, yPos + 5);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text(capitalizeName(customerName) || 'Sin especificar', margin + 4, yPos + 10);
+    
+    if (customerAddress) {
       doc.setFontSize(7);
-      doc.setTextColor(...textGray);
-      doc.text('CLIENTE', margin + 4, yPos + 5);
-      
-      doc.setFontSize(10);
-      doc.setTextColor(...primaryColor);
-      doc.setFont('helvetica', 'bold');
-      doc.text(capitalizeName(customerName) || 'Sin especificar', margin + 4, yPos + 11);
-      
-      if (customerAddress) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.text(capitalizeName(customerAddress), margin + 4, yPos + 15);
-      }
-      
-      yPos += 22;
-    } else {
-      // En páginas siguientes, mostrar cliente en una línea
-      doc.setFontSize(7);
-      doc.setTextColor(...textGray);
-      doc.text(`Cliente: ${capitalizeName(customerName) || 'Sin especificar'}`, margin, yPos + 3);
-      yPos += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.text(capitalizeName(customerAddress), margin + 70, yPos + 10);
     }
     
-    return yPos;
+    return yPos + 18;
   };
 
   // ==========================================
-  // FUNCIÓN PARA DIBUJAR TOTALES (HORIZONTAL)
+  // DIBUJAR TOTALES (siempre al final de la página)
   // ==========================================
-  const drawTotals = (yPos) => {
-    const totalsHeight = 18;
-    const boxY = yPos;
+  const drawTotals = () => {
+    const totalsY = pageHeight - totalsHeight - footerHeight;
     
-    // Fondo completo para totales
+    // Fondo para totales
     doc.setFillColor(...primaryColor);
-    doc.roundedRect(margin, boxY, contentWidth, totalsHeight, 2, 2, 'F');
+    doc.roundedRect(margin, totalsY, contentWidth, 20, 2, 2, 'F');
     
-    // Dividir en 4 secciones horizontales
     const sectionWidth = contentWidth / 4;
     
     // BRUTO LÍNEAS
     doc.setFontSize(6);
     doc.setTextColor(148, 163, 184);
-    doc.text('BRUTO LÍNEAS', margin + 4, boxY + 6);
-    doc.setFontSize(9);
+    doc.text('BRUTO LÍNEAS', margin + 4, totalsY + 6);
+    doc.setFontSize(10);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${baseImponible.toFixed(2)}€`, margin + 4, boxY + 13);
+    doc.text(`${baseImponible.toFixed(2)}€`, margin + 4, totalsY + 14);
     
-    // BASE IMPONIBLE NETO
+    // BASE IMPONIBLE
     doc.setFontSize(6);
     doc.setTextColor(148, 163, 184);
     doc.setFont('helvetica', 'normal');
-    doc.text('BASE IMPONIBLE', margin + sectionWidth + 4, boxY + 6);
-    doc.setFontSize(9);
+    doc.text('BASE IMPONIBLE', margin + sectionWidth + 4, totalsY + 6);
+    doc.setFontSize(10);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${baseImponible.toFixed(2)}€`, margin + sectionWidth + 4, boxY + 13);
+    doc.text(`${baseImponible.toFixed(2)}€`, margin + sectionWidth + 4, totalsY + 14);
     
     // IVA
     doc.setFontSize(6);
     doc.setTextColor(148, 163, 184);
     doc.setFont('helvetica', 'normal');
-    doc.text(`IVA ${ivaRate}%`, margin + sectionWidth * 2 + 4, boxY + 6);
-    doc.setFontSize(9);
+    doc.text(`IVA ${ivaRate}%`, margin + sectionWidth * 2 + 4, totalsY + 6);
+    doc.setFontSize(10);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${ivaAmount.toFixed(2)}€`, margin + sectionWidth * 2 + 4, boxY + 13);
+    doc.text(`${ivaAmount.toFixed(2)}€`, margin + sectionWidth * 2 + 4, totalsY + 14);
     
-    // TOTAL PRESUPUESTO (destacado)
+    // TOTAL (destacado)
     doc.setFillColor(...accentColor);
-    doc.roundedRect(margin + sectionWidth * 3, boxY, sectionWidth, totalsHeight, 2, 2, 'F');
+    doc.roundedRect(margin + sectionWidth * 3, totalsY, sectionWidth, 20, 2, 2, 'F');
     
     doc.setFontSize(6);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'normal');
-    doc.text('TOTAL PRESUPUESTO', margin + sectionWidth * 3 + 4, boxY + 6);
+    doc.text('TOTAL PRESUPUESTO', margin + sectionWidth * 3 + 4, totalsY + 6);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${totalConIva.toFixed(2)}€`, margin + sectionWidth * 3 + sectionWidth - 4, boxY + 13, { align: 'right' });
-    
-    return boxY + totalsHeight + 4;
+    doc.text(`${totalConIva.toFixed(2)}€`, margin + sectionWidth * 4 - 4, totalsY + 14, { align: 'right' });
   };
 
   // ==========================================
-  // FUNCIÓN PARA DIBUJAR PIE DE PÁGINA
+  // DIBUJAR FOOTER
   // ==========================================
-  const drawFooter = (yPos) => {
+  const drawFooter = () => {
+    const footerY = pageHeight - footerHeight + 2;
+    
     // Especificaciones
     if (specs.length > 0) {
       doc.setFontSize(6);
       doc.setTextColor(...textGray);
       doc.setFont('helvetica', 'normal');
-      
-      // Dividir specs en líneas si son muchas
       const specsText = specs.join('  •  ');
-      if (specsText.length > 100) {
-        const mid = Math.ceil(specs.length / 2);
-        doc.text(specs.slice(0, mid).join('  •  '), pageWidth / 2, yPos, { align: 'center' });
-        doc.text(specs.slice(mid).join('  •  '), pageWidth / 2, yPos + 4, { align: 'center' });
-        yPos += 8;
-      } else {
-        doc.text(specsText, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 5;
-      }
+      doc.text(specsText, pageWidth / 2, footerY, { align: 'center', maxWidth: contentWidth });
     }
     
     // Texto legal
     doc.setFontSize(5);
     doc.setTextColor(148, 163, 184);
-    doc.text('Presupuesto válido 30 días. Consulte condiciones de montaje y transporte.', pageWidth / 2, yPos, { align: 'center' });
-    doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, yPos + 3, { align: 'center' });
+    doc.text('Presupuesto válido 30 días. Consulte condiciones de montaje y transporte.', pageWidth / 2, footerY + 5, { align: 'center' });
+    doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, footerY + 9, { align: 'center' });
   };
-
-  // ==========================================
-  // CALCULAR PAGINACIÓN
-  // ==========================================
-  
-  // Altura disponible para contenido en primera página
-  const headerHeightFirstPage = 60; // Encabezado completo con cliente
-  const headerHeightOtherPages = 38; // Encabezado reducido
-  const totalsHeight = 22;
-  const footerHeight = 15;
-  const rowHeight = 6; // Altura aproximada por fila de tabla
-  
-  // Espacio disponible para filas
-  const availableFirstPage = pageHeight - headerHeightFirstPage - totalsHeight - footerHeight - 10;
-  const availableOtherPages = pageHeight - headerHeightOtherPages - totalsHeight - footerHeight - 10;
-  
-  const maxRowsFirstPage = Math.floor(availableFirstPage / rowHeight);
-  const maxRowsOtherPages = Math.floor(availableOtherPages / rowHeight);
-  
-  // Calcular número de páginas necesarias
-  let totalPages = 1;
-  let remainingRows = tableData.length;
-  
-  if (remainingRows > maxRowsFirstPage) {
-    remainingRows -= maxRowsFirstPage;
-    totalPages += Math.ceil(remainingRows / maxRowsOtherPages);
-  }
 
   // ==========================================
   // GENERAR PÁGINAS
   // ==========================================
-  
   let currentPage = 1;
   let rowIndex = 0;
   
-  while (rowIndex < tableData.length || currentPage === 1) {
+  while (currentPage <= totalPages) {
     if (currentPage > 1) {
       doc.addPage();
     }
     
     // Dibujar encabezado
-    let yPos = drawHeader(currentPage, totalPages);
+    let yPos = drawHeader(currentPage);
+    
+    // Título de sección
+    doc.setFontSize(8);
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETALLE DEL PRESUPUESTO', margin, yPos);
+    yPos += 4;
     
     // Calcular filas para esta página
-    const maxRows = currentPage === 1 ? maxRowsFirstPage : maxRowsOtherPages;
-    const pageRows = tableData.slice(rowIndex, rowIndex + maxRows);
+    const rowsThisPage = tableData.slice(rowIndex, rowIndex + maxRowsPerPage);
     
-    if (pageRows.length > 0) {
-      // Título de sección
-      doc.setFontSize(8);
-      doc.setTextColor(...primaryColor);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DETALLE DEL PRESUPUESTO', margin, yPos);
-      yPos += 4;
-      
-      // Tabla de artículos
+    if (rowsThisPage.length > 0) {
       autoTable(doc, {
         startY: yPos,
         head: [['UD', 'REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'AP', 'IMPORTE']],
-        body: pageRows,
+        body: rowsThisPage,
         theme: 'striped',
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
           fontStyle: 'bold',
-          fontSize: 6,
-          cellPadding: 1.5
+          fontSize: 7,
+          cellPadding: 2
         },
         bodyStyles: {
-          fontSize: 6,
-          cellPadding: 1.2
+          fontSize: 7,
+          cellPadding: 1.5
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252]
         },
         columnStyles: {
-          0: { cellWidth: 8, halign: 'center' },
-          1: { cellWidth: 22 },
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 25 },
           2: { cellWidth: 'auto' },
-          3: { cellWidth: 10, halign: 'center' },
-          4: { cellWidth: 10, halign: 'center' },
-          5: { cellWidth: 10, halign: 'center' },
-          6: { cellWidth: 8, halign: 'center' },
-          7: { cellWidth: 20, halign: 'right' }
+          3: { cellWidth: 12, halign: 'center' },
+          4: { cellWidth: 12, halign: 'center' },
+          5: { cellWidth: 12, halign: 'center' },
+          6: { cellWidth: 10, halign: 'center' },
+          7: { cellWidth: 22, halign: 'right' }
         },
         margin: { left: margin, right: margin },
         tableLineColor: [226, 232, 240],
         tableLineWidth: 0.1
       });
-      
-      yPos = doc.lastAutoTable.finalY + 5;
     }
     
-    rowIndex += maxRows;
+    rowIndex += maxRowsPerPage;
     
-    // En la última página (o única página), dibujar totales y footer
-    if (rowIndex >= tableData.length) {
-      // Si no hay espacio suficiente para totales, crear nueva página
-      if (yPos > pageHeight - totalsHeight - footerHeight - 5) {
-        doc.addPage();
-        currentPage++;
-        yPos = drawHeader(currentPage, totalPages + 1);
-      }
-      
-      yPos = drawTotals(yPos);
-      drawFooter(yPos + 2);
-      break;
+    // Dibujar totales y footer solo en la última página
+    if (currentPage === totalPages) {
+      drawTotals();
+      drawFooter();
     }
     
     currentPage++;
   }
 
-  // Si no hay items, mostrar mensaje y totales
+  // Si no hay items
   if (tableData.length === 0) {
-    let yPos = drawHeader(1, 1);
+    let yPos = drawHeader(1);
     
     doc.setFontSize(10);
     doc.setTextColor(...textGray);
-    doc.text('No hay artículos en este presupuesto', pageWidth / 2, yPos + 20, { align: 'center' });
+    doc.text('No hay artículos en este presupuesto', pageWidth / 2, yPos + 30, { align: 'center' });
     
-    yPos = drawTotals(yPos + 40);
-    drawFooter(yPos + 2);
+    drawTotals();
+    drawFooter();
   }
 
-  // ==========================================
-  // DESCARGAR
-  // ==========================================
-  
+  // Guardar
   const fileName = `Presupuesto_${budgetNumber || 'SIN_NUMERO'}_${customerName?.replace(/\s+/g, '_') || 'Cliente'}.pdf`;
   doc.save(fileName);
   
@@ -451,7 +394,7 @@ export const generateBudgetPDF = ({
 };
 
 /**
- * Genera un PDF del presupuesto de armarios (completo)
+ * Genera un PDF del presupuesto de armarios
  */
 export const generateArmarioPresupuestoPDF = ({
   projectName = '',
@@ -475,8 +418,8 @@ export const generateArmarioPresupuestoPDF = ({
     format: 'a4'
   });
   
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  const pageWidth = 210;
+  const pageHeight = 297;
   const margin = 12;
   const contentWidth = pageWidth - margin * 2;
   
@@ -485,42 +428,40 @@ export const generateArmarioPresupuestoPDF = ({
   const textGray = [100, 116, 139];
   const lightGray = [241, 245, 249];
   
-  let yPos = 15;
+  let yPos = margin;
   
   // Logo
-  let logoWidth = 0;
+  let logoEndX = margin;
   if (logo && logo.startsWith('data:image')) {
     try {
-      doc.addImage(logo, 'AUTO', margin, yPos, 35, 15);
-      logoWidth = 40;
+      doc.addImage(logo, 'AUTO', margin, yPos, 40, 16);
+      logoEndX = margin + 45;
     } catch (e) {
       console.error('Error adding logo:', e);
     }
   }
   
   // Título
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
-  doc.text(companyName, margin + logoWidth, yPos + 6);
+  doc.text(companyName, logoEndX, yPos + 6);
   
-  doc.setFontSize(7);
+  doc.setFontSize(9);
   doc.setTextColor(...accentColor);
-  doc.text('PRESUPUESTO ARMARIO', margin + logoWidth, yPos + 11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('PRESUPUESTO ARMARIO', logoEndX, yPos + 12);
   
   // Info proyecto (derecha)
   doc.setFontSize(9);
   doc.setTextColor(...primaryColor);
-  doc.text(projectName || 'Sin nombre', pageWidth - margin, yPos + 3, { align: 'right' });
+  doc.text(projectName || 'Sin nombre', pageWidth - margin, yPos + 4, { align: 'right' });
   
   doc.setFontSize(7);
   doc.setTextColor(...textGray);
-  doc.text(new Date().toLocaleDateString('es-ES'), pageWidth - margin, yPos + 8, { align: 'right' });
-  if (projectRef) {
-    doc.text(`Ref: ${projectRef}`, pageWidth - margin, yPos + 12, { align: 'right' });
-  }
+  doc.text(new Date().toLocaleDateString('es-ES'), pageWidth - margin, yPos + 10, { align: 'right' });
   
-  yPos += 20;
+  yPos += 22;
   
   // Línea separadora
   doc.setDrawColor(...accentColor);
@@ -529,142 +470,93 @@ export const generateArmarioPresupuestoPDF = ({
   
   yPos += 8;
   
-  // Datos cliente
+  // Datos cliente y dimensiones
   doc.setFillColor(...lightGray);
-  doc.roundedRect(margin, yPos, contentWidth, 16, 2, 2, 'F');
+  doc.roundedRect(margin, yPos, contentWidth, 14, 2, 2, 'F');
   
   doc.setFontSize(7);
   doc.setTextColor(...textGray);
   doc.text('CLIENTE', margin + 4, yPos + 5);
+  doc.text('DIMENSIONES', margin + contentWidth / 2, yPos + 5);
   
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
-  doc.text(capitalizeName(customerName) || 'Sin especificar', margin + 4, yPos + 12);
+  doc.text(capitalizeName(customerName) || 'Sin especificar', margin + 4, yPos + 10);
+  doc.text(`${dimensions.width} x ${dimensions.height} x ${dimensions.depth} cm`, margin + contentWidth / 2, yPos + 10);
   
-  yPos += 22;
+  yPos += 20;
   
-  // Configuración del armario
+  // Configuración
   doc.setFontSize(8);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
-  doc.text('CONFIGURACIÓN DEL ARMARIO', margin, yPos);
+  doc.text('CONFIGURACIÓN', margin, yPos);
   yPos += 4;
   
   const configData = [
-    ['Dimensiones', `${dimensions.width} x ${dimensions.height} x ${dimensions.depth} cm`],
-    ['Nº Módulos', `${modules} módulos`],
+    ['Módulos', `${modules} módulos`],
     ['Tipo Puertas', doorType === 'sliding' ? 'Correderas' : 'Batientes'],
-    ['Color Exterior', colors.exteriorName || colors.exterior || '-'],
-    ['Color Interior', colors.interiorName || colors.interior || '-'],
-    ['Estantes', specifications.shelves || '0'],
-    ['Cajones', specifications.drawers || '0'],
-    ['Barras', specifications.hangingRods || '0']
+    ['Color Exterior', colors.exteriorName || '-'],
+    ['Color Interior', colors.interiorName || '-']
   ];
   
   autoTable(doc, {
     startY: yPos,
-    head: [['CARACTERÍSTICA', 'VALOR']],
     body: configData,
-    theme: 'striped',
-    headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 6
-    },
-    bodyStyles: {
-      fontSize: 7
-    },
+    theme: 'plain',
+    bodyStyles: { fontSize: 7 },
     columnStyles: {
-      0: { cellWidth: 50, fontStyle: 'bold' },
+      0: { cellWidth: 40, fontStyle: 'bold' },
       1: { cellWidth: 'auto' }
     },
     margin: { left: margin, right: margin }
   });
   
-  yPos = doc.lastAutoTable.finalY + 8;
-  
-  // Desglose de precios si está disponible
-  if (pricing && (pricing.boards > 0 || pricing.accessories > 0)) {
-    doc.setFontSize(8);
-    doc.setTextColor(...primaryColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DESGLOSE DE PRECIO', margin, yPos);
-    yPos += 4;
-    
-    const priceData = [];
-    if (pricing.boards > 0) priceData.push(['Tableros', `${pricing.boards.toFixed(2)}€`]);
-    if (pricing.accessories > 0) priceData.push(['Accesorios', `${pricing.accessories.toFixed(2)}€`]);
-    if (pricing.labor > 0) priceData.push(['Mano de obra', `${pricing.labor.toFixed(2)}€`]);
-    if (pricing.doors > 0) priceData.push(['Puertas', `${pricing.doors.toFixed(2)}€`]);
-    
-    autoTable(doc, {
-      startY: yPos,
-      body: priceData,
-      theme: 'plain',
-      bodyStyles: {
-        fontSize: 7
-      },
-      columnStyles: {
-        0: { cellWidth: 100 },
-        1: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }
-      },
-      margin: { left: margin, right: margin }
-    });
-    
-    yPos = doc.lastAutoTable.finalY + 8;
-  }
-  
-  // Totales horizontales
+  // Totales al final de la página
+  const totalsY = pageHeight - 50;
   const subtotal = pricing.subtotal || 0;
   const ivaAmount = subtotal * (ivaRate / 100);
   const total = pricing.total || subtotal + ivaAmount;
   
   doc.setFillColor(...primaryColor);
-  doc.roundedRect(margin, yPos, contentWidth, 18, 2, 2, 'F');
+  doc.roundedRect(margin, totalsY, contentWidth, 18, 2, 2, 'F');
   
   const sectionWidth = contentWidth / 3;
   
-  // Base imponible
   doc.setFontSize(6);
   doc.setTextColor(148, 163, 184);
-  doc.text('BASE IMPONIBLE', margin + 4, yPos + 6);
+  doc.text('BASE IMPONIBLE', margin + 4, totalsY + 6);
   doc.setFontSize(10);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${subtotal.toFixed(2)}€`, margin + 4, yPos + 13);
+  doc.text(`${subtotal.toFixed(2)}€`, margin + 4, totalsY + 13);
   
-  // IVA
   doc.setFontSize(6);
   doc.setTextColor(148, 163, 184);
   doc.setFont('helvetica', 'normal');
-  doc.text(`IVA ${ivaRate}%`, margin + sectionWidth + 4, yPos + 6);
+  doc.text(`IVA ${ivaRate}%`, margin + sectionWidth + 4, totalsY + 6);
   doc.setFontSize(10);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${ivaAmount.toFixed(2)}€`, margin + sectionWidth + 4, yPos + 13);
+  doc.text(`${ivaAmount.toFixed(2)}€`, margin + sectionWidth + 4, totalsY + 13);
   
-  // Total
   doc.setFillColor(...accentColor);
-  doc.roundedRect(margin + sectionWidth * 2, yPos, sectionWidth, 18, 2, 2, 'F');
+  doc.roundedRect(margin + sectionWidth * 2, totalsY, sectionWidth, 18, 2, 2, 'F');
   
   doc.setFontSize(6);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'normal');
-  doc.text('TOTAL PRESUPUESTO', margin + sectionWidth * 2 + 4, yPos + 6);
+  doc.text('TOTAL', margin + sectionWidth * 2 + 4, totalsY + 6);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${total.toFixed(2)}€`, margin + sectionWidth * 3 - 4, yPos + 13, { align: 'right' });
+  doc.text(`${total.toFixed(2)}€`, margin + sectionWidth * 3 - 4, totalsY + 13, { align: 'right' });
   
   // Footer
-  yPos += 24;
   doc.setFontSize(5);
   doc.setTextColor(148, 163, 184);
-  doc.text('Presupuesto válido 30 días. Consulte condiciones de montaje y transporte.', pageWidth / 2, yPos, { align: 'center' });
-  doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, yPos + 3, { align: 'center' });
+  doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
-  // Guardar
   const fileName = `Presupuesto_Armario_${projectName?.replace(/\s+/g, '_') || 'SinNombre'}.pdf`;
   doc.save(fileName);
   
@@ -694,8 +586,8 @@ export const generateArmariosDespiecePDF = ({
     format: 'a4'
   });
   
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  const pageWidth = 210;
+  const pageHeight = 297;
   const margin = 12;
   const contentWidth = pageWidth - margin * 2;
   
@@ -704,50 +596,48 @@ export const generateArmariosDespiecePDF = ({
   const textGray = [100, 116, 139];
   const lightGray = [241, 245, 249];
   
-  let yPos = 15;
+  let yPos = margin;
   
   // Logo
-  let logoWidth = 0;
   if (logo && logo.startsWith('data:image')) {
     try {
-      doc.addImage(logo, 'AUTO', margin, yPos, 35, 15);
-      logoWidth = 40;
+      doc.addImage(logo, 'AUTO', margin, yPos, 40, 16);
     } catch (e) {
       console.error('Error adding logo:', e);
     }
   }
   
   // Título
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
-  doc.text(companyName, margin + logoWidth, yPos + 6);
+  doc.text(companyName, margin + 45, yPos + 6);
   
-  doc.setFontSize(7);
-  doc.setTextColor(...accentColor);
-  doc.text('DESPIECE ARMARIO', margin + logoWidth, yPos + 11);
-  
-  // Info proyecto (derecha)
   doc.setFontSize(9);
+  doc.setTextColor(...accentColor);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DESPIECE ARMARIO', margin + 45, yPos + 12);
+  
+  doc.setFontSize(8);
   doc.setTextColor(...primaryColor);
-  doc.text(projectRef || 'Sin referencia', pageWidth - margin, yPos + 3, { align: 'right' });
+  doc.text(projectRef || 'Sin referencia', pageWidth - margin, yPos + 6, { align: 'right' });
   
   doc.setFontSize(7);
   doc.setTextColor(...textGray);
-  doc.text(new Date().toLocaleDateString('es-ES'), pageWidth - margin, yPos + 8, { align: 'right' });
+  doc.text(new Date().toLocaleDateString('es-ES'), pageWidth - margin, yPos + 11, { align: 'right' });
   
-  yPos += 20;
+  yPos += 22;
   
-  // Línea separadora
+  // Línea
   doc.setDrawColor(...accentColor);
   doc.setLineWidth(0.8);
   doc.line(margin, yPos, pageWidth - margin, yPos);
   
   yPos += 8;
   
-  // Datos cliente y dimensiones
+  // Cliente y dimensiones
   doc.setFillColor(...lightGray);
-  doc.roundedRect(margin, yPos, contentWidth, 16, 2, 2, 'F');
+  doc.roundedRect(margin, yPos, contentWidth, 14, 2, 2, 'F');
   
   doc.setFontSize(7);
   doc.setTextColor(...textGray);
@@ -757,12 +647,12 @@ export const generateArmariosDespiecePDF = ({
   doc.setFontSize(9);
   doc.setTextColor(...primaryColor);
   doc.setFont('helvetica', 'bold');
-  doc.text(capitalizeName(customerName) || 'Sin especificar', margin + 4, yPos + 12);
-  doc.text(`${dimensions.width} x ${dimensions.height} x ${dimensions.depth} cm`, margin + contentWidth / 2, yPos + 12);
+  doc.text(capitalizeName(customerName) || 'Sin especificar', margin + 4, yPos + 10);
+  doc.text(`${dimensions.width} x ${dimensions.height} x ${dimensions.depth} cm`, margin + contentWidth / 2, yPos + 10);
   
-  yPos += 22;
+  yPos += 20;
   
-  // Tabla de tableros
+  // Tableros
   if (boards && boards.length > 0) {
     doc.setFontSize(8);
     doc.setTextColor(...primaryColor);
@@ -787,13 +677,9 @@ export const generateArmariosDespiecePDF = ({
         fillColor: primaryColor,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 6,
-        cellPadding: 1.5
+        fontSize: 7
       },
-      bodyStyles: {
-        fontSize: 6,
-        cellPadding: 1.2
-      },
+      bodyStyles: { fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
         1: { cellWidth: 'auto' },
@@ -809,11 +695,6 @@ export const generateArmariosDespiecePDF = ({
   
   // Accesorios
   if (accessories && accessories.length > 0) {
-    if (yPos > pageHeight - 80) {
-      doc.addPage();
-      yPos = 20;
-    }
-    
     doc.setFontSize(8);
     doc.setTextColor(...primaryColor);
     doc.setFont('helvetica', 'bold');
@@ -836,13 +717,9 @@ export const generateArmariosDespiecePDF = ({
         fillColor: primaryColor,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 6,
-        cellPadding: 1.5
+        fontSize: 7
       },
-      bodyStyles: {
-        fontSize: 6,
-        cellPadding: 1.2
-      },
+      bodyStyles: { fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
         1: { cellWidth: 'auto' },
@@ -851,63 +728,52 @@ export const generateArmariosDespiecePDF = ({
       },
       margin: { left: margin, right: margin }
     });
-    
-    yPos = doc.lastAutoTable.finalY + 8;
   }
   
-  // Totales horizontales
-  if (yPos > pageHeight - 40) {
-    doc.addPage();
-    yPos = 20;
-  }
-  
+  // Totales al final
+  const totalsY = pageHeight - 40;
   const baseImponible = totals.subtotal || 0;
   const ivaAmount = baseImponible * (ivaRate / 100);
   const totalConIva = baseImponible + ivaAmount;
   
   doc.setFillColor(...primaryColor);
-  doc.roundedRect(margin, yPos, contentWidth, 16, 2, 2, 'F');
+  doc.roundedRect(margin, totalsY, contentWidth, 18, 2, 2, 'F');
   
   const sectionWidth = contentWidth / 3;
   
-  // Base imponible
   doc.setFontSize(6);
   doc.setTextColor(148, 163, 184);
-  doc.text('BASE IMPONIBLE', margin + 4, yPos + 5);
-  doc.setFontSize(9);
+  doc.text('BASE IMPONIBLE', margin + 4, totalsY + 6);
+  doc.setFontSize(10);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${baseImponible.toFixed(2)}€`, margin + 4, yPos + 11);
+  doc.text(`${baseImponible.toFixed(2)}€`, margin + 4, totalsY + 13);
   
-  // IVA
   doc.setFontSize(6);
   doc.setTextColor(148, 163, 184);
   doc.setFont('helvetica', 'normal');
-  doc.text(`IVA ${ivaRate}%`, margin + sectionWidth + 4, yPos + 5);
-  doc.setFontSize(9);
+  doc.text(`IVA ${ivaRate}%`, margin + sectionWidth + 4, totalsY + 6);
+  doc.setFontSize(10);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${ivaAmount.toFixed(2)}€`, margin + sectionWidth + 4, yPos + 11);
+  doc.text(`${ivaAmount.toFixed(2)}€`, margin + sectionWidth + 4, totalsY + 13);
   
-  // Total
   doc.setFillColor(...accentColor);
-  doc.roundedRect(margin + sectionWidth * 2, yPos, sectionWidth, 16, 2, 2, 'F');
+  doc.roundedRect(margin + sectionWidth * 2, totalsY, sectionWidth, 18, 2, 2, 'F');
   
   doc.setFontSize(6);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'normal');
-  doc.text('TOTAL', margin + sectionWidth * 2 + 4, yPos + 5);
-  doc.setFontSize(11);
+  doc.text('TOTAL', margin + sectionWidth * 2 + 4, totalsY + 6);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${totalConIva.toFixed(2)}€`, margin + sectionWidth * 3 - 4, yPos + 11, { align: 'right' });
+  doc.text(`${totalConIva.toFixed(2)}€`, margin + sectionWidth * 3 - 4, totalsY + 13, { align: 'right' });
   
   // Footer
-  yPos += 22;
   doc.setFontSize(5);
   doc.setTextColor(148, 163, 184);
-  doc.text(`${companyName} - Despiece generado el ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, yPos, { align: 'center' });
+  doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
-  // Guardar
   const fileName = `Despiece_Armario_${projectRef?.replace(/\s+/g, '_') || 'SinRef'}.pdf`;
   doc.save(fileName);
   
