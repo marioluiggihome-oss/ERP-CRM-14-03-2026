@@ -451,6 +451,227 @@ export const generateBudgetPDF = ({
 };
 
 /**
+ * Genera un PDF del presupuesto de armarios (completo)
+ */
+export const generateArmarioPresupuestoPDF = ({
+  projectName = '',
+  customerName = '',
+  projectRef = '',
+  dimensions = { width: 0, height: 0, depth: 0 },
+  modules = 2,
+  doorType = '',
+  colors = {},
+  pricing = {},
+  specifications = {},
+  boardsCalculation = {},
+  ivaRate = 21,
+  logo,
+  brandColor = '#ea580c',
+  companyName = 'LUIGGI HOME'
+}) => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+  
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 12;
+  const contentWidth = pageWidth - margin * 2;
+  
+  const primaryColor = [30, 41, 59];
+  const accentColor = hexToRgb(brandColor);
+  const textGray = [100, 116, 139];
+  const lightGray = [241, 245, 249];
+  
+  let yPos = 15;
+  
+  // Logo
+  let logoWidth = 0;
+  if (logo && logo.startsWith('data:image')) {
+    try {
+      doc.addImage(logo, 'AUTO', margin, yPos, 35, 15);
+      logoWidth = 40;
+    } catch (e) {
+      console.error('Error adding logo:', e);
+    }
+  }
+  
+  // Título
+  doc.setFontSize(16);
+  doc.setTextColor(...primaryColor);
+  doc.setFont('helvetica', 'bold');
+  doc.text(companyName, margin + logoWidth, yPos + 6);
+  
+  doc.setFontSize(7);
+  doc.setTextColor(...accentColor);
+  doc.text('PRESUPUESTO ARMARIO', margin + logoWidth, yPos + 11);
+  
+  // Info proyecto (derecha)
+  doc.setFontSize(9);
+  doc.setTextColor(...primaryColor);
+  doc.text(projectName || 'Sin nombre', pageWidth - margin, yPos + 3, { align: 'right' });
+  
+  doc.setFontSize(7);
+  doc.setTextColor(...textGray);
+  doc.text(new Date().toLocaleDateString('es-ES'), pageWidth - margin, yPos + 8, { align: 'right' });
+  if (projectRef) {
+    doc.text(`Ref: ${projectRef}`, pageWidth - margin, yPos + 12, { align: 'right' });
+  }
+  
+  yPos += 20;
+  
+  // Línea separadora
+  doc.setDrawColor(...accentColor);
+  doc.setLineWidth(0.8);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  
+  yPos += 8;
+  
+  // Datos cliente
+  doc.setFillColor(...lightGray);
+  doc.roundedRect(margin, yPos, contentWidth, 16, 2, 2, 'F');
+  
+  doc.setFontSize(7);
+  doc.setTextColor(...textGray);
+  doc.text('CLIENTE', margin + 4, yPos + 5);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(...primaryColor);
+  doc.setFont('helvetica', 'bold');
+  doc.text(capitalizeName(customerName) || 'Sin especificar', margin + 4, yPos + 12);
+  
+  yPos += 22;
+  
+  // Configuración del armario
+  doc.setFontSize(8);
+  doc.setTextColor(...primaryColor);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CONFIGURACIÓN DEL ARMARIO', margin, yPos);
+  yPos += 4;
+  
+  const configData = [
+    ['Dimensiones', `${dimensions.width} x ${dimensions.height} x ${dimensions.depth} cm`],
+    ['Nº Módulos', `${modules} módulos`],
+    ['Tipo Puertas', doorType === 'sliding' ? 'Correderas' : 'Batientes'],
+    ['Color Exterior', colors.exteriorName || colors.exterior || '-'],
+    ['Color Interior', colors.interiorName || colors.interior || '-'],
+    ['Estantes', specifications.shelves || '0'],
+    ['Cajones', specifications.drawers || '0'],
+    ['Barras', specifications.hangingRods || '0']
+  ];
+  
+  autoTable(doc, {
+    startY: yPos,
+    head: [['CARACTERÍSTICA', 'VALOR']],
+    body: configData,
+    theme: 'striped',
+    headStyles: {
+      fillColor: primaryColor,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 6
+    },
+    bodyStyles: {
+      fontSize: 7
+    },
+    columnStyles: {
+      0: { cellWidth: 50, fontStyle: 'bold' },
+      1: { cellWidth: 'auto' }
+    },
+    margin: { left: margin, right: margin }
+  });
+  
+  yPos = doc.lastAutoTable.finalY + 8;
+  
+  // Desglose de precios si está disponible
+  if (pricing && (pricing.boards > 0 || pricing.accessories > 0)) {
+    doc.setFontSize(8);
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DESGLOSE DE PRECIO', margin, yPos);
+    yPos += 4;
+    
+    const priceData = [];
+    if (pricing.boards > 0) priceData.push(['Tableros', `${pricing.boards.toFixed(2)}€`]);
+    if (pricing.accessories > 0) priceData.push(['Accesorios', `${pricing.accessories.toFixed(2)}€`]);
+    if (pricing.labor > 0) priceData.push(['Mano de obra', `${pricing.labor.toFixed(2)}€`]);
+    if (pricing.doors > 0) priceData.push(['Puertas', `${pricing.doors.toFixed(2)}€`]);
+    
+    autoTable(doc, {
+      startY: yPos,
+      body: priceData,
+      theme: 'plain',
+      bodyStyles: {
+        fontSize: 7
+      },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }
+      },
+      margin: { left: margin, right: margin }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 8;
+  }
+  
+  // Totales horizontales
+  const subtotal = pricing.subtotal || 0;
+  const ivaAmount = subtotal * (ivaRate / 100);
+  const total = pricing.total || subtotal + ivaAmount;
+  
+  doc.setFillColor(...primaryColor);
+  doc.roundedRect(margin, yPos, contentWidth, 18, 2, 2, 'F');
+  
+  const sectionWidth = contentWidth / 3;
+  
+  // Base imponible
+  doc.setFontSize(6);
+  doc.setTextColor(148, 163, 184);
+  doc.text('BASE IMPONIBLE', margin + 4, yPos + 6);
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${subtotal.toFixed(2)}€`, margin + 4, yPos + 13);
+  
+  // IVA
+  doc.setFontSize(6);
+  doc.setTextColor(148, 163, 184);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`IVA ${ivaRate}%`, margin + sectionWidth + 4, yPos + 6);
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${ivaAmount.toFixed(2)}€`, margin + sectionWidth + 4, yPos + 13);
+  
+  // Total
+  doc.setFillColor(...accentColor);
+  doc.roundedRect(margin + sectionWidth * 2, yPos, sectionWidth, 18, 2, 2, 'F');
+  
+  doc.setFontSize(6);
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'normal');
+  doc.text('TOTAL PRESUPUESTO', margin + sectionWidth * 2 + 4, yPos + 6);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${total.toFixed(2)}€`, margin + sectionWidth * 3 - 4, yPos + 13, { align: 'right' });
+  
+  // Footer
+  yPos += 24;
+  doc.setFontSize(5);
+  doc.setTextColor(148, 163, 184);
+  doc.text('Presupuesto válido 30 días. Consulte condiciones de montaje y transporte.', pageWidth / 2, yPos, { align: 'center' });
+  doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, yPos + 3, { align: 'center' });
+  
+  // Guardar
+  const fileName = `Presupuesto_Armario_${projectName?.replace(/\s+/g, '_') || 'SinNombre'}.pdf`;
+  doc.save(fileName);
+  
+  return fileName;
+};
+
+/**
  * Genera un PDF del despiece de armarios
  */
 export const generateArmariosDespiecePDF = ({
