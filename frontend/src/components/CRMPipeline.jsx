@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Target, Plus, Euro, Calendar, User, Building2, FileText,
   Edit2, Trash2, X, Save, Loader2, GripVertical, ArrowRight,
-  TrendingUp, ChevronDown
+  TrendingUp, ChevronDown, UtensilsCrossed, DoorOpen, Filter
 } from 'lucide-react';
 import { crmOpportunitiesAPI, crmContactsAPI } from '../services/api';
 
@@ -15,6 +15,12 @@ const STAGES = [
   { id: 'lost', name: 'Perdida', color: 'bg-red-500', lightColor: 'bg-red-50 border-red-200' }
 ];
 
+const BUSINESS_TYPES = [
+  { id: 'all', name: 'Todos', icon: Filter },
+  { id: 'cocina', name: 'Cocina', icon: UtensilsCrossed, color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-100' },
+  { id: 'armarios', name: 'Armarios', icon: DoorOpen, color: 'bg-emerald-500', textColor: 'text-emerald-700', bgLight: 'bg-emerald-100' }
+];
+
 const CRMPipeline = ({ currentUser }) => {
   const [opportunities, setOpportunities] = useState([]);
   const [contacts, setContacts] = useState([]);
@@ -23,6 +29,7 @@ const CRMPipeline = ({ currentUser }) => {
   const [editingOpp, setEditingOpp] = useState(null);
   const [draggedOpp, setDraggedOpp] = useState(null);
   const [showLost, setShowLost] = useState(false);
+  const [businessTypeFilter, setBusinessTypeFilter] = useState('all');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -33,7 +40,8 @@ const CRMPipeline = ({ currentUser }) => {
     probability: 20,
     stage: 'lead',
     expectedCloseDate: '',
-    notes: ''
+    notes: '',
+    businessType: 'cocina'
   });
 
   useEffect(() => {
