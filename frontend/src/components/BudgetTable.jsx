@@ -571,7 +571,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                  ) : (
                    <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center gap-2">
                       <AlertCircle size={14} className="text-indigo-300" />
-                      <span className="text-[7px] font-black text-indigo-300 uppercase leading-tight italic">Añade muebles</span>
+                      <span className="text-[7px] font-black text-indigo-300 uppercase leading-tight italic">Añade artículos</span>
                    </div>
                  )}
                  <button onClick={() => exportToPdf('budget-pdf', `EXP_${state.budgetNumber}`)} className="w-full bg-indigo-950 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-900 transition-all">
