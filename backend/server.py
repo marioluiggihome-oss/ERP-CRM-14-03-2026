@@ -896,7 +896,7 @@ REGLAS CRÍTICAS:
 - Extrae TODOS los productos visibles, no solo el primero
 - Respeta el orden de las filas (Z1 es el primer precio de cada fila)
 - Responde SOLO con el JSON estructurado, sin explicaciones"""
-            ).with_model("gemini", "gemini-2.5-pro")
+            ).with_model("gemini", "gemini-2.0-flash")
             
             # Create message with image
             user_message = UserMessage(
