@@ -124,6 +124,7 @@ class UserResponse(BaseModel):
     isAdmin: bool = False
     isRepresentative: bool = False
     isPrescriptor: bool = False
+    isTienda: bool = False  # Tienda/Punto de Venta
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
