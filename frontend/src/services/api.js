@@ -536,6 +536,8 @@ export const crmOpportunitiesAPI = {
     // Filtrado por comercial asignado (para usuarios no-admin)
     if (options.assignedTo) params.append('assignedTo', options.assignedTo);
     if (options.isAdmin !== undefined) params.append('isAdmin', options.isAdmin);
+    // Filtrado por tipo de negocio
+    if (options.businessType) params.append('businessType', options.businessType);
     if (params.toString()) url += `?${params.toString()}`;
     
     const response = await fetch(url);
@@ -559,11 +561,19 @@ export const crmOpportunitiesAPI = {
     return response.json();
   },
 
-  createFromProject: async (projectId) => {
-    const response = await fetch(`${API_URL}/api/crm/opportunities/from-project/${projectId}`, {
+  createFromProject: async (projectId, businessType = 'cocina') => {
+    const response = await fetch(`${API_URL}/api/crm/opportunities/from-project/${projectId}?businessType=${businessType}`, {
       method: 'POST'
     });
     if (!response.ok) throw new Error('Error al crear oportunidad desde proyecto');
+    return response.json();
+  },
+
+  createFromArmario: async (projectId) => {
+    const response = await fetch(`${API_URL}/api/crm/opportunities/from-armario/${projectId}`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error('Error al crear oportunidad desde armario');
     return response.json();
   },
 
