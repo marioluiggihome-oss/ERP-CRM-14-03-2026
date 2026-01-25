@@ -95,8 +95,9 @@ class UserModelInternal(BaseModel):
     linkedClientId: Optional[str] = None  # Vinculación con cliente activo
     isActive: bool = True
     isAdmin: bool = False
-    isRepresentative: bool = False
+    isRepresentative: bool = False  # Comercial/Representante
     isPrescriptor: bool = False  # Colaborador comercial - solo aporta contactos
+    isTienda: bool = False  # Tienda/Punto de Venta - solo acceso al presupuestador
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
