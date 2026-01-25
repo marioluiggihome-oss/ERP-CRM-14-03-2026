@@ -8,6 +8,7 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [metrics, setMetrics] = useState(null);
+  const [trends, setTrends] = useState(null);
   const [activeTab, setActiveTab] = useState('metrics'); // 'metrics' or 'work'
   const [searchTerm, setSearchTerm] = useState('');
   const [isFullScreen, setIsFullScreen] = useState(false); // Pantalla completa
@@ -22,6 +23,7 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
     if (isOpen) {
       loadData();
       loadMetrics();
+      loadTrends();
     }
   }, [isOpen]);
 
@@ -45,6 +47,16 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
       setMetrics(result);
     } catch (err) {
       console.error('Error loading metrics:', err);
+    }
+  };
+
+  const loadTrends = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/metrics/trends`);
+      const result = await response.json();
+      setTrends(result);
+    } catch (err) {
+      console.error('Error loading trends:', err);
     }
   };
 
