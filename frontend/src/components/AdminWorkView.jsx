@@ -121,7 +121,15 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
               <FolderOpen size={16} className="inline mr-2" />
               Trabajos
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors ml-4">
+            {/* Botón Pantalla Completa */}
+            <button 
+              onClick={() => setIsFullScreen(!isFullScreen)} 
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors ml-2"
+              title={isFullScreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
+            >
+              {isFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors ml-2">
               <X size={20} />
             </button>
           </div>
@@ -131,13 +139,13 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
         {activeTab === 'metrics' && metrics && (
           <div className="flex-1 overflow-auto p-6">
             {/* Global Summary Cards */}
-            <div className="grid grid-cols-5 gap-4 mb-6">
+            <div className={`grid gap-4 mb-6 ${isFullScreen ? 'grid-cols-5' : 'grid-cols-5'}`}>
               <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
                 <div className="flex items-center gap-2 mb-2">
                   <Euro size={20} />
                   <span className="text-xs font-bold uppercase opacity-80">Ventas Cerradas</span>
                 </div>
-                <p className="text-3xl font-black">{formatCurrency(metrics.global.totalValue)}</p>
+                <p className={`font-black ${isFullScreen ? 'text-4xl' : 'text-3xl'}`}>{formatCurrency(metrics.global.totalValue)}</p>
                 <p className="text-xs opacity-80 mt-1">{metrics.global.wonOpportunities} oportunidades ganadas</p>
               </div>
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
