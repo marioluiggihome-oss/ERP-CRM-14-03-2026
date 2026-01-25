@@ -4183,8 +4183,11 @@ Genera la configuración óptima en formato JSON."""
         import json
         import re
         
+        # Get text content from response
+        response_text = response.content if hasattr(response, 'content') else str(response)
+        
         # Extraer JSON de la respuesta
-        json_match = re.search(r'\{[\s\S]*\}', response)
+        json_match = re.search(r'\{[\s\S]*\}', response_text)
         if json_match:
             config = json.loads(json_match.group())
             return {"success": True, "config": config}
