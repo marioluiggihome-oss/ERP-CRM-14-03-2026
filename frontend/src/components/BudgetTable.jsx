@@ -597,7 +597,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
            </div>
         </aside>
 
-        <div className="flex-1 overflow-y-auto p-12 bg-indigo-50/30 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto p-12 pb-24 bg-indigo-50/30 scrollbar-thin">
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center opacity-20">
                <FileText size={120} strokeWidth={0.5} className="text-indigo-900 mb-6" />
