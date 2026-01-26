@@ -46,12 +46,12 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         body: formData
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.detail || 'Error al analizar el plano');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error ${response.status}: Error al analizar el plano`);
       }
 
+      const data = await response.json();
       setAnalysisResult(data.analysis);
     } catch (err) {
       setError(err.message);
