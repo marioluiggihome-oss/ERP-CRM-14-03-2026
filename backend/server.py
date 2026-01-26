@@ -1478,10 +1478,15 @@ async def create_products_bulk(products: List[dict]):
             # Create product with new ID
             clean_data["id"] = f"prod-{uuid.uuid4().hex[:8]}"
             
+            # Insert into database (MongoDB adds _id)
             await db.products.insert_one(clean_data)
+            
+            # Remove _id before adding to response
+            clean_data.pop("_id", None)
             created.append(clean_data)
             
         except Exception as e:
+            logger.error(f"Error creating product {idx}: {e}")
             errors.append(f"Producto {idx} ({product_data.get('code', '?')}): {str(e)}")
     
     logger.info(f"Bulk create: {len(created)} created, {duplicates} duplicates, {len(errors)} errors")
