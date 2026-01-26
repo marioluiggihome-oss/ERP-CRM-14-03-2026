@@ -774,14 +774,12 @@ Responde SOLO con JSON válido:
         # Use Gemini Vision
         chat = LlmChat(
             api_key=api_key,
-            model="gemini/gemini-2.0-flash",
             session_id=f"kitchen-plan-{uuid.uuid4().hex[:8]}",
-            system_prompt="Eres un experto en diseño de cocinas. Analiza planos y detecta muebles con precisión."
-        )
+            system_message="Eres un experto en diseño de cocinas. Analiza planos y detecta muebles con precisión."
+        ).with_model("gemini", "gemini-2.0-flash")
         
         image_content = ImageContent(
-            data=base64_image,
-            media_type=mime_type
+            image_base64=base64_image
         )
         
         response = await chat.send_message_async(
