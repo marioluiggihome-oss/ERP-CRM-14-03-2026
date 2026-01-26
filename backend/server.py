@@ -2836,9 +2836,12 @@ async def get_all_prescriptor_notes(
 async def get_opportunities(stage: Optional[str] = None, contactId: Optional[str] = None, assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True, businessType: Optional[str] = None, moduleType: Optional[str] = None):
     """Get all opportunities with optional filters
     
-    Para usuarios NO admin (comerciales/representantes), solo devuelve oportunidades asignadas a ellos.
+    Para usuarios NO admin (comerciales/representantes), devuelve:
+    - Sus propias oportunidades asignadas
+    - Las oportunidades de sus tiendas vinculadas (linkedRepresentativeId)
+    
     assignedTo: ID del usuario comercial para filtrar sus oportunidades
-    isAdmin: Si es False, solo devuelve oportunidades del comercial asignado
+    isAdmin: Si es False, solo devuelve oportunidades del comercial y sus tiendas
     businessType: cocina, armarios o None para todos
     moduleType: montada, despiece o None para todos (solo aplica si businessType=cocina)
     """
@@ -2853,9 +2856,21 @@ async def get_opportunities(stage: Optional[str] = None, contactId: Optional[str
         if moduleType:
             query["moduleType"] = moduleType
         
-        # IMPORTANTE: Si NO es admin y tiene assignedTo, filtrar solo sus oportunidades
+        # IMPORTANTE: Si NO es admin y tiene assignedTo, filtrar por comercial + sus tiendas
         if not isAdmin and assignedTo:
-            query["assignedTo"] = assignedTo
+            # Obtener las tiendas vinculadas a este comercial
+            shops = await db.users.find(
+                {"linkedRepresentativeId": assignedTo},
+                {"id": 1, "_id": 0}
+            ).to_list(100)
+            shop_ids = [s["id"] for s in shops]
+            
+            # Incluir oportunidades del comercial Y de sus tiendas
+            all_ids = [assignedTo] + shop_ids
+            query["$or"] = [
+                {"assignedTo": {"$in": all_ids}},
+                {"createdBy": {"$in": all_ids}}
+            ]
         
         opportunities = await db.opportunities.find(query, {"_id": 0}).sort("createdAt", -1).to_list(1000)
         return opportunities
