@@ -2533,24 +2533,47 @@ async def get_backup_status():
 async def get_contacts(status: Optional[str] = None, search: Optional[str] = None, assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True):
     """Get all contacts with optional filters, including total value from opportunities
     
-    Para usuarios NO admin (comerciales/representantes), solo devuelve contactos asignados a ellos.
+    Para usuarios NO admin (comerciales/representantes), devuelve:
+    - Sus propios contactos asignados
+    - Los contactos de sus tiendas vinculadas (linkedRepresentativeId)
+    
     assignedTo: ID del usuario comercial para filtrar sus contactos asignados
-    isAdmin: Si es False, solo devuelve contactos del comercial asignado
+    isAdmin: Si es False, solo devuelve contactos del comercial y sus tiendas
     """
     try:
         query = {}
         if status:
             query["status"] = status
         if search:
-            query["$or"] = [
+            search_filter = [
                 {"name": {"$regex": search, "$options": "i"}},
                 {"company": {"$regex": search, "$options": "i"}},
                 {"email": {"$regex": search, "$options": "i"}}
             ]
         
-        # IMPORTANTE: Si NO es admin y tiene assignedTo, filtrar solo sus contactos
+        # IMPORTANTE: Si NO es admin y tiene assignedTo, filtrar por comercial + sus tiendas
         if not isAdmin and assignedTo:
-            query["assignedTo"] = assignedTo
+            # Obtener las tiendas vinculadas a este comercial
+            shops = await db.users.find(
+                {"linkedRepresentativeId": assignedTo},
+                {"id": 1, "_id": 0}
+            ).to_list(100)
+            shop_ids = [s["id"] for s in shops]
+            
+            # Incluir contactos del comercial Y de sus tiendas
+            all_ids = [assignedTo] + shop_ids
+            assigned_filter = {"$or": [
+                {"assignedTo": {"$in": all_ids}},
+                {"createdBy": {"$in": all_ids}}
+            ]}
+            
+            # Combinar con búsqueda si existe
+            if search:
+                query["$and"] = [assigned_filter, {"$or": search_filter}]
+            else:
+                query.update(assigned_filter)
+        elif search:
+            query["$or"] = search_filter
         
         contacts = await db.contacts.find(query, {"_id": 0}).sort("createdAt", -1).to_list(1000)
         
