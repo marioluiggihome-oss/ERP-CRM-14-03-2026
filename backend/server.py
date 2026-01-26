@@ -782,8 +782,8 @@ Responde SOLO con JSON válido:
             image_base64=base64_image
         )
         
-        response = await chat.send_message_async(
-            UserMessage(content=[analysis_prompt, image_content])
+        response = await chat.send_message(
+            UserMessage(text=analysis_prompt, file_contents=[image_content])
         )
         
         # Parse response
