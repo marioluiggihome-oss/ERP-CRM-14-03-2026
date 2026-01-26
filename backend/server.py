@@ -1433,18 +1433,65 @@ async def create_product(product: ProductCreate):
     await db.products.insert_one(product_obj.model_dump())
     return product_obj
 
-@api_router.post("/products/bulk", response_model=List[ProductModel])
-async def create_products_bulk(products: List[ProductCreate]):
-    """Crear múltiples productos"""
+@api_router.post("/products/bulk")
+async def create_products_bulk(products: List[dict]):
+    """Crear múltiples productos - acepta datos flexibles del importador IA"""
     created = []
-    for product in products:
-        product_obj = ProductModel(**product.model_dump())
-        product_obj.code = product_obj.code.upper()
-        if product_obj.zonePoints:
-            product_obj.points = product_obj.zonePoints.Z1
-        await db.products.insert_one(product_obj.model_dump())
-        created.append(product_obj)
-    return created
+    errors = []
+    duplicates = 0
+    
+    for idx, product_data in enumerate(products):
+        try:
+            # Clean and normalize the data
+            clean_data = {
+                "code": str(product_data.get("code", "")).upper().strip(),
+                "name": str(product_data.get("name", "")),
+                "category": str(product_data.get("category", "")),
+                "series": str(product_data.get("series", "")),
+                "visualType": str(product_data.get("visualType", "")),
+                "width": float(product_data.get("width", 0) or 0),
+                "height": float(product_data.get("height", 0) or 0),
+                "depth": float(product_data.get("depth", 0) or 0),
+                "manufacturer": str(product_data.get("manufacturer", "Zona Cocinas")),
+                "points": float(product_data.get("points", 0) or 0),
+                "module": str(product_data.get("module", "montada"))
+            }
+            
+            if not clean_data["code"]:
+                errors.append(f"Producto {idx}: código vacío")
+                continue
+            
+            # Check for duplicates
+            existing = await db.products.find_one({"code": clean_data["code"]})
+            if existing:
+                duplicates += 1
+                continue
+            
+            # Handle zonePoints
+            zone_points_data = product_data.get("zonePoints")
+            if zone_points_data and isinstance(zone_points_data, dict):
+                clean_data["zonePoints"] = {
+                    f"Z{i}": float(zone_points_data.get(f"Z{i}", 0) or 0) for i in range(1, 13)
+                }
+                clean_data["points"] = clean_data["zonePoints"]["Z1"]
+            
+            # Create product with new ID
+            clean_data["id"] = f"prod-{uuid.uuid4().hex[:8]}"
+            
+            await db.products.insert_one(clean_data)
+            created.append(clean_data)
+            
+        except Exception as e:
+            errors.append(f"Producto {idx} ({product_data.get('code', '?')}): {str(e)}")
+    
+    logger.info(f"Bulk create: {len(created)} created, {duplicates} duplicates, {len(errors)} errors")
+    
+    return {
+        "created": len(created),
+        "duplicates": duplicates,
+        "errors": errors,
+        "products": created
+    }
 
 @api_router.put("/products/{product_id}", response_model=ProductModel)
 async def update_product(product_id: str, product: ProductCreate):
