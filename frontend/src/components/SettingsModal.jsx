@@ -3137,7 +3137,17 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 if (existingCodes.has(p.code)) { dupP.push(p); addLog({ type: 'dup', code: p.code, name: p.name, pts: p.points || 0 }); }
                                 else { newP.push(p); addLog({ type: 'new', code: p.code, name: p.name, pts: p.points || 0 }); setExistingCodes(prev => new Set([...prev, p.code])); }
                               }
-                              if (newP.length > 0) { await productsAPI.bulkCreate(newP); addLog({ type: 'ok', msg: `${newP.length} guardado(s)` }); }
+                              if (newP.length > 0) { 
+                                try {
+                                  const bulkResult = await productsAPI.bulkCreate(newP);
+                                  if (bulkResult.errors && bulkResult.errors.length > 0) {
+                                    addLog({ type: 'err', msg: `${bulkResult.errors.length} error(es)` });
+                                  }
+                                  addLog({ type: 'ok', msg: `${bulkResult.created || newP.length} guardado(s)` });
+                                } catch (bulkErr) {
+                                  addLog({ type: 'err', msg: `Error al crear: ${bulkErr.message}` });
+                                }
+                              }
                               setTelemetryResult({ ok: true, newC: newP.length, dupC: dupP.length });
                             } else { addLog({ type: 'err', msg: result.error || 'Error' }); }
                             setTelemetryFiles([]);
