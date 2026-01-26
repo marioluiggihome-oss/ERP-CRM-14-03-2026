@@ -230,6 +230,7 @@ class ProductModel(BaseModel):
     module: str = "montada"  # montada or despiece
 
 class ProductCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     code: str
     name: str
     category: str = ""
