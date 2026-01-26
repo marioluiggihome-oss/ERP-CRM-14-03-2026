@@ -200,6 +200,7 @@ class UserUpdate(BaseModel):
 
 # Product Model
 class ZonePoints(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     Z1: float = 0
     Z2: float = 0
     Z3: float = 0
