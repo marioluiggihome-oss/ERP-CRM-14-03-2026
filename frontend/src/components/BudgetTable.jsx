@@ -1131,6 +1131,142 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
         projectReference={state.projectReference || ''}
         expedientNumber={state.expedientNumber || ''}
       />
+
+      {/* Modal Confirmar Pedido */}
+      {isConfirmOrderOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            {/* Header */}
+            <div className="bg-emerald-600 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle size={24} />
+                <h2 className="text-lg font-black uppercase tracking-wider">Confirmar Pedido</h2>
+              </div>
+              <button onClick={() => setIsConfirmOrderOpen(false)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {orderSent ? (
+                <div className="text-center py-8">
+                  <CheckCircle size={64} className="mx-auto text-emerald-500 mb-4" />
+                  <p className="text-xl font-black text-emerald-600">¡Pedido Confirmado!</p>
+                  <p className="text-sm text-gray-500 mt-2">Se ha enviado la confirmación al email indicado</p>
+                </div>
+              ) : (
+                <>
+                  {/* Info del presupuesto */}
+                  <div className="bg-indigo-50 rounded-xl p-4 space-y-1">
+                    <p className="text-xs font-black text-indigo-400 uppercase">Resumen del Pedido</p>
+                    <p className="text-sm font-bold text-indigo-950">Expediente: <span className="text-orange-600">{state.budgetNumber}</span></p>
+                    <p className="text-sm font-bold text-indigo-950">Cliente: {state.customerName || 'Sin nombre'}</p>
+                    <p className="text-sm font-bold text-indigo-950">Total: <span className="text-emerald-600">{total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span></p>
+                    <p className="text-sm text-indigo-400">{sortedItems.length} artículo(s)</p>
+                  </div>
+
+                  {/* Email destino */}
+                  <div>
+                    <label className="text-xs font-black text-indigo-950 uppercase mb-1 block">
+                      <Mail size={12} className="inline mr-1" /> Email de destino *
+                    </label>
+                    <input
+                      type="email"
+                      value={orderEmail}
+                      onChange={(e) => setOrderEmail(e.target.value)}
+                      placeholder="pedidos@empresa.com"
+                      className="w-full border border-indigo-200 rounded-lg px-4 py-2.5 text-sm focus:border-emerald-500 outline-none"
+                    />
+                  </div>
+
+                  {/* Archivos adjuntos */}
+                  <div>
+                    <label className="text-xs font-black text-indigo-950 uppercase mb-2 block">
+                      <Paperclip size={12} className="inline mr-1" /> Adjuntar Planos / Fotos
+                    </label>
+                    <div className="border-2 border-dashed border-indigo-200 rounded-xl p-4 text-center hover:border-emerald-400 transition-colors">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*,.pdf,.dwg,.dxf"
+                        onChange={handleAttachmentChange}
+                        className="hidden"
+                        id="order-attachments"
+                      />
+                      <label htmlFor="order-attachments" className="cursor-pointer">
+                        <Upload size={32} className="mx-auto text-indigo-300 mb-2" />
+                        <p className="text-xs font-bold text-indigo-400">Click para adjuntar archivos</p>
+                        <p className="text-[10px] text-indigo-300">Planos, fotos de cocina, dibujos...</p>
+                      </label>
+                    </div>
+
+                    {/* Lista de archivos adjuntos */}
+                    {orderAttachments.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {orderAttachments.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-indigo-50 rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <FileImage size={16} className="text-indigo-400" />
+                              <span className="text-xs font-bold text-indigo-950 truncate max-w-[200px]">{file.name}</span>
+                              <span className="text-[10px] text-indigo-300">({(file.size / 1024).toFixed(0)} KB)</span>
+                            </div>
+                            <button onClick={() => removeAttachment(index)} className="p-1 hover:bg-red-100 rounded text-red-500">
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notas adicionales */}
+                  <div>
+                    <label className="text-xs font-black text-indigo-950 uppercase mb-1 block">
+                      Notas adicionales
+                    </label>
+                    <textarea
+                      value={orderNotes}
+                      onChange={(e) => setOrderNotes(e.target.value)}
+                      placeholder="Instrucciones especiales, observaciones..."
+                      rows={3}
+                      className="w-full border border-indigo-200 rounded-lg px-4 py-2.5 text-sm focus:border-emerald-500 outline-none resize-none"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!orderSent && (
+              <div className="px-6 py-4 bg-gray-50 flex gap-3">
+                <button
+                  onClick={() => setIsConfirmOrderOpen(false)}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmOrder}
+                  disabled={isSendingOrder || !orderEmail}
+                  className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-black uppercase tracking-wider hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSendingOrder ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Mail size={16} /> Enviar Confirmación
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
