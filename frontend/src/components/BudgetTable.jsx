@@ -376,6 +376,75 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
     }
   };
 
+  // Función para confirmar pedido y enviar por email
+  const handleConfirmOrder = async () => {
+    if (!orderEmail) {
+      alert('Por favor, introduce un email de destino');
+      return;
+    }
+    
+    setIsSendingOrder(true);
+    try {
+      // Preparar datos del formulario con archivos
+      const formData = new FormData();
+      formData.append('budgetNumber', state.budgetNumber);
+      formData.append('customerName', state.customerName || 'Sin nombre');
+      formData.append('customerAddress', state.customerAddress || '');
+      formData.append('totalAmount', total.toFixed(2));
+      formData.append('email', orderEmail);
+      formData.append('notes', orderNotes);
+      formData.append('items', JSON.stringify(sortedItems.map(item => {
+        const product = allProducts.find(p => p.id === item.productId);
+        const details = calculateLineDetails(item, product);
+        return {
+          code: product?.code || item.code || 'Manual',
+          name: product?.name || item.name || 'Artículo manual',
+          quantity: item.quantity,
+          price: details.total
+        };
+      })));
+      
+      // Adjuntar archivos
+      orderAttachments.forEach((file, index) => {
+        formData.append(`attachment_${index}`, file);
+      });
+      
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/orders/confirm`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error al enviar la confirmación');
+      }
+      
+      setOrderSent(true);
+      setTimeout(() => {
+        setIsConfirmOrderOpen(false);
+        setOrderSent(false);
+        setOrderAttachments([]);
+        setOrderNotes('');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error confirming order:', error);
+      alert(`Error al confirmar pedido: ${error.message}`);
+    } finally {
+      setIsSendingOrder(false);
+    }
+  };
+
+  // Manejar archivos adjuntos
+  const handleAttachmentChange = (e) => {
+    const files = Array.from(e.target.files);
+    setOrderAttachments(prev => [...prev, ...files]);
+  };
+
+  const removeAttachment = (index) => {
+    setOrderAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   useEffect(() => {
     const onMouseMove = (e) => {
       if (isResizingSidebar.current) setSidebarWidth(Math.max(250, Math.min(600, e.clientX - 80)));
