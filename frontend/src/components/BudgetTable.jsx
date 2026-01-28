@@ -535,16 +535,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
             <Download size={16}/> EXPORTAR PDF
           </button>
 
-          {/* Botón Confirmar Pedido - Solo si hay items */}
-          {items.length > 0 && (
-            <button 
-              onClick={() => setIsConfirmOrderOpen(true)}
-              className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-lg border-2 border-emerald-400"
-              data-testid="confirm-order-btn"
-            >
-              <CheckCircle size={16}/> CONFIRMAR PEDIDO
-            </button>
-          )}
+          {/* Botón Confirmar Pedido - Siempre visible */}
+          <button 
+            onClick={() => setIsConfirmOrderOpen(true)}
+            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-lg border-2 border-emerald-400"
+            data-testid="confirm-order-btn"
+          >
+            <CheckCircle size={16}/> CONFIRMAR PEDIDO
+          </button>
 
           {state.currentUser?.canViewTechnicalDespiece && (
             <button 
