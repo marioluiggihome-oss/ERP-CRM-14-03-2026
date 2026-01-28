@@ -1,4 +1,4 @@
-import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, FileText, ChevronDown, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download, Scissors } from 'lucide-react';
+import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, FileText, ChevronDown, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download, Scissors, CheckCircle, Paperclip, Mail, X, Upload, Image, FileImage } from 'lucide-react';
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { exportToPdf } from '../utils/pdfHelper';
 import { generateBudgetPDF } from '../services/pdfGenerator';
@@ -15,6 +15,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [catalogHeight, setCatalogHeight] = useState(300);
   const [isDespieceOpen, setIsDespieceOpen] = useState(false);
+  const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
+  const [orderAttachments, setOrderAttachments] = useState([]);
+  const [orderEmail, setOrderEmail] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [isSendingOrder, setIsSendingOrder] = useState(false);
+  const [orderSent, setOrderSent] = useState(false);
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
 
