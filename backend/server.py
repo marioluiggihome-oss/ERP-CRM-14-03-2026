@@ -2274,6 +2274,156 @@ async def init_data():
     return {"message": "Admin ya existe"}
 
 # ============================================
+# ORDER CONFIRMATION SYSTEM
+# ============================================
+
+@api_router.post("/orders/confirm")
+async def confirm_order(
+    budgetNumber: str = Form(...),
+    customerName: str = Form(...),
+    customerAddress: str = Form(""),
+    totalAmount: str = Form(...),
+    email: str = Form(...),
+    notes: str = Form(""),
+    items: str = Form("[]"),
+    attachment_0: Optional[UploadFile] = File(None),
+    attachment_1: Optional[UploadFile] = File(None),
+    attachment_2: Optional[UploadFile] = File(None),
+    attachment_3: Optional[UploadFile] = File(None),
+    attachment_4: Optional[UploadFile] = File(None),
+):
+    """
+    Confirma un pedido y envía un email con los detalles y archivos adjuntos.
+    """
+    try:
+        sendgrid_key = os.environ.get('SENDGRID_API_KEY')
+        if not sendgrid_key:
+            raise HTTPException(status_code=500, detail="SENDGRID_API_KEY no configurada. Configure el API key en Panel Maestro > Configuración.")
+        
+        # Parse items
+        try:
+            items_list = json.loads(items)
+        except:
+            items_list = []
+        
+        # Build email content
+        items_html = ""
+        for item in items_list:
+            items_html += f"""
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">{item.get('code', '-')}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">{item.get('name', '-')}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">{item.get('quantity', 1)}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">{item.get('price', 0):.2f} €</td>
+            </tr>
+            """
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0;">
+                <h1 style="margin: 0; font-size: 24px;">✅ CONFIRMACIÓN DE PEDIDO</h1>
+                <p style="margin: 10px 0 0; opacity: 0.9;">Expediente: {budgetNumber}</p>
+            </div>
+            
+            <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0;">
+                <h2 style="color: #1e293b; margin-top: 0;">Datos del Cliente</h2>
+                <table style="width: 100%; margin-bottom: 20px;">
+                    <tr>
+                        <td style="padding: 5px 0; color: #64748b;">Cliente:</td>
+                        <td style="padding: 5px 0; font-weight: bold;">{customerName}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0; color: #64748b;">Dirección:</td>
+                        <td style="padding: 5px 0;">{customerAddress or 'No especificada'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0; color: #64748b;">Total:</td>
+                        <td style="padding: 5px 0; font-weight: bold; color: #059669; font-size: 18px;">{float(totalAmount):,.2f} €</td>
+                    </tr>
+                </table>
+                
+                <h2 style="color: #1e293b;">Artículos del Pedido</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <thead>
+                        <tr style="background: #1e293b; color: white;">
+                            <th style="padding: 10px; text-align: left;">Código</th>
+                            <th style="padding: 10px; text-align: left;">Descripción</th>
+                            <th style="padding: 10px; text-align: center;">Cant.</th>
+                            <th style="padding: 10px; text-align: right;">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items_html}
+                    </tbody>
+                </table>
+                
+                {f'<h2 style="color: #1e293b;">Notas</h2><p style="background: #fff; padding: 15px; border-radius: 5px; border: 1px solid #e2e8f0;">{notes}</p>' if notes else ''}
+            </div>
+            
+            <div style="background: #1e293b; color: white; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
+                <p style="margin: 0; opacity: 0.7;">Enviado desde LUIGGI HOME - Sistema de Gestión de Cocinas</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create email
+        message = Mail(
+            from_email='noreply@luiggihome.com',
+            to_emails=email,
+            subject=f'✅ Confirmación Pedido #{budgetNumber} - {customerName}',
+            html_content=html_content
+        )
+        
+        # Add attachments
+        attachments = [attachment_0, attachment_1, attachment_2, attachment_3, attachment_4]
+        for attachment in attachments:
+            if attachment and attachment.filename:
+                file_content = await attachment.read()
+                encoded_content = base64.b64encode(file_content).decode()
+                
+                attached_file = Attachment(
+                    FileContent(encoded_content),
+                    FileName(attachment.filename),
+                    FileType(attachment.content_type or 'application/octet-stream'),
+                    Disposition('attachment')
+                )
+                message.add_attachment(attached_file)
+        
+        # Send email
+        sg = SendGridAPIClient(sendgrid_key)
+        response = sg.send(message)
+        
+        # Log the order confirmation
+        order_record = {
+            "id": f"order-{uuid.uuid4().hex[:8]}",
+            "budgetNumber": budgetNumber,
+            "customerName": customerName,
+            "customerAddress": customerAddress,
+            "totalAmount": float(totalAmount),
+            "email": email,
+            "notes": notes,
+            "itemsCount": len(items_list),
+            "attachmentsCount": sum(1 for a in attachments if a and a.filename),
+            "confirmedAt": datetime.now(timezone.utc).isoformat(),
+            "status": "confirmed"
+        }
+        await db.orders.insert_one(order_record)
+        
+        logger.info(f"Order confirmed: {budgetNumber} sent to {email}")
+        
+        return {
+            "success": True,
+            "message": f"Pedido confirmado y enviado a {email}",
+            "orderId": order_record["id"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Order confirmation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
 # BACKUP SYSTEM
 # ============================================
 
