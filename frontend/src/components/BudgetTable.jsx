@@ -667,9 +667,18 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
 
               <div className="pt-4 space-y-2">
                  {items.length > 0 ? (
-                   <button onClick={handleSaveBudget} className="w-full bg-orange-600 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition-all border-b-2 border-slate-900/20">
-                      <Save size={14}/> GUARDAR
-                   </button>
+                   <>
+                     <button onClick={handleSaveBudget} className="w-full bg-orange-600 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition-all border-b-2 border-slate-900/20">
+                        <Save size={14}/> GUARDAR
+                     </button>
+                     <button 
+                       onClick={() => setIsConfirmOrderOpen(true)} 
+                       className="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-700 transition-all"
+                       data-testid="confirm-order-btn"
+                     >
+                        <CheckCircle size={14}/> CONFIRMAR PEDIDO
+                     </button>
+                   </>
                  ) : (
                    <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center gap-2">
                       <AlertCircle size={14} className="text-indigo-300" />
