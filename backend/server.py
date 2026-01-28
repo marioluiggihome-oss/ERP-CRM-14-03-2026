@@ -2369,8 +2369,9 @@ async def confirm_order(
         """
         
         # Create email
+        from_email = os.environ.get('BACKUP_EMAIL', 'marioluiggihome@gmail.com')
         message = Mail(
-            from_email='noreply@luiggihome.com',
+            from_email=from_email,
             to_emails=email,
             subject=f'✅ Confirmación Pedido #{budgetNumber} - {customerName}',
             html_content=html_content
