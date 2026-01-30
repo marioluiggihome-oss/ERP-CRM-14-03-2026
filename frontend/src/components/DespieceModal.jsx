@@ -541,6 +541,27 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             Generado: {despieceData?.generatedAt ? new Date(despieceData.generatedAt).toLocaleString('es-ES') : '-'}
           </p>
           <div className="flex gap-3">
+            {/* Botones de exportación para seccionadora */}
+            {despieceData && (
+              <>
+                <button
+                  onClick={handleExportCSV}
+                  className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg"
+                  title="Exportar CSV para seccionadora"
+                >
+                  <Download size={16} />
+                  CSV Seccionadora
+                </button>
+                <button
+                  onClick={handleExportXML}
+                  className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg"
+                  title="Exportar XML (CutRite/Ardis)"
+                >
+                  <Download size={16} />
+                  XML CutRite
+                </button>
+              </>
+            )}
             <button
               onClick={handlePrint}
               className="bg-white border border-indigo-200 text-indigo-700 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-50 transition-colors"
