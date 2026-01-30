@@ -115,6 +115,102 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     window.print();
   };
 
+  // Exportar archivo CSV para seccionadora
+  const handleExportCSV = () => {
+    if (!despieceData || !despieceData.cutList) return;
+    
+    // Crear contenido CSV con formato estándar para seccionadoras
+    let csvContent = "REFERENCIA;DESCRIPCION;LARGO;ANCHO;ESPESOR;CANTIDAD;MATERIAL;VETA;CANTO_L1;CANTO_L2;CANTO_A1;CANTO_A2\n";
+    
+    despieceData.cutList.forEach((piece, index) => {
+      const ref = `P${String(index + 1).padStart(3, '0')}`;
+      const desc = piece.description || piece.component || 'Pieza';
+      const largo = piece.length || piece.width || 0;
+      const ancho = piece.width2 || piece.height || 0;
+      const espesor = piece.thickness || 18;
+      const cantidad = piece.quantity || 1;
+      const material = piece.material || carcassMaterialName || 'MELAMINA';
+      const veta = piece.grain || 'NO';
+      // Cantos: 0 = sin canto, 1 = con canto
+      const cantoL1 = piece.edgeL1 || 0;
+      const cantoL2 = piece.edgeL2 || 0;
+      const cantoA1 = piece.edgeW1 || 0;
+      const cantoA2 = piece.edgeW2 || 0;
+      
+      csvContent += `${ref};${desc};${largo};${ancho};${espesor};${cantidad};${material};${veta};${cantoL1};${cantoL2};${cantoA1};${cantoA2}\n`;
+    });
+    
+    // También añadir lista de montaje si existe
+    if (despieceData.items) {
+      csvContent += "\n\n# LISTA DE MONTAJE\n";
+      csvContent += "MUEBLE;COMPONENTE;LARGO;ANCHO;ESPESOR;CANTIDAD;MATERIAL\n";
+      
+      despieceData.items.forEach(item => {
+        item.components?.forEach(comp => {
+          const compValue = (field) => getComponentValue(item.productId, comp, field);
+          csvContent += `${item.productCode};${comp.name};${compValue('length')};${compValue('width')};${compValue('thickness')};${compValue('quantity')};${comp.material || carcassMaterialName}\n`;
+        });
+      });
+    }
+    
+    // Descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `DESPIECE_${editableExpedient || 'EXP'}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Exportar archivo XML para seccionadora (formato CutRite/Ardis)
+  const handleExportXML = () => {
+    if (!despieceData || !despieceData.cutList) return;
+    
+    let xmlContent = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xmlContent += '<CuttingList>\n';
+    xmlContent += `  <Project name="${editableExpedient || 'DESPIECE'}" customer="${editableCustomerName || ''}" date="${new Date().toISOString().split('T')[0]}">\n`;
+    
+    // Agrupar por material
+    const byMaterial = {};
+    despieceData.cutList.forEach(piece => {
+      const mat = piece.material || carcassMaterialName || 'MELAMINA';
+      if (!byMaterial[mat]) byMaterial[mat] = [];
+      byMaterial[mat].push(piece);
+    });
+    
+    Object.entries(byMaterial).forEach(([material, pieces]) => {
+      xmlContent += `    <Material name="${material}">\n`;
+      pieces.forEach((piece, index) => {
+        xmlContent += `      <Part id="${index + 1}" description="${piece.description || piece.component || 'Pieza'}">\n`;
+        xmlContent += `        <Length>${piece.length || piece.width || 0}</Length>\n`;
+        xmlContent += `        <Width>${piece.width2 || piece.height || 0}</Width>\n`;
+        xmlContent += `        <Thickness>${piece.thickness || 18}</Thickness>\n`;
+        xmlContent += `        <Quantity>${piece.quantity || 1}</Quantity>\n`;
+        xmlContent += `        <Grain>${piece.grain || 'false'}</Grain>\n`;
+        xmlContent += `        <EdgeBanding l1="${piece.edgeL1 || 0}" l2="${piece.edgeL2 || 0}" w1="${piece.edgeW1 || 0}" w2="${piece.edgeW2 || 0}"/>\n`;
+        xmlContent += `      </Part>\n`;
+      });
+      xmlContent += `    </Material>\n`;
+    });
+    
+    xmlContent += `  </Project>\n`;
+    xmlContent += '</CuttingList>\n';
+    
+    // Descargar archivo
+    const blob = new Blob([xmlContent], { type: 'application/xml;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `DESPIECE_${editableExpedient || 'EXP'}_${new Date().toISOString().split('T')[0]}.xml`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!isOpen) return null;
 
   return (
