@@ -465,6 +465,16 @@ class ContactModel(BaseModel):
     convertedToClientId: Optional[str] = None
     # Business types associated: cocina, armarios
     businessTypes: List[str] = []
+    # ========= VALORES PERSONALIZADOS POR CLIENTE =========
+    # Estos valores personalizan el presupuesto para este cliente específico
+    # Solo pueden ser editados por usuarios con isAdmin=true
+    customCarcassMaterialId: Optional[str] = None  # ID del armazón personalizado
+    customWidthIncrement: Optional[float] = None   # Incremento corte ancho (€)
+    customHeightIncrement: Optional[float] = None  # Incremento corte alto (€)
+    customDepthIncrement: Optional[float] = None   # Incremento corte fondo (€)
+    customVigaCutIncrement: Optional[float] = None # Incremento corte viga (€)
+    customPointValueMontada: Optional[float] = None  # Valor punto montada
+    customPointValueDespiece: Optional[float] = None # Valor punto despiece
 
 class ContactCreate(BaseModel):
     name: str
