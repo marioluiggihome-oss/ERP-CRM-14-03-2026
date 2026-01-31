@@ -639,7 +639,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                    </select>
                    <div className="mt-2 flex justify-center">
                      <span className="px-4 py-1.5 bg-orange-500 text-white rounded-full text-[11px] font-black uppercase tracking-wider shadow-md">
-                       GRUPO {DOOR_FINISHES.find(f => f.name === state.globalFinish)?.group || 'Z1'}
+                       TARIFA {DOOR_FINISHES.find(f => f.name === state.globalFinish)?.group || 'Z1'}
                      </span>
                    </div>
                  </div>
