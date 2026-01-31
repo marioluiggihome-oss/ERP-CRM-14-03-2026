@@ -666,13 +666,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                  <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">✏️ COLORES ESPECÍFICOS</h4>
                  <div className="space-y-1">
                     <input type="text" value={state.doorColorLow} onChange={e => setState(p => ({...p, doorColorLow: e.target.value}))} className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-1.5 text-[9px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P. Bajos" />
-                    <input type="text" value={state.doorColorHigh} onChange={e => setState(p => ({...p, doorColorHigh: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-bold outline-none focus:border-orange-500" placeholder="P. Altos" />
-                    <input type="text" value={state.doorColorColumns} onChange={e => setState(p => ({...p, doorColorColumns: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-bold outline-none focus:border-orange-500" placeholder="P. Columnas" />
-                    <input type="text" value={state.sideColor} onChange={e => setState(p => ({...p, sideColor: e.target.value}))} className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-bold outline-none focus:border-orange-500" placeholder="Costados" />
+                    <input type="text" value={state.doorColorHigh} onChange={e => setState(p => ({...p, doorColorHigh: e.target.value}))} className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-1.5 text-[9px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P. Altos" />
+                    <input type="text" value={state.doorColorColumns} onChange={e => setState(p => ({...p, doorColorColumns: e.target.value}))} className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-1.5 text-[9px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P. Columnas" />
+                    <input type="text" value={state.sideColor} onChange={e => setState(p => ({...p, sideColor: e.target.value}))} className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-1.5 text-[9px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Costados" />
                  </div>
               </section>
 
-              <div className="pt-4 space-y-2">
+              <div className="pt-3 space-y-1.5">
                  {items.length > 0 ? (
                    <>
                      <button onClick={handleSaveBudget} className="w-full bg-orange-600 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition-all border-b-2 border-slate-900/20">
