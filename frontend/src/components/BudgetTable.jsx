@@ -14,6 +14,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [isConfigOpen, setIsConfigOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [catalogHeight, setCatalogHeight] = useState(300);
+  const [catalogWidth, setCatalogWidth] = useState(400);  // Ancho para modo vertical
+  const [catalogPosition, setCatalogPosition] = useState('horizontal'); // 'horizontal' | 'vertical'
   const [isDespieceOpen, setIsDespieceOpen] = useState(false);
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
@@ -23,6 +25,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [orderSent, setOrderSent] = useState(false);
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
+  const isResizingCatalogWidth = useRef(false);
 
   const allProducts = useMemo(() => {
     return catalogs
