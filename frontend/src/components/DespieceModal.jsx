@@ -122,30 +122,23 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       return;
     }
     
-    // Crear contenido CSV con formato estándar para seccionadoras
-    let csvContent = "REFERENCIA;DESCRIPCION;LARGO;ANCHO;ESPESOR;CANTIDAD;MATERIAL;VETA;CANTO_L1;CANTO_L2;CANTO_A1;CANTO_A2\n";
+    // Formato: Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad
+    let csvContent = "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad\n";
     
-    let pieceIndex = 1;
     despieceData.items.forEach(item => {
       const itemQty = item.itemQuantity || 1;
       item.components?.forEach(comp => {
         const compValue = (field) => getComponentValue(item.productId, comp, field);
-        const ref = `P${String(pieceIndex++).padStart(3, '0')}`;
-        const desc = `${item.productCode} - ${comp.name}`;
+        const espesor = compValue('thickness') || 18;
+        // Código material basado en espesor y tipo
+        const materialBase = carcassMaterialName?.toUpperCase().replace(/\s+/g, '') || 'MELAMINA';
+        const material = `40-${materialBase}${espesor < 10 ? '0' : ''}${espesor}`;
+        const nombrePieza = comp.name || 'Pieza';
         const largo = compValue('length') || 0;
         const ancho = compValue('width') || 0;
-        const espesor = compValue('thickness') || 18;
         const cantidad = (compValue('quantity') || 1) * itemQty;
-        const material = comp.material || carcassMaterialName || 'MELAMINA';
-        const veta = comp.grain ? 'SI' : 'NO';
-        // Cantos: 0 = sin canto, 1 = con canto (basado en tipo de pieza)
-        const isEdgeVisible = comp.name?.toLowerCase().includes('frontal') || comp.name?.toLowerCase().includes('puerta');
-        const cantoL1 = isEdgeVisible ? 1 : 0;
-        const cantoL2 = isEdgeVisible ? 1 : 0;
-        const cantoA1 = isEdgeVisible ? 1 : 0;
-        const cantoA2 = isEdgeVisible ? 1 : 0;
         
-        csvContent += `${ref};${desc};${largo};${ancho};${espesor};${cantidad};${material};${veta};${cantoL1};${cantoL2};${cantoA1};${cantoA2}\n`;
+        csvContent += `${material};${espesor.toFixed(1).replace('.', ',')};${nombrePieza};${largo};${ancho};${cantidad}\n`;
       });
     });
     
