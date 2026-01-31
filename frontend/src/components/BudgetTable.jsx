@@ -624,7 +624,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
               </section>
               
               <section className="space-y-2 pt-2 border-t border-indigo-50">
-                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">🎨 ACABADO / ZONA</h4>
+                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic">🎨 ACABADO / TARIFA</h4>
                  <div className="bg-gradient-to-br from-indigo-950 to-indigo-900 rounded-xl p-3 shadow-lg">
                    <select 
                      className="w-full bg-transparent text-white rounded-lg p-2.5 text-[10px] font-black outline-none cursor-pointer border-2 border-indigo-700 focus:border-orange-500" 
