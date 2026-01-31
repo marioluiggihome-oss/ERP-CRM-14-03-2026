@@ -3862,16 +3862,12 @@ def calculate_furniture_despiece(
     add_component(
         "Trasera modulo", "TRAS",
         back_material,
-        ancho_interior + 6, back_height, back_thickness, 1,  # +6 para ranuras laterales
-        "Panel trasero"
-    )
-        "TRASERA", "TRAS",
-        back_material,
-        back_width, back_height, 1,
-        "Tablero 8mm encastrado"
+        ancho_interior + 6, back_height, back_thickness, 1,
+        "Panel trasero encastrado"
     )
     
     # BALDAS / ESTANTES (Shelves) - estimate based on height
+    # Los estantes son HORIZONTALES, descontar grosor de laterales
     shelf_count = 0
     if h >= 700:  # Tall units get more shelves
         shelf_count = 2 if h < 1200 else 3 if h < 1800 else 4
@@ -3879,12 +3875,12 @@ def calculate_furniture_despiece(
         shelf_count = 1
     
     if shelf_count > 0:
-        shelf_width = w - (2 * g)
-        shelf_depth = d - 20  # Slightly recessed
+        shelf_length = ancho_interior  # Entre laterales
+        shelf_width = d - 20  # Ligeramente retranqueado del frontal
         add_component(
-            f"BALDA INTERIOR", "BALDA",
+            "Balda interior", "BALDA",
             carcass_material,
-            shelf_width, shelf_depth, shelf_count,
+            shelf_length, shelf_width, g, shelf_count,
             "Regulable con soportes"
         )
     
