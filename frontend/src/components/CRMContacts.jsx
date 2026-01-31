@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Search, Plus, Mail, Phone, Building2, MapPin, Tag,
-  Edit2, Trash2, X, Save, Loader2, UserPlus, Filter, UserCheck, User
+  Edit2, Trash2, X, Save, Loader2, UserPlus, Filter, UserCheck, User, Settings
 } from 'lucide-react';
 import { crmContactsAPI, clientsAPI, usersAPI } from '../services/api';
 
