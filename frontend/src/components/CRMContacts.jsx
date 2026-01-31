@@ -685,6 +685,87 @@ const CRMContacts = ({ currentUser }) => {
                   className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 resize-none"
                 />
               </div>
+
+              {/* Valores Personalizados - Solo para Admin y al editar */}
+              {currentUser?.isAdmin && editingContact && (
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mt-4">
+                  <h4 className="text-xs font-black text-amber-700 uppercase mb-3 flex items-center gap-2">
+                    <Settings size={14} />
+                    Valores Personalizados para este Cliente
+                  </h4>
+                  <p className="text-[10px] text-amber-600 mb-3">
+                    Estos valores sobreescriben los valores por defecto del sistema solo para este cliente
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">Incremento Ancho (€)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.customWidthIncrement ?? ''}
+                        onChange={e => setFormData({...formData, customWidthIncrement: e.target.value ? parseFloat(e.target.value) : null})}
+                        placeholder="Por defecto"
+                        className="w-full px-3 py-2 border-2 border-amber-200 rounded-lg text-sm font-bold outline-none focus:border-amber-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">Incremento Alto (€)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.customHeightIncrement ?? ''}
+                        onChange={e => setFormData({...formData, customHeightIncrement: e.target.value ? parseFloat(e.target.value) : null})}
+                        placeholder="Por defecto"
+                        className="w-full px-3 py-2 border-2 border-amber-200 rounded-lg text-sm font-bold outline-none focus:border-amber-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">Incremento Fondo (€)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.customDepthIncrement ?? ''}
+                        onChange={e => setFormData({...formData, customDepthIncrement: e.target.value ? parseFloat(e.target.value) : null})}
+                        placeholder="Por defecto"
+                        className="w-full px-3 py-2 border-2 border-amber-200 rounded-lg text-sm font-bold outline-none focus:border-amber-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">Incremento Viga (€)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.customVigaCutIncrement ?? ''}
+                        onChange={e => setFormData({...formData, customVigaCutIncrement: e.target.value ? parseFloat(e.target.value) : null})}
+                        placeholder="Por defecto"
+                        className="w-full px-3 py-2 border-2 border-amber-200 rounded-lg text-sm font-bold outline-none focus:border-amber-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">Valor Punto Montada</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.customPointValueMontada ?? ''}
+                        onChange={e => setFormData({...formData, customPointValueMontada: e.target.value ? parseFloat(e.target.value) : null})}
+                        placeholder="Por defecto"
+                        className="w-full px-3 py-2 border-2 border-amber-200 rounded-lg text-sm font-bold outline-none focus:border-amber-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">Valor Punto Despiece</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.customPointValueDespiece ?? ''}
+                        onChange={e => setFormData({...formData, customPointValueDespiece: e.target.value ? parseFloat(e.target.value) : null})}
+                        placeholder="Por defecto"
+                        className="w-full px-3 py-2 border-2 border-amber-200 rounded-lg text-sm font-bold outline-none focus:border-amber-500 bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
