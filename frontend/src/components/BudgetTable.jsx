@@ -1052,82 +1052,179 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
           )}
         </div>
 
-        <div style={{ height: isCatalogOpen ? catalogHeight : 45 }} className="absolute bottom-0 left-0 right-0 bg-white border-t border-indigo-100 no-print transition-all duration-500 z-50 overflow-hidden shadow-2xl">
-           <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>
-           <div className="h-[45px] px-8 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center cursor-pointer" onClick={() => setIsCatalogOpen(!isCatalogOpen)}>
-              <div className="flex items-center gap-3">
-                <LayoutPanelTop size={18} className="text-orange-600"/>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] italic text-indigo-900">
-                  LIBRERÍA MAESTRA <span className="text-orange-600">({filteredCatalog.length} ARTÍCULOS)</span>
-                </h3>
-              </div>
-              <div className="flex items-center gap-4" onClick={e => e.stopPropagation()}>
-                 <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
-                    <select 
-                      value={selectedCategory} 
-                      onChange={e => setSelectedCategory(e.target.value)}
-                      className="bg-white border border-indigo-100 rounded-xl py-1.5 pl-9 pr-8 text-[9px] font-black uppercase text-indigo-800 outline-none focus:border-orange-600 shadow-sm appearance-none cursor-pointer hover:bg-indigo-50"
-                      data-testid="category-filter"
-                    >
-                       <option value="TODAS">TODAS LAS CATEGORÍAS</option>
-                       {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none" size={12} />
-                 </div>
-                 <div className="relative">
-                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
-                    <select 
-                      value={selectedSeries} 
-                      onChange={e => setSelectedSeries(e.target.value)}
-                      className="bg-white border border-indigo-100 rounded-xl py-1.5 pl-9 pr-8 text-[9px] font-black uppercase text-indigo-800 outline-none focus:border-orange-600 shadow-sm appearance-none cursor-pointer hover:bg-indigo-50"
-                    >
-                       <option value="TODAS">TODAS LAS SERIES / FAMILIAS</option>
-                       {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none" size={12} />
-                 </div>
-                 <div className="relative w-[300px]">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-200" size={14} />
-                    <input type="text" placeholder="BUSCAR ARTÍCULO..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-50 rounded-xl py-1.5 pl-10 pr-4 text-[10px] font-black outline-none uppercase italic focus:border-orange-600 shadow-sm" />
-                 </div>
-              </div>
-           </div>
-           
-           <div className="h-[calc(100%-45px)] overflow-y-auto scrollbar-thin">
-              <table className="w-full text-left">
-                <thead className="bg-indigo-950 text-white text-[8px] font-black uppercase sticky top-0 z-20 tracking-widest italic">
-                  <tr>
-                    <th className="p-4">REF. TÉCNICA</th>
-                    <th className="p-4">NOMBRE COMERCIAL</th>
-                    <th className="p-4 text-center">ANCHO</th>
-                    <th className="p-4 text-center">ALTO</th>
-                    <th className="p-4 text-center">FONDO</th>
-                    <th className="p-4 text-center">PUNTOS</th>
-                    <th className="p-4 pr-8 text-right">AÑADIR</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-indigo-50">
-                  {filteredCatalog.map(p => (
-                    <tr key={p.id} className="hover:bg-indigo-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
-                      <td className="p-4 font-black italic text-indigo-900 text-[12px] tracking-tighter">{p.code}</td>
-                      <td className="p-4">
-                        <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest italic">{p.name}</div>
-                        {p.series && <div className="text-[7px] font-black text-orange-600/50 uppercase tracking-tight mt-0.5 border border-orange-600/20 bg-orange-600/5 inline-block px-1 rounded">{p.series}</div>}
-                      </td>
-                      <td className="p-4 text-center font-bold text-slate-600 text-[10px]">{p.width ? Math.round(p.width / 10) : '-'}</td>
-                      <td className="p-4 text-center font-bold text-slate-600 text-[10px]">{p.height || '-'}</td>
-                      <td className="p-4 text-center font-bold text-slate-600 text-[10px]">{p.depth || '-'}</td>
-                      <td className="p-4 text-center font-black text-orange-600 italic">
-                        {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
-                      </td>
-                      <td className="p-4 pr-8 text-right"><Plus size={18} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-all scale-125"/></td>
+        {/* Catálogo - POSICIÓN HORIZONTAL (abajo) */}
+        {catalogPosition === 'horizontal' && (
+          <div style={{ height: isCatalogOpen ? catalogHeight : 45 }} className="absolute bottom-0 left-0 right-0 bg-white border-t border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl">
+             <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>
+             <div className="h-[45px] px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIsCatalogOpen(!isCatalogOpen)}>
+                  <LayoutPanelTop size={16} className="text-orange-600"/>
+                  <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-900">
+                    LIBRERÍA <span className="text-orange-600">({filteredCatalog.length})</span>
+                  </h3>
+                  {isCatalogOpen ? <ChevronDown size={14} className="text-indigo-400"/> : <ChevronUp size={14} className="text-indigo-400"/>}
+                </div>
+                <div className="flex items-center gap-2">
+                   {/* Filtros solo cuando está abierto */}
+                   {isCatalogOpen && (
+                     <>
+                       <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="bg-white border border-indigo-100 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
+                         <option value="TODAS">CATEGORÍAS</option>
+                         {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                       </select>
+                       <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="bg-white border border-indigo-100 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
+                         <option value="TODAS">SERIES</option>
+                         {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
+                       </select>
+                       <div className="relative w-[180px]">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-300" size={12} />
+                          <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1 pl-7 pr-2 text-[8px] font-bold outline-none uppercase" />
+                       </div>
+                     </>
+                   )}
+                   {/* Botón cambiar posición */}
+                   <button 
+                     onClick={() => setCatalogPosition('vertical')} 
+                     className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
+                     title="Cambiar a vista vertical (derecha)"
+                   >
+                     <PanelRightOpen size={14} className="text-indigo-600"/>
+                   </button>
+                </div>
+             </div>
+             
+             <div className="h-[calc(100%-45px)] overflow-y-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-indigo-950 text-white text-[8px] font-black uppercase sticky top-0 z-20">
+                    <tr>
+                      <th className="p-3">REF.</th>
+                      <th className="p-3">NOMBRE</th>
+                      <th className="p-3 text-center">ANCHO</th>
+                      <th className="p-3 text-center">ALTO</th>
+                      <th className="p-3 text-center">FONDO</th>
+                      <th className="p-3 text-center">PTS</th>
+                      <th className="p-3 text-right">+</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-           </div>
-        </div>
+                  </thead>
+                  <tbody className="divide-y divide-indigo-50">
+                    {filteredCatalog.map(p => (
+                      <tr key={p.id} className="hover:bg-indigo-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
+                        <td className="p-2 font-black text-indigo-900 text-[10px]">{p.code}</td>
+                        <td className="p-2">
+                          <div className="text-[8px] font-bold text-indigo-500 uppercase">{p.name}</div>
+                        </td>
+                        <td className="p-2 text-center font-bold text-slate-500 text-[9px]">{p.width ? Math.round(p.width / 10) : '-'}</td>
+                        <td className="p-2 text-center font-bold text-slate-500 text-[9px]">{p.height || '-'}</td>
+                        <td className="p-2 text-center font-bold text-slate-500 text-[9px]">{p.depth || '-'}</td>
+                        <td className="p-2 text-center font-black text-orange-600 text-[10px]">
+                          {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
+                        </td>
+                        <td className="p-2 text-right"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100"/></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+             </div>
+          </div>
+        )}
+
+        {/* Catálogo - POSICIÓN VERTICAL (derecha) */}
+        {catalogPosition === 'vertical' && (
+          <div 
+            style={{ width: isCatalogOpen ? catalogWidth : 50 }} 
+            className="absolute top-0 right-0 bottom-0 bg-white border-l border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl flex flex-col"
+          >
+            {/* Resizer horizontal */}
+            <div 
+              onMouseDown={() => { isResizingCatalogWidth.current = true; }} 
+              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-orange-600/30 z-10"
+            />
+            
+            {/* Header */}
+            <div className="h-[45px] px-3 bg-indigo-50/30 border-b border-indigo-50 flex items-center gap-2 shrink-0">
+              <button 
+                onClick={() => setIsCatalogOpen(!isCatalogOpen)}
+                className="p-1"
+              >
+                {isCatalogOpen ? <PanelRightClose size={16} className="text-indigo-600"/> : <PanelRightOpen size={16} className="text-indigo-600"/>}
+              </button>
+              {isCatalogOpen && (
+                <>
+                  <div className="flex-1">
+                    <h3 className="text-[8px] font-black uppercase text-indigo-900">
+                      LIBRERÍA <span className="text-orange-600">({filteredCatalog.length})</span>
+                    </h3>
+                  </div>
+                  <button 
+                    onClick={() => setCatalogPosition('horizontal')} 
+                    className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
+                    title="Cambiar a vista horizontal (abajo)"
+                  >
+                    <PanelBottomOpen size={14} className="text-indigo-600"/>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {isCatalogOpen && (
+              <>
+                {/* Filtros verticales */}
+                <div className="p-2 space-y-1.5 border-b border-indigo-50 shrink-0">
+                  <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1.5 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
+                    <option value="TODAS">TODAS CATEGORÍAS</option>
+                    {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1.5 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
+                    <option value="TODAS">TODAS SERIES</option>
+                    {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-300" size={12} />
+                    <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1.5 pl-7 pr-2 text-[8px] font-bold outline-none uppercase" />
+                  </div>
+                </div>
+
+                {/* Lista de productos */}
+                <div className="flex-1 overflow-y-auto">
+                  <div className="divide-y divide-indigo-50">
+                    {filteredCatalog.map(p => (
+                      <div 
+                        key={p.id} 
+                        className="p-2 hover:bg-indigo-50 cursor-pointer transition-colors group"
+                        onClick={() => addItemToBudget(p)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[9px] font-black text-indigo-900 truncate">{p.code}</div>
+                            <div className="text-[7px] font-bold text-indigo-400 uppercase truncate">{p.name}</div>
+                            <div className="flex gap-1 mt-0.5 text-[7px] text-slate-400">
+                              <span>{p.width ? Math.round(p.width / 10) : '-'}×{p.height || '-'}×{p.depth || '-'}</span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-[10px] font-black text-orange-600">
+                              {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
+                            </div>
+                            <Plus size={12} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Cuando está cerrado, mostrar solo icono */}
+            {!isCatalogOpen && (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="transform -rotate-90 whitespace-nowrap text-[8px] font-black uppercase text-indigo-400 tracking-widest">
+                  LIBRERÍA ({filteredCatalog.length})
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Despiece Modal */}
