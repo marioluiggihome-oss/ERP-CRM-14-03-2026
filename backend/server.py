@@ -509,6 +509,14 @@ class ContactUpdate(BaseModel):
     assignedTo: Optional[str] = None  # ID del comercial/representante asignado
     totalValue: Optional[float] = None
     linkedProjectIds: Optional[List[str]] = None
+    # Valores personalizados (solo editables por admin)
+    customCarcassMaterialId: Optional[str] = None
+    customWidthIncrement: Optional[float] = None
+    customHeightIncrement: Optional[float] = None
+    customDepthIncrement: Optional[float] = None
+    customVigaCutIncrement: Optional[float] = None
+    customPointValueMontada: Optional[float] = None
+    customPointValueDespiece: Optional[float] = None
 
 class OpportunityModel(BaseModel):
     """Modelo para oportunidades de venta (pipeline)"""
