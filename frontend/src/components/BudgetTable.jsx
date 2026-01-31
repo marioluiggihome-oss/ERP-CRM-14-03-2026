@@ -452,8 +452,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
     const onMouseMove = (e) => {
       if (isResizingSidebar.current) setSidebarWidth(Math.max(250, Math.min(600, e.clientX - 80)));
       if (isResizingCatalog.current) setCatalogHeight(Math.max(120, Math.min(600, window.innerHeight - e.clientY)));
+      if (isResizingCatalogWidth.current) setCatalogWidth(Math.max(280, Math.min(800, window.innerWidth - e.clientX)));
     };
-    const onMouseUp = () => { isResizingSidebar.current = isResizingCatalog.current = false; };
+    const onMouseUp = () => { 
+      isResizingSidebar.current = false;
+      isResizingCatalog.current = false; 
+      isResizingCatalogWidth.current = false;
+    };
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
     return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
