@@ -3760,19 +3760,17 @@ def calculate_furniture_despiece(
     """
     Calculate the despiece (bill of materials) for a single furniture piece.
     
+    REGLA FUNDAMENTAL:
+    - VERTICALES (laterales/costados): Usan el ALTO COMPLETO del mueble
+    - HORIZONTALES (tapas, estantes): Se les descuenta el GROSOR del casco (x2)
+    
     Standard furniture components:
-    - TAPA SUPERIOR: width x depth (top cover)
-    - TAPA INFERIOR: width x depth (bottom cover) 
-    - LATERAL IZQUIERDO: (height - 2*grosor) x depth
-    - LATERAL DERECHO: (height - 2*grosor) x depth
-    - TRASERA: width x (height - 2*grosor) (back panel, 8mm)
+    - LATERAL IZQUIERDO: height x depth (ALTO COMPLETO)
+    - LATERAL DERECHO: height x depth (ALTO COMPLETO)
+    - TAPA SUPERIOR: (width - 2*grosor) x depth (entre laterales)
+    - TAPA INFERIOR: (width - 2*grosor) x depth (entre laterales)
+    - TRASERA: (width - 2*grosor) x (height - 6mm) (encajada en ranuras)
     - BALDA/ESTANTE: (width - 2*grosor) x (depth - 3mm) - optional shelves
-    
-    For ALTOS (wall cabinets):
-    - Usually no bottom cover (open for mounting)
-    
-    For BAJOS (base cabinets):
-    - Standard configuration with possible kick plate
     """
     
     w = item.width  # Width in mm
@@ -3788,66 +3786,84 @@ def calculate_furniture_despiece(
     is_bajo = "BAJO" in item.category.upper() or "BAJO" in item.productName.upper()
     is_columna = "COLUMNA" in item.category.upper() or "COLUMNA" in item.productName.upper()
     
-    def add_component(name: str, short: str, material: str, width: float, height: float, qty: int = 1, notes: str = ""):
+    def add_component(name: str, short: str, material: str, length: float, width: float, thickness: float = grosor, qty: int = 1, notes: str = ""):
         nonlocal component_id
         component_id += 1
-        area = (width * height * qty) / 1_000_000  # Convert mm² to m²
+        area = (length * width * qty) / 1_000_000  # Convert mm² to m²
         components.append(ComponentPiece(
             id=f"CMP-{item.productId[:8]}-{component_id:03d}",
             name=name,
             nameShort=short,
             material=material,
+            length=round(length, 1),
             width=round(width, 1),
-            height=round(height, 1),
+            thickness=round(thickness, 1),
             quantity=qty,
             area=round(area, 4),
             notes=notes
         ))
     
-    # TAPA SUPERIOR (Top panel)
+    # =============================================
+    # VERTICALES - Usan el ALTO COMPLETO
+    # =============================================
+    
+    # LATERAL IZQUIERDO (Side panel - full height)
     add_component(
-        "TAPA SUPERIOR", "TAPA-S", 
+        "Lateral izquierdo", "LAT-I",
         carcass_material,
-        w, d, 1,
+        h, d, g, 1,  # ALTO COMPLETO x FONDO
+        "Canto frontal visto"
+    )
+    
+    # LATERAL DERECHO (Side panel - full height)
+    add_component(
+        "Lateral derecho", "LAT-D",
+        carcass_material,
+        h, d, g, 1,  # ALTO COMPLETO x FONDO
+        "Canto frontal visto"
+    )
+    
+    # =============================================
+    # HORIZONTALES - Descontar grosor de los laterales
+    # =============================================
+    
+    # Ancho interior (entre laterales)
+    ancho_interior = w - (2 * g)
+    
+    # TAPA SUPERIOR (Top panel - between sides)
+    add_component(
+        "Tapa superior", "TAPA-S", 
+        carcass_material,
+        ancho_interior, d, g, 1,
         "Canto frontal visto"
     )
     
     # TAPA INFERIOR (Bottom panel) - not always present in ALTOS
     if not is_alto:
         add_component(
-            "TAPA INFERIOR", "TAPA-I",
+            "Tapa inferior", "TAPA-I",
             carcass_material,
-            w, d, 1,
+            ancho_interior, d, g, 1,
             "Canto frontal visto" if is_bajo else ""
         )
     else:
         # ALTOS use a narrower bottom rail
         add_component(
-            "TRAVESAÑO INFERIOR", "TRAV-I",
+            "Travesaño inferior", "TRAV-I",
             carcass_material,
-            w - (2 * g), 80, 1,  # 80mm rail
+            ancho_interior, 80, g, 1,  # 80mm rail
             "Travesaño de sujeción"
         )
     
-    # LATERALES (Side panels)
-    lateral_height = h - (2 * g) if not is_alto else h - g - 80  # Account for rail in ALTOS
+    # TRASERA (Back panel) - siempre más fina (8mm o 6mm)
+    back_thickness = 8 if g >= 18 else 6
+    back_height = h - 6  # Encajada en ranuras (3mm arriba y abajo)
     add_component(
-        "LATERAL IZQUIERDO", "LAT-I",
-        carcass_material,
-        lateral_height, d, 1,
-        "Canto frontal visto"
+        "Trasera modulo", "TRAS",
+        back_material,
+        ancho_interior + 6, back_height, back_thickness, 1,  # +6 para ranuras laterales
+        "Panel trasero"
     )
-    add_component(
-        "LATERAL DERECHO", "LAT-D",
-        carcass_material,
-        lateral_height, d, 1,
-        "Canto frontal visto"
-    )
-    
-    # TRASERA (Back panel) - siempre 8mm
-    back_width = w - (2 * g) + 6  # Recessed into grooves (3mm each side)
-    back_height = h - (2 * g) + 6 if not is_alto else h - g - 80 + 6
-    add_component(
         "TRASERA", "TRAS",
         back_material,
         back_width, back_height, 1,
