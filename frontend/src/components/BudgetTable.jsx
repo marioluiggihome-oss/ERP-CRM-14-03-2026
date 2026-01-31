@@ -485,23 +485,23 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
            <button onClick={() => setIsConfigOpen(!isConfigOpen)} className={`p-2.5 rounded-lg transition-all ${isConfigOpen ? 'bg-indigo-950 text-white shadow-md' : 'bg-white border text-indigo-200'}`}>
               {isConfigOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
            </button>
-           
-           {/* Pestaña ARMARIOS - Solo para usuarios con permiso */}
-           {(state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
-             <button 
-               onClick={() => setState(p => ({...p, currentTab: 'armarios'}))} 
-               className="ml-4 flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg border border-purple-200 transition-all"
-               data-testid="armarios-tab-btn"
-             >
-               <Box size={14} className="text-purple-600" />
-               <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">Armarios</span>
-             </button>
-           )}
         </div>
         
-        <div className="flex gap-4 items-center">
-          <button onClick={addManualItemToBudget} className="bg-white border-2 border-indigo-100 text-indigo-800 px-4 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-indigo-50 transition-all shadow-sm">
-             <Keyboard size={16}/> LÍNEA MANUAL
+        <div className="flex gap-3 items-center">
+          {/* Pestaña ARMARIOS - Solo para usuarios con permiso */}
+          {(state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
+            <button 
+              onClick={() => setState(p => ({...p, currentTab: 'armarios'}))} 
+              className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-xl border border-purple-200 transition-all"
+              data-testid="armarios-tab-btn"
+            >
+              <Box size={14} className="text-purple-600" />
+              <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">Armarios</span>
+            </button>
+          )}
+
+          <button onClick={addManualItemToBudget} className="bg-white border-2 border-indigo-100 text-indigo-800 px-4 py-2 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-indigo-50 transition-all shadow-sm">
+             <Keyboard size={14}/> LÍNEA MANUAL
           </button>
 
           <button 
