@@ -122,8 +122,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       return;
     }
     
-    // Formato: Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad
-    let csvContent = "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad\n";
+    // Formato: Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código
+    let csvContent = "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código\n";
     
     despieceData.items.forEach(item => {
       const itemQty = item.itemQuantity || 1;
@@ -137,8 +137,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         const largo = compValue('length') || 0;
         const ancho = compValue('width') || 0;
         const cantidad = (compValue('quantity') || 1) * itemQty;
+        // Textura: 0 = sin veta, 1 = con veta (verticales suelen tener veta)
+        const esVertical = nombrePieza.toLowerCase().includes('lateral') || 
+                          nombrePieza.toLowerCase().includes('costado') ||
+                          nombrePieza.toLowerCase().includes('vertical');
+        const textura = esVertical ? 1 : 0;
+        // Código de la pieza
+        const codigo = `${item.productCode || ''}-${comp.id || nombrePieza.substring(0,3).toUpperCase()}`;
         
-        csvContent += `${material};${espesor.toFixed(1).replace('.', ',')};${nombrePieza};${largo};${ancho};${cantidad}\n`;
+        csvContent += `${material};${espesor.toFixed(1).replace('.', ',')};${nombrePieza};${largo};${ancho};${cantidad};${textura};${codigo}\n`;
       });
     });
     
