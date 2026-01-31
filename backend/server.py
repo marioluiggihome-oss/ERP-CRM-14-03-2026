@@ -2843,6 +2843,71 @@ async def get_contacts_by_prescriptor(prescriptor_id: str):
         logger.error(f"Get contacts by prescriptor error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.get("/crm/contacts/{contact_id}/custom-values")
+async def get_contact_custom_values(contact_id: str):
+    """Get custom budget values for a specific contact/client"""
+    try:
+        contact = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
+        if not contact:
+            raise HTTPException(status_code=404, detail="Contacto no encontrado")
+        
+        return {
+            "contactId": contact_id,
+            "contactName": contact.get("name", ""),
+            "customCarcassMaterialId": contact.get("customCarcassMaterialId"),
+            "customWidthIncrement": contact.get("customWidthIncrement"),
+            "customHeightIncrement": contact.get("customHeightIncrement"),
+            "customDepthIncrement": contact.get("customDepthIncrement"),
+            "customVigaCutIncrement": contact.get("customVigaCutIncrement"),
+            "customPointValueMontada": contact.get("customPointValueMontada"),
+            "customPointValueDespiece": contact.get("customPointValueDespiece")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get contact custom values error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/crm/contacts/{contact_id}/custom-values")
+async def update_contact_custom_values(contact_id: str, values: dict):
+    """Update custom budget values for a contact - ADMIN ONLY
+    
+    Allows admin to set personalized values for:
+    - customCarcassMaterialId: Material armazón específico
+    - customWidthIncrement: Incremento corte ancho
+    - customHeightIncrement: Incremento corte alto
+    - customDepthIncrement: Incremento corte fondo
+    - customVigaCutIncrement: Incremento corte viga
+    - customPointValueMontada: Valor punto montada
+    - customPointValueDespiece: Valor punto despiece
+    """
+    try:
+        # Only allow updating custom fields
+        allowed_fields = [
+            "customCarcassMaterialId", "customWidthIncrement", "customHeightIncrement",
+            "customDepthIncrement", "customVigaCutIncrement", 
+            "customPointValueMontada", "customPointValueDespiece"
+        ]
+        
+        update_data = {k: v for k, v in values.items() if k in allowed_fields}
+        update_data["updatedAt"] = datetime.now(timezone.utc)
+        
+        result = await db.contacts.update_one(
+            {"id": contact_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Contacto no encontrado")
+        
+        logger.info(f"Custom values updated for contact {contact_id}: {update_data}")
+        return {"success": True, "message": "Valores personalizados actualizados"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update contact custom values error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/crm/prescriptors")
 async def get_prescriptors():
     """Get all users who are prescriptors"""
