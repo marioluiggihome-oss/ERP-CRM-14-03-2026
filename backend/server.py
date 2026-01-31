@@ -3722,11 +3722,12 @@ class DespieceRequest(BaseModel):
 class ComponentPiece(BaseModel):
     """A single piece/component in the despiece"""
     id: str
-    name: str  # e.g., "Tapa Superior", "Lateral Izquierdo"
-    nameShort: str  # e.g., "TAPA", "LAT-I"
+    name: str  # e.g., "Lateral izquierdo", "Tapa superior"
+    nameShort: str  # e.g., "LAT-I", "TAPA-S"
     material: str
-    width: float  # in mm
-    height: float  # in mm
+    length: float  # Largo pieza in mm
+    width: float  # Ancho pieza in mm
+    thickness: float = 18  # Grosor in mm
     quantity: int
     area: float  # in m²
     notes: str = ""
