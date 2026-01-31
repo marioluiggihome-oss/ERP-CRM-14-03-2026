@@ -675,24 +675,24 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
               <div className="pt-3 space-y-1.5">
                  {items.length > 0 ? (
                    <>
-                     <button onClick={handleSaveBudget} className="w-full bg-orange-600 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition-all border-b-2 border-slate-900/20">
+                     <button onClick={handleSaveBudget} className="w-full bg-orange-500 text-white py-2 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-orange-600 transition-all">
                         <Save size={14}/> GUARDAR
                      </button>
                      <button 
                        onClick={() => setIsConfirmOrderOpen(true)} 
-                       className="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-700 transition-all"
+                       className="w-full bg-emerald-500 text-white py-2 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 transition-all"
                        data-testid="confirm-order-btn"
                      >
                         <CheckCircle size={14}/> CONFIRMAR PEDIDO
                      </button>
                    </>
                  ) : (
-                   <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center gap-2">
-                      <AlertCircle size={14} className="text-indigo-300" />
-                      <span className="text-[7px] font-black text-indigo-300 uppercase leading-tight italic">Añade artículos</span>
+                   <div className="p-1.5 bg-orange-50 rounded-xl border border-orange-200 flex items-center gap-2">
+                      <AlertCircle size={12} className="text-orange-400" />
+                      <span className="text-[7px] font-black text-orange-400 uppercase leading-tight">Añade artículos</span>
                    </div>
                  )}
-                 <button onClick={() => exportToPdf('budget-pdf', `EXP_${state.budgetNumber}`)} className="w-full bg-indigo-950 text-white py-2.5 rounded-lg font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-900 transition-all">
+                 <button onClick={() => exportToPdf('budget-pdf', `EXP_${state.budgetNumber}`)} className="w-full bg-indigo-800 text-white py-2 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-900 transition-all">
                     <Printer size={14}/> IMPRIMIR
                  </button>
               </div>
