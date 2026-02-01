@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, LogIn, User as UserIcon, Key, ShieldAlert, Loader } from 'lucide-react';
 import Logo from './Logo';
-import { authAPI } from '../services/api';
+import { login, setTokens, setUser } from '../services/authService';
 
 const Login = ({ onLogin, customLogo }) => {
   const [username, setUsername] = useState('');
@@ -15,8 +15,9 @@ const Login = ({ onLogin, customLogo }) => {
     setError(null);
     
     try {
-      const result = await authAPI.login(username.trim(), password.trim());
+      const result = await login(username.trim(), password.trim());
       if (result.success && result.user) {
+        // Los tokens ya se guardan en authService.login()
         onLogin(result.user);
       } else {
         setError('CREDENCIALES NO VÁLIDAS');
