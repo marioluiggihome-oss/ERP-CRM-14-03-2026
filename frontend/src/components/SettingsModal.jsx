@@ -125,6 +125,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [maintenanceMinutes, setMaintenanceMinutes] = useState(30);
   const [maintenanceCreateBackup, setMaintenanceCreateBackup] = useState(true);
 
+  // Director Panel states (formerly AdminWorkView)
+  const [directorLoading, setDirectorLoading] = useState(true);
+  const [directorData, setDirectorData] = useState(null);
+  const [directorMetrics, setDirectorMetrics] = useState(null);
+  const [directorTrends, setDirectorTrends] = useState(null);
+  const [directorTab, setDirectorTab] = useState('metrics');
+  const [directorSearchTerm, setDirectorSearchTerm] = useState('');
+  const [directorFilterUser, setDirectorFilterUser] = useState('');
+  const [directorExpandedSections, setDirectorExpandedSections] = useState({
+    projects: true,
+    opportunities: true,
+    digitalizaciones: false
+  });
+
   // Load clients and segments when tab is active
   useEffect(() => {
     if (isOpen && activeTab === 'clients') {
