@@ -115,7 +115,7 @@ const Login = ({ onLogin, customLogo }) => {
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ 
-            backgroundImage: 'url(https://images.unsplash.com/photo-1768413292078-a0ff5e27c487?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBraXRjaGVuJTIwaW50ZXJpb3IlMjB3b29kJTIwY2FiaW5ldHMlMjBtaW5pbWFsaXN0JTIwZGVzaWdufGVufDB8fHx8MTc2OTk0OTM1Nnww&ixlib=rb-4.1.0&q=85)'
+            backgroundImage: 'url(https://images.unsplash.com/photo-1758548157243-f4ef3e614684?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBsdXh1cnklMjBraXRjaGVuJTIwaW50ZXJpb3IlMjBkZXNpZ24lMjB3aGl0ZSUyMG1pbmltYWxpc3R8ZW58MHx8fHwxNzY5OTQ4OTQ3fDA&ixlib=rb-4.1.0&q=85)'
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-slate-900/40 to-transparent" />
