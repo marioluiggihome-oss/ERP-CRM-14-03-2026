@@ -22,7 +22,7 @@
 - Botón verde junto a "Crear Backup Manual"
 
 ### ✅ Exportables de Base de Datos
-- **URL de descarga**: https://kitchen-manager-app.preview.emergentagent.com/export_database_latest.xlsx
+- **URL de descarga**: https://luiggi-budget.preview.emergentagent.com/export_database_latest.xlsx
 - Incluye: 10 usuarios, 4685 productos, acabados/materiales, proyectos, oportunidades CRM
 
 ### ✅ CSV Seccionadora - Formato Limpio

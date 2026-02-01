@@ -7,7 +7,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://kitchen-manager-app.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://luiggi-budget.preview.emergentagent.com').rstrip('/')
 
 # Test data prefixes for cleanup
 TEST_PREFIX = "TEST_CRM_"
