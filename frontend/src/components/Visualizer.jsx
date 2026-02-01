@@ -60,7 +60,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     }
   };
 
-  const addFurnitureToBudget = (furniture) => {
+  const addFurnitureToBudget = (furniture, showAlert = true) => {
     if (onAddToBudget) {
       onAddToBudget({
         code: furniture.codigo_sugerido,
@@ -71,8 +71,20 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         category: furniture.tipo,
         points: 0,
         zonePoints: {}
-      });
+      }, showAlert);
     }
+  };
+
+  const addAllFurnitureToBudget = () => {
+    if (!analysisResult?.muebles_detectados?.length) return;
+    
+    const count = analysisResult.muebles_detectados.length;
+    analysisResult.muebles_detectados.forEach((f, i) => {
+      // Only show alert on the last one
+      addFurnitureToBudget(f, false);
+    });
+    
+    alert(`✅ Se han añadido ${count} muebles al presupuesto.\n\nVe a la pestaña "Presupuesto" para verlos.`);
   };
 
   const clearAll = () => {
