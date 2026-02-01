@@ -2718,6 +2718,19 @@ async def get_project(project_id: str):
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return project
 
+@api_router.get("/projects/check-budget-number/{budget_number}")
+async def check_budget_number(budget_number: str):
+    """Verificar si ya existe un presupuesto con este número"""
+    project = await db.projects.find_one({"budgetNumber": budget_number}, {"_id": 0})
+    if project:
+        return {
+            "exists": True,
+            "projectId": project.get("id"),
+            "customerName": project.get("customerName", "Sin nombre"),
+            "createdAt": project.get("createdAt")
+        }
+    return {"exists": False}
+
 @api_router.post("/projects", response_model=ProjectModel)
 async def create_project(project: ProjectCreate, user_id: str):
     """Crear un nuevo proyecto"""
