@@ -1226,6 +1226,16 @@ async def delete_user(request: Request, user_id: str):
     result = await db.users.delete_one({"id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    # Auditoría
+    audit.log(
+        AuditAction.USER_DELETE,
+        resource_type="user",
+        resource_id=user_id,
+        request=request,
+        details={"deleted_username": user_to_delete.get("username") if user_to_delete else "unknown"}
+    )
+    
     return {"message": "Usuario eliminado"}
 
 # ============================================
