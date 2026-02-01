@@ -1575,19 +1575,29 @@ async def update_client(client_id: str, client: ClientUpdate):
     return updated
 
 @api_router.delete("/clients/{client_id}")
-async def delete_client(client_id: str):
-    """Eliminar un cliente"""
+async def delete_client(client_id: str, force: bool = False):
+    """Eliminar un cliente. Si force=True, desvincula usuarios automáticamente."""
     # Check if client has linked users
     linked_users = await db.users.count_documents({"linkedClientId": client_id})
     if linked_users > 0:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"No se puede eliminar: {linked_users} usuario(s) vinculado(s)"
-        )
+        if force:
+            # Admin force delete: unlink users first
+            await db.users.update_many(
+                {"linkedClientId": client_id},
+                {"$set": {"linkedClientId": None}}
+            )
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"No se puede eliminar: {linked_users} usuario(s) vinculado(s). Use force=true para desvincular y eliminar."
+            )
     
     result = await db.clients.delete_one({"id": client_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    if linked_users > 0 and force:
+        return {"message": f"Cliente eliminado. {linked_users} usuario(s) desvinculado(s)."}
     return {"message": "Cliente eliminado"}
 
 @api_router.post("/clients/import-csv")
