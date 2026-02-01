@@ -80,24 +80,33 @@ const ClientSelector = ({
   const fetchClients = async () => {
     setIsLoading(true);
     try {
-      // Fetch from CRM contacts as they are the main source
-      const response = await fetch(`${API_URL}/api/crm/contacts`);
+      // SEGURIDAD: Enviar el ID del usuario y su rol al backend para filtrado server-side
+      const params = new URLSearchParams();
+      
+      if (currentUser) {
+        params.append('requestingUserId', currentUser.id);
+        params.append('isAdmin', currentUser.isAdmin || currentUser.isResponsableDelegacion ? 'true' : 'false');
+        
+        // Si no es admin, enviar el ID para filtrar en backend
+        if (!currentUser.isAdmin && !currentUser.isResponsableDelegacion) {
+          params.append('assignedTo', currentUser.id);
+        }
+      }
+      
+      const response = await fetch(`${API_URL}/api/crm/contacts?${params.toString()}`);
       if (!response.ok) throw new Error('Error fetching contacts');
       
       let contactsData = await response.json();
       
-      // Apply permission filters
-      if (currentUser) {
-        if (currentUser.isAdmin || currentUser.isResponsableDelegacion) {
-          // Admins and Responsables see all
-        } else if (currentUser.isRepresentative) {
-          // Comerciales: Only see their assigned clients
+      // Filtrado adicional en frontend como segunda capa de seguridad
+      // (El filtrado principal debe estar en el backend)
+      if (currentUser && !currentUser.isAdmin && !currentUser.isResponsableDelegacion) {
+        if (currentUser.isRepresentative) {
           contactsData = contactsData.filter(c => 
             c.assignedTo === currentUser.id || 
             c.createdBy === currentUser.id
           );
         } else if (currentUser.isTienda) {
-          // Tiendas: Only see their own created clients
           contactsData = contactsData.filter(c => 
             c.createdBy === currentUser.id
           );
