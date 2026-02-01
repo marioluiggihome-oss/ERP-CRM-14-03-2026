@@ -285,22 +285,38 @@ export const generateBudgetPDF = ({
   // DIBUJAR FOOTER
   // ==========================================
   const drawFooter = () => {
-    const footerY = pageHeight - footerHeight + 2;
+    const footerY = pageHeight - footerHeight;
     
-    // Especificaciones
+    // Especificaciones de materiales - mostrar en formato tabla
     if (specs.length > 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(margin, footerY, contentWidth, 16, 1, 1, 'F');
+      
+      doc.setFontSize(5);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ESPECIFICACIONES DE ACABADOS', margin + 2, footerY + 3);
+      
       doc.setFontSize(6);
-      doc.setTextColor(...textGray);
+      doc.setTextColor(...primaryColor);
       doc.setFont('helvetica', 'normal');
-      const specsText = specs.join('  •  ');
-      doc.text(specsText, pageWidth / 2, footerY, { align: 'center', maxWidth: contentWidth });
+      
+      // Dividir specs en columnas
+      const colWidth = contentWidth / 3;
+      specs.forEach((spec, i) => {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const x = margin + 2 + (col * colWidth);
+        const y = footerY + 7 + (row * 4);
+        doc.text(spec, x, y);
+      });
     }
     
     // Texto legal
     doc.setFontSize(5);
     doc.setTextColor(148, 163, 184);
-    doc.text('Presupuesto válido 30 días. Consulte condiciones de montaje y transporte.', pageWidth / 2, footerY + 5, { align: 'center' });
-    doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, footerY + 9, { align: 'center' });
+    doc.text('Presupuesto válido 30 días. Consulte condiciones de montaje y transporte.', pageWidth / 2, footerY + 18, { align: 'center' });
+    doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, footerY + 22, { align: 'center' });
   };
 
   // ==========================================
