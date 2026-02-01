@@ -1,6 +1,6 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v4.4 - SECURITY UPDATE)
+## Última Actualización: 01/02/2026 (v4.5)
 
 ---
 
@@ -16,7 +16,8 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 - Digitalizador de borradores con IA
 - Importador de catálogo IA
 - Sistema de backups automáticos
-- **🔒 NUEVO: Sistema de Seguridad Enterprise (JWT + Rate Limiting + Auditoría)**
+- **🔒 Sistema de Seguridad Enterprise (JWT + Rate Limiting + Auditoría)**
+- **🆕 Sistema de Registro de Distribuidores con notificación por email**
 
 ---
 
