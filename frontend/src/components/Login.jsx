@@ -143,7 +143,7 @@ const Login = ({ onLogin, customLogo }) => {
         <div className="w-full max-w-md relative z-10">
           {/* Logo */}
           <div className="text-center mb-8">
-            <Logo variant="dark" customLogo={customLogo} className="h-16 mb-3" />
+            <Logo variant="dark" customLogo={customLogo} className="h-24 mb-3" />
             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
               {mode === 'login' ? 'Acceso Distribuidores' : 'Solicitud de Alta'}
             </p>
