@@ -855,6 +855,19 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
         {/* Tabs */}
         <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto shrink-0">
+          {/* Tab Panel Director - Solo Admin (antes era Panel Admin separado) */}
+          {state.currentUser?.isAdmin && (
+            <button
+              onClick={() => setActiveTab('director')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'director' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+              data-testid="director-tab"
+            >
+              Panel Director
+            </button>
+          )}
+          
           <button
             onClick={() => setActiveTab('users')}
             className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
