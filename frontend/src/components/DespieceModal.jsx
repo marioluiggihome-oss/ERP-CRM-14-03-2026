@@ -203,9 +203,24 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       return;
     }
     
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    const horaHoy = new Date().toLocaleTimeString('es-ES');
+    
     let xmlContent = '<?xml version="1.0" encoding="UTF-8"?>\n';
-    xmlContent += '<CuttingList>\n';
-    xmlContent += `  <Project name="${editableExpedient || 'DESPIECE'}" customer="${editableCustomerName || ''}" date="${new Date().toISOString().split('T')[0]}">\n`;
+    xmlContent += '<CuttingList version="1.0">\n';
+    xmlContent += `  <Header>\n`;
+    xmlContent += `    <GeneratedDate>${fechaHoy}</GeneratedDate>\n`;
+    xmlContent += `    <GeneratedTime>${horaHoy}</GeneratedTime>\n`;
+    xmlContent += `    <Software>LUIGGI HOME ERP</Software>\n`;
+    xmlContent += `  </Header>\n`;
+    xmlContent += `  <Project>\n`;
+    xmlContent += `    <Name>${editableExpedient || 'DESPIECE'}</Name>\n`;
+    xmlContent += `    <Reference>${editableProjectRef || ''}</Reference>\n`;
+    xmlContent += `    <Customer>${editableCustomerName || ''}</Customer>\n`;
+    xmlContent += `    <Date>${fechaHoy}</Date>\n`;
+    xmlContent += `    <TotalPieces>${despieceData.totalPieces || 0}</TotalPieces>\n`;
+    xmlContent += `    <TotalArea>${despieceData.totalArea?.toFixed(3) || 0}</TotalArea>\n`;
+    xmlContent += `    <BaseMaterial>${carcassMaterialName || 'Sin especificar'}</BaseMaterial>\n`;
     
     // Agrupar por material
     const byMaterial = {};
@@ -217,6 +232,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         byMaterial[mat].push({
           ...comp,
           productCode: item.productCode,
+          productName: item.productName,
           itemQuantity: itemQty,
           productId: item.productId
         });
@@ -230,13 +246,20 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         const compValue = (field) => getComponentValue(piece.productId, piece, field);
         const desc = `${piece.productCode} - ${piece.name}`;
         const qty = (compValue('quantity') || 1) * piece.itemQuantity;
+        const esVertical = piece.name?.toLowerCase().includes('lateral') || 
+                          piece.name?.toLowerCase().includes('costado') ||
+                          piece.name?.toLowerCase().includes('vertical');
         
-        xmlContent += `      <Part id="${partId++}" description="${desc}">\n`;
+        xmlContent += `      <Part id="${partId++}">\n`;
+        xmlContent += `        <Description>${desc}</Description>\n`;
+        xmlContent += `        <FurnitureCode>${piece.productCode || ''}</FurnitureCode>\n`;
+        xmlContent += `        <FurnitureName>${piece.productName || ''}</FurnitureName>\n`;
+        xmlContent += `        <PieceName>${piece.name || ''}</PieceName>\n`;
         xmlContent += `        <Length>${compValue('length') || 0}</Length>\n`;
         xmlContent += `        <Width>${compValue('width') || 0}</Width>\n`;
         xmlContent += `        <Thickness>${compValue('thickness') || 18}</Thickness>\n`;
         xmlContent += `        <Quantity>${qty}</Quantity>\n`;
-        xmlContent += `        <Grain>${piece.grain ? 'true' : 'false'}</Grain>\n`;
+        xmlContent += `        <Grain>${esVertical ? '1' : '0'}</Grain>\n`;
         xmlContent += `        <EdgeBanding l1="0" l2="0" w1="0" w2="0"/>\n`;
         xmlContent += `      </Part>\n`;
       });
@@ -251,7 +274,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `DESPIECE_${editableExpedient || 'EXP'}_${new Date().toISOString().split('T')[0]}.xml`);
+    const nombreArchivo = `CORTE_${(editableExpedient || 'EXP').replace(/[^a-zA-Z0-9-]/g, '_')}_${(editableCustomerName || 'CLIENTE').replace(/[^a-zA-Z0-9]/g, '_').substring(0,20)}_${new Date().toISOString().split('T')[0]}.xml`;
+    link.setAttribute('download', nombreArchivo);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
