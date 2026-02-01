@@ -11,204 +11,175 @@ Feature requests have been provided incrementally through PowerPoint presentatio
 5.  **Master Margins (Márgenes Maestros):** A settings panel to configure prices and costs.
 6.  **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders.
 7.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets, including a totals section with editable IVA.
-8.  **PDF Export:** Generate a PDF of the current budget with specific layout requirements, including multipage support, A4 formatting, and custom headers/footers.
+8.  **PDF Export:** Generate a PDF of the current budget with specific layout requirements.
 9.  **Database Backup System:** Automatic and manual backups.
 10. **Security & Data Isolation:** Secure user password storage and implement strict role-based permissions.
 11. **CRM Integration:** A full sales CRM with a dashboard, pipeline, contacts, and permissions.
 12. **Digitalizador de Borradores (Draft Digitizer):** An OCR/AI tool to upload photos of handwritten budgets.
 13. **IA Lab - Analizador de Planos:** A feature to analyze kitchen plans and detect furniture.
-14. **Advanced Armarios Module:** Editable bill of materials, AI-powered layout generation, and AI-powered realistic rendering.
-15. **UI/UX:** Continuous UI improvements based on user feedback, including fullscreen modals, reorganized navigation, and specific layout adjustments.
+14. **Advanced Armarios Module:** Editable bill of materials and AI-powered features.
+15. **UI/UX:** Continuous UI improvements based on user feedback.
+16. **Distributor Registration:** A system for new distributors to request access, notifying an administrator.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack application with a React frontend and a FastAPI backend connected to MongoDB. It serves as an ERP/CRM for a kitchen business, featuring a complete user and permissions system, a CRM, and budgeting tools for kitchens and wardrobes.
+A full-stack application with a React frontend and a FastAPI backend connected to MongoDB. The application serves as an ERP/CRM for a kitchen business.
 
-In this session, the agent implemented a significant number of features and bug fixes driven by direct user requests:
-- **IA Telemetry Enhancement**: The AI product importer was improved to automatically detect new categories (e.g., PUERTAS Y VITRINAS) from tariff sheet images and was fine-tuned for the user's specific product catalog structure. 32 new products were successfully imported.
-- **New Features**: A Confirmar Pedido button was added to the budgeter, which opens a modal to attach files and sends a confirmation email via SendGrid. Export functionality (CSV and XML) was added to the Despiece (Bill of Materials) modal. A toggleable horizontal/vertical layout was added for the product library, with the user's preference saved to .
-- **Bug Fixes & UX Improvements**: The agent fixed a major CRM bug preventing sales reps from seeing their linked stores' opportunities, resolved a crash in the IA Lab feature, and fixed a bulk product creation error. The UI was heavily refined, including adding a category filter, fixing layout overlaps, improving the product library's readability, and standardizing UI terminology (ZONA to TARIFA).
-- **Customization**: A system for setting custom pricing increments per client was implemented, editable only by administrators in the CRM.
+In this session, the agent implemented a major security overhaul, adding JWT authentication, rate limiting, and audit logging. A new client selector with role-based permissions was added to the budgeting tool. The login page was completely redesigned to be more modern and now includes a new feature for distributors to request access, which triggers an email notification to the administrator. Several bugs were fixed, including a critical layout issue in the IA Lab. The agent also performed data correction on several products. The session ended with the user providing PDF files for a full catalog data integrity review.
 
 **Last working item**:
-- Last item agent was working: The user reported a layout issue in the IA Lab - Analizador de Planos (), where the uploaded image is too large, hiding the Analizar button. The agent was in the process of fixing this UI bug.
-- Status: IN PROGRESS
+- Last item agent was working: The user provided two of three parts of the product catalog in PDF format ( and ) for an exhaustive data review. The agent extracted the data from these files and was preparing to create a script to compare it against the database to find and fix discrepancies (incorrect names, missing products, wrong prices).
+- Status: BLOCKED
 - Agent Testing Done: N
-- Which testing method agent to use? screenshot tool
+- Which testing method agent to use? backend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: IA Lab Visualizer Layout Bug (P0)**
+-   **Issue 1: Exhaustive Product Catalog Review (P0)**
     -   Description: This is the 
-wtmp begins Sun Jan 25 22:26:20 2026. In the IA Lab - Analizador de Planos, the container for the uploaded floor plan image is too large, pushing the Analizar button off-screen and making it inaccessible.
-    -   Next debug checklist:
-        1.  Inspect .
-        2.  Modify the CSS classes for the image container to ensure it does not expand beyond the viewport and that the button remains visible. Use properties like , , and ensure the parent container is a flex column.
-    -   Why fix this issue and what will be achieved with the fix? To make the IA Lab feature usable again.
-    -   Status: IN PROGRESS
-    -   Should Test frontend/backend/both after fix? frontend
+wtmp begins Sun Feb  1 09:46:29 2026. The agent needs to process the data extracted from the user-provided PDFs, compare it with the MongoDB database, and generate a report of discrepancies or a script to fix them. The process is paused.
+    -   Status: BLOCKED
+    -   Blocked on other issue: Waiting for the user to provide the 3rd and final part of the PDF catalog.
 -   **Issue 2: PDF and Permissions UI Refinement (from previous fork) (P1)**
-    -   Description: The user's previous requests for UI changes have not been addressed yet.
-        1.  **PDF Aesthetics:** The PDF header needs to match an uploaded image, Luiggi Master Design text removed, PRESUPUESTO TÉCNICO text enlarged, and the logo re-proportioned.
-        2.  **Permissions UI:** The permission checkbox for the Armarios module needs to be moved to a different location in the user settings panel.
-    -   Next debug checklist: Refer to the previous handoff summary for image references and details. Modify  and .
-    -   Why fix this issue and what will be achieved with the fix? To align the UI/UX with the user's specific design requirements.
+    -   Description: Pending UI changes from a previous session: PDF header aesthetics need to be updated to match a user-provided image, and a permission checkbox for the Armarios module needs to be relocated.
     -   Status: NOT STARTED
     -   Should Test frontend/backend/both after fix? frontend
 -   **Issue 3:  for Existing Projects (from previous fork) (P1)**
-    -   Description: Projects saved before a previous bug fix still show 0,00 € in the project library.
-    -   Next debug checklist: Create a one-time backend script or a temporary, admin-only endpoint that iterates through all projects in the database, recalculates their total value from their items, and updates the  field.
-    -   Why fix this issue and what will be achieved with the fix? To ensure historical data is accurate and the project library is useful.
+    -   Description: Historical projects saved before a specific bug fix have an incorrect  of 0,00 €. A one-time data migration script is needed to recalculate and update these values.
     -   Status: NOT STARTED
     -   Should Test frontend/backend/both after fix? backend
--   **Issue 4: Overlapping UI Fields (Campos superpuestos) (from previous fork) (P2)**
-    -   Description: The user reported overlapping fields via an image, but the agent was unable to reproduce or locate the issue.
-    -   Next debug checklist: Ask the user for the exact steps, screen, and component to reproduce the visual bug.
-    -   Status: BLOCKED (User input required)
--   **Issue 5: Critical Frontend Stability (from previous fork) (P2)**
-    -   Description: A recurring React DOM crash ( error) was noted in a previous handoff but was not addressed. It remains a potential stability risk.
-    -   Next debug checklist: Analyze components with heavy conditional rendering (, , ); investigate for any direct DOM manipulation outside of React's lifecycle.
-    -   Why fix this issue and what will be achieved with the fix? To prevent random application crashes and improve overall stability.
+-   **Issue 4: Critical Frontend Stability ( error) (from previous fork) (P2)**
+    -   Description: A recurring React DOM crash ( error) noted in a previous handoff remains unaddressed and poses a stability risk, especially in components with heavy conditional rendering.
     -   Status: NOT STARTED
     -   Is recurring issue? Y
     -   Should Test frontend/backend/both after fix? frontend
 
 **In progress Task List**:
--   **Task 1: Fix IA Lab Visualizer Layout**
-    -   Where to resume: Modify  to adjust the layout, making the image preview container smaller so the Analizar button is always visible.
-    -   What will be achieved with this? The IA Lab feature will be functional and usable.
+-   **Task 1: Backend Refactoring**
+    -   Where to resume: The agent created the new directory structure (, , ) but did not migrate any logic from the monolithic . The next step is to start moving endpoints, starting with  and , into their respective router files.
+    -   What will be achieved with this? Improved maintainability, scalability, and code organization of the backend.
+    -   Status: IN PROGRESS
+    -   Should Test frontend/backend/both after fix? backend
+-   **Task 2: Frontend Refactoring ()**
+    -   Where to resume: The agent created placeholder files for new components (, ) but the code still lives inside the massive  (1400+ lines). The next step is to extract the JSX and logic into these new component files and import them back into .
+    -   What will be achieved with this? Reduced component complexity, making  easier to manage and debug.
     -   Status: IN PROGRESS
     -   Should Test frontend/backend/both after fix? frontend
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P1) **PDF Aesthetics & Permissions UI Refinement**: Implement the pending UI changes from the previous session (see Issue 2).
-    - (P1) **Migrate  for Existing Projects**: Create a backend script to update the  field for all historical projects (see Issue 3).
+    - (P0) **Finish Product Catalog Sync**: Once the user provides the final PDF, complete the data synchronization task.
+    - (P1) **Create Admin Panel for Distributor Requests**: Build a UI for administrators to view, approve, or reject pending distributor registrations from the  collection. Approving should trigger a welcome email.
 - **Future Tasks:**
-    - (P2) **Refactor Backend and Frontend:**
-        - Break down the monolithic  into a proper FastAPI project structure (routers, models, services).
-        - Decompose massive frontend components like , , and .
-    - Implement a  field to sort products.
-    - Add automated reminders for calendar events in the CRM.
-    - Enhance the kitchen Despieces (Bill of Materials) feature.
+    - (P2) Create an admin dashboard to view the new audit logs ().
+    - (P2) Implement a  field in the product schema to allow for custom sorting in the catalog.
+    - (P2) Add automated reminders for calendar events in the CRM.
+    - (P2) Enhance the kitchen Despieces (Bill of Materials) feature.
 
 **Completed work in this session**
-- **Telemetría IA Enhancement**: Improved the AI prompt () to automatically detect categories like PUERTAS Y VITRINAS from tariff sheets and handle truncated JSON responses.
-- **Product Import & Categorization**: Imported 32 PUERTAS products into the database.
-- **New Category Filter**: Added a category dropdown filter in  to allow users to filter the product library by categories like PUERTAS.
-- **Bulk Product Creation Fix**: Fixed the  endpoint by adding  to Pydantic models in  and improving error handling.
-- **CRM Permissions Fix**: Fixed a bug where Comercial users couldn't see data from their linked Tienda users. Modified  and  in .
-- **IA Lab Analyzer Fix**: Fixed a crash in  and  caused by incorrect API calls and  initialization.
-- **Confirmar Pedido Feature**:
-    - Added a button and modal in .
-    - Created a new endpoint  in  to handle file uploads and send a confirmation email via SendGrid.
-- **Despiece Export to CSV/XML**: Added CSV and XML export functionality to , with the CSV format being iteratively refined based on user feedback.
-- **Despiece Calculation Logic**: Corrected the backend despiece calculation logic in  for vertical and horizontal pieces.
-- **Major UI/UX Overhaul ()**:
-    - Renamed ZONA to TARIFA across the UI.
-    - Fixed overlapping header buttons.
-    - Implemented customizable pricing increments per client, editable by Admins in .
-    - Added a toggleable horizontal/vertical layout for the product library, persisting the choice in .
-    - Fixed layout issues with the vertical library to prevent overlap.
-    - Increased font sizes and standardized units to  in the product library for better readability.
+- **Major Security Implementation**:
+    - **JWT Authentication**: Replaced the previous login system with a secure JWT-based flow (, ), including protected endpoints and token handling on the frontend.
+    - **Security Flaw Fixed**: Patched a critical vulnerability where the backend improperly trusted a client-side  flag. Role validation is now handled securely on the backend.
+    - **Rate Limiting**: Added protection against brute-force attacks on critical endpoints (login, user creation, backup).
+    - **Audit Logging**: Implemented a service to log critical security and data-access events to .
+- **Login Page Redesign & Feature**:
+    - Completely redesigned the login page with a modern split-screen layout and a professional background image.
+    - Added a Solicitar Alta de Distribuidor feature, including a new form, a backend endpoint (), and an email notification to the admin.
+- **Client Selector Feature**:
+    - Implemented a new  component in the budgeter that allows searching for existing clients or creating new ones.
+    - Enforces role-based permissions (Admins see all, Tiendas see their own, etc.).
+- **IA Lab Layout Fix**: Resolved the UI bug in  where the uploaded image container was too large and hid the Analizar button.
+- **Product Data Correction**: Manually corrected names and added several missing BOTELLERO products in the database based on user feedback.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1:  for Existing Projects**: A data migration script is needed.
--   **Issue 2: Overlapping UI Fields**: Blocked on user input for reproduction steps.
--   **Issue 3: Critical Frontend Stability ( error)**: Recurring React crash, root cause unknown.
+-   **Issue 1: Overlapping UI Fields**: Still blocked on user input for reproduction steps.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** None.
--   **Recurrence count:** 0
--   **Status:** NONE
+-   **Issue recurrence in previous fork:** Critical Frontend Stability ( error).
+-   **Recurrence count:** 1
+-   **Status:** NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, , ,  for UI state.
+- **Frontend:** React, TailwindCSS, , .
 - **Backend:** Python, FastAPI, Pydantic, .
-- **Database:** MongoDB ( for async operations).
-- **AI/OCR:**  library for Google Gemini.
-- **Email:** SendGrid for order confirmations.
-- **Permissions:** Role-Based Access Control (RBAC).
+- **Database:** MongoDB ().
+- **Security:** JWT (, ), Rate Limiting (), Audit Logging.
+- **Email:** SendGrid.
+- **State Management:**  for JWT persistence.
 
 **key DB schema**
-- **ContactModel**: (Updated) Added , , , , , .
-- **orders**: (New Collection) { , , , , , ,  }
+-   **distributor_requests**: (New Collection) 
 
 **changes in tech stack**
-- None.
+-   **New Backend Dependencies:** , , .
 
 **All files of reference**
--   
--   
--   
--   
--   
--   
+-   **/app/backend/server.py**: Heavily modified with security features and new endpoints.
+-   **/app/frontend/src/components/Login.jsx**: Completely overwritten with a new design and functionality.
+-   **/app/frontend/src/components/ClientSelector.jsx**: Newly created for client management in the budgeter.
+-   **/app/frontend/src/services/authService.js**: Newly created to handle JWT logic.
+-   **/app/frontend/src/App.js**: Modified to integrate the new authentication flow.
+-   **/app/frontend/src/components/Visualizer.jsx**: Modified to fix a layout bug.
+-   **/app/backend/services/**: New directory with , , .
+-   **/app/memory/PRD.md**: Updated multiple times.
 
 **Areas that need refactoring**:
--   **Monolithic Backend:**  is critically overgrown and must be broken down.
--   **Massive Frontend Components:**  has become extremely large and complex due to the addition of multiple features and states, making it brittle and hard to maintain.
+-   **Backend Monolith:** The refactoring of  was started but is incomplete. It remains the highest priority for technical debt reduction.
+-   **Frontend Monolith Component:**  is still over 1400 lines and needs to be broken down into the smaller components that were planned.
 
 **key api endpoints**
--    (Updated)
--    (Updated)
--    (Updated)
--    (Updated)
--    (Fixed)
--    (New)
--    (New)
--    (Updated)
--    (Updated to include custom values)
+-   ****: (Updated) Now returns JWT access and refresh tokens.
+-   ****: (Updated) Security patched; role verification is now done on the backend.
+-   ****: (New) Endpoint for handling new distributor sign-up requests.
+-   ****: (New) Protected endpoint to validate a token and retrieve current user data.
 
 **Critical Info for New Agent**
--   **Immediate Priority:** The highest priority (P0) is to fix the layout bug in the **IA Lab Visualizer** () as it's the user's last reported issue.
--   **User-Driven Development:** The user provides frequent, direct, and iterative feedback. Prioritize addressing the user's latest requests over the existing backlog. Be prepared for a rapid feedback loop.
--   **Backlog from Previous Fork:** Once the current user requests are fulfilled, plan to address the pending tasks from the previous session, starting with the PDF/Permissions UI changes and the  data migration script.
--   **Technical Debt:** The backend monolith and the oversized  component are significant risks. Proposing a refactoring phase is highly recommended once current high-priority tasks are complete.
+-   **IMMEDIATE BLOCKER:** The primary task of conducting a full catalog review is blocked. You must wait for the user to provide the third and final part of the PDF catalog (). Do not proceed with the data sync until you have all three parts.
+-   **Prioritize Refactoring:** The user has explicitly approved the urgent refactoring of both the backend and frontend. Once the catalog review is unblocked and completed, this should be the next major focus.
+-   **Security Framework:** A comprehensive security layer (JWT, Rate Limiting, Audit Logs) is now in place. All new endpoints must be integrated with this framework, including JWT token verification and appropriate audit logging.
+-   **User Feedback:** The user is highly engaged with UI/UX. Be prepared for iterative feedback and design changes, especially after implementing new visual components.
 
 **documents and test reports created in this job**
--   None.
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (Latest):** esta sección está muy expandida y no se ve el botón de reconocimiento ia, para que detecte los muebles - Reports that the IA Lab Visualizer layout is broken.
-2.  **Agent:** Acknowledges the issue and starts investigating .
-3.  **User:** Asks for the product library items to be larger and for all units to be in .
-4.  **Agent:** Implements the UI changes for the product library.
-5.  **User:** Provides a full PDF catalog and asks the agent to review it to improve the Telemetry IA's categorization.
-6.  **Agent:** Improves the Telemetry IA prompt with specific rules for the user's catalog.
-7.  **User:** Reports that the button to hide the product library is not working after the new horizontal/vertical layout was implemented and that the vertical view overlaps with the budget.
-8.  **Agent:** Fixes the toggle button, makes the vertical view push content aside, and saves the user's layout preference.
-9.  **User:** Requests the ability to switch the product library from a horizontal bar to a vertical one on the right.
-10. **Agent:** Implements the toggleable horizontal/vertical layout for the product library.
+10. **User:** Provided parts 1 and 2 of the PDF catalog for an exhaustive review, stating that part 3 is missing. (PENDING)
+9.  **User:** Requested to revert to the previous login page background image while keeping the new text slogan. (DONE)
+8.  **User:** Requested a more exhaustive review of the product data and also suggested changes to the login page image and text. (DONE)
+7.  **Agent:** Presented the completed modern login page with the distributor registration system.
+6.  **User:** Requested to modernize the login page with a background image and add a registration feature for distributors. (DONE)
+5.  **Agent:** Confirmed the initial correction of BOTELLERO products and asked for the full catalog PDF to do a more thorough check.
+4.  **User:** Pointed out that a botellero product was incorrectly filtered and its text was wrong, providing a screenshot from the PDF. (DONE)
+3.  **Agent:** Summarized the newly implemented security features (JWT, rate limiting, audit logs) and asked if the user wanted an admin dashboard to manage them.
+2.  **User:** Approved implementing all security recommendations (JWT, Rate Limiting, Audit Logs). (DONE)
+1.  **User:** Asked if the new client selector tool was secure. (Answered, and led to the security overhaul).
 
 **Project Health Check:**
--   **Broken:** None.
--   **Mocked:** None.
+-   **Broken:** None
+-   **Mocked:** None
 
 **3rd Party Integrations**
--   **Google Gemini:** Via . (Emergent LLM Key)
--   **SendGrid:** For sending database backups and order confirmations. (User API Key)
--   **jspdf:** For PDF generation.
--   **recharts:** For data visualization charts.
+-   **Google Gemini:** Via  (Emergent LLM Key)
+-   **SendGrid:** For sending database backups and order/distributor notifications (User API Key)
+-   **jspdf:** For PDF generation
+-   **recharts:** For data visualization charts
+-   **PyJWT, python-jose:** For JWT implementation
+-   **slowapi:** For backend rate limiting
 
 **Testing status**
 -   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: None.
--   Known regressions: The layout of  was broken during this session's work.
+-   Known regressions: None.
 
 **Credentials to test flow:**
--   **User:** MARIO (Director Comercial)
--   **Password:** MARIO
--   **User:** COMERCIAL SALAMANCA (Comercial/Representante)
--   **Password:** COMERCIAL
--   **User:** TIENDSA / TIENDA SALAMANCA (Tienda/Punto de Venta)
--   **Password:** TIENDSA
+-   **User:** MARIO (Director Comercial), **Password:** MARIO
+-   **User:** COMERCIAL SALAMANCA (Comercial), **Password:** COMERCIAL
+-   **User:** TISA (Tienda), **Password:** TISA
 
 **What agent forgot to execute**
-- The agent correctly prioritized the user's immediate and continuous stream of requests over the backlog items from the previous handoff summary (e.g., PDF aesthetics,  migration). These items were postponed, not forgotten.
-- The initial  step to confirm the plan was skipped as the user immediately provided a new, high-priority task at the beginning of the session.</analysis>
+- The agent started major refactoring initiatives for both the backend () and a large frontend component () by creating the new file structures. However, the actual migration of code into these new files was not completed, leaving the tasks half-finished. This was done to prioritize direct user requests but should be resumed.</analysis>
