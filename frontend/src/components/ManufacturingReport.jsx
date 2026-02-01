@@ -122,6 +122,16 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
                 
                 if (!product) return null;
 
+                // Calcular cortes especiales
+                const specialCuts = [];
+                if (Number(item.customWidth) !== Number(product.width)) specialCuts.push('C.ANCHO');
+                if (Number(item.customHeight) !== Number(product.height)) specialCuts.push('C.ALTO');
+                if (Number(item.customDepth) !== Number(product.depth)) specialCuts.push('C.FONDO');
+                if (item.hasVigaCut) specialCuts.push('C.VIGA');
+                
+                const notesDisplay = [...specialCuts];
+                if (item.notes) notesDisplay.push(item.notes);
+
                 return (
                   <tr key={item.id} className="hover:bg-indigo-50/50">
                     <td className="p-4 font-black text-indigo-900 text-lg">{item.quantity}</td>
@@ -130,13 +140,18 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
                     </td>
                     <td className="p-4 font-bold text-indigo-900 text-sm">{product.name}</td>
                     <td className="p-4 text-center font-mono text-xs font-bold text-indigo-800">
-                      {item.customWidth} × {item.customHeight} × {item.customDepth} cm
+                      {item.customWidth} × {item.customHeight} × {item.customDepth} mm
                     </td>
                     <td className="p-4 text-center text-xs font-black uppercase text-indigo-600">
                       {item.openingDirection || 'N/A'}
                     </td>
-                    <td className="p-4 text-xs text-indigo-600 italic">
-                      {item.notes || '-'}
+                    <td className="p-4 text-xs">
+                      {specialCuts.length > 0 && (
+                        <span className="font-black text-orange-600">{specialCuts.join(', ')}</span>
+                      )}
+                      {specialCuts.length > 0 && item.notes && ' - '}
+                      {item.notes && <span className="text-indigo-600 italic">{item.notes}</span>}
+                      {notesDisplay.length === 0 && '-'}
                     </td>
                   </tr>
                 );
