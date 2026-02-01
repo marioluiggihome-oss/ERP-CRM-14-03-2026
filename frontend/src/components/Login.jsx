@@ -123,14 +123,11 @@ const Login = ({ onLogin, customLogo }) => {
         {/* Overlay Content */}
         <div className="relative z-10 flex flex-col justify-end p-12 text-white">
           <div className="max-w-md">
-            <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight">
-              Tu Cocina,<br />
-              Tu Hogar,<br />
-              <span className="text-orange-400">Tu Estilo</span>
+            <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
+              TU COCINA<br />
+              TU HOGAR<br />
+              <span className="text-orange-400">TU ESTILO</span>
             </h1>
-            <p className="text-white/70 text-lg">
-              Sistema profesional de presupuestos para distribuidores de cocinas y armarios.
-            </p>
           </div>
         </div>
       </div>
