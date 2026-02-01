@@ -128,6 +128,7 @@ const App = () => {
           specialIncrementWidth: settings.specialIncrementWidth || 45,
           specialIncrementHeight: settings.specialIncrementHeight || 45,
           specialIncrementDepth: settings.specialIncrementDepth || 45,
+          vigaCutIncrement: settings.vigaCutIncrement || 0,
           brandColor: settings.brandColor || DEFAULT_BRAND_COLOR,
           logo: settings.logo || null
         }));
