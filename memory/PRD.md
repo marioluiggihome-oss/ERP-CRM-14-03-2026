@@ -21,6 +21,28 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 ---
 
+## 🆕 PÁGINA DE LOGIN MODERNIZADA (01/02/2026)
+
+### ✅ Nuevo Diseño
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **Imagen de fondo** | ✅ | Cocina moderna de Unsplash (split layout) |
+| **Formulario Login** | ✅ | Diseño limpio con campos Usuario/Contraseña |
+| **Registro Distribuidor** | ✅ | Formulario completo: Empresa, Contacto, Teléfono, Email, Ciudad, Provincia, Mensaje |
+| **Pantalla de éxito** | ✅ | Confirmación visual después de enviar solicitud |
+
+### ✅ Backend - Solicitudes de Distribuidores
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/distributor/request` | POST | Recibir solicitud y enviar email a mario@luiggihome.es |
+| `/api/distributor/requests` | GET | Listar solicitudes (solo admins) |
+| `/api/distributor/requests/{id}` | PUT | Actualizar estado (pending/approved/rejected) |
+
+### ✅ Colección MongoDB
+- **distributor_requests**: { id, companyName, contactName, email, phone, city, province, message, status, createdAt, processedAt, processedBy }
+
+---
+
 ## 🔒 SEGURIDAD ENTERPRISE (01/02/2026)
 
 ### ✅ Autenticación JWT
