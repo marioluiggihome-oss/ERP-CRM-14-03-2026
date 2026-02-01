@@ -108,14 +108,24 @@ export const generateBudgetPDF = ({
     const depth = item.customDepth || '-';
     const apertura = item.openingDirection === 'Derecha' ? 'D' : item.openingDirection === 'Izquierda' ? 'I' : '-';
     
+    // Construir notas con cortes especiales
+    const notasList = [];
+    if (item.hasSpecialWidthCut) notasList.push('C.Ancho');
+    if (item.hasSpecialHeightCut) notasList.push('C.Alto');
+    if (item.hasSpecialDepthCut) notasList.push('C.Fondo');
+    if (item.hasVigaCut) notasList.push('CORTE VIGA');
+    if (item.notes) notasList.push(item.notes);
+    const notas = notasList.length > 0 ? notasList.join(', ') : '-';
+    
     return [
       item.quantity || 1,
       code,
-      name.length > 50 ? name.substring(0, 50) + '...' : name,
+      name.length > 40 ? name.substring(0, 40) + '...' : name,
       width,
       height,
       depth,
       apertura,
+      notas.length > 15 ? notas.substring(0, 15) + '...' : notas,
       `${price.toFixed(2)}€`
     ];
   });
