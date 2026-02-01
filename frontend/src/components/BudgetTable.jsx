@@ -55,9 +55,13 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     const currentModuleProducts = allProducts.filter(p => 
       catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule
     );
-    const series = new Set(currentModuleProducts.map(p => p.series || 'GENERAL'));
+    // Filter by category if one is selected
+    const categoryFilteredProducts = selectedCategory === 'TODAS' 
+      ? currentModuleProducts 
+      : currentModuleProducts.filter(p => (p.category || 'OTROS') === selectedCategory);
+    const series = new Set(categoryFilteredProducts.map(p => p.series || 'GENERAL'));
     return Array.from(series).sort();
-  }, [allProducts, state.currentModule, catalogs]);
+  }, [allProducts, state.currentModule, catalogs, selectedCategory]);
 
   const sortedItems = useMemo(() => {
     return [...items].sort((a, b) => {
