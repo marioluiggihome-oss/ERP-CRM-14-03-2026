@@ -2752,17 +2752,38 @@ async def get_backup_status():
 # ============================================
 
 @api_router.get("/crm/contacts")
-async def get_contacts(status: Optional[str] = None, search: Optional[str] = None, assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True):
+async def get_contacts(
+    status: Optional[str] = None, 
+    search: Optional[str] = None, 
+    assignedTo: Optional[str] = None, 
+    isAdmin: Optional[bool] = True,
+    requestingUserId: Optional[str] = None
+):
     """Get all contacts with optional filters, including total value from opportunities
+    
+    SEGURIDAD: El parámetro isAdmin se VERIFICA contra la base de datos, no se confía en el cliente.
     
     Para usuarios NO admin (comerciales/representantes), devuelve:
     - Sus propios contactos asignados
     - Los contactos de sus tiendas vinculadas (linkedRepresentativeId)
     
     assignedTo: ID del usuario comercial para filtrar sus contactos asignados
-    isAdmin: Si es False, solo devuelve contactos del comercial y sus tiendas
+    requestingUserId: ID del usuario que hace la petición (para verificar permisos)
     """
     try:
+        # SEGURIDAD: Verificar rol del usuario en la base de datos
+        verified_is_admin = False
+        if requestingUserId:
+            requesting_user = await db.users.find_one({"id": requestingUserId}, {"_id": 0})
+            if requesting_user:
+                verified_is_admin = (
+                    requesting_user.get("isAdmin", False) or 
+                    requesting_user.get("isResponsableDelegacion", False)
+                )
+        
+        # Si el cliente dice que es admin pero la DB dice que no, usar la DB
+        effective_is_admin = verified_is_admin if requestingUserId else isAdmin
+        
         query = {}
         if status:
             query["status"] = status
@@ -2773,8 +2794,8 @@ async def get_contacts(status: Optional[str] = None, search: Optional[str] = Non
                 {"email": {"$regex": search, "$options": "i"}}
             ]
         
-        # IMPORTANTE: Si NO es admin y tiene assignedTo, filtrar por comercial + sus tiendas
-        if not isAdmin and assignedTo:
+        # SEGURIDAD: Si NO es admin verificado y tiene assignedTo, filtrar por comercial + sus tiendas
+        if not effective_is_admin and assignedTo:
             # Obtener las tiendas vinculadas a este comercial
             shops = await db.users.find(
                 {"linkedRepresentativeId": assignedTo},
