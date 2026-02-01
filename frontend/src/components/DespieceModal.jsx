@@ -536,8 +536,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                 <th className="px-6 py-3 text-left">Componente</th>
                                 <th className="px-4 py-3 text-center">Código</th>
                                 <th className="px-4 py-3 text-center">Material</th>
+                                <th className="px-4 py-3 text-center">Largo (mm)</th>
                                 <th className="px-4 py-3 text-center">Ancho (mm)</th>
-                                <th className="px-4 py-3 text-center">Alto (mm)</th>
                                 <th className="px-4 py-3 text-center">Cant.</th>
                                 <th className="px-4 py-3 text-right">Notas</th>
                               </tr>
@@ -557,16 +557,16 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                   <td className="px-4 py-3 text-center">
                                     <input
                                       type="number"
-                                      value={getComponentValue(furniture.productId, comp, 'width')}
-                                      onChange={(e) => handleEditComponent(furniture.productId, comp.id, 'width', parseFloat(e.target.value))}
+                                      value={getComponentValue(furniture.productId, comp, 'length')}
+                                      onChange={(e) => handleEditComponent(furniture.productId, comp.id, 'length', parseFloat(e.target.value))}
                                       className="w-20 bg-white border border-indigo-200 rounded px-2 py-1 text-center text-sm font-bold focus:border-orange-500 focus:outline-none"
                                     />
                                   </td>
                                   <td className="px-4 py-3 text-center">
                                     <input
                                       type="number"
-                                      value={getComponentValue(furniture.productId, comp, 'height')}
-                                      onChange={(e) => handleEditComponent(furniture.productId, comp.id, 'height', parseFloat(e.target.value))}
+                                      value={getComponentValue(furniture.productId, comp, 'width')}
+                                      onChange={(e) => handleEditComponent(furniture.productId, comp.id, 'width', parseFloat(e.target.value))}
                                       className="w-20 bg-white border border-indigo-200 rounded px-2 py-1 text-center text-sm font-bold focus:border-orange-500 focus:outline-none"
                                     />
                                   </td>
