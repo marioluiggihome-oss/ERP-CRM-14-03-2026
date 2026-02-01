@@ -144,8 +144,12 @@ export const clientsAPI = {
     return response.json();
   },
 
-  delete: async (id) => {
-    const response = await fetch(`${API_URL}/api/clients/${id}`, {
+  delete: async (id, force = false) => {
+    const url = force 
+      ? `${API_URL}/api/clients/${id}?force=true`
+      : `${API_URL}/api/clients/${id}`;
+    
+    const response = await fetch(url, {
       method: 'DELETE'
     });
     
