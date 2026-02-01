@@ -2822,6 +2822,13 @@ async def confirm_order(
     email: str = Form(...),
     notes: str = Form(""),
     items: str = Form("[]"),
+    doorColorLow: str = Form(""),
+    doorColorHigh: str = Form(""),
+    doorColorColumns: str = Form(""),
+    sideColor: str = Form(""),
+    carcassColor: str = Form(""),
+    globalFinish: str = Form(""),
+    distributorName: str = Form(""),
     attachment_0: Optional[UploadFile] = File(None),
     attachment_1: Optional[UploadFile] = File(None),
     attachment_2: Optional[UploadFile] = File(None),
@@ -2842,63 +2849,143 @@ async def confirm_order(
         except:
             items_list = []
         
-        # Build email content
+        # Build items table HTML
         items_html = ""
         for item in items_list:
             items_html += f"""
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">{item.get('code', '-')}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">{item.get('name', '-')}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">{item.get('quantity', 1)}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">{item.get('price', 0):.2f} €</td>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #fed7aa; font-weight: bold; color: #ea580c;">{item.get('code', '-')}</td>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #fed7aa; color: #1e293b;">{item.get('name', '-')}</td>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #fed7aa; text-align: center; font-weight: bold;">{item.get('quantity', 1)}</td>
+                <td style="padding: 12px 8px; border-bottom: 1px solid #fed7aa; text-align: right; font-weight: bold; color: #1e293b;">{item.get('price', 0):.2f} €</td>
             </tr>
             """
         
-        html_content = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0;">
-                <h1 style="margin: 0; font-size: 24px;">✅ CONFIRMACIÓN DE PEDIDO</h1>
-                <p style="margin: 10px 0 0; opacity: 0.9;">Expediente: {budgetNumber}</p>
+        # Build specifications HTML
+        specs_html = ""
+        specs = []
+        if globalFinish:
+            specs.append(f"<strong>Acabado Global:</strong> {globalFinish}")
+        if carcassColor:
+            specs.append(f"<strong>Armazón:</strong> {carcassColor}")
+        if doorColorLow:
+            specs.append(f"<strong>Puertas Bajos:</strong> {doorColorLow}")
+        if doorColorHigh:
+            specs.append(f"<strong>Puertas Altos:</strong> {doorColorHigh}")
+        if doorColorColumns:
+            specs.append(f"<strong>Puertas Columnas:</strong> {doorColorColumns}")
+        if sideColor:
+            specs.append(f"<strong>Costados/Vistos:</strong> {sideColor}")
+        
+        if specs:
+            specs_html = f"""
+            <div style="background: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ea580c;">
+                <h3 style="color: #ea580c; margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Especificaciones de Acabados</h3>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px; color: #64748b;">
+                    {''.join([f'<div>{s}</div>' for s in specs])}
+                </div>
             </div>
-            
-            <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0;">
-                <h2 style="color: #1e293b; margin-top: 0;">Datos del Cliente</h2>
-                <table style="width: 100%; margin-bottom: 20px;">
+            """
+        
+        # Current date
+        from datetime import datetime
+        fecha_actual = datetime.now().strftime("%d/%m/%Y")
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 0; background: #f1f5f9;">
+            <!-- Header con Logo -->
+            <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 30px 40px; border-radius: 12px 12px 0 0;">
+                <table style="width: 100%;">
                     <tr>
-                        <td style="padding: 5px 0; color: #64748b;">Cliente:</td>
-                        <td style="padding: 5px 0; font-weight: bold;">{customerName}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px 0; color: #64748b;">Dirección:</td>
-                        <td style="padding: 5px 0;">{customerAddress or 'No especificada'}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 5px 0; color: #64748b;">Total:</td>
-                        <td style="padding: 5px 0; font-weight: bold; color: #059669; font-size: 18px;">{float(totalAmount):,.2f} €</td>
+                        <td>
+                            <h1 style="margin: 0; color: #ea580c; font-size: 28px; font-weight: 800; font-style: italic;">LUIGGI HOME</h1>
+                            {f'<p style="margin: 5px 0 0; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">{distributorName}</p>' if distributorName else ''}
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="background: #ea580c; color: white; padding: 15px 25px; border-radius: 8px; display: inline-block;">
+                                <p style="margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Confirmación de Pedido</p>
+                                <p style="margin: 5px 0 0; font-size: 20px; font-weight: 800;">#{budgetNumber}</p>
+                            </div>
+                        </td>
                     </tr>
                 </table>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="background: white; padding: 40px; border: 1px solid #e2e8f0; border-top: none;">
                 
-                <h2 style="color: #1e293b;">Artículos del Pedido</h2>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <!-- Datos del Cliente -->
+                <div style="background: #f8fafc; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="width: 60%;">
+                                <p style="margin: 0 0 5px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Cliente</p>
+                                <p style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 700;">{customerName}</p>
+                                {f'<p style="margin: 8px 0 0; color: #64748b; font-size: 13px;">{customerAddress}</p>' if customerAddress else ''}
+                            </td>
+                            <td style="width: 40%; text-align: right;">
+                                <p style="margin: 0 0 5px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Fecha</p>
+                                <p style="margin: 0; color: #1e293b; font-size: 14px; font-weight: 600;">{fecha_actual}</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- Tabla de Artículos -->
+                <h2 style="color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 15px; padding-bottom: 10px; border-bottom: 2px solid #ea580c;">
+                    Artículos del Pedido
+                </h2>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
                     <thead>
-                        <tr style="background: #1e293b; color: white;">
-                            <th style="padding: 10px; text-align: left;">Código</th>
-                            <th style="padding: 10px; text-align: left;">Descripción</th>
-                            <th style="padding: 10px; text-align: center;">Cant.</th>
-                            <th style="padding: 10px; text-align: right;">Importe</th>
+                        <tr style="background: #1e293b;">
+                            <th style="padding: 12px 8px; text-align: left; color: white; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Ref.</th>
+                            <th style="padding: 12px 8px; text-align: left; color: white; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Descripción</th>
+                            <th style="padding: 12px 8px; text-align: center; color: white; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Ud.</th>
+                            <th style="padding: 12px 8px; text-align: right; color: white; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Importe</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody style="background: #fffbeb;">
                         {items_html}
                     </tbody>
                 </table>
                 
-                {f'<h2 style="color: #1e293b;">Notas</h2><p style="background: #fff; padding: 15px; border-radius: 5px; border: 1px solid #e2e8f0;">{notes}</p>' if notes else ''}
+                <!-- Total -->
+                <div style="background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%); padding: 20px 25px; border-radius: 8px; margin-bottom: 25px;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="color: white; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Total Pedido</td>
+                            <td style="text-align: right; color: white; font-size: 28px; font-weight: 800;">{float(totalAmount):,.2f} €</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- Especificaciones de Acabados -->
+                {specs_html}
+                
+                <!-- Notas -->
+                {f'''
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #e2e8f0;">
+                    <h3 style="color: #64748b; margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Observaciones</h3>
+                    <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.6;">{notes}</p>
+                </div>
+                ''' if notes else ''}
+                
             </div>
             
-            <div style="background: #1e293b; color: white; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
-                <p style="margin: 0; opacity: 0.7;">Enviado desde LUIGGI HOME - Sistema de Gestión de Cocinas</p>
+            <!-- Footer -->
+            <div style="background: #1e293b; color: white; padding: 25px 40px; border-radius: 0 0 12px 12px; text-align: center;">
+                <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                    Este pedido ha sido confirmado a través de <strong style="color: #ea580c;">LUIGGI HOME</strong> - Sistema de Gestión de Cocinas
+                </p>
+                <p style="margin: 10px 0 0; color: #64748b; font-size: 11px;">
+                    © {datetime.now().year} LUIGGI HOME. Todos los derechos reservados.
+                </p>
             </div>
         </body>
         </html>
