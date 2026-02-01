@@ -1219,7 +1219,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
               <>
                 {/* Filtros verticales */}
                 <div className="p-3 space-y-2 border-b border-indigo-50 shrink-0">
-                  <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-indigo-800 outline-none">
+                  <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="w-full bg-white border border-indigo-100 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-indigo-800 outline-none">
                     <option value="TODAS">TODAS CATEGORÍAS</option>
                     {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
