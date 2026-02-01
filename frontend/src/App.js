@@ -403,7 +403,10 @@ const App = () => {
                 </button>
               )}
               <button 
-                  onClick={() => setState(p => ({...p, currentUser: null}))}
+                  onClick={async () => {
+                    await authLogout();
+                    setState(p => ({...p, currentUser: null}));
+                  }}
                   className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-red-500 transition-all"
               >
                   <LogOut size={22}/>
