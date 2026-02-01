@@ -14,8 +14,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [isConfigOpen, setIsConfigOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [catalogHeight, setCatalogHeight] = useState(300);
-  const [catalogWidth, setCatalogWidth] = useState(400);  // Ancho para modo vertical
-  const [catalogPosition, setCatalogPosition] = useState('horizontal'); // 'horizontal' | 'vertical'
+  const [catalogWidth, setCatalogWidth] = useState(400);
+  // Cargar preferencia de posición guardada
+  const [catalogPosition, setCatalogPosition] = useState(() => {
+    const saved = localStorage.getItem('luiggi_catalog_position');
+    return saved || 'horizontal';
+  });
   const [isDespieceOpen, setIsDespieceOpen] = useState(false);
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
@@ -26,6 +30,11 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
   const isResizingCatalogWidth = useRef(false);
+
+  // Guardar preferencia cuando cambie
+  useEffect(() => {
+    localStorage.setItem('luiggi_catalog_position', catalogPosition);
+  }, [catalogPosition]);
 
   const allProducts = useMemo(() => {
     return catalogs
