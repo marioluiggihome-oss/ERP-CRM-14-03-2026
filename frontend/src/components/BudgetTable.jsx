@@ -637,7 +637,23 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       <Tag className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-200" size={10} />
                       <input type="text" value={state.internalReference} onChange={e => setState(p => ({...p, internalReference: e.target.value}))} placeholder="Ref. Proyecto" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg py-2 pl-7 pr-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
                     </div>
-                    <input type="text" value={state.customerName} onChange={e => setState(p => ({...p, customerName: e.target.value}))} placeholder="Cliente" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg p-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
+                    {/* Selector de Cliente con búsqueda y permisos */}
+                    <ClientSelector
+                      value={state.customerName}
+                      onChange={(name) => setState(p => ({...p, customerName: name}))}
+                      currentUser={state.currentUser}
+                      onClientSelected={(client) => {
+                        // Guardar también el ID del cliente seleccionado
+                        setState(p => ({
+                          ...p, 
+                          customerName: client.nombre,
+                          selectedClientId: client.id,
+                          customerPhone: client.telefono || '',
+                          customerEmail: client.email || ''
+                        }));
+                      }}
+                      placeholder="Buscar o crear cliente..."
+                    />
                  </div>
               </section>
               
