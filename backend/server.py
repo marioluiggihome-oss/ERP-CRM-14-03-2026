@@ -1149,7 +1149,8 @@ async def get_user(user_id: str):
     return user
 
 @api_router.post("/users", response_model=UserResponse)
-async def create_user(user: UserCreate):
+@limiter.limit(get_limit("user_create"))
+async def create_user(request: Request, user: UserCreate):
     """Crear un nuevo usuario con password hasheado"""
     # Check if username exists
     existing = await db.users.find_one({"username": user.username.upper()})
@@ -1162,10 +1163,21 @@ async def create_user(user: UserCreate):
     user_data["password"] = hash_password(user_data["password"])
     
     await db.users.insert_one(user_data)
+    
+    # Auditoría
+    audit.log(
+        AuditAction.USER_CREATE,
+        resource_type="user",
+        resource_id=user_data["id"],
+        request=request,
+        details={"username": user_data["username"]}
+    )
+    
     return user_to_response(user_data)
 
 @api_router.put("/users/{user_id}", response_model=UserResponse)
-async def update_user(user_id: str, user: UserUpdate):
+@limiter.limit(get_limit("write"))
+async def update_user(request: Request, user_id: str, user: UserUpdate):
     """Actualizar un usuario"""
     existing = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not existing:
@@ -1178,18 +1190,38 @@ async def update_user(user_id: str, user: UserUpdate):
     # Hash password if provided
     if "password" in update_data and update_data["password"]:
         update_data["password"] = hash_password(update_data["password"])
+        # Auditoría para cambio de contraseña
+        audit.log(
+            AuditAction.PASSWORD_CHANGE,
+            resource_type="user",
+            resource_id=user_id,
+            request=request
+        )
     
     if update_data:
         await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    # Auditoría para actualización general
+    audit.log(
+        AuditAction.USER_UPDATE,
+        resource_type="user",
+        resource_id=user_id,
+        request=request,
+        details={"fields_updated": list(update_data.keys())}
+    )
     
     updated = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     return updated
 
 @api_router.delete("/users/{user_id}")
-async def delete_user(user_id: str):
+@limiter.limit(get_limit("user_delete"))
+async def delete_user(request: Request, user_id: str):
     """Eliminar un usuario"""
     if user_id == "admin":
         raise HTTPException(status_code=400, detail="No se puede eliminar el administrador principal")
+    
+    # Obtener info del usuario antes de eliminar para auditoría
+    user_to_delete = await db.users.find_one({"id": user_id}, {"_id": 0, "username": 1})
     
     result = await db.users.delete_one({"id": user_id})
     if result.deleted_count == 0:
