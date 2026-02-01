@@ -2828,7 +2828,8 @@ class BackupHistoryModel(BaseModel):
 # ============================================
 
 @api_router.post("/backup/manual")
-async def trigger_manual_backup(background_tasks: BackgroundTasks):
+@limiter.limit(get_limit("backup"))
+async def trigger_manual_backup(request: Request, background_tasks: BackgroundTasks):
     """Trigger a manual backup and send via email"""
     try:
         backup_data = await create_backup_data()
@@ -2850,6 +2851,15 @@ async def trigger_manual_backup(background_tasks: BackgroundTasks):
         }
         await db.backup_history.insert_one(history_entry)
         
+        # Auditoría
+        audit.log(
+            AuditAction.BACKUP_CREATE,
+            resource_type="backup",
+            resource_id=history_entry["id"],
+            request=request,
+            details={"type": "manual", "item_count": total_items}
+        )
+        
         return {
             "status": "success",
             "message": f"Backup enviado a {history_entry['sentTo']}",
@@ -2861,17 +2871,28 @@ async def trigger_manual_backup(background_tasks: BackgroundTasks):
         raise HTTPException(status_code=500, detail=f"Error al crear backup: {str(e)}")
 
 @api_router.get("/backup/download")
-async def download_backup():
+@limiter.limit(get_limit("export"))
+async def download_backup(request: Request):
     """Download backup as JSON file (for manual save to Google Drive)"""
     try:
         backup_data = await create_backup_data()
+        
+        # Auditoría
+        audit.log(
+            AuditAction.BACKUP_CREATE,
+            resource_type="backup",
+            request=request,
+            details={"type": "download"}
+        )
+        
         return backup_data
     except Exception as e:
         logger.error(f"Download backup error: {e}")
         raise HTTPException(status_code=500, detail=f"Error al descargar backup: {str(e)}")
 
 @api_router.post("/backup/restore")
-async def restore_backup(backup_data: Dict):
+@limiter.limit(get_limit("backup"))
+async def restore_backup(request: Request, backup_data: Dict):
     """Restore data from a backup file"""
     try:
         if "data" not in backup_data:
