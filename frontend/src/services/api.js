@@ -148,11 +148,35 @@ export const clientsAPI = {
     const response = await fetch(`${API_URL}/api/clients/${id}`, {
       method: 'DELETE'
     });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.detail || 'Error al eliminar cliente');
+    
+    // Clone response to safely read body
+    const clonedResponse = response.clone();
+    
+    try {
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al eliminar cliente');
+      }
+      return data;
+    } catch (parseError) {
+      // If body stream error, try with cloned response
+      if (parseError.message?.includes('body stream') || parseError.message?.includes('already read')) {
+        try {
+          const data = await clonedResponse.json();
+          if (!clonedResponse.ok) {
+            throw new Error(data.detail || 'Error al eliminar cliente');
+          }
+          return data;
+        } catch {
+          // If both fail, check status and return appropriate response
+          if (response.ok) {
+            return { message: 'Cliente eliminado' };
+          }
+          throw new Error('Error al eliminar cliente');
+        }
+      }
+      throw parseError;
     }
-    return data;
   },
 
   importCSV: async (clients) => {
