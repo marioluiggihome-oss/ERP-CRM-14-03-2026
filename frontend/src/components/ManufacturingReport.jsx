@@ -159,6 +159,18 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
                 <span className="ml-2 font-bold text-slate-900">{state.doorColorHigh}</span>
               </div>
             )}
+            {state.doorColorColumns && (
+              <div>
+                <span className="font-black text-slate-500 uppercase">Puertas Columnas:</span>
+                <span className="ml-2 font-bold text-slate-900">{state.doorColorColumns}</span>
+              </div>
+            )}
+            {state.sideColor && (
+              <div>
+                <span className="font-black text-slate-500 uppercase">Costados / Vistos:</span>
+                <span className="ml-2 font-bold text-slate-900">{state.sideColor}</span>
+              </div>
+            )}
           </div>
         </div>
 
