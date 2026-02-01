@@ -405,9 +405,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                         </div>
                         <div className="flex items-center gap-6">
                           <div className="text-right">
-                            <p className="text-xs text-indigo-300 uppercase font-bold">Dimensiones</p>
+                            <p className="text-xs text-indigo-300 uppercase font-bold">Dimensiones (mm)</p>
                             <p className="font-black text-indigo-800 text-sm">
-                              {Math.round(furniture.originalWidth / 10)} x {furniture.originalHeight} x {furniture.originalDepth} cm
+                              {furniture.originalWidth} x {furniture.originalHeight * 10} x {furniture.originalDepth * 10}
                             </p>
                           </div>
                           <div className="text-right">
