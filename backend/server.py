@@ -2014,6 +2014,27 @@ async def update_product(product_id: str, product: ProductCreate):
     updated = await db.products.find_one({"id": product_id}, {"_id": 0})
     return updated
 
+@api_router.patch("/products/{product_id}/zone-points")
+async def update_product_zone_points(product_id: str, zone_points: dict):
+    """Actualizar solo los zonePoints de un producto"""
+    existing = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    # Merge existing zonePoints with new ones
+    current_zones = existing.get("zonePoints", {}) or {}
+    updated_zones = {**current_zones, **zone_points}
+    
+    # Update points to match Z1
+    points = updated_zones.get("Z1", existing.get("points", 0))
+    
+    await db.products.update_one(
+        {"id": product_id}, 
+        {"$set": {"zonePoints": updated_zones, "points": points}}
+    )
+    updated = await db.products.find_one({"id": product_id}, {"_id": 0})
+    return updated
+
 @api_router.delete("/products/{product_id}")
 async def delete_product(product_id: str):
     """Eliminar un producto"""
