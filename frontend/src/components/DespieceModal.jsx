@@ -631,10 +631,10 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                               </td>
                               <td className="px-4 py-3 text-center text-xs text-indigo-500">{comp.material}</td>
                               <td className="px-4 py-3 text-center font-black text-indigo-900">
-                                {getComponentValue(furniture.productId, comp, 'width')}
+                                {getComponentValue(furniture.productId, comp, 'length')}
                               </td>
                               <td className="px-4 py-3 text-center font-black text-indigo-900">
-                                {getComponentValue(furniture.productId, comp, 'height')}
+                                {getComponentValue(furniture.productId, comp, 'width')}
                               </td>
                               <td className="px-4 py-3 text-center font-black text-orange-600">
                                 {comp.quantity * furniture.itemQuantity}
