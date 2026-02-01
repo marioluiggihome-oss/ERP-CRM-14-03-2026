@@ -1,10 +1,19 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v5.3)
+## Última Actualización: 01/02/2026 (v5.4)
 
 ---
 
-## 🆕 ACTUALIZACIÓN 01/02/2026 (v5.3)
+## 🆕 ACTUALIZACIÓN 01/02/2026 (v5.4)
+
+### ✅ Precios GOLA Importados desde PDF
+- Importados precios de productos GOLA desde el PDF "TARIFA-TECNICA-ZONACOCINAS_GOLA.pdf"
+- 34 productos GOLA que no tenían precios ahora tienen zonePoints (Z1-Z4)
+- Total: 1642 productos GOLA con precios completos
+
+### ✅ Nuevo Endpoint PATCH para Actualizar zonePoints
+- Creado `PATCH /api/products/{product_id}/zone-points` para actualizar solo los precios por zona
+- Permite actualizar precios sin necesidad de enviar todos los campos del producto
 
 ### ✅ Panel Admin Fusionado con MASTER
 - El contenido del "Panel Admin" ahora está dentro del modal MASTER como pestaña "PANEL DIRECTOR"
@@ -13,7 +22,7 @@
 
 ### ✅ Eliminación de Clientes Arreglada
 - Corregido error "body stream already read" al eliminar clientes
-- La API ahora funciona correctamente
+- La API ahora funciona correctamente (**Requiere refresh del navegador Ctrl+Shift+R**)
 
 ### ✅ Iconos Removidos del Inventario
 - Los iconos de muebles ya no aparecen en la vista de Inventario
