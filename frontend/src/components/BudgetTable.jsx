@@ -1282,7 +1282,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
         carcassMaterialName={carcassMaterialName}
         customerName={state.customerName || ''}
         projectReference={state.projectReference || ''}
-        expedientNumber={state.expedientNumber || ''}
+        expedientNumber={state.budgetNumber || ''}
       />
 
       {/* Modal Confirmar Pedido */}
