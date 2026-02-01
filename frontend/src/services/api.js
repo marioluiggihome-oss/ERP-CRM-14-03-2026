@@ -149,32 +149,36 @@ export const clientsAPI = {
       ? `${API_URL}/api/clients/${id}?force=true`
       : `${API_URL}/api/clients/${id}`;
     
-    const response = await fetch(url, {
-      method: 'DELETE'
+    // Use XMLHttpRequest for more reliable body handling
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('DELETE', url, true);
+      
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          try {
+            const data = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(data.message ? data : { message: 'Cliente eliminado' });
+            } else {
+              reject(new Error(data.detail || 'Error al eliminar cliente'));
+            }
+          } catch (e) {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve({ message: 'Cliente eliminado' });
+            } else {
+              reject(new Error('Error al eliminar cliente'));
+            }
+          }
+        }
+      };
+      
+      xhr.onerror = function() {
+        reject(new Error('Error de conexión al eliminar cliente'));
+      };
+      
+      xhr.send();
     });
-    
-    // Read response as text first (more robust)
-    const responseText = await response.text();
-    
-    // If successful, return parsed JSON or success message
-    if (response.ok) {
-      try {
-        return JSON.parse(responseText);
-      } catch {
-        return { message: 'Cliente eliminado' };
-      }
-    }
-    
-    // If error, try to parse error message
-    try {
-      const errorData = JSON.parse(responseText);
-      throw new Error(errorData.detail || 'Error al eliminar cliente');
-    } catch (parseError) {
-      if (parseError.message && !parseError.message.includes('JSON')) {
-        throw parseError;
-      }
-      throw new Error('Error al eliminar cliente');
-    }
   },
 
   importCSV: async (clients) => {
