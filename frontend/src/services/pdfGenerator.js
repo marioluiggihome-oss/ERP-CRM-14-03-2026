@@ -891,22 +891,23 @@ export const generateManufacturingPDF = ({
   // Preparar datos de la tabla - excluir líneas manuales
   const tableData = items.filter(item => !item.isManual).map(item => {
     const product = allProducts.find(p => p.id === item.productId);
-    const code = product?.code || item.productCode || item.customReference || '???';
-    const name = product?.name || item.productName || 'Sin descripción';
+    const code = (product?.code || item.productCode || item.customReference || '???').toUpperCase();
+    const rawName = product?.name || item.productName || 'Sin descripción';
+    const name = capitalizeName(rawName);
     const width = item.customWidth || product?.width || 0;
     const height = item.customHeight || product?.height || 0;
     const depth = item.customDepth || product?.depth || 0;
-    const apertura = item.openingDirection === 'left' ? 'IZQUIERDA' : item.openingDirection === 'right' ? 'DERECHA' : '-';
+    const apertura = item.openingDirection === 'left' ? 'Izquierda' : item.openingDirection === 'right' ? 'Derecha' : '-';
     
     // Calcular cortes especiales comparando con dimensiones originales del producto
     const notes = [];
     if (product) {
-      if (Number(item.customWidth) !== Number(product.width)) notes.push('C.ANCHO');
-      if (Number(item.customHeight) !== Number(product.height)) notes.push('C.ALTO');
-      if (Number(item.customDepth) !== Number(product.depth)) notes.push('C.FONDO');
+      if (Number(item.customWidth) !== Number(product.width)) notes.push('C.Ancho');
+      if (Number(item.customHeight) !== Number(product.height)) notes.push('C.Alto');
+      if (Number(item.customDepth) !== Number(product.depth)) notes.push('C.Fondo');
     }
-    if (item.hasVigaCut) notes.push('C.VIGA');
-    if (item.notes) notes.push(item.notes);
+    if (item.hasVigaCut) notes.push('C.Viga');
+    if (item.notes) notes.push(capitalizeName(item.notes));
     
     return [
       item.quantity || 1,
