@@ -72,21 +72,25 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 ├── backend/
 │   ├── server.py (~5100 líneas)
 │   │   ├── OpportunityModel + businessType
-│   │   ├── ContactModel + businessTypes[]
-│   │   ├── GET /api/admin/metrics/trends (nuevo)
-│   │   ├── POST /api/crm/opportunities/from-armario (nuevo)
-│   │   └── GET /api/crm/opportunities?businessType (actualizado)
+│   │   ├── ContactModel + businessTypes[] + customValues
+│   │   ├── GET /api/admin/metrics/trends
+│   │   ├── POST /api/crm/opportunities/from-armario
+│   │   ├── GET /api/crm/opportunities?businessType
+│   │   └── POST /api/orders/confirm
 │   └── tests/
-│       └── test_p1_p2_features.py (nuevo)
+│       └── test_p1_p2_features.py
 ├── frontend/
 │   └── src/
 │       ├── components/
 │       │   ├── AdminWorkView.jsx (gráficos recharts)
 │       │   ├── CRMPipeline.jsx (filtros businessType)
-│       │   ├── BudgetTable.jsx (auto-etiquetado cocina)
+│       │   ├── BudgetTable.jsx (ClientSelector, auto-etiquetado)
+│       │   ├── ClientSelector.jsx (NUEVO - búsqueda/creación clientes)
+│       │   ├── Visualizer.jsx (FIXED - layout IA Lab)
+│       │   ├── DespieceModal.jsx (export CSV/XML)
 │       │   └── Armarios.jsx (auto-etiquetado armarios)
 │       └── services/
-│           └── api.js (adminMetricsAPI, createFromArmario)
+│           └── api.js
 └── memory/
     └── PRD.md
 ```
