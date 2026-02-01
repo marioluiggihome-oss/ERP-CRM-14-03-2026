@@ -2312,10 +2312,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                     onClick={async () => {
                                       if (!window.confirm(`¿Eliminar cliente "${client.nombre}"?`)) return;
                                       try {
-                                        await clientsAPI.delete(client.id);
+                                        const result = await clientsAPI.delete(client.id);
+                                        console.log('Delete result:', result);
+                                        alert(`✅ Cliente "${client.nombre}" eliminado correctamente`);
                                         loadClients();
                                       } catch (err) {
-                                        alert(err.message);
+                                        console.error('Delete error:', err);
+                                        alert(`❌ ${err.message}`);
                                       }
                                     }}
                                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
