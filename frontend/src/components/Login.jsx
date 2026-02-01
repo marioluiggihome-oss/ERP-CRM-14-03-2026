@@ -153,7 +153,7 @@ const Login = ({ onLogin, customLogo }) => {
             /* LOGIN FORM */
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-2 ml-1">
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-2 ml-1">
                   <UserIcon size={12} className="text-orange-500" /> Usuario
                 </label>
                 <input 
@@ -161,7 +161,7 @@ const Login = ({ onLogin, customLogo }) => {
                   autoFocus
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-slate-900 font-bold outline-none focus:border-orange-500 focus:bg-white transition-all placeholder-slate-300"
+                  className="w-full bg-white/90 border-2 border-slate-200 rounded-xl p-4 text-slate-900 font-bold outline-none focus:border-orange-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm"
                   placeholder="Tu usuario"
                   required
                   data-testid="login-username"
@@ -169,14 +169,14 @@ const Login = ({ onLogin, customLogo }) => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-2 ml-1">
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-2 ml-1">
                   <Key size={12} className="text-orange-500" /> Contraseña
                 </label>
                 <input 
                   type="password" 
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-slate-900 font-bold outline-none focus:border-orange-500 focus:bg-white transition-all placeholder-slate-300"
+                  className="w-full bg-white/90 border-2 border-slate-200 rounded-xl p-4 text-slate-900 font-bold outline-none focus:border-orange-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm"
                   placeholder="••••••••"
                   required
                   data-testid="login-password"
@@ -184,7 +184,7 @@ const Login = ({ onLogin, customLogo }) => {
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-100 p-3 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold">
+                <div className="bg-red-50/90 border border-red-200 p-3 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold shadow-sm">
                   <ShieldAlert size={16} />
                   {error}
                 </div>
