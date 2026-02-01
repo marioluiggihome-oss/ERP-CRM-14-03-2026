@@ -1,38 +1,27 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v4.8)
+## Última Actualización: 01/02/2026 (v4.9)
 
 ---
 
-## RESUMEN DEL SISTEMA
+## 🆕 ACTUALIZACIÓN 01/02/2026 (v4.9)
 
-LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y armarios.
+### ✅ Corrección de Medidas en Sistema de Despiece
+| Vista | Antes | Ahora |
+|-------|-------|-------|
+| **Orden de Montaje** | Headers: Ancho/Alto (campos vacíos) | Headers: **LARGO (MM) / ANCHO (MM)** con datos |
+| **Lista de Corte** | LARGO/ANCHO (campo altura vacío) | **LARGO (MM) / ANCHO (MM)** con valores correctos |
+| **Datos mostrados** | length=undefined, width=330 | **length=350, width=330** ✅ |
 
----
+### ✅ Filtro de Series por Categoría
+| Comportamiento | Antes | Ahora |
+|----------------|-------|-------|
+| **Series al filtrar** | Mostraba todas (3000+) | Solo series de la categoría seleccionada |
+| **Reset automático** | No | Sí, al cambiar categoría reset a "TODAS SERIES" |
 
-## 🆕 ACTUALIZACIÓN 01/02/2026 (v4.8)
-
-### ✅ Exportaciones con Datos del Pedido
-| Funcionalidad | Estado | Descripción |
-|---------------|--------|-------------|
-| **CSV Seccionadora** | ✅ | Incluye cabecera con Cliente, Expediente, Referencia, Fecha, Material |
-| **XML CutRite** | ✅ | Estructura completa con metadatos del proyecto y datos por pieza |
-| **Nombre Archivo** | ✅ | `CORTE_EXP-2026-001_CLIENTE_2026-02-01.csv/xml` |
-
-### ✅ Importación Masiva de Precios GOLA/TIRADOR
-| Métrica | Antes | Después |
-|---------|-------|---------|
-| Productos con zonePoints | 3,640 (77.7%) | **4,636 (99.0%)** |
-| Sin precios válidos | 1,045 | **49** |
-
-Se generaron automáticamente los `zonePoints` para 996 productos usando ratios estándar.
-
-### ✅ Dimensiones del Casco + Botón Copiar
-- Sección verde con Ancho × Alto × Fondo en mm
-- Botón "COPIAR" copia: `"35A1P400 - Casco: 400 x 350 x 330 mm"`
-
-### ✅ Checkbox Armarios Reubicado
-- Movido a sección "MÓDULOS ACTIVOS" junto a Cocina Montada/Despiece
+### ✅ Exportación CSV con Datos del Pedido
+- Cabecera con CLIENTE, EXPEDIENTE, REFERENCIA, FECHA, MATERIAL BASE
+- Columnas: Material, Grosor, Nombre pieza, **Largo**, **Ancho**, Cantidad, Textura, Código, Mueble
 
 ---
 
@@ -42,7 +31,7 @@ Se generaron automáticamente los `zonePoints` para 996 productos usando ratios 
 |---------|-------|
 | Total productos | 4,685 |
 | **CON zonePoints** | **4,636 (99.0%)** |
-| Sin precios (requieren proveedor) | 49 (1.0%) |
+| Sin precios | 49 (1.0%) |
 
 ---
 
@@ -50,15 +39,12 @@ Se generaron automáticamente los `zonePoints` para 996 productos usando ratios 
 
 ### P1 - Alta Prioridad
 - [ ] **49 productos sin precios**: Productos GOLA especiales que requieren datos del proveedor
-- [ ] PDF Aesthetics: Ajustar encabezado según diseño del usuario
 
 ### P2 - Media Prioridad
-- [ ] Estabilidad Frontend: Investigar error `insertBefore` de React
-- [ ] Filtros temporales en métricas
+- [ ] Estabilidad Frontend: Error `insertBefore` de React
 
 ### P3 - Refactorización
-- [ ] Migrar endpoints de server.py a routers separados
-- [ ] Descomponer BudgetTable.jsx
+- [ ] Migrar endpoints de server.py a routers
 
 ---
 
@@ -67,14 +53,5 @@ Se generaron automáticamente los `zonePoints` para 996 productos usando ratios 
 | Usuario | Contraseña | Rol |
 |---------|------------|-----|
 | MARIO | MARIO | Director Comercial |
-| TIENDSA | TIENDSA | Tienda/Punto de Venta |
+| TIENDSA | TIENDSA | Tienda |
 | COMSA | COMERCIAL | Comercial |
-
----
-
-## INTEGRACIONES
-
-- **Google Gemini** (via emergentintegrations)
-- **SendGrid**: Notificaciones por email
-- **jspdf**: PDFs
-- **recharts**: Gráficos
