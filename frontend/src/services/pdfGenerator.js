@@ -102,7 +102,9 @@ export const generateBudgetPDF = ({
     }
     
     const code = item.customReference || product?.code || '-';
-    const name = item.manualDescription || product?.name || '-';
+    // Aplicar capitalización a los nombres, especialmente líneas manuales
+    const rawName = item.manualDescription || product?.name || '-';
+    const name = item.isManual ? capitalizeName(rawName) : rawName;
     const width = item.customWidth ? Math.round(item.customWidth / 10) : '-';
     const height = item.customHeight || '-';
     const depth = item.customDepth || '-';
@@ -113,13 +115,13 @@ export const generateBudgetPDF = ({
     if (item.hasSpecialWidthCut) notasList.push('C.Ancho');
     if (item.hasSpecialHeightCut) notasList.push('C.Alto');
     if (item.hasSpecialDepthCut) notasList.push('C.Fondo');
-    if (item.hasVigaCut) notasList.push('CORTE VIGA');
-    if (item.notes) notasList.push(item.notes);
+    if (item.hasVigaCut) notasList.push('C.Viga');
+    if (item.notes) notasList.push(capitalizeName(item.notes));
     const notas = notasList.length > 0 ? notasList.join(', ') : '-';
     
     return [
       item.quantity || 1,
-      code,
+      code.toUpperCase(),
       name.length > 40 ? name.substring(0, 40) + '...' : name,
       width,
       height,
