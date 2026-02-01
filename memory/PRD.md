@@ -1,6 +1,6 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 25/01/2026 (v4.1)
+## Última Actualización: 01/02/2026 (v4.2)
 
 ---
 
