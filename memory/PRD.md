@@ -79,25 +79,39 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 ```
 /app
 ├── backend/
-│   ├── server.py (~5100 líneas)
-│   │   ├── OpportunityModel + businessType
-│   │   ├── ContactModel + businessTypes[] + customValues
-│   │   ├── GET /api/admin/metrics/trends
-│   │   ├── POST /api/crm/opportunities/from-armario
-│   │   ├── GET /api/crm/opportunities?businessType
-│   │   └── POST /api/orders/confirm
+│   ├── server.py (~5200 líneas - funcional, migración gradual pendiente)
+│   ├── models/                    # ✅ NUEVO - Modelos Pydantic extraídos
+│   │   ├── __init__.py
+│   │   ├── base.py               # TimestampMixin, generate_id
+│   │   ├── user.py               # UserModel, UserCreate, UserUpdate, UserResponse
+│   │   ├── product.py            # ProductModel, ZonePoints, MaterialModel
+│   │   ├── project.py            # ProjectModel, SettingsModel, BudgetItemModel
+│   │   ├── client.py             # ClientModel, CLIENT_SEGMENTS
+│   │   └── crm.py                # Contact, Opportunity, Activity, CalendarEvent
+│   ├── services/                  # ✅ NUEVO - Servicios reutilizables
+│   │   ├── __init__.py
+│   │   ├── database.py           # MongoDB connection (db)
+│   │   ├── auth_service.py       # hash_password, verify_password
+│   │   └── email_service.py      # SendGrid integration
+│   ├── routers/                   # ✅ NUEVO - FastAPI routers (estructura base)
+│   │   ├── __init__.py
+│   │   ├── auth.py               # /api/auth/*, /api/users/*
+│   │   ├── products.py           # /api/products/*
+│   │   └── clients.py            # /api/clients/*
 │   └── tests/
 │       └── test_p1_p2_features.py
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── AdminWorkView.jsx (gráficos recharts)
-│       │   ├── CRMPipeline.jsx (filtros businessType)
-│       │   ├── BudgetTable.jsx (ClientSelector, auto-etiquetado)
-│       │   ├── ClientSelector.jsx (NUEVO - búsqueda/creación clientes)
-│       │   ├── Visualizer.jsx (FIXED - layout IA Lab)
-│       │   ├── DespieceModal.jsx (export CSV/XML)
-│       │   └── Armarios.jsx (auto-etiquetado armarios)
+│       │   ├── AdminWorkView.jsx
+│       │   ├── CRMPipeline.jsx
+│       │   ├── BudgetTable.jsx (~1400 líneas)
+│       │   ├── ClientSelector.jsx        # ✅ NUEVO
+│       │   ├── ConfirmOrderModal.jsx     # ✅ NUEVO (extraído)
+│       │   ├── BudgetTotals.jsx          # ✅ NUEVO (extraído)
+│       │   ├── Visualizer.jsx (FIXED)
+│       │   ├── DespieceModal.jsx
+│       │   └── Armarios.jsx
 │       └── services/
 │           └── api.js
 └── memory/
