@@ -17,11 +17,11 @@ const Logo = ({ className = 'h-12', showSlogan = true, variant = 'light', custom
   if (variant === 'dark') {
     return (
       <div className={`flex flex-col items-center justify-center ${className}`}>
-        <div className="flex flex-col items-center text-center gap-1">
-             <div className="flex items-center gap-3">
-                <span className="text-slate-900 font-black italic text-5xl tracking-tighter leading-none">LUIGGI</span>
+        <div className="flex flex-col items-center text-center gap-0.5">
+             <div className="flex items-center gap-2">
+                <span className="text-slate-900 font-black italic text-3xl tracking-tighter leading-none">LUIGGI</span>
              </div>
-             <span className="text-orange-600 font-black tracking-[0.4em] text-xs uppercase italic -mt-1">
+             <span className="text-orange-600 font-black tracking-[0.3em] text-[10px] uppercase italic">
                 HOME MASTER
              </span>
         </div>
