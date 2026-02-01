@@ -355,6 +355,7 @@ class SettingsModel(BaseModel):
     specialIncrementWidth: float = 45
     specialIncrementHeight: float = 45
     specialIncrementDepth: float = 45
+    vigaCutIncrement: float = 0
     brandColor: str = "#ea580c"
     logo: Optional[str] = None
 
@@ -364,6 +365,7 @@ class SettingsUpdate(BaseModel):
     specialIncrementWidth: Optional[float] = None
     specialIncrementHeight: Optional[float] = None
     specialIncrementDepth: Optional[float] = None
+    vigaCutIncrement: Optional[float] = None
     brandColor: Optional[str] = None
     logo: Optional[str] = None
 
