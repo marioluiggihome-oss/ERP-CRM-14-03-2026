@@ -1,6 +1,23 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v5.4)
+## Última Actualización: 01/02/2026 (v5.5)
+
+---
+
+## 🆕 ACTUALIZACIÓN 01/02/2026 (v5.5)
+
+### ✅ BUG CRÍTICO CORREGIDO: Eliminación de Clientes
+- **Problema**: Error "body stream already read" al eliminar clientes desde Panel Maestro
+- **Solución**: Implementado `response.clone()` en `clientsAPI.delete()` para manejar correctamente el stream del body
+- **Verificación**: Probado con testing agent - 100% de tests pasaron
+- **Archivo modificado**: `/app/frontend/src/services/api.js`
+- Añadido mensaje de éxito al eliminar cliente
+
+### ✅ Email de Confirmación de Pedido
+- Endpoint `/api/orders/confirm` verificado y funcionando
+- Template HTML profesional con branding corporativo
+- Incluye especificaciones de acabados (armazón, puertas, costados)
+- Soporta archivos adjuntos (hasta 5)
 
 ---
 
@@ -19,10 +36,6 @@
 - El contenido del "Panel Admin" ahora está dentro del modal MASTER como pestaña "PANEL DIRECTOR"
 - Incluye métricas globales, top performers, y detalles por comercial
 - Gráficos de ventas mensuales y embudo de conversión
-
-### ✅ Eliminación de Clientes Arreglada
-- Corregido error "body stream already read" al eliminar clientes
-- La API ahora funciona correctamente (**Requiere refresh del navegador Ctrl+Shift+R**)
 
 ### ✅ Iconos Removidos del Inventario
 - Los iconos de muebles ya no aparecen en la vista de Inventario
