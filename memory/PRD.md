@@ -99,15 +99,20 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 ## PRÓXIMAS TAREAS
 
+### P1 - Alta Prioridad
+- [ ] PDF Aesthetics: Ajustar encabezado según diseño del usuario
+- [ ] Permisos UI: Mover checkbox de "Armarios" en panel de usuario
+- [ ] Migración `totalPvp`: Script para actualizar proyectos históricos
+
 ### P2 - Media Prioridad
-- [ ] Probar IA Lab - Analizador de Planos con imagen real
-- [ ] Personalizar datos a quitar del PDF
-- [ ] Reorganizar UI campo "expediente"
+- [ ] Campos superpuestos: Investigar bug de overlapping (necesita más info del usuario)
+- [ ] Estabilidad Frontend: Investigar error `insertBefore` de React
 - [ ] Filtros temporales en métricas (mes, trimestre, año)
+- [ ] Campo `catalogOrder` para ordenar productos
 
 ### P3 - Refactorización (URGENTE)
 - [ ] Separar server.py en routers/models/services
-- [ ] Separar componentes grandes (Armarios.jsx, SettingsModal.jsx)
+- [ ] Separar componentes grandes (BudgetTable.jsx >1500 líneas)
 
 ---
 
