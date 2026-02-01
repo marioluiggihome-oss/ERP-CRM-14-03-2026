@@ -1122,31 +1122,32 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
              
              <div className="h-[calc(100%-45px)] overflow-y-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-indigo-950 text-white text-[8px] font-black uppercase sticky top-0 z-20">
+                  <thead className="bg-indigo-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
                     <tr>
-                      <th className="p-3">REF.</th>
-                      <th className="p-3">NOMBRE</th>
-                      <th className="p-3 text-center">ANCHO</th>
-                      <th className="p-3 text-center">ALTO</th>
-                      <th className="p-3 text-center">FONDO</th>
-                      <th className="p-3 text-center">PTS</th>
-                      <th className="p-3 text-right">+</th>
+                      <th className="p-3 pl-4">REFERENCIA</th>
+                      <th className="p-3">DESCRIPCIÓN</th>
+                      <th className="p-3 text-center">ANCHO (cm)</th>
+                      <th className="p-3 text-center">ALTO (cm)</th>
+                      <th className="p-3 text-center">FONDO (cm)</th>
+                      <th className="p-3 text-center">PUNTOS</th>
+                      <th className="p-3 pr-4 text-right">AÑADIR</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-50">
                     {filteredCatalog.map(p => (
-                      <tr key={p.id} className="hover:bg-indigo-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
-                        <td className="p-2 font-black text-indigo-900 text-[10px]">{p.code}</td>
-                        <td className="p-2">
-                          <div className="text-[8px] font-bold text-indigo-500 uppercase">{p.name}</div>
+                      <tr key={p.id} className="hover:bg-orange-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
+                        <td className="p-3 pl-4 font-black text-indigo-900 text-[13px]">{p.code}</td>
+                        <td className="p-3">
+                          <div className="text-[11px] font-bold text-indigo-600 uppercase">{p.name}</div>
+                          {p.series && <div className="text-[9px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                         </td>
-                        <td className="p-2 text-center font-bold text-slate-500 text-[9px]">{p.width ? Math.round(p.width / 10) : '-'}</td>
-                        <td className="p-2 text-center font-bold text-slate-500 text-[9px]">{p.height || '-'}</td>
-                        <td className="p-2 text-center font-bold text-slate-500 text-[9px]">{p.depth || '-'}</td>
-                        <td className="p-2 text-center font-black text-orange-600 text-[10px]">
+                        <td className="p-3 text-center font-bold text-slate-600 text-[12px]">{p.width ? Math.round(p.width / 10) : '-'}</td>
+                        <td className="p-3 text-center font-bold text-slate-600 text-[12px]">{p.height || '-'}</td>
+                        <td className="p-3 text-center font-bold text-slate-600 text-[12px]">{p.depth || '-'}</td>
+                        <td className="p-3 text-center font-black text-orange-600 text-[14px]">
                           {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
                         </td>
-                        <td className="p-2 text-right"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100"/></td>
+                        <td className="p-3 pr-4 text-right"><Plus size={18} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
                       </tr>
                     ))}
                   </tbody>
