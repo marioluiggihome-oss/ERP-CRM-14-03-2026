@@ -1646,9 +1646,9 @@ const Armarios = ({ state, setState }) => {
             <input
               type="text"
               value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              onChange={(e) => setCustomerName(e.target.value.toUpperCase())}
               placeholder="Nombre cliente..."
-              className="bg-transparent text-white placeholder-white/50 text-sm outline-none w-40"
+              className="bg-transparent text-white placeholder-white/50 text-sm outline-none w-40 uppercase"
             />
           </div>
           
