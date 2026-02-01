@@ -120,8 +120,8 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 ```
 /app
 ├── backend/
-│   ├── server.py (~5200 líneas - funcional, migración gradual pendiente)
-│   ├── models/                    # ✅ NUEVO - Modelos Pydantic extraídos
+│   ├── server.py (~5400 líneas - funcional, migración gradual pendiente)
+│   ├── models/                    # Modelos Pydantic extraídos
 │   │   ├── __init__.py
 │   │   ├── base.py               # TimestampMixin, generate_id
 │   │   ├── user.py               # UserModel, UserCreate, UserUpdate, UserResponse
@@ -129,12 +129,15 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 │   │   ├── project.py            # ProjectModel, SettingsModel, BudgetItemModel
 │   │   ├── client.py             # ClientModel, CLIENT_SEGMENTS
 │   │   └── crm.py                # Contact, Opportunity, Activity, CalendarEvent
-│   ├── services/                  # ✅ NUEVO - Servicios reutilizables
+│   ├── services/                  # Servicios reutilizables
 │   │   ├── __init__.py
 │   │   ├── database.py           # MongoDB connection (db)
 │   │   ├── auth_service.py       # hash_password, verify_password
-│   │   └── email_service.py      # SendGrid integration
-│   ├── routers/                   # ✅ NUEVO - FastAPI routers (estructura base)
+│   │   ├── email_service.py      # SendGrid integration
+│   │   ├── jwt_service.py        # 🔒 JWT tokens, dependencies
+│   │   ├── rate_limiter.py       # 🔒 Rate limiting con slowapi
+│   │   └── audit_service.py      # 🔒 Logs de auditoría
+│   ├── routers/                   # FastAPI routers (estructura base)
 │   │   ├── __init__.py
 │   │   ├── auth.py               # /api/auth/*, /api/users/*
 │   │   ├── products.py           # /api/products/*
@@ -147,14 +150,18 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 │       │   ├── AdminWorkView.jsx
 │       │   ├── CRMPipeline.jsx
 │       │   ├── BudgetTable.jsx (~1400 líneas)
-│       │   ├── ClientSelector.jsx        # ✅ NUEVO
-│       │   ├── ConfirmOrderModal.jsx     # ✅ NUEVO (extraído)
-│       │   ├── BudgetTotals.jsx          # ✅ NUEVO (extraído)
+│       │   ├── ClientSelector.jsx        # Selector de clientes con permisos
+│       │   ├── ConfirmOrderModal.jsx     # Modal confirmación pedido
+│       │   ├── BudgetTotals.jsx          # Sección totales
+│       │   ├── Login.jsx                 # 🔒 Integrado con JWT
 │       │   ├── Visualizer.jsx (FIXED)
 │       │   ├── DespieceModal.jsx
 │       │   └── Armarios.jsx
 │       └── services/
-│           └── api.js
+│           ├── api.js
+│           └── authService.js            # 🔒 NUEVO - JWT management
+├── var/log/
+│   └── luiggi_audit.log                  # 🔒 Logs de auditoría
 └── memory/
     └── PRD.md
 ```
