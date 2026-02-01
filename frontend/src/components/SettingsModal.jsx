@@ -197,6 +197,61 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
   };
 
+  // Load Director Panel data when tab is active
+  useEffect(() => {
+    if (isOpen && activeTab === 'director') {
+      loadDirectorData();
+      loadDirectorMetrics();
+      loadDirectorTrends();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadDirectorData = async () => {
+    setDirectorLoading(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/all-work`);
+      const result = await response.json();
+      setDirectorData(result);
+    } catch (err) {
+      console.error('Error loading director data:', err);
+    } finally {
+      setDirectorLoading(false);
+    }
+  };
+
+  const loadDirectorMetrics = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/metrics`);
+      const result = await response.json();
+      setDirectorMetrics(result);
+    } catch (err) {
+      console.error('Error loading metrics:', err);
+    }
+  };
+
+  const loadDirectorTrends = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/metrics/trends`);
+      const result = await response.json();
+      setDirectorTrends(result);
+    } catch (err) {
+      console.error('Error loading trends:', err);
+    }
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value || 0);
+  };
+
+  const toggleDirectorSection = (section) => {
+    setDirectorExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   // Load maintenance status when tab is active
   useEffect(() => {
     if (isOpen && activeTab === 'maintenance') {
