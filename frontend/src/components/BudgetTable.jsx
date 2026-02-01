@@ -1234,7 +1234,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                             <div className="text-[10px] font-black text-orange-600">
                               {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
                             </div>
-                            <Plus size={12} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                            <Plus size={16} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity"/>
                           </div>
                         </div>
                       </div>
@@ -1247,7 +1247,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
             {/* Cuando está cerrado, mostrar solo icono */}
             {!isCatalogOpen && (
               <div className="flex-1 flex items-center justify-center">
-                <div className="transform -rotate-90 whitespace-nowrap text-[8px] font-black uppercase text-indigo-400 tracking-widest">
+                <div className="transform -rotate-90 whitespace-nowrap text-[10px] font-black uppercase text-indigo-400 tracking-widest">
                   LIBRERÍA ({filteredCatalog.length})
                 </div>
               </div>
