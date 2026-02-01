@@ -110,15 +110,17 @@ const Login = ({ onLogin, customLogo }) => {
 
   return (
     <div className="fixed inset-0 flex overflow-hidden font-sans">
-      {/* Left Side - Background Image */}
+      {/* Full Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ 
+          backgroundImage: 'url(https://static.prod-images.emergentagent.com/jobs/b3965c3e-ccdc-4506-be7a-5d947275bca3/images/34360bf741aea83455380cd7a1a3e4f5cf9c6771d54283a4efe0ac8d2bf300d3.png)'
+        }}
+      />
+      
+      {/* Left Side - Text Content */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: 'url(https://static.prod-images.emergentagent.com/jobs/b3965c3e-ccdc-4506-be7a-5d947275bca3/images/34360bf741aea83455380cd7a1a3e4f5cf9c6771d54283a4efe0ac8d2bf300d3.png)'
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-slate-900/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 via-slate-900/50 to-transparent" />
         
         {/* Overlay Content */}
         <div className="relative z-10 flex flex-col justify-end p-12 text-white">
@@ -128,17 +130,21 @@ const Login = ({ onLogin, customLogo }) => {
               TU HOGAR<br />
               <span className="text-orange-400">TU ESTILO</span>
             </h1>
+            <p className="text-white/70 text-lg">
+              Sistema profesional de presupuestos para distribuidores de cocinas.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Right Side - Forms */}
-      <div className="w-full lg:w-1/2 xl:w-2/5 bg-white flex items-center justify-center p-8 lg:p-12">
-        <div className="w-full max-w-md">
+      {/* Right Side - Forms with Glass Effect */}
+      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-8 lg:p-12 relative">
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-md lg:bg-white/70 lg:backdrop-blur-xl" />
+        <div className="w-full max-w-md relative z-10">
           {/* Logo */}
-          <div className="text-center mb-6">
-            <Logo variant="dark" customLogo={customLogo} className="h-12 mb-2" />
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+          <div className="text-center mb-8">
+            <Logo variant="dark" customLogo={customLogo} className="h-16 mb-3" />
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
               {mode === 'login' ? 'Acceso Distribuidores' : 'Solicitud de Alta'}
             </p>
           </div>
