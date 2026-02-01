@@ -93,7 +93,7 @@ export const generateBudgetPDF = ({
     if (item.isManual) {
       product = {
         code: item.customReference || 'MANUAL',
-        name: item.manualDescription || 'CONCEPTO MANUAL'
+        name: capitalizeName(item.manualDescription) || 'Concepto Manual'
       };
       price = (item.manualPoints || 0) * pointValueMontada * (item.quantity || 1);
     } else if (product && calculateLineDetails) {
