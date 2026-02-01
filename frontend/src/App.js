@@ -218,7 +218,7 @@ const App = () => {
   };
 
   // Function to add furniture from Visualizer (IA Lab) to budget
-  const handleAddFromVisualizer = (furniture) => {
+  const handleAddFromVisualizer = (furniture, showAlert = true) => {
     // Create a budget item from the detected furniture
     const newItem = {
       id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -237,28 +237,15 @@ const App = () => {
 
     // Add to the current module's budget items
     if (state.currentModule === 'montada') {
-      setState(prev => {
-        const updated = [...prev.budgetItemsMontada, newItem];
-        // Show feedback
-        setTimeout(() => {
-          alert(`✅ Producto añadido al presupuesto:\n\n${newItem.productName}\n\nTotal productos: ${updated.length}`);
-        }, 100);
-        return {
-          ...prev,
-          budgetItemsMontada: updated
-        };
-      });
+      setState(prev => ({
+        ...prev,
+        budgetItemsMontada: [...prev.budgetItemsMontada, newItem]
+      }));
     } else {
-      setState(prev => {
-        const updated = [...prev.budgetItemsDespiece, newItem];
-        setTimeout(() => {
-          alert(`✅ Producto añadido al presupuesto:\n\n${newItem.productName}\n\nTotal productos: ${updated.length}`);
-        }, 100);
-        return {
-          ...prev,
-          budgetItemsDespiece: updated
-        };
-      });
+      setState(prev => ({
+        ...prev,
+        budgetItemsDespiece: [...prev.budgetItemsDespiece, newItem]
+      }));
     }
 
     console.log('Producto añadido desde IA:', newItem);
