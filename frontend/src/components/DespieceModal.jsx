@@ -140,18 +140,11 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       return;
     }
     
-    const fechaHoy = new Date().toLocaleDateString('es-ES');
-    const horaHoy = new Date().toLocaleTimeString('es-ES');
-    
-    // Cabecera con información del pedido
-    let csvContent = ";;;;;LISTA DE CORTE - SECCIONADORA\n";
-    csvContent += `CLIENTE;${editableCustomerName || 'Sin especificar'};;;;FECHA;${fechaHoy}\n`;
-    csvContent += `EXPEDIENTE;${editableExpedient || 'Sin especificar'};;;;HORA;${horaHoy}\n`;
-    csvContent += `REFERENCIA;${editableProjectRef || 'Sin especificar'};;;;MATERIAL BASE;${carcassMaterialName || 'Sin especificar'}\n`;
-    csvContent += ";;;;;;;;\n";
+    // CSV LIMPIO para seccionadora - SOLO datos de piezas
+    // Sin cabeceras de cliente/expediente, sin resumen al final
     
     // Encabezados de la tabla de piezas
-    csvContent += "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código;Mueble\n";
+    let csvContent = "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código;Mueble\n";
     
     despieceData.items.forEach(item => {
       const itemQty = item.itemQuantity || 1;
@@ -179,11 +172,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       });
     });
     
-    // Resumen al final
-    csvContent += ";;;;;;;;\n";
-    csvContent += `TOTAL PIEZAS;${despieceData.totalPieces || 0};;ÁREA TOTAL;${despieceData.totalArea?.toFixed(3) || 0} m²;;;;\n`;
-    
-    // Descargar archivo
+    // Descargar archivo - nombre incluye expediente y cliente para identificación
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
