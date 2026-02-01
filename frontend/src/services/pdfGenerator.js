@@ -132,7 +132,7 @@ export const generateBudgetPDF = ({
   // Calcular paginación
   const headerHeight = 50;
   const totalsHeight = 35;
-  const footerHeight = 15;
+  const footerHeight = 28;  // Aumentado para mostrar mejor las especificaciones
   const rowHeight = 6;
   const availableForRows = pageHeight - headerHeight - totalsHeight - footerHeight - 20;
   const maxRowsPerPage = Math.floor(availableForRows / rowHeight);
