@@ -62,16 +62,8 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
 
   const addFurnitureToBudget = (furniture, showAlert = true) => {
     if (onAddToBudget) {
-      onAddToBudget({
-        code: furniture.codigo_sugerido,
-        name: `${furniture.tipo} ${furniture.subtipo?.replace('_', ' ')} ${furniture.ancho_estimado}mm`,
-        width: furniture.ancho_estimado,
-        height: furniture.alto_estimado,
-        depth: furniture.fondo_estimado,
-        category: furniture.tipo,
-        points: 0,
-        zonePoints: {}
-      }, showAlert);
+      // Pasar directamente el objeto de la IA con todas sus propiedades originales
+      onAddToBudget(furniture, showAlert);
     }
   };
 
