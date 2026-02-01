@@ -217,43 +217,155 @@ const App = () => {
     }
   };
 
+  // Function to generate possible product codes from furniture dimensions
+  const generatePossibleCodes = (tipo, subtipo, ancho, alto) => {
+    const codes = [];
+    const puertas = subtipo?.includes('2') ? '2' : '1';
+    const tipoLetra = subtipo?.includes('VITRINA') ? 'V' : 'P';
+    
+    // Normalizar altura (la IA da en cm, los códigos usan formato especial)
+    // Altos: 35, 40, 45, 60, 70, 80, 90 -> 35A, 40A, 45A, 60A, 7A, 8A, 9A
+    // Bajos: 70, 80 -> 7B, 8B
+    // Columnas: 200, 220, 240 -> 20CD, 22CD, 24CD
+    // Semicolumnas: 110, 120, 130, 140 -> 11SM, 12SM, 13SM, 14SM
+    
+    const alturaNum = parseInt(alto) || 70;
+    const anchoNum = parseInt(ancho) || 600;
+    
+    if (tipo === 'ALTO') {
+      // Formato: {altura}A{puertas}P{ancho} o {altura/10}A{puertas}P{ancho}
+      if (alturaNum >= 70 && alturaNum < 100) {
+        // Altos 70-90cm: 7A, 8A, 9A
+        const h = Math.floor(alturaNum / 10);
+        codes.push(`${h}A${puertas}${tipoLetra}${anchoNum}`);
+        codes.push(`A${h}A${puertas}${tipoLetra}${anchoNum}`); // Versión aluminio
+      } else {
+        // Altos 35-60cm: 35A, 40A, etc.
+        codes.push(`${alturaNum}A${puertas}${tipoLetra}${anchoNum}`);
+      }
+    } else if (tipo === 'BAJO') {
+      // Formato: {altura/10}B{puertas}P{ancho}
+      const h = alturaNum >= 70 ? Math.floor(alturaNum / 10) : alturaNum;
+      codes.push(`${h}B${puertas}${tipoLetra}${anchoNum}`);
+      // Variantes con G (GOLA)
+      codes.push(`${h}B1G2CB${anchoNum}`);
+    } else if (tipo === 'COLUMNA') {
+      // Formato: {altura/10}CD{puertas}P{ancho}
+      const h = Math.floor(alturaNum / 10);
+      codes.push(`${h}CD${puertas}P${anchoNum}`);
+      codes.push(`${h}C${puertas}P${anchoNum}`);
+    } else if (tipo === 'SEMICOLUMNA') {
+      // Formato: {altura/10}SM{puertas}P{ancho}
+      const h = Math.floor(alturaNum / 10);
+      codes.push(`${h}SM${puertas}P${anchoNum}`);
+      codes.push(`${h}SE${puertas}P${anchoNum}`);
+      codes.push(`${h}SC${puertas}P${anchoNum}`);
+    }
+    
+    // Añadir código sugerido por la IA si existe
+    return codes;
+  };
+
+  // Function to find matching product in catalog
+  const findProductInCatalog = (possibleCodes, iaCode) => {
+    const allProducts = [...(state.productsMontada || []), ...(state.productsDespiece || [])];
+    
+    // Primero buscar código exacto de la IA
+    if (iaCode) {
+      const exactMatch = allProducts.find(p => 
+        p.code?.toUpperCase() === iaCode.toUpperCase()
+      );
+      if (exactMatch) return exactMatch;
+    }
+    
+    // Buscar por códigos generados
+    for (const code of possibleCodes) {
+      const match = allProducts.find(p => 
+        p.code?.toUpperCase() === code.toUpperCase()
+      );
+      if (match) return match;
+    }
+    
+    // Búsqueda parcial - buscar productos que contengan parte del código
+    for (const code of possibleCodes) {
+      const partialMatch = allProducts.find(p => 
+        p.code?.toUpperCase().includes(code.substring(0, 5).toUpperCase())
+      );
+      if (partialMatch) return partialMatch;
+    }
+    
+    return null;
+  };
+
   // Function to add furniture from Visualizer (IA Lab) to budget
   const handleAddFromVisualizer = (furniture, showAlert = true) => {
-    // Debug: ver qué datos llegan de la IA
     console.log('Datos recibidos de IA:', furniture);
     
-    // Construir nombre descriptivo
-    const tipo = furniture.tipo || 'MUEBLE';
+    const tipo = (furniture.tipo || 'MUEBLE').toUpperCase();
     const subtipo = furniture.subtipo ? furniture.subtipo.replace(/_/g, ' ') : '';
     const ancho = furniture.ancho_estimado || furniture.width || 600;
     const alto = furniture.alto_estimado || furniture.height || 70;
     const fondo = furniture.fondo_estimado || furniture.depth || 58;
+    const iaCode = furniture.codigo_sugerido;
     
-    const productName = `${tipo} ${subtipo} ${ancho}x${alto}x${fondo}mm`.toUpperCase().trim();
-    const productCode = furniture.codigo_sugerido || `IA-${tipo.substring(0,3)}-${ancho}`;
+    // Generar posibles códigos y buscar en catálogo
+    const possibleCodes = generatePossibleCodes(tipo, subtipo, ancho, alto);
+    if (iaCode) possibleCodes.unshift(iaCode);
     
-    // Create a budget item from the detected furniture
-    const newItem = {
-      id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      productId: productCode,
-      productCode: productCode.toUpperCase(),
-      productName: productName,
-      quantity: 1,
-      // Estos son los campos que BudgetTable usa para mostrar/editar dimensiones
-      customWidth: ancho,
-      customHeight: alto,
-      customDepth: fondo,
-      // También guardar en width/height/depth para compatibilidad
-      width: ancho,
-      height: alto,
-      depth: fondo,
-      category: tipo.toUpperCase(),
-      points: 0,
-      zonePoints: {},
-      fromAI: true
-    };
+    console.log('Códigos posibles:', possibleCodes);
+    
+    const foundProduct = findProductInCatalog(possibleCodes, iaCode);
+    
+    let newItem;
+    
+    if (foundProduct) {
+      // Producto encontrado en catálogo - usar sus datos reales
+      console.log('✅ Producto encontrado:', foundProduct.code, foundProduct.name);
+      newItem = {
+        id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        productId: foundProduct.id,
+        productCode: foundProduct.code,
+        productName: foundProduct.name,
+        quantity: 1,
+        customWidth: foundProduct.width || ancho,
+        customHeight: foundProduct.height || alto,
+        customDepth: foundProduct.depth || fondo,
+        width: foundProduct.width || ancho,
+        height: foundProduct.height || alto,
+        depth: foundProduct.depth || fondo,
+        category: foundProduct.category || tipo,
+        points: foundProduct.points || 0,
+        zonePoints: foundProduct.zonePoints || {},
+        fromAI: true,
+        catalogMatch: true
+      };
+    } else {
+      // Producto NO encontrado - crear con referencia desconocida
+      console.log('⚠️ Producto NO encontrado, códigos probados:', possibleCodes);
+      const productName = `${tipo} ${subtipo} ${ancho}x${alto}x${fondo}mm [REF. NO ENCONTRADA]`.toUpperCase().trim();
+      const productCode = iaCode || possibleCodes[0] || `IA-${tipo.substring(0,3)}-${ancho}`;
+      
+      newItem = {
+        id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        productId: productCode,
+        productCode: productCode.toUpperCase(),
+        productName: productName,
+        quantity: 1,
+        customWidth: ancho,
+        customHeight: alto,
+        customDepth: fondo,
+        width: ancho,
+        height: alto,
+        depth: fondo,
+        category: tipo,
+        points: 0,
+        zonePoints: {},
+        fromAI: true,
+        catalogMatch: false
+      };
+    }
 
-    console.log('Item creado para presupuesto:', newItem);
+    console.log('Item para presupuesto:', newItem);
 
     // Add to the current module's budget items
     if (state.currentModule === 'montada') {
@@ -266,6 +378,10 @@ const App = () => {
         ...prev,
         budgetItemsDespiece: [...prev.budgetItemsDespiece, newItem]
       }));
+    }
+    
+    if (showAlert && foundProduct) {
+      // No mostrar alerta individual, se mostrará al final
     }
   };
 
