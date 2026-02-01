@@ -928,6 +928,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                         if (Number(item.customWidth) !== Number(product.width)) specialCuts.push("ANCHO");
                         if (Number(item.customHeight) !== Number(product.height)) specialCuts.push("ALTO");
                         if (Number(item.customDepth) !== Number(product.depth)) specialCuts.push("FONDO");
+                        if (item.hasVigaCut) specialCuts.push("VIGA");
                     }
                     const specialLabel = specialCuts.length > 0 ? `+ CORTE ${specialCuts.join('/')}` : '';
                     
