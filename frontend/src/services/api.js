@@ -148,11 +148,11 @@ export const clientsAPI = {
     const response = await fetch(`${API_URL}/api/clients/${id}`, {
       method: 'DELETE'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar cliente');
+      throw new Error(data.detail || 'Error al eliminar cliente');
     }
-    return response.json();
+    return data;
   },
 
   importCSV: async (clients) => {

@@ -2214,7 +2214,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 )}
                               </button>
                             </th>
-                            <th className="p-2 text-center text-[9px] font-black uppercase whitespace-nowrap w-12"></th>
                             <th className="p-3 text-left text-[9px] font-black uppercase whitespace-nowrap">REF</th>
                             <th className="p-3 text-left text-[9px] font-black uppercase min-w-[200px]">NOMBRE</th>
                             {inventoryModule === 'montada' ? (
@@ -2259,12 +2258,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                       <Square size={18} className="text-slate-300" />
                                     )}
                                   </button>
-                                </td>
-                                <td className="p-2 w-12">
-                                  <div 
-                                    className="w-10 h-10 flex items-center justify-center text-indigo-600"
-                                    dangerouslySetInnerHTML={{ __html: getProductIcon(product.code, product.name) }}
-                                  />
                                 </td>
                                 <td className="p-3 text-xs font-black text-orange-600 uppercase">{product.code}</td>
                                 <td className="p-3 text-xs font-bold text-slate-900">{product.name}</td>
