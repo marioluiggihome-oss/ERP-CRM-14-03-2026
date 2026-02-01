@@ -1,6 +1,6 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v4.2)
+## Última Actualización: 01/02/2026 (v4.3)
 
 ---
 
@@ -37,6 +37,15 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 | **Creación** | ✅ | Formulario inline para crear clientes nuevos (nombre*, teléfono, email) |
 | **Integración CRM** | ✅ | Los clientes se crean como contactos en el CRM |
 | **BudgetTable.jsx** | ✅ | Integrado el nuevo selector reemplazando input simple |
+
+### ✅ P3 - Refactorización Backend y Frontend
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **Backend Models** | ✅ | Modelos extraídos a `/backend/models/` (user, product, project, client, crm) |
+| **Backend Services** | ✅ | Servicios extraídos a `/backend/services/` (database, auth, email) |
+| **Backend Routers** | ✅ | Routers creados en `/backend/routers/` (auth, products, clients) |
+| **Frontend Components** | ✅ | Nuevos componentes extraídos: `ConfirmOrderModal.jsx`, `BudgetTotals.jsx` |
+| **server.py** | ⚠️ | Mantiene funcionalidad pero con estructura lista para migración gradual |
 
 ---
 
