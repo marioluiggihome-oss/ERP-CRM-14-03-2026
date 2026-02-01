@@ -149,33 +149,27 @@ export const clientsAPI = {
       method: 'DELETE'
     });
     
-    // Clone response to safely read body
-    const clonedResponse = response.clone();
+    // Read response as text first (more robust)
+    const responseText = await response.text();
     
+    // If successful, return parsed JSON or success message
+    if (response.ok) {
+      try {
+        return JSON.parse(responseText);
+      } catch {
+        return { message: 'Cliente eliminado' };
+      }
+    }
+    
+    // If error, try to parse error message
     try {
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al eliminar cliente');
-      }
-      return data;
+      const errorData = JSON.parse(responseText);
+      throw new Error(errorData.detail || 'Error al eliminar cliente');
     } catch (parseError) {
-      // If body stream error, try with cloned response
-      if (parseError.message?.includes('body stream') || parseError.message?.includes('already read')) {
-        try {
-          const data = await clonedResponse.json();
-          if (!clonedResponse.ok) {
-            throw new Error(data.detail || 'Error al eliminar cliente');
-          }
-          return data;
-        } catch {
-          // If both fail, check status and return appropriate response
-          if (response.ok) {
-            return { message: 'Cliente eliminado' };
-          }
-          throw new Error('Error al eliminar cliente');
-        }
+      if (parseError.message && !parseError.message.includes('JSON')) {
+        throw parseError;
       }
-      throw parseError;
+      throw new Error('Error al eliminar cliente');
     }
   },
 
