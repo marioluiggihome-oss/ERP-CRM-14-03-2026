@@ -894,12 +894,17 @@ export const generateManufacturingPDF = ({
     const width = item.customWidth || product?.width || 0;
     const height = item.customHeight || product?.height || 0;
     const depth = item.customDepth || product?.depth || 0;
-    const apertura = item.openingDirection === 'left' ? 'IZQUIERDA' : 'DERECHA';
+    const apertura = item.openingDirection === 'left' ? 'IZQUIERDA' : item.openingDirection === 'right' ? 'DERECHA' : '-';
+    
+    // Calcular cortes especiales comparando con dimensiones originales del producto
     const notes = [];
-    if (item.hasSpecialWidthCut) notes.push('Corte Ancho');
-    if (item.hasSpecialHeightCut) notes.push('Corte Alto');
-    if (item.hasSpecialDepthCut) notes.push('Corte Fondo');
-    if (item.hasVigaCut) notes.push('Corte Viga');
+    if (product) {
+      if (Number(item.customWidth) !== Number(product.width)) notes.push('C.ANCHO');
+      if (Number(item.customHeight) !== Number(product.height)) notes.push('C.ALTO');
+      if (Number(item.customDepth) !== Number(product.depth)) notes.push('C.FONDO');
+    }
+    if (item.hasVigaCut) notes.push('C.VIGA');
+    if (item.notes) notes.push(item.notes);
     
     return [
       item.quantity || 1,
