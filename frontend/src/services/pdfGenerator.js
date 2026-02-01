@@ -378,32 +378,33 @@ export const generateBudgetPDF = ({
     if (rowsThisPage.length > 0) {
       autoTable(doc, {
         startY: yPos,
-        head: [['UD', 'REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'AP', 'IMPORTE']],
+        head: [['UD', 'REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'AP', 'NOTAS', 'IMPORTE']],
         body: rowsThisPage,
         theme: 'striped',
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
           fontStyle: 'bold',
-          fontSize: 7,
+          fontSize: 6,
           cellPadding: 2
         },
         bodyStyles: {
-          fontSize: 7,
+          fontSize: 6,
           cellPadding: 1.5
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252]
         },
         columnStyles: {
-          0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 25 },
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 22 },
           2: { cellWidth: 'auto' },
-          3: { cellWidth: 12, halign: 'center' },
-          4: { cellWidth: 12, halign: 'center' },
-          5: { cellWidth: 12, halign: 'center' },
-          6: { cellWidth: 10, halign: 'center' },
-          7: { cellWidth: 22, halign: 'right' }
+          3: { cellWidth: 10, halign: 'center' },
+          4: { cellWidth: 10, halign: 'center' },
+          5: { cellWidth: 10, halign: 'center' },
+          6: { cellWidth: 8, halign: 'center' },
+          7: { cellWidth: 25, fontSize: 5 },
+          8: { cellWidth: 18, halign: 'right' }
         },
         margin: { left: margin, right: margin },
         tableLineColor: [226, 232, 240],
