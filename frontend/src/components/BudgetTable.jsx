@@ -452,12 +452,22 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
       formData.append('totalAmount', total.toFixed(2));
       formData.append('email', orderEmail);
       formData.append('notes', orderNotes);
+      
+      // Especificaciones de acabados
+      formData.append('doorColorLow', state.doorColorLow || '');
+      formData.append('doorColorHigh', state.doorColorHigh || '');
+      formData.append('doorColorColumns', state.doorColorColumns || '');
+      formData.append('sideColor', state.sideColor || '');
+      formData.append('carcassColor', carcassMaterial?.name || '');
+      formData.append('globalFinish', finish || '');
+      formData.append('distributorName', state.currentUser?.clientName || '');
+      
       formData.append('items', JSON.stringify(sortedItems.map(item => {
         const product = allProducts.find(p => p.id === item.productId);
         const details = calculateLineDetails(item, product);
         return {
-          code: product?.code || item.code || 'Manual',
-          name: product?.name || item.name || 'Artículo manual',
+          code: product?.code || item.productCode || item.customReference || 'Manual',
+          name: product?.name || item.productName || item.manualDescription || 'Artículo manual',
           quantity: item.quantity,
           price: details.total
         };
