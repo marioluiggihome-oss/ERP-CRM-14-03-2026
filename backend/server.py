@@ -779,19 +779,27 @@ IDENTIFICA CON CUIDADO:
 6. ALTILLOS COMBI (muebles pequeños sobre frigoríficos o similar)
 7. Electrodomésticos integrados (horno, microondas, nevera, lavavajillas)
 
-IMPORTANTE: 
-- Los COSTADOS son paneles verticales que se colocan junto a electrodomésticos o al final de composiciones
-- Los ALTILLOS COMBI son muebles altos pequeños que van sobre frigoríficos
-- Cuenta cada elemento por separado, no agrupes
+SISTEMA DE CÓDIGOS (MUY IMPORTANTE):
+- ALTOS 35-60cm altura: {altura}A{nPuertas}P{anchoMM} → Ej: 60A1P600 = Alto 60cm 1 Puerta 600mm
+- ALTOS 70-90cm altura: {altura/10}A{nPuertas}P{anchoMM} → Ej: 9A1P600 = Alto 90cm 1 Puerta 600mm
+- BAJOS: {altura/10}B{nPuertas}P{anchoMM} → Ej: 7B1P600 = Bajo 70cm 1 Puerta 600mm
+- COLUMNAS: {altura/10}CD{nPuertas}P{anchoMM} → Ej: 22CD1P600 = Columna 220cm 1 Puerta 600mm
+- SEMICOLUMNAS: {altura/10}SM{nPuertas}P{anchoMM} → Ej: 11SM1P450 = Semicolumna 110cm 1 Puerta 450mm
+- VITRINAS: usar V en lugar de P → Ej: 9A1V600 = Alto 90cm 1 Vitrina 600mm
 
-Para cada mueble/elemento detectado, proporciona:
-- tipo: ALTO/BAJO/COLUMNA/SEMICOLUMNA/COSTADO/ALTILLO_COMBI/ELECTRODOMESTICO
-- subtipo: 1_PUERTA, 2_PUERTAS, CAJON, VITRINA, HORNO, FREGADERO, COSTADO_FRIGORIFICO, COSTADO_BAJO, etc.
-- ancho_estimado: ancho en mm (60, 100, 150, 300, 350, 400, 450, 500, 600, 800, 900, etc.)
-- alto_estimado: altura en cm (35, 40, 45, 60, 70, 80, 90, 110, 130, 220, 240, etc.)
-- fondo_estimado: fondo en cm (33, 58, 60)
-- posicion: descripción de ubicación (ej: "esquina izquierda", "junto a frigorífico", "sobre frigorífico")
-- codigo_sugerido: código de referencia estimado (ej: "35A1P400" para Alto 35cm 1 Puerta 40cm)
+ANCHOS ESTÁNDAR: 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200mm
+ALTURAS ALTOS: 35, 40, 45, 60, 70, 80, 90cm
+ALTURAS BAJOS: 70, 80cm
+ALTURAS COLUMNAS: 200, 220, 240cm
+
+Para cada mueble detectado proporciona:
+- tipo: ALTO/BAJO/COLUMNA/SEMICOLUMNA/COSTADO/ELECTRODOMESTICO
+- subtipo: 1_PUERTA, 2_PUERTAS, CAJON, VITRINA, HORNO, FREGADERO, etc.
+- ancho_estimado: ancho en mm (usar valores estándar)
+- alto_estimado: altura en cm
+- fondo_estimado: fondo en cm (33 para altos estándar, 58 para bajos)
+- posicion: ubicación en el plano
+- codigo_sugerido: USAR EL SISTEMA DE CÓDIGOS DESCRITO ARRIBA
 - confianza: ALTA/MEDIA/BAJA
 
 Responde SOLO con JSON válido:
@@ -800,21 +808,21 @@ Responde SOLO con JSON válido:
     {
       "tipo": "ALTO",
       "subtipo": "1_PUERTA",
-      "ancho_estimado": 400,
-      "alto_estimado": 35,
+      "ancho_estimado": 600,
+      "alto_estimado": 90,
       "fondo_estimado": 33,
       "posicion": "sobre fregadero",
-      "codigo_sugerido": "35A1P400",
+      "codigo_sugerido": "9A1P600",
       "confianza": "ALTA"
     },
     {
-      "tipo": "COSTADO",
-      "subtipo": "COSTADO_FRIGORIFICO",
-      "ancho_estimado": 60,
-      "alto_estimado": 220,
-      "fondo_estimado": 60,
-      "posicion": "junto a frigorífico izquierda",
-      "codigo_sugerido": "COST-FRIGO",
+      "tipo": "BAJO",
+      "subtipo": "2_PUERTAS",
+      "ancho_estimado": 800,
+      "alto_estimado": 70,
+      "fondo_estimado": 58,
+      "posicion": "bajo encimera central",
+      "codigo_sugerido": "7B2P800",
       "confianza": "ALTA"
     }
   ],
@@ -827,7 +835,7 @@ Responde SOLO con JSON válido:
     "total_altillos": 0,
     "metros_lineales_estimados": 0
   },
-  "observaciones": "Notas adicionales sobre el plano"
+  "observaciones": "Notas adicionales"
 }"""
 
         # Use Gemini Vision
