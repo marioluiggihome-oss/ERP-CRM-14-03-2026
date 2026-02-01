@@ -309,6 +309,43 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
   };
 
+  // Export database to Excel
+  const handleExportDatabase = async () => {
+    setIsExportingDB(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/export-database`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al exportar');
+      }
+      
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `LUIGGI_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      alert('✅ Base de datos exportada correctamente');
+    } catch (err) {
+      console.error('Error exporting database:', err);
+      alert('❌ Error al exportar: ' + err.message);
+    } finally {
+      setIsExportingDB(false);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen || activeTab !== 'telemetry') return;
     const loadCodes = async () => {
