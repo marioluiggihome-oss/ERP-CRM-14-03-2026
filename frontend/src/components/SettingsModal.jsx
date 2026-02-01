@@ -139,6 +139,30 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     digitalizaciones: false
   });
 
+  // Settings saving state
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  // Function to save pricing settings
+  const handleSavePricingSettings = async () => {
+    setIsSavingSettings(true);
+    try {
+      await settingsAPI.update({
+        pointValueMontada: state.pointValueMontada,
+        pointValueDespiece: state.pointValueDespiece,
+        specialIncrementWidth: state.specialIncrementWidth,
+        specialIncrementHeight: state.specialIncrementHeight,
+        specialIncrementDepth: state.specialIncrementDepth,
+        vigaCutIncrement: state.vigaCutIncrement || 0
+      });
+      alert('✅ Configuración guardada correctamente');
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      alert('❌ Error al guardar la configuración');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
   // Load clients and segments when tab is active
   useEffect(() => {
     if (isOpen && activeTab === 'clients') {
