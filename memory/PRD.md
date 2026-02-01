@@ -19,7 +19,28 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 ---
 
-## COMPLETADO EN ESTA SESIÓN (25/01/2026)
+## COMPLETADO EN ESTA SESIÓN (01/02/2026)
+
+### ✅ P0 - Bug Fix: IA Lab Visualizer Layout
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **Visualizer.jsx** | ✅ | Corregido el bug donde la imagen expandía demasiado y ocultaba el botón "Analizar" |
+| **CSS Layout** | ✅ | Añadido `max-h-[50vh]` al contenedor de imagen y `shrink-0` al botón |
+| **UX** | ✅ | El botón "Analizar Plano con IA" siempre es visible después de subir imagen |
+
+### ✅ P1 - ClientSelector: Gestión de Clientes en Presupuestador
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **ClientSelector.jsx** | ✅ NUEVO | Componente con búsqueda y creación de clientes |
+| **Permisos por Rol** | ✅ | Admin: todos, Comerciales: asignados, Tiendas: propios, Prescriptores: sin acceso |
+| **Búsqueda** | ✅ | Búsqueda por nombre, código, teléfono, email |
+| **Creación** | ✅ | Formulario inline para crear clientes nuevos (nombre*, teléfono, email) |
+| **Integración CRM** | ✅ | Los clientes se crean como contactos en el CRM |
+| **BudgetTable.jsx** | ✅ | Integrado el nuevo selector reemplazando input simple |
+
+---
+
+## COMPLETADO EN SESIÓN ANTERIOR (25/01/2026)
 
 ### ✅ P1 - Etiquetado de Oportunidades por Tipo de Negocio
 
