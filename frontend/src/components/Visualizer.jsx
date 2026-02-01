@@ -278,7 +278,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               {/* Add All Button */}
               {analysisResult.muebles_detectados?.length > 0 && (
                 <button
-                  onClick={() => analysisResult.muebles_detectados.forEach(f => addFurnitureToBudget(f))}
+                  onClick={addAllFurnitureToBudget}
                   className="mt-4 w-full py-3 bg-emerald-600 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
                 >
                   <Plus size={18} />
