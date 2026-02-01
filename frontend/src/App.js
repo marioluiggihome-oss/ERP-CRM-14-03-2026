@@ -237,18 +237,30 @@ const App = () => {
 
     // Add to the current module's budget items
     if (state.currentModule === 'montada') {
-      setState(prev => ({
-        ...prev,
-        budgetItemsMontada: [...prev.budgetItemsMontada, newItem]
-      }));
+      setState(prev => {
+        const updated = [...prev.budgetItemsMontada, newItem];
+        // Show feedback
+        setTimeout(() => {
+          alert(`✅ Producto añadido al presupuesto:\n\n${newItem.productName}\n\nTotal productos: ${updated.length}`);
+        }, 100);
+        return {
+          ...prev,
+          budgetItemsMontada: updated
+        };
+      });
     } else {
-      setState(prev => ({
-        ...prev,
-        budgetItemsDespiece: [...prev.budgetItemsDespiece, newItem]
-      }));
+      setState(prev => {
+        const updated = [...prev.budgetItemsDespiece, newItem];
+        setTimeout(() => {
+          alert(`✅ Producto añadido al presupuesto:\n\n${newItem.productName}\n\nTotal productos: ${updated.length}`);
+        }, 100);
+        return {
+          ...prev,
+          budgetItemsDespiece: updated
+        };
+      });
     }
 
-    // Show feedback (optional - could add a toast notification)
     console.log('Producto añadido desde IA:', newItem);
   };
 
