@@ -1,27 +1,34 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v4.9)
+## Última Actualización: 01/02/2026 (v5.0)
 
 ---
 
-## 🆕 ACTUALIZACIÓN 01/02/2026 (v4.9)
+## 🆕 ACTUALIZACIÓN 01/02/2026 (v5.0)
 
 ### ✅ Corrección de Medidas en Sistema de Despiece
-| Vista | Antes | Ahora |
-|-------|-------|-------|
-| **Orden de Montaje** | Headers: Ancho/Alto (campos vacíos) | Headers: **LARGO (MM) / ANCHO (MM)** con datos |
-| **Lista de Corte** | LARGO/ANCHO (campo altura vacío) | **LARGO (MM) / ANCHO (MM)** con valores correctos |
-| **Datos mostrados** | length=undefined, width=330 | **length=350, width=330** ✅ |
+- Headers: **LARGO (MM) / ANCHO (MM)** con datos correctos
+- Lista de corte funcionando: LAT-I: 350 x 330 mm ✅
 
 ### ✅ Filtro de Series por Categoría
-| Comportamiento | Antes | Ahora |
-|----------------|-------|-------|
-| **Series al filtrar** | Mostraba todas (3000+) | Solo series de la categoría seleccionada |
-| **Reset automático** | No | Sí, al cambiar categoría reset a "TODAS SERIES" |
+- Al cambiar categoría, las series se filtran automáticamente
+- Reset automático de serie
 
-### ✅ Exportación CSV con Datos del Pedido
-- Cabecera con CLIENTE, EXPEDIENTE, REFERENCIA, FECHA, MATERIAL BASE
-- Columnas: Material, Grosor, Nombre pieza, **Largo**, **Ancho**, Cantidad, Textura, Código, Mueble
+### ✅ Corrección de Nombres (11cm → 110cm)
+- **115 productos** corregidos: "Alto Gola 11cm" → "Alto Gola 110cm"
+- Series actualizadas: "GOLA - ALTOS 11" → "GOLA - ALTOS 110"
+
+### ✅ Categorías GOLA Visibles
+- **1033 productos** sin módulo → asignados a `montada`
+- Ahora aparecen en dropdown:
+  - ALTO GOLA (477)
+  - BAJO GOLA (292)
+  - COLUMNA GOLA (124)
+- **Librería**: 4685 productos (antes 3652)
+
+### ✅ Excel de Productos Sin Precio
+- **URL de descarga**: https://kitchen-manager-app.preview.emergentagent.com/productos_sin_precio.xlsx
+- 49 productos que requieren datos del proveedor
 
 ---
 
@@ -32,19 +39,17 @@
 | Total productos | 4,685 |
 | **CON zonePoints** | **4,636 (99.0%)** |
 | Sin precios | 49 (1.0%) |
+| Módulo montada | 4,685 (100%) |
 
 ---
 
 ## PRÓXIMAS TAREAS
 
 ### P1 - Alta Prioridad
-- [ ] **49 productos sin precios**: Productos GOLA especiales que requieren datos del proveedor
+- [ ] **49 productos sin precios**: Excel disponible para rellenar
 
 ### P2 - Media Prioridad
 - [ ] Estabilidad Frontend: Error `insertBefore` de React
-
-### P3 - Refactorización
-- [ ] Migrar endpoints de server.py a routers
 
 ---
 
