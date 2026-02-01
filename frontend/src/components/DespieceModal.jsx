@@ -140,8 +140,18 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       return;
     }
     
-    // Formato: Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código
-    let csvContent = "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código\n";
+    const fechaHoy = new Date().toLocaleDateString('es-ES');
+    const horaHoy = new Date().toLocaleTimeString('es-ES');
+    
+    // Cabecera con información del pedido
+    let csvContent = ";;;;;LISTA DE CORTE - SECCIONADORA\n";
+    csvContent += `CLIENTE;${editableCustomerName || 'Sin especificar'};;;;FECHA;${fechaHoy}\n`;
+    csvContent += `EXPEDIENTE;${editableExpedient || 'Sin especificar'};;;;HORA;${horaHoy}\n`;
+    csvContent += `REFERENCIA;${editableProjectRef || 'Sin especificar'};;;;MATERIAL BASE;${carcassMaterialName || 'Sin especificar'}\n`;
+    csvContent += ";;;;;;;;\n";
+    
+    // Encabezados de la tabla de piezas
+    csvContent += "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código;Mueble\n";
     
     despieceData.items.forEach(item => {
       const itemQty = item.itemQuantity || 1;
@@ -162,17 +172,24 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         const textura = esVertical ? 1 : 0;
         // Código de la pieza
         const codigo = `${item.productCode || ''}-${comp.id || nombrePieza.substring(0,3).toUpperCase()}`;
+        // Referencia del mueble
+        const mueble = `${item.productCode} - ${item.productName || ''}`;
         
-        csvContent += `${material};${espesor.toFixed(1).replace('.', ',')};${nombrePieza};${largo};${ancho};${cantidad};${textura};${codigo}\n`;
+        csvContent += `${material};${espesor.toFixed(1).replace('.', ',')};${nombrePieza};${largo};${ancho};${cantidad};${textura};${codigo};${mueble}\n`;
       });
     });
+    
+    // Resumen al final
+    csvContent += ";;;;;;;;\n";
+    csvContent += `TOTAL PIEZAS;${despieceData.totalPieces || 0};;ÁREA TOTAL;${despieceData.totalArea?.toFixed(3) || 0} m²;;;;\n`;
     
     // Descargar archivo
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `DESPIECE_${editableExpedient || 'EXP'}_${new Date().toISOString().split('T')[0]}.csv`);
+    const nombreArchivo = `CORTE_${(editableExpedient || 'EXP').replace(/[^a-zA-Z0-9-]/g, '_')}_${(editableCustomerName || 'CLIENTE').replace(/[^a-zA-Z0-9]/g, '_').substring(0,20)}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('download', nombreArchivo);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
