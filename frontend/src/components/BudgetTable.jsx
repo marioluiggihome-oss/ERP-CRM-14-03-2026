@@ -458,8 +458,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
       formData.append('doorColorHigh', state.doorColorHigh || '');
       formData.append('doorColorColumns', state.doorColorColumns || '');
       formData.append('sideColor', state.sideColor || '');
-      formData.append('carcassColor', carcassMaterial?.name || '');
-      formData.append('globalFinish', finish || '');
+      formData.append('carcassColor', carcassMaterialName || '');
+      formData.append('globalFinish', state.globalFinish || '');
       formData.append('distributorName', state.currentUser?.clientName || '');
       
       formData.append('items', JSON.stringify(sortedItems.map(item => {
