@@ -133,9 +133,12 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 - [ ] Filtros temporales en métricas (mes, trimestre, año)
 - [ ] Campo `catalogOrder` para ordenar productos
 
-### P3 - Refactorización (URGENTE)
-- [ ] Separar server.py en routers/models/services
-- [ ] Separar componentes grandes (BudgetTable.jsx >1500 líneas)
+### P3 - Refactorización FASE 2 (Migración Gradual)
+- [ ] **Migrar endpoints de auth** de server.py a routers/auth.py
+- [ ] **Migrar endpoints de products** de server.py a routers/products.py
+- [ ] **Crear routers CRM** (opportunities, contacts, activities, calendar)
+- [ ] **Crear routers Admin** (metrics, backups, settings)
+- [ ] **Integrar componentes extraídos** en BudgetTable.jsx (ConfirmOrderModal, BudgetTotals)
 
 ---
 
