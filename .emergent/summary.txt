@@ -5,11 +5,11 @@ Feature requests have been provided incrementally through PowerPoint presentatio
 
 **PRODUCT REQUIREMENTS:**
 1.  **Clone LUIGGI HOME application:** Replicate the design, layout, and functionality.
-2.  **User Management:** Implement a hierarchical user system (Director Comercial, Responsable Delegación, Comercial, Tienda, Colaborador Comercial).
-3.  **Client Management:** Differentiate between Clientes Potenciales (Leads) and Clientes Activos, with segmentation and conversion workflows.
-4.  **Inventory Management:** Manage product catalogs, including an AI-powered importer and an Armarios (Wardrobes) module. This includes keeping the product database synchronized with user-provided PDF catalogs.
+2.  **User Management:** Implement a hierarchical user system.
+3.  **Client Management:** Differentiate between leads and active clients.
+4.  **Inventory Management:** Manage product catalogs, including an AI-powered importer and an Armarios (Wardrobes) module.
 5.  **Master Margins (Márgenes Maestros):** A settings panel to configure prices and costs.
-6.  **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders, using millimeters for measurements. The view should also show the dimensions of the final assembled casco (cabinet).
+6.  **Bill of Materials (Despiece):** A system to calculate and generate editable mounting and cutting-list orders.
 7.  **Project/Budget Management:** Allow saving, loading, and managing customer budgets, including a totals section with editable IVA.
 8.  **PDF Export:** Generate a PDF of the current budget.
 9.  **Database Backup System:** Automatic and manual backups.
@@ -19,95 +19,77 @@ Feature requests have been provided incrementally through PowerPoint presentatio
 13. **IA Lab - Analizador de Planos:** A feature to analyze kitchen plans and detect furniture.
 14. **UI/UX:** Continuous UI improvements based on user feedback.
 15. **Distributor Registration:** A system for new distributors to request access.
-16. **Multi-catalog support:** Name the current catalog ZC, visible only to admins, and prepare the system for future catalogs.
+16. **Multi-catalog support.**
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack application (React + FastAPI + MongoDB) for kitchen business management. In this session, the agent implemented a significant number of user requests and bug fixes. Key accomplishments include:
-- **Data Integrity:** Corrected a major misunderstanding regarding product pricing, identifying  as the correct field and running a script to populate it for ~99% of all products. Fixed multiple data errors, including incorrect product names (11cm -> 110cm) and missing  fields for over 1000 products, which made GOLA categories visible.
-- **Despiece Module:** Added the final casco dimensions, a copy dimensions button, and fixed incorrect measurement displays ( vs. ) in the component tables.
-- **Export Functionality:** Added customer and project details to the headers of CSV/XML exports and removed those headers for the machine-specific CSV as requested. Created a new feature for admins to export the main database collections to an Excel file.
-- **Bug Fixes:** Resolved a critical bug preventing furniture detected by the IA Lab from being added to a budget. Fixed a UI bug where the product series filter didn't update correctly when the category changed.
-- **UI Refactoring:** Started a user-requested refactor to merge the Panel Admin into the MASTER settings modal as a new tab to centralize admin controls.
+A full-stack application (React + FastAPI + MongoDB) for kitchen business management. This session involved a significant number of bug fixes and UI/UX enhancements based on rapid user feedback.
+
+Key accomplishments include fixing the invisible Panel Director content, resolving a bug that prevented Corte de Viga price changes from being saved, updating prices for all 1642 GOLA products in the database, and fixing multiple issues with adding products from the IA Lab. The agent also made extensive improvements to PDF generation for budgets and manufacturing reports, fixing layouts, capitalization, logo distortion, and content accuracy (like including special cuts). A recurring and critical client deletion bug was investigated multiple times, but persists for the user. An email template redesign was started but interrupted.
 
 **Last working item**:
-- Last item agent was working: The user reported two new critical issues after the agent started merging the admin panels: 1) The content of the Panel Admin (metrics, charts) is not showing up in its new tab inside the MASTER modal. 2) Attempting to delete a client results in a body stream already read error. The agent acknowledged these issues and was about to begin debugging.
+- Last item agent was working: The agent was interrupted while refactoring the order confirmation email template. The user reported for a third time that they are unable to delete a client (cocinas perez, s.l.), receiving a body stream already read error, and provided a screenshot. The email refactor task was left with linting errors in .
 - Status: IN PROGRESS
 - Agent Testing Done: N
 - Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Panel Admin Content Not Visible (P0)**
-    - Description: After moving the Panel Admin into a tab within the MASTER modal (), its content () is no longer rendering.
-    - Status: IN PROGRESS
-    - Should Test frontend/backend/both after fix? frontend
-- **Issue 2: Error Deleting Client (P0)**
-    - Description: Deleting a client from the CRM triggers a body stream already read error, preventing the deletion. This is a critical bug in a core CRUD operation.
-    - Status: IN PROGRESS
-    - Should Test frontend/backend/both after fix? both
-- **Issue 3: Despiece Calculation Logic Confirmation (P1)**
-    - Description: The agent confirmed the backend logic correctly calculates inset tops between full-height sides. The user stated they would review and confirm if this matches their manufacturing process.
-    - Status: USER VERIFICATION PENDING
-    - Blocked on: User feedback.
-- **Issue 4: CSV Export with Multiple Sheets (P1)**
-    - Description: The user requested the CSV export for the cutting machine to be a multi-sheet file (one for customer data, one for the cut list). The current implementation only removed headers from a single-sheet CSV.
-    - Status: NOT STARTED
-    - Should Test frontend/backend/both after fix? frontend
-- **Issue 5:  for Historical Projects (from previous fork) (P2)**
-    - Description: A one-time data migration script is needed to recalculate  for a few old projects. The agent found only one affected project, so this is low priority.
-    - Status: NOT STARTED
-    - Should Test frontend/backend/both after fix? backend
-- **Issue 6: Critical Frontend Stability ( error) (from previous fork) (P2)**
-    - Description: A recurring React DOM crash noted in a previous handoff remains unaddressed and poses a stability risk.
-    - Status: NOT STARTED
-    - Is recurring issue? Y
-    - Should Test frontend/backend/both after fix? frontend
+- **Issue 1: Critical Client Deletion Error (P0)**
+  - Description: Deleting a client from the UI consistently fails for the user with a body stream already read error, despite the agent confirming the API works via  and fixing the frontend code. This is a highly recurring issue and a blocker for the user.
+  - Status: IN PROGRESS
+  - Is recurring issue? Y
+  - Blocked on other issue: None
+- **Issue 2: Manual Lines Not in Despiece (P1)**
+  - Description: The user reported that manually added lines in a budget are not appearing in the Despiece (Bill of Materials). The agent removed a filter that was excluding them. This fix needs user verification.
+  - Status: USER VERIFICATION PENDING
+- **Issue 3: Critical Frontend Stability ( error) (from previous fork) (P2)**
+  - Description: A recurring React DOM crash noted in a previous handoff remains unaddressed and poses a stability risk.
+  - Status: NOT STARTED
+  - Is recurring issue? Y
+  - Should Test frontend/backend/both after fix? frontend
+- **Issue 4: Despiece Calculation Logic Confirmation (from previous fork) (P2)**
+  - Description: The user needs to review and confirm if the backend logic for despiece calculation matches their manufacturing process.
+  - Status: USER VERIFICATION PENDING
+  - Blocked on: User feedback.
 
 **In progress Task List**:
-- **Task 1: Unify Admin Panels (P0)**
-    - Where to resume: The agent has moved the Panel Admin tab into  but needs to import and render the  component content within the new PANEL DIRECTOR tab. The content is currently not visible.
-    - What will be achieved with this? A unified and simplified admin interface as requested by the user.
-    - Status: IN PROGRESS
-- **Task 2: Backend Refactoring (P2)**
-    - Where to resume: The monolithic  still needs to be broken down into the , , and  directories.
-    - What will be achieved with this? Improved maintainability and scalability.
-    - Status: NOT STARTED
-- **Task 3: Frontend Refactoring () (P2)**
-    - Where to resume: The massive  component needs to be decomposed into smaller, manageable components.
-    - What will be achieved with this? Reduced component complexity and easier debugging.
-    - Status: NOT STARTED
+- **Task 1: Finish Order Confirmation Email Refactor (P1)**
+  - Where to resume: The backend email template in  has been updated with new HTML. However, the frontend call in  is broken and has linting errors (e.g.,  is not defined). These errors must be fixed to complete the feature.
+  - What will be achieved with this? A professionally styled order confirmation email with corporate branding.
+  - Status: IN PROGRESS
+  - Should Test frontend/backend/both after fix? backend
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P1) **Import Missing Prices**: Populate prices for the remaining ~49 products using the data the user provides in the  file.
-    - (P1) **Create Admin Panel for Distributor Requests**: Build a UI for administrators to approve or reject pending distributor registrations.
+  - (P1) **CSV Export with Multiple Sheets**: Implement the user's request for a multi-sheet export for the cutting machine (customer data on one sheet, cut list on another).
+  - (P1) **Import Missing Prices**: Populate prices for the remaining ~49 non-GOLA products.
+  - (P1) **Create Admin Panel for Distributor Requests**: Build a UI for administrators to approve or reject pending distributor registrations.
 - **Future Tasks:**
-    - (P2) Create an admin dashboard to view audit logs ().
-    - (P2) Add automated reminders for calendar events in the CRM.
-    - (P2) Further enhance the kitchen Despieces (Bill of Materials) feature.
+  - (P2) **Backend Refactoring**: Decompose the monolithic .
+  - (P2) **Frontend Refactoring**: Decompose the monolithic .
+  - (P2) Create an admin dashboard to view audit logs ().
+  - (P2) Add automated reminders for calendar events in the CRM.
 
 **Completed work in this session**
-- **Data Integrity & Pricing Overhaul**:
-    - Identified  as the correct pricing field (not ) and populated it for ~99% of products.
-    - Corrected hundreds of incorrect product names (e.g., Alto Gola 11cm to Alto Gola 110cm).
-    - Fixed a critical data loading bug by assigning  to 1033 products, making the GOLA categories visible in the UI.
-- **Despiece Module Enhancements**:
-    - Added a DIMENSIONES DEL CASCO ENSAMBLADO section with a Copy button.
-    - Fixed measurement display issues in the Orden de Montaje and Lista de Corte tables by correctly mapping  and  from the backend.
-    - Added customer/project headers to CSV/XML exports.
-- **Bug Fixes**:
-    - Fixed a bug preventing furniture from the IA Lab from being added to the budget.
-    - Fixed a UI bug where the Series filter didn't update when the Category was changed.
-- **Admin & Export Features**:
-    - Created an Excel export of all products missing price data for the user to fill out.
-    - Implemented a new feature for admins to export the entire database (Users, Products, etc.) to a single Excel file from the MASTER panel.
-    - Confirmed role-based permissions correctly hide the MASTER/ADMIN panels for restricted users (e.g., Tienda).
-- **UI Refactoring & Prompt Engineering**:
-    - Began refactoring the admin UI to merge the Panel Admin into the MASTER modal.
-    - Improved the backend prompt for the IA Lab - Analizador de Planos to enhance furniture detection.
-    - Cleaned the machine-specific CSV export to remove all header rows, leaving only component data.
+- **Critical Bug Fixes**:
+  - **Panel Director**: Fixed the Panel Director tab to correctly render its content within the MASTER modal.
+  - **IA Lab Integration**: Resolved issues preventing IA Lab furniture from being added to budgets, ensuring they appear with correct dimensions and a distinct style, not as REFERENCIA DESCONOCIDA.
+  - **Budget Number Duplication**: Implemented a check on save to warn the user if a budget number already exists and ask for confirmation to overwrite.
+- **Data & Pricing**:
+  - **GOLA Price Update**: Successfully identified and updated all 1642 GOLA products, including 34 that were missing prices, using data extracted from a user-provided PDF.
+- **UI/UX Enhancements**:
+  - **Inventory View**: Removed furniture icons for a cleaner look.
+  - **Settings Persistence**: Added a Guardar button to persist pricing settings like Corte de Viga.
+  - **Uppercase Text**: Modified input fields to preserve uppercase characters entered by the user.
+  - **Special Cuts Display**: Consolidated the CORTE VIGA indicator to appear alongside other special cuts (Ancho, Alto, Fondo) for consistency.
+- **PDF Generation Overhaul**:
+  - **Manufacturing Report PDF**: Replaced  with a proper, paginated  export to handle large reports correctly.
+  - **Logo Aspect Ratio**: Fixed distorted logos in all PDFs by dynamically calculating and preserving the aspect ratio.
+  - **Content & Layout**: Added a NOTAS column to the budget PDF, included all special cuts in the manufacturing report PDF, improved capitalization, and redesigned the budget PDF footer.
+- **Business Logic**:
+  - **Manual Lines**: Corrected logic to ensure manual lines appear in the Despiece but are excluded from the Informe de Fabricación.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Overlapping UI Fields**: Blocked on user input for reproduction steps.
@@ -121,79 +103,75 @@ A full-stack application (React + FastAPI + MongoDB) for kitchen business manage
 
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, , , .
-- **Backend:** Python, FastAPI, Pydantic, Motor (async MongoDB driver).
-- **Data Operations:** Significant data cleaning, migration, and correction performed directly on the MongoDB database via Python scripts.
+- **Frontend:** React, TailwindCSS, , .
+- **Backend:** Python, FastAPI, Pydantic, Motor (async MongoDB driver), SendGrid.
+- **Data Operations:** Data extraction from PDF, batch updates to MongoDB via custom Python scripts and new API endpoints.
 
 **key DB schema**
--   **products**: 
--   **users**: 
--   **projects/budgets**: 
+- **products**: 
+- **settings**:  (new field added)
 
 **changes in tech stack**
--   None.
+- None.
 
 **All files of reference**
--   **/app/frontend/src/components/DespieceModal.jsx**: Heavily modified for casco dimensions, copy button, table measurement corrections, and CSV/XML header logic.
--   **/app/frontend/src/components/SettingsModal.jsx**: Modified to move the Armarios permission, add the database export button, and begin the admin panel merge by adding a new tab.
--   **/app/frontend/src/components/BudgetTable.jsx**: Modified to fix the category/series filter dependency and pass correct props to child components.
--   **/app/backend/server.py**: Modified to add the  endpoint and improve the IA Lab prompt.
--   **/app/frontend/src/App.js**: Modified to fix the IA Lab add to budget bug and implement the Admin Panel UI refactor.
--   **/app/frontend/public/productos_sin_precio.xlsx**: New file created for the user.
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Areas that need refactoring**:
--   **Backend Monolith:**  is critically overdue for refactoring.
--   **Frontend Monolith Component:**  remains a major source of complexity.
--   **CSV Export Logic:** Needs to be refactored to support generating a multi-sheet Excel file as requested by the user, instead of a simple CSV.
+-   **Backend Monolith:**  is critically overdue for refactoring. The embedded HTML for the confirmation email should be moved to a template file.
+-   **Frontend Monoliths:**  and  are extremely large and complex.
+-   **PDF Generation:**  now contains multiple large functions for generating different PDFs and could be broken into smaller, more focused modules.
 
 **key api endpoints**
--   ****: Logic analyzed and confirmed to be likely correct, pending user validation.
--   ****: Behavior now correct after fixing the underlying  data for all products.
--   ****: Prompt was improved to enhance detection accuracy.
--   ****: (or similar) This endpoint is likely failing with a body stream already read error and needs immediate investigation.
--   ****: A new endpoint created to export database collections to an Excel file.
+-   ****: **CRITICAL ISSUE.** Fails for the user in the UI despite passing  tests.
+-   ****: New endpoint to update only product prices.
+-   ****: New endpoint to check for duplicate budget numbers.
+-   ****: Backend template updated, but frontend call is broken.
 
 **Critical Info for New Agent**
--   **Top Priorities are Blocking Bugs:** You must immediately address the two P0 issues: the invisible content in the PANEL DIRECTOR tab and the critical error preventing client deletion.
--   **Admin Panel Refactor:** The user wants to merge the Panel Admin into the MASTER settings modal. You need to finish this task by making the content of  render correctly inside the new tab in .
--   **CSV Export for Seccionadora:** The user's request for a multi-sheet export (customer data on one sheet, cut list on another) has not been implemented yet and is a pending P1 task.
--   ** are the Source of Truth:** The previous handoff's concern about  is resolved. The correct field is , and over 99% of products now have this data. Do not get confused by the old information.
+-   **PRIORITY #1: Client Deletion Bug.** This is a highly frustrating, recurring bug for the user. Do not assume it is a browser cache issue again. A deep-dive investigation is required. Check network logs in the browser's developer tools when the user performs the action, inspect the exact request and response, and consider potential race conditions or state management issues in React that  would not reveal.
+-   **Finish the Email Refactor:** The order confirmation email task is incomplete. You must fix the linting errors in  to correctly pass the material and finish specifications to the backend.
+-   **Verify Recent Fixes:** Many fixes were implemented in this session (manual lines in despiece, uppercase text, etc.). The user may not have had a chance to test them all. Be prepared for feedback on these items.
 
 **documents and test reports created in this job**
--   /app/memory/PRD.md
--   /app/frontend/public/productos_sin_precio.xlsx
+- /app/memory/PRD.md (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Wants to merge the Admin Panel into the Master Panel. (IN PROGRESS)
-9.  **User:** Reports that the moved Admin Panel content is not visible and that deleting a client gives an error. (PENDING - **Current P0 tasks**)
-8.  **User:** Asks for an Excel export of the 49 products without a price, points out a data error where 11 should be 110, and requests a Gola family/category for easier filtering. (DONE)
-7.  **User:** Provides a Word document clarifying that the machine-specific CSV export should NOT contain headers and that the AI furniture detection was inaccurate. (DONE)
-6.  **User:** Requests that project data (expediente, client name) be included in all document exports, including the . (DONE)
-5.  **User:** Instructs the agent to proceed with P0 and P1 tasks. (ACKNOWLEDGED)
-4.  **User:** Clarifies the required column order for the cutting list export. (IN PROGRESS)
-3.  **User:** Confirms that the agent should proceed with adding the copy casco dimensions button and other pending tasks. (DONE)
-2.  **User:** Asks the agent to review the cutting list and what it exports to the cutting machine, emphasizing the column order must not be changed. (IN PROGRESS)
-1.  **User:** Asks for project/budget number, client name, etc., to be properly imported into all despiece documents to track orders. Also asks to proceed with all P1 tasks. (DONE)
+10. **User:** Reports that the order confirmation email needs to be redesigned with corporate branding and sent for testing. (IN PROGRESS)
+9.  **User:** Reports that corte de viga should also be reflected in the manufacturing order PDF. (DONE)
+8.  **User:** Asks for corte de viga to also be added to PDF exports. (DONE)
+7.  **User:** Wants the corte de viga indicator to be shown visually when active. (DONE)
+6.  **User:** Reports distorted logo in PDF exports and asks for it to maintain proportions. (DONE)
+5.  **User:** Reports the manufacturing report PDF has a bad layout with multiple items. (DONE)
+4.  **User:** Clarifies that an issue with a PDF is related to the Orden de Fabricación report. (DONE)
+3.  **User:** Reports that fields are not showing up correctly when printing a PDF. (DONE)
+2.  **User:** Reports that the manufacturing report is missing the COSTADOS/VISTOS and P. COLUMNA fields. (DONE)
+1.  **User:** Reports that they still cannot delete the client cocinas perez, s.l. and provides a screenshot of the error. (PENDING - **Current P0 task**)
 
 **Project Health Check:**
 -   **Broken:**
-    -   Client deletion functionality.
-    -   The UI for the newly merged Panel Director is not rendering its content.
+    -   Client deletion functionality (recurring critical bug).
 -   **Mocked:** None
 
 **3rd Party Integrations**
 -   **Google Gemini:** Via  (Emergent LLM Key)
--   **SendGrid:** For sending database backups and order/distributor notifications (User API Key)
--   **jspdf:** For PDF generation
--   **recharts:** For data visualization charts
--   **PyJWT, python-jose:** For JWT implementation
--   **slowapi:** For backend rate limiting
+-   **SendGrid:** For sending database backups and order/distributor notifications (User API Key).
+-   **jspdf:** For PDF generation.
+-   **recharts:** For data visualization charts.
 
 **Testing status**
 -   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: None
--   Known regressions: Client deletion is now broken.
+-   Known regressions: The client deletion bug has regressed or was never fully fixed from the user's perspective.
 
 **Credentials to test flow:**
 -   **User:** MARIO (Director Comercial), **Password:** MARIO
@@ -201,5 +179,5 @@ A full-stack application (React + FastAPI + MongoDB) for kitchen business manage
 -   **User:** TISA (Tienda), **Password:** TISA
 
 **What agent forgot to execute**
--   The user's request for a **multi-sheet** export file was not fully implemented. The agent only cleaned the headers from a single-sheet CSV.
+-   The user's request for a **multi-sheet** CSV export file (from the previous handoff) has not been implemented.
 -   The major backend () and frontend () refactoring tasks from previous forks remain pending.</analysis>
