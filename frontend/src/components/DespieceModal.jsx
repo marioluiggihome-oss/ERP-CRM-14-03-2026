@@ -58,19 +58,35 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     setError(null);
     
     try {
-      // Prepare items for API
-      const apiItems = items.filter(item => !item.isManual).map(item => {
-        const product = allProducts.find(p => p.id === item.productId);
-        return {
-          productId: item.productId,
-          productCode: item.customReference || product?.code || 'UNKNOWN',
-          productName: product?.name || 'Producto Desconocido',
-          width: item.customWidth,
-          height: item.customHeight,
-          depth: item.customDepth,
-          quantity: item.quantity,
-          category: product?.category || ''
-        };
+      // Prepare items for API - incluir tanto muebles del catálogo como líneas manuales
+      const apiItems = items.map(item => {
+        if (item.isManual) {
+          // Línea manual - usar los datos del item directamente
+          return {
+            productId: item.productId || `manual-${item.id}`,
+            productCode: 'MANUAL',
+            productName: item.manualDescription || 'CONCEPTO MANUAL',
+            width: item.customWidth || 0,
+            height: item.customHeight || 0,
+            depth: item.customDepth || 0,
+            quantity: item.quantity || 1,
+            category: 'MANUAL',
+            isManual: true
+          };
+        } else {
+          // Mueble del catálogo
+          const product = allProducts.find(p => p.id === item.productId);
+          return {
+            productId: item.productId,
+            productCode: item.customReference || product?.code || 'UNKNOWN',
+            productName: product?.name || item.productName || 'Producto Desconocido',
+            width: item.customWidth,
+            height: item.customHeight,
+            depth: item.customDepth,
+            quantity: item.quantity,
+            category: product?.category || ''
+          };
+        }
       });
 
       if (apiItems.length === 0) {
