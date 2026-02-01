@@ -118,6 +118,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [maintenanceActivating, setMaintenanceActivating] = useState(false);
   const [maintenanceDeactivating, setMaintenanceDeactivating] = useState(false);
   const [maintenanceBackups, setMaintenanceBackups] = useState([]);
+  
+  // Export database state
+  const [isExportingDB, setIsExportingDB] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('Sistema en actualización. Volvemos pronto.');
   const [maintenanceMinutes, setMaintenanceMinutes] = useState(30);
   const [maintenanceCreateBackup, setMaintenanceCreateBackup] = useState(true);
