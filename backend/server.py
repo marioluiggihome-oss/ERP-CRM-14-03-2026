@@ -4908,6 +4908,133 @@ async def export_digitalizador_csv(request: DigitalizadorExportRequest):
 
 
 # ============================================
+# DATABASE EXPORT API (Admin Only)
+# ============================================
+
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
+import io
+
+@api_router.get("/admin/export-database")
+async def export_database(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Exportar toda la base de datos a Excel.
+    Solo accesible para Director Comercial (admin).
+    """
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Token requerido")
+    
+    try:
+        # Verify admin role
+        payload = verify_access_token(credentials.credentials)
+        user_id = payload.get("sub")
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        
+        if not user or user.get('role') != 'director_comercial':
+            raise HTTPException(status_code=403, detail="Solo el Director Comercial puede exportar la base de datos")
+        
+        # Create workbook
+        wb = Workbook()
+        
+        # Styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+        
+        # ===== USUARIOS =====
+        ws_users = wb.active
+        ws_users.title = "Usuarios"
+        
+        users = await db.users.find({}, {'_id': 0, 'password': 0}).to_list(1000)
+        user_headers = ['ID', 'Usuario', 'Nombre', 'Rol', 'Email', 'Teléfono', 'Delegación', 'Activo']
+        for col, header in enumerate(user_headers, 1):
+            cell = ws_users.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+        
+        for row_num, u in enumerate(users, 2):
+            ws_users.cell(row=row_num, column=1, value=u.get('id', ''))
+            ws_users.cell(row=row_num, column=2, value=u.get('username', ''))
+            ws_users.cell(row=row_num, column=3, value=u.get('fullName', ''))
+            ws_users.cell(row=row_num, column=4, value=u.get('role', ''))
+            ws_users.cell(row=row_num, column=5, value=u.get('email', ''))
+            ws_users.cell(row=row_num, column=6, value=u.get('phone', ''))
+            ws_users.cell(row=row_num, column=7, value=u.get('delegation', ''))
+            ws_users.cell(row=row_num, column=8, value='Sí' if u.get('isActive', True) else 'No')
+        
+        # ===== PRODUCTOS =====
+        ws_products = wb.create_sheet("Productos")
+        
+        products = await db.products.find({}, {'_id': 0}).to_list(10000)
+        prod_headers = ['Código', 'Nombre', 'Categoría', 'Serie', 'Ancho', 'Alto', 'Fondo', 'Puntos', 'Z1', 'Z2', 'Z3', 'Z4']
+        for col, header in enumerate(prod_headers, 1):
+            cell = ws_products.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+        
+        for row_num, p in enumerate(products, 2):
+            zp = p.get('zonePoints', {}) or {}
+            ws_products.cell(row=row_num, column=1, value=p.get('code', ''))
+            ws_products.cell(row=row_num, column=2, value=p.get('name', ''))
+            ws_products.cell(row=row_num, column=3, value=p.get('category', ''))
+            ws_products.cell(row=row_num, column=4, value=p.get('series', ''))
+            ws_products.cell(row=row_num, column=5, value=p.get('width', 0))
+            ws_products.cell(row=row_num, column=6, value=p.get('height', 0))
+            ws_products.cell(row=row_num, column=7, value=p.get('depth', 0))
+            ws_products.cell(row=row_num, column=8, value=p.get('points', 0))
+            ws_products.cell(row=row_num, column=9, value=zp.get('Z1', 0))
+            ws_products.cell(row=row_num, column=10, value=zp.get('Z2', 0))
+            ws_products.cell(row=row_num, column=11, value=zp.get('Z3', 0))
+            ws_products.cell(row=row_num, column=12, value=zp.get('Z4', 0))
+        
+        # ===== PROYECTOS =====
+        ws_projects = wb.create_sheet("Proyectos")
+        
+        projects = await db.projects.find({}, {'_id': 0, 'itemsMontada': 0, 'itemsDespiece': 0}).to_list(1000)
+        proj_headers = ['Nº Expediente', 'Cliente', 'Dirección', 'Total PVP', 'Estado', 'Comercial']
+        for col, header in enumerate(proj_headers, 1):
+            cell = ws_projects.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+        
+        for row_num, p in enumerate(projects, 2):
+            ws_projects.cell(row=row_num, column=1, value=p.get('budgetNumber', ''))
+            ws_projects.cell(row=row_num, column=2, value=p.get('customerName', ''))
+            ws_projects.cell(row=row_num, column=3, value=p.get('customerAddress', ''))
+            ws_projects.cell(row=row_num, column=4, value=p.get('totalPvp', 0))
+            ws_projects.cell(row=row_num, column=5, value=p.get('status', 'activo'))
+            ws_projects.cell(row=row_num, column=6, value=p.get('savedBy', ''))
+        
+        # Adjust column widths
+        for ws in wb.worksheets:
+            for col in range(1, ws.max_column + 1):
+                ws.column_dimensions[get_column_letter(col)].width = 18
+        
+        # Save to bytes
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        # Log audit
+        await log_audit("database_export", user_id, "admin", True, {"tables": ["users", "products", "projects"]})
+        
+        filename = f"LUIGGI_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Database export error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error exportando base de datos: {str(e)}")
+
+
+# ============================================
 # MAINTENANCE MODE API
 # ============================================
 
