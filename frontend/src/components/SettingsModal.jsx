@@ -2837,6 +2837,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     {creatingBackup ? <Loader size={14} className="animate-spin" /> : <HardDrive size={14} />}
                     Crear Backup Manual
                   </button>
+                  <button
+                    onClick={handleExportDatabase}
+                    disabled={isExportingDB}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase transition-colors"
+                    data-testid="export-database-btn"
+                  >
+                    {isExportingDB ? <Loader size={14} className="animate-spin" /> : <Download size={14} />}
+                    Exportar a Excel
+                  </button>
                 </div>
               </div>
 
