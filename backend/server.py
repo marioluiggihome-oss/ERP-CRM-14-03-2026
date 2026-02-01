@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, File, UploadFile, Form, HTTPException, BackgroundTasks
+from fastapi import FastAPI, APIRouter, File, UploadFile, Form, HTTPException, BackgroundTasks, Request, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,7 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import base64
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 import json
@@ -18,6 +19,21 @@ from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileT
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import asyncio
+
+# Servicios de seguridad
+from services.jwt_service import (
+    create_access_token,
+    create_refresh_token,
+    verify_access_token,
+    verify_refresh_token,
+    get_current_user,
+    require_auth,
+    require_admin,
+    get_token_from_request,
+    security
+)
+from services.rate_limiter import limiter, get_limit, rate_limit_exceeded_handler
+from services.audit_service import audit, AuditAction
 
 
 ROOT_DIR = Path(__file__).parent
@@ -37,6 +53,10 @@ logger = logging.getLogger(__name__)
 
 # Create the main app without a prefix
 app = FastAPI()
+
+# Configurar Rate Limiter
+app.state.limiter = limiter
+app.add_exception_handler(429, rate_limit_exceeded_handler)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
