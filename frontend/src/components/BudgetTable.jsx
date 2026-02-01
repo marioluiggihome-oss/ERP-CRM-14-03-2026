@@ -1197,18 +1197,18 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
             {isCatalogOpen && (
               <>
                 {/* Filtros verticales */}
-                <div className="p-2 space-y-1.5 border-b border-indigo-50 shrink-0">
-                  <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1.5 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
+                <div className="p-3 space-y-2 border-b border-indigo-50 shrink-0">
+                  <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-indigo-800 outline-none">
                     <option value="TODAS">TODAS CATEGORÍAS</option>
                     {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1.5 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
+                  <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-indigo-800 outline-none">
                     <option value="TODAS">TODAS SERIES</option>
                     {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-300" size={12} />
-                    <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1.5 pl-7 pr-2 text-[8px] font-bold outline-none uppercase" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
+                    <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 pl-9 pr-3 text-[10px] font-bold outline-none uppercase" />
                   </div>
                 </div>
 
@@ -1218,15 +1218,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                     {filteredCatalog.map(p => (
                       <div 
                         key={p.id} 
-                        className="p-2 hover:bg-indigo-50 cursor-pointer transition-colors group"
+                        className="p-3 hover:bg-orange-50 cursor-pointer transition-colors group"
                         onClick={() => addItemToBudget(p)}
                       >
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="text-[9px] font-black text-indigo-900 truncate">{p.code}</div>
-                            <div className="text-[7px] font-bold text-indigo-400 uppercase truncate">{p.name}</div>
-                            <div className="flex gap-1 mt-0.5 text-[7px] text-slate-400">
-                              <span>{p.width ? Math.round(p.width / 10) : '-'}×{p.height || '-'}×{p.depth || '-'}</span>
+                            <div className="text-[12px] font-black text-indigo-900 truncate">{p.code}</div>
+                            <div className="text-[10px] font-bold text-indigo-500 uppercase truncate mt-0.5">{p.name}</div>
+                            {p.series && <div className="text-[9px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
+                            <div className="flex gap-2 mt-1 text-[10px] text-slate-500 font-medium">
+                              <span>{p.width ? Math.round(p.width / 10) : '-'} × {p.height || '-'} × {p.depth || '-'} cm</span>
                             </div>
                           </div>
                           <div className="text-right shrink-0">
