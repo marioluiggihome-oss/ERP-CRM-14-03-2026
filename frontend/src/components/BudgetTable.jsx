@@ -901,9 +901,25 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                             zonePoints: {},
                             manufacturer: 'Manual'
                         };
+                    } else if (item.fromAI) {
+                        // Producto detectado por IA - usar los datos del item
+                        product = {
+                            id: item.productId,
+                            code: item.productCode || 'IA-DETECT',
+                            name: item.productName || 'MUEBLE DETECTADO POR IA',
+                            category: item.category || 'IA',
+                            series: 'IA',
+                            visualType: 'HUECO',
+                            width: item.width || 0,
+                            height: item.height || 0,
+                            depth: item.depth || 58,
+                            points: item.points || 0,
+                            zonePoints: item.zonePoints || {},
+                            manufacturer: 'IA Lab'
+                        };
                     } else if (!product) {
                         isUnknown = true;
-                        product = { id: item.productId, code: item.customReference || '???', name: 'REFERENCIA DESCONOCIDA (DESCATALOGADO)', category: CabinetCategory.MANUAL, series: 'DESCONOCIDO', visualType: 'HUECO', width: item.customWidth || 0, height: item.customHeight || 0, depth: item.customDepth || 0, points: 0, zonePoints: {}, manufacturer: 'Unknown' };
+                        product = { id: item.productId, code: item.productCode || item.customReference || '???', name: item.productName || 'REFERENCIA DESCONOCIDA (DESCATALOGADO)', category: CabinetCategory.MANUAL, series: 'DESCONOCIDO', visualType: 'HUECO', width: item.customWidth || item.width || 0, height: item.customHeight || item.height || 0, depth: item.customDepth || item.depth || 0, points: 0, zonePoints: {}, manufacturer: 'Unknown' };
                     }
 
                     const { total: price, breakdown, hasExtras } = calculateLineDetails(item, product);
