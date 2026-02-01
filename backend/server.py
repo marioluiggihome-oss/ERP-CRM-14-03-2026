@@ -1471,24 +1471,141 @@ async def link_client_to_user(client_id: str, data: dict):
     return updated
 
 @api_router.post("/auth/login")
-async def login(credentials: dict):
-    """Iniciar sesión con verificación de password hasheado"""
+@limiter.limit(get_limit("login"))
+async def login(request: Request, credentials: dict):
+    """Iniciar sesión con verificación de password hasheado + JWT + Auditoría"""
     username = credentials.get("username", "").upper().strip()
     password = credentials.get("password", "").strip()
     
     user = await db.users.find_one({"username": username}, {"_id": 0})
     if not user:
+        # Auditoría: login fallido
+        audit.log_login_failed(username, request, "user_not_found")
         raise HTTPException(status_code=401, detail="Credenciales no válidas")
     
     # Verify password (supports both hashed and plain text for migration)
     if not verify_password(password, user.get("password", "")):
+        # Auditoría: login fallido
+        audit.log_login_failed(username, request, "invalid_password")
         raise HTTPException(status_code=401, detail="Credenciales no válidas")
     
     if not user.get("isActive", True):
+        # Auditoría: cuenta desactivada
+        audit.log_login_failed(username, request, "account_disabled")
         raise HTTPException(status_code=401, detail="Cuenta desactivada")
     
-    # Return user without password
-    return {"success": True, "user": user_to_response(user)}
+    # Crear tokens JWT
+    access_token = create_access_token(user)
+    refresh_token = create_refresh_token(user.get("id"))
+    
+    # Auditoría: login exitoso
+    audit.log_login_success(user.get("id"), username, request)
+    
+    # Return user without password + tokens
+    return {
+        "success": True, 
+        "user": user_to_response(user),
+        "tokens": {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": 86400  # 24 horas en segundos
+        }
+    }
+
+
+@api_router.post("/auth/refresh")
+@limiter.limit(get_limit("login"))
+async def refresh_token(request: Request, data: dict):
+    """Renovar access token usando refresh token"""
+    refresh_token_str = data.get("refresh_token", "")
+    
+    if not refresh_token_str:
+        raise HTTPException(status_code=400, detail="Refresh token requerido")
+    
+    try:
+        payload = verify_refresh_token(refresh_token_str)
+        user_id = payload.get("sub")
+        
+        # Obtener usuario actualizado
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+        
+        if not user.get("isActive", True):
+            raise HTTPException(status_code=401, detail="Cuenta desactivada")
+        
+        # Crear nuevo access token
+        new_access_token = create_access_token(user)
+        
+        # Auditoría
+        audit.log(
+            AuditAction.TOKEN_REFRESH,
+            user_id=user_id,
+            username=user.get("username"),
+            resource_type="session",
+            request=request
+        )
+        
+        return {
+            "access_token": new_access_token,
+            "token_type": "bearer",
+            "expires_in": 86400
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Token refresh error: {e}")
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+
+@api_router.post("/auth/logout")
+async def logout(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Cerrar sesión (invalida el token en el cliente)"""
+    user = None
+    if credentials:
+        try:
+            payload = verify_access_token(credentials.credentials)
+            user = {"id": payload.get("sub"), "username": payload.get("username")}
+        except:
+            pass
+    
+    if user:
+        audit.log(
+            AuditAction.LOGOUT,
+            user_id=user.get("id"),
+            username=user.get("username"),
+            resource_type="session",
+            request=request
+        )
+    
+    return {"success": True, "message": "Sesión cerrada"}
+
+
+@api_router.get("/auth/me")
+async def get_current_user_info(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Obtener información del usuario actual desde el token"""
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Token requerido")
+    
+    try:
+        payload = verify_access_token(credentials.credentials)
+        user_id = payload.get("sub")
+        
+        # Obtener datos completos del usuario
+        user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        return {"success": True, "user": user}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get current user error: {e}")
+        raise HTTPException(status_code=401, detail="Token inválido")
 
 # ============================================
 # PRODUCT ENDPOINTS
