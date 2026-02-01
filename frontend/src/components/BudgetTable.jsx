@@ -639,7 +639,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                     </div>
                     <div className="relative">
                       <Tag className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-200" size={10} />
-                      <input type="text" value={state.internalReference} onChange={e => setState(p => ({...p, internalReference: e.target.value}))} placeholder="Ref. Proyecto" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg py-2 pl-7 pr-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
+                      <input type="text" value={state.internalReference} onChange={e => setState(p => ({...p, internalReference: e.target.value.toUpperCase()}))} placeholder="Ref. Proyecto" className="w-full bg-indigo-50/30 border border-indigo-50 rounded-lg py-2 pl-7 pr-2 text-[9px] font-black outline-none focus:border-orange-500 uppercase" />
                     </div>
                     {/* Selector de Cliente con búsqueda y permisos */}
                     <ClientSelector
