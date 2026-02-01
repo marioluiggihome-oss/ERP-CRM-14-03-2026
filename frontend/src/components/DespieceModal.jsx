@@ -10,11 +10,29 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   const [expandedItems, setExpandedItems] = useState({});
   const [editingComponent, setEditingComponent] = useState(null);
   const [editedComponents, setEditedComponents] = useState({});
+  const [copiedCascoId, setCopiedCascoId] = useState(null); // Para feedback visual de copiado
   
   // Editable header fields
   const [editableCustomerName, setEditableCustomerName] = useState(customerName || '');
   const [editableProjectRef, setEditableProjectRef] = useState(projectReference || '');
   const [editableExpedient, setEditableExpedient] = useState(expedientNumber || '');
+  
+  // Función para copiar dimensiones del casco al portapapeles
+  const handleCopyCascoDimensions = (furniture) => {
+    const ancho = furniture.originalWidth;
+    const alto = furniture.originalHeight * 10;
+    const fondo = furniture.originalDepth * 10;
+    
+    const text = `${furniture.productCode} - Casco: ${ancho} x ${alto} x ${fondo} mm`;
+    
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedCascoId(furniture.productId);
+      setTimeout(() => setCopiedCascoId(null), 2000);
+    }).catch(err => {
+      console.error('Error copying to clipboard:', err);
+      alert('Error al copiar al portapapeles');
+    });
+  };
   
   // Update editable fields when props change
   useEffect(() => {
