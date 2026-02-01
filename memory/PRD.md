@@ -1,6 +1,6 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v4.3)
+## Última Actualización: 01/02/2026 (v4.4 - SECURITY UPDATE)
 
 ---
 
@@ -16,6 +16,47 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 - Digitalizador de borradores con IA
 - Importador de catálogo IA
 - Sistema de backups automáticos
+- **🔒 NUEVO: Sistema de Seguridad Enterprise (JWT + Rate Limiting + Auditoría)**
+
+---
+
+## 🔒 SEGURIDAD ENTERPRISE (01/02/2026)
+
+### ✅ Autenticación JWT
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **jwt_service.py** | ✅ | Servicio completo de JWT con access y refresh tokens |
+| **Access Token** | ✅ | Expira en 24 horas, contiene roles y permisos |
+| **Refresh Token** | ✅ | Expira en 7 días, permite renovar access token |
+| **Endpoints** | ✅ | `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` |
+| **Frontend** | ✅ | `authService.js` con renovación automática de tokens |
+
+### ✅ Rate Limiting
+| Endpoint | Límite | Descripción |
+|----------|--------|-------------|
+| **Login** | 5/min | Protección contra fuerza bruta |
+| **User Create** | 10/min | Prevención de spam de usuarios |
+| **User Delete** | 5/min | Operación sensible limitada |
+| **Backup** | 5/min | Operación costosa limitada |
+| **AI Analysis** | 10/min | Endpoints de IA costosos |
+| **Default** | 60/min | Operaciones generales |
+
+### ✅ Logs de Auditoría
+| Evento | Nivel | Datos Registrados |
+|--------|-------|-------------------|
+| **LOGIN_SUCCESS** | INFO | usuario, IP, timestamp |
+| **LOGIN_FAILED** | WARNING | intento, IP, razón |
+| **USER_CREATE/UPDATE/DELETE** | INFO | acción, recurso, detalles |
+| **PASSWORD_CHANGE** | INFO | usuario afectado |
+| **BACKUP_CREATE** | INFO | tipo, items |
+| **UNAUTHORIZED_ACCESS** | WARNING | intento, IP |
+
+**Archivo de Log:** `/var/log/luiggi_audit.log`
+
+### ✅ Verificación de Permisos Server-Side
+- El parámetro `isAdmin` del cliente ahora se VERIFICA contra la base de datos
+- Filtrado de datos se hace en el backend, no solo en frontend
+- Doble capa de seguridad: backend (principal) + frontend (secundario)
 
 ---
 
@@ -42,7 +83,7 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 | Componente | Estado | Descripción |
 |------------|--------|-------------|
 | **Backend Models** | ✅ | Modelos extraídos a `/backend/models/` (user, product, project, client, crm) |
-| **Backend Services** | ✅ | Servicios extraídos a `/backend/services/` (database, auth, email) |
+| **Backend Services** | ✅ | Servicios extraídos a `/backend/services/` (database, auth, email, jwt, rate_limiter, audit) |
 | **Backend Routers** | ✅ | Routers creados en `/backend/routers/` (auth, products, clients) |
 | **Frontend Components** | ✅ | Nuevos componentes extraídos: `ConfirmOrderModal.jsx`, `BudgetTotals.jsx` |
 | **server.py** | ⚠️ | Mantiene funcionalidad pero con estructura lista para migración gradual |
