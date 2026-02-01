@@ -1,6 +1,6 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v4.6)
+## Última Actualización: 01/02/2026 (v4.7)
 
 ---
 
@@ -21,28 +21,28 @@ LUIGGI HOME es un ERP/CRM completo para la gestión de presupuestos de cocinas y
 
 ---
 
-## 🆕 ACTUALIZACIÓN 01/02/2026 (v4.6)
+## 🆕 ACTUALIZACIÓN 01/02/2026 (v4.7)
 
-### ✅ Dimensiones del Casco en Despiece
+### ✅ Dimensiones del Casco en Despiece con Botón Copiar
 | Componente | Estado | Descripción |
 |------------|--------|-------------|
-| **DespieceModal.jsx** | ✅ | Nueva sección "DIMENSIONES DEL CASCO ENSAMBLADO" |
-| **UI** | ✅ | Muestra Ancho × Alto × Fondo en mm con diseño destacado |
-| **Utilidad** | ✅ | Para usuarios que trabajan con cascos prefabricados |
+| **DespieceModal.jsx** | ✅ | Sección "DIMENSIONES DEL CASCO ENSAMBLADO" con Ancho × Alto × Fondo en mm |
+| **Botón Copiar** | ✅ | Copia al portapapeles: "CODIGO - Casco: 400 x 350 x 330 mm" |
+| **Feedback Visual** | ✅ | Cambia a "Copiado" con check durante 2 segundos |
+
+### ✅ Checkbox Armarios Reubicado
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **SettingsModal.jsx** | ✅ | "Diseñador Armarios" movido a sección "MÓDULOS ACTIVOS" |
+| **UI** | ✅ | Junto a "Cocina Montada" y "Formato Despiece" con fondo púrpura |
+| **Badge** | ✅ | Aparece como etiqueta ARMARIOS (cyan) en lista de usuarios |
 
 ### ✅ Verificación de Precios por Zona (zonePoints)
 | Métrica | Valor |
 |---------|-------|
 | Total productos | 4,685 |
 | **CON zonePoints válidos** | **3,640 (77.7%)** |
-| Sin zonePoints (null) | 1,032 (22.0%) |
-| Con zonePoints vacíos/0 | 13 (0.3%) |
-
-**Nota:** Los 1,032 productos sin precios son principalmente:
-- **GOLA** (893): Acabado especial sin tirador
-- **TIRADOR** (139): Productos con tirador integrado
-
-Estos requieren datos del proveedor y no son un error del sistema.
+| Sin zonePoints (productos GOLA/TIRADOR) | 1,032 (22.0%) |
 
 ---
 
@@ -51,24 +51,21 @@ Estos requieren datos del proveedor y no son un error del sistema.
 ```
 /app
 ├── backend/
-│   ├── server.py (~5400 líneas - funcional, migración gradual pendiente)
-│   ├── models/                    # Modelos Pydantic extraídos
-│   ├── services/                  # Servicios reutilizables
-│   │   ├── jwt_service.py        # JWT tokens
-│   │   ├── rate_limiter.py       # Rate limiting
-│   │   └── audit_service.py      # Logs de auditoría
-│   └── routers/                   # FastAPI routers
+│   ├── server.py (~5400 líneas)
+│   ├── models/
+│   ├── services/
+│   │   ├── jwt_service.py
+│   │   ├── rate_limiter.py
+│   │   └── audit_service.py
+│   └── routers/
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── DespieceModal.jsx  # ✅ ACTUALIZADO - Dimensiones del casco
+│       │   ├── DespieceModal.jsx  # ✅ Dimensiones casco + botón copiar
+│       │   ├── SettingsModal.jsx  # ✅ Checkbox Armarios reubicado
 │       │   ├── BudgetTable.jsx
-│       │   ├── Login.jsx
 │       │   └── ...
 │       └── services/
-│           ├── api.js
-│           ├── authService.js
-│           └── pdfGenerator.js
 └── memory/
     └── PRD.md
 ```
@@ -78,36 +75,17 @@ Estos requieren datos del proveedor y no son un error del sistema.
 ## PRÓXIMAS TAREAS
 
 ### P1 - Alta Prioridad
+- [ ] **Importar precios GOLA/TIRADOR**: 1,032 productos pendientes de datos del proveedor
 - [ ] PDF Aesthetics: Ajustar encabezado según diseño del usuario (requiere imagen)
-- [ ] Permisos UI: Mover checkbox de "Armarios" en panel de usuario
 - [ ] Migración `totalPvp`: Script para actualizar proyectos históricos (solo 1 afectado)
 
 ### P2 - Media Prioridad
-- [ ] Campos superpuestos: Investigar bug de overlapping (necesita más info)
 - [ ] Estabilidad Frontend: Investigar error `insertBefore` de React
-- [ ] Importar precios para productos GOLA y TIRADOR (1,032 productos)
 - [ ] Filtros temporales en métricas (mes, trimestre, año)
 
-### P3 - Refactorización FASE 2
-- [ ] Migrar endpoints de auth de server.py a routers/auth.py
-- [ ] Migrar endpoints de products de server.py a routers/products.py
-- [ ] Crear routers CRM (opportunities, contacts, activities, calendar)
+### P3 - Refactorización
+- [ ] Migrar endpoints de server.py a routers separados
 - [ ] Descomponer BudgetTable.jsx en componentes más pequeños
-
----
-
-## BASE DE DATOS
-
-### Productos
-- **Total:** 4,685 productos
-- **Con precios válidos:** 3,640 (77.7%)
-- **Catálogo:** ZC (ZonaCocinas)
-- **Estructura zonePoints:** `{Z1: float, Z2: float, ..., Z12: float}`
-
-### Proyectos
-- **Total:** 6 proyectos
-- **Con totalPvp:** 5
-- **Sin totalPvp:** 1
 
 ---
 
@@ -118,20 +96,12 @@ Estos requieren datos del proveedor y no son un error del sistema.
 | MARIO | MARIO | Director Comercial |
 | TIENDSA | TIENDSA | Tienda/Punto de Venta |
 | COMSA | COMERCIAL | Comercial |
-| PRESCRIPTOR1 | PRESCRIPTOR1 | Colaborador Comercial |
 
 ---
 
 ## INTEGRACIONES
 
-- **Google Gemini** (via emergentintegrations): gemini-2.0-flash para análisis
-- **SendGrid**: Envío de backups y notificaciones
-- **jspdf + jspdf-autotable**: Generación de PDFs
-- **recharts**: Gráficos de métricas
-
----
-
-## PROBLEMAS CONOCIDOS (P2)
-
-1. **Estabilidad del Frontend**: Error recurrente de React DOM (`insertBefore`) que podría causar crashes aleatorios.
-2. **Productos sin precios**: 1,032 productos GOLA/TIRADOR sin zonePoints configurados.
+- **Google Gemini** (via emergentintegrations): gemini-2.0-flash
+- **SendGrid**: Notificaciones por email
+- **jspdf + jspdf-autotable**: PDFs
+- **recharts**: Gráficos
