@@ -218,6 +218,41 @@ const App = () => {
 
   // Loading screen
   if (isLoading) {
+
+  // Function to add furniture from Visualizer (IA Lab) to budget
+  const handleAddFromVisualizer = (furniture) => {
+    // Create a budget item from the detected furniture
+    const newItem = {
+      id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      productId: furniture.code || `detected-${Date.now()}`,
+      productCode: furniture.code || furniture.codigo_sugerido || 'IA-DETECT',
+      productName: furniture.name || `${furniture.tipo || 'Mueble'} ${furniture.subtipo?.replace('_', ' ') || ''} ${furniture.ancho_estimado || furniture.width || 0}mm`,
+      quantity: 1,
+      width: furniture.width || furniture.ancho_estimado || 600,
+      height: furniture.height || furniture.alto_estimado || 70,
+      depth: furniture.depth || furniture.fondo_estimado || 58,
+      category: furniture.category || furniture.tipo || 'OTROS',
+      points: furniture.points || 0,
+      zonePoints: furniture.zonePoints || {},
+      fromAI: true
+    };
+
+    // Add to the current module's budget items
+    if (state.currentModule === 'montada') {
+      setState(prev => ({
+        ...prev,
+        budgetItemsMontada: [...prev.budgetItemsMontada, newItem]
+      }));
+    } else {
+      setState(prev => ({
+        ...prev,
+        budgetItemsDespiece: [...prev.budgetItemsDespiece, newItem]
+      }));
+    }
+
+    // Show feedback (optional - could add a toast notification)
+    console.log('Producto añadido desde IA:', newItem);
+  };
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
         <div className="text-center">
