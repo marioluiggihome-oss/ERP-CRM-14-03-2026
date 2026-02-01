@@ -647,10 +647,21 @@ export const generateArmariosDespiecePDF = ({
   
   let yPos = margin;
   
-  // Logo
+  // Logo con proporción correcta
   if (logo && logo.startsWith('data:image')) {
     try {
-      doc.addImage(logo, 'AUTO', margin, yPos, 40, 16);
+      const maxLogoWidth = 40;
+      const maxLogoHeight = 16;
+      const img = new Image();
+      img.src = logo;
+      const aspectRatio = (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : 3;
+      let imgWidth = maxLogoWidth;
+      let imgHeight = imgWidth / aspectRatio;
+      if (imgHeight > maxLogoHeight) {
+        imgHeight = maxLogoHeight;
+        imgWidth = imgHeight * aspectRatio;
+      }
+      doc.addImage(logo, 'AUTO', margin, yPos, imgWidth, imgHeight);
     } catch (e) {
       console.error('Error adding logo:', e);
     }
