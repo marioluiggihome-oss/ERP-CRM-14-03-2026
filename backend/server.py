@@ -1134,6 +1134,235 @@ def user_to_response(user_doc: dict) -> dict:
     """Convert user document to response (excluding password)"""
     return {k: v for k, v in user_doc.items() if k != "password"}
 
+
+# ============================================
+# DISTRIBUTOR REQUEST ENDPOINTS
+# ============================================
+
+class DistributorRequest(BaseModel):
+    """Solicitud de alta de distribuidor"""
+    companyName: str
+    contactName: str
+    email: str
+    phone: str
+    city: str = ""
+    province: str = ""
+    message: str = ""
+
+
+@api_router.post("/distributor/request")
+@limiter.limit(get_limit("register"))
+async def request_distributor(request: Request, data: DistributorRequest):
+    """
+    Recibir solicitud de alta de distribuidor y enviar email al administrador
+    """
+    try:
+        # Guardar la solicitud en la base de datos
+        request_data = {
+            "id": f"dist-req-{uuid.uuid4().hex[:8]}",
+            "companyName": data.companyName,
+            "contactName": data.contactName,
+            "email": data.email,
+            "phone": data.phone,
+            "city": data.city,
+            "province": data.province,
+            "message": data.message,
+            "status": "pending",  # pending, approved, rejected
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "processedAt": None,
+            "processedBy": None,
+            "notes": ""
+        }
+        
+        await db.distributor_requests.insert_one(request_data)
+        
+        # Enviar email al administrador
+        admin_email = "mario@luiggihome.es"
+        
+        email_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: white; padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">LUIGGI HOME</h1>
+                <p style="margin: 8px 0 0 0; opacity: 0.8; font-size: 14px;">Nueva Solicitud de Distribuidor</p>
+            </div>
+            
+            <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px; border-radius: 0 8px 8px 0;">
+                    <p style="margin: 0; color: #92400e; font-weight: bold; font-size: 14px;">
+                        ⚡ Nueva solicitud de alta pendiente de revisión
+                    </p>
+                </div>
+                
+                <h2 style="color: #1e1b4b; margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+                    Datos del Solicitante
+                </h2>
+                
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px; width: 35%;">
+                            <strong>Empresa:</strong>
+                        </td>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px; font-weight: 600;">
+                            {data.companyName}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;">
+                            <strong>Contacto:</strong>
+                        </td>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px;">
+                            {data.contactName}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;">
+                            <strong>Email:</strong>
+                        </td>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+                            <a href="mailto:{data.email}" style="color: #ea580c; text-decoration: none; font-weight: 600;">{data.email}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;">
+                            <strong>Teléfono:</strong>
+                        </td>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+                            <a href="tel:{data.phone}" style="color: #ea580c; text-decoration: none; font-weight: 600;">{data.phone}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 13px;">
+                            <strong>Ubicación:</strong>
+                        </td>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px;">
+                            {data.city}{', ' + data.province if data.province else ''}{' - Sin especificar' if not data.city else ''}
+                        </td>
+                    </tr>
+                </table>
+                
+                {f'''
+                <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                    <p style="margin: 0 0 8px 0; color: #64748b; font-size: 12px; font-weight: bold; text-transform: uppercase;">Mensaje:</p>
+                    <p style="margin: 0; color: #475569; font-size: 14px; line-height: 1.6;">{data.message}</p>
+                </div>
+                ''' if data.message else ''}
+                
+                <div style="margin-top: 30px; text-align: center;">
+                    <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                        Solicitud recibida el {datetime.now(timezone.utc).strftime('%d/%m/%Y a las %H:%M')} UTC
+                    </p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 11px;">
+                <p style="margin: 0;">LUIGGI HOME - Sistema de Presupuestos Profesional</p>
+            </div>
+        </div>
+        """
+        
+        # Intentar enviar email
+        sendgrid_key = os.environ.get('SENDGRID_API_KEY')
+        if sendgrid_key:
+            try:
+                sg = SendGridAPIClient(sendgrid_key)
+                message = Mail(
+                    from_email=os.environ.get('SENDGRID_FROM_EMAIL', 'noreply@luiggihome.es'),
+                    to_emails=admin_email,
+                    subject=f"🏢 Nueva Solicitud de Distribuidor: {data.companyName}",
+                    html_content=email_html
+                )
+                sg.send(message)
+                logger.info(f"Distributor request email sent to {admin_email}")
+            except Exception as e:
+                logger.error(f"Error sending distributor request email: {e}")
+        else:
+            logger.warning("SendGrid not configured - distributor request email not sent")
+        
+        # Auditoría
+        audit.log(
+            AuditAction.USER_CREATE,
+            resource_type="distributor_request",
+            resource_id=request_data["id"],
+            request=request,
+            details={"company": data.companyName, "email": data.email}
+        )
+        
+        if "_id" in request_data:
+            del request_data["_id"]
+        
+        return {
+            "success": True,
+            "message": "Solicitud enviada correctamente",
+            "requestId": request_data["id"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error processing distributor request: {e}")
+        raise HTTPException(status_code=500, detail="Error al procesar la solicitud")
+
+
+@api_router.get("/distributor/requests")
+async def get_distributor_requests(
+    status: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Obtener todas las solicitudes de distribuidores (solo admins)"""
+    # Verificar que es admin
+    if credentials:
+        try:
+            payload = verify_access_token(credentials.credentials)
+            if not payload.get("isAdmin"):
+                raise HTTPException(status_code=403, detail="Acceso denegado")
+        except:
+            raise HTTPException(status_code=401, detail="Token inválido")
+    else:
+        raise HTTPException(status_code=401, detail="Autenticación requerida")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    requests = await db.distributor_requests.find(query, {"_id": 0}).sort("createdAt", -1).to_list(500)
+    return requests
+
+
+@api_router.put("/distributor/requests/{request_id}")
+async def update_distributor_request(
+    request_id: str,
+    data: dict,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Actualizar estado de una solicitud de distribuidor (solo admins)"""
+    # Verificar que es admin
+    if credentials:
+        try:
+            payload = verify_access_token(credentials.credentials)
+            if not payload.get("isAdmin"):
+                raise HTTPException(status_code=403, detail="Acceso denegado")
+            admin_id = payload.get("sub")
+            admin_username = payload.get("username")
+        except:
+            raise HTTPException(status_code=401, detail="Token inválido")
+    else:
+        raise HTTPException(status_code=401, detail="Autenticación requerida")
+    
+    existing = await db.distributor_requests.find_one({"id": request_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    
+    update_data = {
+        "status": data.get("status", existing.get("status")),
+        "notes": data.get("notes", existing.get("notes", "")),
+        "processedAt": datetime.now(timezone.utc).isoformat(),
+        "processedBy": admin_username
+    }
+    
+    await db.distributor_requests.update_one({"id": request_id}, {"$set": update_data})
+    
+    updated = await db.distributor_requests.find_one({"id": request_id}, {"_id": 0})
+    return updated
+
+
 @api_router.get("/users", response_model=List[UserResponse])
 async def get_users():
     """Obtener todos los usuarios (sin passwords)"""
