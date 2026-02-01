@@ -117,28 +117,9 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
               </tr>
             </thead>
             <tbody className="divide-y divide-indigo-50">
-              {items.map((item, idx) => {
+              {items.filter(item => !item.isManual).map((item, idx) => {
                 const product = allProducts.find(p => p.id === item.productId);
                 
-                if (item.isManual) {
-                  return (
-                    <tr key={item.id} className="hover:bg-indigo-50/50">
-                      <td className="p-4 font-black text-indigo-900">{item.quantity}</td>
-                      <td className="p-4 font-black text-indigo-600 uppercase text-xs">
-                        {item.customReference || 'MANUAL'}
-                      </td>
-                      <td className="p-4 font-bold text-indigo-900 text-sm">
-                        {item.manualDescription || 'Concepto Manual'}
-                      </td>
-                      <td className="p-4 text-center text-xs font-bold text-indigo-400">-</td>
-                      <td className="p-4 text-center text-xs font-bold text-indigo-400">-</td>
-                      <td className="p-4 text-xs text-indigo-600 italic">
-                        Línea manual - {item.manualPoints || 0} puntos
-                      </td>
-                    </tr>
-                  );
-                }
-
                 if (!product) return null;
 
                 return (
