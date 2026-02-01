@@ -250,6 +250,37 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
     const itemsDespieceCopy = [...state.budgetItemsDespiece];
 
     try {
+      // Verificar si ya existe un presupuesto con este número
+      const checkResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects/check-budget-number/${encodeURIComponent(state.budgetNumber)}`);
+      const checkData = await checkResponse.json();
+      
+      let shouldOverwrite = false;
+      let existingProjectId = null;
+      
+      if (checkData.exists) {
+        const userChoice = window.confirm(
+          `⚠️ El número de presupuesto "${state.budgetNumber}" ya existe.\n\n` +
+          `Cliente: ${checkData.customerName}\n` +
+          `Fecha: ${new Date(checkData.createdAt).toLocaleDateString('es-ES')}\n\n` +
+          `¿Desea SOBRESCRIBIR el presupuesto existente?\n\n` +
+          `(Pulse "Cancelar" para guardar con un número diferente)`
+        );
+        
+        if (userChoice) {
+          shouldOverwrite = true;
+          existingProjectId = checkData.projectId;
+        } else {
+          // Obtener siguiente número disponible
+          const expResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/expedient/next`);
+          const expData = await expResponse.json();
+          if (expData.success) {
+            setState(prev => ({ ...prev, budgetNumber: expData.expedient }));
+            alert(`Se usará el número: ${expData.expedient}\n\nVuelva a pulsar GUARDAR para confirmar.`);
+            return;
+          }
+        }
+      }
+
       // GUARDAR EN BACKEND - Persistir en MongoDB
       const projectData = {
         budgetNumber: state.budgetNumber,
@@ -267,11 +298,22 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
         totalPvp: total // Incluir el total del presupuesto
       };
 
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects?user_id=${state.currentUser.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projectData)
-      });
+      let response;
+      if (shouldOverwrite && existingProjectId) {
+        // Actualizar proyecto existente
+        response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects/${existingProjectId}?user_id=${state.currentUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(projectData)
+        });
+      } else {
+        // Crear nuevo proyecto
+        response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects?user_id=${state.currentUser.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(projectData)
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
