@@ -225,8 +225,8 @@ const App = () => {
     // Construir nombre descriptivo
     const tipo = furniture.tipo || 'MUEBLE';
     const subtipo = furniture.subtipo ? furniture.subtipo.replace(/_/g, ' ') : '';
-    const ancho = furniture.ancho_estimado || furniture.width || 0;
-    const alto = furniture.alto_estimado || furniture.height || 0;
+    const ancho = furniture.ancho_estimado || furniture.width || 600;
+    const alto = furniture.alto_estimado || furniture.height || 70;
     const fondo = furniture.fondo_estimado || furniture.depth || 58;
     
     const productName = `${tipo} ${subtipo} ${ancho}x${alto}x${fondo}mm`.toUpperCase().trim();
@@ -239,6 +239,11 @@ const App = () => {
       productCode: productCode.toUpperCase(),
       productName: productName,
       quantity: 1,
+      // Estos son los campos que BudgetTable usa para mostrar/editar dimensiones
+      customWidth: ancho,
+      customHeight: alto,
+      customDepth: fondo,
+      // También guardar en width/height/depth para compatibilidad
       width: ancho,
       height: alto,
       depth: fondo,
