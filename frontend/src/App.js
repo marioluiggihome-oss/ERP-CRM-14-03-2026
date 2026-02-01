@@ -219,21 +219,36 @@ const App = () => {
 
   // Function to add furniture from Visualizer (IA Lab) to budget
   const handleAddFromVisualizer = (furniture, showAlert = true) => {
+    // Debug: ver qué datos llegan de la IA
+    console.log('Datos recibidos de IA:', furniture);
+    
+    // Construir nombre descriptivo
+    const tipo = furniture.tipo || 'MUEBLE';
+    const subtipo = furniture.subtipo ? furniture.subtipo.replace(/_/g, ' ') : '';
+    const ancho = furniture.ancho_estimado || furniture.width || 0;
+    const alto = furniture.alto_estimado || furniture.height || 0;
+    const fondo = furniture.fondo_estimado || furniture.depth || 58;
+    
+    const productName = `${tipo} ${subtipo} ${ancho}x${alto}x${fondo}mm`.toUpperCase().trim();
+    const productCode = furniture.codigo_sugerido || `IA-${tipo.substring(0,3)}-${ancho}`;
+    
     // Create a budget item from the detected furniture
     const newItem = {
       id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      productId: furniture.code || `detected-${Date.now()}`,
-      productCode: furniture.code || furniture.codigo_sugerido || 'IA-DETECT',
-      productName: furniture.name || `${furniture.tipo || 'Mueble'} ${furniture.subtipo?.replace('_', ' ') || ''} ${furniture.ancho_estimado || furniture.width || 0}mm`,
+      productId: productCode,
+      productCode: productCode.toUpperCase(),
+      productName: productName,
       quantity: 1,
-      width: furniture.width || furniture.ancho_estimado || 600,
-      height: furniture.height || furniture.alto_estimado || 70,
-      depth: furniture.depth || furniture.fondo_estimado || 58,
-      category: furniture.category || furniture.tipo || 'OTROS',
-      points: furniture.points || 0,
-      zonePoints: furniture.zonePoints || {},
+      width: ancho,
+      height: alto,
+      depth: fondo,
+      category: tipo.toUpperCase(),
+      points: 0,
+      zonePoints: {},
       fromAI: true
     };
+
+    console.log('Item creado para presupuesto:', newItem);
 
     // Add to the current module's budget items
     if (state.currentModule === 'montada') {
@@ -247,8 +262,6 @@ const App = () => {
         budgetItemsDespiece: [...prev.budgetItemsDespiece, newItem]
       }));
     }
-
-    console.log('Producto añadido desde IA:', newItem);
   };
 
   // Loading screen
