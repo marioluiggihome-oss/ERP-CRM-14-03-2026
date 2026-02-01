@@ -2314,11 +2314,24 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                       try {
                                         const result = await clientsAPI.delete(client.id);
                                         console.log('Delete result:', result);
-                                        alert(`✅ Cliente "${client.nombre}" eliminado correctamente`);
+                                        alert(`✅ ${result.message || 'Cliente eliminado correctamente'}`);
                                         loadClients();
                                       } catch (err) {
                                         console.error('Delete error:', err);
-                                        alert(`❌ ${err.message}`);
+                                        // Si tiene usuarios vinculados, preguntar si forzar
+                                        if (err.message && err.message.includes('vinculado')) {
+                                          if (window.confirm(`${err.message}\n\n¿Desea forzar la eliminación? Los usuarios serán desvinculados automáticamente.`)) {
+                                            try {
+                                              const result = await clientsAPI.delete(client.id, true);
+                                              alert(`✅ ${result.message || 'Cliente eliminado correctamente'}`);
+                                              loadClients();
+                                            } catch (err2) {
+                                              alert(`❌ ${err2.message}`);
+                                            }
+                                          }
+                                        } else {
+                                          alert(`❌ ${err.message}`);
+                                        }
                                       }
                                     }}
                                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
