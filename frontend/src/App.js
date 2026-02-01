@@ -461,7 +461,7 @@ const App = () => {
                 onOpenManufacturing={() => setIsManufacturingView(true)} 
               />
             )}
-            {state.currentTab === 'visualizer' && <Visualizer images={state.uploadedImages} state={state} setState={setState} />}
+            {state.currentTab === 'visualizer' && <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />}
             {state.currentTab === 'library' && <ProjectLibrary state={state} setState={setState} />}
             {state.currentTab === 'backup' && <BackupManager />}
             {state.currentTab === 'digitalizador' && <Digitalizador state={state} />}
