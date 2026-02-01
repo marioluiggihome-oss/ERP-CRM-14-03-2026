@@ -766,22 +766,29 @@ async def analyze_kitchen_plan(file: UploadFile = File(...)):
         base64_image = base64.b64encode(file_content).decode('utf-8')
         mime_type = file.content_type or 'image/png'
         
-        analysis_prompt = """Analiza este plano/diseño de cocina y detecta TODOS los muebles visibles.
+        analysis_prompt = """Analiza este plano/diseño de cocina y detecta TODOS los muebles y elementos visibles.
 
-IDENTIFICA:
-1. Muebles ALTOS (armarios de pared superiores)
+IDENTIFICA CON CUIDADO:
+1. Muebles ALTOS (armarios de pared superiores) - Incluye altillos sobre electrodomésticos
 2. Muebles BAJOS (armarios de base con encimera)
 3. COLUMNAS (muebles de altura completa - despensas, hornos)
 4. SEMICOLUMNAS (muebles de media altura)
-5. Electrodomésticos integrados (horno, microondas, nevera)
+5. COSTADOS (paneles laterales decorativos - junto a electrodomésticos, al final de muebles)
+6. ALTILLOS COMBI (muebles pequeños sobre frigoríficos o similar)
+7. Electrodomésticos integrados (horno, microondas, nevera, lavavajillas)
 
-Para cada mueble detectado, proporciona:
-- tipo: ALTO/BAJO/COLUMNA/SEMICOLUMNA/ELECTRODOMESTICO
-- subtipo: 1_PUERTA, 2_PUERTAS, CAJON, VITRINA, HORNO, FREGADERO, etc.
-- ancho_estimado: ancho en mm (300, 350, 400, 450, 500, 600, 800, 900, etc.)
-- alto_estimado: altura en cm (35, 40, 45, 60, 70, 80, 90, 110, 130, etc.)
+IMPORTANTE: 
+- Los COSTADOS son paneles verticales que se colocan junto a electrodomésticos o al final de composiciones
+- Los ALTILLOS COMBI son muebles altos pequeños que van sobre frigoríficos
+- Cuenta cada elemento por separado, no agrupes
+
+Para cada mueble/elemento detectado, proporciona:
+- tipo: ALTO/BAJO/COLUMNA/SEMICOLUMNA/COSTADO/ALTILLO_COMBI/ELECTRODOMESTICO
+- subtipo: 1_PUERTA, 2_PUERTAS, CAJON, VITRINA, HORNO, FREGADERO, COSTADO_FRIGORIFICO, COSTADO_BAJO, etc.
+- ancho_estimado: ancho en mm (60, 100, 150, 300, 350, 400, 450, 500, 600, 800, 900, etc.)
+- alto_estimado: altura en cm (35, 40, 45, 60, 70, 80, 90, 110, 130, 220, 240, etc.)
 - fondo_estimado: fondo en cm (33, 58, 60)
-- posicion: descripción de ubicación (ej: "esquina izquierda", "sobre fregadero")
+- posicion: descripción de ubicación (ej: "esquina izquierda", "junto a frigorífico", "sobre frigorífico")
 - codigo_sugerido: código de referencia estimado (ej: "35A1P400" para Alto 35cm 1 Puerta 40cm)
 - confianza: ALTA/MEDIA/BAJA
 
@@ -797,6 +804,16 @@ Responde SOLO con JSON válido:
       "posicion": "sobre fregadero",
       "codigo_sugerido": "35A1P400",
       "confianza": "ALTA"
+    },
+    {
+      "tipo": "COSTADO",
+      "subtipo": "COSTADO_FRIGORIFICO",
+      "ancho_estimado": 60,
+      "alto_estimado": 220,
+      "fondo_estimado": 60,
+      "posicion": "junto a frigorífico izquierda",
+      "codigo_sugerido": "COST-FRIGO",
+      "confianza": "ALTA"
     }
   ],
   "resumen": {
@@ -804,6 +821,8 @@ Responde SOLO con JSON válido:
     "total_bajos": 0,
     "total_columnas": 0,
     "total_semicolumnas": 0,
+    "total_costados": 0,
+    "total_altillos": 0,
     "metros_lineales_estimados": 0
   },
   "observaciones": "Notas adicionales sobre el plano"
