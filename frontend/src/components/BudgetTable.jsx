@@ -1116,7 +1116,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                    {/* Filtros solo cuando está abierto */}
                    {isCatalogOpen && (
                      <>
-                       <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="bg-white border border-indigo-100 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
+                       <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="bg-white border border-indigo-100 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
                          <option value="TODAS">CATEGORÍAS</option>
                          {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
                        </select>
