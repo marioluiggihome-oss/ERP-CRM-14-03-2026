@@ -1,10 +1,30 @@
 import React from 'react';
-import { ArrowLeft, Printer, FileText } from 'lucide-react';
+import { ArrowLeft, Printer, FileText, Download } from 'lucide-react';
+import { generateManufacturingPDF } from '../services/pdfGenerator';
 
 const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, logo, distributorName, onBack }) => {
   
   const allProducts = catalogs
     .flatMap(c => c.products.map(p => ({ ...p, catalogId: c.id })));
+
+  const handleExportPDF = () => {
+    generateManufacturingPDF({
+      budgetNumber: state.budgetNumber,
+      customerName: state.customerName,
+      globalFinish: finish,
+      carcassColor: carcassColor,
+      doorColorLow: state.doorColorLow,
+      doorColorHigh: state.doorColorHigh,
+      doorColorColumns: state.doorColorColumns,
+      sideColor: state.sideColor,
+      items: items,
+      allProducts: allProducts,
+      logo: logo,
+      brandColor: state.brandColor,
+      companyName: 'LUIGGI HOME',
+      distributorName: distributorName
+    });
+  };
 
   return (
     <div className="h-screen bg-slate-900 overflow-auto">
@@ -22,13 +42,22 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
           Informe Industrial de Fabricación
         </h1>
 
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 px-6 py-2 bg-orange-600 text-white rounded-xl font-black uppercase text-xs hover:bg-orange-700 transition-all shadow-xl"
-        >
-          <Printer size={18} />
-          Imprimir
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs hover:bg-emerald-700 transition-all shadow-xl"
+          >
+            <Download size={18} />
+            Exportar PDF
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-6 py-2 bg-orange-600 text-white rounded-xl font-black uppercase text-xs hover:bg-orange-700 transition-all shadow-xl"
+          >
+            <Printer size={18} />
+            Imprimir
+          </button>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto p-12 bg-white my-8 rounded-2xl shadow-2xl">
