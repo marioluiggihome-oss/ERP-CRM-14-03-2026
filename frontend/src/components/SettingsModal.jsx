@@ -1295,7 +1295,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     {/* Modules */}
                     <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                       <h4 className="text-sm font-black text-indigo-900 uppercase mb-3">Módulos Activos</h4>
-                      <div className="flex gap-3">
+                      <div className="flex flex-wrap gap-3">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
@@ -1313,6 +1313,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             className="w-5 h-5 rounded border-2 border-indigo-300"
                           />
                           <span className="text-sm font-black text-slate-900">Uso Formato Despiece</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-purple-100 px-3 py-1 rounded-lg border border-purple-200">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canAccessArmarios}
+                            onChange={(e) => setUserForm({...userForm, canAccessArmarios: e.target.checked})}
+                            className="w-5 h-5 rounded border-2 border-purple-300"
+                          />
+                          <span className="text-sm font-black text-purple-900">Diseñador Armarios</span>
                         </label>
                       </div>
                     </div>
