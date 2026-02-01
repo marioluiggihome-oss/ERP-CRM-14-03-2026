@@ -859,61 +859,107 @@ async def analyze_product_sheets(
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"product-analysis-{uuid.uuid4()}",
-                system_message="""Eres un experto en digitalización de tarifas técnicas de muebles de cocina.
+                system_message="""Eres un experto en digitalización de tarifas técnicas de muebles de cocina ZONA COCINAS.
 Tu tarea es extraer TODOS los productos visibles en la imagen de forma estructurada.
 
-PASO 1 - DETECTAR CATEGORÍA DESDE ENCABEZADO:
-Lee el título/encabezado de la página para identificar la CATEGORÍA PRINCIPAL.
-Ejemplos de encabezados y sus categorías:
-- "PUERTAS Y VITRINAS - PUERTAS" → category: "PUERTAS", subcategory: "PUERTAS"
-- "PUERTAS Y VITRINAS - VITRINAS" → category: "PUERTAS Y VITRINAS", subcategory: "VITRINAS"  
-- "PROGRAMA ESTANDAR - MODULOS ALTOS" → category: "ALTOS"
-- "MODULOS BAJOS 70" → category: "BAJOS"
-- "COLUMNAS Y SEMICOLUMNAS" → category: "COLUMNAS"
-- "ACCESORIOS" → category: "ACCESORIOS"
-- "TIRADORES Y HERRAJES" → category: "TIRADORES"
-- "ENCIMERAS" → category: "ENCIMERAS"
-- "ZOCALOS Y CORNISAS" → category: "ZOCALOS"
-- Cualquier otro título → Usa el texto principal como categoría
+═══════════════════════════════════════════════════════════════
+PASO 1: DETECTAR CATEGORÍA PRINCIPAL DESDE EL ENCABEZADO
+═══════════════════════════════════════════════════════════════
+Lee el título/encabezado de CADA página para identificar la categoría.
+El encabezado suele estar en la parte superior con formato:
+"PROGRAMA ESTÁNDAR - [TIPO DE MÓDULO] - [SERIE/FONDO]"
 
-PASO 2 - EXTRAER PRODUCTOS:
-Para cada fila de productos en la tabla:
+CATEGORÍAS PRINCIPALES DEL CATÁLOGO ZONA COCINAS:
 
-3. REFERENCIAS Y ZONAS DE PRECIO:
-   - Las referencias son códigos como: PTA_ZC898X298, 35A1P58350, 7B1P300
-   - Cada producto tiene 12 zonas de precio (Z1 a Z12)
-   - Los precios van en orden horizontal para cada producto
+📦 MÓDULOS ALTOS (category: "ALTOS"):
+   - "ALTOS 35 FONDO 58" → series: "ALTOS 35 F58"
+   - "ALTOS 40 FONDO 33" → series: "ALTOS 40 F33"
+   - "ALTOS ABATIBLES" → series: "ABATIBLES"
+   - "ALTOS ESQUINEROS" → series: "ESQUINEROS"
+   - Códigos empiezan por: 35A, 40A, 35AB, etc.
 
-FORMATO DE RESPUESTA - JSON con categorías detectadas y productos:
+📦 MÓDULOS BAJOS (category: "BAJOS"):
+   - "BAJOS 70 FONDO ESTÁNDAR" → series: "BAJOS 70"
+   - "BAJOS 80 FONDO ESTÁNDAR" → series: "BAJOS 80"
+   - "BAJOS FREGADERO" → series: "FREGADERO"
+   - "BAJOS HORNO" → series: "HORNO"
+   - "BAJOS ESQUINEROS" → series: "ESQUINEROS"
+   - Códigos empiezan por: 7B, 8B, 70B, 80B, etc.
+
+📦 SEMICOLUMNAS (category: "SEMICOLUMNAS"):
+   - "SEMICOLUMNAS 135/140" → series: "SC 135-140"
+   - "SEMICOLUMNAS 160/165" → series: "SC 160-165"
+   - Códigos empiezan por: 135SC, 140SC, 160SC, etc.
+
+📦 COLUMNAS (category: "COLUMNAS"):
+   - "COLUMNAS 195/200" → series: "COL 195-200"
+   - "COLUMNAS 215/220" → series: "COL 215-220"
+   - "COLUMNAS DESPENSA" → series: "DESPENSA"
+   - "COLUMNAS HORNO/MICRO" → series: "HORNO-MICRO"
+   - Códigos empiezan por: 195C, 200C, 215C, etc.
+
+🚪 PUERTAS Y VITRINAS (category: "PUERTAS"):
+   - "PUERTAS" → series: "PUERTAS"
+   - "VITRINAS" → series: "VITRINAS"
+   - "PUERTAS LACADAS" → series: "LACADAS"
+   - Códigos empiezan por: PTA_, VIT_, etc.
+
+🔧 ACCESORIOS (category: "ACCESORIOS"):
+   - "ACCESORIOS" → series: "ACCESORIOS"
+   - "HERRAJES" → series: "HERRAJES"
+   - "TIRADORES" → series: "TIRADORES"
+
+📐 OTROS ELEMENTOS:
+   - "ZÓCALOS Y CORNISAS" → category: "ZOCALOS"
+   - "ENCIMERAS" → category: "ENCIMERAS"
+   - "ELECTRODOMÉSTICOS" → category: "ELECTRO"
+   - "COMPLEMENTOS" → category: "COMPLEMENTOS"
+
+═══════════════════════════════════════════════════════════════
+PASO 2: EXTRAER CÓDIGOS Y PRECIOS
+═══════════════════════════════════════════════════════════════
+Para CADA fila de la tabla:
+1. Lee el CÓDIGO exacto (primera columna, ej: 35A1P58350)
+2. Lee los 12 valores de precio Z1 a Z12 (de izquierda a derecha)
+
+DECODIFICACIÓN DE CÓDIGOS:
+- 35A1P58350: 35=altura(cm), A=alto, 1P=1puerta, 58=fondo(cm), 350=ancho(mm)
+- 35A2P58600: 35=altura, A=alto, 2P=2puertas, 58=fondo, 600=ancho
+- 7B1P300: 7=70cm altura, B=bajo, 1P=1puerta, 300=ancho(mm)
+- 80B2P600: 80=80cm altura, B=bajo, 2P=2puertas, 600=ancho
+- 135SC1P58450: 135=altura, SC=semicolumna, 1P=1puerta, 58=fondo, 450=ancho
+- 200C2P60600: 200=altura, C=columna, 2P=2puertas, 60=fondo, 600=ancho
+- PTA_ZC898X298: PTA=puerta, ZC=serie, 898=ancho(mm), 298=alto(mm)
+
+═══════════════════════════════════════════════════════════════
+FORMATO DE RESPUESTA JSON:
+═══════════════════════════════════════════════════════════════
 {
-  "detectedCategory": "CATEGORÍA_DEL_ENCABEZADO",
-  "detectedSubcategory": "SUBCATEGORÍA_SI_EXISTE",
+  "detectedCategory": "ALTOS|BAJOS|SEMICOLUMNAS|COLUMNAS|PUERTAS|ACCESORIOS|etc",
+  "detectedSubcategory": "Serie o tipo específico del encabezado",
+  "pageTitle": "Texto exacto del encabezado de la página",
   "products": [
     {
-      "code": "CÓDIGO_EXACTO_DE_LA_TABLA",
-      "name": "Nombre descriptivo basado en código y categoría",
-      "category": "CATEGORÍA_DETECTADA",
-      "series": "Serie o subcategoría si existe",
-      "visualType": "Tipo visual (PUERTA/VITRINA/1P/2P/etc)",
-      "width": ancho_en_mm_del_código,
-      "height": alto_en_mm_del_código,
-      "depth": fondo_en_cm_estimado,
+      "code": "CÓDIGO_EXACTO",
+      "name": "Descripción: [Tipo] [Altura]cm [NºPuertas] [Ancho]mm",
+      "category": "CATEGORÍA",
+      "series": "Serie del encabezado",
+      "visualType": "1P/2P/ABATIBLE/VITRINA/FREGADERO/etc",
+      "width": ancho_mm,
+      "height": altura_cm,
+      "depth": fondo_cm,
       "points": valor_Z1,
-      "zonePoints": {"Z1": n, "Z2": n, "Z3": n, "Z4": n, "Z5": n, "Z6": n, "Z7": n, "Z8": n, "Z9": n, "Z10": n, "Z11": n, "Z12": n}
+      "zonePoints": {"Z1":n,"Z2":n,"Z3":n,"Z4":n,"Z5":n,"Z6":n,"Z7":n,"Z8":n,"Z9":n,"Z10":n,"Z11":n,"Z12":n}
     }
   ]
 }
 
-REGLAS PARA EXTRAER DIMENSIONES DE CÓDIGOS:
-- PTA_ZC898X298: ZC=serie, 898=ancho(mm), 298=alto(mm) → width:898, height:298
-- PTA_ZC1198X498: width:1198, height:498
-- 35A1P58350: 35=altura(cm), A=alto, 1P=1puerta, 58=fondo, 350=ancho(mm)
-
 REGLAS CRÍTICAS:
-- Detecta la categoría EXACTA del encabezado de la página
-- Extrae TODOS los productos visibles, no solo el primero
-- Respeta el orden de las filas (Z1 es el primer precio de cada fila)
-- Responde SOLO con el JSON estructurado, sin explicaciones"""
+✅ Lee el encabezado EXACTO de la página para determinar categoría
+✅ Extrae TODOS los productos de la tabla, no solo algunos
+✅ Los códigos deben ser EXACTOS como aparecen
+✅ Z1 es el PRIMER precio de cada fila (columna después del código)
+✅ Responde SOLO con JSON válido, sin explicaciones"""
             ).with_model("gemini", "gemini-2.0-flash")
             
             # Create message with image
