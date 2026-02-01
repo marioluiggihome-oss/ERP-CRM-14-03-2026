@@ -1065,11 +1065,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                                 {/* Observaciones */}
                                 <div className="w-24 shrink-0 pr-1">
                                     <input type="text" placeholder="Notas..." value={item.notes || ''} onChange={e => updateItem(item.id, 'notes', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-100 rounded px-1 py-0.5 text-[7px] font-bold text-indigo-400 outline-none focus:border-orange-300 no-print" />
-                                    <div className="print-only">
-                                      {item.hasVigaCut && <span className="text-[7px] font-black text-orange-600 uppercase block">CORTE VIGA</span>}
-                                      {item.notes && <p className="text-[7px] font-bold text-indigo-400 italic truncate">{item.notes}</p>}
-                                    </div>
-                                    {item.hasVigaCut && <span className="no-print text-[6px] font-black text-orange-500 uppercase block mt-0.5">+ CORTE VIGA</span>}
+                                    <p className="print-only text-[7px] font-bold text-indigo-400 italic truncate">{item.notes}</p>
                                 </div>
                             </>
                          )}
