@@ -217,9 +217,6 @@ const App = () => {
     }
   };
 
-  // Loading screen
-  if (isLoading) {
-
   // Function to add furniture from Visualizer (IA Lab) to budget
   const handleAddFromVisualizer = (furniture) => {
     // Create a budget item from the detected furniture
@@ -254,6 +251,9 @@ const App = () => {
     // Show feedback (optional - could add a toast notification)
     console.log('Producto añadido desde IA:', newItem);
   };
+
+  // Loading screen
+  if (isLoading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
         <div className="text-center">
