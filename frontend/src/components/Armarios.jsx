@@ -2938,7 +2938,7 @@ const Armarios = ({ state, setState }) => {
                 ) : (
                   <div className="text-center">
                     <Image size={64} className="text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-400 font-bold">Pulsa "Generar" para crear el render</p>
+                    <p className="text-slate-400 font-bold">Pulsa &quot;Generar&quot; para crear el render</p>
                     <p className="text-slate-300 text-xs mt-1">La IA creará una imagen fotorrealista de tu armario</p>
                   </div>
                 )}
