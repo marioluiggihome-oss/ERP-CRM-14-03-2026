@@ -151,13 +151,35 @@ export const generateBudgetPDF = ({
       try {
         const maxLogoWidth = 45;
         const maxLogoHeight = 18;
-        // Asumimos proporción 2.5:1 para el logo de Luiggi
+        
+        // Crear una imagen temporal para obtener las dimensiones reales
+        const img = new Image();
+        img.src = logo;
+        
+        // Calcular proporción real del logo
         let imgWidth = maxLogoWidth;
-        let imgHeight = imgWidth / 2.5;
-        if (imgHeight > maxLogoHeight) {
-          imgHeight = maxLogoHeight;
-          imgWidth = imgHeight * 2.5;
+        let imgHeight = maxLogoHeight;
+        
+        // Si podemos obtener las dimensiones reales, usarlas
+        if (img.naturalWidth && img.naturalHeight) {
+          const aspectRatio = img.naturalWidth / img.naturalHeight;
+          imgWidth = maxLogoWidth;
+          imgHeight = imgWidth / aspectRatio;
+          if (imgHeight > maxLogoHeight) {
+            imgHeight = maxLogoHeight;
+            imgWidth = imgHeight * aspectRatio;
+          }
+        } else {
+          // Fallback: asumir proporción del logo Luiggi (~3:1)
+          const aspectRatio = 3;
+          imgWidth = maxLogoWidth;
+          imgHeight = imgWidth / aspectRatio;
+          if (imgHeight > maxLogoHeight) {
+            imgHeight = maxLogoHeight;
+            imgWidth = imgHeight * aspectRatio;
+          }
         }
+        
         doc.addImage(logo, 'AUTO', margin, yPos, imgWidth, imgHeight);
         logoEndX = margin + imgWidth + 5;
       } catch (e) {
