@@ -460,6 +460,28 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                               <p className="font-black text-emerald-800 text-lg">{furniture.originalDepth * 10}</p>
                               <p className="text-[9px] text-emerald-400">mm</p>
                             </div>
+                            {/* Botón Copiar Dimensiones */}
+                            <button
+                              onClick={() => handleCopyCascoDimensions(furniture)}
+                              className={`ml-3 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
+                                copiedCascoId === furniture.productId
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300'
+                              }`}
+                              title="Copiar dimensiones del casco"
+                            >
+                              {copiedCascoId === furniture.productId ? (
+                                <>
+                                  <Check size={14} />
+                                  Copiado
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={14} />
+                                  Copiar
+                                </>
+                              )}
+                            </button>
                           </div>
                         </div>
                       </div>
