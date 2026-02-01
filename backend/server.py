@@ -964,7 +964,16 @@ REGLAS CRÍTICAS:
             
             # Create message with image
             user_message = UserMessage(
-                text="Analiza esta página de tarifa técnica. Detecta la CATEGORÍA desde el encabezado y extrae TODOS los productos visibles con sus 12 zonas de precio. Responde SOLO con el JSON estructurado.",
+                text="""Analiza esta página de tarifa técnica de ZONA COCINAS.
+
+INSTRUCCIONES:
+1. Lee el ENCABEZADO de la página para identificar: ALTOS, BAJOS, SEMICOLUMNAS, COLUMNAS, PUERTAS, ACCESORIOS, etc.
+2. Identifica la SERIE (ej: "ALTOS 35 FONDO 58", "BAJOS 70", "COLUMNAS 200")
+3. Extrae TODOS los códigos de productos de la tabla (35A1P58350, 7B1P300, etc.)
+4. Para cada producto, lee los 12 precios por zona (Z1 a Z12)
+5. Decodifica las dimensiones del código
+
+Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones.""",
                 file_contents=[ImageContent(image_base64=base64_image)]
             )
             
