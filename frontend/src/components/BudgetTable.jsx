@@ -1074,15 +1074,22 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
 
         {/* Catálogo - POSICIÓN HORIZONTAL (abajo) */}
         {catalogPosition === 'horizontal' && (
-          <div style={{ height: isCatalogOpen ? catalogHeight : 45 }} className="absolute bottom-0 left-0 right-0 bg-white border-t border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl">
-             <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>
-             <div className="h-[45px] px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center">
-                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIsCatalogOpen(!isCatalogOpen)}>
-                  <LayoutPanelTop size={16} className="text-orange-600"/>
-                  <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-900">
+          <div style={{ height: isCatalogOpen ? catalogHeight : 40 }} className="absolute bottom-0 left-0 right-0 bg-white border-t border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl">
+             {isCatalogOpen && <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>}
+             <div className={`${isCatalogOpen ? 'h-[40px]' : 'h-[40px]'} px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center`}>
+                <div className="flex items-center gap-2">
+                  {/* Botón ocultar/mostrar */}
+                  <button 
+                    onClick={() => setIsCatalogOpen(!isCatalogOpen)}
+                    className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
+                    title={isCatalogOpen ? "Ocultar librería" : "Mostrar librería"}
+                  >
+                    {isCatalogOpen ? <ChevronDown size={14} className="text-indigo-600"/> : <ChevronUp size={14} className="text-indigo-600"/>}
+                  </button>
+                  <LayoutPanelTop size={14} className="text-orange-600"/>
+                  <h3 className="text-[9px] font-black uppercase tracking-wider text-indigo-900">
                     LIBRERÍA <span className="text-orange-600">({filteredCatalog.length})</span>
                   </h3>
-                  {isCatalogOpen ? <ChevronDown size={14} className="text-indigo-400"/> : <ChevronUp size={14} className="text-indigo-400"/>}
                 </div>
                 <div className="flex items-center gap-2">
                    {/* Filtros solo cuando está abierto */}
