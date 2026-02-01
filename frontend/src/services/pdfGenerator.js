@@ -795,3 +795,246 @@ export const generateArmariosDespiecePDF = ({
   
   return fileName;
 };
+
+/**
+ * Genera un PDF del Informe Industrial de Fabricación
+ */
+export const generateManufacturingPDF = ({
+  budgetNumber = '',
+  customerName = '',
+  globalFinish = '',
+  carcassColor = '',
+  doorColorLow = '',
+  doorColorHigh = '',
+  doorColorColumns = '',
+  sideColor = '',
+  items = [],
+  allProducts = [],
+  logo,
+  brandColor = '#ea580c',
+  companyName = 'LUIGGI HOME',
+  distributorName = ''
+}) => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 12;
+  const contentWidth = pageWidth - margin * 2;
+
+  const primaryColor = [30, 41, 59];
+  const accentColor = hexToRgb(brandColor);
+  const textGray = [100, 116, 139];
+  const lightGray = [241, 245, 249];
+
+  // Preparar datos de la tabla
+  const tableData = items.map(item => {
+    const product = allProducts.find(p => p.id === item.productId);
+    const code = product?.code || item.productCode || item.customReference || '???';
+    const name = product?.name || item.productName || item.manualDescription || 'Sin descripción';
+    const width = item.customWidth || product?.width || 0;
+    const height = item.customHeight || product?.height || 0;
+    const depth = item.customDepth || product?.depth || 0;
+    const apertura = item.openingDirection === 'left' ? 'IZQUIERDA' : 'DERECHA';
+    const notes = [];
+    if (item.hasSpecialWidthCut) notes.push('Corte Ancho');
+    if (item.hasSpecialHeightCut) notes.push('Corte Alto');
+    if (item.hasSpecialDepthCut) notes.push('Corte Fondo');
+    if (item.hasVigaCut) notes.push('Corte Viga');
+    
+    return [
+      item.quantity || 1,
+      code,
+      name,
+      `${width} × ${height} × ${depth}`,
+      apertura,
+      notes.length > 0 ? notes.join(', ') : '-'
+    ];
+  });
+
+  // Calcular páginas
+  const rowsPerPage = 20;
+  const totalPages = Math.ceil(tableData.length / rowsPerPage);
+
+  for (let page = 1; page <= totalPages; page++) {
+    if (page > 1) doc.addPage();
+    
+    let yPos = margin;
+
+    // ==========================================
+    // HEADER
+    // ==========================================
+    if (logo && logo.startsWith('data:image')) {
+      try {
+        doc.addImage(logo, 'AUTO', margin, yPos, 35, 14);
+      } catch (e) {
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setTextColor(...primaryColor);
+        doc.text(companyName, margin, yPos + 10);
+      }
+    } else {
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bolditalic');
+      doc.setTextColor(...primaryColor);
+      doc.text(companyName, margin, yPos + 10);
+    }
+
+    if (distributorName) {
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...accentColor);
+      doc.text(distributorName.toUpperCase(), margin, yPos + 18);
+    }
+
+    // Título y datos (derecha)
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...primaryColor);
+    doc.text('ORDEN DE FABRICACIÓN', pageWidth - margin, yPos + 6, { align: 'right' });
+    
+    doc.setFontSize(8);
+    doc.setTextColor(...textGray);
+    doc.text(`Expediente: ${budgetNumber}`, pageWidth - margin, yPos + 12, { align: 'right' });
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin, yPos + 17, { align: 'right' });
+    doc.text(`Página ${page} de ${totalPages}`, pageWidth - margin, yPos + 22, { align: 'right' });
+
+    yPos += 28;
+
+    // Línea separadora
+    doc.setDrawColor(...accentColor);
+    doc.setLineWidth(0.8);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 6;
+
+    // ==========================================
+    // INFO CLIENTE Y ACABADO GLOBAL
+    // ==========================================
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(margin, yPos, contentWidth / 2 - 2, 12, 2, 2, 'F');
+    doc.setFontSize(6);
+    doc.setTextColor(...textGray);
+    doc.text('CLIENTE', margin + 3, yPos + 4);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...primaryColor);
+    doc.text(customerName || 'Sin especificar', margin + 3, yPos + 9);
+
+    doc.setFillColor(255, 237, 213);
+    doc.roundedRect(margin + contentWidth / 2 + 2, yPos, contentWidth / 2 - 2, 12, 2, 2, 'F');
+    doc.setFontSize(6);
+    doc.setTextColor(...textGray);
+    doc.setFont('helvetica', 'normal');
+    doc.text('ACABADO GLOBAL', margin + contentWidth / 2 + 5, yPos + 4);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(194, 65, 12);
+    doc.text(globalFinish || 'Sin especificar', margin + contentWidth / 2 + 5, yPos + 9);
+
+    yPos += 18;
+
+    // ==========================================
+    // TÍTULO LISTA DE MUEBLES
+    // ==========================================
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...primaryColor);
+    doc.text('LISTA DE MUEBLES A FABRICAR', margin, yPos);
+    yPos += 4;
+
+    // ==========================================
+    // TABLA DE MUEBLES
+    // ==========================================
+    const startRow = (page - 1) * rowsPerPage;
+    const endRow = Math.min(startRow + rowsPerPage, tableData.length);
+    const pageRows = tableData.slice(startRow, endRow);
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['CANT.', 'REFERENCIA', 'DESCRIPCIÓN', 'MEDIDAS (mm)', 'APERT.', 'NOTAS']],
+      body: pageRows,
+      theme: 'striped',
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7,
+        cellPadding: 2
+      },
+      bodyStyles: {
+        fontSize: 7,
+        cellPadding: 2
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 28, fontStyle: 'bold' },
+        2: { cellWidth: 60 },
+        3: { cellWidth: 35, halign: 'center' },
+        4: { cellWidth: 18, halign: 'center' },
+        5: { cellWidth: 33 }
+      },
+      margin: { left: margin, right: margin }
+    });
+
+    // Solo en la última página: especificaciones de materiales
+    if (page === totalPages) {
+      const finalY = doc.lastAutoTable.finalY + 10;
+      
+      // ==========================================
+      // ESPECIFICACIONES DE MATERIALES
+      // ==========================================
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(margin, finalY, contentWidth, 32, 2, 2, 'F');
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('ESPECIFICACIONES DE MATERIALES', margin + 4, finalY + 6);
+      
+      const specs = [];
+      if (carcassColor) specs.push(['Armazón/Casco:', carcassColor]);
+      if (globalFinish) specs.push(['Frentes:', globalFinish]);
+      if (doorColorLow) specs.push(['Puertas Bajos:', doorColorLow]);
+      if (doorColorHigh) specs.push(['Puertas Altos:', doorColorHigh]);
+      if (doorColorColumns) specs.push(['Puertas Columnas:', doorColorColumns]);
+      if (sideColor) specs.push(['Costados/Vistos:', sideColor]);
+      
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      
+      const colWidth = contentWidth / 2;
+      specs.forEach((spec, i) => {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const x = margin + 4 + (col * colWidth);
+        const y = finalY + 12 + (row * 5);
+        
+        doc.setTextColor(...textGray);
+        doc.text(spec[0], x, y);
+        doc.setTextColor(...primaryColor);
+        doc.setFont('helvetica', 'bold');
+        doc.text(spec[1], x + 30, y);
+        doc.setFont('helvetica', 'normal');
+      });
+    }
+
+    // ==========================================
+    // FOOTER
+    // ==========================================
+    doc.setFontSize(5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`DOCUMENTO GENERADO POR ${companyName} MASTER INDUSTRIAL SYSTEM V2026`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+  }
+
+  const fileName = `Orden_Fabricacion_${budgetNumber?.replace(/\s+/g, '_') || 'SinRef'}.pdf`;
+  doc.save(fileName);
+  
+  return fileName;
+};
