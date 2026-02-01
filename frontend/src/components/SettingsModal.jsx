@@ -3100,6 +3100,27 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   </div>
                 </div>
                 <p className="text-xs text-slate-500 mt-3 italic">Los incrementos se aplican por línea cuando hay corte especial o corte de viga activado.</p>
+                
+                {/* Botón Guardar Configuración */}
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={handleSavePricingSettings}
+                    disabled={isSavingSettings}
+                    className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-black uppercase text-sm hover:bg-green-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSavingSettings ? (
+                      <>
+                        <Loader size={18} className="animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={18} />
+                        Guardar Configuración
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Gestión de Armazones */}
