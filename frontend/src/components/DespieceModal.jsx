@@ -405,18 +405,46 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                         </div>
                         <div className="flex items-center gap-6">
                           <div className="text-right">
-                            <p className="text-xs text-indigo-300 uppercase font-bold">Dimensiones (mm)</p>
-                            <p className="font-black text-indigo-800 text-sm">
-                              {furniture.originalWidth} x {furniture.originalHeight * 10} x {furniture.originalDepth * 10}
-                            </p>
-                          </div>
-                          <div className="text-right">
                             <p className="text-xs text-indigo-300 uppercase font-bold">Cantidad</p>
                             <p className="font-black text-orange-600 text-lg">x{furniture.itemQuantity}</p>
                           </div>
                           {expandedItems[furniture.productId] ? <ChevronDown size={20} className="text-indigo-300" /> : <ChevronRight size={20} className="text-indigo-300" />}
                         </div>
                       </button>
+
+                      {/* CASCO (Cabinet Body) Dimensions - Always visible */}
+                      <div className="px-6 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-y border-emerald-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-emerald-600 rounded-lg">
+                              <Box size={18} className="text-white" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Dimensiones del Casco Ensamblado</p>
+                              <p className="text-[9px] text-emerald-500">Medidas exteriores del mueble montado</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-center px-3 py-1.5 bg-white rounded-lg border border-emerald-200 shadow-sm">
+                              <p className="text-[9px] text-emerald-500 uppercase font-bold">Ancho</p>
+                              <p className="font-black text-emerald-800 text-lg">{furniture.originalWidth}</p>
+                              <p className="text-[9px] text-emerald-400">mm</p>
+                            </div>
+                            <div className="text-emerald-300 font-bold">×</div>
+                            <div className="text-center px-3 py-1.5 bg-white rounded-lg border border-emerald-200 shadow-sm">
+                              <p className="text-[9px] text-emerald-500 uppercase font-bold">Alto</p>
+                              <p className="font-black text-emerald-800 text-lg">{furniture.originalHeight * 10}</p>
+                              <p className="text-[9px] text-emerald-400">mm</p>
+                            </div>
+                            <div className="text-emerald-300 font-bold">×</div>
+                            <div className="text-center px-3 py-1.5 bg-white rounded-lg border border-emerald-200 shadow-sm">
+                              <p className="text-[9px] text-emerald-500 uppercase font-bold">Fondo</p>
+                              <p className="font-black text-emerald-800 text-lg">{furniture.originalDepth * 10}</p>
+                              <p className="text-[9px] text-emerald-400">mm</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
                       {/* Components List */}
                       {expandedItems[furniture.productId] && (
