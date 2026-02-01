@@ -305,9 +305,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                 <input
                   type="text"
                   value={editableCustomerName}
-                  onChange={(e) => setEditableCustomerName(e.target.value)}
+                  onChange={(e) => setEditableCustomerName(e.target.value.toUpperCase())}
                   placeholder="Nombre del cliente..."
-                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 uppercase"
                 />
               </div>
             </div>
@@ -318,9 +318,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                 <input
                   type="text"
                   value={editableProjectRef}
-                  onChange={(e) => setEditableProjectRef(e.target.value)}
+                  onChange={(e) => setEditableProjectRef(e.target.value.toUpperCase())}
                   placeholder="REF-001..."
-                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 uppercase"
                 />
               </div>
             </div>
@@ -338,9 +338,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                 <input
                   type="text"
                   value={editableExpedient}
-                  onChange={(e) => setEditableExpedient(e.target.value)}
+                  onChange={(e) => setEditableExpedient(e.target.value.toUpperCase())}
                   placeholder="EXP-0001..."
-                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                  className="w-full text-sm font-bold text-indigo-900 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 uppercase"
                 />
               </div>
             </div>
