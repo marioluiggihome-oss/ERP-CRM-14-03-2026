@@ -115,16 +115,16 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         </div>
       )}
 
-      <div className="flex-1 grid grid-cols-2 gap-6 min-h-0">
+      <div className="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-hidden">
         {/* Left: Upload & Image Preview */}
-        <div className="bg-white rounded-2xl p-6 shadow-xl border border-indigo-100 flex flex-col overflow-hidden">
-          <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <div className="bg-white rounded-2xl p-6 shadow-xl border border-indigo-100 flex flex-col overflow-hidden max-h-full">
+          <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
             <FileImage size={16} className="text-purple-600" />
             Plano de Cocina
           </h3>
           
           {!selectedImage ? (
-            <label className="flex-1 border-4 border-dashed border-indigo-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all group">
+            <label className="flex-1 min-h-0 border-4 border-dashed border-indigo-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all group">
               <Upload size={48} className="text-indigo-300 group-hover:text-purple-600 transition-colors mb-4" />
               <p className="text-sm font-black text-indigo-900 uppercase">Subir plano o render</p>
               <p className="text-xs text-indigo-400 mt-2">JPG, PNG - Planos de diseño</p>
@@ -138,8 +138,9 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               />
             </label>
           ) : (
-            <div className="flex-1 flex flex-col">
-              <div className="flex-1 rounded-xl overflow-hidden border-2 border-indigo-100 relative">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Image container with max height */}
+              <div className="flex-1 min-h-0 max-h-[50vh] rounded-xl overflow-hidden border-2 border-indigo-100 relative">
                 <img 
                   src={selectedImage.dataUrl} 
                   alt="Plano" 
@@ -154,10 +155,12 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 )}
               </div>
               
+              {/* Button always visible at the bottom */}
               {!analyzing && !analysisResult && (
                 <button
                   onClick={analyzeKitchenPlan}
-                  className="mt-4 w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-3 hover:from-purple-700 hover:to-indigo-700 shadow-lg transition-all"
+                  className="mt-4 shrink-0 w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-3 hover:from-purple-700 hover:to-indigo-700 shadow-lg transition-all"
+                  data-testid="analyze-plan-btn"
                 >
                   <Wand2 size={20} />
                   Analizar Plano con IA
