@@ -886,11 +886,11 @@ export const generateManufacturingPDF = ({
   const textGray = [100, 116, 139];
   const lightGray = [241, 245, 249];
 
-  // Preparar datos de la tabla
-  const tableData = items.map(item => {
+  // Preparar datos de la tabla - excluir líneas manuales
+  const tableData = items.filter(item => !item.isManual).map(item => {
     const product = allProducts.find(p => p.id === item.productId);
     const code = product?.code || item.productCode || item.customReference || '???';
-    const name = product?.name || item.productName || item.manualDescription || 'Sin descripción';
+    const name = product?.name || item.productName || 'Sin descripción';
     const width = item.customWidth || product?.width || 0;
     const height = item.customHeight || product?.height || 0;
     const depth = item.customDepth || product?.depth || 0;
