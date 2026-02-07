@@ -980,8 +980,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                             <span className="print-only font-black text-[10px] italic">x{item.quantity}</span>
                          </div>
                          
-                         {/* Referencia - Más ancha */}
-                         <div className="w-28 shrink-0 pr-1">
+                         {/* Referencia - Más corta */}
+                         <div className="w-20 shrink-0 pr-1">
                             {item.isManual ? (
                                 <>
                                   <input 
