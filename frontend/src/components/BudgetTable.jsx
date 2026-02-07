@@ -1460,7 +1460,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       
                       // Detectar tipo de mueble especial para icono
                       let iconType = '1P';
-                      if (code.includes('HK')) iconType = 'HK-TOP';
+                      // HK-TOP: códigos abatibles sin HL/HS/HF
+                      if ((code.includes('APABL') || code.includes('AVABL') || code.includes('APVBL')) && 
+                          !code.includes('HL') && !code.includes('HS') && !code.includes('HF')) {
+                        iconType = 'HK-TOP';
+                      }
                       else if (code.includes('HS')) iconType = 'HS';
                       else if (code.includes('HL')) iconType = 'HL';
                       else if (code.includes('HF')) iconType = 'HF';
