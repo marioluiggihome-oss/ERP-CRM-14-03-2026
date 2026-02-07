@@ -1317,7 +1317,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                             <div className="text-[10px] font-bold text-indigo-500 uppercase truncate mt-0.5">{p.name}</div>
                             {p.series && <div className="text-[9px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                             <div className="flex gap-2 mt-1 text-[10px] text-slate-500 font-medium">
-                              <span>{p.width ? Math.round(p.width / 10) : '-'} × {p.height || '-'} × {p.depth || '-'} cm</span>
+                              <span>{p.width ? Math.round(p.width) : '-'} × {p.height || '-'} × {p.depth || '-'} cm</span>
                             </div>
                           </div>
                           <div className="text-right shrink-0">
