@@ -1297,7 +1297,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       const code = p.code?.toUpperCase() || '';
                       const isGola = code.startsWith('G') && /^G\d/.test(code);
                       
+                      // Detectar tipo de herraje
+                      const hardwareType = getHardwareType(code);
                       // Detectar tipo de mueble especial
+                      const specialType = getSpecialType(code);
+                      
+                      // Detectar tipo de mueble especial para icono
                       let iconType = '1P';
                       if (code.includes('HK')) iconType = 'HK-TOP';
                       else if (code.includes('HS')) iconType = 'HS';
@@ -1315,6 +1320,25 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       else if (code.includes('2P')) iconType = '2P';
                       else if (code.includes('1V') || code.includes('2V')) iconType = '1V';
                       
+                      // Colores para badges de herraje
+                      const hardwareColors = {
+                        'HK': 'bg-red-500 text-white',
+                        'HS': 'bg-emerald-500 text-white', 
+                        'HL': 'bg-violet-500 text-white',
+                        'HF': 'bg-cyan-500 text-white'
+                      };
+                      
+                      // Colores para badges de tipo especial
+                      const specialColors = {
+                        'MICRO': 'bg-blue-100 text-blue-700',
+                        'HORNO': 'bg-amber-100 text-amber-700',
+                        'HORNO+MICRO': 'bg-orange-100 text-orange-700',
+                        'PLACA': 'bg-red-100 text-red-700',
+                        'FREG': 'bg-sky-100 text-sky-700',
+                        'TERMO': 'bg-teal-100 text-teal-700',
+                        'ESCURRE': 'bg-indigo-100 text-indigo-700'
+                      };
+                      
                       return (
                         <tr key={p.id} className="hover:bg-orange-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
                           <td className="p-1 pl-2 w-[45px]">
@@ -1322,7 +1346,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                           </td>
                           <td className="p-2 font-bold text-indigo-900 text-[11px] w-[90px]">{p.code}</td>
                           <td className="p-2 min-w-[180px]">
-                            <div className="text-[10px] font-bold text-indigo-600 uppercase">{p.name}</div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold text-indigo-600 uppercase">{p.name}</span>
+                              {hardwareType && (
+                                <span className={`px-1.5 py-0.5 rounded text-[7px] font-black ${hardwareColors[hardwareType]}`}>
+                                  {hardwareType}
+                                </span>
+                              )}
+                              {specialType && (
+                                <span className={`px-1.5 py-0.5 rounded text-[7px] font-bold ${specialColors[specialType]}`}>
+                                  {specialType}
+                                </span>
+                              )}
+                            </div>
                             {p.series && <div className="text-[8px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                           </td>
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.width ? Math.round(p.width) : '-'}</td>
