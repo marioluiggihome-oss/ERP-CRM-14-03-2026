@@ -1,6 +1,39 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 01/02/2026 (v5.5)
+## Última Actualización: 08/02/2026 (v5.6)
+
+---
+
+## 🆕 ACTUALIZACIÓN 08/02/2026 (v5.6)
+
+### ✅ P0: Búsqueda por Tipos de Herraje (HL, HS, HK, HF)
+- **Problema**: Los productos con herrajes especiales no se podían encontrar buscando por código de herraje
+- **Solución**: Implementada búsqueda mejorada en `filteredCatalog` con mapeo de términos:
+  - `hl`, `lift` → Productos LIFT (209 productos)
+  - `hs`, `servo`, `servo-drive` → Productos SERVO-DRIVE (281 productos)
+  - `hk`, `lift top` → Productos HK-TOP
+  - `hf`, `free fold` → Productos FREE-FOLD
+  - `micro`, `horno`, `placa`, `freg`, `termo`, `escurre` → Tipos especiales de muebles
+- **Badges Visuales**: Añadidos badges de color junto al nombre del producto:
+  - HL: Violeta | HS: Verde esmeralda | HK: Rojo | HF: Cyan
+- **Archivos modificados**: `/app/frontend/src/components/BudgetTable.jsx`
+
+### ✅ P1: Casco Predeterminado por Serie
+- **Requisito**: Permitir configurar un armazón/casco por defecto para cada serie de productos
+- **Solución**: 
+  - Nuevo campo `defaultCarcassBySeries` en modelo Settings (backend)
+  - Nueva sección en Settings > Armazones: "CASCO PREDETERMINADO POR SERIE"
+  - Lista de 64 series con selector de material predeterminado
+  - Al añadir producto, se aplica automáticamente el casco configurado para su serie
+- **Archivos modificados**:
+  - `/app/backend/server.py` - SettingsModel, SettingsUpdate
+  - `/app/frontend/src/App.js` - Estado defaultCarcassBySeries
+  - `/app/frontend/src/components/BudgetTable.jsx` - addItemToBudget()
+  - `/app/frontend/src/components/SettingsModal.jsx` - UI nueva sección
+
+### ✅ Testing Completo
+- Testing agent ejecutado: 100% tests pasados (6/6)
+- Archivo de reporte: `/app/test_reports/iteration_18.json`
 
 ---
 
