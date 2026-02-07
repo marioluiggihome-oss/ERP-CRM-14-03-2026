@@ -154,6 +154,89 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
         </svg>
       );
     
+    // Campana
+    case 'CAMPANA':
+    case 'AC':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <path d="M10 32 L10 18 Q10 8 20 8 Q30 8 30 18 L30 32 Z" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          <rect x="18" y="32" width="4" height="4" fill={stroke} />
+          <line x1="14" y1="14" x2="26" y2="14" stroke={stroke} strokeWidth="1" opacity="0.5" />
+          <line x1="14" y1="18" x2="26" y2="18" stroke={stroke} strokeWidth="1" opacity="0.5" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Extraíble
+    case 'EXTRAIBLE':
+    case 'PE':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          <rect x="10" y="10" width="20" height="20" rx="1" stroke={stroke} strokeWidth="1" fill="#ecfccb" />
+          <path d="M20 15 L25 20 L20 25 L15 20 Z" stroke="#65a30d" strokeWidth="1.5" fill="none" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Botellero
+    case 'BOTELLERO':
+    case 'BOT':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          <circle cx="14" cy="12" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
+          <circle cx="26" cy="12" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
+          <circle cx="14" cy="22" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
+          <circle cx="26" cy="22" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
+          <circle cx="20" cy="32" r="3" stroke={stroke} strokeWidth="1" fill="#fecdd3" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Escobero
+    case 'ESCOBERO':
+    case 'ESC':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          <line x1="15" y1="8" x2="15" y2="32" stroke={stroke} strokeWidth="2" />
+          <line x1="20" y1="8" x2="20" y2="32" stroke={stroke} strokeWidth="2" />
+          <line x1="25" y1="8" x2="25" y2="32" stroke={stroke} strokeWidth="2" />
+          <rect x="12" y="30" width="16" height="4" rx="1" fill="#a8a29e" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Frigorífico
+    case 'FRIGO':
+    case 'FRI':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          <line x1="8" y1="16" x2="32" y2="16" stroke={stroke} strokeWidth="1.5" />
+          <rect x="10" y="6" width="4" height="8" rx="1" fill={stroke} />
+          <rect x="10" y="18" width="4" height="16" rx="1" fill={stroke} />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Cajones / Caceroleros
+    case 'CAJONES':
+    case 'CAC':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          <line x1="8" y1="12" x2="32" y2="12" stroke={stroke} strokeWidth="1.5" />
+          <line x1="8" y1="20" x2="32" y2="20" stroke={stroke} strokeWidth="1.5" />
+          <line x1="8" y1="28" x2="32" y2="28" stroke={stroke} strokeWidth="1.5" />
+          <rect x="17" y="6" width="6" height="2" rx="0.5" fill={stroke} />
+          <rect x="17" y="14" width="6" height="2" rx="0.5" fill={stroke} />
+          <rect x="17" y="22" width="6" height="2" rx="0.5" fill={stroke} />
+          <GolaClip />
+        </svg>
+      );
+    
     // Rincón
     case 'RINCON':
     case 'ARA':
