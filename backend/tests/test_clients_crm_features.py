@@ -19,7 +19,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://kitchenmanager.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://kitchen-budget-3.preview.emergentagent.com')
 
 class TestClientsAPI:
     """Test Client CRUD operations"""
