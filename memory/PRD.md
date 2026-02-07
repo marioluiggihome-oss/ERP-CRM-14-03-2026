@@ -1,6 +1,39 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 08/02/2026 (v5.6)
+## Última Actualización: 08/02/2026 (v5.7)
+
+---
+
+## 🆕 ACTUALIZACIÓN 08/02/2026 (v5.7)
+
+### ✅ Correcciones de Catálogo de Productos
+1. **BAJOS GOLA**: Los productos G8B* ahora están correctamente categorizados como "BAJOS GOLA" (395 productos)
+   - Antes: Categoría "ALTOS GOLA" ❌
+   - Después: Categoría "BAJOS GOLA" ✅
+   - Nombres actualizados de "GOLA" a "BAJO GOLA"
+
+2. **SEMICOLUMNA HORNO**: Los productos con código SC+BH/CH ahora se llaman "SEMICOLUMNA HORNO" (32 productos)
+   - Antes: "BAJO HORNO ALTO" ❌
+   - Después: "SEMICOLUMNA HORNO" ✅
+   - Fondo actualizado a 58 cms
+   - Categoría: SEMICOLUMNAS
+
+3. **HK-TOP**: Los productos abatibles sin sufijo HL/HS/HF ahora muestran "HK-TOP" (284 productos)
+   - Son los productos con código APABL/AVABL que NO terminan en HL, HS, o HF
+   - Badge rojo "HK" visible en la librería
+   - Búsqueda por "hk" o "hk-top" funciona correctamente
+
+### ✅ Casco Predeterminado (Simplificado)
+- Eliminada la sección compleja "Casco por Serie"
+- Añadido botón "Establecer como Predeterminado" en cada tarjeta de material de armazón
+- El material predeterminado se guarda en settings y persiste entre sesiones
+
+### ✅ Mejoras en Búsqueda de Herrajes
+- `hk` / `hk-top` → Encuentra productos HK-TOP (284)
+- `hl` / `lift` → Encuentra productos LIFT (209)
+- `hs` / `servo` → Encuentra productos SERVO-DRIVE (281)
+- `horno` → Encuentra productos con horno
+- `micro` → Encuentra productos con microondas
 
 ---
 
