@@ -1509,7 +1509,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       
                       // Detectar tipo de herraje y tipo especial
                       const hardwareType = getHardwareType(code);
-                      const specialType = getSpecialType(code);
+                      const specialType = getSpecialType(code, p.name);
                       
                       // Detectar tipo de mueble especial para icono
                       let iconType = '1P';
@@ -1521,13 +1521,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       else if (code.includes('HS')) iconType = 'HS';
                       else if (code.includes('HL')) iconType = 'HL';
                       else if (code.includes('HF')) iconType = 'HF';
-                      else if (code.includes('AM') || code.includes('BM')) iconType = 'MICRO';
-                      else if (code.includes('CHM')) iconType = 'HORNO-MICRO';
-                      else if (code.includes('CH') || code.includes('BH')) iconType = 'HORNO';
-                      else if (code.includes('BP')) iconType = 'PLACA';
-                      else if (code.includes('BF')) iconType = 'FREG';
-                      else if (code.includes('AT')) iconType = 'TERMO';
-                      else if (code.includes('AE')) iconType = 'ESCURRE';
+                      else if (code.includes('AM') || code.includes('BM') || p.name?.toUpperCase().includes('MICRO')) iconType = 'MICRO';
+                      else if (code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO-MICRO';
+                      else if (code.includes('CH') || code.includes('BH') || code.includes('PH') || code.includes('VH') || p.name?.toUpperCase().includes('HORNO')) iconType = 'HORNO';
+                      else if (code.includes('BP') || p.name?.toUpperCase().includes('PLACA')) iconType = 'PLACA';
+                      else if (code.includes('BF') || p.name?.toUpperCase().includes('FREGADERO')) iconType = 'FREG';
+                      else if (code.includes('AT') || p.name?.toUpperCase().includes('TERMO')) iconType = 'TERMO';
+                      else if (code.includes('AE') || p.name?.toUpperCase().includes('ESCURRE')) iconType = 'ESCURRE';
+                      else if (code.includes('AC') || p.name?.toUpperCase().includes('CAMPANA')) iconType = 'CAMPANA';
+                      else if (code.includes('PE') || p.name?.toUpperCase().includes('EXTRAIBLE') || p.name?.toUpperCase().includes('EXTRAÍBLE')) iconType = 'EXTRAIBLE';
+                      else if (code.includes('BOT') || p.name?.toUpperCase().includes('BOTELLERO')) iconType = 'BOTELLERO';
+                      else if (code.includes('ESC') || p.name?.toUpperCase().includes('ESCOBERO')) iconType = 'ESCOBERO';
+                      else if (code.includes('FRI') || p.name?.toUpperCase().includes('FRIGO')) iconType = 'FRIGO';
+                      else if (p.name?.toUpperCase().includes('CACEROLERO') || p.name?.toUpperCase().includes('CAJONES') || p.name?.toUpperCase().includes('CAJÓN')) iconType = 'CAJONES';
                       else if (code.includes('ARA') || code.includes('BRA') || code.includes('ARC') || code.includes('BRC')) iconType = 'RINCON';
                       else if (code.includes('3C') || code.includes('4C') || code.includes('5C')) iconType = '3C';
                       else if (code.includes('2P')) iconType = '2P';
