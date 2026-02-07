@@ -1230,16 +1230,29 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       // Determinar tipo de icono basado en el código
                       const code = p.code?.toUpperCase() || '';
                       const isGola = code.startsWith('G') && /^G\d/.test(code);
+                      
+                      // Detectar tipo de mueble especial
                       let iconType = '1P';
-                      if (code.includes('2P')) iconType = '2P';
-                      else if (code.includes('3C') || code.includes('2G')) iconType = '3C';
-                      else if (code.includes('BF') || code.includes('FREG')) iconType = 'FREG';
-                      else if (code.includes('HK') || code.includes('HS') || code.includes('HL') || code.includes('HF')) iconType = 'HK-TOP';
+                      if (code.includes('HK')) iconType = 'HK-TOP';
+                      else if (code.includes('HS')) iconType = 'HS';
+                      else if (code.includes('HL')) iconType = 'HL';
+                      else if (code.includes('HF')) iconType = 'HF';
+                      else if (code.includes('AM') || code.includes('BM')) iconType = 'MICRO';
+                      else if (code.includes('CHM')) iconType = 'HORNO-MICRO';
+                      else if (code.includes('CH') || code.includes('BH')) iconType = 'HORNO';
+                      else if (code.includes('BP')) iconType = 'PLACA';
+                      else if (code.includes('BF')) iconType = 'FREG';
+                      else if (code.includes('AT')) iconType = 'TERMO';
+                      else if (code.includes('AE')) iconType = 'ESCURRE';
+                      else if (code.includes('ARA') || code.includes('BRA') || code.includes('ARC') || code.includes('BRC')) iconType = 'RINCON';
+                      else if (code.includes('3C') || code.includes('4C') || code.includes('5C')) iconType = '3C';
+                      else if (code.includes('2P')) iconType = '2P';
+                      else if (code.includes('1V') || code.includes('2V')) iconType = '1V';
                       
                       return (
                         <tr key={p.id} className="hover:bg-orange-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
                           <td className="p-1 pl-2 w-[45px]">
-                            <CabinetIcon type={iconType} isGola={isGola} className="w-8 h-8 text-indigo-400" />
+                            <CabinetIcon type={iconType} isGola={isGola} className="w-8 h-8" />
                           </td>
                           <td className="p-2 font-bold text-indigo-900 text-[11px] w-[90px]">{p.code}</td>
                           <td className="p-2 min-w-[180px]">
