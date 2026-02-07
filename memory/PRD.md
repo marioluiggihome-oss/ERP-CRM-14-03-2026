@@ -1,6 +1,33 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 08/02/2026 (v5.7)
+## Última Actualización: 08/02/2026 (v5.8)
+
+---
+
+## 🆕 ACTUALIZACIÓN 08/02/2026 (v5.8)
+
+### ✅ Revisión Completa de COLUMNAS y SEMICOLUMNAS
+
+1. **COLUMNAS** (123 productos - código 20CH/22CH/24CH):
+   - Nombres actualizados con descripción completa del PDF
+   - Incluyen: puertas, vitrinas, cajones BAX/LUX, caceroleros, horno, micro
+   - Fondo según prefijo: 20CH=58cm, 22CH=65cm, 24CH=70cm
+   - Ejemplos: "COLUMNA 2 PUERTAS + HORNO 60 CMS. ANCHO / FONDO 58 CMS."
+
+2. **SEMICOLUMNAS** (246 productos - código 13SC/11SM):
+   - Nombres actualizados con descripción correcta
+   - Incluyen: puertas, vitrinas, cajones, caceroleros, horno, micro
+   - Fondo según prefijo: 13SC=58cm, 11SM=estándar
+   - Ejemplos: "SEMICOLUMNA 4 CAJONES BAX + HORNO 60 CMS. ANCHO / FONDO 58 CMS."
+
+### ✅ Tipos de productos incluidos:
+- **Solo puertas/vitrinas**: 1P, 2P, 1V, 2V
+- **Con horno**: +H en código (ejemplo: 13SC1PH600)
+- **Con horno + micro**: +HM en código (ejemplo: 13SC1PHM600)
+- **Con cajones BAX**: CB en código (cajones económicos)
+- **Con cajones LUX**: CL en código (cajones premium)
+- **Con caceroleros**: 1G, 2G en código
+- **Puertas extraíbles**: PE en código
 
 ---
 
