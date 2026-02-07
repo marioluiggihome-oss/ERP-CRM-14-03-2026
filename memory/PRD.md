@@ -1,12 +1,18 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 08/02/2026 (v5.11)
+## Última Actualización: 07/02/2026 (v5.12)
 
 ---
 
-## 🆕 ACTUALIZACIÓN 08/02/2026 (v5.11)
+## 🆕 ACTUALIZACIÓN 07/02/2026 (v5.12)
 
-### ✅ AUDITORÍA COMPLETA DEL CATÁLOGO
+### ✅ BUG P0 RESUELTO: Productos Nuevos Ahora Visibles
+
+**Problema:** 733 productos nuevos (Costados, Regletas, Zócalos, etc.) no aparecían en el frontend.
+**Causa:** Los productos importados no tenían el campo `module` asignado.
+**Solución:** Asignado `module: 'montada'` a todos los productos afectados.
+
+### ✅ CATÁLOGO COMPLETO (6,438 productos)
 
 **Resumen de Productos por Categoría:**
 | Categoría | Cantidad |
@@ -16,10 +22,30 @@
 | BAJOS | 1,073 |
 | BAJOS GOLA | 395 |
 | SEMICOLUMNAS | 322 |
-| SEMICOLUMNAS GOLA | 218 |
 | COLUMNAS | 322 |
+| **COSTADOS** | **241** |
+| SEMICOLUMNAS GOLA | 218 |
+| **VITRINAS** | **161** |
+| **PUERTAS** | **156** |
+| **ESTANTES** | **115** |
 | COLUMNAS GOLA | 83 |
-| **TOTAL** | **5,705** |
+| **REGLETAS** | **40** |
+| **ZOCALOS** | **8** |
+| **CORNISAS** | **7** |
+| COMPLEMENTOS | 5 |
+| **TOTAL** | **6,438** |
+
+### ✅ Tests Verificados (iteration_19.json)
+- Backend: 15/15 tests passed (100%)
+- Frontend: 100%
+- Login MARIO/MARIO: ✅
+- Búsqueda productos: ✅
+- Eliminación clientes: ✅
+- Añadir al presupuesto: ✅
+
+---
+
+## 🆕 ACTUALIZACIÓN 08/02/2026 (v5.11)
 
 **Muebles Especiales:**
 - Abatibles HK-TOP: 284
