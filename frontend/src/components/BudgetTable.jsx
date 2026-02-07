@@ -118,13 +118,15 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     // 4. COLUMNAS (parte 2, páginas 78-125)
     const categoryOrder = {
       'ALTO': 1, 'ALTOS': 1,
-      'BAJO': 2, 'BAJOS': 2,
-      'SEMICOLUMNA': 3, 'SEMICOLUMNAS': 3,
-      'COLUMNA': 4, 'COLUMNAS': 4,
-      'ELECTRO': 5, 'ELECTRODOMESTICOS': 5,
-      'PUERTAS': 6, 'PUERTAS Y VITRINAS': 6,
-      'ACCESORIO': 7, 'ACCESORIOS': 7,
-      'OTRO': 8, 'OTROS': 8
+      'ALTOS GOLA': 2,
+      'BAJO': 3, 'BAJOS': 3,
+      'BAJOS GOLA': 4,
+      'SEMICOLUMNA': 5, 'SEMICOLUMNAS': 5,
+      'COLUMNA': 6, 'COLUMNAS': 6,
+      'ELECTRO': 7, 'ELECTRODOMESTICOS': 7,
+      'PUERTAS': 8, 'PUERTAS Y VITRINAS': 8,
+      'ACCESORIO': 9, 'ACCESORIOS': 9,
+      'OTRO': 10, 'OTROS': 10
     };
 
     // Mapeo de términos de búsqueda para herrajes
