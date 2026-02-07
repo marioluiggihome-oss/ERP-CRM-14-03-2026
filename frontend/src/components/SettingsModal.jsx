@@ -2765,6 +2765,49 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
                   </div>
 
+                  {/* Filtros de auditoría */}
+                  <div className="flex gap-4 items-center bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <span className="text-xs font-black text-amber-800 uppercase">🔍 Filtros Auditoría:</span>
+                    
+                    {/* Filtro por serie */}
+                    <select
+                      value={productSeriesFilter}
+                      onChange={(e) => setProductSeriesFilter(e.target.value)}
+                      className="px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold focus:outline-none focus:border-orange-500 max-w-[250px]"
+                    >
+                      <option value="">Todas las series ({availableSeries.length})</option>
+                      {availableSeries.map(series => (
+                        <option key={series} value={series}>{series}</option>
+                      ))}
+                    </select>
+                    
+                    {/* Filtro sin precio */}
+                    <button
+                      onClick={() => setProductZeroPriceFilter(!productZeroPriceFilter)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        productZeroPriceFilter 
+                          ? 'bg-red-600 text-white' 
+                          : 'bg-white border border-amber-300 text-amber-800 hover:bg-amber-100'
+                      }`}
+                    >
+                      {productZeroPriceFilter ? <CheckSquare size={14} /> : <Square size={14} />}
+                      Sin Precio (Z1=0)
+                    </button>
+                    
+                    {/* Limpiar filtros */}
+                    {(productSeriesFilter || productZeroPriceFilter) && (
+                      <button
+                        onClick={() => {
+                          setProductSeriesFilter('');
+                          setProductZeroPriceFilter(false);
+                        }}
+                        className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-300 transition-all"
+                      >
+                        Limpiar filtros
+                      </button>
+                    )}
+                  </div>
+
                   {/* Products Table */}
                   <div className="bg-white border-2 border-indigo-100 rounded-2xl overflow-hidden">
                     <div className="overflow-x-auto">
