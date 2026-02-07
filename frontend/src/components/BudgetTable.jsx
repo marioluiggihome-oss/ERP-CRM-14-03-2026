@@ -84,7 +84,11 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   // Función helper para detectar tipo de herraje del código
   const getHardwareType = useCallback((code) => {
     const c = code?.toUpperCase() || '';
-    if (c.includes('HK')) return 'HK';
+    // HK: códigos APABL/AVABL sin HL/HS/HF al final
+    if ((c.includes('APABL') || c.includes('AVABL') || c.includes('APVBL') || c.includes('AVVBL')) && 
+        !c.includes('HL') && !c.includes('HS') && !c.includes('HF')) {
+      return 'HK';
+    }
     if (c.includes('HS')) return 'HS';
     if (c.includes('HL')) return 'HL';
     if (c.includes('HF')) return 'HF';
