@@ -1403,7 +1403,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                         'PLACA': 'bg-red-100 text-red-700',
                         'FREG': 'bg-sky-100 text-sky-700',
                         'TERMO': 'bg-teal-100 text-teal-700',
-                        'ESCURRE': 'bg-indigo-100 text-indigo-700'
+                        'ESCURRE': 'bg-indigo-100 text-indigo-700',
+                        'CAMPANA': 'bg-purple-100 text-purple-700',
+                        'EXTRAÍBLE': 'bg-lime-100 text-lime-700',
+                        'BOTELLERO': 'bg-rose-100 text-rose-700',
+                        'ESCOBERO': 'bg-stone-100 text-stone-700',
+                        'FRIGO': 'bg-cyan-100 text-cyan-700',
+                        'CAJONES': 'bg-yellow-100 text-yellow-700'
                       };
                       
                       return (
@@ -1555,7 +1561,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                         'PLACA': 'bg-red-100 text-red-700',
                         'FREG': 'bg-sky-100 text-sky-700',
                         'TERMO': 'bg-teal-100 text-teal-700',
-                        'ESCURRE': 'bg-indigo-100 text-indigo-700'
+                        'ESCURRE': 'bg-indigo-100 text-indigo-700',
+                        'CAMPANA': 'bg-purple-100 text-purple-700',
+                        'EXTRAÍBLE': 'bg-lime-100 text-lime-700',
+                        'BOTELLERO': 'bg-rose-100 text-rose-700',
+                        'ESCOBERO': 'bg-stone-100 text-stone-700',
+                        'FRIGO': 'bg-cyan-100 text-cyan-700',
+                        'CAJONES': 'bg-yellow-100 text-yellow-700'
                       };
                       
                       return (
