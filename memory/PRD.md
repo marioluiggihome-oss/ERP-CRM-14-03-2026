@@ -125,10 +125,17 @@
 
 ## PRÓXIMAS TAREAS
 
+### ✅ Completadas en v5.6
+- [x] **P0: Búsqueda por tipos de herraje** (HL, HS, HK, HF) - Completado
+- [x] **P1: Casco Predeterminado por Serie** - Completado
+
 ### P1 - Alta Prioridad
+- [ ] **Series Especiales de Casco + Lógica Coste Cero**: Añadir nuevas series para cascos especiales y manejar cascos con coste 0
 - [ ] **CSV Multi-hoja**: Exportar a Excel con datos de cliente en una hoja y lista de corte en otra
-- [ ] **49 productos sin precios**: Importar precios desde Excel proporcionado por usuario
 - [ ] **Panel de solicitudes de distribuidores**: UI para aprobar/rechazar registros
+
+### P2 - Media Prioridad
+- [ ] **Nuevo CRM y Workflow de Pedidos**: Implementar flujo completo cuando el catálogo esté aprobado
 
 ### Pendiente de Confirmación
 - [ ] **Medidas del despiece**: Confirmar cálculo de costados/tapas
