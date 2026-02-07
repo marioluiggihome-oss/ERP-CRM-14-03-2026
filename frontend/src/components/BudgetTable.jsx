@@ -883,12 +883,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                      <div className="w-7 text-center shrink-0">V</div>
                      <div className="w-8 text-center shrink-0">UD</div>
                      <div className="w-20 shrink-0">REF</div>
-                     <div className="flex-1 min-w-[180px]">DESCRIPCIÓN</div>
-                     <div className="w-9 text-center shrink-0">AN</div>
-                     <div className="w-9 text-center shrink-0">AL</div>
-                     <div className="w-9 text-center shrink-0">FO</div>
+                     <div className="flex-1 min-w-[150px]">DESCRIPCIÓN</div>
+                     <div className="w-11 text-center shrink-0">AN</div>
+                     <div className="w-11 text-center shrink-0">AL</div>
+                     <div className="w-11 text-center shrink-0">FO</div>
                      <div className="w-8 text-center shrink-0">AP</div>
-                     <div className="w-24 shrink-0">OBS</div>
+                     <div className="w-20 shrink-0">OBS</div>
                      <div className="w-20 text-right shrink-0 pr-2">€</div>
                      <div className="w-6 shrink-0 no-print"></div>
                   </div>
