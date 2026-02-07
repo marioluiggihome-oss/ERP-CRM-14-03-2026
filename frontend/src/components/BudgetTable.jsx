@@ -1321,30 +1321,42 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                 {/* Lista de productos */}
                 <div className="flex-1 overflow-y-auto">
                   <div className="divide-y divide-indigo-50">
-                    {filteredCatalog.map(p => (
-                      <div 
-                        key={p.id} 
-                        className="p-3 hover:bg-orange-50 cursor-pointer transition-colors group"
-                        onClick={() => addItemToBudget(p)}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[12px] font-black text-indigo-900 truncate">{p.code}</div>
-                            <div className="text-[10px] font-bold text-indigo-500 uppercase truncate mt-0.5">{p.name}</div>
-                            {p.series && <div className="text-[9px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
-                            <div className="flex gap-2 mt-1 text-[10px] text-slate-500 font-medium">
-                              <span>{p.width ? Math.round(p.width) : '-'} × {p.height || '-'} × {p.depth || '-'} cm</span>
+                    {filteredCatalog.map(p => {
+                      // Determinar tipo de icono basado en el código
+                      const code = p.code?.toUpperCase() || '';
+                      const isGola = code.startsWith('G') && /^G\d/.test(code);
+                      let iconType = '1P';
+                      if (code.includes('2P')) iconType = '2P';
+                      else if (code.includes('3C') || code.includes('2G')) iconType = '3C';
+                      else if (code.includes('BF') || code.includes('FREG')) iconType = 'FREG';
+                      else if (code.includes('HK') || code.includes('HS') || code.includes('HL') || code.includes('HF')) iconType = 'HK-TOP';
+                      
+                      return (
+                        <div 
+                          key={p.id} 
+                          className="p-2 hover:bg-orange-50 cursor-pointer transition-colors group"
+                          onClick={() => addItemToBudget(p)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <CabinetIcon type={iconType} isGola={isGola} className="w-9 h-9 text-indigo-400 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[11px] font-black text-indigo-900 truncate">{p.code}</div>
+                              <div className="text-[9px] font-bold text-indigo-500 uppercase truncate">{p.name}</div>
+                              {p.series && <div className="text-[8px] text-orange-500 font-medium">{p.series}</div>}
                             </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-[10px] font-black text-orange-600">
-                              {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
+                            <div className="text-right shrink-0">
+                              <div className="text-[9px] text-slate-500 font-medium">
+                                {p.width ? Math.round(p.width) : '-'} × {p.height || '-'} × {p.depth || '-'}
+                              </div>
+                              <div className="text-[11px] font-black text-orange-600">
+                                {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0} pts
+                              </div>
                             </div>
-                            <Plus size={16} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                            <Plus size={14} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"/>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </>
