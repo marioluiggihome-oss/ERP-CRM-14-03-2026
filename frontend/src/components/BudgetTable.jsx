@@ -60,8 +60,16 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       'SEMICOLUMNAS GOLA': 6,
       'COLUMNAS': 7,
       'COLUMNAS GOLA': 8,
-      'ELECTRODOMESTICOS': 9,
-      'ACCESORIOS': 10,
+      'COSTADOS': 9,
+      'ESTANTES': 10,
+      'REGLETAS': 11,
+      'PUERTAS': 12,
+      'VITRINAS': 13,
+      'CORNISAS': 14,
+      'ZOCALOS': 15,
+      'COMPLEMENTOS': 16,
+      'ELECTRODOMESTICOS': 17,
+      'ACCESORIOS': 18,
       'OTROS': 99
     };
     
