@@ -1231,7 +1231,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                           <div className="text-[11px] font-bold text-indigo-600 uppercase">{p.name}</div>
                           {p.series && <div className="text-[9px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                         </td>
-                        <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[70px]">{p.width ? Math.round(p.width / 10) : '-'}</td>
+                        <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[70px]">{p.width ? Math.round(p.width) : '-'}</td>
                         <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[60px]">{p.height || '-'}</td>
                         <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[60px]">{p.depth || '-'}</td>
                         <td className="p-2 text-center font-black text-orange-600 text-[12px] w-[70px]">
