@@ -115,6 +115,10 @@ const App = () => {
         const materials = results[3].status === 'fulfilled' ? results[3].value : [];
         const settings = results[4].status === 'fulfilled' ? results[4].value : {};
 
+        // Determinar el material de casco predeterminado
+        const defaultMaterialId = settings.defaultCarcassMaterialId || 
+          (materials.length > 0 ? materials[0].id : INITIAL_CARCASS_MATERIALS[0].id);
+
         setState(prev => ({
           ...prev,
           users,
@@ -123,7 +127,7 @@ const App = () => {
             { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: productsDespiece, module: 'despiece' }
           ],
           carcassMaterials: materials.length > 0 ? materials : INITIAL_CARCASS_MATERIALS,
-          selectedCarcassMaterialId: materials.length > 0 ? materials[0].id : INITIAL_CARCASS_MATERIALS[0].id,
+          selectedCarcassMaterialId: defaultMaterialId,
           pointValueMontada: settings.pointValueMontada || 1.0,
           pointValueDespiece: settings.pointValueDespiece || 0.88,
           specialIncrementWidth: settings.specialIncrementWidth || 45,
@@ -131,8 +135,7 @@ const App = () => {
           specialIncrementDepth: settings.specialIncrementDepth || 45,
           vigaCutIncrement: settings.vigaCutIncrement || 0,
           brandColor: settings.brandColor || DEFAULT_BRAND_COLOR,
-          logo: settings.logo || null,
-          defaultCarcassBySeries: settings.defaultCarcassBySeries || {}
+          logo: settings.logo || null
         }));
       } catch (err) {
         console.error("Error loading data from API:", err);
