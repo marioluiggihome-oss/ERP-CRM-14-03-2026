@@ -1565,6 +1565,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       else if (p.name?.toUpperCase().includes('CACEROLERO') || p.name?.toUpperCase().includes('CAJONES') || p.name?.toUpperCase().includes('CAJÓN')) iconType = 'CAJONES';
                       else if (code.includes('ARA') || code.includes('BRA') || code.includes('ARC') || code.includes('BRC')) iconType = 'RINCON';
                       else if (code.includes('3C') || code.includes('4C') || code.includes('5C')) iconType = '3C';
+                      // Nuevas categorías: Costados, Estantes, Regletas, etc.
+                      else if (code.startsWith('COS_') || p.category === 'COSTADOS') iconType = 'COSTADO';
+                      else if (code.startsWith('EST_') || p.category === 'ESTANTES') iconType = 'ESTANTE';
+                      else if (code.startsWith('REG_') || p.category === 'REGLETAS') iconType = 'REGLETA';
+                      else if (code.startsWith('PTA_') || p.category === 'PUERTAS') iconType = 'PUERTA';
+                      else if (code.startsWith('VIT_') || p.category === 'VITRINAS') iconType = 'VITRINA';
+                      else if (code.startsWith('COR_') || p.category === 'CORNISAS') iconType = 'CORNISA';
+                      else if (code.startsWith('ZOC_') || p.category === 'ZOCALOS') iconType = 'ZOCALO';
                       else if (code.includes('2P')) iconType = '2P';
                       else if (code.includes('1V') || code.includes('2V')) iconType = '1V';
                       
