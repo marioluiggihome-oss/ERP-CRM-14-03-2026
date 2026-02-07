@@ -9,11 +9,11 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     );
   }
 
-  const stroke = 'currentColor';
-  const strokeWidth = 1.5;
+  const stroke = '#4338ca'; // Indigo-700 para mejor visibilidad
+  const strokeWidth = 2;
 
   const GolaClip = () => isGola ? (
-    <path d="M8 8 L32 8" stroke={stroke} strokeWidth="2" strokeOpacity="0.5" strokeDasharray="1 2" />
+    <path d="M8 6 L32 6" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
   ) : null;
 
   switch (type) {
@@ -22,49 +22,62 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
     case 'HF':
     case 'HL':
       return (
-        <svg viewBox="0 0 40 40" className={className} fill="none" stroke={stroke} strokeWidth={strokeWidth}>
-          <rect x="8" y="10" width="24" height="20" rx="1" />
-          <path d="M8 12 Q20 4 32 12" strokeOpacity="0.5" strokeDasharray="2 2" />
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="10" width="24" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#eef2ff" />
+          <path d="M8 14 Q20 6 32 14" stroke={stroke} strokeWidth="1.5" strokeOpacity="0.6" />
           <GolaClip />
         </svg>
       );
     case '3C':
     case '2G':
       return (
-        <svg viewBox="0 0 40 40" className={className} fill="none" stroke={stroke} strokeWidth={strokeWidth}>
-          <rect x="8" y="4" width="24" height="32" rx="1" />
-          <line x1="8" y1="14" x2="32" y2="14" />
-          <line x1="8" y1="26" x2="32" y2="26" />
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#eef2ff" />
+          <line x1="8" y1="14" x2="32" y2="14" stroke={stroke} strokeWidth="1.5" />
+          <line x1="8" y1="24" x2="32" y2="24" stroke={stroke} strokeWidth="1.5" />
+          <GolaClip />
         </svg>
       );
     case 'FREG':
       return (
-        <svg viewBox="0 0 40 40" className={className} fill="none" stroke={stroke} strokeWidth={strokeWidth}>
-          <rect x="8" y="4" width="24" height="32" rx="1" />
-          <path d="M12 10 Q20 12 28 10" strokeOpacity="0.5" />
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#eef2ff" />
+          <ellipse cx="20" cy="20" rx="8" ry="6" stroke={stroke} strokeWidth="1.5" fill="#c7d2fe" />
           <GolaClip />
         </svg>
       );
     case '1P':
       return (
-        <svg viewBox="0 0 40 40" className={className} fill="none" stroke={stroke} strokeWidth={strokeWidth}>
-          <rect x="8" y="4" width="24" height="32" rx="1" />
-          <circle cx="12" cy="20" r="1.5" fill={stroke} />
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#eef2ff" />
+          <circle cx="28" cy="20" r="2" fill={stroke} />
           <GolaClip />
         </svg>
       );
     case '2P':
       return (
-        <svg viewBox="0 0 40 40" className={className} fill="none" stroke={stroke} strokeWidth={strokeWidth}>
-          <rect x="8" y="4" width="24" height="32" rx="1" />
-          <line x1="20" y1="4" x2="20" y2="36" />
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#eef2ff" />
+          <line x1="20" y1="4" x2="20" y2="36" stroke={stroke} strokeWidth="1.5" />
+          <circle cx="14" cy="20" r="1.5" fill={stroke} />
+          <circle cx="26" cy="20" r="1.5" fill={stroke} />
+          <GolaClip />
+        </svg>
+      );
+    case '1V':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#eef2ff" />
+          <rect x="12" y="8" width="16" height="20" rx="1" stroke={stroke} strokeWidth="1" fill="#dbeafe" />
+          <circle cx="28" cy="20" r="2" fill={stroke} />
+          <GolaClip />
         </svg>
       );
     default:
       return (
-        <svg viewBox="0 0 40 40" className={className} fill="none" stroke={stroke} strokeWidth={strokeWidth}>
-          <rect x="10" y="6" width="20" height="28" rx="1" strokeDasharray="2 2" strokeOpacity="0.3" />
-          <text x="20" y="24" textAnchor="middle" fontSize="8" fill={stroke} fillOpacity="0.4" fontStyle="italic" fontWeight="bold">REF</text>
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#eef2ff" />
+          <circle cx="28" cy="20" r="2" fill={stroke} />
         </svg>
       );
   }
