@@ -116,15 +116,40 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   }, []);
 
   // Función helper para detectar tipo de mueble especial
-  const getSpecialType = useCallback((code) => {
+  const getSpecialType = useCallback((code, name) => {
     const c = code?.toUpperCase() || '';
+    const n = name?.toUpperCase() || '';
+    
+    // Por código primero
     if (c.includes('AM') || c.includes('BM')) return 'MICRO';
-    if (c.includes('CHM')) return 'HORNO+MICRO';
-    if (c.includes('CH') || c.includes('BH')) return 'HORNO';
+    if (c.includes('CHM') || c.includes('PHM') || c.includes('VHM')) return 'HORNO+MICRO';
+    if (c.includes('CH') || c.includes('BH') || c.includes('PH') || c.includes('VH')) return 'HORNO';
     if (c.includes('BP')) return 'PLACA';
     if (c.includes('BF')) return 'FREG';
     if (c.includes('AT')) return 'TERMO';
     if (c.includes('AE')) return 'ESCURRE';
+    if (c.includes('AC')) return 'CAMPANA';
+    if (c.includes('PE') || c.includes('PEL') || c.includes('PEB')) return 'EXTRAÍBLE';
+    if (c.includes('BOT')) return 'BOTELLERO';
+    if (c.includes('ESC')) return 'ESCOBERO';
+    if (c.includes('FRI')) return 'FRIGO';
+    
+    // Por nombre si no se detectó por código
+    if (n.includes('MICROONDAS') || n.includes('MICRO')) return 'MICRO';
+    if (n.includes('HORNO') && n.includes('MICRO')) return 'HORNO+MICRO';
+    if (n.includes('HORNO')) return 'HORNO';
+    if (n.includes('PLACA') || n.includes('VITRO')) return 'PLACA';
+    if (n.includes('FREGADERO') || n.includes('FREG')) return 'FREG';
+    if (n.includes('TERMO') || n.includes('CALENTADOR')) return 'TERMO';
+    if (n.includes('ESCURREPLATOS') || n.includes('ESCURRE')) return 'ESCURRE';
+    if (n.includes('CAMPANA')) return 'CAMPANA';
+    if (n.includes('EXTRAIBLE') || n.includes('EXTRAÍBLE')) return 'EXTRAÍBLE';
+    if (n.includes('BOTELLERO')) return 'BOTELLERO';
+    if (n.includes('ESCOBERO')) return 'ESCOBERO';
+    if (n.includes('FRIGO') || n.includes('FRIGORÍFICO')) return 'FRIGO';
+    if (n.includes('CACEROLERO')) return 'CAJONES';
+    if (n.includes('CAJONES') || n.includes('CAJÓN')) return 'CAJONES';
+    
     return null;
   }, []);
 
