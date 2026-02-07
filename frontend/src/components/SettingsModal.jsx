@@ -3441,6 +3441,92 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 </div>
               )}
 
+              {/* Sección: Casco Predeterminado por Serie */}
+              <div className="bg-white border border-amber-200 rounded-xl p-5 mt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl">
+                    <Layers size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-indigo-950 uppercase">Casco Predeterminado por Serie</h4>
+                    <p className="text-xs text-indigo-400">Configura qué armazón usar automáticamente para cada serie de productos</p>
+                  </div>
+                </div>
+                
+                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                  {(() => {
+                    // Obtener todas las series únicas de los productos
+                    const allSeries = new Set();
+                    state.catalogs?.forEach(catalog => {
+                      catalog.products?.forEach(product => {
+                        if (product.series) allSeries.add(product.series);
+                      });
+                    });
+                    const seriesList = Array.from(allSeries).sort();
+                    
+                    if (seriesList.length === 0) {
+                      return (
+                        <div className="text-center py-6 text-slate-400 text-sm">
+                          No hay series disponibles en el catálogo
+                        </div>
+                      );
+                    }
+                    
+                    return seriesList.map(series => {
+                      const currentCarcassId = state.defaultCarcassBySeries?.[series] || '';
+                      return (
+                        <div key={series} className="flex items-center gap-3 bg-slate-50 rounded-lg p-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-indigo-900 truncate" title={series}>{series}</p>
+                          </div>
+                          <select
+                            value={currentCarcassId}
+                            onChange={(e) => {
+                              const newValue = e.target.value;
+                              setState(prev => ({
+                                ...prev,
+                                defaultCarcassBySeries: {
+                                  ...prev.defaultCarcassBySeries,
+                                  [series]: newValue
+                                }
+                              }));
+                            }}
+                            className="w-48 bg-white border border-amber-200 rounded-lg py-2 px-3 text-xs font-bold text-amber-900 outline-none focus:border-orange-500"
+                          >
+                            <option value="">-- Sin predeterminado --</option>
+                            {state.carcassMaterials?.map(mat => (
+                              <option key={mat.id} value={mat.id}>{mat.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+                
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/settings`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ defaultCarcassBySeries: state.defaultCarcassBySeries || {} })
+                        });
+                        alert('Configuración de cascos predeterminados guardada correctamente');
+                      } catch (err) {
+                        console.error('Error saving default carcass settings:', err);
+                        alert('Error al guardar la configuración');
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black uppercase text-xs transition-all shadow-md"
+                  >
+                    <Save size={14} />
+                    Guardar Cascos por Serie
+                  </button>
+                </div>
+              </div>
+
               {/* Info */}
               <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600">
                 <p className="font-bold text-slate-700 mb-1">¿Qué es el incremento de armazón?</p>
