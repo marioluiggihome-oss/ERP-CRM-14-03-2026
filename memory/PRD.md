@@ -1,6 +1,34 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 08/02/2026 (v5.8)
+## Última Actualización: 08/02/2026 (v5.9)
+
+---
+
+## 🆕 ACTUALIZACIÓN 08/02/2026 (v5.9)
+
+### ✅ SEMICOLUMNAS GOLA y COLUMNAS GOLA Añadidas
+
+1. **SEMICOLUMNAS GOLA** (142 productos - código G13SC/G14SC/G16SC):
+   - Productos correctamente categorizados y nombrados
+   - Incluyen: puertas, vitrinas, caceroleros, cajones, horno, micro
+   - Ejemplo: "SEMICOLUMNA GOLA 1 PUERTA 1 CACEROLERO + 1 CAJÓN 40 CMS. ANCHO / FONDO 58 CMS."
+
+2. **COLUMNAS GOLA** (83 productos - código G20CD/G22CD/G24CD):
+   - Productos correctamente categorizados y nombrados  
+   - Incluyen: puertas, vitrinas, caceroleros, cajones, horno, micro, frigorífico
+   - Ejemplo: "COLUMNA GOLA 2 PUERTAS 60 CMS. ANCHO / FONDO 58 CMS."
+
+### ✅ Resumen de Categorías Actualizadas:
+| Categoría | Cantidad |
+|-----------|----------|
+| ALTOS | 2,126 |
+| ALTOS GOLA | 1,792 |
+| BAJOS | 1,073 |
+| BAJOS GOLA | 395 |
+| SEMICOLUMNAS | 238 |
+| SEMICOLUMNAS GOLA | 142 |
+| COLUMNAS | 123 |
+| COLUMNAS GOLA | 83 |
 
 ---
 
