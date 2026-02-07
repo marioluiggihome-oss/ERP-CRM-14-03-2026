@@ -1215,32 +1215,47 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                 <table className="w-full text-left">
                   <thead className="bg-indigo-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
                     <tr>
-                      <th className="p-2 pl-3 w-[90px]">REF</th>
-                      <th className="p-2 min-w-[200px]">DESCRIPCIÓN</th>
-                      <th className="p-2 text-center w-[70px]">ANCHO</th>
-                      <th className="p-2 text-center w-[60px]">ALTO</th>
-                      <th className="p-2 text-center w-[60px]">FONDO</th>
-                      <th className="p-2 text-center w-[70px]">PUNTOS</th>
-                      <th className="p-2 pr-3 text-right w-[50px]"></th>
+                      <th className="p-2 pl-3 w-[45px]"></th>
+                      <th className="p-2 w-[90px]">REF</th>
+                      <th className="p-2 min-w-[180px]">DESCRIPCIÓN</th>
+                      <th className="p-2 text-center w-[55px]">AN</th>
+                      <th className="p-2 text-center w-[55px]">AL</th>
+                      <th className="p-2 text-center w-[55px]">FO</th>
+                      <th className="p-2 text-center w-[60px]">PTS</th>
+                      <th className="p-2 pr-3 text-right w-[40px]"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-50">
-                    {filteredCatalog.map(p => (
-                      <tr key={p.id} className="hover:bg-orange-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
-                        <td className="p-2 pl-3 font-bold text-indigo-900 text-[11px] w-[90px]">{p.code}</td>
-                        <td className="p-2 min-w-[200px]">
-                          <div className="text-[11px] font-bold text-indigo-600 uppercase">{p.name}</div>
-                          {p.series && <div className="text-[9px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
-                        </td>
-                        <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[70px]">{p.width ? Math.round(p.width) : '-'}</td>
-                        <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[60px]">{p.height || '-'}</td>
-                        <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[60px]">{p.depth || '-'}</td>
-                        <td className="p-2 text-center font-black text-orange-600 text-[12px] w-[70px]">
-                          {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
-                        </td>
-                        <td className="p-2 pr-3 text-right w-[50px]"><Plus size={16} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
-                      </tr>
-                    ))}
+                    {filteredCatalog.map(p => {
+                      // Determinar tipo de icono basado en el código
+                      const code = p.code?.toUpperCase() || '';
+                      const isGola = code.startsWith('G') && /^G\d/.test(code);
+                      let iconType = '1P';
+                      if (code.includes('2P')) iconType = '2P';
+                      else if (code.includes('3C') || code.includes('2G')) iconType = '3C';
+                      else if (code.includes('BF') || code.includes('FREG')) iconType = 'FREG';
+                      else if (code.includes('HK') || code.includes('HS') || code.includes('HL') || code.includes('HF')) iconType = 'HK-TOP';
+                      
+                      return (
+                        <tr key={p.id} className="hover:bg-orange-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
+                          <td className="p-1 pl-2 w-[45px]">
+                            <CabinetIcon type={iconType} isGola={isGola} className="w-8 h-8 text-indigo-400" />
+                          </td>
+                          <td className="p-2 font-bold text-indigo-900 text-[11px] w-[90px]">{p.code}</td>
+                          <td className="p-2 min-w-[180px]">
+                            <div className="text-[10px] font-bold text-indigo-600 uppercase">{p.name}</div>
+                            {p.series && <div className="text-[8px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
+                          </td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.width ? Math.round(p.width) : '-'}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
+                          <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
+                            {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
+                          </td>
+                          <td className="p-2 pr-3 text-right w-[40px]"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
              </div>
