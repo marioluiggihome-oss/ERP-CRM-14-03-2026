@@ -146,6 +146,26 @@ const ClientSelector = ({
     setSearchQuery('');
   };
 
+  const handleDeleteClient = async (e, clientId) => {
+    e.stopPropagation();
+    if (!confirm('¿Seguro que quieres eliminar este cliente?')) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/crm/contacts/${clientId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) throw new Error('Error deleting contact');
+      
+      // Remove from local list
+      setClients(prev => prev.filter(c => c.id !== clientId));
+      setFilteredClients(prev => prev.filter(c => c.id !== clientId));
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      alert('Error al eliminar el cliente');
+    }
+  };
+
   const handleCreateClient = async () => {
     if (!newClientName.trim()) return;
 
