@@ -147,6 +147,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     
     const filtered = allProducts.filter(p => {
       const codeUpper = p.code?.toUpperCase() || '';
+      const nameUpper = p.name?.toUpperCase() || '';
       const nameLower = p.name?.toLowerCase() || '';
       
       // Búsqueda estándar por código y nombre
@@ -154,9 +155,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       
       // Si no coincide, buscar por términos de herraje
       if (!matchesSearch && q) {
-        const hardwareCode = hardwareSearchTerms[q];
-        if (hardwareCode && codeUpper.includes(hardwareCode)) {
-          matchesSearch = true;
+        const hardwareText = hardwareSearchTerms[q];
+        if (hardwareText) {
+          // Buscar en código O en nombre
+          if (codeUpper.includes(hardwareText) || nameUpper.includes(hardwareText)) {
+            matchesSearch = true;
+          }
         }
         
         // Buscar por tipo especial (horno, micro, etc.)
