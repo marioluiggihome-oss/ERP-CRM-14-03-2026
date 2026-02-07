@@ -81,8 +81,31 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     });
   }, [items, allProducts]);
 
+  // Función helper para detectar tipo de herraje del código
+  const getHardwareType = useCallback((code) => {
+    const c = code?.toUpperCase() || '';
+    if (c.includes('HK')) return 'HK';
+    if (c.includes('HS')) return 'HS';
+    if (c.includes('HL')) return 'HL';
+    if (c.includes('HF')) return 'HF';
+    return null;
+  }, []);
+
+  // Función helper para detectar tipo de mueble especial
+  const getSpecialType = useCallback((code) => {
+    const c = code?.toUpperCase() || '';
+    if (c.includes('AM') || c.includes('BM')) return 'MICRO';
+    if (c.includes('CHM')) return 'HORNO+MICRO';
+    if (c.includes('CH') || c.includes('BH')) return 'HORNO';
+    if (c.includes('BP')) return 'PLACA';
+    if (c.includes('BF')) return 'FREG';
+    if (c.includes('AT')) return 'TERMO';
+    if (c.includes('AE')) return 'ESCURRE';
+    return null;
+  }, []);
+
   const filteredCatalog = useMemo(() => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
     
     // Orden según el catálogo PDF TARIFA-TECNICA-ZONACOCINAS
     // 1. ALTOS (primero en parte 1)
@@ -99,9 +122,52 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       'ACCESORIO': 7, 'ACCESORIOS': 7,
       'OTRO': 8, 'OTROS': 8
     };
+
+    // Mapeo de términos de búsqueda para herrajes
+    const hardwareSearchTerms = {
+      'hk': 'HK', 'lift top': 'HK', 'lifttop': 'HK',
+      'hs': 'HS', 'servo': 'HS', 'servo-drive': 'HS', 'servodrive': 'HS',
+      'hl': 'HL', 'lift': 'HL',
+      'hf': 'HF', 'free fold': 'HF', 'freefold': 'HF', 'free-fold': 'HF'
+    };
+
+    // Mapeo de términos de búsqueda para tipos especiales
+    const specialSearchTerms = {
+      'micro': ['AM', 'BM'], 'microondas': ['AM', 'BM'],
+      'horno': ['CH', 'BH', 'CHM'], 'oven': ['CH', 'BH', 'CHM'],
+      'placa': ['BP'], 'vitro': ['BP'], 'vitroceramica': ['BP'],
+      'freg': ['BF'], 'fregadero': ['BF'], 'sink': ['BF'],
+      'termo': ['AT'], 'calentador': ['AT'],
+      'escurre': ['AE'], 'escurreplatos': ['AE']
+    };
     
     const filtered = allProducts.filter(p => {
-      const matchesSearch = p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q);
+      const codeUpper = p.code?.toUpperCase() || '';
+      const nameLower = p.name?.toLowerCase() || '';
+      
+      // Búsqueda estándar por código y nombre
+      let matchesSearch = codeUpper.toLowerCase().includes(q) || nameLower.includes(q);
+      
+      // Si no coincide, buscar por términos de herraje
+      if (!matchesSearch && q) {
+        const hardwareCode = hardwareSearchTerms[q];
+        if (hardwareCode && codeUpper.includes(hardwareCode)) {
+          matchesSearch = true;
+        }
+        
+        // Buscar por tipo especial (horno, micro, etc.)
+        if (!matchesSearch) {
+          for (const [term, codes] of Object.entries(specialSearchTerms)) {
+            if (term.includes(q) || q.includes(term)) {
+              if (codes.some(c => codeUpper.includes(c))) {
+                matchesSearch = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+      
       const isCorrectModule = catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule;
       const matchesSeries = selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
       const matchesCategory = selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
