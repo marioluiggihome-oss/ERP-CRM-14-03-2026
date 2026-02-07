@@ -1231,13 +1231,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                           <div className="text-[11px] font-bold text-indigo-600 uppercase">{p.name}</div>
                           {p.series && <div className="text-[9px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                         </td>
-                        <td className="p-3 text-center font-bold text-slate-600 text-[12px]">{p.width ? Math.round(p.width / 10) : '-'}</td>
-                        <td className="p-3 text-center font-bold text-slate-600 text-[12px]">{p.height || '-'}</td>
-                        <td className="p-3 text-center font-bold text-slate-600 text-[12px]">{p.depth || '-'}</td>
-                        <td className="p-3 text-center font-black text-orange-600 text-[14px]">
+                        <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[70px]">{p.width ? Math.round(p.width / 10) : '-'}</td>
+                        <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[60px]">{p.height || '-'}</td>
+                        <td className="p-2 text-center font-bold text-slate-600 text-[11px] w-[60px]">{p.depth || '-'}</td>
+                        <td className="p-2 text-center font-black text-orange-600 text-[12px] w-[70px]">
                           {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
                         </td>
-                        <td className="p-3 pr-4 text-right"><Plus size={18} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
+                        <td className="p-2 pr-3 text-right w-[50px]"><Plus size={16} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
                       </tr>
                     ))}
                   </tbody>
