@@ -1318,11 +1318,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                   </div>
                 </div>
 
-                {/* Lista de productos */}
+                {/* Lista de productos - más compacta */}
                 <div className="flex-1 overflow-y-auto">
-                  <div className="divide-y divide-indigo-50">
+                  <div className="divide-y divide-indigo-50/50">
                     {filteredCatalog.map(p => {
-                      // Determinar tipo de icono basado en el código
                       const code = p.code?.toUpperCase() || '';
                       const isGola = code.startsWith('G') && /^G\d/.test(code);
                       let iconType = '1P';
@@ -1334,25 +1333,22 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       return (
                         <div 
                           key={p.id} 
-                          className="p-2 hover:bg-orange-50 cursor-pointer transition-colors group"
+                          className="px-2 py-1.5 hover:bg-orange-50 cursor-pointer transition-colors group"
                           onClick={() => addItemToBudget(p)}
                         >
-                          <div className="flex items-center gap-2">
-                            <CabinetIcon type={iconType} isGola={isGola} className="w-9 h-9 text-indigo-400 shrink-0" />
+                          <div className="flex items-center gap-1.5">
+                            <CabinetIcon type={iconType} isGola={isGola} className="w-7 h-7 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div className="text-[11px] font-black text-indigo-900 truncate">{p.code}</div>
-                              <div className="text-[9px] font-bold text-indigo-500 uppercase truncate">{p.name}</div>
-                              {p.series && <div className="text-[8px] text-orange-500 font-medium">{p.series}</div>}
-                            </div>
-                            <div className="text-right shrink-0">
-                              <div className="text-[9px] text-slate-500 font-medium">
-                                {p.width ? Math.round(p.width) : '-'} × {p.height || '-'} × {p.depth || '-'}
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-black text-indigo-900">{p.code}</span>
+                                <span className="text-[10px] font-black text-orange-600">{typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}</span>
                               </div>
-                              <div className="text-[11px] font-black text-orange-600">
-                                {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0} pts
+                              <div className="text-[8px] font-bold text-indigo-500 uppercase truncate leading-tight">{p.name}</div>
+                              <div className="text-[7px] text-slate-400">
+                                {p.width ? Math.round(p.width) : '-'}×{p.height || '-'}×{p.depth || '-'} cm
                               </div>
                             </div>
-                            <Plus size={14} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"/>
+                            <Plus size={12} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"/>
                           </div>
                         </div>
                       );
