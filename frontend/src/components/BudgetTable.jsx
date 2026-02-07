@@ -122,11 +122,13 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       'BAJO': 3, 'BAJOS': 3,
       'BAJOS GOLA': 4,
       'SEMICOLUMNA': 5, 'SEMICOLUMNAS': 5,
-      'COLUMNA': 6, 'COLUMNAS': 6,
-      'ELECTRO': 7, 'ELECTRODOMESTICOS': 7,
-      'PUERTAS': 8, 'PUERTAS Y VITRINAS': 8,
-      'ACCESORIO': 9, 'ACCESORIOS': 9,
-      'OTRO': 10, 'OTROS': 10
+      'SEMICOLUMNAS GOLA': 6,
+      'COLUMNA': 7, 'COLUMNAS': 7,
+      'COLUMNAS GOLA': 8,
+      'ELECTRO': 9, 'ELECTRODOMESTICOS': 9,
+      'PUERTAS': 10, 'PUERTAS Y VITRINAS': 10,
+      'ACCESORIO': 11, 'ACCESORIOS': 11,
+      'OTRO': 12, 'OTROS': 12
     };
 
     // Mapeo de términos de búsqueda para herrajes
