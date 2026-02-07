@@ -6,6 +6,7 @@ import { DOOR_FINISHES, CabinetCategory } from '../constants';
 import Logo from './Logo';
 import DespieceModal from './DespieceModal';
 import ClientSelector from './ClientSelector';
+import CabinetIcon from './CabinetIcon';
 
 const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpenManufacturing }) => {
   const [searchQuery, setSearchQuery] = useState('');
