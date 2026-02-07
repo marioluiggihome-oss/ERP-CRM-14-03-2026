@@ -1,6 +1,47 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 08/02/2026 (v5.9)
+## Última Actualización: 08/02/2026 (v5.10)
+
+---
+
+## 🆕 ACTUALIZACIÓN 08/02/2026 (v5.10)
+
+### ✅ Filtro de Categorías Actualizado
+Todas las categorías GOLA ahora aparecen en el dropdown ordenadas:
+1. ALTOS
+2. ALTOS GOLA
+3. BAJOS
+4. BAJOS GOLA  
+5. SEMICOLUMNAS
+6. SEMICOLUMNAS GOLA
+7. COLUMNAS
+8. COLUMNAS GOLA
+
+### ✅ Iconos para Muebles Especiales
+Nuevos iconos añadidos a CabinetIcon.jsx:
+- **CAMPANA** - Extractor de cocina
+- **EXTRAÍBLE** - Muebles con sistema extraíble
+- **BOTELLERO** - Organizador de botellas
+- **ESCOBERO** - Almacenamiento de escobas
+- **FRIGORÍFICO** - Muebles para frigorífico
+- **CAJONES/CACEROLEROS** - Muebles con cajones
+
+### ✅ Detección Mejorada de Tipos Especiales
+La función `getSpecialType` ahora detecta por código Y por nombre:
+- Micro, Horno, Horno+Micro
+- Placa/Vitrocerámica
+- Fregadero, Termo, Escurreplatos
+- Campana, Extraíble, Botellero
+- Escobero, Frigorífico, Cajones
+
+### ✅ Badges de Colores para Tipos Especiales
+Nuevos colores de badges:
+- CAMPANA: Púrpura
+- EXTRAÍBLE: Lima
+- BOTELLERO: Rosa
+- ESCOBERO: Piedra
+- FRIGO: Cyan
+- CAJONES: Amarillo
 
 ---
 
