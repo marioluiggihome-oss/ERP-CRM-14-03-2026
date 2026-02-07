@@ -41,6 +41,9 @@ const ClientSelector = ({
     currentUser.isResponsableDelegacion
   );
 
+  // Check if user can delete clients (only admin)
+  const canDeleteClients = currentUser && currentUser.isAdmin;
+
   // Fetch clients on mount
   useEffect(() => {
     if (canAccessClients) {
