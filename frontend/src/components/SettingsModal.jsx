@@ -2876,6 +2876,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 </td>
                                 <td className="p-3 text-xs font-black text-orange-600 uppercase">{product.code}</td>
                                 <td className="p-3 text-xs font-bold text-slate-900">{product.name}</td>
+                                <td className="p-3 text-[10px] font-bold text-amber-800 bg-amber-50 max-w-[150px] truncate" title={product.series || 'Sin serie'}>{product.series || '-'}</td>
+                                <td className="p-3 text-center text-xs font-bold text-amber-800 bg-amber-50">{product.depth || '-'}</td>
                                 {inventoryModule === 'montada' ? (
                                   <>
                                     <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z1 || product.points || 0}</td>
