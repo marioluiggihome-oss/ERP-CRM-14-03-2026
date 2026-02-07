@@ -20,164 +20,164 @@ Feature requests have been provided incrementally through PowerPoint presentatio
 14. **UI/UX:** Continuous UI improvements based on user feedback.
 15. **Distributor Registration:** A system for new distributors to request access.
 16. **Multi-catalog support.**
+17. **Default Cabinet Shell (Casco):** Allow setting a default casco for each product series.
+18. **Special Cabinet Shell Series:** Add new series for special cascos.
+19. **Zero-Cost Cabinet Shells:** Implement a mechanism to handle cascos with no cost.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack application (React + FastAPI + MongoDB) for kitchen business management. This session involved a significant number of bug fixes and UI/UX enhancements based on rapid user feedback.
+A full-stack React/FastAPI/MongoDB application for kitchen business management. This session was heavily focused on addressing critical data integrity issues within the product catalog, as requested by the user.
 
-Key accomplishments include fixing the invisible Panel Director content, resolving a bug that prevented Corte de Viga price changes from being saved, updating prices for all 1642 GOLA products in the database, and fixing multiple issues with adding products from the IA Lab. The agent also made extensive improvements to PDF generation for budgets and manufacturing reports, fixing layouts, capitalization, logo distortion, and content accuracy (like including special cuts). A recurring and critical client deletion bug was investigated multiple times, but persists for the user. An email template redesign was started but interrupted.
+The agent performed a deep audit of the MongoDB  collection using a series of Python scripts, identifying and automatically correcting numerous issues related to pricing, product series, and dimensions.
+
+To empower the user to conduct their own audits, the agent significantly enhanced the Inventario (Inventory) section of the MASTER settings panel. New frontend features were added, including filters for product series and products with no price, and new SERIE and FONDO (depth) columns were added to the inventory table for better visibility.
+
+After the initial audit and correction, the user requested a full, meticulous import of the complete product catalog, which they are providing in four parts. The agent has successfully received and performed an initial data extraction on Part 1.
 
 **Last working item**:
-- Last item agent was working: The agent was interrupted while refactoring the order confirmation email template. The user reported for a third time that they are unable to delete a client (cocinas perez, s.l.), receiving a body stream already read error, and provided a screenshot. The email refactor task was left with linting errors in .
+- Last item agent was working: The agent is processing the first part of a complete product catalog overhaul. The user provided , and the agent has successfully extracted the text content. The immediate next step is to parse this data, compare it against the existing database, and generate a script to perform the necessary inserts and updates for Part 1.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? both
+- Which testing method agent to use? backend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Critical Client Deletion Error (P0)**
-  - Description: Deleting a client from the UI consistently fails for the user with a body stream already read error, despite the agent confirming the API works via  and fixing the frontend code. This is a highly recurring issue and a blocker for the user.
+- **Issue 1: Catalog Data Integrity (P0)**
+  - Description: The product catalog suffers from widespread inconsistencies, including products with zero price, incorrect series, and wrong dimensions. An initial audit and correction were performed. The task has now evolved into a full catalog re-import based on user-provided PDFs.
   - Status: IN PROGRESS
   - Is recurring issue? Y
-  - Blocked on other issue: None
-- **Issue 2: Manual Lines Not in Despiece (P1)**
-  - Description: The user reported that manually added lines in a budget are not appearing in the Despiece (Bill of Materials). The agent removed a filter that was excluding them. This fix needs user verification.
+  - Should Test frontend/backend/both after fix? both
+- **Issue 2: Critical Client Deletion Error (P1)**
+  - Description: A highly recurring bug preventing users from deleting clients. The last attempted fix (switching from  to ) is awaiting user validation. The user has deprioritized this in favor of the catalog fix.
   - Status: USER VERIFICATION PENDING
-- **Issue 3: Critical Frontend Stability ( error) (from previous fork) (P2)**
+  - Is recurring issue? Y
+  - Should Test frontend/backend/both after fix? frontend
+- **Issue 3: IA Lab Furniture Price Accuracy (P2)**
+  - Description: An enhancement for the AI to look up catalog prices for detected furniture is awaiting user testing and confirmation.
+  - Status: USER VERIFICATION PENDING
+  - Is recurring issue? N
+  - Should Test frontend/backend/both after fix? both
+- **Issue 4: Manual Lines Not in Despiece (from previous fork) (P2)**
+  - Description: A fix to include manually added budget lines in the Despiece (Bill of Materials) is awaiting user confirmation.
+  - Status: USER VERIFICATION PENDING
+  - Is recurring issue? N
+  - Should Test frontend/backend/both after fix? both
+- **Issue 5: Critical Frontend Stability ( error) (from previous fork) (P3)**
   - Description: A recurring React DOM crash noted in a previous handoff remains unaddressed and poses a stability risk.
   - Status: NOT STARTED
   - Is recurring issue? Y
   - Should Test frontend/backend/both after fix? frontend
-- **Issue 4: Despiece Calculation Logic Confirmation (from previous fork) (P2)**
-  - Description: The user needs to review and confirm if the backend logic for despiece calculation matches their manufacturing process.
-  - Status: USER VERIFICATION PENDING
-  - Blocked on: User feedback.
 
 **In progress Task List**:
-- **Task 1: Finish Order Confirmation Email Refactor (P1)**
-  - Where to resume: The backend email template in  has been updated with new HTML. However, the frontend call in  is broken and has linting errors (e.g.,  is not defined). These errors must be fixed to complete the feature.
-  - What will be achieved with this? A professionally styled order confirmation email with corporate branding.
+- **Task 1: Full Product Catalog Import (P0)**
+  - Description: The user is providing the complete product catalog in 4 PDF parts. The agent must meticulously extract, process, and import/update each part into the database, providing a summary to the user after each part is processed.
+  - Where to resume: The agent has extracted the data from . The next step is to write and execute a Python script to parse the extracted text, handle existing vs. new products, and update the MongoDB  collection.
   - Status: IN PROGRESS
-  - Should Test frontend/backend/both after fix? backend
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-  - (P1) **CSV Export with Multiple Sheets**: Implement the user's request for a multi-sheet export for the cutting machine (customer data on one sheet, cut list on another).
-  - (P1) **Import Missing Prices**: Populate prices for the remaining ~49 non-GOLA products.
-  - (P1) **Create Admin Panel for Distributor Requests**: Build a UI for administrators to approve or reject pending distributor registrations.
+  - (P1) **Complete Catalog Import (Parts 2, 3, 4)**: Continue the import process as the user provides the remaining files.
+  - (P1) **Set Default Casco per Series**: Implement UI and backend logic to allow setting a default cabinet shell for each product series, as per the user's  file.
+  - (P1) **Add Special Casco Series & Zero-Cost Logic**: Add new series for special shells and implement the logic for zero-cost shells.
+  - (P2) **Implement New CRM and Order Management Workflow**: This multi-part feature (preventing duplicate opportunities, creating an order backoffice) was the previous P0 and is now on hold until the catalog is fixed.
+  - (P2) **CSV Export with Multiple Sheets**: Implement the user's request for a multi-sheet export.
+  - (P2) **Create Admin Panel for Distributor Requests**: Build a UI for administrators to approve or reject registrations.
 - **Future Tasks:**
-  - (P2) **Backend Refactoring**: Decompose the monolithic .
-  - (P2) **Frontend Refactoring**: Decompose the monolithic .
-  - (P2) Create an admin dashboard to view audit logs ().
-  - (P2) Add automated reminders for calendar events in the CRM.
+  - (P2) **Define Collaborator Assignment Rules**: Requires user clarification on business logic.
+  - (P3) **Backend Refactoring**: Decompose the monolithic .
+  - (P3) **Frontend Refactoring**: Decompose the monolithic  and .
+  - (P3) Create an admin dashboard to view audit logs.
+  - (P3) Add automated reminders for calendar events in the CRM.
 
 **Completed work in this session**
-- **Critical Bug Fixes**:
-  - **Panel Director**: Fixed the Panel Director tab to correctly render its content within the MASTER modal.
-  - **IA Lab Integration**: Resolved issues preventing IA Lab furniture from being added to budgets, ensuring they appear with correct dimensions and a distinct style, not as REFERENCIA DESCONOCIDA.
-  - **Budget Number Duplication**: Implemented a check on save to warn the user if a budget number already exists and ask for confirmation to overwrite.
-- **Data & Pricing**:
-  - **GOLA Price Update**: Successfully identified and updated all 1642 GOLA products, including 34 that were missing prices, using data extracted from a user-provided PDF.
-- **UI/UX Enhancements**:
-  - **Inventory View**: Removed furniture icons for a cleaner look.
-  - **Settings Persistence**: Added a Guardar button to persist pricing settings like Corte de Viga.
-  - **Uppercase Text**: Modified input fields to preserve uppercase characters entered by the user.
-  - **Special Cuts Display**: Consolidated the CORTE VIGA indicator to appear alongside other special cuts (Ancho, Alto, Fondo) for consistency.
-- **PDF Generation Overhaul**:
-  - **Manufacturing Report PDF**: Replaced  with a proper, paginated  export to handle large reports correctly.
-  - **Logo Aspect Ratio**: Fixed distorted logos in all PDFs by dynamically calculating and preserving the aspect ratio.
-  - **Content & Layout**: Added a NOTAS column to the budget PDF, included all special cuts in the manufacturing report PDF, improved capitalization, and redesigned the budget PDF footer.
-- **Business Logic**:
-  - **Manual Lines**: Corrected logic to ensure manual lines appear in the Despiece but are excluded from the Informe de Fabricación.
+- **Product Catalog Audit & Correction**: Performed a comprehensive audit of the  collection using Python scripts. Automatically corrected several data issues, such as standardizing series names and fixing depth values.
+- **Developed Catalog Audit UI**: Enhanced the Inventario tab in the MASTER settings panel () by adding:
+    - A dropdown filter for all product series.
+    - A filter button for products with zero price.
+    - SERIE and FONDO columns to the inventory table for improved data visibility.
+- **Initiated Full Catalog Import**: Received and performed initial data extraction on Part 1 of the complete product catalog provided by the user.
 
 **Earlier issues found/mentioned but not fixed**
--   **Overlapping UI Fields**: Blocked on user input for reproduction steps.
+- **Overlapping UI Fields**: Blocked on user input for reproduction steps.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Critical Frontend Stability ( error).
--   **Recurrence count:** 2
--   **Status:** NOT STARTED
+- **Issue recurrence in previous fork:** Critical Client Deletion Bug.
+- **Recurrence count:** 3+
+- **Status:** USER VERIFICATION PENDING
+- **Issue recurrence in previous fork:** Critical Frontend Stability ( error).
+- **Recurrence count:** 2
+- **Status:** NOT STARTED
 
 **Code Architecture**
 
+*(Note: Several temporary Python scripts were created in  for DB auditing and correction but are not part of the permanent codebase.)*
 
 **Key Technical Concepts**
-- **Frontend:** React, TailwindCSS, , .
-- **Backend:** Python, FastAPI, Pydantic, Motor (async MongoDB driver), SendGrid.
-- **Data Operations:** Data extraction from PDF, batch updates to MongoDB via custom Python scripts and new API endpoints.
+- **Database Auditing & Correction:** Using Python with  to connect to MongoDB, run complex aggregations to analyze data quality, and perform bulk updates.
+- **Frontend Development (React):** Modifying a large existing component () to add new state (), UI controls (select, button), conditional rendering, and dynamic table columns to enhance functionality.
+- **Data Extraction:** Using  to parse text content from a user-uploaded PDF for data import.
 
 **key DB schema**
-- **products**: 
-- **settings**:  (new field added)
-
-**changes in tech stack**
-- None.
+- No schema changes. All work focused on data manipulation within the existing  collection.
 
 **All files of reference**
--   
--   
--   
--   
--   
--   
--   
--   
--   
+-  (Heavily Modified)
+-  (Read for context)
+-  (New user requirements document)
+-  (Data source for the current import task)
 
 **Areas that need refactoring**:
--   **Backend Monolith:**  is critically overdue for refactoring. The embedded HTML for the confirmation email should be moved to a template file.
--   **Frontend Monoliths:**  and  are extremely large and complex.
--   **PDF Generation:**  now contains multiple large functions for generating different PDFs and could be broken into smaller, more focused modules.
+- **Backend Monolith:**  is critically overdue for decomposition.
+- **Frontend Monoliths:**  has grown even larger and more complex, making it a prime candidate for being broken down into smaller, manageable components.  also remains a large component.
 
 **key api endpoints**
--   ****: **CRITICAL ISSUE.** Fails for the user in the UI despite passing  tests.
--   ****: New endpoint to update only product prices.
--   ****: New endpoint to check for duplicate budget numbers.
--   ****: Backend template updated, but frontend call is broken.
+- No API endpoints were created or modified in this session. All database work was performed via direct-access scripts.
 
 **Critical Info for New Agent**
--   **PRIORITY #1: Client Deletion Bug.** This is a highly frustrating, recurring bug for the user. Do not assume it is a browser cache issue again. A deep-dive investigation is required. Check network logs in the browser's developer tools when the user performs the action, inspect the exact request and response, and consider potential race conditions or state management issues in React that  would not reveal.
--   **Finish the Email Refactor:** The order confirmation email task is incomplete. You must fix the linting errors in  to correctly pass the material and finish specifications to the backend.
--   **Verify Recent Fixes:** Many fixes were implemented in this session (manual lines in despiece, uppercase text, etc.). The user may not have had a chance to test them all. Be prepared for feedback on these items.
+- **PRIORITY #1: Complete the Catalog Import.** The user has shifted all focus to correcting the product catalog. Your immediate task is to parse the data extracted from  and import it into the database. You must be meticulous, handle updates vs. new entries correctly, and provide a summary of changes to the user before requesting Part 2.
+- **New Requirements from DOCX:** The user uploaded . This contains new high-priority requirements about setting default cascos (cabinet shells) per series. Plan to address these *after* the full catalog import is complete.
+- **Deprioritized Tasks:** The CRM/Order workflow tasks from the last fork are now on hold. Do not work on them until the catalog is fixed and the user approves shifting focus.
+- **Verify Old Fixes:** The critical client deletion bug still needs user verification. It is a major source of user frustration, so once the catalog work is done, it is important to circle back and confirm if the last fix was successful.
 
 **documents and test reports created in this job**
-- /app/memory/PRD.md (updated)
+- User Upload: 
+- User Upload: 
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Reports that the order confirmation email needs to be redesigned with corporate branding and sent for testing. (IN PROGRESS)
-9.  **User:** Reports that corte de viga should also be reflected in the manufacturing order PDF. (DONE)
-8.  **User:** Asks for corte de viga to also be added to PDF exports. (DONE)
-7.  **User:** Wants the corte de viga indicator to be shown visually when active. (DONE)
-6.  **User:** Reports distorted logo in PDF exports and asks for it to maintain proportions. (DONE)
-5.  **User:** Reports the manufacturing report PDF has a bad layout with multiple items. (DONE)
-4.  **User:** Clarifies that an issue with a PDF is related to the Orden de Fabricación report. (DONE)
-3.  **User:** Reports that fields are not showing up correctly when printing a PDF. (DONE)
-2.  **User:** Reports that the manufacturing report is missing the COSTADOS/VISTOS and P. COLUMNA fields. (DONE)
-1.  **User:** Reports that they still cannot delete the client cocinas perez, s.l. and provides a screenshot of the error. (PENDING - **Current P0 task**)
+10. **(upload)** User uploaded .
+9. **revisa todo esto por favor**: User asks the agent to review the new document.
+8. **(agent)** Agent analyzed the doc, saw critical catalog issues, and presented a plan to the user, asking for priority.
+7. **si primero el punto 1, priorizar auditoría y corrección del catálogo**: User confirms that auditing and correcting the catalog is the top priority.
+6. **(agent)** Agent performed the audit/correction, added UI tools, and presented a summary of the work done, asking for the next steps.
+5. **TE PASO EL CATÁLOGO COMPLETO Y LOS REVISAS TODOS Y AÑADES MINUCIOSAMENTE...**: User instructs the agent to prepare for a meticulous, multi-part import of the entire catalog.
+4. **(agent)** Agent confirms readiness and asks for Part 1.
+3. **1ª PARTE**: User message indicating the upload of the first part.
+2. **(upload)** User uploaded .
+1. **(agent)** Agent confirmed receipt of Part 1 and began the analysis. (This is the current state).
 
 **Project Health Check:**
--   **Broken:**
-    -   Client deletion functionality (recurring critical bug).
--   **Mocked:** None
+- **Broken:**
+  - **Catalog Data Integrity:** IN PROGRESS of being fixed via a full re-import.
+  - **Client Deletion:** Potentially still broken from the user's perspective. Awaiting verification.
+- **Mocked:** None
 
 **3rd Party Integrations**
--   **Google Gemini:** Via  (Emergent LLM Key)
--   **SendGrid:** For sending database backups and order/distributor notifications (User API Key).
--   **jspdf:** For PDF generation.
--   **recharts:** For data visualization charts.
+- **Google Gemini:** Via  (Emergent LLM Key)
+- **SendGrid:** For sending emails (User API Key).
+- **jspdf:** For PDF generation.
+- **recharts:** For data visualization charts.
 
 **Testing status**
--   Testing agent used after significant changes: NO
--   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: None
--   Known regressions: The client deletion bug has regressed or was never fully fixed from the user's perspective.
+- Testing agent used after significant changes: NO
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: None
+- Known regressions: The client deletion bug has repeatedly regressed.
 
 **Credentials to test flow:**
--   **User:** MARIO (Director Comercial), **Password:** MARIO
--   **User:** COMERCIAL SALAMANCA (Comercial), **Password:** COMERCIAL
--   **User:** TISA (Tienda), **Password:** TISA
+- **User:** MARIO (Director Comercial), **Password:** MARIO
+- **User:** COMERCIAL SALAMANCA (Comercial), **Password:** COMERCIAL
+- **User:** TISA (Tienda), **Password:** TISA
 
 **What agent forgot to execute**
--   The user's request for a **multi-sheet** CSV export file (from the previous handoff) has not been implemented.
--   The major backend () and frontend () refactoring tasks from previous forks remain pending.</analysis>
+- All previously planned tasks (CRM workflow, CSV export, etc.) were correctly deprioritized based on direct user instruction to focus on the catalog. The clarification on collaborator assignment logic remains pending.</analysis>
