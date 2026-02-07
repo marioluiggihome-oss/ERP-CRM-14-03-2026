@@ -49,7 +49,27 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule
     );
     const categories = new Set(currentModuleProducts.map(p => p.category || 'OTROS'));
-    return Array.from(categories).sort();
+    
+    // Orden de categorías según el catálogo
+    const categoryOrder = {
+      'ALTOS': 1,
+      'ALTOS GOLA': 2,
+      'BAJOS': 3,
+      'BAJOS GOLA': 4,
+      'SEMICOLUMNAS': 5,
+      'SEMICOLUMNAS GOLA': 6,
+      'COLUMNAS': 7,
+      'COLUMNAS GOLA': 8,
+      'ELECTRODOMESTICOS': 9,
+      'ACCESORIOS': 10,
+      'OTROS': 99
+    };
+    
+    return Array.from(categories).sort((a, b) => {
+      const orderA = categoryOrder[a] || 50;
+      const orderB = categoryOrder[b] || 50;
+      return orderA - orderB;
+    });
   }, [allProducts, state.currentModule, catalogs]);
 
   const uniqueSeries = useMemo(() => {
