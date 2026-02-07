@@ -129,10 +129,10 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
 
     // Mapeo de términos de búsqueda para herrajes
     const hardwareSearchTerms = {
-      'hk': 'HK', 'lift top': 'HK', 'lifttop': 'HK',
-      'hs': 'HS', 'servo': 'HS', 'servo-drive': 'HS', 'servodrive': 'HS',
-      'hl': 'HL', 'lift': 'HL',
-      'hf': 'HF', 'free fold': 'HF', 'freefold': 'HF', 'free-fold': 'HF'
+      'hk': 'HK-TOP', 'hk-top': 'HK-TOP', 'hktop': 'HK-TOP', 'aventos hk': 'HK-TOP',
+      'hs': 'HS', 'servo': 'SERVO', 'servo-drive': 'SERVO', 'servodrive': 'SERVO',
+      'hl': 'HL', 'lift': 'LIFT',
+      'hf': 'HF', 'free fold': 'FREE', 'freefold': 'FREE', 'free-fold': 'FREE'
     };
 
     // Mapeo de términos de búsqueda para tipos especiales
