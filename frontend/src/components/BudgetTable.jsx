@@ -1318,9 +1318,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                   </div>
                 </div>
 
-                {/* Lista de productos - más compacta */}
+                {/* Lista de productos - más visible */}
                 <div className="flex-1 overflow-y-auto">
-                  <div className="divide-y divide-indigo-50/50">
+                  <div className="divide-y divide-indigo-100">
                     {filteredCatalog.map(p => {
                       const code = p.code?.toUpperCase() || '';
                       const isGola = code.startsWith('G') && /^G\d/.test(code);
@@ -1333,22 +1333,25 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       return (
                         <div 
                           key={p.id} 
-                          className="px-2 py-1.5 hover:bg-orange-50 cursor-pointer transition-colors group"
+                          className="p-3 hover:bg-orange-50 cursor-pointer transition-colors group"
                           onClick={() => addItemToBudget(p)}
                         >
-                          <div className="flex items-center gap-1.5">
-                            <CabinetIcon type={iconType} isGola={isGola} className="w-7 h-7 shrink-0" />
+                          <div className="flex items-center gap-3">
+                            <CabinetIcon type={iconType} isGola={isGola} className="w-12 h-12 shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1">
-                                <span className="text-[10px] font-black text-indigo-900">{p.code}</span>
-                                <span className="text-[10px] font-black text-orange-600">{typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}</span>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[13px] font-black text-indigo-900">{p.code}</span>
+                                <span className="text-[14px] font-black text-orange-600">{typeof p.points === 'number' ? p.points : p.points?.Z1 || 0} pts</span>
                               </div>
-                              <div className="text-[8px] font-bold text-indigo-500 uppercase truncate leading-tight">{p.name}</div>
-                              <div className="text-[7px] text-slate-400">
-                                {p.width ? Math.round(p.width) : '-'}×{p.height || '-'}×{p.depth || '-'} cm
+                              <div className="text-[11px] font-bold text-indigo-600 uppercase mt-1">{p.name}</div>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="text-[10px] font-bold text-slate-500">
+                                  AN: {p.width ? Math.round(p.width) : '-'} | AL: {p.height || '-'} | FO: {p.depth || '-'}
+                                </span>
                               </div>
+                              {p.series && <div className="text-[9px] text-orange-500 font-medium mt-1">{p.series}</div>}
                             </div>
-                            <Plus size={12} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"/>
+                            <Plus size={18} className="text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"/>
                           </div>
                         </div>
                       );
