@@ -1004,8 +1004,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                          {/* Descripción - para líneas manuales, ocupar todo el espacio de descripción + medidas */}
                          {item.isManual ? (
                              <>
-                               {/* Descripción extendida que ocupa: flex-1 + w-10*3 + w-8 = todo el espacio hasta PTS */}
-                               <div className="flex-1 min-w-0 flex items-center gap-2">
+                               {/* Descripción extendida que ocupa: flex-1 + w-9*3 + w-8 = todo el espacio hasta PTS */}
+                               <div className="flex-1 min-w-[180px] flex items-center gap-2">
                                   <input 
                                       type="text" 
                                       value={item.manualDescription || ''} 
@@ -1017,8 +1017,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                                </div>
                              </>
                          ) : (
-                            <div className="flex-1 min-w-0 pr-2">
-                                <span className={`text-[8px] font-bold uppercase italic leading-tight block truncate ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}>{product.name}</span>
+                            <div className="flex-1 min-w-[180px] pr-2">
+                                <span className={`text-[8px] font-bold uppercase italic leading-tight block ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}>{product.name}</span>
                                 {specialLabel && <span className="text-[6px] font-black text-orange-600 uppercase tracking-wide">{specialLabel}</span>}
                             </div>
                          )}
@@ -1043,16 +1043,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                             </>
                          ) : (
                             <>
-                                <div className="w-10 shrink-0 text-center">
-                                    <input type="number" value={Math.round(item.customWidth / 10)} onChange={e => updateItem(item.id, 'customWidth', (parseInt(e.target.value) || 0) * 10)} className={`w-9 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                <div className="w-9 shrink-0 text-center">
+                                    <input type="number" value={Math.round(item.customWidth / 10)} onChange={e => updateItem(item.id, 'customWidth', (parseInt(e.target.value) || 0) * 10)} className={`w-8 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
                                     <span className="print-only font-bold text-[8px]">{item.customWidth ? Math.round(item.customWidth / 10) : '-'}</span>
                                 </div>
-                                <div className="w-10 shrink-0 text-center">
-                                    <input type="number" value={item.customHeight} onChange={e => updateItem(item.id, 'customHeight', parseInt(e.target.value) || 0)} className={`w-9 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                <div className="w-9 shrink-0 text-center">
+                                    <input type="number" value={item.customHeight} onChange={e => updateItem(item.id, 'customHeight', parseInt(e.target.value) || 0)} className={`w-8 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
                                     <span className="print-only font-bold text-[8px]">{item.customHeight || '-'}</span>
                                 </div>
-                                <div className="w-10 shrink-0 text-center">
-                                    <input type="number" value={item.customDepth} onChange={e => updateItem(item.id, 'customDepth', parseInt(e.target.value) || 0)} className={`w-9 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product.depth) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                <div className="w-9 shrink-0 text-center">
+                                    <input type="number" value={item.customDepth} onChange={e => updateItem(item.id, 'customDepth', parseInt(e.target.value) || 0)} className={`w-8 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product.depth) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
                                     <span className="print-only font-bold text-[8px]">{item.customDepth || '-'}</span>
                                 </div>
                                 <div className="w-8 shrink-0 text-center">
