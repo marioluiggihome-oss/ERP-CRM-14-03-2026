@@ -2829,6 +2829,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             </th>
                             <th className="p-3 text-left text-[9px] font-black uppercase whitespace-nowrap">REF</th>
                             <th className="p-3 text-left text-[9px] font-black uppercase min-w-[200px]">NOMBRE</th>
+                            <th className="p-3 text-left text-[9px] font-black uppercase whitespace-nowrap bg-amber-900">SERIE</th>
+                            <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap bg-amber-900">FONDO</th>
                             {inventoryModule === 'montada' ? (
                               <>
                                 <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z1</th>
