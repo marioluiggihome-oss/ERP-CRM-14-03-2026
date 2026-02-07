@@ -385,6 +385,16 @@ const ClientSelector = ({
                       }`}>
                         {client.tipo === 'activo' ? 'Activo' : 'Lead'}
                       </span>
+                      {canDeleteClients && (
+                        <button
+                          onClick={(e) => handleDeleteClient(e, client.id)}
+                          className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+                          title="Eliminar cliente"
+                          data-testid={`delete-client-${client.id}`}
+                        >
+                          <Trash2 size={12} className="text-red-500" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
