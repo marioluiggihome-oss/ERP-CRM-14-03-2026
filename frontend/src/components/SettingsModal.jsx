@@ -17,6 +17,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   // Inventory states
   const [inventoryModule, setInventoryModule] = useState('montada');
   const [productSearch, setProductSearch] = useState('');
+  const [productSeriesFilter, setProductSeriesFilter] = useState(''); // Filtro por serie
+  const [productZeroPriceFilter, setProductZeroPriceFilter] = useState(false); // Filtro sin precio
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
   const [selectedProducts, setSelectedProducts] = useState([]);
