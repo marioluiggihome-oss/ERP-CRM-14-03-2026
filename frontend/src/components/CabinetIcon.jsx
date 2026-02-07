@@ -290,6 +290,85 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
         </svg>
       );
     
+    // Costados
+    case 'COSTADO':
+    case 'COS':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="4" y="4" width="8" height="32" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#fef3c7" />
+          <rect x="14" y="8" width="22" height="24" rx="1" stroke={stroke} strokeWidth="1" strokeDasharray="3 2" fill="none" opacity="0.4" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Estantes
+    case 'ESTANTE':
+    case 'EST':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="4" y="16" width="32" height="8" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#dbeafe" />
+          <line x1="4" y1="20" x2="36" y2="20" stroke={stroke} strokeWidth="1" opacity="0.5" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Regletas
+    case 'REGLETA':
+    case 'REG':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="4" y="14" width="32" height="12" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#e0e7ff" />
+          <line x1="8" y1="20" x2="32" y2="20" stroke={stroke} strokeWidth="1" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Puertas sueltas
+    case 'PUERTA':
+    case 'PTA':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#fef9c3" />
+          <circle cx="28" cy="20" r="2" fill={stroke} />
+          <rect x="10" y="6" width="20" height="28" rx="1" stroke={stroke} strokeWidth="0.5" fill="none" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Vitrinas sueltas
+    case 'VITRINA':
+    case 'VIT':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="8" y="4" width="24" height="32" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill="#dbeafe" />
+          <rect x="10" y="6" width="20" height="28" rx="1" stroke={stroke} strokeWidth="0.5" fill="#bfdbfe" opacity="0.5" />
+          <circle cx="28" cy="20" r="2" fill={stroke} />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Cornisas
+    case 'CORNISA':
+    case 'COR':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <path d="M4 30 L4 20 Q4 14 10 14 L30 14 Q36 14 36 20 L36 30" stroke={stroke} strokeWidth={strokeWidth} fill="#fde68a" />
+          <line x1="4" y1="30" x2="36" y2="30" stroke={stroke} strokeWidth="1.5" />
+          <GolaClip />
+        </svg>
+      );
+    
+    // Zócalos
+    case 'ZOCALO':
+    case 'ZOC':
+      return (
+        <svg viewBox="0 0 40 40" className={className} fill="none">
+          <rect x="4" y="28" width="32" height="8" rx="1" stroke={stroke} strokeWidth={strokeWidth} fill="#d4d4d8" />
+          <line x1="4" y1="32" x2="36" y2="32" stroke={stroke} strokeWidth="1" opacity="0.5" />
+          <GolaClip />
+        </svg>
+      );
+    
     // 1 Puerta (default)
     case '1P':
     default:
