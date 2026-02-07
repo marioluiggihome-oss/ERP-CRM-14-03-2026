@@ -1214,20 +1214,20 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                 <table className="w-full text-left">
                   <thead className="bg-indigo-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
                     <tr>
-                      <th className="p-3 pl-4">REFERENCIA</th>
-                      <th className="p-3">DESCRIPCIÓN</th>
-                      <th className="p-3 text-center">ANCHO (cm)</th>
-                      <th className="p-3 text-center">ALTO (cm)</th>
-                      <th className="p-3 text-center">FONDO (cm)</th>
-                      <th className="p-3 text-center">PUNTOS</th>
-                      <th className="p-3 pr-4 text-right">AÑADIR</th>
+                      <th className="p-2 pl-3 w-[90px]">REF</th>
+                      <th className="p-2 min-w-[200px]">DESCRIPCIÓN</th>
+                      <th className="p-2 text-center w-[70px]">ANCHO</th>
+                      <th className="p-2 text-center w-[60px]">ALTO</th>
+                      <th className="p-2 text-center w-[60px]">FONDO</th>
+                      <th className="p-2 text-center w-[70px]">PUNTOS</th>
+                      <th className="p-2 pr-3 text-right w-[50px]"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-50">
                     {filteredCatalog.map(p => (
                       <tr key={p.id} className="hover:bg-orange-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
-                        <td className="p-3 pl-4 font-black text-indigo-900 text-[13px]">{p.code}</td>
-                        <td className="p-3">
+                        <td className="p-2 pl-3 font-bold text-indigo-900 text-[11px] w-[90px]">{p.code}</td>
+                        <td className="p-2 min-w-[200px]">
                           <div className="text-[11px] font-bold text-indigo-600 uppercase">{p.name}</div>
                           {p.series && <div className="text-[9px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                         </td>
