@@ -870,6 +870,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                      TARIFA {DOOR_FINISHES.find(f => f.name === state.globalFinish)?.group || 'Z1'}
                    </span>
                  </div>
+                 <button 
+                   onClick={() => window.open('/relacion-de-modelos.pdf', '_blank')}
+                   className="w-full mt-2 bg-purple-500 hover:bg-purple-600 text-white py-1.5 rounded-lg font-black uppercase text-[8px] tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                   data-testid="models-catalog-btn"
+                 >
+                   <FileText size={12}/> CATÁLOGO MODELOS
+                 </button>
               </section>
               
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
