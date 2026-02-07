@@ -1440,7 +1440,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       const code = p.code?.toUpperCase() || '';
                       const isGola = code.startsWith('G') && /^G\d/.test(code);
                       
-                      // Detectar tipo de mueble especial
+                      // Detectar tipo de herraje y tipo especial
+                      const hardwareType = getHardwareType(code);
+                      const specialType = getSpecialType(code);
+                      
+                      // Detectar tipo de mueble especial para icono
                       let iconType = '1P';
                       if (code.includes('HK')) iconType = 'HK-TOP';
                       else if (code.includes('HS')) iconType = 'HS';
@@ -1458,6 +1462,25 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                       else if (code.includes('2P')) iconType = '2P';
                       else if (code.includes('1V') || code.includes('2V')) iconType = '1V';
                       
+                      // Colores para badges de herraje
+                      const hardwareColors = {
+                        'HK': 'bg-red-500 text-white',
+                        'HS': 'bg-emerald-500 text-white', 
+                        'HL': 'bg-violet-500 text-white',
+                        'HF': 'bg-cyan-500 text-white'
+                      };
+                      
+                      // Colores para badges de tipo especial
+                      const specialColors = {
+                        'MICRO': 'bg-blue-100 text-blue-700',
+                        'HORNO': 'bg-amber-100 text-amber-700',
+                        'HORNO+MICRO': 'bg-orange-100 text-orange-700',
+                        'PLACA': 'bg-red-100 text-red-700',
+                        'FREG': 'bg-sky-100 text-sky-700',
+                        'TERMO': 'bg-teal-100 text-teal-700',
+                        'ESCURRE': 'bg-indigo-100 text-indigo-700'
+                      };
+                      
                       return (
                         <div 
                           key={p.id} 
@@ -1471,7 +1494,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                                 <span className="text-[13px] font-black text-indigo-900">{p.code}</span>
                                 <span className="text-[14px] font-black text-orange-600">{typeof p.points === 'number' ? p.points : p.points?.Z1 || 0} pts</span>
                               </div>
-                              <div className="text-[11px] font-bold text-indigo-600 uppercase mt-1">{p.name}</div>
+                              <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                                <span className="text-[11px] font-bold text-indigo-600 uppercase">{p.name}</span>
+                                {hardwareType && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${hardwareColors[hardwareType]}`}>
+                                    {hardwareType}
+                                  </span>
+                                )}
+                                {specialType && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${specialColors[specialType]}`}>
+                                    {specialType}
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-3 mt-1">
                                 <span className="text-[10px] font-bold text-slate-500">
                                   AN: {p.width ? Math.round(p.width) : '-'} | AL: {p.height || '-'} | FO: {p.depth || '-'}
