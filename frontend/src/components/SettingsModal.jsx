@@ -3346,10 +3346,19 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
               {!isEditingMaterial ? (
                 <div className="grid grid-cols-2 gap-4">
-                  {state.carcassMaterials.map(material => (
-                    <div key={material.id} className="bg-white border border-amber-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                  {state.carcassMaterials.map(material => {
+                    const isDefault = material.id === state.selectedCarcassMaterialId;
+                    return (
+                    <div key={material.id} className={`bg-white border-2 ${isDefault ? 'border-emerald-400 shadow-lg shadow-emerald-100' : 'border-amber-200'} rounded-xl p-5 hover:shadow-lg transition-all`}>
                       <div className="flex justify-between items-start mb-3">
-                        <h4 className="text-base font-black text-amber-900">{material.name}</h4>
+                        <div>
+                          <h4 className="text-base font-black text-amber-900">{material.name}</h4>
+                          {isDefault && (
+                            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black uppercase">
+                              <CheckCircle size={10} /> PREDETERMINADO
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-1">
                           <button
                             onClick={() => handleEditMaterial(material)}
@@ -3377,13 +3386,29 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           <p className="text-xl font-black text-indigo-600">{material.thickness}mm</p>
                         </div>
                       </div>
-                      {material.id === state.selectedCarcassMaterialId && (
-                        <div className="mt-3 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold text-center uppercase">
-                          Seleccionado como predeterminado
-                        </div>
+                      {!isDefault && (
+                        <button
+                          onClick={async () => {
+                            setState(prev => ({ ...prev, selectedCarcassMaterialId: material.id }));
+                            try {
+                              await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/settings`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ defaultCarcassMaterialId: material.id })
+                              });
+                            } catch (err) {
+                              console.error('Error saving default carcass:', err);
+                            }
+                          }}
+                          className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-[10px] font-black uppercase transition-all"
+                        >
+                          <Target size={12} />
+                          Establecer como Predeterminado
+                        </button>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 /* Material Form */
