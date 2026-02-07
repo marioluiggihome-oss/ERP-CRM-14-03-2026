@@ -42,7 +42,6 @@ const App = () => {
       globalFinish: DOOR_FINISHES[0].name, 
       carcassMaterials: INITIAL_CARCASS_MATERIALS,
       selectedCarcassMaterialId: INITIAL_CARCASS_MATERIALS[0].id,
-      defaultCarcassBySeries: {}, // Casco predeterminado por serie
       doorColorLow: '', doorColorHigh: '', doorColorColumns: '', sideColor: '',
       pointValueMontada: 1.0, pointValueDespiece: 0.88, 
       specialIncrementWidth: 45,
