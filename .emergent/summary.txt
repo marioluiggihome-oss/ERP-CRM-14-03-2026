@@ -20,83 +20,90 @@ Feature requests have been provided incrementally through PowerPoint presentatio
 14. **UI/UX:** Continuous UI improvements based on user feedback.
 15. **Distributor Registration:** A system for new distributors to request access.
 16. **Multi-catalog support.**
-17. **Default Cabinet Shell (Casco):** Allow setting a default casco for each product series.
+17. **Default Cabinet Shell (Casco):** Allow setting a default casco (initially per-series, corrected to global).
 18. **Special Cabinet Shell Series:** Add new series for special cascos.
 19. **Zero-Cost Cabinet Shells:** Implement a mechanism to handle cascos with no cost.
+20. **Data Integrity:** The product catalog must be a perfect match of the provided PDF, including categories, names, special features, dimensions, and prices (points).
+21. **Rincón (Corner) Cabinets:** Ensure corner cabinets with specific dimensions (e.g., 108x108, 93x93) and depths (e.g., 58cm) are correctly represented in the catalog.
+22. **Catalog Models PDF Link:** Add a button in the UI to open a PDF listing all product models.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application for kitchen business management. This session was heavily focused on addressing critical data integrity issues within the product catalog, as requested by the user.
-
-The agent performed a deep audit of the MongoDB  collection using a series of Python scripts, identifying and automatically correcting numerous issues related to pricing, product series, and dimensions.
-
-To empower the user to conduct their own audits, the agent significantly enhanced the Inventario (Inventory) section of the MASTER settings panel. New frontend features were added, including filters for product series and products with no price, and new SERIE and FONDO (depth) columns were added to the inventory table for better visibility.
-
-After the initial audit and correction, the user requested a full, meticulous import of the complete product catalog, which they are providing in four parts. The agent has successfully received and performed an initial data extraction on Part 1.
+A full-stack React/FastAPI/MongoDB application for kitchen business management. This session resolved a critical product visibility bug and then transitioned into an intensive, user-directed, page-by-page audit and data correction of the product catalog. The agent has fixed data for ZÓCALOS, CORNISAS, VITRINAS, PUERTAS, and COSTADOS, corrected dimensions (width/height swap, exact decimal values), and standardized the depth of all base cabinets () to 58cm. The CRM/budget data (, , ) was cleared at the user's request to start testing from scratch. An admin-only delete button was added to the client search list.
 
 **Last working item**:
-- Last item agent was working: The agent is processing the first part of a complete product catalog overhaul. The user provided , and the agent has successfully extracted the text content. The immediate next step is to parse this data, compare it against the existing database, and generate a script to perform the necessary inserts and updates for Part 1.
-- Status: IN PROGRESS
+- Last item agent was working: The user requested a reset of all opportunities and budgets, followed by an audit of page 436 of the catalog PDF. The agent successfully deleted the data and analyzed the PDF, identifying its contents as COLUMNAS ALUMINIO. The next step is to perform the audit and correct the data for these products.
+- Status: NOT STARTED
 - Agent Testing Done: N
-- Which testing method agent to use? backend testing agent
+- Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Catalog Data Integrity (P0)**
-  - Description: The product catalog suffers from widespread inconsistencies, including products with zero price, incorrect series, and wrong dimensions. An initial audit and correction were performed. The task has now evolved into a full catalog re-import based on user-provided PDFs.
-  - Status: IN PROGRESS
-  - Is recurring issue? Y
+- **Issue 1: Audit and Correct COLUMNAS ALUMINIO (Page 436) (P0)**
+  - Description: The user has requested a meticulous review of the products on page 436. The agent needs to compare the data in the database against the provided PDF and make necessary corrections to prices, names, and dimensions.
+  - Status: NOT STARTED
+  - Is recurring issue? N
   - Should Test frontend/backend/both after fix? both
-- **Issue 2: Critical Client Deletion Error (P1)**
-  - Description: A highly recurring bug preventing users from deleting clients. The last attempted fix (switching from  to ) is awaiting user validation. The user has deprioritized this in favor of the catalog fix.
-  - Status: USER VERIFICATION PENDING
-  - Is recurring issue? Y
-  - Should Test frontend/backend/both after fix? frontend
+- **Issue 2: Complete COSTADOS Data Import (P1)**
+  - Description: During the catalog audit, it was found that 87  products (mostly ALUMINIO type) are still missing their price points (). The agent needs to find the correct data from the catalog PDF and update these remaining products.
+  - Status: IN PROGRESS
+  - Is recurring issue? N
+  - Should Test frontend/backend/both after fix? both
 - **Issue 3: IA Lab Furniture Price Accuracy (P2)**
   - Description: An enhancement for the AI to look up catalog prices for detected furniture is awaiting user testing and confirmation.
   - Status: USER VERIFICATION PENDING
   - Is recurring issue? N
   - Should Test frontend/backend/both after fix? both
-- **Issue 4: Manual Lines Not in Despiece (from previous fork) (P2)**
+- **Issue 4: Manual Lines Not in Despiece (P2)**
   - Description: A fix to include manually added budget lines in the Despiece (Bill of Materials) is awaiting user confirmation.
   - Status: USER VERIFICATION PENDING
   - Is recurring issue? N
   - Should Test frontend/backend/both after fix? both
-- **Issue 5: Critical Frontend Stability ( error) (from previous fork) (P3)**
+- **Issue 5: Critical Frontend Stability ( error) (P3)**
   - Description: A recurring React DOM crash noted in a previous handoff remains unaddressed and poses a stability risk.
   - Status: NOT STARTED
   - Is recurring issue? Y
   - Should Test frontend/backend/both after fix? frontend
 
 **In progress Task List**:
-- **Task 1: Full Product Catalog Import (P0)**
-  - Description: The user is providing the complete product catalog in 4 PDF parts. The agent must meticulously extract, process, and import/update each part into the database, providing a summary to the user after each part is processed.
-  - Where to resume: The agent has extracted the data from . The next step is to write and execute a Python script to parse the extracted text, handle existing vs. new products, and update the MongoDB  collection.
+- **Task 1: Full Product Catalog Audit and Refinement (P0)**
+  - Description: The main task is a comprehensive, page-by-page audit of the entire product catalog, guided by the user. The agent is working backward from the end of the catalog PDF.
+  - Where to resume: Begin the audit of COLUMNAS ALUMINIO from page 436 of  as per the user's last instruction.
   - Status: IN PROGRESS
+  - Blocked on something: User guidance on which page to audit next.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-  - (P1) **Complete Catalog Import (Parts 2, 3, 4)**: Continue the import process as the user provides the remaining files.
-  - (P1) **Set Default Casco per Series**: Implement UI and backend logic to allow setting a default cabinet shell for each product series, as per the user's  file.
-  - (P1) **Add Special Casco Series & Zero-Cost Logic**: Add new series for special shells and implement the logic for zero-cost shells.
-  - (P2) **Implement New CRM and Order Management Workflow**: This multi-part feature (preventing duplicate opportunities, creating an order backoffice) was the previous P0 and is now on hold until the catalog is fixed.
-  - (P2) **CSV Export with Multiple Sheets**: Implement the user's request for a multi-sheet export.
-  - (P2) **Create Admin Panel for Distributor Requests**: Build a UI for administrators to approve or reject registrations.
+    - (P1) **Implement Client-Sales Rep Assignment**: Implement the requirements from .
+    - (P2) **Add Special Casco Series & Zero-Cost Logic**: Add new series for special shells and handle zero-cost shells.
+    - (P2) **CSV Export with Multiple Sheets**.
+    - (P2) **Create Admin Panel for Distributor Requests**.
 - **Future Tasks:**
-  - (P2) **Define Collaborator Assignment Rules**: Requires user clarification on business logic.
-  - (P3) **Backend Refactoring**: Decompose the monolithic .
-  - (P3) **Frontend Refactoring**: Decompose the monolithic  and .
-  - (P3) Create an admin dashboard to view audit logs.
-  - (P3) Add automated reminders for calendar events in the CRM.
+    - (P2) **Implement New CRM and Order Management Workflow**: This is on hold until the catalog work is fully signed off.
+    - (P3) **Backend Refactoring**: Decompose the monolithic .
+    - (P3) **Frontend Refactoring**: Decompose  and .
+    - (P3) Create an admin dashboard to view audit logs.
+    - (P3) Add automated reminders for calendar events in the CRM.
 
 **Completed work in this session**
-- **Product Catalog Audit & Correction**: Performed a comprehensive audit of the  collection using Python scripts. Automatically corrected several data issues, such as standardizing series names and fixing depth values.
-- **Developed Catalog Audit UI**: Enhanced the Inventario tab in the MASTER settings panel () by adding:
-    - A dropdown filter for all product series.
-    - A filter button for products with zero price.
-    - SERIE and FONDO columns to the inventory table for improved data visibility.
-- **Initiated Full Catalog Import**: Received and performed initial data extraction on Part 1 of the complete product catalog provided by the user.
+- **BUGFIX: New Products Not Visible (P0)**: Resolved the critical issue where 733 new products weren't showing in the frontend by assigning the missing  field in the database.
+- **BUGFIX: Client Deletion**: Investigated the recurring client deletion bug, confirmed the backend endpoint works correctly via , and passed a full testing agent suite that included client deletion tests.
+- **BUGFIX: Duplicate Armazones UI**: Removed the duplicate Gestión de Armazones section from the MÁRGENES tab in the , leaving it only in its dedicated ARMAZONES tab.
+- **BUGFIX: Incorrect Product Dimensions**:
+    - Corrected the  and  for all 151  and 161  by swapping the values to match the Alto x Ancho convention.
+    - Modified  to display exact decimal dimensions (e.g., 29.8) instead of rounded integers.
+- **DATA CORRECTION: Standardized Cabinet Depth**: Updated all 1073  and 395  products to have a standard  of 58cm as per user instruction.
+- **DATA CORRECTION: Full Catalog Audit (In Progress)**: Performed an extensive, page-by-page data audit and correction based on user-provided PDFs for the following categories:
+    - **ZÓCALOS** (Page 478): Corrected names, points, and dimensions.
+    - **CORNISAS** (Page 477): Corrected names, points, and price zones.
+    - **VITRINAS** (Pages 467-474): Corrected points and price zones for all 161 products.
+    - **PUERTAS** (Pages 465-471): Corrected points and price zones for all 156 products.
+    - **COSTADOS** (Pages 439-452): Corrected data for 154 products; 87 remain pending.
+- **FEATURE: Catalog Models PDF Link**: Added a CATÁLOGO MODELOS button below the price zone selector that opens  in a new tab.
+- **FEATURE: Admin Client Deletion**: Cleaned the  collection and added a delete icon (🗑️) next to each client in the search dropdown, visible only to admin users, to allow for quick removal.
+- **ADMIN: Data Reset**: Deleted all , , and  from the database at the user's request to facilitate fresh CRM testing.
+- **TESTING**: Successfully ran the , which passed 100% of its test suite, validating backend endpoints and core frontend functionality after the main P0 bug fix.
 
 **Earlier issues found/mentioned but not fixed**
 - **Overlapping UI Fields**: Blocked on user input for reproduction steps.
@@ -104,62 +111,73 @@ After the initial audit and correction, the user requested a full, meticulous im
 **Known issue recurrence from previous fork**
 - **Issue recurrence in previous fork:** Critical Client Deletion Bug.
 - **Recurrence count:** 3+
-- **Status:** USER VERIFICATION PENDING
+- **Status:** RESOLVED (Verified by agent with  and passed the testing agent suite. Monitoring is advised).
 - **Issue recurrence in previous fork:** Critical Frontend Stability ( error).
-- **Recurrence count:** 2
+- **Recurrence count:** 2+
 - **Status:** NOT STARTED
 
 **Code Architecture**
 
-*(Note: Several temporary Python scripts were created in  for DB auditing and correction but are not part of the permanent codebase.)*
 
 **Key Technical Concepts**
-- **Database Auditing & Correction:** Using Python with  to connect to MongoDB, run complex aggregations to analyze data quality, and perform bulk updates.
-- **Frontend Development (React):** Modifying a large existing component () to add new state (), UI controls (select, button), conditional rendering, and dynamic table columns to enhance functionality.
-- **Data Extraction:** Using  to parse text content from a user-uploaded PDF for data import.
+- **Iterative Data Correction:** The primary workflow involves analyzing user-provided PDFs, writing ad-hoc Python scripts executed via  to query and update the MongoDB  collection, and verifying the changes in the UI.
+- **Multi-Collection Data Management:** Debugged an issue where search results were populated from the  collection, while the main client list was in the  collection, requiring cleanup in both to satisfy user requirements.
+- **Role-Based UI:** Implemented a feature (delete client button) that is conditionally rendered based on the user's role ().
+- **Frontend Data Formatting:** Modified React components to control the display format of numerical data, switching from  to direct value display to show precise decimal measurements.
 
 **key DB schema**
-- No schema changes. All work focused on data manipulation within the existing  collection.
+- **products**: Heavily modified. Corrected  and  for hundreds of items. Swapped  and  for all  and . Standardized  to 58.0 for all  and .
+- **contacts**: Cleared entirely (19 records deleted). Re-populated with 2 records to match .
+- **clients**: Cleared and re-populated to contain only 'MARIO' and 'JOSE ANTONIO'.
+- **opportunities**: Cleared entirely.
+- **projects**: Cleared entirely.
 
 **All files of reference**
--  (Heavily Modified)
--  (Read for context)
--  (New user requirements document)
--  (Data source for the current import task)
+-  (Modified for dimension display and PDF button)
+-  (Modified to remove duplicate UI)
+-  (Modified to add admin delete functionality)
+-  (Used for running Python data correction scripts)
+-  (Primary source of truth for catalog data)
+-  (Newly added asset)
+- User Uploads: All the single-page PDF files (, , etc.) provided during the session.
 
 **Areas that need refactoring**:
-- **Backend Monolith:**  is critically overdue for decomposition.
-- **Frontend Monoliths:**  has grown even larger and more complex, making it a prime candidate for being broken down into smaller, manageable components.  also remains a large component.
+- **/app/frontend/src/components/BudgetTable.jsx**: Still over 1600 lines and overloaded with logic.
+- **/app/frontend/src/components/ClientSelector.jsx**: Has grown in complexity and could be simplified.
+- **/app/backend/server.py**: Remains a large monolith.
 
 **key api endpoints**
-- No API endpoints were created or modified in this session. All database work was performed via direct-access scripts.
+- : Used to fetch all product data.
+- : Used to fetch cabinet shell materials.
+- : Verified to be working for deleting clients.
+- : A new delete endpoint was implemented in the frontend logic for contacts.
 
 **Critical Info for New Agent**
-- **PRIORITY #1: Complete the Catalog Import.** The user has shifted all focus to correcting the product catalog. Your immediate task is to parse the data extracted from  and import it into the database. You must be meticulous, handle updates vs. new entries correctly, and provide a summary of changes to the user before requesting Part 2.
-- **New Requirements from DOCX:** The user uploaded . This contains new high-priority requirements about setting default cascos (cabinet shells) per series. Plan to address these *after* the full catalog import is complete.
-- **Deprioritized Tasks:** The CRM/Order workflow tasks from the last fork are now on hold. Do not work on them until the catalog is fixed and the user approves shifting focus.
-- **Verify Old Fixes:** The critical client deletion bug still needs user verification. It is a major source of user frustration, so once the catalog work is done, it is important to circle back and confirm if the last fix was successful.
+- **Continue the User-Guided Audit:** The top priority is to continue the meticulous, page-by-page audit of the product catalog. The user will provide the next page to work on. The immediate next task is auditing **page 436 (COLUMNAS ALUMINIO)**.
+- **Data Precision is Paramount:** The user requires the data in the app to be a perfect mirror of the provided PDFs. Pay close attention to product names, dimensions, price points (), and the specific price zones (, , etc.) they apply to.
+- **Verify, then Act:** Before creating or deleting data, always verify if it already exists or if an update is sufficient. The user has corrected the agent for creating duplicate products before.
+- **Admin User for Testing:** Use the **MARIO / MARIO** credentials to test administrative features like the new client delete button.
 
 **documents and test reports created in this job**
-- User Upload: 
-- User Upload: 
+- Test Report: 
+- Asset: 
+- User Uploads: , , , , , , , , , .
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **(upload)** User uploaded .
-9. **revisa todo esto por favor**: User asks the agent to review the new document.
-8. **(agent)** Agent analyzed the doc, saw critical catalog issues, and presented a plan to the user, asking for priority.
-7. **si primero el punto 1, priorizar auditoría y corrección del catálogo**: User confirms that auditing and correcting the catalog is the top priority.
-6. **(agent)** Agent performed the audit/correction, added UI tools, and presented a summary of the work done, asking for the next steps.
-5. **TE PASO EL CATÁLOGO COMPLETO Y LOS REVISAS TODOS Y AÑADES MINUCIOSAMENTE...**: User instructs the agent to prepare for a meticulous, multi-part import of the entire catalog.
-4. **(agent)** Agent confirms readiness and asks for Part 1.
-3. **1ª PARTE**: User message indicating the upload of the first part.
-2. **(upload)** User uploaded .
-1. **(agent)** Agent confirmed receipt of Part 1 and began the analysis. (This is the current state).
+10. **borra todas las oportunidades... borra todos los presupuestos... audita página 436**: User requested a full data reset for CRM/budgets and to start auditing page 436. (Data reset DONE, audit IN PROGRESS).
+9.  **revisa todas las puertas, la medida primera es el alto y la segunda es el ancho**: User requested swapping width/height for doors/vitrines. (DONE).
+8.  **pon la medida exacta también de ancho 29.8**: User requested to show exact decimal dimensions in the UI. (DONE).
+7.  **siguen saliendo clientes en la barra de búsqueda, pon un botón para poder borrar si me interesa alguno, a mi como administrador sólo**: User reported stale clients in search and requested an admin-only delete button. (DONE).
+6.  **añade 437 y revisa minuciosamente**: User requested an audit of page 437. (DONE, led to further investigation).
+5.  **borra los nombres de clientes, sólo deja mario y jose antonio**: User requested a client list cleanup. (DONE).
+4.  **revisa y modifica (with PDF link button instructions)**: User asked to add a button to open a PDF of product models. (DONE).
+3.  **pon bien todos estos precios (re-uploading 467-471.pdf)**: User asked to re-verify prices for PUERTAS and VITRINAS. (DONE).
+2.  **vamos a ir revisando precios, categorías... empezamos de la pagina 478 hacia abajo**: User initiated the detailed, page-by-page catalog audit. (IN PROGRESS).
+1.  **no crees esos productos, así... para los bajos el fondo standard siempre será 58**: User corrected the agent's approach for corner units and established that all base cabinets must have 58cm depth. (DONE).
 
 **Project Health Check:**
 - **Broken:**
-  - **Catalog Data Integrity:** IN PROGRESS of being fixed via a full re-import.
-  - **Client Deletion:** Potentially still broken from the user's perspective. Awaiting verification.
+    - **Frontend Stability ( error):** Unaddressed, poses a potential stability risk.
 - **Mocked:** None
 
 **3rd Party Integrations**
@@ -169,15 +187,15 @@ After the initial audit and correction, the user requested a full, meticulous im
 - **recharts:** For data visualization charts.
 
 **Testing status**
-- Testing agent used after significant changes: NO
+- Testing agent used after significant changes: YES (after P0 bug fix, passed 100%)
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
-- Known regressions: The client deletion bug has repeatedly regressed.
+- Known regressions: Client deletion bug appears fixed but has a history of regressing.
 
 **Credentials to test flow:**
-- **User:** MARIO (Director Comercial), **Password:** MARIO
+- **User:** MARIO (Director Comercial / Admin), **Password:** MARIO
 - **User:** COMERCIAL SALAMANCA (Comercial), **Password:** COMERCIAL
 - **User:** TISA (Tienda), **Password:** TISA
 
 **What agent forgot to execute**
-- All previously planned tasks (CRM workflow, CSV export, etc.) were correctly deprioritized based on direct user instruction to focus on the catalog. The clarification on collaborator assignment logic remains pending.</analysis>
+The agent has been following the user's granular instructions closely. No tasks were forgotten; rather, the current work is part of a much larger, ongoing catalog audit task. The next step is to continue this audit as directed by the user.</analysis>
