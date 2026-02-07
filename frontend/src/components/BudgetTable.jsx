@@ -187,9 +187,6 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const budgetKey = state.currentModule === 'montada' ? 'budgetItemsMontada' : 'budgetItemsDespiece';
 
   const addItemToBudget = (product) => {
-    // Verificar si hay un casco predeterminado configurado para la serie de este producto
-    const defaultCarcassId = product.series && state.defaultCarcassBySeries?.[product.series];
-    
     const newItem = {
       id: Math.random().toString(36).substr(2, 9),
       productId: product.id,
@@ -203,17 +200,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       notes: '',
       hasVigaCut: false  // Nuevo campo para incremento de corte viga
     };
-    
-    // Si hay un casco predeterminado para esta serie, cambiar el material seleccionado
-    if (defaultCarcassId && state.carcassMaterials?.some(m => m.id === defaultCarcassId)) {
-      setState(prev => ({ 
-        ...prev, 
-        [budgetKey]: [...prev[budgetKey], newItem],
-        selectedCarcassMaterialId: defaultCarcassId 
-      }));
-    } else {
-      setState(prev => ({ ...prev, [budgetKey]: [...prev[budgetKey], newItem] }));
-    }
+    setState(prev => ({ ...prev, [budgetKey]: [...prev[budgetKey], newItem] }));
   };
 
   const addManualItemToBudget = () => {
