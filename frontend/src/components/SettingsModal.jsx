@@ -2855,7 +2855,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <tbody className="divide-y divide-slate-100">
                           {filteredProducts.length === 0 ? (
                             <tr>
-                              <td colSpan={inventoryModule === 'montada' ? 16 : 6} className="p-8 text-center text-slate-400 italic">
+                              <td colSpan={inventoryModule === 'montada' ? 18 : 8} className="p-8 text-center text-slate-400 italic">
                                 No hay productos en este catálogo
                               </td>
                             </tr>
