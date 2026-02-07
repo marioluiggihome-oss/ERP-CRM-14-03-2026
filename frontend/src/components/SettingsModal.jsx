@@ -503,16 +503,37 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     return state.catalogs.find(c => c.module === inventoryModule);
   }, [state.catalogs, inventoryModule]);
 
+  // Obtener lista de series únicas para el filtro
+  const availableSeries = useMemo(() => {
+    if (!currentCatalog) return [];
+    const series = new Set(currentCatalog.products.map(p => p.series || 'SIN SERIE'));
+    return Array.from(series).sort();
+  }, [currentCatalog]);
+
   const filteredProducts = useMemo(() => {
     if (!currentCatalog) return [];
     const query = productSearch.toLowerCase();
-    const filtered = currentCatalog.products.filter(p =>
+    let filtered = currentCatalog.products.filter(p =>
       p.code.toLowerCase().includes(query) ||
       p.name.toLowerCase().includes(query)
     );
+    
+    // Filtrar por serie
+    if (productSeriesFilter) {
+      filtered = filtered.filter(p => (p.series || 'SIN SERIE') === productSeriesFilter);
+    }
+    
+    // Filtrar por productos sin precio
+    if (productZeroPriceFilter) {
+      filtered = filtered.filter(p => 
+        (!p.zonePoints?.Z1 || p.zonePoints.Z1 === 0) && 
+        (!p.points || p.points === 0)
+      );
+    }
+    
     // Ordenar por código de referencia
     return filtered.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-  }, [currentCatalog, productSearch]);
+  }, [currentCatalog, productSearch, productSeriesFilter, productZeroPriceFilter]);
 
   if (!isOpen) return null;
 
