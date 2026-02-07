@@ -358,8 +358,8 @@ class SettingsModel(BaseModel):
     vigaCutIncrement: float = 0
     brandColor: str = "#ea580c"
     logo: Optional[str] = None
-    # Casco predeterminado por serie: {series_name: material_id}
-    defaultCarcassBySeries: Dict[str, str] = {}
+    # ID del material de casco predeterminado
+    defaultCarcassMaterialId: Optional[str] = None
 
 class SettingsUpdate(BaseModel):
     pointValueMontada: Optional[float] = None
@@ -370,7 +370,7 @@ class SettingsUpdate(BaseModel):
     vigaCutIncrement: Optional[float] = None
     brandColor: Optional[str] = None
     logo: Optional[str] = None
-    defaultCarcassBySeries: Optional[Dict[str, str]] = None
+    defaultCarcassMaterialId: Optional[str] = None
 
 class StatusCheckCreate(BaseModel):
     client_name: str
