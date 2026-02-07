@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, User, Building2, Phone, Mail, X, ChevronDown, Check, UserPlus } from 'lucide-react';
+import { Search, Plus, User, Building2, Phone, Mail, X, ChevronDown, Check, UserPlus, Trash2 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
