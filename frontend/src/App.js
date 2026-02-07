@@ -130,7 +130,8 @@ const App = () => {
           specialIncrementDepth: settings.specialIncrementDepth || 45,
           vigaCutIncrement: settings.vigaCutIncrement || 0,
           brandColor: settings.brandColor || DEFAULT_BRAND_COLOR,
-          logo: settings.logo || null
+          logo: settings.logo || null,
+          defaultCarcassBySeries: settings.defaultCarcassBySeries || {}
         }));
       } catch (err) {
         console.error("Error loading data from API:", err);
