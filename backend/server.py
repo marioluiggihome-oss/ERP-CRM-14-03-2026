@@ -239,6 +239,7 @@ class ProductModel(BaseModel):
     id: str = Field(default_factory=lambda: f"prod-{uuid.uuid4().hex[:8]}")
     code: str
     name: str
+    reference: Optional[str] = None  # Catalog reference code (e.g., A45A1P300, COS_ZC400X600)
     category: str = ""
     series: str = ""
     visualType: str = ""
