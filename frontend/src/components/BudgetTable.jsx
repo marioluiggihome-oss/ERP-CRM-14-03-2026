@@ -45,11 +45,24 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       .flatMap(c => c.products.map(p => ({ ...p, catalogId: c.id })));
   }, [catalogs, activeCatalogIds]);
 
+  // Programas únicos
+  const uniqueProgramas = useMemo(() => {
+    const currentModuleProducts = allProducts.filter(p => 
+      catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule
+    );
+    const programas = new Set(currentModuleProducts.map(p => p.programa || 'SIN PROGRAMA'));
+    return Array.from(programas).sort();
+  }, [allProducts, state.currentModule, catalogs]);
+
   const uniqueCategories = useMemo(() => {
     const currentModuleProducts = allProducts.filter(p => 
       catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule
     );
-    const categories = new Set(currentModuleProducts.map(p => p.category || 'OTROS'));
+    // Filtrar por programa si está seleccionado
+    const programaFilteredProducts = selectedPrograma === 'TODOS'
+      ? currentModuleProducts
+      : currentModuleProducts.filter(p => (p.programa || 'SIN PROGRAMA') === selectedPrograma);
+    const categories = new Set(programaFilteredProducts.map(p => p.category || 'OTROS'));
     
     // Orden de categorías según el catálogo
     const categoryOrder = {
