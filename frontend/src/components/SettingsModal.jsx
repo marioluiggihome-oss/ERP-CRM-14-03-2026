@@ -18,6 +18,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [inventoryModule, setInventoryModule] = useState('montada');
   const [productSearch, setProductSearch] = useState('');
   const [productSeriesFilter, setProductSeriesFilter] = useState(''); // Filtro por serie
+  const [productProgramaFilter, setProductProgramaFilter] = useState(''); // Filtro por programa
+  const [productTipoMuebleFilter, setProductTipoMuebleFilter] = useState(''); // Filtro por tipo de mueble
   const [productZeroPriceFilter, setProductZeroPriceFilter] = useState(false); // Filtro sin precio
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
