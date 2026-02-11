@@ -1350,12 +1350,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
                    {/* Filtros solo cuando está abierto */}
                    {isCatalogOpen && (
                      <>
-                       <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="bg-white border border-indigo-100 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
-                         <option value="TODAS">CATEGORÍAS</option>
+                       <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-indigo-900 outline-none">
+                         <option value="TODOS">📁 PROGRAMA</option>
+                         {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
+                       </select>
+                       <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="bg-purple-100 border-2 border-purple-400 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-purple-900 outline-none" disabled={selectedPrograma === 'TODOS'}>
+                         <option value="TODAS">📂 CATEGORÍA</option>
                          {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
                        </select>
-                       <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="bg-white border border-indigo-100 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-indigo-800 outline-none">
-                         <option value="TODAS">SERIES</option>
+                       <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="bg-amber-100 border-2 border-amber-400 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-amber-900 outline-none" disabled={selectedCategory === 'TODAS'}>
+                         <option value="TODAS">📄 SERIE</option>
                          {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
                        </select>
                        <div className="relative w-[180px]">
