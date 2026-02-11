@@ -242,7 +242,8 @@ class ProductModel(BaseModel):
     reference: Optional[str] = None  # Catalog reference code (e.g., A45A1P300, COS_ZC400X600)
     category: str = ""
     series: str = ""
-    programa: str = ""  # GOLA, ALUMINIO, STANDARD
+    programa: str = ""  # GOLA, ALUMINIO, ESTÁNDAR
+    tipo_mueble: str = ""  # ALTOS, BAJOS, COLUMNAS, SEMICOLUMNAS, etc.
     fondo: int = 35  # Depth in cm (35 = estándar, 58 = profundo)
     visualType: str = ""
     width: float = 0
