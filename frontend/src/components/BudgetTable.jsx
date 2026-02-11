@@ -10,6 +10,7 @@ import CabinetIcon from './CabinetIcon';
 
 const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpenManufacturing }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPrograma, setSelectedPrograma] = useState('TODOS');
   const [selectedSeries, setSelectedSeries] = useState('TODAS');
   const [selectedCategory, setSelectedCategory] = useState('TODAS');
   const [isCatalogOpen, setIsCatalogOpen] = useState(true);
