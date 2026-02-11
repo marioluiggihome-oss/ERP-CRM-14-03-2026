@@ -92,19 +92,23 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const orderB = categoryOrder[b] || 50;
       return orderA - orderB;
     });
-  }, [allProducts, state.currentModule, catalogs]);
+  }, [allProducts, state.currentModule, catalogs, selectedPrograma]);
 
   const uniqueSeries = useMemo(() => {
     const currentModuleProducts = allProducts.filter(p => 
       catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule
     );
+    // Filtrar por programa si está seleccionado
+    let filteredProducts = selectedPrograma === 'TODOS'
+      ? currentModuleProducts
+      : currentModuleProducts.filter(p => (p.programa || 'SIN PROGRAMA') === selectedPrograma);
     // Filter by category if one is selected
-    const categoryFilteredProducts = selectedCategory === 'TODAS' 
-      ? currentModuleProducts 
-      : currentModuleProducts.filter(p => (p.category || 'OTROS') === selectedCategory);
-    const series = new Set(categoryFilteredProducts.map(p => p.series || 'GENERAL'));
+    filteredProducts = selectedCategory === 'TODAS' 
+      ? filteredProducts 
+      : filteredProducts.filter(p => (p.category || 'OTROS') === selectedCategory);
+    const series = new Set(filteredProducts.map(p => p.series || 'GENERAL'));
     return Array.from(series).sort();
-  }, [allProducts, state.currentModule, catalogs, selectedCategory]);
+  }, [allProducts, state.currentModule, catalogs, selectedPrograma, selectedCategory]);
 
   const sortedItems = useMemo(() => {
     return [...items].sort((a, b) => {
