@@ -259,9 +259,10 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       }
       
       const isCorrectModule = catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule;
+      const matchesPrograma = selectedPrograma === 'TODOS' || (p.programa || 'SIN PROGRAMA') === selectedPrograma;
       const matchesSeries = selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
       const matchesCategory = selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
-      return matchesSearch && isCorrectModule && matchesSeries && matchesCategory;
+      return matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory;
     });
     
     // Ordenar por categoría y luego por código
@@ -272,7 +273,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       // Dentro de la misma categoría, ordenar por código
       return a.code.localeCompare(b.code);
     });
-  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedSeries, selectedCategory]);
+  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory]);
 
   const budgetKey = state.currentModule === 'montada' ? 'budgetItemsMontada' : 'budgetItemsDespiece';
 
