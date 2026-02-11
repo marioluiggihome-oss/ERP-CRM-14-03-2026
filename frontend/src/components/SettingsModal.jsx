@@ -505,12 +505,37 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     return state.catalogs.find(c => c.module === inventoryModule);
   }, [state.catalogs, inventoryModule]);
 
-  // Obtener lista de series únicas para el filtro
+  // Obtener lista de programas únicos para el filtro
+  const availableProgramas = useMemo(() => {
+    if (!currentCatalog) return [];
+    const programas = new Set(currentCatalog.products.map(p => p.programa || 'SIN PROGRAMA'));
+    return Array.from(programas).sort();
+  }, [currentCatalog]);
+
+  // Obtener lista de tipos de mueble únicos para el filtro (dependiente del programa seleccionado)
+  const availableTiposMueble = useMemo(() => {
+    if (!currentCatalog) return [];
+    let products = currentCatalog.products;
+    if (productProgramaFilter) {
+      products = products.filter(p => (p.programa || 'SIN PROGRAMA') === productProgramaFilter);
+    }
+    const tipos = new Set(products.map(p => p.tipo_mueble || 'SIN TIPO'));
+    return Array.from(tipos).sort();
+  }, [currentCatalog, productProgramaFilter]);
+
+  // Obtener lista de series únicas para el filtro (dependiente del programa y tipo seleccionados)
   const availableSeries = useMemo(() => {
     if (!currentCatalog) return [];
-    const series = new Set(currentCatalog.products.map(p => p.series || 'SIN SERIE'));
+    let products = currentCatalog.products;
+    if (productProgramaFilter) {
+      products = products.filter(p => (p.programa || 'SIN PROGRAMA') === productProgramaFilter);
+    }
+    if (productTipoMuebleFilter) {
+      products = products.filter(p => (p.tipo_mueble || 'SIN TIPO') === productTipoMuebleFilter);
+    }
+    const series = new Set(products.map(p => p.series || 'SIN SERIE'));
     return Array.from(series).sort();
-  }, [currentCatalog]);
+  }, [currentCatalog, productProgramaFilter, productTipoMuebleFilter]);
 
   const filteredProducts = useMemo(() => {
     if (!currentCatalog) return [];
