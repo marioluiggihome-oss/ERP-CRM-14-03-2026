@@ -2802,17 +2802,54 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
                   </div>
 
-                  {/* Filtros de auditoría */}
-                  <div className="flex gap-4 items-center bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <span className="text-xs font-black text-amber-800 uppercase">🔍 Filtros Auditoría:</span>
+                  {/* Filtros de auditoría - Jerarquía: PROGRAMA → TIPO MUEBLE → SERIE */}
+                  <div className="flex flex-wrap gap-3 items-center bg-gradient-to-r from-indigo-50 to-amber-50 border border-indigo-200 rounded-xl p-3">
+                    <span className="text-xs font-black text-indigo-900 uppercase">📂 Jerarquía:</span>
                     
-                    {/* Filtro por serie */}
+                    {/* Filtro por PROGRAMA */}
+                    <select
+                      value={productProgramaFilter}
+                      onChange={(e) => {
+                        setProductProgramaFilter(e.target.value);
+                        setProductTipoMuebleFilter('');
+                        setProductSeriesFilter('');
+                      }}
+                      className="px-3 py-1.5 bg-indigo-100 border-2 border-indigo-400 rounded-lg text-xs font-black focus:outline-none focus:border-indigo-600 min-w-[140px]"
+                    >
+                      <option value="">📁 PROGRAMA ({availableProgramas.length})</option>
+                      {availableProgramas.map(prog => (
+                        <option key={prog} value={prog}>{prog}</option>
+                      ))}
+                    </select>
+                    
+                    <span className="text-indigo-400 font-bold">→</span>
+                    
+                    {/* Filtro por TIPO MUEBLE */}
+                    <select
+                      value={productTipoMuebleFilter}
+                      onChange={(e) => {
+                        setProductTipoMuebleFilter(e.target.value);
+                        setProductSeriesFilter('');
+                      }}
+                      className="px-3 py-1.5 bg-purple-100 border-2 border-purple-400 rounded-lg text-xs font-black focus:outline-none focus:border-purple-600 min-w-[160px]"
+                      disabled={!productProgramaFilter}
+                    >
+                      <option value="">📂 TIPO MUEBLE ({availableTiposMueble.length})</option>
+                      {availableTiposMueble.map(tipo => (
+                        <option key={tipo} value={tipo}>{tipo}</option>
+                      ))}
+                    </select>
+                    
+                    <span className="text-purple-400 font-bold">→</span>
+                    
+                    {/* Filtro por SERIE */}
                     <select
                       value={productSeriesFilter}
                       onChange={(e) => setProductSeriesFilter(e.target.value)}
-                      className="px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold focus:outline-none focus:border-orange-500 max-w-[250px]"
+                      className="px-3 py-1.5 bg-amber-100 border-2 border-amber-400 rounded-lg text-xs font-black focus:outline-none focus:border-amber-600 min-w-[200px]"
+                      disabled={!productTipoMuebleFilter}
                     >
-                      <option value="">Todas las series ({availableSeries.length})</option>
+                      <option value="">📄 SERIE ({availableSeries.length})</option>
                       {availableSeries.map(series => (
                         <option key={series} value={series}>{series}</option>
                       ))}
@@ -2824,10 +2861,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                         productZeroPriceFilter 
                           ? 'bg-red-600 text-white' 
-                          : 'bg-white border border-amber-300 text-amber-800 hover:bg-amber-100'
+                          : 'bg-white border border-red-300 text-red-700 hover:bg-red-50'
                       }`}
                     >
                       {productZeroPriceFilter ? <CheckSquare size={14} /> : <Square size={14} />}
+                      Sin Precio
+                    </button>
                       Sin Precio (Z1=0)
                     </button>
                     
