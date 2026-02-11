@@ -2867,19 +2867,19 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       {productZeroPriceFilter ? <CheckSquare size={14} /> : <Square size={14} />}
                       Sin Precio
                     </button>
-                      Sin Precio (Z1=0)
-                    </button>
                     
                     {/* Limpiar filtros */}
-                    {(productSeriesFilter || productZeroPriceFilter) && (
+                    {(productProgramaFilter || productTipoMuebleFilter || productSeriesFilter || productZeroPriceFilter) && (
                       <button
                         onClick={() => {
+                          setProductProgramaFilter('');
+                          setProductTipoMuebleFilter('');
                           setProductSeriesFilter('');
                           setProductZeroPriceFilter(false);
                         }}
-                        className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-300 transition-all"
+                        className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-all"
                       >
-                        Limpiar filtros
+                        ✕ Limpiar
                       </button>
                     )}
                   </div>
