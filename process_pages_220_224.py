@@ -57,7 +57,7 @@ for ref, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12 in [
     products_to_add.append({
         "reference": ref, "name": "Columna 2 puertas",
         "programa": "ESTÁNDAR", "category": "COLUMNAS", "series": "COLUMNAS DE 220cm FONDO 58cm",
-        "sourcePage": 220, "width": int(ref[-3:].replace("P", "").replace("0", "")) * 10 if ref[-4].isdigit() else int(ref[-3:]) / 10, "height": 220, "depth": 58,
+        "sourcePage": 220, "width": 60, "height": 220, "depth": 58,
         "zonePoints": {"Z1": z1, "Z2": z2, "Z3": z3, "Z4": z4, "Z5": z5, "Z6": z6, "Z7": z7, "Z8": z8, "Z9": z9, "Z10": z10, "Z11": z11, "Z12": z12}
     })
 
