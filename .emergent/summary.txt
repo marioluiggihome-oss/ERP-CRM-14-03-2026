@@ -4,19 +4,19 @@ The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIG
 **PRODUCT REQUIREMENTS:**
 1.  **Clone LUIGGI HOME application:** Replicate the design and functionality.
 2.  **User-Guided Product Catalog Creation:** Build a definitive product catalog by processing pages from  as provided by the user.
-3.  **Data Integrity:** Ensure the final database is a perfect, clean representation of the user-provided pages, with all other data purged.
+3.  **Data Integrity:** Ensure the final database is a perfect, clean representation of the user-provided pages, with all other data purged. This includes capturing precise product , , and  as specified by the user.
 4.  **Data Export System:** Maintain existing functionality to export various datasets to Excel.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The database was recently rolled back to a previous state () at the user's request, containing 3,541 products. Following the rollback, a new, user-guided process was initiated to rebuild the catalog. The agent has processed pages 21-54 provided by the user, adding ~822 new or missing products. The database is currently in a hybrid state, containing 4,217 products: the original items from the backup plus the newly verified ones. A file, , is being used to track all user-approved product references.
+A full-stack React/FastAPI/MongoDB application. The database currently contains **4,641 products**. The core of the current work revolves around a master list of approved product references, , which has been built up to contain **1,358 entries**. This list has been populated by processing pages 21-99 of the user's master PDF. The data extraction logic has been recently refined to capture product ,  (ESTÁNDAR, GOLA, ALUMINIO), and  (ALTOS, BAJOS, etc.) with greater precision, per user instructions.
 
 **Last working item**:
-- Last item agent was working: The agent is in the middle of a meticulous, page-by-page process to build the definitive product catalog. The user provides images of the PDF, and the agent extracts product data, adds missing products to the database, and records their references in a master list. The process is paused, awaiting the user to provide the next set of pages. The user has confirmed they wish to continue this process in the new session.
+- Last item agent was working: The agent was actively processing a batch of PDF pages (95-99) provided by the user. This involves extracting product data from the images, adding new products to the database, updating existing ones, and appending the new, valid product references to the master list in . The user has just provided the pages, and the agent has begun processing them.
 - Status: IN PROGRESS
 - Agent Testing Done: Y
-- Which testing method agent to use? This is a user-guided data validation task. The agent's role is to process the pages the user provides. The primary test is the user's confirmation of each step. The final test will be a review of the cleaned database.
+- Which testing method agent to use? This is a data-entry task. The agent verifies its work after each batch by running scripts to count new products and references. No automated testing agent is required for this phase. The final user review will be the ultimate test.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
@@ -32,28 +32,29 @@ A full-stack React/FastAPI/MongoDB application. The database was recently rolled
 
 Issues Detail:
 - **Issue 1: Finalize Product Catalog from PDF Pages**
-  - **Attempted fixes:** Previous attempts at full, automated PDF imports were rejected by the user due to data inconsistencies. The current, user-approved method is a manual, page-by-page verification and gradual build.
+  - **Attempted fixes:** N/A. The current page-by-page approach is the user-approved fix to previous failed automated imports.
   - **Next debug checklist:**
-    1.  Prompt the user for the next batch of PDF pages (starting from page 55).
-    2.  Load the existing list of verified references from .
-    3.  For each new page, extract all product references, names, and prices.
-    4.  Append the new, valid references to the master list in .
-    5.  Check if each product reference exists in the database. If not, create it using the extracted data.
-    6.  Confirm completion of the batch and await the next set of pages.
-    7.  **IMPORTANT**: Once the user confirms all pages have been sent, execute a final script to delete every product from the database whose reference is not present in the master  file.
+    1.  Complete the processing of pages 95-99.
+    2.  Prompt the user for the next batch of PDF pages (starting from page 100).
+    3.  Load the existing list of verified references from .
+    4.  For each new page, extract all product data (reference, name, prices, dimensions, etc.), adhering to the recently clarified rules for , , and .
+    5.  Append the new, valid references to the master list in .
+    6.  Check if each product reference exists in the database. If not, create it. If it exists, update it.
+    7.  Confirm completion of the batch and await the next set of pages.
+    8.  **IMPORTANT**: Once the user confirms all pages have been sent, execute a final script to delete every product from the database whose  is not present in the master  file.
   - **Why fix this issue and what will be achieved with the fix?** This will achieve the user's primary goal: a 100% accurate and verified product catalog that serves as a reliable foundation for the ERP.
   - **Status:** IN PROGRESS
   - **Is recurring issue?** Y
   - **Should Test frontend/backend/both after fix?** Both. The backend data must be validated, and the frontend product library must reflect the final, cleaned list.
-  - **Blocked on other issue:** User needs to provide the next set of pages.
+  - **Blocked on other issue:** The overall task is blocked until the user provides all pages from the PDF.
 
 **In progress Task List**:
 - **Task 1: Build Canonical Product Catalog via Page-by-Page Verification (P0)**
-  - **Where to resume:** The process is paused. The next step is to ask the user to provide the next set of PDF pages (pages 55 and onwards) to continue building the master list of valid products.
-  - **What will be achieved with this?** A definitive and clean product database that contains only the products specified by the user.
+  - **Where to resume:** The agent is processing pages 95-99. The immediate next step is to finish this batch, report the results, and then ask the user for the next pages (100+).
+  - **What will be achieved with this?** A definitive and clean product database that contains only the products specified by the user, with accurate data fields.
   - **Status:** IN PROGRESS
   - **Should Test frontend/backend/both after fix?** Both.
-  - **Blocked on something:** Waiting for user to provide more pages.
+  - **Blocked on something:** Waiting for user to provide more pages to complete the entire catalog.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
@@ -67,13 +68,10 @@ Issues Detail:
     - (P3) Create an admin dashboard to view audit logs.
 
 **Completed work in this session**
-- **Database Rollback:** Successfully restored the database to a previous state () containing 3,541 products, as requested by the user.
-- **Initiated User-Guided Catalog Re-creation:**
-  - Started a new workflow where the user provides PDF pages to define the official product list.
-  - Processed pages 21-54.
-  - Extracted 822 valid product references from these pages.
-  - Added over 400 new products to the database that were present in the PDFs but missing from the restored backup (e.g., abatibles HK-TOP, HL, HS).
-  - Maintained a master list of all 822 user-verified references in .
+- **Re-established Master Reference List:** In a new environment, the agent recreated the  file by first extracting 772 existing references from the DB (for pages 21-54) and then appending new ones as pages were processed.
+- **Processed PDF Pages 55-99:** The agent successfully processed user-provided images for pages 55 through 99 in multiple batches.
+- **Added/Updated Hundreds of Products:** Products from the processed pages were either created new or updated in the database, growing the total count to 4,641.
+- **Refined Data Extraction Logic:** Based on user feedback, the agent updated its processing script to capture the exact product  from the PDF and correctly assign  (ESTÁNDAR) and  (ALTOS, SOBREMÓDULOS).
 
 **Earlier issues found/mentioned but not fixed**
 - **Overlapping UI Fields**: Blocked on user input for reproduction steps.
@@ -87,52 +85,61 @@ Issues Detail:
 
 
 **Key Technical Concepts**
-- **User-Guided Data Curation:** The workflow has pivoted to a manual, page-by-page verification process entirely driven by the user, replacing previous automated approaches.
-- **Stateful Catalog Building:** The agent is maintaining a cumulative list of approved products in  that persists across interactions.
+- **User-Guided Data Curation:** The workflow is a manual, page-by-page verification process entirely driven by the user.
+- **Stateful Catalog Building:** The agent maintains a cumulative list of approved products in  that persists across interactions.
+- **Refined Data Extraction:** The agent's logic was improved mid-session to capture more precise fields (, , ) based on direct user feedback.
 - **Hybrid Database State:** The current database is a temporary mix of old backup data and new, verified products. A final cleanup step is planned and essential.
-- **Database Rollback:** The agent successfully restored the MongoDB database from a JSON backup file.
 
 **key DB schema**
-- **products**: , , , , , , , , ,  (prices), .
+- **products**: , , , , , , , , ,  (prices), , , , .
 
 **All files of reference**
 - **Created/Updated:**
-  - : Contains the master list of 822 product references approved by the user from pages 21-54. **This file is essential for resuming the task.**
+  - : Contains the master list of **1,358** product references approved by the user from pages 21-99. **This file is essential for resuming the task.**
+  - : A series of temporary Python scripts created to process batches of pages.
 - **Referenced:**
-  - : The source document provided by the user.
-  - : The backup file used for the database restoration.
   - 
   - 
 
 **Areas that need refactoring**:
-- **Data Import Logic:** The PDF parsing logic is scattered across numerous agent steps. It should be consolidated into a robust backend service for any future data work.
-- **/app/backend/server.py**: The monolith continues to grow.
+- **Data Import Logic:** The PDF parsing logic is scattered across numerous temporary scripts (). It should be consolidated into a single, robust, and configurable backend service.
+- **/app/backend/server.py**: The monolith continues to grow and should be decomposed into separate modules for routes, models, and services.
 
 **key api endpoints**
 - : Fetches the product library for the frontend.
+- : Creates a new product.
+- : Updates an existing product.
 
 **Critical Info for New Agent**
-- **Follow the User's Process Strictly:** The current task is a manual, page-by-page catalog build. **Do not** attempt to automate or re-import the full PDF. Your first action should be to ask the user for the next set of pages.
+- **Follow the User's Process Strictly:** The current task is a manual, page-by-page catalog build. Your immediate next action, after finishing the current batch (95-99), is to ask the user for the next set of pages (100+). **Do not** attempt to automate this differently.
 - ** is the Source of Truth:** This file contains the master list of approved products. You must load this file at the start of your work and append to it as the user provides more pages.
-- **Final Cleanup is Required:** The user's goal is to have a database containing *only* the products from the pages they provide. After they confirm all pages have been sent, you must delete every product from the database whose reference is NOT in the  list. **Do not do this prematurely.**
-- **Database is in a Hybrid State:** The DB currently holds 4,217 products. Only 822 are from the user's verified pages. The rest are from an old backup and will likely be deleted in the final cleanup step.
+- **Adhere to Refined Data Rules:** When processing new pages, ensure you capture the product  exactly as it appears in the PDF, and correctly assign the  and  based on the section headers.
+- **Final Cleanup is Required but NOT YET:** The user's goal is to have a database containing *only* the products from the pages they provide. After they confirm all pages have been sent, you must delete every product whose reference is NOT in the  list. **Do not do this prematurely.**
 
 **documents and test reports created in this job**
+-  (Updated continuously)
 - 
 - 
--  (Stores valid product references from user-provided pages)
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-10.  - User confirms they want to continue the page-by-page verification process. (PENDING)
-9.   - User asking to clarify if only new products will be shown. Agent clarified the cleanup will happen at the end. (Completed)
-8.   - User asked to see the newly added products in the UI. (Completed)
-7.   - User provided pages 53-54. (Completed)
-6.   - User explains the new process of providing pages to build the catalog. (Completed)
-5.   - User reported a search issue, which led to the discovery that the desired products were not in the restored backup. (Completed)
-4.   - User chose which backup to restore. (Completed)
-3.   - User rejected the fully re-imported catalog and requested a rollback. (Completed)
-2.   - User providing an image. (Completed)
-1.   - User confirmed that prices for all product lines, including ALUMINIO, are in the PDF. (Completed)
+10. User provides pages 95-99. (In Progress)
+9.  User provides pages 90-94. (Completed)
+8.  User provides pages 85-89. (Completed)
+7.  User provides pages 80-84. (Completed)
+6.  User provides pages 75-79. (Completed)
+5.   - User provides crucial clarification on how to capture product , , and . (Completed, logic implemented)
+4.   - User asks for details on the data extraction process, prompting a clarification. (Completed)
+3.  User provides pages 70-74. (Completed)
+2.  User provides pages 65-69. (Completed)
+1.  User provides pages 60-64. (Completed)
 
 **Project Health Check:**
 - **Mocked:** The product database is in a temporary, hybrid state. It contains valid data from newly added pages mixed with old data from a backup, awaiting a final cleanup.
@@ -148,7 +155,7 @@ Issues Detail:
 - Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
-- Known regressions: The entire data import strategy has been reset multiple times. The current user-guided approach is intended to prevent further regressions.
+- Known regressions: The current user-guided approach is intended to prevent further data regressions.
 
 **Credentials to test flow:**
 - **User:** MARIO (Director Comercial / Admin), **Password:** MARIO
@@ -156,4 +163,4 @@ Issues Detail:
 - **User:** TISA (Tienda), **Password:** TISA
 
 **What agent forgot to execute**
-- The agent correctly followed the user's very specific and evolving instructions, including a full data rollback and the initiation of a new, manual verification process. The known  frontend error remains deferred but was not forgotten.</analysis>
+- The agent correctly followed the user's very specific and evolving instructions, including adapting its data extraction logic mid-stream based on feedback. The known  frontend error remains deferred but was not forgotten.</analysis>
