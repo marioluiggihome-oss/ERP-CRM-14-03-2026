@@ -1159,6 +1159,91 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 >
                   <RefreshCw size={18} />
                 </button>
+                
+                {/* Botones de exportación */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/export/presupuestos`, {
+                          headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (response.ok) {
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `LUIGGI_Presupuestos_${new Date().toISOString().split('T')[0]}.xlsx`;
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                        }
+                      } catch (err) {
+                        console.error('Error exportando:', err);
+                      }
+                    }}
+                    className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition-colors"
+                    title="Exportar Presupuestos"
+                    data-testid="export-presupuestos-btn"
+                  >
+                    <Download size={14} />
+                    Presup.
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/export/crm`, {
+                          headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (response.ok) {
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `LUIGGI_CRM_${new Date().toISOString().split('T')[0]}.xlsx`;
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                        }
+                      } catch (err) {
+                        console.error('Error exportando:', err);
+                      }
+                    }}
+                    className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+                    title="Exportar CRM"
+                    data-testid="export-crm-btn"
+                  >
+                    <Download size={14} />
+                    CRM
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/export/usuarios`, {
+                          headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (response.ok) {
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `LUIGGI_Usuarios_${new Date().toISOString().split('T')[0]}.xlsx`;
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                        }
+                      } catch (err) {
+                        console.error('Error exportando:', err);
+                      }
+                    }}
+                    className="flex items-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
+                    title="Exportar Usuarios"
+                    data-testid="export-usuarios-btn"
+                  >
+                    <Download size={14} />
+                    Usuarios
+                  </button>
+                </div>
               </div>
 
               {/* METRICS TAB */}
