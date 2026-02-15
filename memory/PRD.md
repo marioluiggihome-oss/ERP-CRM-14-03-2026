@@ -1,6 +1,35 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 07/02/2026 (v5.12)
+## Última Actualización: 15/02/2026 (v5.13)
+
+---
+
+## 🆕 ACTUALIZACIÓN 15/02/2026 (v5.13)
+
+### ✅ BUG P0 RESUELTO: Corrección de Nombres de Productos con Fondo 58
+
+**Problema:** 430 productos tenían nombres incorrectos donde el ancho mostraba "58 CMS" en lugar del ancho real.
+**Ejemplo:** `G11A1P100058` mostraba "ALTO 1 PUERTA 58 CMS" cuando debería ser "ALTO GOLA 1 PUERTA 100 CMS"
+
+**Causa Raíz:** El parsing de referencias interpretaba incorrectamente el sufijo `58` (que indica fondo 58cm) como parte del ancho.
+
+**Solución Aplicada:**
+1. Corregidos 387 productos GOLA con referencias terminadas en `58`
+2. Corregidos 43 productos adicionales con patrones especiales (CDX, ABL, SCH, etc.)
+3. Actualizados campos `ancho` y `alto` en toda la base de datos
+4. Regenerados archivos Excel (.xlsx y .xls) con datos correctos
+
+**Productos Corregidos:**
+- Referencias `G*A*P*58`, `G*A*V*58` → Nombres ahora incluyen "GOLA" y ancho correcto
+- Referencias `G*CD*58` → COLUMNA GOLA con ancho correcto
+- Referencias `G*ABL*58` → ALTO GOLA PUERTA/VITRINA ABATIBLE con ancho correcto
+- Referencias `G*SCH*58` → SEMICOLUMNA GOLA con ancho correcto
+
+**Verificación:**
+- ✅ 0 productos con discrepancia nombre/ancho (antes: 430)
+- ✅ API devuelve campos `ancho` y `alto` correctamente
+- ✅ Excel actualizado con datos correctos
+- ✅ Frontend muestra valores correctos en librería
 
 ---
 
