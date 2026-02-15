@@ -34,7 +34,7 @@ products_to_add = []
 
 # Semicolumna 1 puerta (Izquierda/Derecha) + horno 600mm / 460mm + micro 400mm
 for ref, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12 in [
-    ("13SC1PHM600", 151, 154, 161, 166, 176, 180, 187, 211, 218, 249),
+    ("13SC1PHM600", 151, 154, 161, 166, 176, 180, 187, 189, 195, 211, 218, 249),
 ]:
     products_to_add.append({
         "reference": ref, "name": "Semicolumna 1 puerta (Izquierda/Derecha) + horno 600mm / 460mm + micro 400mm",
