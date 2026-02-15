@@ -2802,13 +2802,22 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       
                       {/* Botón descargar catálogo Excel */}
                       <a
-                        href={`${process.env.REACT_APP_BACKEND_URL}/catalogo_productos_completo.xlsx`}
-                        download="catalogo_productos_completo.xlsx"
+                        href="/catalogo_productos_completo.xlsx"
+                        download="LUIGGI_Catalogo_Productos.xlsx"
                         className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl font-black uppercase text-xs hover:bg-green-700 transition-all shadow-lg whitespace-nowrap"
-                        data-testid="download-catalog-btn"
+                        data-testid="download-catalog-xlsx-btn"
                       >
                         <Download size={18} />
-                        Descargar Excel
+                        Excel
+                      </a>
+                      <a
+                        href="/catalogo_productos_completo.xls"
+                        download="LUIGGI_Catalogo_Productos.xls"
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs hover:bg-emerald-700 transition-all shadow-lg whitespace-nowrap"
+                        data-testid="download-catalog-xls-btn"
+                      >
+                        <FileSpreadsheet size={18} />
+                        XLS
                       </a>
                     </div>
                   </div>
