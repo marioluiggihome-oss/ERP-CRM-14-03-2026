@@ -9,8 +9,13 @@ import os
 from pymongo import MongoClient
 
 # MongoDB connection
-MONGO_URL = os.environ.get('MONGO_URL')
-DB_NAME = os.environ.get('DB_NAME')
+MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+DB_NAME = os.environ.get('DB_NAME', 'test_database')
+# Remove quotes if present
+if MONGO_URL.startswith('"'):
+    MONGO_URL = MONGO_URL.strip('"')
+if DB_NAME.startswith('"'):
+    DB_NAME = DB_NAME.strip('"')
 client = MongoClient(MONGO_URL)
 db = client[DB_NAME]
 
