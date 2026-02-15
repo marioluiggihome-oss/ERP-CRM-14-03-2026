@@ -249,6 +249,8 @@ class ProductModel(BaseModel):
     width: float = 0
     height: float = 0
     depth: float = 0
+    ancho: Optional[float] = None  # Width in cm (same as width, for Spanish UI)
+    alto: Optional[float] = None  # Height in cm (same as height, for Spanish UI)
     manufacturer: str = "Luiggi Home Master"
     points: float = 0
     zonePoints: Optional[ZonePoints] = None
