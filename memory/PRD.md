@@ -27,16 +27,23 @@
 | Métrica | Valor |
 |---------|-------|
 | Total Productos | 6,575 |
-| Con Precios | 1,538 (23.4%) |
-| Sin Precios | 5,037 |
-| GOLA | 2,387 |
-| ESTÁNDAR | 4,065 |
-| ALUMINIO | 123 |
+| Con Precios | **3,369 (51.2%)** |
+| Sin Precios | 3,206 |
+| GOLA | 2,387 (760 con precio) |
+| ESTÁNDAR | 4,065 (2,596 con precio) |
+| ALUMINIO | 123 (0 con precio) |
 
-**Nota sobre Precios:**
-Los ~5,000 productos sin precio son referencias que existían en el PDF pero NO en los backups anteriores. Para completar los precios se necesitaría:
-- Extraer tablas de precios directamente del PDF (proceso complejo)
-- O recibir un archivo de precios del usuario
+**Extracción de Precios del PDF:**
+- ✅ Procesadas 479 páginas del PDF
+- ✅ Extraídos 2,865 precios directamente de tablas
+- ✅ Combinados con 4,254 precios del backup
+- ✅ Total: 6,085 precios únicos aplicados
+
+**Productos sin precio restantes:**
+Los ~3,200 productos sin precio son principalmente:
+- Productos ALUMINIO (sin precios en el PDF visible)
+- Productos con variantes especiales (HL, HS, decorativos)
+- Referencias que el parsing de tablas no pudo asociar
 
 ---
 
