@@ -1,6 +1,46 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 15/02/2026 (v5.14)
+## Última Actualización: 15/02/2026 (v5.15)
+
+---
+
+## 🆕 ACTUALIZACIÓN 15/02/2026 (v5.15)
+
+### ✅ REIMPORTACIÓN COMPLETA + VALIDACIÓN SEVERA
+
+**Problema Resuelto:** Referencias inventadas que NO existían en el PDF (ej: `G7A1P73058`).
+
+**Solución:**
+1. Extracción directa de **6,633 referencias** del `TARIFA-COMPLETA.pdf`
+2. Importación de **6,575 productos** con referencias 100% validadas
+3. Validación severa comparando BD vs PDF: **0 referencias inválidas**
+4. Recuperación de **1,538 precios** desde backups anteriores
+
+**Validación Severa PASADA:**
+```
+✅ Referencias válidas: 6,575/6,575 (100%)
+❌ Referencias inválidas: 0
+⚠️ "Faltantes" en PDF: 58 (son nombres de acabados, no productos)
+```
+
+**Estado del Catálogo:**
+| Métrica | Valor |
+|---------|-------|
+| Total Productos | 6,575 |
+| Con Precios | 1,538 (23.4%) |
+| Sin Precios | 5,037 |
+| GOLA | 2,387 |
+| ESTÁNDAR | 4,065 |
+| ALUMINIO | 123 |
+
+**Nota sobre Precios:**
+Los ~5,000 productos sin precio son referencias que existían en el PDF pero NO en los backups anteriores. Para completar los precios se necesitaría:
+- Extraer tablas de precios directamente del PDF (proceso complejo)
+- O recibir un archivo de precios del usuario
+
+---
+
+## 🆕 ACTUALIZACIÓN 15/02/2026 (v5.14)
 
 ---
 
