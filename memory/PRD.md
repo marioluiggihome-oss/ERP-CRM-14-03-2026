@@ -1,35 +1,42 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 15/02/2026 (v5.13)
+## Última Actualización: 15/02/2026 (v5.14)
 
 ---
 
-## 🆕 ACTUALIZACIÓN 15/02/2026 (v5.13)
+## 🆕 ACTUALIZACIÓN 15/02/2026 (v5.14)
 
-### ✅ BUG P0 RESUELTO: Corrección de Nombres de Productos con Fondo 58
+### ✅ REIMPORTACIÓN COMPLETA DEL CATÁLOGO DESDE PDF
 
-**Problema:** 430 productos tenían nombres incorrectos donde el ancho mostraba "58 CMS" en lugar del ancho real.
-**Ejemplo:** `G11A1P100058` mostraba "ALTO 1 PUERTA 58 CMS" cuando debería ser "ALTO GOLA 1 PUERTA 100 CMS"
-
-**Causa Raíz:** El parsing de referencias interpretaba incorrectamente el sufijo `58` (que indica fondo 58cm) como parte del ancho.
+**Problema Detectado:** La base de datos contenía ~2,000 productos con referencias que NO existían en el PDF `TARIFA-COMPLETA.pdf`. Por ejemplo:
+- `G7A1P73058` - No existe en el PDF
+- `G7A1P35058` - Formato incorrecto (debería ser `G7A1P58350`)
 
 **Solución Aplicada:**
-1. Corregidos 387 productos GOLA con referencias terminadas en `58`
-2. Corregidos 43 productos adicionales con patrones especiales (CDX, ABL, SCH, etc.)
-3. Actualizados campos `ancho` y `alto` en toda la base de datos
-4. Regenerados archivos Excel (.xlsx y .xls) con datos correctos
+1. **Backup completo** de la BD anterior
+2. **Extracción directa** de 6,575 referencias válidas del PDF
+3. **Reimportación limpia** con todas las referencias correctas
+4. **Recuperación de precios** desde el backup anterior (936 productos con precios)
 
-**Productos Corregidos:**
-- Referencias `G*A*P*58`, `G*A*V*58` → Nombres ahora incluyen "GOLA" y ancho correcto
-- Referencias `G*CD*58` → COLUMNA GOLA con ancho correcto
-- Referencias `G*ABL*58` → ALTO GOLA PUERTA/VITRINA ABATIBLE con ancho correcto
-- Referencias `G*SCH*58` → SEMICOLUMNA GOLA con ancho correcto
+**Estructura de Referencias Correcta:**
+- Fondo 33 (estándar): `G7A1P350` = GOLA ALTO 70cm, 1 PUERTA, ancho 35cm
+- Fondo 58: `G7A1P58350` = GOLA ALTO 70cm, 1 PUERTA, fondo 58cm, ancho 35cm
+- El `58` va DESPUÉS del tipo (`P`, `V`) y ANTES del ancho
+
+**Resultados:**
+| Métrica | Antes | Después |
+|---------|-------|---------|
+| Total Productos | 3,541 | **6,575** |
+| Referencias Válidas | ~1,500 | **6,575 (100%)** |
+| Productos GOLA | ~1,700 | **2,387** |
+| Productos G7A | 0 (mal importados) | **156** |
+| Con Precios | ~900 | **936** |
 
 **Verificación:**
-- ✅ 0 productos con discrepancia nombre/ancho (antes: 430)
-- ✅ API devuelve campos `ancho` y `alto` correctamente
-- ✅ Excel actualizado con datos correctos
-- ✅ Frontend muestra valores correctos en librería
+- ✅ `G7A1P73058` NO existe (correcto, no está en PDF)
+- ✅ `G7A1P58350` SÍ existe (correcto, está en PDF)
+- ✅ 6,575 productos con referencias 100% del PDF
+- ✅ Excel regenerado con datos correctos
 
 ---
 
