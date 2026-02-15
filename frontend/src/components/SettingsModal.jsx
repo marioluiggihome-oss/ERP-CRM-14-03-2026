@@ -2247,6 +2247,34 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <Plus size={14} />
                         Activo
                       </button>
+                      
+                      {/* Botón Exportar Clientes */}
+                      <button
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem('token');
+                            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/export/clientes`, {
+                              headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            if (response.ok) {
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `LUIGGI_Clientes_${new Date().toISOString().split('T')[0]}.xlsx`;
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                            }
+                          } catch (err) {
+                            console.error('Error exportando:', err);
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold uppercase transition-colors"
+                        data-testid="export-clients-btn"
+                      >
+                        <Download size={14} />
+                        Excel
+                      </button>
                     </div>
                   </div>
 
