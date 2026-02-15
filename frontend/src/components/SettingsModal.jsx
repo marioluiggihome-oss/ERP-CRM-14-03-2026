@@ -1162,6 +1162,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 
                 {/* Botones de exportación */}
                 <div className="flex gap-2">
+                  <a
+                    href="/catalogo_productos_completo.xlsx"
+                    download="LUIGGI_Catalogo_Productos.xlsx"
+                    className="flex items-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-colors"
+                    title="Exportar Catálogo Productos"
+                    data-testid="export-productos-btn"
+                  >
+                    <Download size={14} />
+                    Artículos
+                  </a>
                   <button
                     onClick={async () => {
                       try {
