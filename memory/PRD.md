@@ -23,27 +23,24 @@
 ⚠️ "Faltantes" en PDF: 58 (son nombres de acabados, no productos)
 ```
 
-**Estado del Catálogo:**
-| Métrica | Valor |
-|---------|-------|
-| Total Productos | 6,575 |
-| Con Precios | **3,369 (51.2%)** |
-| Sin Precios | 3,206 |
-| GOLA | 2,387 (760 con precio) |
-| ESTÁNDAR | 4,065 (2,596 con precio) |
-| ALUMINIO | 123 (0 con precio) |
+**Estado del Catálogo (ACTUALIZADO):**
+| Programa | Productos | Con Precio | % |
+|----------|-----------|------------|---|
+| ESTÁNDAR | 4,065 | 2,605 | 64.1% |
+| GOLA | 2,387 | 1,276 | 53.5% |
+| ALUMINIO | 161 | 108 | 67.1% |
+| **TOTAL** | **6,613** | **3,989** | **60.3%** |
 
 **Extracción de Precios del PDF:**
-- ✅ Procesadas 479 páginas del PDF
-- ✅ Extraídos 2,865 precios directamente de tablas
-- ✅ Combinados con 4,254 precios del backup
-- ✅ Total: 6,085 precios únicos aplicados
+- ✅ Procesadas 479 páginas del PDF en múltiples pasadas
+- ✅ Corregidos productos ALUMINIO (eliminados 123 incorrectos, añadidos 161 correctos)
+- ✅ Extraídos precios de tablas de 12 zonas y precios únicos
+- ✅ Total: 6,584 precios únicos aplicados
 
-**Productos sin precio restantes:**
-Los ~3,200 productos sin precio son principalmente:
-- Productos ALUMINIO (sin precios en el PDF visible)
+**Productos sin precio restantes (~2,600):**
 - Productos con variantes especiales (HL, HS, decorativos)
-- Referencias que el parsing de tablas no pudo asociar
+- Referencias cuyo parsing de tablas no pudo asociar correctamente
+- Algunas páginas del PDF tienen estructuras no estándar
 
 ---
 
