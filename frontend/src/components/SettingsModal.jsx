@@ -2799,6 +2799,17 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <Plus size={18} />
                         Nueva Alta
                       </button>
+                      
+                      {/* Botón descargar catálogo Excel */}
+                      <a
+                        href={`${process.env.REACT_APP_BACKEND_URL}/catalogo_productos_completo.xlsx`}
+                        download="catalogo_productos_completo.xlsx"
+                        className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl font-black uppercase text-xs hover:bg-green-700 transition-all shadow-lg whitespace-nowrap"
+                        data-testid="download-catalog-btn"
+                      >
+                        <Download size={18} />
+                        Descargar Excel
+                      </a>
                     </div>
                   </div>
 
