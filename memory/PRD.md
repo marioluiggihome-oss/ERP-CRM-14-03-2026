@@ -1,6 +1,34 @@
 # LUIGGI HOME - ERP/CRM para Presupuestos de Cocinas y Armarios
 
-## Última Actualización: 15/02/2026 (v5.15)
+## Última Actualización: 15/02/2026 (v5.16)
+
+---
+
+## 🔄 EN PROGRESO: Auditoría Manual del Catálogo (Página a Página)
+
+**Estado:** El usuario está pasando las páginas del PDF una a una para validar referencias, nombres y precios.
+
+**Progreso:**
+- ✅ Páginas verificadas: **21-54** (34 páginas)
+- ✅ Referencias válidas extraídas: **822**
+- ✅ Productos creados/verificados: **4,217** en BD
+- 📄 Archivo de refs válidas: `/app/valid_refs_from_pdf.json`
+
+**Secciones procesadas:**
+- ALTOS 35cm (fondo std y 58, abatibles HK-TOP/HL/HS, decorativos)
+- ALTOS 40cm (fondo std y 58, abatibles HK-TOP/HL/HS, decorativos)
+- ALTOS 45cm (fondo std y 58, abatibles HK-TOP/HL/HS, decorativos)
+- ALTOS 60cm (fondo std y 58, abatibles HK-TOP/HL/HS, decorativos)
+- ALTOS 70cm (fondo std, plegables HF, escurreplatos, campana, microondas, rincones)
+
+**Próximos pasos:**
+1. Continuar con páginas 55+
+2. Al terminar TODAS las páginas → eliminar productos NO incluidos en la lista
+3. Verificar precios de cada producto
+
+---
+
+## 🆕 ACTUALIZACIÓN 15/02/2026 (v5.15)
 
 ---
 
