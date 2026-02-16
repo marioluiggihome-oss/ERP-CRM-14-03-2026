@@ -153,7 +153,9 @@ class UserResponse(BaseModel):
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
-    commercialDiscount: float = 0
+    commercialDiscount: float = 0  # Descuento general (legacy)
+    discountMontada: float = 0  # Descuento específico para Montada (%)
+    discountDespiece: float = 0  # Descuento específico para Despiece (%)
     canSeeCost: bool = False
     canSeeRetail: bool = True
     canUseAIAnalysis: bool = False
@@ -180,7 +182,9 @@ class UserCreate(BaseModel):
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
-    commercialDiscount: float = 0
+    commercialDiscount: float = 0  # Descuento general (legacy)
+    discountMontada: float = 0  # Descuento específico para Montada (%)
+    discountDespiece: float = 0  # Descuento específico para Despiece (%)
     canSeeCost: bool = False
     canSeeRetail: bool = True
     canUseAIAnalysis: bool = False
