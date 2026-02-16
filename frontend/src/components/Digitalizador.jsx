@@ -832,12 +832,22 @@ const Digitalizador = ({ state }) => {
                       <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest">Descripción del Mueble / Artículo</th>
                       <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-24">Precio</th>
                       <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-20">Dto%</th>
+                      {/* Columna INC% solo visible cuando está desbloqueado */}
+                      {!isLocked && globalMarkup > 0 && (
+                        <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-20 text-emerald-400">Inc%</th>
+                      )}
                       <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest w-28">Neto</th>
                       <th className="px-4 py-3 text-center w-12 no-print"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-50">
-                    {(currentPage === -1 ? lines : (pages[currentPage] || [])).map((line) => (
+                    {(currentPage === -1 ? lines : (pages[currentPage] || [])).map((line) => {
+                      // Calcular precio a mostrar según estado del candado
+                      const originalPrice = line.price;
+                      const priceWithMarkup = originalPrice * (1 + globalMarkup / 100);
+                      const displayPrice = isLocked && globalMarkup > 0 ? priceWithMarkup : originalPrice;
+                      
+                      return (
                       <tr key={line.id} className={`hover:bg-indigo-50/50 transition-colors ${line.isManual ? 'bg-orange-50/30' : ''}`}>
                         <td className="px-4 py-3">
                           <input
@@ -866,18 +876,28 @@ const Digitalizador = ({ state }) => {
                           />
                         </td>
                         <td className="px-4 py-3 text-center">
-                          {/* Input de texto para permitir punto y coma como decimal */}
-                          <input
-                            type="text"
-                            value={line.price}
-                            onChange={(e) => {
-                              // Permitir punto y coma como separador decimal
-                              const value = e.target.value.replace(',', '.');
-                              updateLine(line.id, 'price', parseFloat(value) || 0);
-                            }}
-                            className="w-24 bg-transparent text-center font-bold text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
-                            placeholder="0.00"
-                          />
+                          {/* Precio: muestra original si desbloqueado, o con incremento si bloqueado */}
+                          <div className="flex flex-col items-center">
+                            <input
+                              type="text"
+                              value={isLocked ? displayPrice.toFixed(2) : line.price}
+                              onChange={(e) => {
+                                if (!isLocked) {
+                                  const value = e.target.value.replace(',', '.');
+                                  updateLine(line.id, 'price', parseFloat(value) || 0);
+                                }
+                              }}
+                              readOnly={isLocked && globalMarkup > 0}
+                              className={`w-24 bg-transparent text-center font-bold outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 ${isLocked && globalMarkup > 0 ? 'text-indigo-900' : 'text-indigo-900'}`}
+                              placeholder="0.00"
+                            />
+                            {/* Mostrar precio original tachado si hay markup y está desbloqueado */}
+                            {!isLocked && globalMarkup > 0 && (
+                              <span className="text-[9px] text-emerald-600 font-bold">
+                                → {priceWithMarkup.toFixed(2)}€
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           {/* Descuento SIEMPRE editable - casilla más ancha */}
@@ -892,6 +912,12 @@ const Digitalizador = ({ state }) => {
                             className={`w-16 bg-indigo-50 rounded px-2 py-1 text-center font-bold outline-none border border-transparent hover:border-indigo-200 focus:border-orange-500 ${line.isManual ? 'text-orange-600 bg-orange-50' : (line.discount > 0 ? 'text-orange-600' : 'text-indigo-600')}`}
                           />
                         </td>
+                        {/* Columna INC% solo visible cuando está desbloqueado */}
+                        {!isLocked && globalMarkup > 0 && (
+                          <td className="px-4 py-3 text-center">
+                            <span className="text-emerald-600 font-bold">{globalMarkup}</span>
+                          </td>
+                        )}
                         <td className="px-4 py-3 text-right font-black text-indigo-950">
                           {getLineNet(line).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                         </td>
@@ -904,7 +930,8 @@ const Digitalizador = ({ state }) => {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
