@@ -801,9 +801,37 @@ const Digitalizador = ({ state }) => {
                     <Logo className="h-16 w-auto" customLogo={state.logo} />
                   </div>
                   <div className="text-right">
-                    <h1 className="text-2xl font-black text-indigo-950 uppercase tracking-tight">
-                      Presupuesto <span className="text-orange-600">Técnico</span>
-                    </h1>
+                    {/* Título editable del documento */}
+                    <div className="relative group">
+                      <input
+                        type="text"
+                        value={documentTitle}
+                        onChange={(e) => setDocumentTitle(e.target.value)}
+                        className="text-2xl font-black text-indigo-950 uppercase tracking-tight text-right bg-transparent outline-none border-b-2 border-transparent hover:border-indigo-200 focus:border-orange-500 w-full no-print"
+                        placeholder="Presupuesto Técnico"
+                      />
+                      <h1 className="print-only text-2xl font-black text-indigo-950 uppercase tracking-tight">
+                        {documentTitle || 'Presupuesto Técnico'}
+                      </h1>
+                    </div>
+                    
+                    {/* Botón Valorado/No Valorado */}
+                    <div className="flex items-center justify-end gap-2 mt-2">
+                      <button 
+                        onClick={() => setIsValorado(!isValorado)}
+                        className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all no-print ${
+                          isValorado 
+                            ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                      >
+                        {isValorado ? 'VALORADO' : 'SIN VALORAR'}
+                      </button>
+                      <p className="print-only text-[9px] font-black uppercase tracking-wider text-orange-600">
+                        {isValorado ? 'DOCUMENTO VALORADO' : 'DOCUMENTO SIN VALORACIÓN'}
+                      </p>
+                    </div>
+                    
                     {/* Número de expediente único */}
                     <div className="flex items-center justify-end gap-2 mt-2">
                       <span className="px-3 py-1.5 bg-indigo-100 text-indigo-800 rounded-lg font-black text-sm tracking-wider">
