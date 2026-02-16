@@ -1945,8 +1945,25 @@ const Armarios = ({ state, setState }) => {
           <div className="p-4 border-b border-slate-200 bg-purple-50">
             <h3 className="font-black text-purple-800 uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
               <Layers size={14} />
-              MÓDULO {selectedModule + 1}
+              MÓDULO {selectedModule + 1} de {wardrobeConfig.modules}
             </h3>
+            
+            {/* Selector visual de módulos */}
+            <div className="flex gap-1 mb-4">
+              {Array.from({ length: wardrobeConfig.modules }).map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedModule(idx)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${
+                    selectedModule === idx 
+                      ? 'bg-purple-600 text-white shadow-lg' 
+                      : 'bg-white border border-purple-200 text-purple-600 hover:bg-purple-100'
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+            </div>
             
             <div className="space-y-3">
               <div className="flex items-center justify-between">
