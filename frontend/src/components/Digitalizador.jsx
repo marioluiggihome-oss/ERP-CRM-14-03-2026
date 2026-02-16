@@ -117,14 +117,43 @@ const Digitalizador = ({ state }) => {
     };
   }, [quoteData]);
 
+  // Paginación mejorada:
+  // - Primera página: menos líneas porque tiene cabecera de cliente y datos
+  // - Páginas intermedias: más líneas (solo cabecera de página)
+  // - Última página: reservar espacio para totales
   const paginatedItems = useMemo(() => {
-    if (!quoteData) return [];
+    if (!quoteData || !quoteData.items || quoteData.items.length === 0) return [];
+    
     const items = [...quoteData.items];
     const pages = [];
-    pages.push(items.splice(0, 22)); 
-    while (items.length > 0) {
-      pages.push(items.splice(0, 38)); 
+    
+    const FIRST_PAGE_LINES = 18;      // Primera página tiene cabecera cliente
+    const MIDDLE_PAGE_LINES = 28;     // Páginas intermedias
+    const LAST_PAGE_WITH_TOTALS = 22; // Última página necesita espacio para totales
+    
+    // Primera página
+    if (items.length <= FIRST_PAGE_LINES) {
+      // Todo cabe en una página
+      pages.push(items.splice(0, items.length));
+    } else {
+      // Múltiples páginas
+      pages.push(items.splice(0, FIRST_PAGE_LINES));
+      
+      while (items.length > 0) {
+        // Si es la última tanda y cabe con totales
+        if (items.length <= LAST_PAGE_WITH_TOTALS) {
+          pages.push(items.splice(0, items.length));
+        } else if (items.length <= MIDDLE_PAGE_LINES + LAST_PAGE_WITH_TOTALS) {
+          // Dividir entre esta página y la siguiente (última)
+          const forThisPage = items.length - LAST_PAGE_WITH_TOTALS;
+          pages.push(items.splice(0, Math.max(forThisPage, 1)));
+        } else {
+          // Página intermedia completa
+          pages.push(items.splice(0, MIDDLE_PAGE_LINES));
+        }
+      }
     }
+    
     return pages;
   }, [quoteData]);
 
