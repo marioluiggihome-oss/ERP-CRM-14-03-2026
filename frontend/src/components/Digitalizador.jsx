@@ -341,6 +341,7 @@ const Digitalizador = ({ state }) => {
     setCostados('');
     setError(null);
     setOpportunityCreated(null);
+    setCurrentPage(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
