@@ -89,10 +89,10 @@ const ClientSelector = ({
       
       if (currentUser) {
         params.append('requestingUserId', currentUser.id);
-        params.append('isAdmin', currentUser.isAdmin || currentUser.isResponsableDelegacion ? 'true' : 'false');
+        params.append('isAdmin', currentUser.isAdmin || currentUser.isGerente || currentUser.isResponsableDelegacion ? 'true' : 'false');
         
-        // Si no es admin, enviar el ID para filtrar en backend
-        if (!currentUser.isAdmin && !currentUser.isResponsableDelegacion) {
+        // Si no es admin/gerente, enviar el ID para filtrar en backend
+        if (!currentUser.isAdmin && !currentUser.isGerente && !currentUser.isResponsableDelegacion) {
           params.append('assignedTo', currentUser.id);
         }
       }
@@ -104,7 +104,7 @@ const ClientSelector = ({
       
       // Filtrado adicional en frontend como segunda capa de seguridad
       // (El filtrado principal debe estar en el backend)
-      if (currentUser && !currentUser.isAdmin && !currentUser.isResponsableDelegacion) {
+      if (currentUser && !currentUser.isAdmin && !currentUser.isGerente && !currentUser.isResponsableDelegacion) {
         if (currentUser.isRepresentative) {
           contactsData = contactsData.filter(c => 
             c.assignedTo === currentUser.id || 
