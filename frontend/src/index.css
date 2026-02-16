@@ -78,6 +78,19 @@ code {
     [class*="absolute"][class*="bottom-0"] {
         display: none !important;
     }
+    
+    /* Estilos específicos para Digitalizador */
+    #digitalizador-pdf {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    
+    #digitalizador-pdf .bg-white {
+        box-shadow: none !important;
+    }
 }
 
 @layer base {
