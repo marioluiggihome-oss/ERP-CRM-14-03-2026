@@ -26,6 +26,10 @@ const Digitalizador = ({ state }) => {
   const [historySearch, setHistorySearch] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showCRMModal, setShowCRMModal] = useState(false);
+  const [showSaveOptionsModal, setShowSaveOptionsModal] = useState(false);  // Modal de opciones de guardado
+  const [saveToPresupuestos, setSaveToPresupuestos] = useState(true);  // Guardar en presupuestos
+  const [saveToHistory, setSaveToHistory] = useState(true);  // Guardar en historial
+  const [saveToCRM, setSaveToCRM] = useState(false);  // Guardar en CRM
   const [crmContactName, setCrmContactName] = useState('');
   const [crmContactEmail, setCrmContactEmail] = useState('');
   const [crmContactPhone, setCrmContactPhone] = useState('');
