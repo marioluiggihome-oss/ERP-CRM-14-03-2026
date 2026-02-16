@@ -398,6 +398,10 @@ const Digitalizador = ({ state }) => {
     setError(null);
     setOpportunityCreated(null);
     setCurrentPage(0);
+    setIsLocked(true);
+    setShowCostMode(false);
+    setGlobalMarkup(0);
+    setExpNumber(generateExpNumber());  // Nuevo número de expediente
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
