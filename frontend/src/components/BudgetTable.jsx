@@ -365,7 +365,10 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
      const pointsCost = usedPoints * pointValue;
      const unitPrice = pointsCost + cutsCost + carcassCost + vigaCost;
      
-     const discountPct = state.currentUser?.commercialDiscount || 0;
+     // Usar descuento específico según el módulo actual
+     const discountPct = state.currentModule === 'despiece' 
+       ? (state.currentUser?.discountDespiece || state.currentUser?.commercialDiscount || 0)
+       : (state.currentUser?.discountMontada || state.currentUser?.commercialDiscount || 0);
      // Las líneas manuales NO se afectan por el cambio de modo PVP/COSTO
      const discountFactor = (state.showDistributorPrice && !item.isManual) ? (1 - discountPct / 100) : 1;
      
@@ -385,11 +388,11 @@ ${!item.isManual ? `EXTRAS APLICADOS:
 
 PRECIO UNITARIO: ${unitPrice.toFixed(2)}€
 CANTIDAD: x${item.quantity}
-${state.showDistributorPrice ? `DTO. COMERCIAL: -${discountPct}%` : ''}
+${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCase()}): -${discountPct}%` : ''}
 `.trim();
 
      return { total: finalPrice, breakdown, hasExtras: (carcassCost > 0 || cutsCost > 0 || vigaCost > 0), usedPoints, vigaCost };
-  }, [state.globalFinish, state.currentModule, state.pointValueMontada, state.pointValueDespiece, state.specialIncrementWidth, state.specialIncrementHeight, state.specialIncrementDepth, state.showDistributorPrice, state.currentUser?.commercialDiscount, state.selectedCarcassMaterialId, state.carcassMaterials, state.vigaCutIncrement]);
+  }, [state.globalFinish, state.currentModule, state.pointValueMontada, state.pointValueDespiece, state.specialIncrementWidth, state.specialIncrementHeight, state.specialIncrementDepth, state.showDistributorPrice, state.currentUser?.commercialDiscount, state.currentUser?.discountMontada, state.currentUser?.discountDespiece, state.selectedCarcassMaterialId, state.carcassMaterials, state.vigaCutIncrement]);
 
 
   const total = useMemo(() => sortedItems.reduce((acc, item) => {
