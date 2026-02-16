@@ -299,7 +299,12 @@ const Digitalizador = ({ state }) => {
 
   // Export to PDF (uses browser print)
   const handleExportPDF = () => {
-    window.print();
+    // Temporalmente mostrar todas las líneas para impresión
+    setCurrentPage(-1); // -1 significa "mostrar todas"
+    setTimeout(() => {
+      window.print();
+      setCurrentPage(0); // Volver a la primera página después de imprimir
+    }, 100);
   };
 
   // Export to CSV for cutting machine
