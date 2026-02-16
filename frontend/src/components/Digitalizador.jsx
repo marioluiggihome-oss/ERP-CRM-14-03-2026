@@ -687,8 +687,22 @@ const Digitalizador = ({ state }) => {
                     <h1 className="text-2xl font-black text-indigo-950 uppercase tracking-tight">
                       Presupuesto <span className="text-orange-600">Técnico</span>
                     </h1>
+                    {/* Número de expediente único */}
+                    <div className="flex items-center justify-end gap-2 mt-2">
+                      <span className="px-3 py-1.5 bg-indigo-100 text-indigo-800 rounded-lg font-black text-sm tracking-wider">
+                        {isGeneratingExp ? '...' : expNumber || 'SIN EXP'}
+                      </span>
+                      <button
+                        onClick={generateExpNumber}
+                        disabled={isGeneratingExp}
+                        className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors no-print"
+                        title="Generar nuevo número de expediente"
+                      >
+                        <RefreshCw size={14} className={isGeneratingExp ? 'animate-spin' : ''} />
+                      </button>
+                    </div>
                     <p className="text-xs text-indigo-400 mt-1">
-                      EXP: {state.currentUser?.clientName || 'FACTORY 01'} &nbsp; {new Date().toLocaleDateString('es-ES')}
+                      {state.currentUser?.clientName || 'FACTORY 01'} &nbsp; {new Date().toLocaleDateString('es-ES')}
                     </p>
                   </div>
                 </div>
