@@ -2062,6 +2062,49 @@ const Armarios = ({ state, setState }) => {
               ))}
             </div>
           </div>
+
+          {/* Panel DISEÑO CON IA - Nuevo */}
+          <div className="p-4 border-b border-slate-200 bg-gradient-to-br from-indigo-900 to-purple-900">
+            <h3 className="font-black text-white uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
+              <Sparkles size={14} className="text-yellow-400" />
+              DISEÑO INTELIGENTE IA
+            </h3>
+            
+            <div className="space-y-3">
+              <textarea
+                value={iaInstruction}
+                onChange={(e) => setIaInstruction(e.target.value)}
+                placeholder="Ej: En el primer módulo, 3 cajones abajo, una balda, y un perchero con luz. En el segundo, solo baldas. En el tercero, percha doble altura..."
+                className="w-full bg-white/10 backdrop-blur text-white placeholder-white/50 text-xs p-3 rounded-xl border border-white/20 min-h-[100px] outline-none focus:border-yellow-400 resize-none"
+              />
+              
+              <button
+                onClick={handleIAGenerateLayout}
+                disabled={iaLoading || !iaInstruction.trim()}
+                className="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg hover:from-yellow-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              >
+                {iaLoading ? (
+                  <>
+                    <Loader size={14} className="animate-spin" />
+                    Generando interior...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} />
+                    Aplicar diseño IA
+                  </>
+                )}
+              </button>
+
+              {iaError && (
+                <p className="text-xs text-red-300 bg-red-900/30 p-2 rounded-lg">{iaError}</p>
+              )}
+              
+              <p className="text-[9px] text-white/50 leading-relaxed">
+                💡 Describe qué quieres en cada módulo y la IA configurará automáticamente baldas, cajones, barras y accesorios.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Panel central - Visualización */}
