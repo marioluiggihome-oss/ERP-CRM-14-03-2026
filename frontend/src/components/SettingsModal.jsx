@@ -2148,25 +2148,54 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
                     {/* Commercial Discount */}
                     <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                      <h4 className="text-sm font-black text-green-900 uppercase mb-3">Descuento Comercial Base (%)</h4>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={userForm.commercialDiscount}
-                          onChange={(e) => setUserForm({...userForm, commercialDiscount: parseInt(e.target.value)})}
-                          className="flex-1"
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={userForm.commercialDiscount}
-                          onChange={(e) => setUserForm({...userForm, commercialDiscount: parseInt(e.target.value) || 0})}
-                          className="w-20 bg-white border-2 border-green-300 rounded-xl p-2 text-center text-lg font-black text-green-700 outline-none"
-                        />
-                        <span className="text-sm font-black text-green-700">%</span>
+                      <h4 className="text-sm font-black text-green-900 uppercase mb-3">Descuentos Comerciales (%)</h4>
+                      
+                      {/* Descuento Montada */}
+                      <div className="mb-4">
+                        <label className="text-xs font-bold text-green-700 mb-1 block">Descuento MONTADA</label>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={userForm.discountMontada}
+                            onChange={(e) => setUserForm({...userForm, discountMontada: parseInt(e.target.value)})}
+                            className="flex-1"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={userForm.discountMontada}
+                            onChange={(e) => setUserForm({...userForm, discountMontada: parseInt(e.target.value) || 0})}
+                            className="w-20 bg-white border-2 border-green-300 rounded-xl p-2 text-center text-lg font-black text-green-700 outline-none"
+                          />
+                          <span className="text-sm font-black text-green-700">%</span>
+                        </div>
+                      </div>
+                      
+                      {/* Descuento Despiece */}
+                      <div>
+                        <label className="text-xs font-bold text-orange-700 mb-1 block">Descuento DESPIECE</label>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={userForm.discountDespiece}
+                            onChange={(e) => setUserForm({...userForm, discountDespiece: parseInt(e.target.value)})}
+                            className="flex-1"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={userForm.discountDespiece}
+                            onChange={(e) => setUserForm({...userForm, discountDespiece: parseInt(e.target.value) || 0})}
+                            className="w-20 bg-white border-2 border-orange-300 rounded-xl p-2 text-center text-lg font-black text-orange-700 outline-none"
+                          />
+                          <span className="text-sm font-black text-orange-700">%</span>
+                        </div>
                       </div>
                     </div>
 
