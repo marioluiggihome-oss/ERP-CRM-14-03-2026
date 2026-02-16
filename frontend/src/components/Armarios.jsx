@@ -1618,6 +1618,8 @@ const Armarios = ({ state, setState }) => {
     const { width, height, modules, doorType } = wardrobeConfig;
     const moduleWidth = 100 / modules;
     const exteriorColor = getColorByName(wardrobeConfig.exteriorColor);
+    const numDoors = wardrobeConfig.numDoors || modules;
+    const doorWidth = 100 / numDoors; // Porcentaje de ancho por puerta
     
     return (
       <div className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-100 to-slate-200 rounded-xl overflow-hidden border border-slate-300 shadow-inner">
@@ -1626,23 +1628,23 @@ const Armarios = ({ state, setState }) => {
         
         {/* Armario */}
         <div 
-          className="absolute left-1/2 bottom-4 -translate-x-1/2 rounded-t-lg shadow-2xl border border-slate-400"
+          className="absolute left-1/2 bottom-4 -translate-x-1/2 rounded-t-lg shadow-2xl border border-slate-400 overflow-hidden"
           style={{ 
             width: '80%', 
             height: '85%',
-            backgroundColor: exteriorColor.hex,
+            backgroundColor: getColorByName(wardrobeConfig.interiorColor).hex,
             boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
           }}
         >
-          {/* Módulos */}
-          <div className="absolute inset-2 flex gap-1">
+          {/* Interior - Módulos (solo visible cuando puertas están "abiertas") */}
+          <div className="absolute inset-2 flex gap-0.5 z-0">
             {moduleConfigs.slice(0, modules).map((mod, i) => (
               <div 
                 key={i}
                 onClick={() => setSelectedModule(i)}
-                className={`flex-1 rounded cursor-pointer transition-all ${
+                className={`flex-1 rounded-sm cursor-pointer transition-all relative ${
                   selectedModule === i 
-                    ? 'ring-2 ring-orange-500 ring-offset-2' 
+                    ? 'ring-2 ring-orange-500 ring-offset-1' 
                     : 'hover:ring-1 hover:ring-orange-300'
                 }`}
                 style={{ 
@@ -1650,49 +1652,107 @@ const Armarios = ({ state, setState }) => {
                   border: '1px solid rgba(0,0,0,0.1)'
                 }}
               >
-                {/* Representación interior simplificada */}
-                <div className="h-full p-1 flex flex-col justify-between">
-                  {/* Baldas */}
-                  {[...Array(Math.min(mod.shelves, 5))].map((_, j) => (
-                    <div key={j} className="h-px bg-slate-400/50" />
-                  ))}
-                  
-                  {/* Barra de colgar */}
-                  {mod.hangingRods > 0 && (
-                    <div className="absolute left-2 right-2 top-4 h-1 bg-slate-500 rounded-full" />
+                {/* Representación interior */}
+                <div className="h-full p-0.5 flex flex-col justify-between relative">
+                  {/* Barra de colgar doble altura */}
+                  {mod.hangingRods >= 2 && (
+                    <>
+                      <div className="absolute left-1 right-1 top-3 h-0.5 bg-gray-500 rounded-full shadow" />
+                      <div className="absolute left-1 right-1 top-1/2 h-0.5 bg-gray-500 rounded-full shadow" />
+                    </>
                   )}
                   
-                  {/* Cajones */}
+                  {/* Barra de colgar simple */}
+                  {mod.hangingRods === 1 && (
+                    <div className="absolute left-1 right-1 top-3 h-0.5 bg-gray-500 rounded-full shadow" />
+                  )}
+                  
+                  {/* Baldas */}
+                  <div className="flex-1 flex flex-col justify-evenly py-8">
+                    {[...Array(Math.min(mod.shelves, 6))].map((_, j) => (
+                      <div key={j} className="h-0.5 bg-slate-400/60 mx-0.5" />
+                    ))}
+                  </div>
+                  
+                  {/* Cajones en la parte inferior */}
                   {mod.drawers > 0 && (
-                    <div className="absolute bottom-2 left-1 right-1 space-y-1">
-                      {[...Array(Math.min(mod.drawers, 3))].map((_, j) => (
-                        <div key={j} className="h-3 bg-slate-400/30 rounded border border-slate-400/50 flex items-center justify-center">
-                          <div className="w-4 h-0.5 bg-slate-500/50 rounded" />
+                    <div className="absolute bottom-1 left-0.5 right-0.5 space-y-0.5">
+                      {[...Array(Math.min(mod.drawers, 4))].map((_, j) => (
+                        <div key={j} className="h-2 bg-slate-300 rounded-sm border border-slate-400/50 flex items-center justify-center shadow-sm">
+                          <div className="w-3 h-0.5 bg-slate-500 rounded" />
                         </div>
                       ))}
                     </div>
                   )}
+                  
+                  {/* Indicador de módulo */}
+                  <div className="absolute top-0.5 left-0.5 text-[7px] font-black text-slate-400 bg-white/50 px-0.5 rounded">
+                    M{i + 1}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
           
-          {/* Tiradores (puertas correderas) */}
-          {doorType === DoorType.SLIDING && (
-            <div className="absolute inset-y-4 left-1/2 w-1 bg-slate-600 rounded-full" />
-          )}
-          
-          {/* Label módulo seleccionado */}
-          <div className="absolute -bottom-6 left-0 right-0 text-center">
-            <span className="text-xs font-bold text-slate-500">
-              Módulo {selectedModule + 1} seleccionado
-            </span>
+          {/* PUERTAS - Superpuestas sobre el interior */}
+          <div className="absolute inset-0 flex z-10 pointer-events-none">
+            {[...Array(numDoors)].map((_, doorIndex) => {
+              const isSliding = doorType === DoorType.SLIDING;
+              const isFolding = doorType === DoorType.FOLDING;
+              
+              return (
+                <div 
+                  key={doorIndex}
+                  className="relative border-r border-slate-600/20"
+                  style={{ 
+                    width: `${doorWidth}%`,
+                    background: `linear-gradient(135deg, ${exteriorColor.hex} 0%, ${exteriorColor.hex}ee 50%, ${exteriorColor.hex}dd 100%)`,
+                    boxShadow: 'inset 0 0 20px rgba(255,255,255,0.1), 1px 0 3px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  {/* Tirador según tipo de puerta */}
+                  {isSliding ? (
+                    // Tirador corredera - vertical
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1.5 h-16 bg-gradient-to-r from-slate-500 to-slate-400 rounded-full shadow-lg" />
+                  ) : isFolding ? (
+                    // Tirador plegable - pequeño horizontal
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-1.5 bg-gradient-to-r from-slate-500 to-slate-400 rounded-full shadow-lg" />
+                  ) : (
+                    // Tirador abatible - pomo o tirador lateral
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-gradient-to-r from-slate-500 to-slate-400 rounded-full shadow-lg" />
+                  )}
+                  
+                  {/* Número de puerta */}
+                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white/60 bg-black/20 px-1 rounded">
+                    P{doorIndex + 1}
+                  </div>
+                  
+                  {/* Línea decorativa de división para puertas correderas */}
+                  {isSliding && doorIndex < numDoors - 1 && (
+                    <div className="absolute right-0 top-2 bottom-2 w-0.5 bg-slate-600/30" />
+                  )}
+                </div>
+              );
+            })}
           </div>
+          
+          {/* Marco exterior */}
+          <div className="absolute inset-0 border-4 border-slate-700/20 rounded-t-lg pointer-events-none" />
         </div>
         
-        {/* Dimensiones */}
-        <div className="absolute top-2 left-2 text-xs font-bold text-slate-600 bg-white/80 px-2 py-1 rounded">
+        {/* Dimensiones y info */}
+        <div className="absolute top-2 left-2 text-xs font-bold text-slate-600 bg-white/90 px-2 py-1 rounded shadow">
           {width}mm × {height}mm × {wardrobeConfig.depth}mm
+        </div>
+        
+        {/* Info de puertas */}
+        <div className="absolute top-2 right-2 text-xs font-bold text-purple-700 bg-purple-100 px-2 py-1 rounded shadow">
+          {numDoors} {doorType === DoorType.SLIDING ? 'correderas' : doorType === DoorType.FOLDING ? 'plegables' : 'abatibles'}
+        </div>
+        
+        {/* Label módulo seleccionado */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-600 bg-white/90 px-3 py-1 rounded shadow">
+          Módulo {selectedModule + 1} seleccionado • {modules} módulos interiores
         </div>
       </div>
     );
