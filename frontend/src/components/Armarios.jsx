@@ -1508,6 +1508,7 @@ const Armarios = ({ state, setState }) => {
         height: wardrobeConfig.height,
         depth: wardrobeConfig.depth,
         modules: wardrobeConfig.modules,
+        numDoors: wardrobeConfig.numDoors,  // Número de puertas configurado
         doorType: wardrobeConfig.doorType,
         exteriorColorName: getColorByName(wardrobeConfig.exteriorColor).name,
         exteriorColorHex: getColorByName(wardrobeConfig.exteriorColor).hex,
