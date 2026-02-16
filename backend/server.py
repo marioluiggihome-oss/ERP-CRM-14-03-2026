@@ -6452,8 +6452,9 @@ async def ia_render_armario(request: IARenderRequest):
             module_desc = f"Module {i+1} (from left): {', '.join(items) if items else 'empty space'}"
             interior_desc.append(module_desc)
         
-        # Determinar el número exacto de puertas basado en la configuración
-        doors_count = request.modules if request.doorType == "hinged" else (request.modules // 2 + request.modules % 2)
+        # Usar el número de puertas de la configuración del usuario
+        doors_count = request.numDoors
+        door_width = request.width / doors_count
         
         prompt = f"""Create a PHOTOREALISTIC interior design photograph of a BUILT-IN WARDROBE/CLOSET.
 
@@ -6463,17 +6464,19 @@ CRITICAL - FOLLOW THESE SPECIFICATIONS EXACTLY:
 - Total width: {request.width}mm ({request.width/10}cm / {round(request.width/25.4, 1)} inches)
 - Total height: {request.height}mm ({request.height/10}cm)
 - Depth: {request.depth}mm ({request.depth/10}cm)
-- Number of modules/sections: EXACTLY {request.modules} modules side by side
+- Number of interior modules/sections: {request.modules} modules
 
-🚪 DOORS - CRITICAL:
+🚪 DOORS - CRITICAL - PAY ATTENTION:
+- EXACT NUMBER OF DOORS: {doors_count} doors (this is mandatory!)
 - Door type: {door_type_desc}
-- Door color/finish: {request.exteriorColorName}
+- Each door width: approximately {round(door_width)}mm
+- Door color/finish: {request.exteriorColorName} (hex: {request.exteriorColorHex})
 - Handle/knob style: {request.handleColorName} color handles
-- Show doors 50% OPEN to reveal interior
+- Show doors 50% OPEN to reveal interior organization
 
 🎨 COLORS - MATCH EXACTLY:
-- EXTERIOR FINISH: {request.exteriorColorName} (hex color: {request.exteriorColorHex})
-- INTERIOR COLOR: {request.interiorColorName}
+- EXTERIOR FINISH (doors): {request.exteriorColorName} (hex color: {request.exteriorColorHex})
+- INTERIOR COLOR (shelves, back panel): {request.interiorColorName}
 - All visible melamine surfaces should match these colors
 
 📦 INTERIOR ORGANIZATION - FOLLOW EXACTLY:
@@ -6488,13 +6491,13 @@ CRITICAL - FOLLOW THESE SPECIFICATIONS EXACTLY:
 
 📸 IMAGE REQUIREMENTS:
 - Professional interior photography style, NOT a 3D render or sketch
-- Camera angle: 3/4 view from front-left to show interior
+- Camera angle: 3/4 view from front-left to show interior through open doors
 - High-end quality materials: melamine, chrome hardware, soft-close systems
 - Realistic shadows and reflections
 - Some clothing items neatly organized inside
 - 4K quality, magazine-worthy composition
 
-DO NOT invent or add extra modules, doors, or interior elements not specified above.
+IMPORTANT: The wardrobe MUST have EXACTLY {doors_count} {request.doorType} doors. DO NOT add more or fewer doors.
 Generate ONE high-quality photorealistic image."""
 
         msg = UserMessage(text=prompt)
