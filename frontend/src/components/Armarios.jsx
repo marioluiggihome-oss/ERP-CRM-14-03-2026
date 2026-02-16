@@ -1900,6 +1900,33 @@ const Armarios = ({ state, setState }) => {
                 </button>
               ))}
             </div>
+            
+            {/* Número de puertas */}
+            <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+              <label className="text-[10px] font-bold text-purple-600 uppercase block mb-2">Nº de Puertas</label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => updateConfig('numDoors', Math.max(1, wardrobeConfig.numDoors - 1))}
+                  className="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-purple-700"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="font-black text-2xl text-purple-700 w-10 text-center">{wardrobeConfig.numDoors}</span>
+                <button
+                  onClick={() => updateConfig('numDoors', Math.min(8, wardrobeConfig.numDoors + 1))}
+                  className="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-purple-700"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+              <p className="text-[9px] text-purple-500 mt-2">
+                {wardrobeConfig.doorType === DoorType.SLIDING 
+                  ? `${wardrobeConfig.numDoors} puertas correderas` 
+                  : wardrobeConfig.doorType === DoorType.FOLDING 
+                    ? `${wardrobeConfig.numDoors} puertas plegables` 
+                    : `${wardrobeConfig.numDoors} puertas abatibles`}
+              </p>
+            </div>
           </div>
 
           {/* Colores */}
