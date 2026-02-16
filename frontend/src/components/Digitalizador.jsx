@@ -1108,7 +1108,8 @@ const Digitalizador = ({ state }) => {
                 </button>
               </div>
 
-              {/* Totals Footer */}
+              {/* Totals Footer - Solo si valorado */}
+              {isValorado && (
               <div className="bg-indigo-950 text-white p-6">
                 <div className="grid grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-indigo-900/50 rounded-xl">
@@ -1130,6 +1131,7 @@ const Digitalizador = ({ state }) => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Footer */}
               <div className="px-6 py-3 bg-white border-t border-indigo-100 flex justify-between items-center text-[9px] text-indigo-300 font-bold uppercase tracking-widest">
