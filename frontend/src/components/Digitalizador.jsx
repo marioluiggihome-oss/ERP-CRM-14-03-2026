@@ -433,7 +433,7 @@ const Digitalizador = ({ state }) => {
     setIsLocked(true);
     setShowCostMode(false);
     setGlobalMarkup(0);
-    setExpNumber(generateExpNumber());  // Nuevo número de expediente
+    generateExpNumber();  // Nuevo número de expediente desde servidor
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
