@@ -975,8 +975,13 @@ const Digitalizador = ({ state }) => {
                       <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest w-16">Ct.</th>
                       <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest w-24">Ref.</th>
                       <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest">Descripción del Mueble / Artículo</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-24">Precio</th>
-                      <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-20">Dto%</th>
+                      {/* Columnas de precio solo si es valorado */}
+                      {isValorado && (
+                        <>
+                          <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-24">Precio</th>
+                          <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-20">Dto%</th>
+                        </>
+                      )}
                       {/* Columna INC% solo visible cuando está desbloqueado */}
                       {!isLocked && globalMarkup > 0 && (
                         <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-20 text-emerald-400">Inc%</th>
