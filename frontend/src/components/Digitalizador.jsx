@@ -287,14 +287,6 @@ const Digitalizador = ({ state }) => {
     
     lines.forEach(line => {
       const linePrice = line.price * line.quantity;
-      let lineDiscount = line.discount;
-      
-      // Apply global discount only to non-manual lines
-      if (!line.isManual) {
-        lineDiscount = Math.max(lineDiscount, globalDiscount);
-      }
-      
-      const netPrice = linePrice * (1 - lineDiscount / 100);
       brutoLineas += linePrice;
     });
 
@@ -306,11 +298,16 @@ const Digitalizador = ({ state }) => {
       baseImponible += linePrice * (1 - lineDiscount / 100);
     });
 
+    // Aplicar incremento global de margen (si existe y está desbloqueado)
+    if (globalMarkup > 0 && !isLocked) {
+      baseImponible = baseImponible * (1 + globalMarkup / 100);
+    }
+
     const iva = baseImponible * (ivaRate / 100);
     const total = baseImponible + iva;
 
     return { brutoLineas, baseImponible, iva, total };
-  }, [lines, globalDiscount, ivaRate]);
+  }, [lines, globalDiscount, globalMarkup, isLocked, ivaRate]);
 
   const totals = calculateTotals();
 
@@ -319,11 +316,16 @@ const Digitalizador = ({ state }) => {
     if (lines.length === 0) return { brutoLineas: 0, baseImponible: 0, iva: 0, total: 0 };
 
     // Aplicar descuento del usuario a cada línea
-    const brutoLineas = lines.reduce((sum, line) => {
+    let brutoLineas = lines.reduce((sum, line) => {
       const linePrice = line.price * line.quantity;
       let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
       return sum + (linePrice * (1 - lineDiscount / 100));
     }, 0);
+
+    // Aplicar incremento global de margen (si existe y está desbloqueado)
+    if (globalMarkup > 0 && !isLocked) {
+      brutoLineas = brutoLineas * (1 + globalMarkup / 100);
+    }
 
     // Aplicar descuento del usuario (COSTO)
     const baseImponible = brutoLineas * (1 - userDiscount / 100);
@@ -331,18 +333,25 @@ const Digitalizador = ({ state }) => {
     const total = baseImponible + iva;
 
     return { brutoLineas, baseImponible, iva, total };
-  }, [lines, globalDiscount, ivaRate, userDiscount]);
+  }, [lines, globalDiscount, globalMarkup, isLocked, ivaRate, userDiscount]);
 
   const costTotals = calculateCostTotals();
 
-  // Get net price for a line
+  // Get net price for a line (con incremento de margen si aplica)
   const getLineNet = (line) => {
     const linePrice = line.price * line.quantity;
     let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
-    return linePrice * (1 - lineDiscount / 100);
+    let netPrice = linePrice * (1 - lineDiscount / 100);
+    
+    // Aplicar incremento global de margen si está desbloqueado
+    if (globalMarkup > 0 && !isLocked) {
+      netPrice = netPrice * (1 + globalMarkup / 100);
+    }
+    
+    return netPrice;
   };
 
-  // Get COST price for a line (with user discount)
+  // Get COST price for a line (with user discount and markup)
   const getLineCost = (line) => {
     const netPrice = getLineNet(line);
     return netPrice * (1 - userDiscount / 100);
