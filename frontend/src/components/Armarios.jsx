@@ -586,16 +586,17 @@ const Armarios = ({ state, setState }) => {
       });
     }
 
-    // 2. PUERTAS
+    // 2. PUERTAS - Usar numDoors de la configuración
     const doorAccessory = doorType === DoorType.SLIDING 
       ? ACCESSORIES_CATALOG.slidingDoor 
       : doorType === DoorType.FOLDING 
         ? ACCESSORIES_CATALOG.foldingDoor 
         : ACCESSORIES_CATALOG.hingeDoor;
     
-    const numDoors = doorType === DoorType.SLIDING ? 2 : modules;
+    // Usar el número de puertas configurado por el usuario
+    const configuredNumDoors = wardrobeConfig.numDoors || modules;
     const doorHeight = height - 4;
-    const doorWidth = doorType === DoorType.SLIDING ? width / 2 : moduleWidth;
+    const doorWidth = width / configuredNumDoors;
 
     accessories.push({
       num: itemNum++,
@@ -603,24 +604,26 @@ const Armarios = ({ state, setState }) => {
       name: `${doorAccessory.name} ${exteriorColorName}`,
       category: 'PUERTAS',
       dimensions: `${doorHeight} x ${Math.round(doorWidth)} x 18`,
-      quantity: numDoors,
+      quantity: configuredNumDoors,
       unitPrice: doorAccessory.price,
-      totalPrice: numDoors * doorAccessory.price,
+      totalPrice: configuredNumDoors * doorAccessory.price,
       notes: doorAccessory.description
     });
 
     // Sistema corredera si aplica
     if (doorType === DoorType.SLIDING) {
+      // Para correderas, necesitamos raíles según el número de puertas
+      const numTracks = configuredNumDoors <= 2 ? 1 : Math.ceil(configuredNumDoors / 2);
       accessories.push({
         num: itemNum++,
         code: ACCESSORIES_CATALOG.slidingSystem.id,
         name: ACCESSORIES_CATALOG.slidingSystem.name,
         category: 'HERRAJES',
         dimensions: `${width} mm`,
-        quantity: 1,
+        quantity: numTracks,
         unitPrice: ACCESSORIES_CATALOG.slidingSystem.price,
-        totalPrice: ACCESSORIES_CATALOG.slidingSystem.price,
-        notes: 'Kit guía superior + inferior aluminio'
+        totalPrice: numTracks * ACCESSORIES_CATALOG.slidingSystem.price,
+        notes: `Kit guía superior + inferior aluminio (${configuredNumDoors} puertas)`
       });
     } else {
       // Bisagras para puertas abatibles/plegables
