@@ -6279,6 +6279,129 @@ Genera la configuración óptima en formato JSON."""
         logger.error(f"Error en IA configuración: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+class IALayoutRequest(BaseModel):
+    """Request to generate wardrobe layout from text instructions"""
+    instruction: str
+    modules: int = 3
+    width: int = 2400
+    height: int = 2400
+    depth: int = 600
+
+
+@api_router.post("/armarios/ia/generate-layout")
+async def ia_generate_layout(request: IALayoutRequest):
+    """
+    Generate wardrobe interior layout from natural language instructions.
+    Uses AI to interpret the user's description and create module configurations.
+    """
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import json
+        
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Clave de IA no configurada")
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"armario-layout-{uuid.uuid4()}",
+            system_message="""Eres un diseñador de interiores de armarios experto.
+Tu trabajo es interpretar las instrucciones del usuario y convertirlas en una configuración JSON para el armario.
+
+Reglas de diseño:
+- "maletero" o "trunk" va siempre arriba (primeros 30cm)
+- "perchero" o "barra" o "hanging" va en la parte central-alta
+- "cajones" o "drawers" van en la parte baja (últimos 50-80cm)
+- "baldas" o "shelves" pueden ir en cualquier posición
+- "zapatero" o "shoe rack" va en la parte baja
+- "pantalonero" va en zona media-baja
+- "joyero" va en zona media
+
+Debes responder ÚNICAMENTE con un JSON válido sin explicaciones."""
+        ).with_model("gemini", "gemini-2.0-flash")
+        
+        prompt = f"""El usuario quiere configurar un armario con {request.modules} módulos.
+Dimensiones: {request.width}mm ancho x {request.height}mm alto x {request.depth}mm fondo.
+
+INSTRUCCIONES DEL USUARIO:
+"{request.instruction}"
+
+Genera una configuración JSON con este formato exacto:
+{{
+  "moduleConfigs": [
+    {{
+      "shelves": número_de_baldas,
+      "drawers": número_de_cajones,
+      "hangingRods": número_de_barras_perchero (0, 1 o 2 para doble altura),
+      "hangingHeight": altura_perchero_mm (1200 normal, 1000 para doble altura),
+      "shoesRack": true/false,
+      "trousersRack": true/false,
+      "tieRack": true/false,
+      "jewelryTray": true/false,
+      "trunk": true/false (maletero arriba),
+      "mirrorDoor": true/false
+    }}
+    // ... un objeto por cada módulo (total: {request.modules})
+  ],
+  "extras": {{
+    "led": true/false (si menciona iluminación),
+    "mirror": true/false (si menciona espejo)
+  }}
+}}
+
+Interpreta las instrucciones del usuario y genera la configuración. Si no especifica algo para un módulo, usa valores por defecto sensatos (2 baldas, 1 barra).
+Responde SOLO con el JSON, sin texto adicional."""
+
+        msg = UserMessage(text=prompt)
+        response = await chat.send_message(msg)
+        
+        # Limpiar la respuesta de posibles markdown
+        json_text = response.strip()
+        if json_text.startswith('```json'):
+            json_text = json_text[7:]
+        if json_text.startswith('```'):
+            json_text = json_text[3:]
+        if json_text.endswith('```'):
+            json_text = json_text[:-3]
+        json_text = json_text.strip()
+        
+        try:
+            result = json.loads(json_text)
+            
+            # Validar que tiene la estructura correcta
+            if 'moduleConfigs' not in result:
+                return {"success": False, "error": "Respuesta IA no contiene moduleConfigs"}
+            
+            # Asegurar que hay la cantidad correcta de módulos
+            while len(result['moduleConfigs']) < request.modules:
+                result['moduleConfigs'].append({
+                    "shelves": 2,
+                    "drawers": 0,
+                    "hangingRods": 1,
+                    "hangingHeight": 1200
+                })
+            
+            # Limitar al número de módulos solicitado
+            result['moduleConfigs'] = result['moduleConfigs'][:request.modules]
+            
+            logger.info(f"IA layout generated for {request.modules} modules")
+            
+            return {
+                "success": True,
+                "moduleConfigs": result['moduleConfigs'],
+                "extras": result.get('extras', {})
+            }
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing IA response: {e}")
+            return {"success": False, "error": f"Error interpretando respuesta IA: {str(e)}"}
+            
+    except Exception as e:
+        logger.error(f"Error en IA generate layout: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/armarios/ia/render")
 async def ia_render_armario(request: IARenderRequest):
     """Generar render realista del armario usando IA"""
