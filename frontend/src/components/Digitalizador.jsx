@@ -152,7 +152,7 @@ const Digitalizador = ({ state }) => {
           costados,
           lines,
           globalDiscount,
-          globalMarkup: isLocked ? 0 : globalMarkup,  // Solo enviar markup si está desbloqueado
+          globalMarkup,  // Siempre enviar el markup (se mantiene aunque esté bloqueado)
           ivaRate,
           userId: state.currentUser?.id || 'anonymous',
           expNumber: expNumber  // Enviar número de expediente
