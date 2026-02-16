@@ -115,6 +115,7 @@ class UserModelInternal(BaseModel):
     linkedClientId: Optional[str] = None  # Vinculación con cliente activo
     isActive: bool = True
     isAdmin: bool = False  # Director Comercial (antes Administrador)
+    isGerente: bool = False  # Gerente - mismo acceso que Director Comercial
     isResponsableDelegacion: bool = False  # Responsable de Delegación - reporta al Director Comercial
     isRepresentative: bool = False  # Comercial/Representante
     isPrescriptor: bool = False  # Colaborador comercial - solo aporta contactos
@@ -146,6 +147,7 @@ class UserResponse(BaseModel):
     linkedClientId: Optional[str] = None
     isActive: bool = True
     isAdmin: bool = False  # Director Comercial
+    isGerente: bool = False  # Gerente - mismo acceso que Director Comercial
     isResponsableDelegacion: bool = False  # Responsable Delegación
     isRepresentative: bool = False
     isPrescriptor: bool = False
