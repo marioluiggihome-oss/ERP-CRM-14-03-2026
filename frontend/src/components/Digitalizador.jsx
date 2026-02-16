@@ -321,8 +321,8 @@ const Digitalizador = ({ state }) => {
       baseImponible += linePrice * (1 - lineDiscount / 100);
     });
 
-    // Aplicar incremento global de margen (si existe y está desbloqueado)
-    if (globalMarkup > 0 && !isLocked) {
+    // Aplicar incremento global de margen (SIEMPRE si existe, independiente del candado)
+    if (globalMarkup > 0) {
       baseImponible = baseImponible * (1 + globalMarkup / 100);
     }
 
@@ -330,7 +330,7 @@ const Digitalizador = ({ state }) => {
     const total = baseImponible + iva;
 
     return { brutoLineas, baseImponible, iva, total };
-  }, [lines, globalDiscount, globalMarkup, isLocked, ivaRate]);
+  }, [lines, globalDiscount, globalMarkup, ivaRate]);
 
   const totals = calculateTotals();
 
@@ -345,8 +345,8 @@ const Digitalizador = ({ state }) => {
       return sum + (linePrice * (1 - lineDiscount / 100));
     }, 0);
 
-    // Aplicar incremento global de margen (si existe y está desbloqueado)
-    if (globalMarkup > 0 && !isLocked) {
+    // Aplicar incremento global de margen (SIEMPRE si existe, independiente del candado)
+    if (globalMarkup > 0) {
       brutoLineas = brutoLineas * (1 + globalMarkup / 100);
     }
 
@@ -356,7 +356,7 @@ const Digitalizador = ({ state }) => {
     const total = baseImponible + iva;
 
     return { brutoLineas, baseImponible, iva, total };
-  }, [lines, globalDiscount, globalMarkup, isLocked, ivaRate, userDiscount]);
+  }, [lines, globalDiscount, globalMarkup, ivaRate, userDiscount]);
 
   const costTotals = calculateCostTotals();
 
@@ -366,8 +366,8 @@ const Digitalizador = ({ state }) => {
     let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
     let netPrice = linePrice * (1 - lineDiscount / 100);
     
-    // Aplicar incremento global de margen si está desbloqueado
-    if (globalMarkup > 0 && !isLocked) {
+    // Aplicar incremento global de margen (SIEMPRE si existe, independiente del candado)
+    if (globalMarkup > 0) {
       netPrice = netPrice * (1 + globalMarkup / 100);
     }
     
