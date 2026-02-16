@@ -36,13 +36,14 @@ const ClientSelector = ({
   // Check if user can create new clients
   const canCreateClients = currentUser && (
     currentUser.isAdmin || 
+    currentUser.isGerente ||
     currentUser.isRepresentative || 
     currentUser.isTienda ||
     currentUser.isResponsableDelegacion
   );
 
-  // Check if user can delete clients (only admin)
-  const canDeleteClients = currentUser && currentUser.isAdmin;
+  // Check if user can delete clients (admin or gerente)
+  const canDeleteClients = currentUser && (currentUser.isAdmin || currentUser.isGerente);
 
   // Fetch clients on mount
   useEffect(() => {
