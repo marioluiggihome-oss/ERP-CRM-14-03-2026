@@ -134,44 +134,146 @@ const Digitalizador = ({ state }) => {
     }
   }, [showHistory, historySearch]);
 
-  // Save budget to history
-  const handleSaveBudget = async () => {
+  // Abrir modal de opciones de guardado
+  const handleSaveBudget = () => {
     if (lines.length === 0) {
       setError('No hay líneas para guardar');
       return;
     }
+    // Pre-llenar datos del CRM
+    setCrmContactName(customerName || '');
+    setCrmContactEmail(customerEmail || '');
+    setCrmContactPhone(customerPhone || '');
+    setShowSaveOptionsModal(true);
+  };
 
+  // Ejecutar guardado con las opciones seleccionadas
+  const executeSave = async () => {
     setIsSaving(true);
     setError(null);
+    let savedItems = [];
 
     try {
-      const response = await fetch(`${API_URL}/api/digitalizador/save`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectName: projectName || 'Sin nombre',
-          customerName,
-          acabado,
-          armazon,
-          costados,
-          lines,
-          globalDiscount,
-          globalMarkup,  // Siempre enviar el markup (se mantiene aunque esté bloqueado)
-          ivaRate,
-          userId: state.currentUser?.id || 'anonymous',
-          expNumber: expNumber  // Enviar número de expediente
-        })
-      });
+      // 1. Guardar en historial del digitalizador (siempre)
+      if (saveToHistory) {
+        const historyResponse = await fetch(`${API_URL}/api/digitalizador/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectName: projectName || 'Sin nombre',
+            customerName,
+            acabado,
+            armazon,
+            costados,
+            lines,
+            globalDiscount,
+            globalMarkup,
+            ivaRate,
+            userId: state.currentUser?.id || 'anonymous',
+            expNumber: expNumber
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error('Error al guardar');
+        if (historyResponse.ok) {
+          savedItems.push('Historial');
+        }
       }
 
-      const data = await response.json();
-      setSuccessMessage('Presupuesto guardado correctamente');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      // 2. Guardar en presupuestos principales
+      if (saveToPresupuestos) {
+        const presupuestoResponse = await fetch(`${API_URL}/api/presupuestos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            budgetNumber: expNumber,
+            projectName: projectName || 'Sin nombre',
+            customerName,
+            finish: acabado,
+            carcassMaterial: armazon,
+            sideColor: costados,
+            items: lines.map(line => ({
+              productId: line.id,
+              productCode: line.reference || 'DIGI',
+              productName: line.description,
+              quantity: line.quantity,
+              customWidth: 0,
+              customHeight: 0,
+              customDepth: 0,
+              manualPrice: line.price,
+              discount: line.discount,
+              isManual: line.isManual || false,
+              fromDigitalizador: true
+            })),
+            globalDiscount,
+            globalMarkup,
+            ivaRate,
+            module: 'montada',
+            source: 'digitalizador',
+            userId: state.currentUser?.id || 'anonymous',
+            totalPvp: totals.total
+          })
+        });
+
+        if (presupuestoResponse.ok) {
+          savedItems.push('Presupuestos');
+        }
+      }
+
+      // 3. Crear oportunidad en CRM si está marcado
+      if (saveToCRM && crmContactName.trim()) {
+        // Primero crear/buscar contacto
+        const contactResponse = await fetch(`${API_URL}/api/crm/contacts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: crmContactName,
+            email: crmContactEmail || '',
+            phone: crmContactPhone || '',
+            company: crmCompany || '',
+            type: 'lead',
+            source: 'digitalizador',
+            notes: `Contacto desde Digitalizador - ${projectName || 'Sin nombre'}`
+          })
+        });
+
+        if (contactResponse.ok) {
+          const contact = await contactResponse.json();
+          
+          // Crear oportunidad
+          const oppResponse = await fetch(`${API_URL}/api/crm/opportunities`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: projectName || `Presupuesto ${crmContactName}`,
+              description: `Presupuesto digitalizado - ${lines.length} líneas\nAcabado: ${acabado || 'N/A'}\nArmazón: ${armazon || 'N/A'}`,
+              contactId: contact.id,
+              contactName: contact.name,
+              company: crmCompany || '',
+              value: totals.total,
+              probability: 30,
+              stage: 'lead',
+              notes: `EXP: ${expNumber}\nBase: ${totals.baseImponible.toFixed(2)}€\nIVA: ${totals.iva.toFixed(2)}€`,
+              tags: ['digitalizador', 'presupuesto'],
+              assignedTo: state.currentUser?.id || ''
+            })
+          });
+
+          if (oppResponse.ok) {
+            savedItems.push('CRM');
+            setOpportunityCreated(await oppResponse.json());
+          }
+        }
+      }
+
+      // Mostrar mensaje de éxito
+      if (savedItems.length > 0) {
+        setSuccessMessage(`✓ Guardado en: ${savedItems.join(', ')}`);
+        setTimeout(() => setSuccessMessage(null), 4000);
+      }
+
+      setShowSaveOptionsModal(false);
       
-      // Refresh history
+      // Refresh history si está abierto
       if (showHistory) {
         loadHistory();
       }
