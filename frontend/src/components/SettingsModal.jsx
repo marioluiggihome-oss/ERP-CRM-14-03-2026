@@ -1711,6 +1711,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         🛡️ Director ({visibleUsers.filter(u => u.isAdmin).length})
                       </button>
                       <button
+                        onClick={() => setUserRoleFilter('gerente')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'gerente' ? 'bg-blue-500 text-white shadow' : 'text-slate-600 hover:bg-blue-100'
+                        }`}
+                      >
+                        👔 Gerente ({visibleUsers.filter(u => u.isGerente).length})
+                      </button>
+                      <button
                         onClick={() => setUserRoleFilter('responsable')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
                           userRoleFilter === 'responsable' ? 'bg-red-500 text-white shadow' : 'text-slate-600 hover:bg-red-100'
@@ -1724,7 +1732,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           userRoleFilter === 'comercial' ? 'bg-purple-500 text-white shadow' : 'text-slate-600 hover:bg-purple-100'
                         }`}
                       >
-                        💼 Comercial ({visibleUsers.filter(u => u.isRepresentative && !u.isAdmin && !u.isResponsableDelegacion).length})
+                        💼 Comercial ({visibleUsers.filter(u => u.isRepresentative && !u.isAdmin && !u.isGerente && !u.isResponsableDelegacion).length})
                       </button>
                       <button
                         onClick={() => setUserRoleFilter('tienda')}
