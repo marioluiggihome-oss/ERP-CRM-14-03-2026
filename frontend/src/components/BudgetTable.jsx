@@ -978,7 +978,21 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     <Logo className="h-full w-auto" customLogo={state.logo} />
                   </div>
                   <div className="text-right">
-                     <h1 className="text-2xl font-black italic uppercase text-indigo-950 tracking-tighter leading-none">PRESUPUESTO TÉCNICO</h1>
+                     <h1 className="text-2xl font-black italic uppercase text-indigo-950 tracking-tighter leading-none">PRESUPUESTO</h1>
+                     {/* Toggle Valorado / No Valorado */}
+                     <button 
+                       onClick={() => setIsValorado(!isValorado)}
+                       className={`mt-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all no-print ${
+                         isValorado 
+                           ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                           : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                       }`}
+                     >
+                       {isValorado ? 'DOCUMENTO VALORADO' : 'DOCUMENTO SIN VALORACIÓN'}
+                     </button>
+                     <p className="print-only text-[9px] font-black uppercase tracking-wider mt-1 text-orange-600">
+                       {isValorado ? 'DOCUMENTO VALORADO' : 'DOCUMENTO SIN VALORACIÓN'}
+                     </p>
                      <div className="mt-2 space-y-0.5">
                         <p className="text-[9px] font-black text-indigo-300 uppercase">Nº EXP: <span className="text-indigo-950">{state.budgetNumber}</span></p>
                         {state.internalReference && <p className="text-[8px] font-black text-indigo-300 uppercase">REF: <span className="text-orange-600">{state.internalReference}</span></p>}
