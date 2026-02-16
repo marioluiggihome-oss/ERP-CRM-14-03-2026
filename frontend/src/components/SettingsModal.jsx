@@ -1780,8 +1780,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 </p>
                               </div>
                               <div className="bg-slate-50 p-2 rounded-lg">
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Descuento</p>
-                                <p className="text-xs font-bold text-orange-600">{user.commercialDiscount}%</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Dto. Montada</p>
+                                <p className="text-xs font-bold text-green-600">{user.discountMontada || 0}%</p>
+                              </div>
+                              <div className="bg-slate-50 p-2 rounded-lg">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Dto. Despiece</p>
+                                <p className="text-xs font-bold text-orange-600">{user.discountDespiece || 0}%</p>
                               </div>
                               <div className="bg-slate-50 p-2 rounded-lg">
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Módulos</p>
