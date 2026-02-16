@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle } from 'lucide-react';
+import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle, Lock, Unlock, RefreshCw } from 'lucide-react';
 import Logo from './Logo';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -16,6 +16,7 @@ const Digitalizador = ({ state }) => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [lines, setLines] = useState([]);
   const [globalDiscount, setGlobalDiscount] = useState(0);
+  const [globalMarkup, setGlobalMarkup] = useState(0);  // Incremento global
   const [ivaRate, setIvaRate] = useState(21);
   const [acabado, setAcabado] = useState('');
   const [armazon, setArmazon] = useState('');
@@ -31,7 +32,30 @@ const Digitalizador = ({ state }) => {
   const [crmCompany, setCrmCompany] = useState('');
   const [opportunityCreated, setOpportunityCreated] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);  // Página actual para navegación
+  const [isLocked, setIsLocked] = useState(true);  // Modo bloqueado/desbloqueado
+  const [expNumber, setExpNumber] = useState('');  // Número de expediente único
+  const [showCostMode, setShowCostMode] = useState(false);  // Mostrar precio COSTO vs PVP
   const fileInputRef = useRef(null);
+
+  // Obtener descuento del usuario actual
+  const userDiscount = state?.currentUser?.discountMontada || state?.currentUser?.commercialDiscount || 0;
+
+  // Generar número de expediente único
+  const generateExpNumber = () => {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `${year}${month}${day}-${random}`;
+  };
+
+  // Inicializar número de expediente cuando no hay uno
+  useEffect(() => {
+    if (!expNumber) {
+      setExpNumber(generateExpNumber());
+    }
+  }, []);
 
   // Configuración de paginación
   const LINES_FIRST_PAGE = 15;  // Primera página tiene cabecera
