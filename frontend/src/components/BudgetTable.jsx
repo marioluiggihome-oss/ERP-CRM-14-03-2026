@@ -1291,7 +1291,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                             </>
                          )}
 
-                         {/* Precio - Siempre visible y alineado */}
+                         {/* Precio - Solo visible si es valorado */}
+                         {isValorado && (
                          <div className="w-20 shrink-0 text-right flex items-center justify-end gap-1 relative group/price">
                             {hasExtras && state.currentUser?.isAdmin && <Info size={7} className="text-orange-600 no-print" />}
                             <span className="text-[10px] font-black italic tracking-tight">{price.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
@@ -1304,6 +1305,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                               </div>
                             )}
                          </div>
+                         )}
                          
                          {/* Botón eliminar */}
                          <div className="w-6 shrink-0 no-print">
@@ -1315,6 +1317,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   </div>
                </div>
 
+               {/* Sección de totales - Solo si es valorado */}
+               {isValorado && (
                <div className="pt-4 mt-auto border-t-4 border-indigo-950 mb-4">
                   {/* Sección de totales */}
                   <div className="flex flex-col gap-2">
