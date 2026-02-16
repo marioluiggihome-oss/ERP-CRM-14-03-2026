@@ -177,6 +177,7 @@ class UserCreate(BaseModel):
     linkedClientId: Optional[str] = None
     isActive: bool = True
     isAdmin: bool = False  # Director Comercial
+    isGerente: bool = False  # Gerente - mismo acceso que Director
     isResponsableDelegacion: bool = False  # Responsable Delegación
     isRepresentative: bool = False
     isPrescriptor: bool = False
@@ -206,6 +207,7 @@ class UserUpdate(BaseModel):
     linkedClientId: Optional[str] = None
     isActive: Optional[bool] = None
     isAdmin: Optional[bool] = None  # Director Comercial
+    isGerente: Optional[bool] = None  # Gerente - mismo acceso que Director
     isResponsableDelegacion: Optional[bool] = None  # Responsable Delegación
     isRepresentative: Optional[bool] = None
     isPrescriptor: Optional[bool] = None
