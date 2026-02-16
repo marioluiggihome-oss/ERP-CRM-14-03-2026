@@ -1704,20 +1704,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         Todos ({visibleUsers.length})
                       </button>
                       <button
-                        onClick={() => setUserRoleFilter('director')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
-                          userRoleFilter === 'director' ? 'bg-orange-500 text-white shadow' : 'text-slate-600 hover:bg-orange-100'
-                        }`}
-                      >
-                        🛡️ Director ({visibleUsers.filter(u => u.isAdmin).length})
-                      </button>
-                      <button
                         onClick={() => setUserRoleFilter('gerente')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
                           userRoleFilter === 'gerente' ? 'bg-blue-500 text-white shadow' : 'text-slate-600 hover:bg-blue-100'
                         }`}
                       >
                         👔 Gerente ({visibleUsers.filter(u => u.isGerente).length})
+                      </button>
+                      <button
+                        onClick={() => setUserRoleFilter('director')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'director' ? 'bg-orange-500 text-white shadow' : 'text-slate-600 hover:bg-orange-100'
+                        }`}
+                      >
+                        🛡️ Director ({visibleUsers.filter(u => u.isAdmin).length})
                       </button>
                       <button
                         onClick={() => setUserRoleFilter('responsable')}
