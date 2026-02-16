@@ -644,7 +644,14 @@ const Digitalizador = ({ state }) => {
         <div className="flex items-center gap-3">
           {/* Candado - Modo Bloqueado/Desbloqueado */}
           <button
-            onClick={() => setIsLocked(!isLocked)}
+            onClick={() => {
+              const newLockedState = !isLocked;
+              setIsLocked(newLockedState);
+              // Si se bloquea, desactivar modo COSTO
+              if (newLockedState) {
+                setShowCostMode(false);
+              }
+            }}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs transition-all ${
               isLocked 
                 ? 'bg-white/10 text-white/60 hover:bg-white/20' 
