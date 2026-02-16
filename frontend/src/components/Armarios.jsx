@@ -970,15 +970,16 @@ const Armarios = ({ state, setState }) => {
     boards.tablero8mm.boardsNeeded = Math.ceil((traseraArea * 1.1) / BOARD_AREA); // 10% desperdicio
     
     // ====== TABLERO PUERTAS 18mm ======
-    const numDoors = doorType === DoorType.SLIDING ? 2 : modules;
+    // Usar el número de puertas configurado
+    const configuredNumDoors = wardrobeConfig.numDoors || modules;
     const doorHeight = height - 4;
-    const doorWidth = doorType === DoorType.SLIDING ? width / 2 : moduleWidth;
-    const puertasArea = (doorHeight / 1000) * (doorWidth / 1000) * numDoors;
+    const doorWidth = width / configuredNumDoors;
+    const puertasArea = (doorHeight / 1000) * (doorWidth / 1000) * configuredNumDoors;
     
     boards.puertasTablero.pieces.push({
       name: doorType === DoorType.SLIDING ? 'Puertas Correderas' : doorType === DoorType.FOLDING ? 'Puertas Plegables' : 'Puertas Abatibles',
       dimensions: `${doorHeight} x ${Math.round(doorWidth)}`,
-      quantity: numDoors,
+      quantity: configuredNumDoors,
       areaUnit: (doorHeight / 1000) * (doorWidth / 1000),
       totalArea: puertasArea
     });
