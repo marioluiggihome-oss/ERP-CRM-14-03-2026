@@ -503,9 +503,35 @@ const Digitalizador = ({ state }) => {
           </button>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Candado - Modo Bloqueado/Desbloqueado */}
+          <button
+            onClick={() => setIsLocked(!isLocked)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs transition-all ${
+              isLocked 
+                ? 'bg-white/10 text-white/60 hover:bg-white/20' 
+                : 'bg-emerald-500 text-white shadow-lg'
+            }`}
+            title={isLocked ? 'Desbloquear edición de precios' : 'Bloquear edición'}
+          >
+            {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+          </button>
+
+          {/* Modo PVP/COSTO */}
+          <button
+            onClick={() => setShowCostMode(!showCostMode)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs uppercase transition-all ${
+              showCostMode 
+                ? 'bg-purple-600 text-white shadow-lg' 
+                : 'bg-white/10 text-white/60 hover:bg-white/20'
+            }`}
+            title={showCostMode ? 'Ver precio PVP' : `Ver COSTO (-${userDiscount}%)`}
+          >
+            {showCostMode ? `COSTO -${userDiscount}%` : 'PVP'}
+          </button>
+
           <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-            <span className="text-xs font-bold text-white/60 uppercase">Dto Global Muebles:</span>
+            <span className="text-xs font-bold text-white/60 uppercase">Dto Global:</span>
             <input
               type="number"
               value={globalDiscount}
@@ -516,6 +542,22 @@ const Digitalizador = ({ state }) => {
             />
             <span className="text-white/60 font-bold">%</span>
           </div>
+
+          {/* Incremento global - solo visible si desbloqueado */}
+          {!isLocked && (
+            <div className="flex items-center gap-2 bg-emerald-500/20 rounded-lg px-3 py-1.5">
+              <span className="text-xs font-bold text-emerald-300 uppercase">Inc:</span>
+              <input
+                type="number"
+                value={globalMarkup}
+                onChange={(e) => setGlobalMarkup(parseFloat(e.target.value) || 0)}
+                className="w-12 bg-emerald-500 text-white text-center font-bold rounded px-2 py-1 text-sm outline-none"
+                min="0"
+                max="100"
+              />
+              <span className="text-emerald-300 font-bold">%</span>
+            </div>
+          )}
 
           <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
             <span className="text-xs font-bold text-white/60 uppercase">IVA:</span>
@@ -537,7 +579,7 @@ const Digitalizador = ({ state }) => {
             className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-600/50 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors shadow-lg"
           >
             <Download size={16} />
-            Descargar PDF
+            PDF
           </button>
         </div>
       </header>
