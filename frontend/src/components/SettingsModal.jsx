@@ -1900,18 +1900,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
                         <h4 className="text-sm font-black text-orange-900 uppercase mb-3">Rol y Jerarquía</h4>
                         <div className="space-y-3">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={userForm.isAdmin}
-                              onChange={(e) => setUserForm({...userForm, isAdmin: e.target.checked, isGerente: false})}
-                              className="w-5 h-5 rounded border-2 border-orange-300"
-                            />
-                            <div>
-                              <span className="text-sm font-black text-slate-900">Director Comercial</span>
-                              <p className="text-xs text-slate-500">Control total del sistema</p>
-                            </div>
-                          </label>
+                          {/* GERENTE - Primero */}
                           <label className="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 rounded-xl border border-blue-200">
                             <input
                               type="checkbox"
@@ -1921,7 +1910,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             />
                             <div>
                               <span className="text-sm font-black text-slate-900">Gerente</span>
-                              <p className="text-xs text-slate-500">Mismo acceso que Director Comercial</p>
+                              <p className="text-xs text-slate-500">Acceso total al sistema</p>
+                            </div>
+                          </label>
+                          {/* DIRECTOR COMERCIAL - Segundo */}
+                          <label className="flex items-center gap-3 cursor-pointer p-3 bg-orange-100 rounded-xl border border-orange-200">
+                            <input
+                              type="checkbox"
+                              checked={userForm.isAdmin}
+                              onChange={(e) => setUserForm({...userForm, isAdmin: e.target.checked, isGerente: false})}
+                              className="w-5 h-5 rounded border-2 border-orange-300"
+                            />
+                            <div>
+                              <span className="text-sm font-black text-slate-900">Director Comercial</span>
+                              <p className="text-xs text-slate-500">Acceso total al sistema</p>
                             </div>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
