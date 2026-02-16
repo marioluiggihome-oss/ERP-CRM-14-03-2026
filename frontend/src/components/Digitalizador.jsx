@@ -606,6 +606,61 @@ const Digitalizador = ({ state }) => {
                 </div>
               </div>
 
+              {/* Page Navigation - Solo si hay más de una página */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 my-4 no-print">
+                  <button
+                    onClick={() => setCurrentPage(0)}
+                    disabled={currentPage === 0}
+                    className="px-3 py-1.5 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-xs disabled:opacity-40 hover:bg-indigo-200 transition-colors"
+                  >
+                    ««
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                    disabled={currentPage === 0}
+                    className="px-3 py-1.5 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-xs disabled:opacity-40 hover:bg-indigo-200 transition-colors"
+                  >
+                    « Anterior
+                  </button>
+                  
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        className={`w-8 h-8 rounded-lg font-black text-sm transition-colors ${
+                          currentPage === i 
+                            ? 'bg-indigo-600 text-white' 
+                            : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                    disabled={currentPage === totalPages - 1}
+                    className="px-3 py-1.5 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-xs disabled:opacity-40 hover:bg-indigo-200 transition-colors"
+                  >
+                    Siguiente »
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages - 1)}
+                    disabled={currentPage === totalPages - 1}
+                    className="px-3 py-1.5 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-xs disabled:opacity-40 hover:bg-indigo-200 transition-colors"
+                  >
+                    »»
+                  </button>
+                  
+                  <span className="ml-4 text-xs font-bold text-indigo-400">
+                    Página {currentPage + 1} de {totalPages} ({lines.length} líneas)
+                  </span>
+                </div>
+              )}
+
               {/* Lines Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -621,7 +676,7 @@ const Digitalizador = ({ state }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-50">
-                    {lines.map((line) => (
+                    {(pages[currentPage] || []).map((line) => (
                       <tr key={line.id} className={`hover:bg-indigo-50/50 transition-colors ${line.isManual ? 'bg-orange-50/30' : ''}`}>
                         <td className="px-4 py-3">
                           <input
