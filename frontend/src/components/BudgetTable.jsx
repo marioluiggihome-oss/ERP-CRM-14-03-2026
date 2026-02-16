@@ -1373,6 +1373,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                      </div>
                   </div>
                </div>
+               )}
             </div>
           )}
         </div>
