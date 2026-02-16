@@ -655,7 +655,8 @@ const Digitalizador = ({ state }) => {
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </button>
 
-          {/* Modo PVP/COSTO */}
+          {/* Modo PVP/COSTO - Solo visible si desbloqueado */}
+          {!isLocked && (
           <button
             onClick={() => setShowCostMode(!showCostMode)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs uppercase transition-all ${
