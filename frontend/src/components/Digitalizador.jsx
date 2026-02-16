@@ -314,11 +314,38 @@ const Digitalizador = ({ state }) => {
 
   const totals = calculateTotals();
 
+  // Calcular totales en modo COSTO (con descuento de usuario)
+  const calculateCostTotals = useCallback(() => {
+    if (lines.length === 0) return { brutoLineas: 0, baseImponible: 0, iva: 0, total: 0 };
+
+    // Aplicar descuento del usuario a cada línea
+    const brutoLineas = lines.reduce((sum, line) => {
+      const linePrice = line.price * line.quantity;
+      let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
+      return sum + (linePrice * (1 - lineDiscount / 100));
+    }, 0);
+
+    // Aplicar descuento del usuario (COSTO)
+    const baseImponible = brutoLineas * (1 - userDiscount / 100);
+    const iva = baseImponible * (ivaRate / 100);
+    const total = baseImponible + iva;
+
+    return { brutoLineas, baseImponible, iva, total };
+  }, [lines, globalDiscount, ivaRate, userDiscount]);
+
+  const costTotals = calculateCostTotals();
+
   // Get net price for a line
   const getLineNet = (line) => {
     const linePrice = line.price * line.quantity;
     let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
     return linePrice * (1 - lineDiscount / 100);
+  };
+
+  // Get COST price for a line (with user discount)
+  const getLineCost = (line) => {
+    const netPrice = getLineNet(line);
+    return netPrice * (1 - userDiscount / 100);
   };
 
   // Export to PDF (uses browser print)
