@@ -4863,11 +4863,29 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
             line_discount = line.discount if line.isManual else max(line.discount, request.globalDiscount)
             total_neto += line_price * (1 - line_discount / 100)
         
+        # Aplicar incremento de margen si existe
+        if request.globalMarkup > 0:
+            total_neto = total_neto * (1 + request.globalMarkup / 100)
+        
         total_con_iva = total_neto * (1 + request.ivaRate / 100)
+        
+        # Generar número de expediente si no viene proporcionado
+        exp_number = request.expNumber
+        if not exp_number:
+            current_year = datetime.now().year
+            result = await db.counters.find_one_and_update(
+                {"_id": f"expediente_{current_year}"},
+                {"$inc": {"seq": 1}},
+                upsert=True,
+                return_document=True
+            )
+            seq = result["seq"]
+            exp_number = f"EXP-{current_year}-{seq:03d}" if seq < 1000 else f"EXP-{current_year}-{seq}"
         
         # Create history item
         history_item = {
             "id": f"digi-{uuid.uuid4().hex[:12]}",
+            "expNumber": exp_number,
             "projectName": request.projectName,
             "customerName": request.customerName,
             "acabado": request.acabado,
@@ -4875,6 +4893,7 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
             "costados": request.costados,
             "lines": [line.model_dump() for line in request.lines],
             "globalDiscount": request.globalDiscount,
+            "globalMarkup": request.globalMarkup,
             "ivaRate": request.ivaRate,
             "totalBruto": round(total_bruto, 2),
             "totalNeto": round(total_neto, 2),
@@ -4889,7 +4908,8 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
         return {
             "success": True,
             "message": "Presupuesto guardado en historial",
-            "item": history_item
+            "item": history_item,
+            "expNumber": exp_number
         }
     except Exception as e:
         logger.error(f"Save digitalizador budget error: {e}")
