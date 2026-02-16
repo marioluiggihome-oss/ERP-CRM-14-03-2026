@@ -61,6 +61,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     linkedRepresentativeId: '',
     allowedModules: ['montada'],
     commercialDiscount: 0,
+    discountMontada: 0,
+    discountDespiece: 0,
     canSeeCost: false,
     canSeeRetail: true,
     canUseAIAnalysis: false,
