@@ -4762,8 +4762,10 @@ class DigitalizadorSaveRequest(BaseModel):
     costados: str = ""
     lines: List[DigitalizadorLine]
     globalDiscount: float = 0
+    globalMarkup: float = 0  # Incremento de margen
     ivaRate: float = 21
     userId: str
+    expNumber: str = ""  # Número de expediente (generado por servidor)
     
 class DigitalizadorHistoryItem(BaseModel):
     """A saved digitalized budget"""
@@ -4775,6 +4777,7 @@ class DigitalizadorHistoryItem(BaseModel):
     costados: str
     lines: List[DigitalizadorLine]
     globalDiscount: float
+    globalMarkup: float = 0
     ivaRate: float
     totalBruto: float
     totalNeto: float
