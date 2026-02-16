@@ -681,7 +681,7 @@ const Digitalizador = ({ state }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-50">
-                    {(pages[currentPage] || []).map((line) => (
+                    {(currentPage === -1 ? lines : (pages[currentPage] || [])).map((line) => (
                       <tr key={line.id} className={`hover:bg-indigo-50/50 transition-colors ${line.isManual ? 'bg-orange-50/30' : ''}`}>
                         <td className="px-4 py-3">
                           <input
