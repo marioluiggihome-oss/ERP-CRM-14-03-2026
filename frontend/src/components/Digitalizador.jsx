@@ -1,6 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle, Lock, Unlock, RefreshCw } from 'lucide-react';
 import Logo from './Logo';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
