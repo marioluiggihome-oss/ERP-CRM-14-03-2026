@@ -606,7 +606,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     setEditingUserId(null);
     
     // Si es comercial, automáticamente crear como tienda asignada a él
-    const isCommercial = !state.currentUser?.isAdmin && state.currentUser?.isRepresentative;
+    const isCommercial = !(state.currentUser?.isAdmin || state.currentUser?.isGerente) && state.currentUser?.isRepresentative;
     
     // Load clients if not already loaded
     if (clients.length === 0) {
@@ -713,7 +713,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
     
     // Comerciales solo pueden eliminar tiendas asignadas a ellos
-    if (!state.currentUser?.isAdmin && state.currentUser?.isRepresentative) {
+    if (!(state.currentUser?.isAdmin || state.currentUser?.isGerente) && state.currentUser?.isRepresentative) {
       const userToDelete = state.users.find(u => u.id === userId);
       if (userToDelete && userToDelete.linkedRepresentativeId !== state.currentUser.id) {
         alert('No tienes permisos para eliminar este usuario');
@@ -2050,7 +2050,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     )}
 
                     {/* Si es comercial, mostrar info de asignación automática */}
-                    {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && (
+                    {!(state.currentUser?.isAdmin || state.currentUser?.isGerente) && state.currentUser?.isRepresentative && (
                       <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
                         <div className="flex items-center gap-3">
                           <Briefcase size={20} className="text-indigo-600" />
