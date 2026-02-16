@@ -212,6 +212,8 @@ class UserUpdate(BaseModel):
     allowedModules: Optional[List[str]] = None
     allowedCatalogIds: Optional[List[str]] = None
     commercialDiscount: Optional[float] = None
+    discountMontada: Optional[float] = None
+    discountDespiece: Optional[float] = None
     canSeeCost: Optional[bool] = None
     canSeeRetail: Optional[bool] = None
     canUseAIAnalysis: Optional[bool] = None
