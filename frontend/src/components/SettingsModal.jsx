@@ -1885,7 +1885,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
 
                     {/* Role & Hierarchy */}
-                    {state.currentUser?.isAdmin && (
+                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
                       <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
                         <h4 className="text-sm font-black text-orange-900 uppercase mb-3">Rol y Jerarquía</h4>
                         <div className="space-y-3">
@@ -1893,12 +1893,24 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <input
                               type="checkbox"
                               checked={userForm.isAdmin}
-                              onChange={(e) => setUserForm({...userForm, isAdmin: e.target.checked})}
+                              onChange={(e) => setUserForm({...userForm, isAdmin: e.target.checked, isGerente: false})}
                               className="w-5 h-5 rounded border-2 border-orange-300"
                             />
                             <div>
                               <span className="text-sm font-black text-slate-900">Director Comercial</span>
                               <p className="text-xs text-slate-500">Control total del sistema</p>
+                            </div>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 rounded-xl border border-blue-200">
+                            <input
+                              type="checkbox"
+                              checked={userForm.isGerente}
+                              onChange={(e) => setUserForm({...userForm, isGerente: e.target.checked, isAdmin: false})}
+                              className="w-5 h-5 rounded border-2 border-blue-300"
+                            />
+                            <div>
+                              <span className="text-sm font-black text-slate-900">Gerente</span>
+                              <p className="text-xs text-slate-500">Mismo acceso que Director Comercial</p>
                             </div>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
@@ -1915,7 +1927,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           </label>
 
                           {/* Checkbox Responsable Delegación - Solo visible para Director Comercial */}
-                          {state.currentUser?.isAdmin && (
+                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
                             <label className="flex items-center gap-3 cursor-pointer p-3 bg-red-50 rounded-xl border border-red-200">
                               <input
                                 type="checkbox"
@@ -1927,6 +1939,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   isPrescriptor: false, 
                                   isTienda: false,
                                   isAdmin: false,
+                                  isGerente: false,
                                   canAuthorizePermissions: e.target.checked // Por defecto puede autorizar
                                 })}
                                 className="w-5 h-5 rounded border-2 border-red-300"
@@ -1939,12 +1952,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           )}
 
                           {/* Checkbox Colaborador Comercial - Solo visible para Admin/Responsable */}
-                          {(state.currentUser?.isAdmin || state.currentUser?.isResponsableDelegacion) && (
+                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isResponsableDelegacion) && (
                             <label className="flex items-center gap-3 cursor-pointer p-3 bg-amber-50 rounded-xl border border-amber-200">
                               <input
                                 type="checkbox"
                                 checked={userForm.isPrescriptor}
-                                onChange={(e) => setUserForm({...userForm, isPrescriptor: e.target.checked, isRepresentative: false, isTienda: false, isAdmin: false, isResponsableDelegacion: false})}
+                                onChange={(e) => setUserForm({...userForm, isPrescriptor: e.target.checked, isRepresentative: false, isTienda: false, isAdmin: false, isGerente: false, isResponsableDelegacion: false})}
                                 className="w-5 h-5 rounded border-2 border-amber-300"
                               />
                               <div>
@@ -1955,12 +1968,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           )}
 
                           {/* Checkbox Tienda/Punto de Venta - Solo visible para Admin/Responsable */}
-                          {(state.currentUser?.isAdmin || state.currentUser?.isResponsableDelegacion || state.currentUser?.canAuthorizePermissions) && (
+                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isResponsableDelegacion || state.currentUser?.canAuthorizePermissions) && (
                             <label className="flex items-center gap-3 cursor-pointer p-3 bg-green-50 rounded-xl border border-green-200">
                               <input
                                 type="checkbox"
                                 checked={userForm.isTienda}
-                                onChange={(e) => setUserForm({...userForm, isTienda: e.target.checked, isRepresentative: false, isPrescriptor: false, isAdmin: false, isResponsableDelegacion: false})}
+                                onChange={(e) => setUserForm({...userForm, isTienda: e.target.checked, isRepresentative: false, isPrescriptor: false, isAdmin: false, isGerente: false, isResponsableDelegacion: false})}
                                 className="w-5 h-5 rounded border-2 border-green-300"
                               />
                               <div>
