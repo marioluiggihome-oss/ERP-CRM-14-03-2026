@@ -11,7 +11,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const fileInputRef = useRef(null);
   
-  const canUseAI = state.currentUser?.canUseAIAnalysis || state.currentUser?.isAdmin;
+  const canUseAI = state.currentUser?.canUseAIAnalysis || state.currentUser?.isAdmin || state.currentUser?.isGerente;
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
