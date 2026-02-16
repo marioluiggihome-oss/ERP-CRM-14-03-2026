@@ -6293,49 +6293,85 @@ async def ia_render_armario(request: IARenderRequest):
         chat = LlmChat(
             api_key=api_key,
             session_id=f"armario-render-{uuid.uuid4()}",
-            system_message="You are a professional interior designer creating photorealistic renders of wardrobes."
+            system_message="You are a professional interior designer creating photorealistic renders of wardrobes. You must follow specifications EXACTLY."
         )
         
         chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])  # Nano Banana model
         
-        # Construir descripción del armario
+        # Construir descripción del tipo de puerta
         door_type_desc = {
-            "sliding": "puertas correderas de panel completo",
-            "hinged": "puertas abatibles con tiradores",
-            "folding": "puertas plegables"
-        }.get(request.doorType, "puertas correderas")
+            "sliding": "PUERTAS CORREDERAS (sliding doors on rails, overlap when open)",
+            "hinged": "PUERTAS ABATIBLES CON BISAGRAS (traditional hinged doors with handles)",
+            "folding": "PUERTAS PLEGABLES (bi-fold doors)"
+        }.get(request.doorType, "PUERTAS CORREDERAS")
         
-        # Describir interior
+        # Describir interior DETALLADAMENTE por módulo
         interior_desc = []
-        for i, mod in enumerate(request.moduleConfigs[:3]):
+        for i, mod in enumerate(request.moduleConfigs):
             items = []
             if mod.get('hangingRods', 0) > 0:
-                items.append(f"{mod['hangingRods']} barra(s) para colgar ropa")
+                rod_count = mod['hangingRods']
+                items.append(f"{rod_count} chrome hanging rod{'s' if rod_count > 1 else ''}")
             if mod.get('shelves', 0) > 0:
-                items.append(f"{mod['shelves']} baldas")
+                shelf_count = mod['shelves']
+                items.append(f"{shelf_count} horizontal shelf{'ves' if shelf_count > 1 else ''}")
             if mod.get('drawers', 0) > 0:
-                items.append(f"{mod['drawers']} cajones")
-            if items:
-                interior_desc.append(f"Módulo {i+1}: {', '.join(items)}")
+                drawer_count = mod['drawers']
+                items.append(f"{drawer_count} soft-close drawer{'s' if drawer_count > 1 else ''}")
+            if mod.get('shoesRack'):
+                items.append("angled shoe rack")
+            if mod.get('trousersRack'):
+                items.append("pull-out trouser rack")
+            if mod.get('mirrorDoor'):
+                items.append("full-length mirror on door interior")
+            
+            module_desc = f"Module {i+1} (from left): {', '.join(items) if items else 'empty space'}"
+            interior_desc.append(module_desc)
         
-        prompt = f"""Create a photorealistic interior design render of a modern built-in wardrobe/closet with the following specifications:
+        # Determinar el número exacto de puertas basado en la configuración
+        doors_count = request.modules if request.doorType == "hinged" else (request.modules // 2 + request.modules % 2)
+        
+        prompt = f"""Create a PHOTOREALISTIC interior design photograph of a BUILT-IN WARDROBE/CLOSET.
 
-DIMENSIONS: {request.width}mm width x {request.height}mm height x {request.depth}mm depth
+CRITICAL - FOLLOW THESE SPECIFICATIONS EXACTLY:
 
-EXTERIOR:
-- Color: {request.exteriorColorName} (hex: {request.exteriorColorHex})
+📐 DIMENSIONS:
+- Total width: {request.width}mm ({request.width/10}cm / {round(request.width/25.4, 1)} inches)
+- Total height: {request.height}mm ({request.height/10}cm)
+- Depth: {request.depth}mm ({request.depth/10}cm)
+- Number of modules/sections: EXACTLY {request.modules} modules side by side
+
+🚪 DOORS - CRITICAL:
 - Door type: {door_type_desc}
-- Handle color: {request.handleColorName}
-- {request.modules} modules/sections
+- Door color/finish: {request.exteriorColorName}
+- Handle/knob style: {request.handleColorName} color handles
+- Show doors 50% OPEN to reveal interior
 
-INTERIOR CONFIGURATION:
-{chr(10).join(interior_desc) if interior_desc else "Multiple shelves and hanging rods"}
+🎨 COLORS - MATCH EXACTLY:
+- EXTERIOR FINISH: {request.exteriorColorName} (hex color: {request.exteriorColorHex})
+- INTERIOR COLOR: {request.interiorColorName}
+- All visible melamine surfaces should match these colors
 
-STYLE: {request.roomStyle} bedroom style, soft natural lighting, high-end quality materials
+📦 INTERIOR ORGANIZATION - FOLLOW EXACTLY:
+{chr(10).join(interior_desc)}
 
-The wardrobe should be shown with doors partially open to reveal the interior organization. Include realistic materials like melamine, soft-close drawers, and chrome hanging rods. The image should look like a professional interior design photograph, not a 3D render or sketch.
+🏠 ROOM SETTING:
+- Room style: {request.roomStyle}
+- Soft natural daylight from left side
+- Wardrobe built into wall alcove
+- Hardwood or laminate flooring visible
+- Neutral wall color that complements the wardrobe
 
-Generate a single high-quality photorealistic image."""
+📸 IMAGE REQUIREMENTS:
+- Professional interior photography style, NOT a 3D render or sketch
+- Camera angle: 3/4 view from front-left to show interior
+- High-end quality materials: melamine, chrome hardware, soft-close systems
+- Realistic shadows and reflections
+- Some clothing items neatly organized inside
+- 4K quality, magazine-worthy composition
+
+DO NOT invent or add extra modules, doors, or interior elements not specified above.
+Generate ONE high-quality photorealistic image."""
 
         msg = UserMessage(text=prompt)
         text_response, images = await chat.send_message_multimodal_response(msg)
