@@ -136,36 +136,40 @@ const Digitalizador = ({ state }) => {
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        const base64 = event.target?.result;
+        const base64Full = event.target?.result;
+        // Extraer solo la parte base64 sin el prefijo data:image/...;base64,
+        const base64Data = base64Full.split(',')[1] || base64Full;
         
         // Llamar al backend para digitalizar con Gemini
         const response = await fetch(`${API_URL}/api/digitalizador/analyze`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            image: base64,
-            mimeType: file.type
+            imageBase64: base64Data,
+            filename: file.name
           })
         });
         
         if (!response.ok) {
-          throw new Error('Error en la digitalización');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || 'Error en la digitalización');
         }
         
         const extracted = await response.json();
         
-        const initialItems = (extracted.items || []).map((item, idx) => {
-          const uPrice = item.unitPrice || (item.subtotal / (item.quantity || 1)) || 0;
+        // El backend devuelve: { success, projectName, lines: [{id, quantity, reference, description, price, discount, isManual}], rawText }
+        const initialItems = (extracted.lines || []).map((item, idx) => {
           const quoteItem = {
-            id: `item-${idx}-${Date.now()}`,
+            id: item.id || `item-${idx}-${Date.now()}`,
             reference: item.reference || '',
-            name: item.name || 'ARTÍCULO',
+            name: item.description || 'ARTÍCULO',  // El backend usa 'description', lo mapeamos a 'name'
             w: '', h: '', d: '', mano: '',
             quantity: item.quantity || 1,
-            discountPercent: item.discountPercent || 0,
+            discountPercent: item.discount || 0,
             markupPercent: 0,
-            unitPrice: round2(uPrice),
-            total: 0
+            unitPrice: round2(item.price || 0),
+            total: 0,
+            isManual: item.isManual || false
           };
           quoteItem.total = calculateLineTotal(quoteItem);
           return quoteItem;
@@ -173,8 +177,8 @@ const Digitalizador = ({ state }) => {
         
         const newData = {
           id: `quote-${Date.now()}`,
-          clientName: extracted.clientName || 'CLIENTE NUEVO',
-          expNumber: extracted.expNumber || '0000',
+          clientName: extracted.projectName || 'CLIENTE NUEVO',
+          expNumber: '0000',
           referenceCode: '',
           date: new Date().toLocaleDateString('es-ES'),
           globalFinish: '-', carcassMaterial: '-', visibleSides: '-',
