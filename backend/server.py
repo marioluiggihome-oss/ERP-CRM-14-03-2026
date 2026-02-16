@@ -6177,6 +6177,7 @@ class IARenderRequest(BaseModel):
     height: int
     depth: int
     modules: int
+    numDoors: int = 3  # Número de puertas (puede ser diferente del número de módulos)
     doorType: str
     exteriorColorName: str
     exteriorColorHex: str
