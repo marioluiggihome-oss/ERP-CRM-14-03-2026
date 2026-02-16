@@ -1249,7 +1249,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                                     <span className="print-only font-bold text-[8px]">{item.customDepth || '-'}</span>
                                 </div>
                                 <div className="w-8 shrink-0 text-center">
-                                    {isTwoDoor ? (
+                                    {noNeedsOpeningSelector ? (
                                       <>
                                         <span className="text-[7px] font-black text-indigo-300 no-print">-</span>
                                         <span className="print-only font-black text-[7px]">-</span>
