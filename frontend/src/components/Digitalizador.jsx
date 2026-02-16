@@ -40,6 +40,8 @@ const Digitalizador = ({ state }) => {
   const [expNumber, setExpNumber] = useState('');  // Número de expediente único
   const [isGeneratingExp, setIsGeneratingExp] = useState(false);  // Loading state para generar exp
   const [showCostMode, setShowCostMode] = useState(false);  // Mostrar precio COSTO vs PVP
+  const [documentTitle, setDocumentTitle] = useState('Presupuesto Técnico');  // Título editable del documento
+  const [isValorado, setIsValorado] = useState(true);  // Mostrar/ocultar precios
   const fileInputRef = useRef(null);
 
   // Obtener descuento del usuario actual
