@@ -1783,6 +1783,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rol</p>
                                 <p className="text-xs font-bold text-slate-900">
                                   {user.isAdmin ? '🛡️ Director Comercial' : 
+                                   user.isGerente ? '👔 Gerente' :
                                    user.isResponsableDelegacion ? '📍 Resp. Delegación' : 
                                    user.isRepresentative ? '💼 Comercial' : 
                                    user.isPrescriptor ? '🤝 Colaborador' : 
