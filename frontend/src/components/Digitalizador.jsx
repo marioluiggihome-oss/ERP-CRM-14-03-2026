@@ -667,6 +667,7 @@ const Digitalizador = ({ state }) => {
           >
             {showCostMode ? `COSTO -${userDiscount}%` : 'PVP'}
           </button>
+          )}
 
           <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
             <span className="text-xs font-bold text-white/60 uppercase">Dto Global:</span>
@@ -694,13 +695,6 @@ const Digitalizador = ({ state }) => {
                 max="100"
               />
               <span className="text-emerald-300 font-bold">%</span>
-            </div>
-          )}
-          
-          {/* Indicador de markup aplicado cuando está bloqueado */}
-          {isLocked && globalMarkup > 0 && (
-            <div className="flex items-center gap-1 bg-emerald-600/30 rounded-lg px-3 py-1.5 border border-emerald-500/50">
-              <span className="text-xs font-bold text-emerald-300 uppercase">+{globalMarkup}% aplicado</span>
             </div>
           )}
 
