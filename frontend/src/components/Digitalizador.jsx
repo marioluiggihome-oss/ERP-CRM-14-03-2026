@@ -423,54 +423,60 @@ const Digitalizador = ({ state }) => {
         ) : (
           <div className="flex flex-col items-center w-full">
             <div id="printable-area" className="flex flex-col items-center bg-transparent w-full">
-              {paginatedItems.map((pageItems, index) => (
+              {paginatedItems.map((pageItems, index) => {
+                const isFirstPage = index === 0;
+                const isLastPage = index === paginatedItems.length - 1;
+                
+                return (
                 <div 
                   key={index} 
-                  className="pdf-page bg-white relative p-[15mm] flex flex-col mb-[12mm] shadow-2xl" 
-                  style={{ width: '210mm', height: '297mm', boxSizing: 'border-box', overflow: 'hidden' }}
+                  className="pdf-page bg-white relative p-[12mm] flex flex-col mb-[12mm] shadow-2xl" 
+                  style={{ width: '210mm', minHeight: '297mm', boxSizing: 'border-box', pageBreakAfter: 'always' }}
                 >
+                  {/* HEADER DE PÁGINA - siempre visible */}
                   <PageHeader pageNum={index + 1} totalPages={paginatedItems.length} />
 
-                  {index === 0 && (
-                    <div className="mb-3">
-                      <div className="flex items-center gap-4 border-b-2 border-slate-100 py-1.5 mb-3 px-1">
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">CLIENTE:</span>
-                        <input className="flex-1 bg-transparent outline-none uppercase text-xl font-black text-[#1A1A3D]" value={quoteData.clientName} onChange={e => setQuoteData({...quoteData, clientName: e.target.value})} />
+                  {/* DATOS DEL CLIENTE - solo primera página */}
+                  {isFirstPage && (
+                    <div className="mb-2">
+                      <div className="flex items-center gap-4 border-b-2 border-slate-100 py-1 mb-2 px-1">
+                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">CLIENTE:</span>
+                        <input className="flex-1 bg-transparent outline-none uppercase text-lg font-black text-[#1A1A3D]" value={quoteData.clientName} onChange={e => setQuoteData({...quoteData, clientName: e.target.value})} />
                       </div>
                       
-                      <div className="grid grid-cols-5 gap-2.5">
-                        <div className="col-span-3 bg-slate-50 p-2 rounded-xl flex flex-col border border-slate-100 focus-within:bg-white focus-within:shadow-md transition-all">
+                      <div className="grid grid-cols-5 gap-2">
+                        <div className="col-span-3 bg-slate-50 p-1.5 rounded-lg flex flex-col border border-slate-100">
                           <input 
                             className="text-[6px] font-black text-slate-400 uppercase mb-0.5 outline-none bg-transparent" 
                             value={labels.finish} 
                             onChange={e => setLabels({...labels, finish: e.target.value})}
                           />
                           <input 
-                            className="w-full bg-transparent text-[11px] font-black uppercase text-[#1A1A3D] outline-none" 
+                            className="w-full bg-transparent text-[10px] font-black uppercase text-[#1A1A3D] outline-none" 
                             value={quoteData.globalFinish} 
                             onChange={e => setQuoteData({...quoteData, globalFinish: e.target.value})} 
                           />
                         </div>
-                        <div className="col-span-1 bg-slate-50 p-2 rounded-xl flex flex-col border border-slate-100 focus-within:bg-white focus-within:shadow-md transition-all">
+                        <div className="col-span-1 bg-slate-50 p-1.5 rounded-lg flex flex-col border border-slate-100">
                           <input 
                             className="text-[6px] font-black text-slate-400 uppercase mb-0.5 outline-none bg-transparent" 
                             value={labels.carcass} 
                             onChange={e => setLabels({...labels, carcass: e.target.value})}
                           />
                           <input 
-                            className="w-full bg-transparent text-[9px] font-black uppercase text-[#1A1A3D] outline-none" 
+                            className="w-full bg-transparent text-[8px] font-black uppercase text-[#1A1A3D] outline-none" 
                             value={quoteData.carcassMaterial} 
                             onChange={e => setQuoteData({...quoteData, carcassMaterial: e.target.value})} 
                           />
                         </div>
-                        <div className="col-span-1 bg-slate-50 p-2 rounded-xl flex flex-col border border-slate-100 focus-within:bg-white focus-within:shadow-md transition-all">
+                        <div className="col-span-1 bg-slate-50 p-1.5 rounded-lg flex flex-col border border-slate-100">
                           <input 
                             className="text-[6px] font-black text-slate-400 uppercase mb-0.5 outline-none bg-transparent" 
                             value={labels.sides} 
                             onChange={e => setLabels({...labels, sides: e.target.value})}
                           />
                           <input 
-                            className="w-full bg-transparent text-[9px] font-black uppercase text-[#1A1A3D] outline-none" 
+                            className="w-full bg-transparent text-[8px] font-black uppercase text-[#1A1A3D] outline-none" 
                             value={quoteData.visibleSides} 
                             onChange={e => setQuoteData({...quoteData, visibleSides: e.target.value})} 
                           />
@@ -479,24 +485,25 @@ const Digitalizador = ({ state }) => {
                     </div>
                   )}
 
-                  <div className="flex-1 flex flex-col overflow-hidden mt-1">
+                  {/* TABLA DE LÍNEAS */}
+                  <div className="flex-1">
                     <table className="w-full border-collapse table-fixed">
                       <thead>
-                        <tr className="bg-[#1A1A3D] text-white uppercase font-black text-[8px] tracking-widest">
-                          <th className="py-2 px-1 text-center w-[30px]">Ct.</th>
-                          <th className="py-2 px-1 text-left w-[50px]">Ref</th>
-                          <th className="py-2 px-2 text-left w-auto">Descripción</th>
+                        <tr className="bg-[#1A1A3D] text-white uppercase font-black text-[7px] tracking-wider">
+                          <th className="py-1.5 px-1 text-center w-[28px]">Ct.</th>
+                          <th className="py-1.5 px-1 text-left w-[45px]">Ref</th>
+                          <th className="py-1.5 px-1 text-left">Descripción</th>
                           {quoteData.isValued && (
                             <>
-                              <th className="py-2 px-2 text-right w-[70px]">Precio</th>
-                              <th className="py-2 px-1 text-center w-[40px]">Dto%</th>
+                              <th className="py-1.5 px-1 text-right w-[60px]">Precio</th>
+                              <th className="py-1.5 px-1 text-center w-[35px]">Dto%</th>
                               {!isLocked && (
-                                <th className="py-2 px-1 text-center w-[35px] no-print">Inc%</th>
+                                <th className="py-1.5 px-1 text-center w-[30px] no-print">Inc%</th>
                               )}
-                              <th className="py-2 px-2 text-right w-[85px]">Neto</th>
+                              <th className="py-1.5 px-1 text-right w-[70px]">Neto</th>
                             </>
                           )}
-                          <th className="p-0 no-print w-8"></th>
+                          <th className="p-0 no-print w-6"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -505,117 +512,110 @@ const Digitalizador = ({ state }) => {
 
                           return (
                             <tr key={item.id} className={`group ${item.isManual ? 'bg-orange-50/10' : 'hover:bg-slate-50/30'} transition-all`}>
-                              <td className="py-1 px-1 text-center font-black text-[#1A1A3D] text-[13px]">
+                              <td className="py-0.5 px-1 text-center font-black text-[#1A1A3D] text-[11px]">
                                 <input className="w-full bg-transparent outline-none text-center font-black" value={item.quantity} onChange={e => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
                               </td>
-                              <td className="py-1 px-1 font-black text-[#475569] text-[9px]">
+                              <td className="py-0.5 px-1 font-black text-[#475569] text-[8px]">
                                 <input className="w-full bg-transparent outline-none uppercase font-black tracking-tighter truncate" value={item.reference} onChange={e => updateItem(item.id, 'reference', e.target.value)} />
                               </td>
-                              <td className="py-1 px-2 font-black uppercase text-[#1A1A3D] leading-[1.05] text-[11px]">
-                                <textarea 
-                                  className="w-full bg-transparent outline-none font-black resize-none py-0.5 h-auto overflow-hidden text-[11px] block leading-tight" 
-                                  rows={1}
+                              <td className="py-0.5 px-1 font-black uppercase text-[#1A1A3D] text-[9px] leading-tight">
+                                <input 
+                                  className="w-full bg-transparent outline-none font-black text-[9px]" 
                                   value={item.name} 
                                   onChange={e => updateItem(item.id, 'name', e.target.value)}
-                                  onInput={(e) => {
-                                    e.target.style.height = 'auto';
-                                    e.target.style.height = (e.target.scrollHeight) + 'px';
-                                  }}
                                 />
                               </td>
                               {quoteData.isValued && (
                                 <>
-                                  <td className="py-1 px-2 text-right font-black text-[10px] text-[#1A1A3D]">
+                                  <td className="py-0.5 px-1 text-right font-black text-[9px] text-[#1A1A3D]">
                                     {isLocked ? (
                                       <span className="italic font-black text-indigo-900">{unitSalePrice.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
                                     ) : (
-                                      <div className="flex flex-col items-end">
-                                        <input 
-                                          type="number" 
-                                          step="0.01"
-                                          className="w-full bg-transparent outline-none text-right font-bold text-slate-400" 
-                                          value={item.unitPrice || ''} 
-                                          placeholder="0.00"
-                                          onChange={e => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} 
-                                        />
-                                        <span className="text-[6px] text-indigo-400 font-black uppercase tracking-tighter">{unitSalePrice.toFixed(2)}€</span>
-                                      </div>
+                                      <input 
+                                        type="number" 
+                                        step="0.01"
+                                        className="w-full bg-transparent outline-none text-right font-bold text-slate-400 text-[9px]" 
+                                        value={item.unitPrice || ''} 
+                                        placeholder="0.00"
+                                        onChange={e => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} 
+                                      />
                                     )}
                                   </td>
-                                  <td className={`py-1 px-1 text-center font-black text-[10px] ${item.isManual ? 'text-slate-300' : 'text-orange-600 bg-orange-50/50'}`}>
-                                    <input type="number" step="0.01" className="w-full bg-transparent outline-none text-center font-black" value={item.discountPercent} onChange={e => updateItem(item.id, 'discountPercent', parseFloat(e.target.value) || 0)} />
+                                  <td className={`py-0.5 px-1 text-center font-black text-[9px] ${item.isManual ? 'text-slate-300' : 'text-orange-600'}`}>
+                                    <input type="number" step="0.01" className="w-full bg-transparent outline-none text-center font-black text-[9px]" value={item.discountPercent} onChange={e => updateItem(item.id, 'discountPercent', parseFloat(e.target.value) || 0)} />
                                   </td>
                                   {!isLocked && (
-                                    <td className="py-1 px-1 text-center font-black text-emerald-600 bg-emerald-50/50 no-print text-[10px]">
-                                      <input type="number" step="0.01" className="w-full bg-transparent outline-none text-center font-black" value={item.markupPercent} onChange={e => updateItem(item.id, 'markupPercent', parseFloat(e.target.value) || 0)} />
+                                    <td className="py-0.5 px-1 text-center font-black text-emerald-600 no-print text-[9px]">
+                                      <input type="number" step="0.01" className="w-full bg-transparent outline-none text-center font-black text-[9px]" value={item.markupPercent} onChange={e => updateItem(item.id, 'markupPercent', parseFloat(e.target.value) || 0)} />
                                     </td>
                                   )}
-                                  <td className="py-1 px-2 text-right font-black italic text-[#1A1A3D] text-[11px]">
+                                  <td className="py-0.5 px-1 text-right font-black italic text-[#1A1A3D] text-[10px]">
                                     {item.total.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                                   </td>
                                 </>
                               )}
                               <td className="p-0 no-print text-center">
-                                <button onClick={() => setQuoteData({...quoteData, items: quoteData.items.filter(it => it.id !== item.id)})} className="text-red-200 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => setQuoteData({...quoteData, items: quoteData.items.filter(it => it.id !== item.id)})} className="text-red-200 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"><Trash2 className="w-3 h-3" /></button>
                               </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
-                    
-                    <div className="flex-grow"></div>
+                  </div>
 
-                    {index === paginatedItems.length - 1 && (
-                      <div className="mt-4 mb-2">
-                        <div className="no-print flex justify-center mb-4" data-html2canvas-ignore="true">
-                          <button 
-                            onClick={() => {
-                              const newItem = { 
-                                id: `manual-${Date.now()}`, reference: 'MANUAL', name: 'NUEVA LÍNEA...', w: '', h: '', d: '', mano: '', quantity: 1, discountPercent: 0, markupPercent: 0, unitPrice: 0, total: 0, isManual: true 
-                              };
-                              setQuoteData({...quoteData, items: [...quoteData.items, newItem]});
-                            }} 
-                            className="flex items-center gap-3 px-10 py-3 border-2 border-dashed border-indigo-100 rounded-[2.5rem] text-indigo-300 hover:text-indigo-700 hover:border-indigo-400 hover:bg-white transition-all uppercase text-[10px] font-black tracking-[0.4em] bg-slate-50/40 shadow-sm active:scale-95"
-                          >
-                            <Plus className="w-5 h-5" /> Añadir Artículo
-                          </button>
-                        </div>
+                  {/* TOTALES Y BOTÓN AÑADIR - solo última página */}
+                  {isLastPage && (
+                    <div className="mt-auto pt-2">
+                      <div className="no-print flex justify-center mb-3" data-html2canvas-ignore="true">
+                        <button 
+                          onClick={() => {
+                            const newItem = { 
+                              id: `manual-${Date.now()}`, reference: 'MANUAL', name: 'NUEVA LÍNEA...', w: '', h: '', d: '', mano: '', quantity: 1, discountPercent: 0, markupPercent: 0, unitPrice: 0, total: 0, isManual: true 
+                            };
+                            setQuoteData({...quoteData, items: [...quoteData.items, newItem]});
+                          }} 
+                          className="flex items-center gap-3 px-8 py-2 border-2 border-dashed border-indigo-100 rounded-full text-indigo-300 hover:text-indigo-700 hover:border-indigo-400 hover:bg-white transition-all uppercase text-[9px] font-black tracking-widest bg-slate-50/40 shadow-sm active:scale-95"
+                        >
+                          <Plus className="w-4 h-4" /> Añadir Artículo
+                        </button>
+                      </div>
 
-                        {quoteData.isValued && totals && (
-                          <div className="bg-[#1A1A3D] text-white rounded-[2rem] flex items-stretch border-b-[6px] border-orange-500 overflow-hidden shadow-2xl h-[100px] w-full">
-                            <div className="flex-1 p-4 border-r border-white/5 flex flex-col justify-center items-center">
-                              <span className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Bruto</span>
-                              <span className="text-[14px] font-black italic">{totals.rawSubtotal.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
-                            </div>
-                            <div className="flex-1 p-4 border-r border-white/5 flex flex-col justify-center items-center bg-white/5 relative">
-                              <span className="text-[8px] font-black text-indigo-300 uppercase tracking-widest mb-1">Base Imponible</span>
-                              <span className="text-2xl font-black italic text-indigo-400">{totals.totalNet.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
-                              <div className="absolute bottom-1.5 flex gap-2">
-                                 {quoteData.globalDiscountPercent > 0 && <span className="text-[6px] text-orange-400 font-black uppercase tracking-widest bg-orange-400/15 px-2 py-0.5 rounded-full">DTO {quoteData.globalDiscountPercent}%</span>}
-                                 {quoteData.globalMarkupPercent > 0 && !isLocked && <span className="text-[6px] text-emerald-400 font-black uppercase tracking-widest bg-emerald-400/15 px-2 py-0.5 rounded-full no-print">INC {quoteData.globalMarkupPercent}%</span>}
-                              </div>
-                            </div>
-                            <div className="flex-1 p-4 border-r border-white/5 flex flex-col justify-center items-center">
-                              <span className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">IVA ({quoteData.taxPercent}%)</span>
-                              <span className="text-[14px] font-bold text-white/80">{totals.taxAmount.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
-                            </div>
-                            <div className="flex-[1.2] p-4 bg-white/10 flex flex-col justify-center items-center border-l-4 border-orange-500/30">
-                              <span className="text-[10px] font-black text-orange-400 uppercase tracking-[0.5em] mb-1">Total {quoteData.documentType}</span>
-                              <span className="text-5xl font-black italic text-orange-500 leading-none tracking-tighter">{totals.totalWithTax.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
+                      {quoteData.isValued && totals && (
+                        <div className="bg-[#1A1A3D] text-white rounded-2xl flex items-stretch border-b-4 border-orange-500 overflow-hidden shadow-xl h-[80px]">
+                          <div className="flex-1 p-3 border-r border-white/5 flex flex-col justify-center items-center">
+                            <span className="text-[7px] font-black text-white/30 uppercase tracking-widest mb-0.5">Bruto</span>
+                            <span className="text-[12px] font-black italic">{totals.rawSubtotal.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
+                          </div>
+                          <div className="flex-1 p-3 border-r border-white/5 flex flex-col justify-center items-center bg-white/5 relative">
+                            <span className="text-[7px] font-black text-indigo-300 uppercase tracking-widest mb-0.5">Base Imponible</span>
+                            <span className="text-xl font-black italic text-indigo-400">{totals.totalNet.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
+                            <div className="absolute bottom-1 flex gap-1">
+                               {quoteData.globalDiscountPercent > 0 && <span className="text-[5px] text-orange-400 font-black uppercase tracking-widest bg-orange-400/15 px-1.5 py-0.5 rounded-full">DTO {quoteData.globalDiscountPercent}%</span>}
+                               {quoteData.globalMarkupPercent > 0 && !isLocked && <span className="text-[5px] text-emerald-400 font-black uppercase tracking-widest bg-emerald-400/15 px-1.5 py-0.5 rounded-full no-print">INC {quoteData.globalMarkupPercent}%</span>}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                          <div className="flex-1 p-3 border-r border-white/5 flex flex-col justify-center items-center">
+                            <span className="text-[7px] font-black text-white/30 uppercase tracking-widest mb-0.5">IVA ({quoteData.taxPercent}%)</span>
+                            <span className="text-[12px] font-bold text-white/80">{totals.taxAmount.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
+                          </div>
+                          <div className="flex-[1.3] p-3 bg-white/10 flex flex-col justify-center items-center border-l-4 border-orange-500/30">
+                            <span className="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-0.5">Total {quoteData.documentType}</span>
+                            <span className="text-3xl font-black italic text-orange-500 leading-none tracking-tighter">{totals.totalWithTax.toLocaleString('de-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  <div className="border-t-2 border-slate-50 pt-3 flex justify-between items-center opacity-60 mt-auto">
-                    <span className="text-[7px] font-black text-[#1A1A3D] uppercase italic tracking-widest">LUIGGI HOME MASTER SYSTEM - PROFESSIONAL REPORT 7.8</span>
-                    <span className="text-[9px] font-black text-[#1A1A3D] uppercase tracking-widest">PÁGINA {index + 1} DE {paginatedItems.length}</span>
+                  {/* FOOTER DE PÁGINA */}
+                  <div className="border-t border-slate-100 pt-2 flex justify-between items-center opacity-50 mt-2">
+                    <span className="text-[6px] font-black text-[#1A1A3D] uppercase italic tracking-widest">LUIGGI HOME MASTER SYSTEM - PRO 7.8</span>
+                    <span className="text-[8px] font-black text-[#1A1A3D] uppercase tracking-widest">PÁGINA {index + 1} DE {paginatedItems.length}</span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
