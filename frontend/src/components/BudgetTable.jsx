@@ -1071,7 +1071,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                      <div className="w-11 text-center shrink-0">FO</div>
                      <div className="w-8 text-center shrink-0">AP</div>
                      <div className="w-20 shrink-0">OBS</div>
-                     <div className="w-20 text-right shrink-0 pr-2">€</div>
+                     {/* Columna de precio solo si es valorado */}
+                     {isValorado && (
+                       <div className="w-20 text-right shrink-0 pr-2">€</div>
+                     )}
                      <div className="w-6 shrink-0 no-print"></div>
                   </div>
                   <div className="divide-y divide-indigo-50 border-x border-b border-indigo-50 rounded-b-lg overflow-hidden">
