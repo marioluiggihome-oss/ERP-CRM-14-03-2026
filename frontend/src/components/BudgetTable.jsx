@@ -1110,11 +1110,36 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     }
                     const specialLabel = specialCuts.length > 0 ? `+ CORTE ${specialCuts.join('/')}` : '';
                     
-                    // Detectar si es mueble de 2 puertas (no necesita selector D/I)
-                    const isTwoDoor = product.name?.toLowerCase().includes('2 puerta') || 
-                                      product.name?.toLowerCase().includes('2p') ||
-                                      product.code?.includes('2P') ||
+                    // Detectar si es mueble que NO necesita selector D/I (Derecha/Izquierda)
+                    // - Muebles de 2 puertas
+                    // - Semicolumnas con 2 puertas
+                    // - Muebles con cajones o gavetas (con o sin horno)
+                    const productName = product.name?.toLowerCase() || '';
+                    const productCode = product.code || '';
+                    const productRef = product.reference || '';
+                    
+                    const isTwoDoor = productName.includes('2 puerta') || 
+                                      productName.includes('2p') ||
+                                      productCode.includes('2P') ||
                                       product.visualType === '2P';
+                    
+                    // Semicolumnas con 2 puertas
+                    const isSemicolumnaTwoDoor = (productName.includes('semicolumna') || productRef.startsWith('SC') || productRef.startsWith('10') || productRef.startsWith('11')) &&
+                                                  (productName.includes('2 puerta') || productCode.includes('2P'));
+                    
+                    // Muebles con cajones o gavetas (incluye los que tienen horno)
+                    const hasDrawersOrGavetas = productName.includes('cajón') || 
+                                                productName.includes('cajon') ||
+                                                productName.includes('cajones') ||
+                                                productName.includes('gaveta') ||
+                                                productName.includes('gavetas') ||
+                                                productName.includes('cacerolero') ||
+                                                productCode.includes('CB') ||  // Cajón Bax
+                                                productCode.includes('CL') ||  // Cajón Lux
+                                                productCode.includes('G');     // Gaveta/Cacerolero
+                    
+                    // Determinar si NO necesita selector de apertura
+                    const noNeedsOpeningSelector = isTwoDoor || isSemicolumnaTwoDoor || hasDrawersOrGavetas;
 
                     return (
                       <div key={item.id} className={`flex items-center px-2 py-2 text-indigo-950 hover:bg-indigo-50/50 transition-colors ${isUnknown ? 'bg-red-50 border-l-4 border-red-500' : item.fromAI ? 'bg-purple-50/50 border-l-4 border-purple-500' : item.isManual ? 'bg-emerald-50/30' : specialCuts.length > 0 ? 'bg-orange-50/20' : ''}`}>
