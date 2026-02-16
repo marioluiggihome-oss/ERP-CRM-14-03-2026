@@ -192,9 +192,12 @@ const Digitalizador = ({ state }) => {
         };
         setQuoteData(newData);
         saveToHistory(newData);
+        setStatus('');
       } catch (err) {
-        console.error(err);
-        setStatus('Error al digitalizar el documento');
+        console.error('Error digitalizando:', err);
+        setStatus(`Error: ${err.message || 'Error al digitalizar el documento'}`);
+        // Mostrar error por 5 segundos y luego limpiar
+        setTimeout(() => setStatus(''), 5000);
       } finally {
         setLoading(false);
       }
