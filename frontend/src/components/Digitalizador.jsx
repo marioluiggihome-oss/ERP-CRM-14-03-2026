@@ -30,7 +30,32 @@ const Digitalizador = ({ state }) => {
   const [crmContactPhone, setCrmContactPhone] = useState('');
   const [crmCompany, setCrmCompany] = useState('');
   const [opportunityCreated, setOpportunityCreated] = useState(null);
+  const [currentPage, setCurrentPage] = useState(0);  // Página actual para navegación
   const fileInputRef = useRef(null);
+
+  // Configuración de paginación
+  const LINES_FIRST_PAGE = 15;  // Primera página tiene cabecera
+  const LINES_PER_PAGE = 22;    // Páginas siguientes
+
+  // Calcular páginas
+  const getPages = () => {
+    if (lines.length === 0) return [];
+    const pages = [];
+    let remaining = [...lines];
+    
+    // Primera página
+    pages.push(remaining.splice(0, LINES_FIRST_PAGE));
+    
+    // Páginas siguientes
+    while (remaining.length > 0) {
+      pages.push(remaining.splice(0, LINES_PER_PAGE));
+    }
+    
+    return pages;
+  };
+
+  const pages = getPages();
+  const totalPages = pages.length;
 
   // Load history from database
   const loadHistory = async () => {
