@@ -110,7 +110,7 @@ const Digitalizador = ({ state }) => {
   const loadHistory = async () => {
     setLoadingHistory(true);
     try {
-      const userId = state.currentUser?.isAdmin ? null : state.currentUser?.id;
+      const userId = (state.currentUser?.isAdmin || state.currentUser?.isGerente) ? null : state.currentUser?.id;
       const url = userId 
         ? `${API_URL}/api/digitalizador/history?userId=${userId}${historySearch ? `&search=${historySearch}` : ''}`
         : `${API_URL}/api/digitalizador/history${historySearch ? `?search=${historySearch}` : ''}`;
