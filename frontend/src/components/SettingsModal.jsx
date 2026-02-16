@@ -1013,7 +1013,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         {/* Tabs */}
         <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto shrink-0">
           {/* Tab Panel Director - Solo Admin (antes era Panel Admin separado) */}
-          {state.currentUser?.isAdmin && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
             <button
               onClick={() => setActiveTab('director')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1035,7 +1035,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           </button>
           
           {/* Tab Clientes - Solo Admin */}
-          {state.currentUser?.isAdmin && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
             <button
               onClick={() => setActiveTab('clients')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1085,7 +1085,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           )}
           
           {/* Tab Backups - Solo Admin */}
-          {state.currentUser?.isAdmin && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
             <button
               onClick={() => setActiveTab('backups')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1098,7 +1098,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           )}
           
           {/* Pestaña Mantenimiento - Solo Admin */}
-          {state.currentUser?.isAdmin && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
             <button
               onClick={() => setActiveTab('maintenance')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1110,7 +1110,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </button>
           )}
           
-          {state.currentUser?.isAdmin && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
             <button
               onClick={() => setActiveTab('telemetry')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
