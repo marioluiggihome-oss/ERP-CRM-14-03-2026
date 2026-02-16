@@ -4985,6 +4985,91 @@ async def delete_digitalizador_item(item_id: str):
         logger.error(f"Delete digitalizador item error: {e}")
         raise HTTPException(status_code=500, detail=f"Error eliminando presupuesto: {str(e)}")
 
+
+class DigitalizadorToProjectRequest(BaseModel):
+    """Request to save digitalizador budget to main projects"""
+    expNumber: str
+    projectName: str = ""
+    customerName: str = ""
+    acabado: str = ""
+    armazon: str = ""
+    costados: str = ""
+    lines: List[DigitalizadorLine]
+    globalDiscount: float = 0
+    globalMarkup: float = 0
+    ivaRate: float = 21
+    userId: str = ""
+    totalPvp: float = 0
+
+
+@api_router.post("/presupuestos")
+async def save_digitalizador_to_presupuestos(request: DigitalizadorToProjectRequest):
+    """
+    Save a digitalizador budget to the main projects collection.
+    This allows digitalized budgets to be managed alongside regular budgets.
+    """
+    try:
+        # Convertir líneas del digitalizador al formato de items del proyecto
+        items_montada = []
+        for line in request.lines:
+            item = {
+                "id": f"digi-item-{uuid.uuid4().hex[:8]}",
+                "productId": line.id,
+                "productCode": line.reference or "DIGI",
+                "productName": line.description,
+                "quantity": line.quantity,
+                "customWidth": 0,
+                "customHeight": 0,
+                "customDepth": 0,
+                "manualPrice": line.price,
+                "discount": line.discount,
+                "isManual": line.isManual,
+                "fromDigitalizador": True,
+                "notes": ""
+            }
+            items_montada.append(item)
+        
+        # Crear el proyecto/presupuesto
+        project_data = {
+            "id": f"proj-digi-{uuid.uuid4().hex[:8]}",
+            "userId": request.userId or "anonymous",
+            "budgetNumber": request.expNumber,
+            "customerName": request.customerName,
+            "customerAddress": "",
+            "internalReference": request.projectName,
+            "itemsMontada": items_montada,
+            "itemsDespiece": [],
+            "doorColorLow": "",
+            "doorColorHigh": "",
+            "doorColorColumns": "",
+            "sideColor": request.costados,
+            "selectedCarcassMaterialId": request.armazon,
+            "globalFinish": request.acabado,
+            "globalDiscount": request.globalDiscount,
+            "globalMarkup": request.globalMarkup,
+            "ivaRate": request.ivaRate,
+            "totalPvp": request.totalPvp,
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+            "status": "draft",
+            "source": "digitalizador"
+        }
+        
+        await db.projects.insert_one(project_data)
+        project_data.pop('_id', None)
+        
+        logger.info(f"Digitalizador budget saved to projects: {request.expNumber}")
+        
+        return {
+            "success": True,
+            "message": "Presupuesto guardado en proyectos",
+            "project": project_data
+        }
+    except Exception as e:
+        logger.error(f"Save digitalizador to presupuestos error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error guardando presupuesto: {str(e)}")
+
+
 @api_router.post("/digitalizador/analyze")
 async def analyze_draft(request: DigitalizadorRequest):
     """
