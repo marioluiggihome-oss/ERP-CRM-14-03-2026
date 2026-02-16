@@ -617,7 +617,7 @@ const CRMContacts = ({ currentUser }) => {
               </div>
 
               {/* Asignar a Comercial / Representante - Solo visible para Admin */}
-              {currentUser?.isAdmin && (
+              {currentUser?.isAdmin || currentUser?.isGerente) && (
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Asignar a Comercial / Representante</label>
                   <select
