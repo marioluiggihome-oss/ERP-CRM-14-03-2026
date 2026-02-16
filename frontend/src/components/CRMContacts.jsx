@@ -65,8 +65,8 @@ const CRMContacts = ({ currentUser }) => {
   const loadContacts = async () => {
     setIsLoading(true);
     try {
-      // Determinar si es admin para filtrar datos
-      const isAdmin = currentUser?.isAdmin === true;
+      // Determinar si es admin o gerente para filtrar datos
+      const isAdmin = currentUser?.isAdmin === true || currentUser?.isGerente === true;
       const options = isAdmin ? {} : {
         assignedTo: currentUser?.id,
         isAdmin: false
