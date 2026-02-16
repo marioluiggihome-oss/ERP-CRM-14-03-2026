@@ -1276,7 +1276,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          {/* Precio - Siempre visible y alineado */}
                          <div className="w-20 shrink-0 text-right flex items-center justify-end gap-1 relative group/price">
                             {hasExtras && state.currentUser?.isAdmin && <Info size={7} className="text-orange-600 no-print" />}
-                            <span className="text-[10px] font-black italic tracking-tight">{price.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</span>
+                            <span className="text-[10px] font-black italic tracking-tight">{price.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
                             
                             {/* Desglose solo visible para admin */}
                             {state.currentUser?.isAdmin && (
