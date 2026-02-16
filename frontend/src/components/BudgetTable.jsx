@@ -30,6 +30,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [orderNotes, setOrderNotes] = useState('');
   const [isSendingOrder, setIsSendingOrder] = useState(false);
   const [orderSent, setOrderSent] = useState(false);
+  const [isValorado, setIsValorado] = useState(true);  // Toggle para mostrar/ocultar precios
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
   const isResizingCatalogWidth = useRef(false);
