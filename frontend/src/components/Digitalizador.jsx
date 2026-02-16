@@ -490,14 +490,102 @@ const Digitalizador = ({ state }) => {
     return netPrice * (1 - userDiscount / 100);
   };
 
-  // Export to PDF (uses browser print)
-  const handleExportPDF = () => {
-    // Temporalmente mostrar todas las líneas para impresión
-    setCurrentPage(-1); // -1 significa "mostrar todas"
-    setTimeout(() => {
-      window.print();
-      setCurrentPage(0); // Volver a la primera página después de imprimir
-    }, 100);
+  // Export to PDF (generates real PDF file)
+  const handleExportPDF = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Temporalmente mostrar todas las líneas para el PDF
+      setCurrentPage(-1);
+      
+      // Esperar a que el DOM se actualice
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const element = document.getElementById('digitalizador-pdf');
+      if (!element) {
+        throw new Error('No se encontró el contenedor del documento');
+      }
+      
+      // Capturar el elemento como imagen
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
+      });
+      
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      
+      // Crear PDF en formato A4
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const usableWidth = pageWidth - (margin * 2);
+      
+      // Calcular la altura proporcional
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = usableWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+      
+      // Si la imagen es más alta que una página, dividir en páginas
+      const usableHeight = pageHeight - (margin * 2);
+      
+      if (scaledHeight <= usableHeight) {
+        // Cabe en una sola página
+        pdf.addImage(imgData, 'JPEG', margin, margin, usableWidth, scaledHeight);
+      } else {
+        // Necesita múltiples páginas
+        let yPosition = 0;
+        let pageNumber = 0;
+        
+        while (yPosition < scaledHeight) {
+          if (pageNumber > 0) {
+            pdf.addPage();
+          }
+          
+          // Calcular qué porción de la imagen mostrar
+          const sourceY = (yPosition / ratio);
+          const sourceHeight = Math.min((usableHeight / ratio), imgHeight - sourceY);
+          const destHeight = sourceHeight * ratio;
+          
+          // Crear un canvas temporal para esta porción
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = imgWidth;
+          tempCanvas.height = sourceHeight;
+          const ctx = tempCanvas.getContext('2d');
+          ctx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
+          
+          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+          pdf.addImage(pageImgData, 'JPEG', margin, margin, usableWidth, destHeight);
+          
+          yPosition += usableHeight;
+          pageNumber++;
+        }
+      }
+      
+      // Descargar el PDF
+      const fileName = `${documentTitle.replace(/\s+/g, '_')}_${expNumber || 'borrador'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
+      setSuccessMessage('PDF generado correctamente');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      setError('Error al generar PDF: ' + err.message);
+    } finally {
+      setCurrentPage(0);
+      setIsLoading(false);
+    }
   };
 
   // Export to CSV for cutting machine
