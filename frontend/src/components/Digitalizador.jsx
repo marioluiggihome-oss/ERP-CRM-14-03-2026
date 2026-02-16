@@ -34,26 +34,47 @@ const Digitalizador = ({ state }) => {
   const [currentPage, setCurrentPage] = useState(0);  // Página actual para navegación
   const [isLocked, setIsLocked] = useState(true);  // Modo bloqueado/desbloqueado
   const [expNumber, setExpNumber] = useState('');  // Número de expediente único
+  const [isGeneratingExp, setIsGeneratingExp] = useState(false);  // Loading state para generar exp
   const [showCostMode, setShowCostMode] = useState(false);  // Mostrar precio COSTO vs PVP
   const fileInputRef = useRef(null);
 
   // Obtener descuento del usuario actual
   const userDiscount = state?.currentUser?.discountMontada || state?.currentUser?.commercialDiscount || 0;
 
-  // Generar número de expediente único
-  const generateExpNumber = () => {
-    const now = new Date();
-    const year = now.getFullYear().toString().slice(-2);
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `${year}${month}${day}-${random}`;
+  // Generar número de expediente único desde el servidor (thread-safe)
+  const generateExpNumber = async () => {
+    setIsGeneratingExp(true);
+    try {
+      const response = await fetch(`${API_URL}/api/digitalizador/generate-exp-number`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: state?.currentUser?.id || 'anonymous' })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setExpNumber(data.expNumber);
+        return data.expNumber;
+      } else {
+        // Fallback a generación local si falla el servidor
+        const fallback = `EXP-LOCAL-${Date.now()}`;
+        setExpNumber(fallback);
+        return fallback;
+      }
+    } catch (err) {
+      console.error('Error generating exp number:', err);
+      const fallback = `EXP-LOCAL-${Date.now()}`;
+      setExpNumber(fallback);
+      return fallback;
+    } finally {
+      setIsGeneratingExp(false);
+    }
   };
 
   // Inicializar número de expediente cuando no hay uno
   useEffect(() => {
     if (!expNumber) {
-      setExpNumber(generateExpNumber());
+      generateExpNumber();
     }
   }, []);
 
