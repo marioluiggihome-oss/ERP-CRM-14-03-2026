@@ -152,8 +152,10 @@ const Digitalizador = ({ state }) => {
           costados,
           lines,
           globalDiscount,
+          globalMarkup: isLocked ? 0 : globalMarkup,  // Solo enviar markup si está desbloqueado
           ivaRate,
-          userId: state.currentUser?.id || 'anonymous'
+          userId: state.currentUser?.id || 'anonymous',
+          expNumber: expNumber  // Enviar número de expediente
         })
       });
 
