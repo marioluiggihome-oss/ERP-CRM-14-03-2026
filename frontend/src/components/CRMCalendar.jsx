@@ -67,7 +67,7 @@ const CRMCalendar = ({ currentUser }) => {
 
   useEffect(() => {
     loadContactsAndOpportunities();
-    if (currentUser?.isAdmin) {
+    if (currentUser?.isAdmin || currentUser?.isGerente) {
       loadPrescriptorNotes();
     }
   }, [currentDate]);
@@ -96,8 +96,8 @@ const CRMCalendar = ({ currentUser }) => {
       }
       
       if (filterType) params.eventType = filterType;
-      if (viewAllEvents && currentUser?.isAdmin) params.viewAll = true;
-      if (currentUser?.isRepresentative && !currentUser?.isAdmin) {
+      if (viewAllEvents && currentUser?.isAdmin || currentUser?.isGerente) params.viewAll = true;
+      if (currentUser?.isRepresentative && !currentUser?.isAdmin || currentUser?.isGerente) {
         params.commercialId = currentUser.id;
       }
       
@@ -124,7 +124,7 @@ const CRMCalendar = ({ currentUser }) => {
   };
 
   const loadPrescriptorNotes = async () => {
-    if (!currentUser?.isAdmin) return;
+    if (!currentUser?.isAdmin || currentUser?.isGerente) return;
     try {
       const start = startOfMonth(currentDate);
       const end = endOfMonth(currentDate);
@@ -356,7 +356,7 @@ const CRMCalendar = ({ currentUser }) => {
           </select>
 
           {/* Admin: View All Toggle */}
-          {currentUser?.isAdmin && (
+          {currentUser?.isAdmin || currentUser?.isGerente && (
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -369,7 +369,7 @@ const CRMCalendar = ({ currentUser }) => {
           )}
 
           {/* Admin: Show Prescriptor Notes Toggle */}
-          {currentUser?.isAdmin && (
+          {currentUser?.isAdmin || currentUser?.isGerente && (
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
