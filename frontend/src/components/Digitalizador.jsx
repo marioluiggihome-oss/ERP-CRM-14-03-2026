@@ -1223,6 +1223,159 @@ const Digitalizador = ({ state }) => {
         </div>
       )}
 
+      {/* Modal de Opciones de Guardado */}
+      {showSaveOptionsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 no-print">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <Save size={24} />
+                <h3 className="font-black uppercase tracking-wider">Guardar Presupuesto</h3>
+              </div>
+              <button 
+                onClick={() => setShowSaveOptionsModal(false)} 
+                className="p-1 hover:bg-white/10 rounded transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* Preview del presupuesto */}
+              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">Presupuesto</p>
+                <p className="font-bold text-green-900 text-lg">{expNumber}</p>
+                <p className="text-sm text-green-700">{projectName || 'Sin nombre'}</p>
+                <p className="text-2xl font-black text-green-600 mt-2">
+                  {totals.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                </p>
+                <p className="text-xs text-green-500 mt-1">{lines.length} líneas · IVA {ivaRate}%</p>
+              </div>
+
+              {/* Opciones de guardado */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">¿Dónde guardar?</p>
+                
+                {/* Historial */}
+                <label className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl cursor-pointer hover:bg-indigo-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={saveToHistory}
+                    onChange={(e) => setSaveToHistory(e.target.checked)}
+                    className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-indigo-900">Historial Digitalizador</p>
+                    <p className="text-xs text-indigo-500">Guardar en el historial del digitalizador</p>
+                  </div>
+                  <History size={20} className="text-indigo-400" />
+                </label>
+
+                {/* Presupuestos */}
+                <label className="flex items-center gap-3 p-3 bg-orange-50 rounded-xl cursor-pointer hover:bg-orange-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={saveToPresupuestos}
+                    onChange={(e) => setSaveToPresupuestos(e.target.checked)}
+                    className="w-5 h-5 rounded border-orange-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-orange-900">Presupuestos Principales</p>
+                    <p className="text-xs text-orange-500">Guardar junto a los presupuestos de cocina</p>
+                  </div>
+                  <FileText size={20} className="text-orange-400" />
+                </label>
+
+                {/* CRM */}
+                <label className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl cursor-pointer hover:bg-purple-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={saveToCRM}
+                    onChange={(e) => setSaveToCRM(e.target.checked)}
+                    className="w-5 h-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-purple-900">Crear Oportunidad CRM</p>
+                    <p className="text-xs text-purple-500">Crear contacto y oportunidad en el CRM</p>
+                  </div>
+                  <Briefcase size={20} className="text-purple-400" />
+                </label>
+              </div>
+
+              {/* Campos CRM si está marcado */}
+              {saveToCRM && (
+                <div className="space-y-3 pt-3 border-t border-purple-200">
+                  <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Datos del Cliente para CRM</p>
+                  <input
+                    type="text"
+                    value={crmContactName}
+                    onChange={(e) => setCrmContactName(e.target.value)}
+                    placeholder="Nombre del cliente *"
+                    className="w-full bg-purple-50 border border-purple-200 rounded-lg px-4 py-2.5 text-sm font-medium text-purple-900 outline-none focus:border-purple-500"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="email"
+                      value={crmContactEmail}
+                      onChange={(e) => setCrmContactEmail(e.target.value)}
+                      placeholder="Email"
+                      className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm font-medium text-purple-900 outline-none focus:border-purple-500"
+                    />
+                    <input
+                      type="tel"
+                      value={crmContactPhone}
+                      onChange={(e) => setCrmContactPhone(e.target.value)}
+                      placeholder="Teléfono"
+                      className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm font-medium text-purple-900 outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={crmCompany}
+                    onChange={(e) => setCrmCompany(e.target.value)}
+                    placeholder="Empresa (opcional)"
+                    className="w-full bg-purple-50 border border-purple-200 rounded-lg px-4 py-2 text-sm font-medium text-purple-900 outline-none focus:border-purple-500"
+                  />
+                </div>
+              )}
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={16} className="text-red-500 shrink-0" />
+                  <p className="text-red-700 text-sm font-medium">{error}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() => setShowSaveOptionsModal(false)}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeSave}
+                disabled={isSaving || (!saveToHistory && !saveToPresupuestos && !saveToCRM)}
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-green-700 disabled:bg-green-400 transition-colors shadow-lg flex items-center justify-center gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader size={16} className="animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    Guardar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CRM Opportunity Modal */}
       {showCRMModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 no-print">
