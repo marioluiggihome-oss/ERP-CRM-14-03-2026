@@ -982,11 +982,14 @@ const Digitalizador = ({ state }) => {
                           <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-20">Dto%</th>
                         </>
                       )}
-                      {/* Columna INC% solo visible cuando está desbloqueado */}
-                      {!isLocked && globalMarkup > 0 && (
+                      {/* Columna INC% solo visible cuando está desbloqueado y valorado */}
+                      {isValorado && !isLocked && globalMarkup > 0 && (
                         <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest w-20 text-emerald-400">Inc%</th>
                       )}
-                      <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest w-28">Neto</th>
+                      {/* Columna Neto solo si valorado */}
+                      {isValorado && (
+                        <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest w-28">Neto</th>
+                      )}
                       <th className="px-4 py-3 text-center w-12 no-print"></th>
                     </tr>
                   </thead>
