@@ -4783,6 +4783,70 @@ class DigitalizadorHistoryItem(BaseModel):
     createdAt: str
     filename: str = ""
 
+# ============================================
+# EXPEDIENTE NUMBER GENERATOR (Thread-safe)
+# ============================================
+
+@api_router.post("/digitalizador/generate-exp-number")
+async def generate_expediente_number(userId: str = None):
+    """
+    Generate a unique expediente number using atomic MongoDB operation.
+    Format: EXP-YYYY-NNN (e.g., EXP-2026-001)
+    Thread-safe for concurrent users.
+    """
+    try:
+        current_year = datetime.now().year
+        
+        # Atomic find_and_modify to get next sequence number
+        # Uses upsert to create the counter if it doesn't exist
+        result = await db.counters.find_one_and_update(
+            {"_id": f"expediente_{current_year}"},
+            {"$inc": {"seq": 1}},
+            upsert=True,
+            return_document=True  # Return the document AFTER the update
+        )
+        
+        seq_number = result["seq"]
+        
+        # Format: EXP-YYYY-NNN (with padding for 3 digits, auto-expands if > 999)
+        if seq_number < 1000:
+            exp_number = f"EXP-{current_year}-{seq_number:03d}"
+        else:
+            exp_number = f"EXP-{current_year}-{seq_number}"
+        
+        # Log for audit
+        logger.info(f"Generated expediente number: {exp_number} for user: {userId}")
+        
+        return {
+            "success": True,
+            "expNumber": exp_number,
+            "year": current_year,
+            "sequence": seq_number
+        }
+    except Exception as e:
+        logger.error(f"Generate expediente number error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generando número de expediente: {str(e)}")
+
+
+@api_router.get("/digitalizador/current-exp-sequence")
+async def get_current_expediente_sequence():
+    """Get the current expediente sequence number for the current year"""
+    try:
+        current_year = datetime.now().year
+        counter = await db.counters.find_one({"_id": f"expediente_{current_year}"})
+        
+        current_seq = counter["seq"] if counter else 0
+        
+        return {
+            "year": current_year,
+            "currentSequence": current_seq,
+            "nextExpNumber": f"EXP-{current_year}-{(current_seq + 1):03d}"
+        }
+    except Exception as e:
+        logger.error(f"Get current expediente sequence error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/digitalizador/save")
 async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
     """Save a digitalized budget to history"""
