@@ -427,6 +427,7 @@ const Armarios = ({ state, setState }) => {
     height: 2400, // mm
     depth: 600, // mm
     modules: 3,
+    numDoors: 3, // Número de puertas (independiente de módulos)
     doorType: DoorType.SLIDING,
     exteriorColor: '010', // Blanco Standard
     interiorColor: '010', // Blanco Standard
