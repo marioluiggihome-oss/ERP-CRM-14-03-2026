@@ -1426,6 +1426,71 @@ const Armarios = ({ state, setState }) => {
     }
   };
 
+  // Generar layout desde instrucciones de texto libre
+  const handleIAGenerateLayout = async () => {
+    if (!iaInstruction.trim()) return;
+    
+    setIaLoading(true);
+    setIaError(null);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/armarios/ia/generate-layout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instruction: iaInstruction,
+          modules: wardrobeConfig.modules,
+          width: wardrobeConfig.width,
+          height: wardrobeConfig.height,
+          depth: wardrobeConfig.depth
+        })
+      });
+      
+      if (!response.ok) throw new Error('Error al procesar instrucciones');
+      
+      const result = await response.json();
+      
+      if (result.success && result.moduleConfigs) {
+        // Actualizar la configuración de módulos
+        setModuleConfigs(result.moduleConfigs.map((config, idx) => ({
+          id: idx + 1,
+          shelves: config.shelves || 0,
+          drawers: config.drawers || 0,
+          hangingRods: config.hangingRods || 0,
+          hangingHeight: config.hangingHeight || 1200,
+          extras: {
+            shoesRack: config.shoesRack || false,
+            trousersRack: config.trousersRack || false,
+            tieRack: config.tieRack || false,
+            jewelryTray: config.jewelryTray || false,
+            pulloutBasket: config.pulloutBasket || false,
+            trunk: config.trunk || false,
+            mirrorDoor: config.mirrorDoor || false
+          },
+          components: config.components || []
+        })));
+        
+        // Actualizar extras globales si la IA los sugiere
+        if (result.extras) {
+          setExtras(prev => ({
+            ...prev,
+            led: result.extras.led || prev.led,
+            mirror: result.extras.mirror || prev.mirror
+          }));
+        }
+        
+        setIaInstruction('');
+      } else {
+        setIaError(result.error || 'No se pudo interpretar las instrucciones');
+      }
+    } catch (error) {
+      console.error('Error IA layout:', error);
+      setIaError(error.message || 'Error al generar layout con IA');
+    } finally {
+      setIaLoading(false);
+    }
+  };
+
   // Generar render realista
   const generateRender = async () => {
     setRenderLoading(true);
