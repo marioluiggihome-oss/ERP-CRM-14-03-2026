@@ -494,8 +494,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       // Filtro por rol
       if (userRoleFilter === 'all') return matchesSearch;
       if (userRoleFilter === 'director' && u.isAdmin) return matchesSearch;
+      if (userRoleFilter === 'gerente' && u.isGerente) return matchesSearch;
       if (userRoleFilter === 'responsable' && u.isResponsableDelegacion) return matchesSearch;
-      if (userRoleFilter === 'comercial' && u.isRepresentative && !u.isAdmin && !u.isResponsableDelegacion) return matchesSearch;
+      if (userRoleFilter === 'comercial' && u.isRepresentative && !u.isAdmin && !u.isGerente && !u.isResponsableDelegacion) return matchesSearch;
       if (userRoleFilter === 'tienda' && u.isTienda) return matchesSearch;
       if (userRoleFilter === 'colaborador' && u.isPrescriptor) return matchesSearch;
       
