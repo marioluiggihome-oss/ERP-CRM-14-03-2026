@@ -1687,7 +1687,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg"
                     >
                       <UserPlus size={18} />
-                      {state.currentUser?.isAdmin ? 'Nuevo Usuario' : 'Nueva Tienda'}
+                      {(state.currentUser?.isAdmin || state.currentUser?.isGerente) ? 'Nuevo Usuario' : 'Nueva Tienda'}
                     </button>
                   </div>
 
