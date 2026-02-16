@@ -1028,6 +1028,9 @@ const Digitalizador = ({ state }) => {
                             className="w-full bg-transparent font-medium text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
                           />
                         </td>
+                        {/* Precio y Descuento solo si valorado */}
+                        {isValorado && (
+                        <>
                         <td className="px-4 py-3 text-center">
                           {/* Precio: muestra original si desbloqueado, o con incremento si bloqueado */}
                           <div className="flex flex-col items-center">
@@ -1065,15 +1068,20 @@ const Digitalizador = ({ state }) => {
                             className={`w-16 bg-indigo-50 rounded px-2 py-1 text-center font-bold outline-none border border-transparent hover:border-indigo-200 focus:border-orange-500 ${line.isManual ? 'text-orange-600 bg-orange-50' : (line.discount > 0 ? 'text-orange-600' : 'text-indigo-600')}`}
                           />
                         </td>
-                        {/* Columna INC% solo visible cuando está desbloqueado */}
-                        {!isLocked && globalMarkup > 0 && (
+                        </>
+                        )}
+                        {/* Columna INC% solo visible cuando está desbloqueado y valorado */}
+                        {isValorado && !isLocked && globalMarkup > 0 && (
                           <td className="px-4 py-3 text-center">
                             <span className="text-emerald-600 font-bold">{globalMarkup}</span>
                           </td>
                         )}
+                        {/* Neto solo si valorado */}
+                        {isValorado && (
                         <td className="px-4 py-3 text-right font-black text-indigo-950">
                           {getLineNet(line).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                         </td>
+                        )}
                         <td className="px-4 py-3 text-center no-print">
                           <button
                             onClick={() => deleteLine(line.id)}
