@@ -9,13 +9,12 @@ import sys
 import json
 import asyncio
 import uuid
+import base64
 from pathlib import Path
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# Add emergentintegrations
-sys.path.insert(0, '/app/backend')
-
-from emergentintegrations.llm.chat import chat, Message
+# Import emergentintegrations
+from emergentintegrations.llm.chat import LlmChat, ImageContent
 
 # Configuration
 MONGO_URL = os.environ.get('MONGO_URL')
