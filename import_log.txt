@@ -71,3 +71,12 @@
    ✅ Extraídos 18 productos - Listado de sobremódulos de 1 y 2 vitrinas con precios por zo...
 
 📄 Procesando página 111: /app/pdf_pages_95_234/page-017.jpg
+   ✅ Extraídos 3 productos - Página de catálogo con sobremódulos micro de 1 y 2 puertas y...
+
+📄 Procesando página 112: /app/pdf_pages_95_234/page-018.jpg
+   ✅ Extraídos 16 productos - Página de catálogo con precios por zonas de sobremódulos de ...
+   📊 Productos en BD: 3727
+
+📦 Procesando batch 7/47
+
+📄 Procesando página 113: /app/pdf_pages_95_234/page-019.jpg
