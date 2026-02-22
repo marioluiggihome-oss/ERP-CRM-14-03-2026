@@ -491,3 +491,39 @@
    ✅ Extraídos 4 productos - Columnas de 2 caceroleros con diferentes configuraciones de ...
 
 📄 Procesando página 216: /app/pdf_pages_95_234/page-122.jpg
+   ✅ Extraídos 4 productos - Columnas de 2 caceroleros de 200cm de alto y 58cm de fondo...
+
+📄 Procesando página 217: /app/pdf_pages_95_234/page-123.jpg
+   ✅ Extraídos 19 productos - Columnas de rincón angulares y lineales de 1 y 2 puertas, co...
+   📊 Productos en BD: 4515
+
+📦 Procesando batch 42/47
+
+📄 Procesando página 218: /app/pdf_pages_95_234/page-124.jpg
+   ✅ Extraídos 11 productos - Columnas rinconeras lineales de 1 y 2 puertas con precios po...
+
+📄 Procesando página 219: /app/pdf_pages_95_234/page-125.jpg
+   ✅ Extraídos 18 productos - Columnas de 200cm decorativos: columna rincón lineal 2 puert...
+
+📄 Procesando página 220: /app/pdf_pages_95_234/page-126.jpg
+   ✅ Extraídos 2 productos - Columnas decorativas terminales de 200cm de alto...
+   📊 Productos en BD: 4546
+
+📦 Procesando batch 43/47
+
+📄 Procesando página 221: /app/pdf_pages_95_234/page-127.jpg
+   ✅ Extraídos 21 productos - Listado de columnas de 220cm de alto y 58cm de fondo, de 1 y...
+
+📄 Procesando página 222: /app/pdf_pages_95_234/page-128.jpg
+   ✅ Extraídos 21 productos - Listado de precios para columnas de cocina, varias configura...
+
+📄 Procesando página 223: /app/pdf_pages_95_234/page-129.jpg
+   ✅ Extraídos 21 productos - Listado de columnas con una o dos vitrinas y columna escober...
+   📊 Productos en BD: 4595
+
+📦 Procesando batch 44/47
+
+📄 Procesando página 224: /app/pdf_pages_95_234/page-130.jpg
+   ✅ Extraídos 21 productos - Columnas escobero de 1 y 2 puertas. Alto 220cm, fondo 58cm. ...
+
+📄 Procesando página 225: /app/pdf_pages_95_234/page-131.jpg
