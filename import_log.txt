@@ -369,3 +369,56 @@
 
 📄 Procesando página 185: /app/pdf_pages_95_234/page-091.jpg
    ✅ Extraídos 8 productos - Listado de precios por zonas para diferentes modelos de semi...
+
+📄 Procesando página 186: /app/pdf_pages_95_234/page-092.jpg
+   ✅ Extraídos 8 productos - Lista de precios por zonas de semicollumnas...
+
+📄 Procesando página 187: /app/pdf_pages_95_234/page-093.jpg
+   ✅ Extraídos 8 productos - Listado de precios de diferentes modelos de semicolumnas de ...
+   📊 Productos en BD: 4332
+
+📦 Procesando batch 32/47
+
+📄 Procesando página 188: /app/pdf_pages_95_234/page-094.jpg
+   ✅ Extraídos 5 productos - Precios de Semicolumnas LUIGGI HOME...
+
+📄 Procesando página 189: /app/pdf_pages_95_234/page-095.jpg
+   ✅ Extraídos 3 productos - Semicolumnas de 1 cacerlero con medidas, referencias y preci...
+
+📄 Procesando página 190: /app/pdf_pages_95_234/page-096.jpg
+   ✅ Extraídos 21 productos - Listado de precios por zonas para semicoulumnas de 160cm de ...
+   📊 Productos en BD: 4340
+
+📦 Procesando batch 33/47
+
+📄 Procesando página 191: /app/pdf_pages_95_234/page-097.jpg
+   ✅ Extraídos 11 productos - Página de catálogo con semicolumnas de cocina, incluye preci...
+
+📄 Procesando página 192: /app/pdf_pages_95_234/page-098.jpg
+   ✅ Extraídos 8 productos - Precios de sem колонн con diferentes configuraciones de cajo...
+
+📄 Procesando página 193: /app/pdf_pages_95_234/page-099.jpg
+   ✅ Extraídos 8 productos - Listado de precios para diferentes Semicolumnas...
+   📊 Productos en BD: 4350
+
+📦 Procesando batch 34/47
+
+📄 Procesando página 194: /app/pdf_pages_95_234/page-100.jpg
+   ✅ Extraídos 7 productos - Página de catálogo con semi-columnas de cocina con diferente...
+
+📄 Procesando página 195: /app/pdf_pages_95_234/page-101.jpg
+   ✅ Extraídos 3 productos - Página de catálogo con semicolumnas de cocina LUIGGI HOME. A...
+
+📄 Procesando página 196: /app/pdf_pages_95_234/page-102.jpg
+   ✅ Extraídos 0 productos - Esta página muestra diferentes sistemas de apertura para col...
+   📊 Productos en BD: 4354
+
+📦 Procesando batch 35/47
+
+📄 Procesando página 197: /app/pdf_pages_95_234/page-103.jpg
+   ✅ Extraídos 21 productos - Lista de precios por zonas para columnas de 200cm de alto y ...
+
+📄 Procesando página 198: /app/pdf_pages_95_234/page-104.jpg
+   ✅ Extraídos 21 productos - Columnas de 200 cm de alto y 58 cm de fondo, de 1 puerta, 2 ...
+
+📄 Procesando página 199: /app/pdf_pages_95_234/page-105.jpg
