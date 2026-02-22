@@ -251,3 +251,30 @@
    ✅ Extraídos 18 productos - Lista de precios para muebles bajos de cocina: rinconeros li...
 
 📄 Procesando página 156: /app/pdf_pages_95_234/page-062.jpg
+   ✅ Extraídos 20 productos - Bajos fregadero de 1 o 2 caceroleros de 400mm de ancho. Seri...
+
+📄 Procesando página 157: /app/pdf_pages_95_234/page-063.jpg
+   ✅ Extraídos 20 productos - Precios por zonas de bajos de fregadero, con puerta extraibl...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 22/47
+
+📄 Procesando página 158: /app/pdf_pages_95_234/page-064.jpg
+   ✅ Extraídos 21 productos - Listado de muebles bajos de cocina: bajos de placa con 1 o 2...
+
+📄 Procesando página 159: /app/pdf_pages_95_234/page-065.jpg
+   ✅ Extraídos 24 productos - Precios de bajos de cocina estándar, 80cm de fondo. Incluye ...
+
+📄 Procesando página 160: /app/pdf_pages_95_234/page-066.jpg
+   ✅ Extraídos 20 productos - Precios por zonas de bajos de placa, con 1 o 2 caceroleros e...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 23/47
+
+📄 Procesando página 161: /app/pdf_pages_95_234/page-067.jpg
+   ✅ Extraídos 6 productos - Productos de la sección de bajos con cajón y caceroleros par...
+
+📄 Procesando página 162: /app/pdf_pages_95_234/page-068.jpg
+   ✅ Extraídos 26 productos - Muebles bajos de cocina, fondo 33cm...
+
+📄 Procesando página 163: /app/pdf_pages_95_234/page-069.jpg
