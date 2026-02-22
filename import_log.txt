@@ -527,3 +527,49 @@
    ✅ Extraídos 21 productos - Columnas escobero de 1 y 2 puertas. Alto 220cm, fondo 58cm. ...
 
 📄 Procesando página 225: /app/pdf_pages_95_234/page-131.jpg
+   ✅ Extraídos 6 productos - Columnas Frigorífico de 1 puerta con diferentes combinacione...
+
+📄 Procesando página 226: /app/pdf_pages_95_234/page-132.jpg
+   ✅ Extraídos 5 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+   📊 Productos en BD: 4627
+
+📦 Procesando batch 45/47
+
+📄 Procesando página 227: /app/pdf_pages_95_234/page-133.jpg
+   ✅ Extraídos 6 productos - Columnas de 220cm de alto y 58cm de fondo, con diferentes di...
+
+📄 Procesando página 228: /app/pdf_pages_95_234/page-134.jpg
+   ✅ Extraídos 8 productos - Columnas de 4 cajones para horno de 600mm, diferentes series...
+
+📄 Procesando página 229: /app/pdf_pages_95_234/page-135.jpg
+   ✅ Extraídos 6 productos - Columnas de 5 cajones con hueco para horno, alto 220cm y fon...
+   📊 Productos en BD: 4647
+
+📦 Procesando batch 46/47
+
+📄 Procesando página 230: /app/pdf_pages_95_234/page-136.jpg
+   ✅ Extraídos 6 productos - Columnas de cocina con horno...
+
+📄 Procesando página 231: /app/pdf_pages_95_234/page-137.jpg
+   ✅ Extraídos 8 productos - Listado de precios por zonas de columnas caceroleras de 220c...
+
+📄 Procesando página 232: /app/pdf_pages_95_234/page-138.jpg
+   ✅ Extraídos 6 productos - Columnas de 2 caceroleros con cajón, hueco para horno y una ...
+   📊 Productos en BD: 4666
+
+📦 Procesando batch 47/47
+
+📄 Procesando página 233: /app/pdf_pages_95_234/page-139.jpg
+   ✅ Extraídos 6 productos - Columnas de 2 caceroleros con cajón y hueco para horno. Alto...
+
+📄 Procesando página 234: /app/pdf_pages_95_234/page-140.jpg
+   ✅ Extraídos 6 productos - Lista de precios por zonas de columnas de cocina...
+   📊 Productos en BD: 4678
+
+✅ IMPORTACIÓN COMPLETADA
+   📄 Páginas procesadas: 140
+   📦 Productos encontrados: 2019
+   ✅ Productos importados: 2018
+   ❌ Errores: 0
+
+   📊 Total productos en BD: 4678
