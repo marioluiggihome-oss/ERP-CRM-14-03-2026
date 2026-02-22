@@ -134,3 +134,24 @@
    ✅ Extraídos 33 productos - Lista de bajos de cocina con diferentes configuraciones de c...
 
 📄 Procesando página 127: /app/pdf_pages_95_234/page-033.jpg
+   ✅ Extraídos 33 productos - Lista de muebles bajos de cocina con precios por zonas....
+   📊 Productos en BD: 3951
+
+📦 Procesando batch 12/47
+
+📄 Procesando página 128: /app/pdf_pages_95_234/page-034.jpg
+   ✅ Extraídos 14 productos - Precios de muebles bajos de cocina de diferentes tipos y med...
+
+📄 Procesando página 129: /app/pdf_pages_95_234/page-035.jpg
+   ✅ Extraídos 19 productos - Listado de muebles bajos de rincón lineal (1 y 2 puertas), t...
+
+📄 Procesando página 130: /app/pdf_pages_95_234/page-036.jpg
+   ✅ Extraídos 27 productos - Lista de muebles bajos de fregadero, de 2 puertas, 2 cacerol...
+   📊 Productos en BD: 4000
+
+📦 Procesando batch 13/47
+
+📄 Procesando página 131: /app/pdf_pages_95_234/page-037.jpg
+   ✅ Extraídos 20 productos - Lista de muebles bajos de fregadero, con diferentes configur...
+
+📄 Procesando página 132: /app/pdf_pages_95_234/page-038.jpg
