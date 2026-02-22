@@ -107,3 +107,18 @@
    ✅ Extraídos 16 productos - Sobremódulos decorativos de 147cm de alto con fondo de 33cm ...
 
 📄 Procesando página 120: /app/pdf_pages_95_234/page-026.jpg
+   ✅ Extraídos 0 productos - Diagramas de medidas disponibles para cajones Legrabox y Axi...
+
+📄 Procesando página 121: /app/pdf_pages_95_234/page-027.jpg
+   ✅ Extraídos 25 productos - Página de catálogo de muebles de cocina LUIGGI HOME con mueb...
+   📊 Productos en BD: 3802
+
+📦 Procesando batch 10/47
+
+📄 Procesando página 122: /app/pdf_pages_95_234/page-028.jpg
+   ✅ Extraídos 0 productos - Imagen de portada de la sección de muebles BAJOS del catálog...
+
+📄 Procesando página 123: /app/pdf_pages_95_234/page-029.jpg
+   ✅ Extraídos 28 productos - Listado de muebles bajos de cocina de 1 y 2 puertas con cajó...
+
+📄 Procesando página 124: /app/pdf_pages_95_234/page-030.jpg
