@@ -5168,18 +5168,103 @@ IMPORTANTE:
             
             parsed = json.loads(response_text)
             
-            # Build response lines
+            # Helper function for fuzzy search in catalog
+            async def search_catalog_fuzzy(search_text: str, limit: int = 3):
+                """Search products by reference or description using fuzzy matching"""
+                if not search_text or len(search_text) < 2:
+                    return []
+                
+                search_upper = search_text.upper().strip()
+                search_words = search_upper.split()
+                
+                matches = []
+                
+                # Search by exact code match first
+                exact_match = await db.products.find_one(
+                    {"code": search_upper},
+                    {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1}
+                )
+                if exact_match:
+                    price = exact_match.get("points", 0) or 0
+                    if exact_match.get("zonePoints"):
+                        price = exact_match["zonePoints"].get("Z1", price)
+                    matches.append(DigitalizadorMatchedProduct(
+                        id=exact_match.get("id", ""),
+                        code=exact_match.get("code", ""),
+                        name=exact_match.get("name", ""),
+                        price=float(price),
+                        score=1.0
+                    ))
+                    return matches
+                
+                # Search by partial code or name match
+                regex_patterns = [{"code": {"$regex": word, "$options": "i"}} for word in search_words if len(word) >= 3]
+                regex_patterns.extend([{"name": {"$regex": word, "$options": "i"}} for word in search_words if len(word) >= 3])
+                
+                if regex_patterns:
+                    query = {"$or": regex_patterns}
+                    cursor = db.products.find(query, {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1}).limit(limit * 3)
+                    products = await cursor.to_list(limit * 3)
+                    
+                    for p in products:
+                        # Calculate match score based on word matches
+                        code = (p.get("code", "") or "").upper()
+                        name = (p.get("name", "") or "").upper()
+                        
+                        score = 0
+                        for word in search_words:
+                            if word in code:
+                                score += 0.5
+                            if word in name:
+                                score += 0.3
+                        
+                        # Bonus for code prefix match
+                        if code.startswith(search_upper[:3] if len(search_upper) >= 3 else search_upper):
+                            score += 0.2
+                        
+                        score = min(score, 0.95)  # Cap at 0.95 for non-exact matches
+                        
+                        if score > 0.2:
+                            price = p.get("points", 0) or 0
+                            if p.get("zonePoints"):
+                                price = p["zonePoints"].get("Z1", price)
+                            matches.append(DigitalizadorMatchedProduct(
+                                id=p.get("id", ""),
+                                code=p.get("code", ""),
+                                name=p.get("name", ""),
+                                price=float(price),
+                                score=score
+                            ))
+                    
+                    # Sort by score and limit
+                    matches.sort(key=lambda x: x.score, reverse=True)
+                    return matches[:limit]
+                
+                return []
+            
+            # Build response lines with catalog matching
             extracted_lines = []
             for idx, line in enumerate(parsed.get("lines", [])):
-                # Ensure no None values - use 'or' to convert None to default
+                reference = str(line.get("reference") or "")
+                description = str(line.get("description") or "")
+                
+                # Search for matching products
+                search_text = reference if reference else description
+                matched_products = await search_catalog_fuzzy(search_text)
+                
+                # If no match by reference, try by description keywords
+                if not matched_products and description:
+                    matched_products = await search_catalog_fuzzy(description)
+                
                 extracted_lines.append(DigitalizadorLine(
                     id=f"LINE-{uuid.uuid4().hex[:8]}",
                     quantity=int(line.get("quantity") or 1),
-                    reference=str(line.get("reference") or ""),
-                    description=str(line.get("description") or ""),
+                    reference=reference,
+                    description=description,
                     price=float(line.get("price") or 0),
                     discount=0,
-                    isManual=False
+                    isManual=False,
+                    matchedProducts=matched_products
                 ))
             
             return DigitalizadorResponse(
