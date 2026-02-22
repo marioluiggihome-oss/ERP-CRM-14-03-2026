@@ -422,3 +422,72 @@
    ✅ Extraídos 21 productos - Columnas de 200 cm de alto y 58 cm de fondo, de 1 puerta, 2 ...
 
 📄 Procesando página 199: /app/pdf_pages_95_234/page-105.jpg
+   ✅ Extraídos 21 productos - Lista de precios por zonas para columnas de cocina estándar ...
+   📊 Productos en BD: 4389
+
+📦 Procesando batch 36/47
+
+📄 Procesando página 200: /app/pdf_pages_95_234/page-106.jpg
+   ✅ Extraídos 0 productos - Página del catálogo de muebles de cocina LUIGGI HOME que mue...
+
+📄 Procesando página 201: /app/pdf_pages_95_234/page-107.jpg
+   ✅ Extraídos 21 productos - Lista de precios de columnas escobero de 1 y 2 puertas, alto...
+
+📄 Procesando página 202: /app/pdf_pages_95_234/page-108.jpg
+   ✅ Extraídos 10 productos - Productos de la familia de columnas: columna escobero, colum...
+   📊 Productos en BD: 4420
+
+📦 Procesando batch 37/47
+
+📄 Procesando página 203: /app/pdf_pages_95_234/page-109.jpg
+   ✅ Extraídos 6 productos - Columnas de cocina de 200cm de alto y 58cm de fondo...
+
+📄 Procesando página 204: /app/pdf_pages_95_234/page-110.jpg
+   ✅ Extraídos 6 productos - Listado de columnas de cocina con diferentes configuraciones...
+
+📄 Procesando página 205: /app/pdf_pages_95_234/page-111.jpg
+   ✅ Extraídos 7 productos - Lista de columnas con precios por zona...
+   📊 Productos en BD: 4439
+
+📦 Procesando batch 38/47
+
+📄 Procesando página 206: /app/pdf_pages_95_234/page-112.jpg
+   ✅ Extraídos 7 productos - Columnas de cocina con 5 cajones para horno de 60cm, diferen...
+
+📄 Procesando página 207: /app/pdf_pages_95_234/page-113.jpg
+   ✅ Extraídos 6 productos - Página de catálogo de LUIGGI HOME con columnas para horno....
+
+📄 Procesando página 208: /app/pdf_pages_95_234/page-114.jpg
+   ✅ Extraídos 7 productos - Listado de columnas caceroleras con diferentes combinaciones...
+   📊 Productos en BD: 4459
+
+📦 Procesando batch 39/47
+
+📄 Procesando página 209: /app/pdf_pages_95_234/page-115.jpg
+   ✅ Extraídos 7 productos - Columnas de 2 caceroleros, alto 200cm, fondo 58cm...
+
+📄 Procesando página 210: /app/pdf_pages_95_234/page-116.jpg
+   ✅ Extraídos 6 productos - Columnas de 2 caceroleros para horno de 600mm, alto 200cm y ...
+
+📄 Procesando página 211: /app/pdf_pages_95_234/page-117.jpg
+   ✅ Extraídos 4 productos - Columnas de cocina estándar de 200cm de alto y 58cm de fondo...
+   📊 Productos en BD: 4476
+
+📦 Procesando batch 40/47
+
+📄 Procesando página 212: /app/pdf_pages_95_234/page-118.jpg
+   ✅ Extraídos 4 productos - Columnas de 200cm de alto y 58cm de fondo...
+
+📄 Procesando página 213: /app/pdf_pages_95_234/page-119.jpg
+   ✅ Extraídos 4 productos - Columnas cacerolero de 200cm de alto y 58cm de fondo con dif...
+
+📄 Procesando página 214: /app/pdf_pages_95_234/page-120.jpg
+   ✅ Extraídos 4 productos - Columnas de 200cm de alto y 58cm de fondo con cajones y puer...
+   📊 Productos en BD: 4488
+
+📦 Procesando batch 41/47
+
+📄 Procesando página 215: /app/pdf_pages_95_234/page-121.jpg
+   ✅ Extraídos 4 productos - Columnas de 2 caceroleros con diferentes configuraciones de ...
+
+📄 Procesando página 216: /app/pdf_pages_95_234/page-122.jpg
