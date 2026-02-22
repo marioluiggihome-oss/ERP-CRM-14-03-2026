@@ -1694,6 +1694,13 @@ const Armarios = ({ state, setState }) => {
         {/* Pared de fondo */}
         <div className="absolute inset-4 bg-gradient-to-b from-slate-50 to-slate-100 rounded-lg shadow-inner" />
         
+        {/* Indicador de arrastre activo */}
+        {draggedAccessory && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+            Arrastra {draggedAccessory.icon} {draggedAccessory.name} a un módulo
+          </div>
+        )}
+        
         {/* Armario */}
         <div 
           className="absolute left-1/2 bottom-4 -translate-x-1/2 rounded-t-lg shadow-2xl border border-slate-400 overflow-hidden"
@@ -1710,16 +1717,36 @@ const Armarios = ({ state, setState }) => {
               <div 
                 key={i}
                 onClick={() => setSelectedModule(i)}
+                onDragOver={(e) => handleDragOver(e, i)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, i)}
                 className={`flex-1 rounded-sm cursor-pointer transition-all relative ${
                   selectedModule === i 
                     ? 'ring-2 ring-orange-500 ring-offset-1' 
                     : 'hover:ring-1 hover:ring-orange-300'
+                } ${
+                  dropTargetModule === i 
+                    ? 'ring-2 ring-green-500 ring-offset-2 bg-green-100/50' 
+                    : ''
                 }`}
                 style={{ 
-                  backgroundColor: getColorByName(wardrobeConfig.interiorColor).hex,
-                  border: '1px solid rgba(0,0,0,0.1)'
+                  backgroundColor: dropTargetModule === i 
+                    ? 'rgba(34, 197, 94, 0.2)' 
+                    : getColorByName(wardrobeConfig.interiorColor).hex,
+                  border: dropTargetModule === i 
+                    ? '2px dashed #22c55e' 
+                    : '1px solid rgba(0,0,0,0.1)'
                 }}
               >
+                {/* Drop indicator */}
+                {dropTargetModule === i && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
+                      + {draggedAccessory?.name}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Representación interior */}
                 <div className="h-full p-0.5 flex flex-col justify-between relative">
                   {/* Barra de colgar doble altura */}
@@ -1750,6 +1777,17 @@ const Armarios = ({ state, setState }) => {
                           <div className="w-3 h-0.5 bg-slate-500 rounded" />
                         </div>
                       ))}
+                    </div>
+                  )}
+                  
+                  {/* Extras icons */}
+                  {mod.extras && Object.keys(mod.extras).filter(k => mod.extras[k]).length > 0 && (
+                    <div className="absolute bottom-1 right-0.5 flex flex-wrap gap-0.5 justify-end">
+                      {mod.extras.shoesRack && <span className="text-[6px]">👟</span>}
+                      {mod.extras.trousersRack && <span className="text-[6px]">👖</span>}
+                      {mod.extras.jewelryTray && <span className="text-[6px]">💎</span>}
+                      {mod.extras.tieRack && <span className="text-[6px]">👔</span>}
+                      {mod.extras.pulloutBasket && <span className="text-[6px]">🧺</span>}
                     </div>
                   )}
                   
