@@ -278,3 +278,36 @@
    ✅ Extraídos 26 productos - Muebles bajos de cocina, fondo 33cm...
 
 📄 Procesando página 163: /app/pdf_pages_95_234/page-069.jpg
+   ✅ Extraídos 28 productos - Listado de muebles bajos de cocina, de 1 y 2 puertas, con ca...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 24/47
+
+📄 Procesando página 164: /app/pdf_pages_95_234/page-070.jpg
+   ✅ Extraídos 22 productos - Precios de muebles bajos de cocina de 4 cajones de 200mm de ...
+
+📄 Procesando página 165: /app/pdf_pages_95_234/page-071.jpg
+   ✅ Extraídos 22 productos - Listado de precios para muebles bajos de 5 cajones de 160mm ...
+
+📄 Procesando página 166: /app/pdf_pages_95_234/page-072.jpg
+   ✅ Extraídos 22 productos - Productos de la serie BAJOS: Bajos de 80cm de alto y 33cm de...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 25/47
+
+📄 Procesando página 167: /app/pdf_pages_95_234/page-073.jpg
+   ✅ Extraídos 22 productos - Listado de precios por zonas para muebles bajos de cocina co...
+
+📄 Procesando página 168: /app/pdf_pages_95_234/page-074.jpg
+   ✅ Extraídos 22 productos - Listado de precios por zonas de bajos de cocina de 1 cacerol...
+
+📄 Procesando página 169: /app/pdf_pages_95_234/page-075.jpg
+   ✅ Extraídos 24 productos - Bajos de 2 caceroleros de 400mm de ancho con fondo de 330mm ...
+   📊 Productos en BD: 4292
+
+📦 Procesando batch 26/47
+
+📄 Procesando página 170: /app/pdf_pages_95_234/page-076.jpg
+   ✅ Extraídos 2 productos - Productos bajos de 80cm de alto y 33cm de fondo...
+
+📄 Procesando página 171: /app/pdf_pages_95_234/page-077.jpg
