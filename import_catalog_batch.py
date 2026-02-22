@@ -88,8 +88,8 @@ async def process_page(page_path: str, page_num: int) -> dict:
             file_contents=[FileContent(content_type="image/jpeg", file_content_base64=image_data)]
         )
         
-        # Get response (synchronous)
-        response_text = chat.send_message(user_msg)
+        # Get response (async)
+        response_text = await chat.send_message(user_msg)
         response_text = response_text.strip()
         
         # Clean up response
