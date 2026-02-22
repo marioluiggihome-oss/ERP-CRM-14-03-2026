@@ -194,3 +194,33 @@
    ✅ Extraídos 22 productos - Lista de precios para muebles bajos de 2 caceroleros con caj...
 
 📄 Procesando página 142: /app/pdf_pages_95_234/page-048.jpg
+   ✅ Extraídos 22 productos - Precios de muebles bajos caceroleros de 350mm de ancho con 2...
+   📊 Productos en BD: 4245
+
+📦 Procesando batch 17/47
+
+📄 Procesando página 143: /app/pdf_pages_95_234/page-049.jpg
+   ✅ Extraídos 24 productos - Precios de muebles bajos y puertas de integración para elect...
+
+📄 Procesando página 144: /app/pdf_pages_95_234/page-050.jpg
+   ✅ Extraídos 5 productos - Muebles bajos de cocina de 70cm de alto y 33cm de fondo...
+
+📄 Procesando página 145: /app/pdf_pages_95_234/page-051.jpg
+   ✅ Extraídos 16 productos - Listado de bajos decorativos de 70cm de alto con fondos de 5...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 18/47
+
+📄 Procesando página 146: /app/pdf_pages_95_234/page-052.jpg
+   ✅ Extraídos 25 productos - Lista de muebles bajos de cocina de 80cm de fondo estándar, ...
+
+📄 Procesando página 147: /app/pdf_pages_95_234/page-053.jpg
+   ✅ Extraídos 21 productos - Listado de muebles bajos de cocina con una o dos puertas y u...
+
+📄 Procesando página 148: /app/pdf_pages_95_234/page-054.jpg
+   ✅ Extraídos 29 productos - Listado de muebles bajos de cocina con precios por zonas....
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 19/47
+
+📄 Procesando página 149: /app/pdf_pages_95_234/page-055.jpg
