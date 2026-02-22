@@ -68,3 +68,6 @@
 📦 Procesando batch 6/47
 
 📄 Procesando página 110: /app/pdf_pages_95_234/page-016.jpg
+   ✅ Extraídos 18 productos - Listado de sobremódulos de 1 y 2 vitrinas con precios por zo...
+
+📄 Procesando página 111: /app/pdf_pages_95_234/page-017.jpg
