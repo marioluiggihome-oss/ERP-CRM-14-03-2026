@@ -20,21 +20,46 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
   switch (type) {
     // Herrajes abatibles
     case 'HK-TOP':
+      // HK (Abatible estándar): Puerta que se abre hacia arriba con bisagra superior
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="8" y="10" width="24" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <path d="M8 14 Q20 6 32 14" stroke="#dc2626" strokeWidth="2" />
-          <text x="20" y="26" textAnchor="middle" fontSize="6" fill={stroke} fontWeight="bold">HK</text>
+          {/* Cuerpo del mueble */}
+          <rect x="6" y="14" width="28" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          {/* Puerta abatible abierta hacia arriba */}
+          <path d="M8 14 L8 4 L32 4 L32 14" stroke="#dc2626" strokeWidth="1.5" fill="#fef2f2" />
+          {/* Bisagra superior */}
+          <circle cx="10" cy="4" r="1" fill="#dc2626" />
+          <circle cx="30" cy="4" r="1" fill="#dc2626" />
+          {/* Flecha indicando apertura */}
+          <path d="M20 10 L20 1" stroke="#dc2626" strokeWidth="1" strokeLinecap="round" />
+          <path d="M18 3 L20 1 L22 3" stroke="#dc2626" strokeWidth="1" strokeLinecap="round" />
+          {/* Interior visible */}
+          <line x1="10" y1="24" x2="30" y2="24" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
+          {/* Etiqueta HK */}
+          <text x="20" y="21" textAnchor="middle" fontSize="5" fill="#dc2626" fontWeight="bold">HK</text>
           <GolaClip />
         </svg>
       );
     case 'SERVO':
     case 'HS':
+      // HS (Servo): Sistema de elevación con asistencia eléctrica
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="8" y="10" width="24" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <path d="M8 14 Q20 6 32 14" stroke="#059669" strokeWidth="2" />
-          <text x="20" y="26" textAnchor="middle" fontSize="6" fill={stroke} fontWeight="bold">HS</text>
+          {/* Cuerpo del mueble */}
+          <rect x="6" y="12" width="28" height="24" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          {/* Puerta elevándose con motor */}
+          <rect x="8" y="4" width="24" height="10" rx="1" stroke="#059669" strokeWidth="1.5" fill="#ecfdf5" />
+          {/* Símbolo de motor/servo */}
+          <circle cx="20" cy="9" r="3" stroke="#059669" strokeWidth="1" fill="#d1fae5" />
+          <path d="M18 9 L22 9 M20 7 L20 11" stroke="#059669" strokeWidth="1" />
+          {/* Flechas indicando movimiento automático */}
+          <path d="M14 2 L14 5 M14 2 L12 4 M14 2 L16 4" stroke="#059669" strokeWidth="1" strokeLinecap="round" />
+          <path d="M26 2 L26 5 M26 2 L24 4 M26 2 L28 4" stroke="#059669" strokeWidth="1" strokeLinecap="round" />
+          {/* Interior visible */}
+          <line x1="10" y1="22" x2="30" y2="22" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
+          <line x1="10" y1="28" x2="30" y2="28" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
+          {/* Etiqueta HS */}
+          <text x="20" y="19" textAnchor="middle" fontSize="5" fill="#059669" fontWeight="bold">HS</text>
           <GolaClip />
         </svg>
       );
