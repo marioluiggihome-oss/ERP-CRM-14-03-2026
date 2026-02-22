@@ -488,6 +488,73 @@ const Armarios = ({ state, setState }) => {
   // Estado para edición de accesorios en despiece
   const [editableAccessories, setEditableAccessories] = useState([]);
   const [selectedAccessoryIndex, setSelectedAccessoryIndex] = useState(null);
+  
+  // Estado para drag-and-drop de accesorios
+  const [draggedAccessory, setDraggedAccessory] = useState(null);
+  const [dropTargetModule, setDropTargetModule] = useState(null);
+  
+  // Accesorios disponibles para arrastrar
+  const DRAGGABLE_ACCESSORIES = [
+    { id: 'shelf', name: 'Balda', icon: '📏', field: 'shelves', max: 12 },
+    { id: 'drawer', name: 'Cajón', icon: '🗄️', field: 'drawers', max: 6 },
+    { id: 'hangingRod', name: 'Barra', icon: '👔', field: 'hangingRods', max: 3 },
+    { id: 'shoesRack', name: 'Zapatero', icon: '👟', field: 'extras.shoesRack', isExtra: true },
+    { id: 'trousersRack', name: 'Pantalonero', icon: '👖', field: 'extras.trousersRack', isExtra: true },
+    { id: 'jewelryTray', name: 'Joyero', icon: '💎', field: 'extras.jewelryTray', isExtra: true },
+    { id: 'tieRack', name: 'Corbatero', icon: '👔', field: 'extras.tieRack', isExtra: true },
+    { id: 'pulloutBasket', name: 'Cesto', icon: '🧺', field: 'extras.pulloutBasket', isExtra: true },
+  ];
+  
+  // Handlers para drag-and-drop
+  const handleDragStart = (accessory) => {
+    setDraggedAccessory(accessory);
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedAccessory(null);
+    setDropTargetModule(null);
+  };
+  
+  const handleDragOver = (e, moduleIndex) => {
+    e.preventDefault();
+    setDropTargetModule(moduleIndex);
+  };
+  
+  const handleDragLeave = () => {
+    setDropTargetModule(null);
+  };
+  
+  const handleDrop = (e, moduleIndex) => {
+    e.preventDefault();
+    if (!draggedAccessory) return;
+    
+    setModuleConfigs(prev => {
+      const newConfigs = [...prev];
+      const moduleConfig = { ...newConfigs[moduleIndex] };
+      
+      if (draggedAccessory.isExtra) {
+        // Es un accesorio extra (checkbox)
+        const extraKey = draggedAccessory.field.replace('extras.', '');
+        moduleConfig.extras = {
+          ...moduleConfig.extras,
+          [extraKey]: true
+        };
+      } else {
+        // Es un componente numérico (shelves, drawers, hangingRods)
+        const currentValue = moduleConfig[draggedAccessory.field] || 0;
+        if (currentValue < draggedAccessory.max) {
+          moduleConfig[draggedAccessory.field] = currentValue + 1;
+        }
+      }
+      
+      newConfigs[moduleIndex] = moduleConfig;
+      return newConfigs;
+    });
+    
+    setDraggedAccessory(null);
+    setDropTargetModule(null);
+    setSelectedModule(moduleIndex);
+  };
 
   // Ajustar módulos al cambiar el número (en el handler)
   const adjustModules = useCallback((targetCount) => {
