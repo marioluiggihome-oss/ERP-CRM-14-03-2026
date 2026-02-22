@@ -72,23 +72,24 @@ async def process_page(page_path: str, page_num: int) -> dict:
         with open(page_path, 'rb') as f:
             image_data = base64.b64encode(f.read()).decode('utf-8')
         
-        # Create chat instance
+        # Create chat instance with Gemini model
         chat = LlmChat(
             api_key=EMERGENT_KEY,
-            model="gemini-2.0-flash"
+            session_id=f"catalog-import-{page_num}",
+            system_message="Eres un asistente que extrae información de productos de catálogos de muebles de cocina. Respondes siempre en JSON válido."
+        ).with_model("google", "gemini-2.0-flash-exp")
+        
+        # Create user message with image
+        from emergentintegrations.llm.chat import UserMessage
+        
+        user_msg = UserMessage(
+            text=EXTRACTION_PROMPT,
+            images=[ImageContent(base64_data=image_data, mime_type="image/jpeg")]
         )
         
-        # Add image with text prompt
-        chat.add_user_message(
-            content=[
-                EXTRACTION_PROMPT,
-                ImageContent(base64_data=image_data, mime_type="image/jpeg")
-            ]
-        )
-        
-        # Get response
-        response = await chat.send_async()
-        response_text = response.content.strip()
+        # Get response (synchronous)
+        response_text = chat.send_message(user_msg)
+        response_text = response_text.strip()
         
         # Clean up response
         if response_text.startswith("```"):
