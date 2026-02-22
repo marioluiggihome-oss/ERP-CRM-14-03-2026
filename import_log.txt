@@ -122,3 +122,15 @@
    ✅ Extraídos 28 productos - Listado de muebles bajos de cocina de 1 y 2 puertas con cajó...
 
 📄 Procesando página 124: /app/pdf_pages_95_234/page-030.jpg
+   ✅ Extraídos 33 productos - Lista de muebles bajos de cocina con cajones y precios por z...
+   📊 Productos en BD: 3852
+
+📦 Procesando batch 11/47
+
+📄 Procesando página 125: /app/pdf_pages_95_234/page-031.jpg
+   ✅ Extraídos 33 productos - Productos de la sección de bajos, de 5 cajones LUX, y bajos ...
+
+📄 Procesando página 126: /app/pdf_pages_95_234/page-032.jpg
+   ✅ Extraídos 33 productos - Lista de bajos de cocina con diferentes configuraciones de c...
+
+📄 Procesando página 127: /app/pdf_pages_95_234/page-033.jpg
