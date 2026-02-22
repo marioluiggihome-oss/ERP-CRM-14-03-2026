@@ -39,12 +39,23 @@ All products are PROGRAMA ESTANDAR - COLUMNAS - ALTO 220cm FONDO 58cm:
 
 ⚠️ **Pending:** 22HM2G1CL1P600 (empty price cells in source image)
 
+## Completed Tasks (Dec 2025)
+
+### Icons for Foldable Doors ✅
+- Updated `CabinetIcon.jsx` with improved visual representations for:
+  - **HK-TOP:** Hinged door opening upward (red)
+  - **HS (Servo-Drive):** Motorized lift system with servo symbol (green)
+  - **HL (Lift):** Vertical lift door mechanism (violet)
+  - **HF (Free-Fold):** Bi-fold door with central hinge (cyan)
+- Icons now visually represent the door mechanism instead of just text labels
+- Tested and verified in both library view and budget view
+
 ## Pending Tasks
 
 ### P0 - High Priority
+- [ ] Continue meticulous data import for pages 95-234 (Resume at page 152)
 - [ ] Implement Digitalizador Analyzer Catalog Search
 - [ ] Implement Draggable Accessories in Armarios
-- [ ] Continue catalog import (page 240+)
 
 ### P1 - Medium Priority
 - [ ] Replace "Servo Drive" text (waiting for replacement text)
