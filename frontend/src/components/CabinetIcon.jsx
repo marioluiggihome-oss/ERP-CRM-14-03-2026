@@ -40,21 +40,44 @@ const CabinetIcon = ({ type, iconUrl, isGola = false, className = 'w-10 h-10' })
       );
     case 'LIFT':
     case 'HL':
+      // HL (Lift): Puerta que se eleva verticalmente hacia arriba
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="8" y="10" width="24" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <path d="M8 14 Q20 6 32 14" stroke="#7c3aed" strokeWidth="2" />
-          <text x="20" y="26" textAnchor="middle" fontSize="6" fill={stroke} fontWeight="bold">HL</text>
+          {/* Cuerpo del mueble */}
+          <rect x="6" y="12" width="28" height="24" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          {/* Puerta elevándose - posición intermedia */}
+          <rect x="8" y="4" width="24" height="10" rx="1" stroke="#7c3aed" strokeWidth="1.5" fill="#ede9fe" />
+          {/* Flechas indicando movimiento hacia arriba */}
+          <path d="M20 1 L17 4 M20 1 L23 4" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Interior visible del mueble */}
+          <line x1="10" y1="22" x2="30" y2="22" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
+          <line x1="10" y1="28" x2="30" y2="28" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
+          {/* Etiqueta HL */}
+          <text x="20" y="19" textAnchor="middle" fontSize="5" fill="#7c3aed" fontWeight="bold">HL</text>
           <GolaClip />
         </svg>
       );
     case 'FREE-FOLD':
     case 'HF':
+      // HF (Free-Fold): Sistema bi-fold donde la puerta se pliega en dos partes
       return (
         <svg viewBox="0 0 40 40" className={className} fill="none">
-          <rect x="8" y="10" width="24" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
-          <path d="M8 14 Q20 6 32 14" stroke="#0891b2" strokeWidth="2" />
-          <text x="20" y="26" textAnchor="middle" fontSize="6" fill={stroke} fontWeight="bold">HF</text>
+          {/* Cuerpo del mueble */}
+          <rect x="6" y="14" width="28" height="22" rx="2" stroke={stroke} strokeWidth={strokeWidth} fill={fill} />
+          {/* Puerta plegada bi-fold - parte superior (plegada hacia arriba) */}
+          <path d="M8 8 L8 2 L32 2 L32 8" stroke="#0891b2" strokeWidth="1.5" fill="#ecfeff" />
+          {/* Puerta plegada bi-fold - parte inferior (en ángulo, bisagra central) */}
+          <path d="M8 8 L20 12 L32 8" stroke="#0891b2" strokeWidth="1.5" fill="#cffafe" />
+          {/* Línea de bisagra central */}
+          <circle cx="20" cy="12" r="1" fill="#0891b2" />
+          {/* Flechas indicando plegado */}
+          <path d="M5 5 Q3 10 6 11" stroke="#0891b2" strokeWidth="1" fill="none" strokeLinecap="round" />
+          <path d="M35 5 Q37 10 34 11" stroke="#0891b2" strokeWidth="1" fill="none" strokeLinecap="round" />
+          {/* Interior visible */}
+          <line x1="10" y1="24" x2="30" y2="24" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
+          <line x1="10" y1="30" x2="30" y2="30" stroke={stroke} strokeWidth="0.5" opacity="0.4" />
+          {/* Etiqueta HF */}
+          <text x="20" y="21" textAnchor="middle" fontSize="5" fill="#0891b2" fontWeight="bold">HF</text>
           <GolaClip />
         </svg>
       );
