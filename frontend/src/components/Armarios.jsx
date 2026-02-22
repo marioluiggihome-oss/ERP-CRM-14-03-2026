@@ -701,9 +701,9 @@ const Armarios = ({ state, setState }) => {
         name: `${ACCESSORIES_CATALOG.hinge.name} 110° Soft-close`,
         category: 'HERRAJES',
         dimensions: '-',
-        quantity: numDoors * hingesPerDoor,
+        quantity: configuredNumDoors * hingesPerDoor,
         unitPrice: ACCESSORIES_CATALOG.hinge.price,
-        totalPrice: numDoors * hingesPerDoor * ACCESSORIES_CATALOG.hinge.price,
+        totalPrice: configuredNumDoors * hingesPerDoor * ACCESSORIES_CATALOG.hinge.price,
         notes: `${hingesPerDoor} bisagras por puerta`
       });
     }
@@ -715,9 +715,9 @@ const Armarios = ({ state, setState }) => {
       name: `${ACCESSORIES_CATALOG.handle.name} ${getColorByName(wardrobeConfig.handleColor).name}`,
       category: 'HERRAJES',
       dimensions: '128mm c/c',
-      quantity: numDoors,
+      quantity: configuredNumDoors,
       unitPrice: ACCESSORIES_CATALOG.handle.price,
-      totalPrice: numDoors * ACCESSORIES_CATALOG.handle.price,
+      totalPrice: configuredNumDoors * ACCESSORIES_CATALOG.handle.price,
       notes: 'Tirador por puerta'
     });
 
