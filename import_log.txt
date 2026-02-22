@@ -311,3 +311,61 @@
    ✅ Extraídos 2 productos - Productos bajos de 80cm de alto y 33cm de fondo...
 
 📄 Procesando página 171: /app/pdf_pages_95_234/page-077.jpg
+   ✅ Extraídos 18 productos - Precios de bajos decorativos de 80cm de alto con fondo 580mm...
+
+📄 Procesando página 172: /app/pdf_pages_95_234/page-078.jpg
+   ✅ Extraídos 1 productos - Bajo terminal abierto con 1 estante. Tabla de precios por zo...
+   📊 Productos en BD: 4293
+
+📦 Procesando batch 27/47
+
+📄 Procesando página 173: /app/pdf_pages_95_234/page-079.jpg
+   ✅ Extraídos 0 productos - Esta página muestra diferentes sistemas de apertura para sem...
+
+📄 Procesando página 174: /app/pdf_pages_95_234/page-080.jpg
+   ✅ Extraídos 21 productos - Precios de Semicolumnas de 130cm de alto y 58cm de fondo. In...
+
+📄 Procesando página 175: /app/pdf_pages_95_234/page-081.jpg
+   ✅ Extraídos 21 productos - Tabla de precios para Semicolumnas de 130cm de alto y 58cm d...
+   📊 Productos en BD: 4293
+
+📦 Procesando batch 28/47
+
+📄 Procesando página 176: /app/pdf_pages_95_234/page-082.jpg
+   ✅ Extraídos 0 productos - Página de catálogo de muebles de cocina LUIGGI HOME que mues...
+
+📄 Procesando página 177: /app/pdf_pages_95_234/page-083.jpg
+   ✅ Extraídos 5 productos - Lista de precios de varias Semicolumnas con diferentes confi...
+
+📄 Procesando página 178: /app/pdf_pages_95_234/page-084.jpg
+   ✅ Extraídos 8 productos - Precios de sem колонны columna de cocina LUIGGI HOME...
+   📊 Productos en BD: 4297
+
+📦 Procesando batch 29/47
+
+📄 Procesando página 179: /app/pdf_pages_95_234/page-085.jpg
+   ✅ Extraídos 8 productos - Precios de Semicolumnas caceroleros de diferentes medidas (2...
+
+📄 Procesando página 180: /app/pdf_pages_95_234/page-086.jpg
+   ✅ Extraídos 6 productos - Listado de precios por zonas para diferentes modelos de semi...
+
+📄 Procesando página 181: /app/pdf_pages_95_234/page-087.jpg
+   ✅ Extraídos 4 productos - Página de catálogo con precios de Semicolumnas de cocina est...
+   📊 Productos en BD: 4311
+
+📦 Procesando batch 30/47
+
+📄 Procesando página 182: /app/pdf_pages_95_234/page-088.jpg
+   ✅ Extraídos 2 productos - Semicolumnas con un cacerolero, un cajón y hueco para horno ...
+
+📄 Procesando página 183: /app/pdf_pages_95_234/page-089.jpg
+   ✅ Extraídos 21 productos - Listado de precios de Semicolumnas de 140cm de alto y 58cm d...
+
+📄 Procesando página 184: /app/pdf_pages_95_234/page-090.jpg
+   ✅ Extraídos 11 productos - Página de catálogo de muebles de cocina LUIGGI HOME con prec...
+   📊 Productos en BD: 4318
+
+📦 Procesando batch 31/47
+
+📄 Procesando página 185: /app/pdf_pages_95_234/page-091.jpg
+   ✅ Extraídos 8 productos - Listado de precios por zonas para diferentes modelos de semi...
