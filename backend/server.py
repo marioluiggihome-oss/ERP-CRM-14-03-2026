@@ -5290,6 +5290,96 @@ IMPORTANTE:
         raise HTTPException(status_code=500, detail=f"Error analizando imagen: {str(e)}")
 
 
+@api_router.get("/digitalizador/search-catalog")
+async def search_digitalizador_catalog(q: str, limit: int = 5):
+    """
+    Search products in catalog for digitalizador autocomplete.
+    Returns matching products with fuzzy search.
+    """
+    try:
+        if not q or len(q) < 2:
+            return {"products": []}
+        
+        search_upper = q.upper().strip()
+        search_words = search_upper.split()
+        
+        results = []
+        
+        # Search by exact code match first
+        exact_match = await db.products.find_one(
+            {"code": search_upper},
+            {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "category": 1}
+        )
+        if exact_match:
+            price = exact_match.get("points", 0) or 0
+            if exact_match.get("zonePoints"):
+                price = exact_match["zonePoints"].get("Z1", price)
+            results.append({
+                "id": exact_match.get("id", ""),
+                "code": exact_match.get("code", ""),
+                "name": exact_match.get("name", ""),
+                "category": exact_match.get("category", ""),
+                "price": float(price),
+                "score": 1.0
+            })
+        
+        # Search by partial code or name match
+        regex_patterns = []
+        for word in search_words:
+            if len(word) >= 2:
+                regex_patterns.append({"code": {"$regex": word, "$options": "i"}})
+                regex_patterns.append({"name": {"$regex": word, "$options": "i"}})
+        
+        if regex_patterns:
+            query = {"$or": regex_patterns}
+            cursor = db.products.find(
+                query,
+                {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "category": 1}
+            ).limit(limit * 3)
+            products = await cursor.to_list(limit * 3)
+            
+            for p in products:
+                # Skip if already in results
+                if any(r["code"] == p.get("code") for r in results):
+                    continue
+                
+                code = (p.get("code", "") or "").upper()
+                name = (p.get("name", "") or "").upper()
+                
+                score = 0
+                for word in search_words:
+                    if word in code:
+                        score += 0.5
+                    if word in name:
+                        score += 0.3
+                
+                if code.startswith(search_upper[:3] if len(search_upper) >= 3 else search_upper):
+                    score += 0.2
+                
+                score = min(score, 0.95)
+                
+                if score > 0.1:
+                    price = p.get("points", 0) or 0
+                    if p.get("zonePoints"):
+                        price = p["zonePoints"].get("Z1", price)
+                    results.append({
+                        "id": p.get("id", ""),
+                        "code": p.get("code", ""),
+                        "name": p.get("name", ""),
+                        "category": p.get("category", ""),
+                        "price": float(price),
+                        "score": score
+                    })
+        
+        # Sort by score and limit
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return {"products": results[:limit]}
+        
+    except Exception as e:
+        logger.error(f"Catalog search error: {e}")
+        return {"products": [], "error": str(e)}
+
+
 @api_router.post("/digitalizador/export-csv")
 async def export_digitalizador_csv(request: DigitalizadorExportRequest):
     """
