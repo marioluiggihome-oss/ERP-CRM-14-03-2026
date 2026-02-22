@@ -1,196 +1,184 @@
 <analysis>**original_problem_statement:**
-The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The project's primary focus is a highly detailed, user-guided audit and reconstruction of the product catalog. The user is providing pages from a master PDF () one by one, defining this as the absolute source of truth. The ultimate goal is a database that contains *only* the products, references, names, and prices from these user-verified pages, eliminating all prior data inconsistencies.
+The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The project's primary focus is a highly detailed, user-guided audit and reconstruction of the product catalog by processing pages from a master PDF (). The user is also requesting significant feature additions and bug fixes, particularly for the Digitalizador (draft digitizer) and Armarios (wardrobes) components.
 
 **PRODUCT REQUIREMENTS:**
 1.  **Clone LUIGGI HOME application:** Replicate the design and functionality.
-2.  **User-Guided Product Catalog Creation:** Build a definitive product catalog by processing pages from  as provided by the user.
-3.  **Data Integrity:** Ensure the final database is a perfect, clean representation of the user-provided pages, with all other data purged. This includes capturing precise product , , and  as specified by the user.
-4.  **Data Export System:** Maintain existing functionality to export various datasets to Excel.
+2.  **User-Guided Product Catalog Creation:** Build a definitive product catalog by processing pages from  as provided by the user. This is an ongoing, page-by-page process.
+3.  **Data Integrity:** Ensure the final database is a clean representation of the user-provided pages. All new products must include , , and  fields.
+4.  **Digitalizador Component Enhancements:**
+    *   **Fix pagination & printing:** Generate multi-page PDFs directly.
+    *   **Add UI controls:** Implement Save, New Digitization, and PDF export buttons.
+    *   **Implement COST mode:** Add a lock/unlock button that recalculates prices based on the user's specific discount and a global margin increment. The UI for cost/margin should be hidden when locked.
+    *   **Generate Unique ID:** Each new budget must have a unique, sequential expediente (record) number generated atomically on the server.
+    *   **Improve Analyzer:** The image analyzer must be able to detect and match products from the existing kitchen catalog.
+    *   **Add editable title and valued/unvalued toggle.**
+5.  **Armarios Component Enhancements:**
+    *   **Natural Language Design:** Allow users to describe the interior layout of each module in a text field, which an AI will interpret to configure the wardrobe.
+    *   **Draggable Accessories:** Allow users to visually drag and drop accessories (shelves, drawers) to set their position within each module.
+    *   **Realistic Rendering:** The AI render should accurately reflect the number and type of doors (sliding, hinged) and the configured interior.
+6.  **User Roles & Permissions:** Add a Gerente (Manager) role with permissions identical to the existing Director Comercial (Admin).
+7.  **Data & Workflow:** Allow budgets created in the Digitalizador to be saved to the main Presupuestos (Budgets) list and optionally create an opportunity in the CRM.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The agent has continued the main task of processing the user's PDF, page by page. The session involved processing pages 140 through 204 in multiple batches. Each batch involved creating a dedicated Python script (), executing it to add/update products in the MongoDB database, and updating the master list of approved references. The database has now grown to **5,562 products**, and the master list, , contains **2,989 entries**. The process is repetitive but effective, though it has required minor, on-the-fly script corrections for data errors.
+A full-stack React/FastAPI/MongoDB application. The agent has processed catalog pages up to page 234, bringing the product count to **5,803** and verified references to **3,244**.
+
+A substantial amount of work was done on multiple components:
+-   **Digitalizador:** The component has been significantly enhanced. It now features server-side unique ID generation to prevent race conditions, robust margin calculation logic, an editable title, a Valued/Unvalued toggle to hide prices, and direct PDF generation using .
+-   **Armarios:** A new Intelligent Design feature was added, allowing users to configure wardrobe interiors using natural language. The AI rendering prompt was improved, and the UI was updated to allow specifying the number of doors independently of the modules.
+-   **User Management:** A new Gerente role was created with permissions identical to the admin role, and the UI was updated accordingly.
+-   **BudgetTable:** A Valued/Unvalued toggle was added to hide pricing information on demand.
 
 **Last working item**:
-- Last item agent was working: The agent successfully processed pages 200-204. The user then immediately provided the next batch, pages 205-209. The agent acknowledged the new files and was about to create the corresponding Python script to process them.
+- Last item agent was working: The user requested that the Digitalizador component should search the application's product catalog for items detected in an uploaded draft, suggesting matches with prices. The agent acknowledged the request and was about to begin implementation.
 - Status: NOT STARTED
 - Agent Testing Done: N
-- Which testing method agent to use? manual testing by python -c
+- Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Finalize Product Catalog from PDF Pages (P0)**
-  - Description: The core task is to continue the page-by-page catalog build. The next step is to process pages 205-209. After all pages are processed, a final cleanup is required to delete all products from the database that are NOT in the verified master list.
-  - Status: IN PROGRESS
-  - Is recurring issue? Y
-
-- **Issue 2: Brittle Data Ingestion Scripts (P1)**
-  - Description: The temporary Python scripts for processing pages have repeatedly failed due to missing values in the raw product data. During this session, the agent had to manually fix  exceptions in the scripts for three separate batches (pages 145-149, 160-164, 180-184). The root cause is that the script logic is not robust enough to handle minor data inconsistencies.
-  - Status: IN PROGRESS (recurring, but being handled reactively).
-  - Is recurring issue? Y
-
-- **Issue 3: Critical Frontend Stability ( error) (P2)**
-  - Description: A recurring React DOM crash, noted in previous handoffs, remains unaddressed. While it hasn't occurred in this session, it poses a significant stability risk.
-  - Status: NOT STARTED
-  - Is recurring issue? Y
+- **Issue 1: Digitalizador pagination/printing (P1)**
+    - Description: The original component failed to print multi-page budgets correctly. The agent has implemented a direct-to-PDF generation feature using , which should resolve this.
+    - Status: USER VERIFICATION PENDING
+- **Issue 2: Brittle Data Ingestion Scripts (P2)**
+    - Description: The page processing scripts are prone to errors on minor data inconsistencies and require ongoing maintenance.
+    - Status: IN PROGRESS (handled reactively)
+- **Issue 3: Critical Frontend Stability ( error) (P3)**
+    - Description: A recurring React DOM crash, noted in previous handoffs, remains unaddressed.
+    - Status: NOT STARTED
 
 Issues Detail:
-- **Issue 1: Finalize Product Catalog from PDF Pages**
-    - **Attempted fixes:** N/A. The page-by-page process is the established workflow.
-    - **Next debug checklist:**
-        1. Create and execute a new script, .
-        2. Be prepared to debug potential  exceptions due to inconsistent data in the script, as this has happened several times.
-        3. Verify that the newly added/updated products contain all required fields (, , , , , etc.).
-        4. Report completion to the user and request the next batch of pages.
-        5. Once the user confirms all pages are sent, run a final script to delete all products from the DB whose  is not in .
-    - **Why fix this issue and what will be achieved with the fix?** This will achieve the user's primary goal: a 100% accurate and verified product catalog.
-    - **Status:** IN PROGRESS
-    - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** Backend.
-    - **Blocked on other issue:** The overall task is blocked until the user provides all pages from the PDF.
-
-- **Issue 2: Brittle Data Ingestion Scripts**
-    - **Attempted fixes:** The agent has been reactively fixing the scripts as they fail (e.g., adding missing  price values). No proactive solution has been implemented.
-    - **Next debug checklist:** When creating the next  script, anticipate that it might fail with a  on unpacking product data. The fix is to identify the faulty line in the script's data list and correct it.
-    - **Why fix this issue and what will be achieved with the fix?** Improving the scripts would prevent interruptions and streamline the data entry process.
-    - **Status:** IN PROGRESS
-    - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** Backend.
-
-- **Issue 3: Critical Frontend Stability ( error)**
-    - **Attempted fixes:** None.
-    - **Next debug checklist:** Investigation is blocked until the error can be reliably reproduced.
-    - **Why fix this issue and what will be achieved with the fix?** It will prevent random application crashes and improve user experience.
-    - **Status:** NOT STARTED
+- **Issue 1: Digitalizador pagination/printing**
+    - **Attempted fixes:** The agent replaced the  functionality with a robust solution using  and . This new implementation programmatically captures the component's content, handles multi-page splitting, and generates a downloadable PDF file.
+    - **Next debug checklist:** The user needs to test the Exportar PDF button with a long budget that spans multiple pages to confirm the fix is complete.
+    - **Why fix this issue and what will be achieved with the fix?** This is a critical usability feature for the Digitalizador, allowing users to generate professional, multi-page budget documents.
+    - **Status:** USER VERIFICATION PENDING
     - **Is recurring issue?** Y
     - **Should Test frontend/backend/both after fix?** Frontend.
+    - **Blocked on other issue:** None.
 
 **In progress Task List**:
-- **Task 1: Build Canonical Product Catalog via Page-by-Page Verification (P0)**
-    - **Where to resume:** Create the script  for the latest batch of user-provided images.
-    - **What will be achieved with this?** A definitive and clean product database that contains only the products specified by the user, with accurate data fields.
-    - **Status:** IN PROGRESS
-    - **Should Test frontend/backend/both after fix?** Backend.
-    - **Blocked on something:** Waiting for the user to provide all pages from the catalog.
+None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P0) Final Catalog Cleanup: After all pages are verified, delete all non-authorized products from the database.
-    - (P1) Implement Client-Sales Rep Assignment.
-    - (P2) Add Special Casco Series & Zero-Cost Logic.
+    - (P0) **Implement Digitalizador Analyzer Catalog Search:** Modify the  endpoint to perform a fuzzy search against the  collection for each item detected in the draft. The frontend () must be updated to display these suggestions and allow the user to select a match.
+    - (P0) **Implement Draggable Accessories in Armarios:** Add drag-and-drop functionality to the  visualizer, allowing users to reorder accessories vertically within each module, as specified in the user-provided reference code.
+    - (P1) **Continue Product Catalog Ingestion**: Process pages 235 and onwards as the user provides them.
+    - (P1) **Replace Servo Drive Text**: Blocked on user input for the replacement text.
+    - (P1) **Verify Integrity of Data Exports**: As requested in a user-provided document.
+    - (P2) **Implement Client-Sales Rep Assignment**.
+    - (P2) **Add Special Casco Series & Zero-Cost Logic**.
 - **Future Tasks:**
     - (P2) Implement New CRM and Order Management Workflow.
-    - (P3) Backend Refactoring: Decompose .
-    - (P3) Frontend Refactoring: Decompose .
-    - (P3) Consolidate temporary  scripts into a robust, configurable service.
-    - (P3) Create an admin dashboard to view audit logs.
+    - (P3) **Backend Refactoring**: Decompose .
+    - (P3) **Frontend Refactoring**: Decompose  and .
+    - (P3) **Consolidate Data Ingestion Scripts**.
 
 **Completed work in this session**
-- **Processed PDF Pages 140-204:** Successfully processed 65 pages in 12 batches, adding/updating hundreds of products.
-- **Fixed Data Ingestion Errors:** Reactively corrected 3 separate  issues in the temporary Python scripts during execution.
-- **Expanded Product Catalog:**
-    - Grew the database from 5,299 to **5,562** products.
-    - Increased verified references in  from 2,170 to **2,989**.
+- **Digitalizador Major Enhancements:**
+    - Implemented atomic, server-side generation of unique  numbers.
+    - Fixed complex margin and cost calculation logic, ensuring values persist when hidden.
+    - Added an editable title and a VALORADO / NO VALORADO toggle to hide all prices.
+    - Implemented direct-to-PDF generation using , replacing the browser's print dialog.
+    - Added a save modal allowing users to save to Digitalizador History, Main Budgets, and/or create a CRM opportunity.
+- **Armarios Component AI & UI Upgrade:**
+    - Implemented a Design with IA feature using a new backend endpoint () to interpret natural language descriptions of wardrobe interiors.
+    - Added UI to configure the number of doors independently of the number of modules.
+    - Improved the 2D visual representation of doors and modules.
+    - Enhanced the AI render prompt for greater realism.
+- **User Role Management:**
+    - Added a Gerente (Manager) role with permissions identical to Director Comercial.
+    - Updated the user management UI () to add, display, and filter by the new role, placing it hierarchically above Director Comercial.
+- **BudgetTable Component:**
+    - Implemented a VALORADO / NO VALORADO toggle to show/hide pricing.
+- **Data Ingestion:**
+    - Processed PDF pages 230-234, adding 30 new products.
+- **Bug Fixes:**
+    - Fixed price formatting to always show 2 decimal places.
 
 **Earlier issues found/mentioned but not fixed**
-- **Overlapping UI Fields**: Blocked on user input for reproduction steps.
+- The latent  React DOM error remains unaddressed.
 
 **Known issue recurrence from previous fork**
 - **Issue recurrence in previous fork:** Brittle Data Ingestion Scripts.
-- **Recurrence count:** 3 times this session.
+- **Recurrence count:** 0 (no new script broke, but the pattern of creating one-off scripts continues).
 - **Status:** IN PROGRESS (being handled reactively).
 
 **Code Architecture**
 
 
-**Key Technical Concepts**
-- **User-Guided Data Curation:** The workflow remains a manual, page-by-page verification process entirely driven by the user providing images.
-- **Fix-on-Fail Scripting:** The agent has adopted a pattern of creating a script, running it, and if it fails due to a  (missing data value), it quickly edits the script to fix the data and re-runs it.
-
 **key DB schema**
-- **products**: , , , , , , , , , , , , , , , , , , .
+- **users**: , , , , ,  (new), etc.
+- **products**: , , , , , , etc.
+- **counters**: (New) Collection for storing the next sequential ID for  numbers. Fields: , , .
+- **projects**: Stores saved budgets, now includes a  flag.
 
 **All files of reference**
 - **Created/Updated:**
-  - : Contains the master list of **2,989** verified product references.
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-- **Referenced:**
-  - 
+  - : Major feature implementation (unique IDs, PDF generation, valued/unvalued toggle, save modal).
+  - : Major feature implementation (AI layout design, door configuration).
+  - : Added valued/unvalued toggle.
+  - : Added Gerente role management.
+  - : Added  to user models and multiple new endpoints (, , ).
+  - : New data ingestion script.
 
 **Areas that need refactoring**:
-- **Data Import Logic:** The collection of  scripts is growing large and has proven to be brittle. This approach is not scalable and should be consolidated into a more robust, configurable service.
-- **/app/backend/server.py**: The backend monolith continues to grow.
+- **/app/backend/server.py**: Urgently needs to be broken down into multiple files by functionality (e.g., , , ).
+- **/app/frontend/src/components/Digitalizador.jsx**: Extremely large and complex. Should be split into smaller sub-components (e.g., , , ).
+- **/app/frontend/src/components/Armarios.jsx**: Also extremely large. The configuration panel and the 2D visualizer should be separate components.
+- **Data Import Logic:** The  scripts should be consolidated into a single, robust, and configurable service.
 
 **key api endpoints**
-- : Primary endpoint for the frontend product library.
+- : **NEW**. Generates a unique, sequential budget ID atomically.
+- : **NEW**. Saves a budget created in the Digitalizador to the main  collection.
+- : **NEW**. Interprets a natural language prompt to generate a JSON configuration for a wardrobe's interior.
+- : **MODIFIED**. The prompt was improved to include the number of doors and other details for a more realistic render.
+- : **MODIFIED**. The endpoint and associated models were updated to support the new  role.
 
 **Critical Info for New Agent**
-- **Resume the Data Entry:** Your immediate task is to process pages 205-209. Create the script , execute it, and verify the results.
-- **Anticipate Script Errors:** The data embedded in the Python scripts is often imperfect. Be prepared for  exceptions. The standard procedure is to edit the script to fix the faulty data line and re-run.
-- ** is the Source of Truth:** This file tracks all user-approved products. Load it and append new references in each script.
-- **Final Cleanup is PENDING:** Do not delete any products from the database until the user explicitly confirms they have provided all pages from the entire catalog.
+- **Your IMMEDIATE PRIORITY is to enhance the Digitalizador's analyzer.** The user wants the app to search the product catalog for items detected in uploaded drafts. This is a full-stack task:
+    1.  **Backend ():** Modify the  endpoint. For each text line returned by the current analysis, perform a fuzzy text search against the  collection in MongoDB. Return an array of potential matches for each line.
+    2.  **Frontend ():** Update the UI to display the suggested matches for each line item. Allow the user to click a suggestion to accept it, which should auto-fill the line with the correct product , , and other details from the catalog.
+- **The second high-priority task is to implement draggable accessories in the  component.** The user explicitly requested this, referencing an example. This involves using a library like  to allow vertical reordering of accessories in the 2D visualizer.
+- The user has paused the data ingestion task. Do not work on it until the user provides the next set of pages.
 
 **documents and test reports created in this job**
 - 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-- 10. User provides pages 205-209. (Pending)
-- 9. User provides pages 200-204. (Completed)
-- 8. User provides pages 195-199. (Completed)
-- 7. User provides pages 190-194. (Completed)
-- 6. User provides pages 185-189. (Completed)
-- 5. User provides pages 180-184. (Completed)
-- 4. User provides pages 175-179. (Completed)
-- 3. User provides pages 170-174. (Completed)
-- 2. User provides pages 165-169. (Completed)
-- 1. User provides pages 160-164. (Completed)
+- 10. User provides a document and asks for the Digitalizador analyzer to search for products in the existing catalog. (Pending Implementation)
+- 9. User provides catalog pages 230-234. (Completed)
+- 8. User requests that the Gerente role be positioned above Director Comercial in the UI and that the Digitalizador's PDF button downloads a file directly instead of opening the print dialog. (Completed)
+- 7. User confirms they will provide more catalog pages tomorrow and requests improvements to the wardrobe door configuration (number of doors, render accuracy). (Completed)
+- 6. User requests an editable title and a valued/unvalued button in the Digitalizador. (Completed)
+- 5. User asks for the current status of the catalog processing. (Answered)
+- 4. User reports that the PVP/COST button and markup indicator should be hidden when the Digitalizador lock is engaged. (Completed)
+- 3. User provides a zip file and detailed text instructions for a major overhaul of the  component, requesting natural language input and movable accessories. (Partially Completed - text input is done, movable accessories are pending).
+- 2. User asks to add a Gerente role with the same permissions as Director and to improve the wardrobe rendering. (Completed)
+- 1. User requests that budgets from the Digitalizador be saveable to the main Presupuestos and asks for a confirmation modal for saving to CRM. (Completed)
 
 **Project Health Check:**
-- **Mocked:** The product database remains a temporary mix of old backup data and new, verified products, awaiting a final cleanup.
-- **Broken:** The latent  React DOM error is a known, unaddressed stability risk. The data ingestion process is fragile and fails intermittently.
-- **Improved:** The product catalog has been significantly expanded with data from 65 new pages, but the process for adding *new* data remains fragile.
+- **Broken:** No critical breakages, but several key components (, , ) have become extremely large and complex, posing a significant maintenance and development risk. This technical debt is accumulating rapidly.
+- **Mocked:** N/A
+- **Improved:** Massive feature delivery across the Digitalizador, Armarios, and User Management modules. Core functionalities like unique ID generation and PDF exporting have been made significantly more robust.
 
 **3rd Party Integrations**
-- **Google Gemini:** Via  (Emergent LLM Key).
+- **Google Gemini:** Via . Used by the backend's , , and  endpoints.
 - **SendGrid:** For sending emails (User API Key).
-- **jspdf:** For PDF generation.
+- **jspdf / html2canvas:** For client-side PDF generation.
 - **recharts:** For data visualization charts.
 
 **Testing status**
 - Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
-- Known regressions: The data ingestion scripts have a known, recurring regression where they fail on malformed data tuples. This has been fixed reactively each time it occurs.
+- Known regressions: None.
 
 **Credentials to test flow:**
-- **User:** MARIO (Director Comercial / Admin), **Password:** MARIO
-- **User:** COMERCIAL SALAMANCA (Comercial), **Password:** COMERCIAL
-- **User:** TISA (Tienda), **Password:** TISA
+- **User:** 
+- **Password:** 
 
 **What agent forgot to execute**
-The agent continued a reactive pattern for handling data errors in the ingestion scripts. Despite the issue being identified in the previous handoff and occurring three times this session, the agent did not attempt to implement a more robust, proactive validation layer. It simply fixed each error as it arose, which, while effective, is inefficient and does not address the underlying fragility of the process.</analysis>
+- When implementing the  component overhaul, the agent successfully added the natural language design feature but **did not implement the user's request for draggable accessories** (vertical drag-and-drop for shelves, drawers, etc.). This is a key part of the user's request and should be prioritized.</analysis>
