@@ -155,3 +155,24 @@
    ✅ Extraídos 20 productos - Lista de muebles bajos de fregadero, con diferentes configur...
 
 📄 Procesando página 132: /app/pdf_pages_95_234/page-038.jpg
+   ✅ Extraídos 21 productos - Listado de muebles bajos de cocina de 1 y 2 puertas, y bajos...
+
+📄 Procesando página 133: /app/pdf_pages_95_234/page-039.jpg
+   ✅ Extraídos 24 productos - Programa Estandar - Bajos - Bajos 70cm Fondo Estándar. Conti...
+   📊 Productos en BD: 4056
+
+📦 Procesando batch 14/47
+
+📄 Procesando página 134: /app/pdf_pages_95_234/page-040.jpg
+   ✅ Extraídos 20 productos - Lista de bajos de placa de 2 caceroleros y 1 puerta extraibl...
+
+📄 Procesando página 135: /app/pdf_pages_95_234/page-041.jpg
+   ✅ Extraídos 12 productos - Productos bajos de cocina: Bajos para horno, bajos caceroler...
+
+📄 Procesando página 136: /app/pdf_pages_95_234/page-042.jpg
+   ✅ Extraídos 26 productos - Lista de precios por zonas de muebles bajos de cocina de dif...
+   📊 Productos en BD: 4114
+
+📦 Procesando batch 15/47
+
+📄 Procesando página 137: /app/pdf_pages_95_234/page-043.jpg
