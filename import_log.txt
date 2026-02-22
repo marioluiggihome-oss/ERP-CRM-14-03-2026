@@ -80,3 +80,15 @@
 📦 Procesando batch 7/47
 
 📄 Procesando página 113: /app/pdf_pages_95_234/page-019.jpg
+   ✅ Extraídos 17 productos - Precios de sobremódulos (altos) con fondo 33cm...
+
+📄 Procesando página 114: /app/pdf_pages_95_234/page-020.jpg
+   ✅ Extraídos 22 productos - Listado de precios por zonas para diferentes modelos de sobr...
+
+📄 Procesando página 115: /app/pdf_pages_95_234/page-021.jpg
+   ✅ Extraídos 15 productos - Página de catálogo de sobremódulos de cocina, con precios po...
+   📊 Productos en BD: 3763
+
+📦 Procesando batch 8/47
+
+📄 Procesando página 116: /app/pdf_pages_95_234/page-022.jpg
