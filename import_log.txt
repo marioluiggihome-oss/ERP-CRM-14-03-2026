@@ -176,3 +176,21 @@
 📦 Procesando batch 15/47
 
 📄 Procesando página 137: /app/pdf_pages_95_234/page-043.jpg
+   ✅ Extraídos 21 productos - Listado de muebles bajos de cocina con precios por zona...
+
+📄 Procesando página 138: /app/pdf_pages_95_234/page-044.jpg
+   ✅ Extraídos 22 productos - Precios de bajos de cocina con 4 cajones de 175mm de altura,...
+
+📄 Procesando página 139: /app/pdf_pages_95_234/page-045.jpg
+   ✅ Extraídos 22 productos - Productos de la página: Bajos de 5 cajones de 200mm con fond...
+   📊 Productos en BD: 4179
+
+📦 Procesando batch 16/47
+
+📄 Procesando página 140: /app/pdf_pages_95_234/page-046.jpg
+   ✅ Extraídos 22 productos - Página de catálogo con bajos caceroleros de 280mm + 3 cajone...
+
+📄 Procesando página 141: /app/pdf_pages_95_234/page-047.jpg
+   ✅ Extraídos 22 productos - Lista de precios para muebles bajos de 2 caceroleros con caj...
+
+📄 Procesando página 142: /app/pdf_pages_95_234/page-048.jpg
