@@ -62,3 +62,9 @@
    ✅ Extraídos 16 productos - Sobremódulos de 127cm de alto decorativos con fondo de 33cm ...
 
 📄 Procesando página 109: /app/pdf_pages_95_234/page-015.jpg
+   ✅ Extraídos 18 productos - Sobremódulos de 147cm de alto y 33cm de fondo. Incluye de 1 ...
+   📊 Productos en BD: 3702
+
+📦 Procesando batch 6/47
+
+📄 Procesando página 110: /app/pdf_pages_95_234/page-016.jpg
