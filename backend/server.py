@@ -4727,6 +4727,14 @@ async def calculate_despiece(request: DespieceRequest):
 # DIGITALIZADOR DE BORRADORES API
 # ============================================
 
+class DigitalizadorMatchedProduct(BaseModel):
+    """A product matched from the catalog"""
+    id: str
+    code: str
+    name: str
+    price: float = 0
+    score: float = 0  # Match confidence 0-1
+
 class DigitalizadorLine(BaseModel):
     """A single line extracted from the draft"""
     id: str
@@ -4736,6 +4744,7 @@ class DigitalizadorLine(BaseModel):
     price: float = 0
     discount: float = 0
     isManual: bool = False
+    matchedProducts: List[DigitalizadorMatchedProduct] = []  # Catalog matches
 
 class DigitalizadorRequest(BaseModel):
     """Request to analyze a draft image"""
