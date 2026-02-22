@@ -14,7 +14,7 @@ from pathlib import Path
 from motor.motor_asyncio import AsyncIOMotorClient
 
 # Import emergentintegrations
-from emergentintegrations.llm.chat import LlmChat, ImageContent
+from emergentintegrations.llm.chat import LlmChat
 
 # Configuration
 MONGO_URL = os.environ.get('MONGO_URL')
