@@ -68,24 +68,26 @@ async def process_page(page_path: str, page_num: int) -> dict:
     try:
         print(f"\n📄 Procesando página {page_num}: {page_path}")
         
-        # Read image as base64
-        with open(page_path, 'rb') as f:
-            image_data = base64.b64encode(f.read()).decode('utf-8')
-        
         # Import required classes
-        from emergentintegrations.llm.chat import UserMessage, FileContent
+        from emergentintegrations.llm.chat import UserMessage, FileContentWithMimeType
+        
+        # Create image file content
+        image_file = FileContentWithMimeType(
+            file_path=page_path,
+            mime_type="image/jpeg"
+        )
         
         # Create chat instance with Gemini model
         chat = LlmChat(
             api_key=EMERGENT_KEY,
             session_id=f"catalog-import-{page_num}",
             system_message="Eres un asistente que extrae información de productos de catálogos de muebles de cocina. Respondes siempre en JSON válido."
-        ).with_model("google", "gemini-1.5-flash")
+        ).with_model("gemini", "gemini-2.0-flash")
         
-        # Create user message with image as file content
+        # Create user message with image
         user_msg = UserMessage(
             text=EXTRACTION_PROMPT,
-            file_contents=[FileContent(content_type="image/jpeg", file_content_base64=image_data)]
+            file_contents=[image_file]
         )
         
         # Get response (async)
