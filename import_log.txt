@@ -1,0 +1,64 @@
+
+🚀 Iniciando importación del catálogo
+   📁 Directorio: /app/pdf_pages_95_234
+   📄 Páginas: 1 a 140 (140 páginas)
+   📦 Batch size: 3
+
+📦 Procesando batch 1/47
+
+📄 Procesando página 95: /app/pdf_pages_95_234/page-001.jpg
+   ✅ Extraídos 11 productos - Sobremódulos altos 110cm de alto y 58cm de fondo. Incluye mu...
+
+📄 Procesando página 96: /app/pdf_pages_95_234/page-002.jpg
+   ✅ Extraídos 20 productos - Listado de precios por zonas para sobremódulos rincón lineal...
+
+📄 Procesando página 97: /app/pdf_pages_95_234/page-003.jpg
+   ✅ Extraídos 16 productos - Sobremódulos Decorativos de 110cm de alto, con fondos de 33c...
+   📊 Productos en BD: 3588
+
+📦 Procesando batch 2/47
+
+📄 Procesando página 98: /app/pdf_pages_95_234/page-004.jpg
+   ✅ Extraídos 18 productos - Sobremódulos de 127cm de alto y 33cm de fondo...
+
+📄 Procesando página 99: /app/pdf_pages_95_234/page-005.jpg
+   ✅ Extraídos 19 productos - Sobremódulos de cocina, diferentes modelos y tamaños con pre...
+
+📄 Procesando página 100: /app/pdf_pages_95_234/page-006.jpg
+   ✅ Extraídos 8 productos - Página de catálogo de LUIGGI HOME con información de precios...
+   📊 Productos en BD: 3608
+
+📦 Procesando batch 3/47
+
+📄 Procesando página 101: /app/pdf_pages_95_234/page-007.jpg
+   ✅ Extraídos 18 productos - Página de catálogo con precios por zonas de varios modelos d...
+
+📄 Procesando página 102: /app/pdf_pages_95_234/page-008.jpg
+   ✅ Extraídos 9 productos - Listado de precios por zonas de sobremódulos termo con 2 pue...
+
+📄 Procesando página 103: /app/pdf_pages_95_234/page-009.jpg
+   ✅ Extraídos 18 productos - Listado de sobremódulos de cocina de 127cm de alto y 58cm de...
+      Error importing None: 'NoneType' object has no attribute 'strip'
+   📊 Productos en BD: 3640
+
+📦 Procesando batch 4/47
+
+📄 Procesando página 104: /app/pdf_pages_95_234/page-010.jpg
+   ✅ Extraídos 19 productos - Listado de sobremódulos de cocina, alto 127cm y fondo 58cm, ...
+
+📄 Procesando página 105: /app/pdf_pages_95_234/page-011.jpg
+   ✅ Extraídos 8 productos - Página de catálogo con diferentes modelos de sobremódulos de...
+
+📄 Procesando página 106: /app/pdf_pages_95_234/page-012.jpg
+   ✅ Extraídos 14 productos - Listado de precios por zonas para diferentes modelos de sobr...
+   📊 Productos en BD: 3677
+
+📦 Procesando batch 5/47
+
+📄 Procesando página 107: /app/pdf_pages_95_234/page-013.jpg
+   ✅ Extraídos 13 productos - Listado de sobremódulos termo de 1 y 2 puertas y persiana de...
+
+📄 Procesando página 108: /app/pdf_pages_95_234/page-014.jpg
+   ✅ Extraídos 16 productos - Sobremódulos de 127cm de alto decorativos con fondo de 33cm ...
+
+📄 Procesando página 109: /app/pdf_pages_95_234/page-015.jpg
