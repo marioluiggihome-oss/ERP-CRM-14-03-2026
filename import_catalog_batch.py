@@ -70,32 +70,24 @@ async def process_page(page_path: str, page_num: int) -> dict:
         
         # Read image as base64
         with open(page_path, 'rb') as f:
-            import base64
             image_data = base64.b64encode(f.read()).decode('utf-8')
         
-        # Use Gemini Vision via emergent
-        messages = [
-            Message(
-                role="user",
-                content=[
-                    {"type": "text", "text": EXTRACTION_PROMPT},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{image_data}"
-                        }
-                    }
-                ]
-            )
-        ]
-        
-        response = await chat(
+        # Create chat instance
+        chat = LlmChat(
             api_key=EMERGENT_KEY,
-            model="gemini-2.0-flash",
-            messages=messages,
-            max_tokens=4000
+            model="gemini-2.0-flash"
         )
         
+        # Add image with text prompt
+        chat.add_user_message(
+            content=[
+                EXTRACTION_PROMPT,
+                ImageContent(base64_data=image_data, mime_type="image/jpeg")
+            ]
+        )
+        
+        # Get response
+        response = await chat.send_async()
         response_text = response.content.strip()
         
         # Clean up response
