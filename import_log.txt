@@ -224,3 +224,30 @@
 📦 Procesando batch 19/47
 
 📄 Procesando página 149: /app/pdf_pages_95_234/page-055.jpg
+   ✅ Extraídos 22 productos - Listado de muebles bajos de cocina con 5 cajones, en dos ser...
+
+📄 Procesando página 150: /app/pdf_pages_95_234/page-056.jpg
+   ✅ Extraídos 22 productos - Programa estandar - bajos 80cm fondo estándar. Bajos de 1 ca...
+
+📄 Procesando página 151: /app/pdf_pages_95_234/page-057.jpg
+   ✅ Extraídos 22 productos - Precios de muebles bajos de cocina de 2 caceroleros de 320mm...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 20/47
+
+📄 Procesando página 152: /app/pdf_pages_95_234/page-058.jpg
+   ✅ Extraídos 22 productos - Muebles bajos caceroleros de 400mm con 2 cajones de 200mm de...
+
+📄 Procesando página 153: /app/pdf_pages_95_234/page-059.jpg
+   ✅ Extraídos 26 productos - Listado de precios de muebles bajos de cocina de 2 caceroler...
+
+📄 Procesando página 154: /app/pdf_pages_95_234/page-060.jpg
+   ✅ Extraídos 18 productos - Productos de la sección BAJOS del catálogo. Incluye bajos de...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 21/47
+
+📄 Procesando página 155: /app/pdf_pages_95_234/page-061.jpg
+   ✅ Extraídos 18 productos - Lista de precios para muebles bajos de cocina: rinconeros li...
+
+📄 Procesando página 156: /app/pdf_pages_95_234/page-062.jpg
