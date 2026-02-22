@@ -2398,6 +2398,39 @@ const Armarios = ({ state, setState }) => {
               </span>
             </div>
           </div>
+          
+          {/* Panel de accesorios arrastrables */}
+          <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <GripVertical size={16} className="text-emerald-600" />
+              <h4 className="text-xs font-black text-emerald-800 uppercase tracking-wider">
+                ARRASTRA ACCESORIOS AL ARMARIO
+              </h4>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {DRAGGABLE_ACCESSORIES.map((acc) => (
+                <div
+                  key={acc.id}
+                  draggable
+                  onDragStart={() => handleDragStart(acc)}
+                  onDragEnd={handleDragEnd}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg cursor-grab active:cursor-grabbing
+                    bg-white border-2 border-emerald-300 shadow-sm
+                    hover:border-emerald-500 hover:shadow-md hover:scale-105
+                    transition-all duration-150 select-none
+                    ${draggedAccessory?.id === acc.id ? 'opacity-50 scale-95' : ''}
+                  `}
+                >
+                  <span className="text-lg">{acc.icon}</span>
+                  <span className="text-xs font-bold text-slate-700">{acc.name}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-emerald-600">
+              💡 Arrastra cualquier accesorio y suéltalo en el módulo deseado del armario
+            </p>
+          </div>
         </div>
 
         {/* Panel derecho - Resumen precio */}
