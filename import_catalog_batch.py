@@ -80,7 +80,7 @@ async def process_page(page_path: str, page_num: int) -> dict:
             api_key=EMERGENT_KEY,
             session_id=f"catalog-import-{page_num}",
             system_message="Eres un asistente que extrae información de productos de catálogos de muebles de cocina. Respondes siempre en JSON válido."
-        ).with_model("google", "gemini-2.0-flash-exp")
+        ).with_model("google", "gemini-1.5-flash")
         
         # Create user message with image as file content
         user_msg = UserMessage(
