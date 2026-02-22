@@ -92,3 +92,18 @@
 📦 Procesando batch 8/47
 
 📄 Procesando página 116: /app/pdf_pages_95_234/page-022.jpg
+   ✅ Extraídos 11 productos - Listado de precios para sobremódulos de horno con vitrina y ...
+
+📄 Procesando página 117: /app/pdf_pages_95_234/page-023.jpg
+   ✅ Extraídos 20 productos - Página de catálogo de sobremódulos de cocina LUIGGI HOME, co...
+
+📄 Procesando página 118: /app/pdf_pages_95_234/page-024.jpg
+   ✅ Extraídos 3 productos - Sobremódulos persiana aluminio fondo 580mm...
+   📊 Productos en BD: 3787
+
+📦 Procesando batch 9/47
+
+📄 Procesando página 119: /app/pdf_pages_95_234/page-025.jpg
+   ✅ Extraídos 16 productos - Sobremódulos decorativos de 147cm de alto con fondo de 33cm ...
+
+📄 Procesando página 120: /app/pdf_pages_95_234/page-026.jpg
