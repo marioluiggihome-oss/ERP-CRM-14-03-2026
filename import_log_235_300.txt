@@ -79,3 +79,6 @@
 📦 Procesando batch 7/22
 
 📄 Procesando página 113: /app/pdf_pages_235_300/page-19.jpg
+   ✅ Extraídos 4 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+
+📄 Procesando página 114: /app/pdf_pages_235_300/page-20.jpg
