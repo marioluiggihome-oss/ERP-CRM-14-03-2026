@@ -14,7 +14,8 @@ from pathlib import Path
 from motor.motor_asyncio import AsyncIOMotorClient
 
 # Import emergentintegrations
-from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
+from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContent
+import base64
 
 # Configuration
 MONGO_URL = os.environ.get('MONGO_URL')
@@ -117,10 +118,15 @@ async def process_page(page_path: str, page_num: int) -> dict:
     try:
         print(f"\n📄 Procesando página {page_num}: {page_path}")
         
+        # Read and encode image as base64
+        with open(page_path, "rb") as f:
+            image_bytes = f.read()
+        image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+        
         # Create image file content
-        image_file = FileContentWithMimeType(
-            file_path=page_path,
-            mime_type="image/jpeg"
+        image_file = FileContent(
+            content_type="image/jpeg",
+            file_content_base64=image_base64
         )
         
         # Create chat instance with Gemini model
@@ -133,7 +139,7 @@ async def process_page(page_path: str, page_num: int) -> dict:
         # Create message with image
         user_message = UserMessage(
             text=EXTRACTION_PROMPT,
-            files=[image_file]
+            file_contents=[image_file]
         )
         
         # Get response with timeout
