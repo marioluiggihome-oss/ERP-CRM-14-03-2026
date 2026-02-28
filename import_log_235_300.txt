@@ -115,3 +115,30 @@
 📦 Procesando batch 10/22
 
 📄 Procesando página 122: /app/pdf_pages_235_300/page-28.jpg
+   ✅ Extraídos 4 productos - Lista de columnas de cocina de 2 caceroleros con huecos para...
+
+📄 Procesando página 123: /app/pdf_pages_235_300/page-29.jpg
+   ✅ Extraídos 12 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+
+📄 Procesando página 124: /app/pdf_pages_235_300/page-30.jpg
+   ✅ Extraídos 18 productos - Columnas rinconeras lineales de 1 y 2 puertas, altura 240cm,...
+   📊 Productos en BD: 4922
+
+📦 Procesando batch 11/22
+
+📄 Procesando página 125: /app/pdf_pages_235_300/page-31.jpg
+   ✅ Extraídos 18 productos - Columnas decorativas de 240cm de alto...
+
+📄 Procesando página 126: /app/pdf_pages_235_300/page-32.jpg
+   ✅ Extraídos 2 productos - Columnas decorativas terminales de 240cm de alto...
+
+📄 Procesando página 127: /app/pdf_pages_235_300/page-33.jpg
+   ✅ Extraídos 0 productos - La página muestra información sobre el sistema de apertura G...
+   📊 Productos en BD: 4942
+
+📦 Procesando batch 12/22
+
+📄 Procesando página 128: /app/pdf_pages_235_300/page-34.jpg
+   ✅ Extraídos 0 productos - Página de catálogo de muebles altos para el programa GOLA...
+
+📄 Procesando página 129: /app/pdf_pages_235_300/page-35.jpg
