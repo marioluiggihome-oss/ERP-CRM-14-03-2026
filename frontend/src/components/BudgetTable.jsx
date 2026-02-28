@@ -64,37 +64,34 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       ? currentModuleProducts
       : currentModuleProducts.filter(p => (p.programa || 'ESTÁNDAR') === selectedPrograma);
     
+    // Las categorías vienen directamente de los productos filtrados por programa
+    // No necesitamos filtrado adicional por nombre
     let categories = new Set(programaFilteredProducts.map(p => p.category || 'OTROS'));
-    
-    // Si el programa es GOLA, solo mostrar categorías GOLA
-    if (selectedPrograma === 'GOLA') {
-      categories = new Set([...categories].filter(cat => cat.toUpperCase().includes('GOLA')));
-    }
-    // Si el programa es ESTÁNDAR, excluir categorías GOLA
-    else if (selectedPrograma === 'ESTÁNDAR') {
-      categories = new Set([...categories].filter(cat => !cat.toUpperCase().includes('GOLA')));
-    }
     
     // Orden de categorías según el catálogo
     const categoryOrder = {
       'ALTOS': 1,
       'ALTOS GOLA': 2,
-      'BAJOS': 3,
-      'BAJOS GOLA': 4,
-      'SEMICOLUMNAS': 5,
-      'SEMICOLUMNAS GOLA': 6,
-      'COLUMNAS': 7,
-      'COLUMNAS GOLA': 8,
-      'COSTADOS': 9,
-      'ESTANTES': 10,
-      'REGLETAS': 11,
-      'PUERTAS': 12,
-      'VITRINAS': 13,
-      'CORNISAS': 14,
-      'ZOCALOS': 15,
-      'COMPLEMENTOS': 16,
-      'ELECTRODOMESTICOS': 17,
-      'ACCESORIOS': 18,
+      'ALTOS ALUMINIO': 3,
+      'SOBREMÓDULOS': 4,
+      'BAJOS': 5,
+      'BAJOS GOLA': 6,
+      'BAJOS ALUMINIO': 7,
+      'SEMICOLUMNAS': 8,
+      'SEMICOLUMNAS GOLA': 9,
+      'SEMICOLUMNAS ALUMINIO': 10,
+      'COLUMNAS': 11,
+      'COLUMNAS GOLA': 12,
+      'COSTADOS': 13,
+      'ESTANTES': 14,
+      'REGLETAS': 15,
+      'PUERTAS': 16,
+      'VITRINAS': 17,
+      'CORNISAS': 18,
+      'ZOCALOS': 19,
+      'COMPLEMENTOS': 20,
+      'ELECTRODOMESTICOS': 21,
+      'ACCESORIOS': 22,
       'OTROS': 99
     };
     
