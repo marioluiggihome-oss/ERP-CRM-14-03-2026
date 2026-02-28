@@ -211,3 +211,27 @@
 📦 Procesando batch 18/22
 
 📄 Procesando página 146: /app/pdf_pages_235_300/page-52.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 781 column 15 (char 17319)
+
+📄 Procesando página 147: /app/pdf_pages_235_300/page-53.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 759 column 15 (char 18115)
+
+📄 Procesando página 148: /app/pdf_pages_235_300/page-54.jpg
+   ✅ Extraídos 22 productos - Módulos altos GOLA de 60cm de fondo estándar...
+   📊 Productos en BD: 5125
+
+📦 Procesando batch 19/22
+
+📄 Procesando página 149: /app/pdf_pages_235_300/page-55.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 777 column 9 (char 17821)
+
+📄 Procesando página 150: /app/pdf_pages_235_300/page-56.jpg
+   ❌ Error parsing JSON: Expecting ',' delimiter: line 770 column 17 (char 18040)
+
+📄 Procesando página 151: /app/pdf_pages_235_300/page-57.jpg
+   ✅ Extraídos 22 productos - Listado de muebles altos Gola de 60cm de ancho y fondo 58cm...
+   📊 Productos en BD: 5147
+
+📦 Procesando batch 20/22
+
+📄 Procesando página 152: /app/pdf_pages_235_300/page-58.jpg
