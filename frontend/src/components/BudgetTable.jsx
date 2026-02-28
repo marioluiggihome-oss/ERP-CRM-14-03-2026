@@ -62,8 +62,18 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     // Filtrar por programa si está seleccionado
     const programaFilteredProducts = selectedPrograma === 'TODOS'
       ? currentModuleProducts
-      : currentModuleProducts.filter(p => (p.programa || 'SIN PROGRAMA') === selectedPrograma);
-    const categories = new Set(programaFilteredProducts.map(p => p.category || 'OTROS'));
+      : currentModuleProducts.filter(p => (p.programa || 'ESTÁNDAR') === selectedPrograma);
+    
+    let categories = new Set(programaFilteredProducts.map(p => p.category || 'OTROS'));
+    
+    // Si el programa es GOLA, solo mostrar categorías GOLA
+    if (selectedPrograma === 'GOLA') {
+      categories = new Set([...categories].filter(cat => cat.toUpperCase().includes('GOLA')));
+    }
+    // Si el programa es ESTÁNDAR, excluir categorías GOLA
+    else if (selectedPrograma === 'ESTÁNDAR') {
+      categories = new Set([...categories].filter(cat => !cat.toUpperCase().includes('GOLA')));
+    }
     
     // Orden de categorías según el catálogo
     const categoryOrder = {
