@@ -169,3 +169,15 @@
    ❌ Error parsing JSON: Unterminated string starting at: line 757 column 22 (char 17838)
 
 📄 Procesando página 136: /app/pdf_pages_235_300/page-42.jpg
+   ✅ Extraídos 22 productos - Muebles altos GOLA de 40cm de fondo estándar...
+   📊 Productos en BD: 5008
+
+📦 Procesando batch 15/22
+
+📄 Procesando página 137: /app/pdf_pages_235_300/page-43.jpg
+   ❌ Error parsing JSON: Expecting value: line 773 column 14 (char 18060)
+
+📄 Procesando página 138: /app/pdf_pages_235_300/page-44.jpg
+   ✅ Extraídos 30 productos - Listado de muebles altos GOLA con una puerta abatible o una ...
+
+📄 Procesando página 139: /app/pdf_pages_235_300/page-45.jpg
