@@ -196,6 +196,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const filteredCatalog = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     
+    console.log('Search query:', q, '| Length:', q.length);
+    
     // Orden según el catálogo PDF TARIFA-TECNICA-ZONACOCINAS
     // 1. ALTOS (primero en parte 1)
     // 2. BAJOS (parte 2, páginas 1-27)
