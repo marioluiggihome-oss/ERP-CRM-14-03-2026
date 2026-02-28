@@ -263,7 +263,15 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const matchesPrograma = selectedPrograma === 'TODOS' || (p.programa || 'ESTÁNDAR') === selectedPrograma;
       const matchesSeries = selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
       const matchesCategory = selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
-      return matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory;
+      
+      const result = matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory;
+      
+      // Log para depuración
+      if (q && q.length > 5 && result) {
+        console.log('MATCH:', codeUpper, '| startsWith:', codeUpper.startsWith(qUpper), '| module:', isCorrectModule);
+      }
+      
+      return result;
     });
     
     // Ordenar: primero coincidencias exactas/por inicio, luego por categoría y código
