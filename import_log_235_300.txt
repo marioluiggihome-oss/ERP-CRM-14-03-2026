@@ -154,3 +154,18 @@
    ❌ Error parsing JSON: Unterminated string starting at: line 758 column 20 (char 17677)
 
 📄 Procesando página 132: /app/pdf_pages_235_300/page-38.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 768 column 9 (char 17930)
+
+📄 Procesando página 133: /app/pdf_pages_235_300/page-39.jpg
+   ✅ Extraídos 22 productos - Listado de módulos altos Gola de 35cm de ancho y 58cm de fon...
+   📊 Productos en BD: 4986
+
+📦 Procesando batch 14/22
+
+📄 Procesando página 134: /app/pdf_pages_235_300/page-40.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 759 column 15 (char 17938)
+
+📄 Procesando página 135: /app/pdf_pages_235_300/page-41.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 757 column 22 (char 17838)
+
+📄 Procesando página 136: /app/pdf_pages_235_300/page-42.jpg
