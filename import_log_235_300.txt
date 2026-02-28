@@ -142,3 +142,15 @@
    ✅ Extraídos 0 productos - Página de catálogo de muebles altos para el programa GOLA...
 
 📄 Procesando página 129: /app/pdf_pages_235_300/page-35.jpg
+   ✅ Extraídos 22 productos - Listado de módulos altos Gola de 35cm de fondo estándar, con...
+
+📄 Procesando página 130: /app/pdf_pages_235_300/page-36.jpg
+   ✅ Extraídos 22 productos - Muebles altos GOLA de 35cm de fondo estándar...
+   📊 Productos en BD: 4964
+
+📦 Procesando batch 13/22
+
+📄 Procesando página 131: /app/pdf_pages_235_300/page-37.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 758 column 20 (char 17677)
+
+📄 Procesando página 132: /app/pdf_pages_235_300/page-38.jpg
