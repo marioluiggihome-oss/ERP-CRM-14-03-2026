@@ -250,41 +250,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       let matchesSearch = false;
       
       if (q && q.length > 0) {
-        // Si la búsqueda tiene más de 5 caracteres, es probablemente un código de producto
-        // Hacer búsqueda ESTRICTA: solo códigos que coincidan exactamente o empiecen con el término
-        if (q.length >= 5) {
-          matchesSearch = codeUpper === qUpper || codeUpper.startsWith(qUpper);
-        } else {
-          // Búsqueda corta: más flexible
-          // 1. Código empieza con el término
-          if (codeUpper.startsWith(qUpper)) {
-            matchesSearch = true;
-          }
-          // 2. Nombre contiene el término
-          else if (nameLower.includes(q.toLowerCase())) {
-            matchesSearch = true;
-          }
-          // 3. Buscar por términos de herraje
-          else {
-            const hardwareText = hardwareSearchTerms[q.toLowerCase()];
-            if (hardwareText) {
-              if (codeUpper.includes(hardwareText) || nameUpper.includes(hardwareText)) {
-                matchesSearch = true;
-              }
-            }
-          }
-          // 4. Buscar por tipo especial (horno, micro, etc.)
-          if (!matchesSearch) {
-            for (const [term, codes] of Object.entries(specialSearchTerms)) {
-              if (term.includes(q.toLowerCase()) || q.toLowerCase().includes(term)) {
-                if (codes.some(c => codeUpper.includes(c))) {
-                  matchesSearch = true;
-                  break;
-                }
-              }
-            }
-          }
-        }
+        // Búsqueda ESTRICTA: solo códigos que coincidan exactamente o empiecen con el término
+        matchesSearch = codeUpper === qUpper || codeUpper.startsWith(qUpper);
       } else {
         // Sin búsqueda, mostrar todo
         matchesSearch = true;
