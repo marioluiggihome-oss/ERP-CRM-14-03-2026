@@ -184,6 +184,66 @@ async def import_product(product: dict, page_num: int) -> bool:
         return False
 
 
+
+async def run_specific_pages(file_numbers: list, page_offset: int = 235):
+    """Process specific page files that had errors
+    
+    Args:
+        file_numbers: List of file numbers to process (e.g., [37, 38, 40])
+        page_offset: Offset for page numbering
+    """
+    pages_dir = Path(PDF_PAGES_DIR)
+    
+    print(f"\n🔄 Reprocesando páginas específicas")
+    print(f"   📁 Directorio: {PDF_PAGES_DIR}")
+    print(f"   📄 Archivos: {file_numbers}")
+    
+    total_products = 0
+    total_imported = 0
+    errors = []
+    
+    for file_num in file_numbers:
+        # Find the file
+        page_file = pages_dir / f"page-{file_num:02d}.jpg"
+        if not page_file.exists():
+            page_file = pages_dir / f"page-{file_num}.jpg"
+        
+        if not page_file.exists():
+            print(f"   ❌ Archivo no encontrado: page-{file_num}.jpg")
+            continue
+        
+        page_num = page_offset + file_num - 1  # Real page number
+        
+        result = await process_page(str(page_file), page_num)
+        
+        if result["success"]:
+            products = result["products"]
+            total_products += len(products)
+            
+            for product in products:
+                if await import_product(product, page_num):
+                    total_imported += 1
+        else:
+            errors.append({"page": page_num, "file": page_file.name, "error": result.get("error")})
+        
+        await asyncio.sleep(1)
+    
+    # Summary
+    print(f"\n✅ REPROCESAMIENTO COMPLETADO")
+    print(f"   📄 Páginas procesadas: {len(file_numbers)}")
+    print(f"   📦 Productos encontrados: {total_products}")
+    print(f"   ✅ Productos importados: {total_imported}")
+    print(f"   ❌ Errores: {len(errors)}")
+    
+    if errors:
+        print(f"\n   Páginas con errores:")
+        for err in errors:
+            print(f"      - Página {err['page']} ({err['file']}): {err['error'][:50]}...")
+    
+    final_count = await db.products.count_documents({})
+    print(f"\n   📊 Total productos en BD: {final_count}")
+
+
 async def run_import(start_page: int = 1, end_page: int = None, batch_size: int = 5, page_offset: int = 235):
     """Run the catalog import process
     
