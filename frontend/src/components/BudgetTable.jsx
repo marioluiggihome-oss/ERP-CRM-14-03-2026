@@ -1634,7 +1634,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                 </div>
 
                 {/* Lista de productos - más visible */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto" key={`catalog-${searchQuery}-${selectedPrograma}-${selectedCategory}-${selectedSeries}`}>
                   <div className="divide-y divide-indigo-100">
                     {filteredCatalog.map(p => {
                       const code = p.code?.toUpperCase() || '';
