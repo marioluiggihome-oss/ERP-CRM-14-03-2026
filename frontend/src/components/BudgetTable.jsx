@@ -292,7 +292,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       }
       
       const isCorrectModule = catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule;
-      const matchesPrograma = selectedPrograma === 'TODOS' || (p.programa || 'SIN PROGRAMA') === selectedPrograma;
+      const matchesPrograma = selectedPrograma === 'TODOS' || (p.programa || 'ESTÁNDAR') === selectedPrograma;
       const matchesSeries = selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
       const matchesCategory = selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
       return matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory;
