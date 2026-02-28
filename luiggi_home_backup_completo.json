@@ -264322,5 +264322,74 @@
         "size": 1547691
       }
     ]
+  },
+  "proyecto_info": {
+    "nombre": "LUIGGI HOME - Kitchen Budget ERP/CRM",
+    "descripcion": "Aplicación ERP/CRM para presupuestos de cocinas con catálogo de productos, digitalizador de borradores, diseñador de armarios y gestión de clientes",
+    "stack": {
+      "frontend": "React 18 + TailwindCSS + Shadcn/UI",
+      "backend": "FastAPI + Python 3.11",
+      "database": "MongoDB",
+      "integraciones": [
+        "Gemini AI (análisis imágenes)",
+        "SendGrid (emails)",
+        "jsPDF (generación PDF)"
+      ]
+    },
+    "funcionalidades": [
+      "Catálogo de productos con 4678 artículos",
+      "Presupuestos montada y despiece",
+      "Digitalizador de borradores con IA",
+      "Diseñador de armarios con drag-and-drop",
+      "Gestión de clientes y oportunidades",
+      "Calendario de eventos",
+      "Sistema de usuarios con roles (Admin, Gerente, Comercial)",
+      "Exportación a PDF y Excel",
+      "Backup automático"
+    ],
+    "credenciales_test": {
+      "usuario": "MARIO",
+      "password": "MARIO"
+    },
+    "estructura_archivos": {
+      "backend": "/app/backend/server.py (monolítico)",
+      "frontend": "/app/frontend/src/",
+      "componentes_principales": [
+        "BudgetTable.jsx - Presupuestos y librería",
+        "Digitalizador.jsx - Digitalizador de borradores",
+        "Armarios.jsx - Diseñador de armarios",
+        "CRMCalendar.jsx - Calendario",
+        "CabinetIcon.jsx - Iconos de muebles"
+      ]
+    }
+  },
+  "resumen": {
+    "total_productos": 4678,
+    "total_usuarios": 12,
+    "total_pedidos": 8,
+    "total_proyectos": 1,
+    "categorias_productos": {
+      "ALTOS": 990,
+      "SEMICOLUMNAS": 173,
+      "SOBREMODULOS": 178,
+      "SOBREMÓDULOS": 156,
+      "BAJOS": 1169,
+      "COLUMNAS": 591,
+      "ALTOS GOLA": 362,
+      "BAJOS GOLA": 120,
+      "SEMICOLUMNAS GOLA": 116,
+      "COLUMNAS GOLA": 104,
+      "COSTADOS": 157,
+      "ESTANTES": 61,
+      "REGLETAS": 20,
+      "PUERTAS": 158,
+      "VITRINAS": 161,
+      "CORNISAS": 12,
+      "ZOCALOS": 4,
+      "SEMICOLUMNAS ALUMINIO": 28,
+      "BAJOS ALUMINIO": 58,
+      "ALTOS ALUMINIO": 58,
+      "Puertas": 2
+    }
   }
 }
