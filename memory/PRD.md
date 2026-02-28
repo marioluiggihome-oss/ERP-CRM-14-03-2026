@@ -17,25 +17,34 @@ Spanish (es)
 - **AI Integration:** Google Gemini via emergentintegrations
 
 ## Current Statistics (Feb 2026)
-- **Total Products:** 5,356
-- **Programs:** ESTÁNDAR (3,832), GOLA (1,117), ALUMINIO (144)
-- **Categories:** 19 unique (ALTOS, ALTOS GOLA, ALTOS ALUMINIO, SOBREMÓDULOS, BAJOS, BAJOS GOLA, BAJOS ALUMINIO, SEMICOLUMNAS, SEMICOLUMNAS GOLA, SEMICOLUMNAS ALUMINIO, COLUMNAS, COLUMNAS GOLA, COSTADOS, ESTANTES, REGLETAS, PUERTAS, VITRINAS, CORNISAS, ZOCALOS)
+- **Total Products:** 6,754
+- **Programs:** 
+  - ESTÁNDAR: 4,092 productos
+  - GOLA: 2,518 productos
+  - ALUMINIO: 144 productos
+- **Categories:** 19+ unique categories
 
 ## Completed Tasks
 
-### Feb 28, 2026 - Bug Fixes ✅
+### Feb 28, 2026 - Bug Fixes & Data Import ✅
+
+#### Bug Fixes
 1. **Product Library Rendering Bug (P0)** - FIXED
    - Root cause: 182 products had `null` IDs causing React rendering issues
    - Fix: Assigned unique UUIDs to all products with missing IDs
    
 2. **Category Filtering Bug (P0)** - FIXED
-   - Root cause: Outdated filtering logic was filtering by category name containing 'GOLA'
+   - Root cause: Outdated filtering logic filtering by category name
    - Fix: Categories now come directly from filtered products by program
-   - Removed unnecessary category name filtering
    
 3. **Duplicate Categories Bug (P0)** - FIXED
-   - Unified `SOBREMODULOS` and `SOBREMÓDULOS` → `SOBREMÓDULOS`
-   - Unified `Puertas` and `PUERTAS` → `PUERTAS`
+   - Unified `SOBREMODULOS` → `SOBREMÓDULOS`
+   - Unified `Puertas` → `PUERTAS`
+
+#### Data Import - Pages 301-400
+- **Processed:** 100 pages from PDF `301-400.pdf`
+- **Products imported:** 1,481 new products
+- **Categories covered:** ALTOS GOLA, BAJOS GOLA, SEMICOLUMNAS GOLA, COLUMNAS GOLA
 
 ### Previous Sessions
 - Icons for Foldable Doors (HK-TOP, HS, HL, HF) implemented
@@ -50,7 +59,7 @@ Spanish (es)
 - [ ] Verify Armarios Draggable Accessories functionality
 
 ### P2 - Next Tasks
-- [ ] Continue product catalog import (pages 301+) when user provides more PDFs
+- [ ] Continue product catalog import (pages 401+) when user provides more PDFs
 - [ ] Client-Sales Rep Assignment
 
 ### P3 - Technical Debt
@@ -64,7 +73,11 @@ Spanish (es)
 - `/app/frontend/src/components/Digitalizador.jsx` - Draft digitizer
 - `/app/frontend/src/components/Armarios.jsx` - Wardrobe designer
 - `/app/frontend/src/components/CabinetIcon.jsx` - Cabinet icons (HK, HS, HL, HF)
-- `/app/import_catalog_batch.py` - Data ingestion script
+- `/app/import_pages_301_400.py` - Data ingestion script for pages 301-400
+
+## Import Scripts
+- `/app/import_catalog_batch.py` - Original batch import script
+- `/app/import_pages_301_400.py` - Script for pages 301-400 (uses Gemini 2.5 Flash)
 
 ## Test Credentials
 - **User:** MARIO
