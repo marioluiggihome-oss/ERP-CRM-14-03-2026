@@ -112,7 +112,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     // Filtrar por programa si está seleccionado
     let filteredProducts = selectedPrograma === 'TODOS'
       ? currentModuleProducts
-      : currentModuleProducts.filter(p => (p.programa || 'SIN PROGRAMA') === selectedPrograma);
+      : currentModuleProducts.filter(p => (p.programa || 'ESTÁNDAR') === selectedPrograma);
     // Filter by category if one is selected
     filteredProducts = selectedCategory === 'TODAS' 
       ? filteredProducts 
