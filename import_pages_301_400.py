@@ -139,7 +139,7 @@ async def process_page(page_path: str, page_num: int) -> dict:
         
         # Get response with timeout
         response = await asyncio.wait_for(
-            chat.send_message(user_message, model="gemini"),
+            chat.send_message(user_message),
             timeout=90
         )
         
