@@ -19,7 +19,7 @@ from emergentintegrations.llm.chat import LlmChat
 # Configuration
 MONGO_URL = os.environ.get('MONGO_URL')
 DB_NAME = 'test_database'  # Usar la misma BD que el backend
-PDF_PAGES_DIR = '/app/pdf_pages_95_234'
+PDF_PAGES_DIR = '/app/pdf_pages_235_300'
 EMERGENT_KEY = 'sk-emergent-4A3Ed5d56521e792e1'
 
 # Connect to MongoDB
