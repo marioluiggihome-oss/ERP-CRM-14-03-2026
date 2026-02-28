@@ -82,3 +82,36 @@
    ✅ Extraídos 4 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
 
 📄 Procesando página 114: /app/pdf_pages_235_300/page-20.jpg
+   ✅ Extraídos 6 productos - Listado de columnas caceroleras de 240cm de alto y 58cm de f...
+
+📄 Procesando página 115: /app/pdf_pages_235_300/page-21.jpg
+   ✅ Extraídos 6 productos - Lista de columnas de cocina de 240cm de alto y 58cm de fondo...
+   📊 Productos en BD: 4862
+
+📦 Procesando batch 8/22
+
+📄 Procesando página 116: /app/pdf_pages_235_300/page-22.jpg
+   ✅ Extraídos 6 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+
+📄 Procesando página 117: /app/pdf_pages_235_300/page-23.jpg
+   ✅ Extraídos 4 productos - Página del catálogo LUIGGI HOME con columnas de 240cm de alt...
+
+📄 Procesando página 118: /app/pdf_pages_235_300/page-24.jpg
+   ✅ Extraídos 4 productos - Columnas cacerolero de 240cm de alto y 58cm de fondo...
+   📊 Productos en BD: 4876
+
+📦 Procesando batch 9/22
+
+📄 Procesando página 119: /app/pdf_pages_235_300/page-25.jpg
+   ✅ Extraídos 4 productos - Columnas caceroleras con cajones, hueco para horno y microon...
+
+📄 Procesando página 120: /app/pdf_pages_235_300/page-26.jpg
+   ✅ Extraídos 4 productos - Columnas cacerolero para horno y microondas, diferentes seri...
+
+📄 Procesando página 121: /app/pdf_pages_235_300/page-27.jpg
+   ✅ Extraídos 4 productos - Columnas de cocina de 240cm de alto y 58cm de fondo con cajo...
+   📊 Productos en BD: 4888
+
+📦 Procesando batch 10/22
+
+📄 Procesando página 122: /app/pdf_pages_235_300/page-28.jpg
