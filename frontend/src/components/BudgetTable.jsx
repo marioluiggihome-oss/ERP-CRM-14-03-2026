@@ -242,46 +242,45 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const codeUpper = p.code?.toUpperCase() || '';
       const nameUpper = p.name?.toUpperCase() || '';
       const nameLower = p.name?.toLowerCase() || '';
-      const qUpper = q.toUpperCase();
+      const qUpper = q.toUpperCase().trim();
       
-      // Búsqueda mejorada: priorizar coincidencias exactas y por inicio
       let matchesSearch = false;
       
-      if (q) {
-        // 1. Coincidencia exacta de código
-        if (codeUpper === qUpper) {
-          matchesSearch = true;
-        }
-        // 2. Código empieza con el término de búsqueda
-        else if (codeUpper.startsWith(qUpper)) {
-          matchesSearch = true;
-        }
-        // 3. Nombre contiene el término
-        else if (nameLower.includes(q)) {
-          matchesSearch = true;
-        }
-        // 4. Código contiene el término (búsqueda parcial)
-        else if (codeUpper.includes(qUpper)) {
-          matchesSearch = true;
-        }
+      if (q && q.length > 0) {
+        // Si la búsqueda parece un código de producto (empieza con número o tiene más de 6 caracteres)
+        const looksLikeProductCode = /^\d/.test(q) || q.length >= 6;
         
-        // Si no coincide, buscar por términos de herraje
-        if (!matchesSearch) {
-          const hardwareText = hardwareSearchTerms[q];
-          if (hardwareText) {
-            if (codeUpper.includes(hardwareText) || nameUpper.includes(hardwareText)) {
-              matchesSearch = true;
+        if (looksLikeProductCode) {
+          // Búsqueda estricta para códigos de producto
+          // Solo mostrar si el código coincide exactamente o contiene el término
+          matchesSearch = codeUpper === qUpper || codeUpper.includes(qUpper);
+        } else {
+          // Búsqueda flexible para términos cortos o palabras
+          // 1. Código empieza o contiene el término
+          if (codeUpper.startsWith(qUpper) || codeUpper.includes(qUpper)) {
+            matchesSearch = true;
+          }
+          // 2. Nombre contiene el término
+          else if (nameLower.includes(q.toLowerCase())) {
+            matchesSearch = true;
+          }
+          // 3. Buscar por términos de herraje
+          else {
+            const hardwareText = hardwareSearchTerms[q.toLowerCase()];
+            if (hardwareText) {
+              if (codeUpper.includes(hardwareText) || nameUpper.includes(hardwareText)) {
+                matchesSearch = true;
+              }
             }
           }
-        }
-        
-        // Buscar por tipo especial (horno, micro, etc.)
-        if (!matchesSearch) {
-          for (const [term, codes] of Object.entries(specialSearchTerms)) {
-            if (term.includes(q) || q.includes(term)) {
-              if (codes.some(c => codeUpper.includes(c))) {
-                matchesSearch = true;
-                break;
+          // 4. Buscar por tipo especial (horno, micro, etc.)
+          if (!matchesSearch) {
+            for (const [term, codes] of Object.entries(specialSearchTerms)) {
+              if (term.includes(q.toLowerCase()) || q.toLowerCase().includes(term)) {
+                if (codes.some(c => codeUpper.includes(c))) {
+                  matchesSearch = true;
+                  break;
+                }
               }
             }
           }
