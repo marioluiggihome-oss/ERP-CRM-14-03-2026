@@ -196,29 +196,29 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     console.log('Search query:', q, '| Length:', q.length);
     
     // Orden según el catálogo PDF TARIFA-TECNICA-ZONACOCINAS
-    // 1. ALTOS (primero en parte 1)
-    // 2. BAJOS (parte 2, páginas 1-27)
-    // 3. SEMICOLUMNAS (parte 2, páginas 33-77)
-    // 4. COLUMNAS (parte 2, páginas 78-125)
     const categoryOrder = {
       'ALTO': 1, 'ALTOS': 1,
       'ALTOS GOLA': 2,
-      'BAJO': 3, 'BAJOS': 3,
-      'BAJOS GOLA': 4,
-      'SEMICOLUMNA': 5, 'SEMICOLUMNAS': 5,
-      'SEMICOLUMNAS GOLA': 6,
-      'COLUMNA': 7, 'COLUMNAS': 7,
-      'COLUMNAS GOLA': 8,
-      'COSTADOS': 9,
-      'ESTANTES': 10,
-      'REGLETAS': 11,
-      'PUERTAS': 12,
-      'VITRINAS': 13,
-      'CORNISAS': 14,
-      'ZOCALOS': 15,
-      'COMPLEMENTOS': 16,
-      'ELECTRO': 17, 'ELECTRODOMESTICOS': 17,
-      'ACCESORIO': 18, 'ACCESORIOS': 18,
+      'ALTOS ALUMINIO': 3,
+      'SOBREMÓDULOS': 4,
+      'BAJO': 5, 'BAJOS': 5,
+      'BAJOS GOLA': 6,
+      'BAJOS ALUMINIO': 7,
+      'SEMICOLUMNA': 8, 'SEMICOLUMNAS': 8,
+      'SEMICOLUMNAS GOLA': 9,
+      'SEMICOLUMNAS ALUMINIO': 10,
+      'COLUMNA': 11, 'COLUMNAS': 11,
+      'COLUMNAS GOLA': 12,
+      'COSTADOS': 13,
+      'ESTANTES': 14,
+      'REGLETAS': 15,
+      'PUERTAS': 16,
+      'VITRINAS': 17,
+      'CORNISAS': 18,
+      'ZOCALOS': 19,
+      'COMPLEMENTOS': 20,
+      'ELECTRO': 21, 'ELECTRODOMESTICOS': 21,
+      'ACCESORIO': 22, 'ACCESORIOS': 22,
       'OTRO': 99, 'OTROS': 99
     };
 
