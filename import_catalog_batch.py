@@ -146,7 +146,7 @@ async def import_product(product: dict, page_num: int) -> bool:
         if not reference or len(reference) < 3:
             return False
         
-        # Build product document
+        # Build product document with all fields
         doc = {
             "id": f"prod-{uuid.uuid4().hex[:8]}",
             "code": reference.upper(),
@@ -158,6 +158,8 @@ async def import_product(product: dict, page_num: int) -> bool:
             "width": product.get("width"),
             "height": product.get("height"),
             "depth": product.get("depth"),
+            "visualType": product.get("visualType", ""),
+            "description": product.get("description", ""),
             "zonePoints": product.get("zonePoints", {}),
             "page_number": page_num,
             "module": "montada"
