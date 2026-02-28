@@ -1942,13 +1942,23 @@ async def get_current_user_info(
 # PRODUCT ENDPOINTS
 # ============================================
 
-@api_router.get("/products", response_model=List[ProductModel])
+@api_router.get("/products")
 async def get_products(module: Optional[str] = None):
     """Obtener todos los productos, opcionalmente filtrados por módulo"""
     query = {}
     if module:
         query["module"] = module
     products = await db.products.find(query, {"_id": 0}).to_list(10000)
+    
+    # Asegurar que todos los productos tengan los campos mínimos requeridos
+    for p in products:
+        if not p.get('id'):
+            p['id'] = f"prod-{p.get('code', 'unknown')[:8]}"
+        if not p.get('points') and p.get('zonePoints'):
+            zone_points = p['zonePoints']
+            if isinstance(zone_points, dict):
+                p['points'] = zone_points.get('Z1', 0) or list(zone_points.values())[0] if zone_points else 0
+    
     return products
 
 @api_router.get("/products/{product_id}", response_model=ProductModel)
