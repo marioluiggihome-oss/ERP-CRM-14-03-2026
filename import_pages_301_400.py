@@ -14,7 +14,7 @@ from pathlib import Path
 from motor.motor_asyncio import AsyncIOMotorClient
 
 # Import emergentintegrations
-from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContent
+from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
 import base64
 
 # Configuration
@@ -118,15 +118,10 @@ async def process_page(page_path: str, page_num: int) -> dict:
     try:
         print(f"\n📄 Procesando página {page_num}: {page_path}")
         
-        # Read and encode image as base64
-        with open(page_path, "rb") as f:
-            image_bytes = f.read()
-        image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-        
-        # Create image file content
-        image_file = FileContent(
-            content_type="image/jpeg",
-            file_content_base64=image_base64
+        # Create image file content using FileContentWithMimeType
+        image_file = FileContentWithMimeType(
+            file_path=page_path,
+            mime_type="image/jpeg"
         )
         
         # Create chat instance with Gemini model
@@ -134,7 +129,7 @@ async def process_page(page_path: str, page_num: int) -> dict:
             api_key=EMERGENT_KEY,
             session_id=f"catalog-import-{page_num}",
             system_message="Eres un asistente que extrae información de productos de catálogos de muebles de cocina. Respondes siempre en JSON válido."
-        )
+        ).with_model("gemini", "gemini-2.5-flash")
         
         # Create message with image
         user_message = UserMessage(
