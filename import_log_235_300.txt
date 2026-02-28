@@ -1,0 +1,81 @@
+
+🚀 Iniciando importación del catálogo
+   📁 Directorio: /app/pdf_pages_235_300
+   📄 Páginas: 1 a 66 (66 páginas)
+   📦 Batch size: 3
+
+📦 Procesando batch 1/22
+
+📄 Procesando página 95: /app/pdf_pages_235_300/page-01.jpg
+   ✅ Extraídos 4 productos - Página de catálogo con columnas de cocina de 220cm de alto y...
+
+📄 Procesando página 96: /app/pdf_pages_235_300/page-02.jpg
+   ✅ Extraídos 4 productos - Columnas de cocina con diferentes configuraciones de puertas...
+
+📄 Procesando página 97: /app/pdf_pages_235_300/page-03.jpg
+   ✅ Extraídos 4 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+   📊 Productos en BD: 4690
+
+📦 Procesando batch 2/22
+
+📄 Procesando página 98: /app/pdf_pages_235_300/page-04.jpg
+   ✅ Extraídos 4 productos - Listado de columnas cacerolero de 220cm de alto y 58cm de fo...
+
+📄 Procesando página 99: /app/pdf_pages_235_300/page-05.jpg
+   ✅ Extraídos 4 productos - Listado de columnas caceroleras con horno y microondas...
+
+📄 Procesando página 100: /app/pdf_pages_235_300/page-06.jpg
+   ✅ Extraídos 4 productos - Productos de la familia de columnas de 2 caceroleros, alto 2...
+   📊 Productos en BD: 4702
+
+📦 Procesando batch 3/22
+
+📄 Procesando página 101: /app/pdf_pages_235_300/page-07.jpg
+   ✅ Extraídos 13 productos - Página de catálogo con columnas de cocina angulares y para e...
+
+📄 Procesando página 102: /app/pdf_pages_235_300/page-08.jpg
+   ✅ Extraídos 18 productos - Productos de la familia de columnas rinconeras lineales de 1...
+
+📄 Procesando página 103: /app/pdf_pages_235_300/page-09.jpg
+   ✅ Extraídos 18 productos - Columnas de 220cm decorativas (rincón lineal 2 puertas, deco...
+   📊 Productos en BD: 4751
+
+📦 Procesando batch 4/22
+
+📄 Procesando página 104: /app/pdf_pages_235_300/page-10.jpg
+   ✅ Extraídos 2 productos - Columnas decorativas terminales de 220cm de alto...
+
+📄 Procesando página 105: /app/pdf_pages_235_300/page-11.jpg
+   ✅ Extraídos 21 productos - Página del catálogo de muebles de cocina LUIGGI HOME con col...
+
+📄 Procesando página 106: /app/pdf_pages_235_300/page-12.jpg
+   ✅ Extraídos 21 productos - Listado de columnas de 240cm de alto y 58cm de fondo, con di...
+   📊 Productos en BD: 4788
+
+📦 Procesando batch 5/22
+
+📄 Procesando página 107: /app/pdf_pages_235_300/page-13.jpg
+   ✅ Extraídos 21 productos - Listado de columnas de cocina, con una o dos puertas de vitr...
+
+📄 Procesando página 108: /app/pdf_pages_235_300/page-14.jpg
+   ✅ Extraídos 21 productos - Listado de columnas escobero de 1 y 2 puertas, alto 240cm y ...
+
+📄 Procesando página 109: /app/pdf_pages_235_300/page-15.jpg
+   ✅ Extraídos 6 productos - Columnas Frigo 1 puerta y variantes (con puertas adicionales...
+   📊 Productos en BD: 4829
+
+📦 Procesando batch 6/22
+
+📄 Procesando página 110: /app/pdf_pages_235_300/page-16.jpg
+   ✅ Extraídos 5 productos - Página de catálogo con columnas de cocina estándar de 240cm ...
+
+📄 Procesando página 111: /app/pdf_pages_235_300/page-17.jpg
+   ✅ Extraídos 6 productos - Página de catálogo de LUIGGI HOME con columnas de cocina de ...
+
+📄 Procesando página 112: /app/pdf_pages_235_300/page-18.jpg
+   ✅ Extraídos 6 productos - Columnas de cocina con 4 o 5 cajones, espacio para horno y 2...
+   📊 Productos en BD: 4846
+
+📦 Procesando batch 7/22
+
+📄 Procesando página 113: /app/pdf_pages_235_300/page-19.jpg
