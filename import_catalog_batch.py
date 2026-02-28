@@ -29,15 +29,29 @@ db = client[DB_NAME]
 EXTRACTION_PROMPT = """Analiza esta página del catálogo de muebles de cocina LUIGGI HOME.
 
 Extrae TODOS los productos de la página en formato JSON. Para cada producto incluye:
-- reference: Código de referencia (ej: "35A1P350", "22H2G1CB1P600")
-- name: Nombre descriptivo completo
-- category: Categoría (ALTOS, BAJOS, COLUMNAS, FRENTES CAJÓN, etc.)
-- series: Serie del producto si se indica
-- programa: Programa o línea (Z1, Z2, etc.) si se indica
-- width: Ancho en mm si se indica
-- height: Alto en mm si se indica  
-- depth: Profundidad en mm si se indica
-- zonePoints: Objeto con puntos por zona (Z1, Z2, Z3...) como números
+- reference: Código de referencia completo (ej: "35A1P350", "22H2G1CB1P600", "FTE_CAJ_450")
+- name: Nombre descriptivo completo del producto
+- category: Categoría principal (ALTOS, BAJOS, COLUMNAS, SEMICOLUMNAS, FRENTES CAJÓN, ZÓCALOS, COSTADOS, ENCIMERAS, TIRADORES, HERRAJES, etc.)
+- series: Serie específica del producto (ej: "ALTOS 70 FONDO 33", "BAJOS GOLA", "COLUMNAS 200")
+- programa: Programa o acabado (ej: "GOLA", "ALUMINIO", "ESTÁNDAR", "Z1: Naturmel / Seda", etc.)
+- width: Ancho en mm
+- height: Alto en mm  
+- depth: Profundidad/Fondo en mm
+- visualType: Tipo visual para el icono (1P, 2P, 1C, 2C, VITRINA, HORNO, MICRO, FREGADERO, CAJONES, etc.)
+- description: Descripción adicional si la hay (materiales, acabados, características)
+- zonePoints: Objeto con TODOS los precios por zona como números (Z1, Z2, Z3, Z4, Z5, Z6, Z7, Z8, Z9, Z10, Z11, Z12)
+
+IMPORTANTE sobre las zonas de precios:
+- Extrae TODAS las columnas de precios que veas en la tabla
+- Los valores deben ser números (sin símbolos de euro)
+- Si una zona no tiene precio, no la incluyas
+
+IMPORTANTE sobre el icono/visualType:
+- Mira el dibujo/icono junto a cada producto
+- 1P = 1 puerta, 2P = 2 puertas
+- 1C = 1 cajón, 2C = 2 cajones, etc.
+- VITRINA = con cristal
+- Describe el tipo de mueble visualmente
 
 Si hay tabla de precios por zonas, extrae los valores numéricos para cada zona.
 Si no encuentras productos válidos, devuelve una lista vacía.
@@ -51,12 +65,14 @@ Formato de respuesta:
       "reference": "35A1P350",
       "name": "Alto 1 puerta 35cm",
       "category": "ALTOS",
-      "series": "ALTOS 35",
-      "programa": "Z1: Naturmel",
+      "series": "ALTOS 70 FONDO 33",
+      "programa": "ESTÁNDAR",
       "width": 350,
       "height": 700,
       "depth": 330,
-      "zonePoints": {"Z1": 85, "Z2": 90, "Z3": 95}
+      "visualType": "1P",
+      "description": "Mueble alto de 1 puerta con bisagras soft-close",
+      "zonePoints": {"Z1": 85, "Z2": 90, "Z3": 95, "Z4": 100, "Z5": 105, "Z6": 110}
     }
   ],
   "pageInfo": "Descripción breve de qué contiene la página"
