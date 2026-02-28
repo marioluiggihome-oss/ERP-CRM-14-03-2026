@@ -1505,7 +1505,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       else if (code.includes('HL')) iconType = 'HL';
                       else if (code.includes('HF')) iconType = 'HF';
                       // HORNO+MICRO primero (HM en código o ambos en nombre)
-                      else if (code.includes('HM') || code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO-MICRO';
+                      else if (code.includes('HM') || code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO+MICRO';
                       // Solo MICRO
                       else if (code.includes('AM') || code.includes('BM') || p.name?.toUpperCase().includes('MICRO')) iconType = 'MICRO';
                       // Solo HORNO
@@ -1678,7 +1678,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       else if (code.includes('HL')) iconType = 'HL';
                       else if (code.includes('HF')) iconType = 'HF';
                       // HORNO+MICRO primero (HM en código o ambos en nombre)
-                      else if (code.includes('HM') || code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO-MICRO';
+                      else if (code.includes('HM') || code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO+MICRO';
                       // Solo MICRO
                       else if (code.includes('AM') || code.includes('BM') || p.name?.toUpperCase().includes('MICRO')) iconType = 'MICRO';
                       // Solo HORNO
