@@ -51,7 +51,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     const currentModuleProducts = allProducts.filter(p => 
       catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule
     );
-    const programas = new Set(currentModuleProducts.map(p => p.programa || 'SIN PROGRAMA'));
+    const programas = new Set(currentModuleProducts.map(p => p.programa || 'ESTÁNDAR'));
     return Array.from(programas).sort();
   }, [allProducts, state.currentModule, catalogs]);
 
