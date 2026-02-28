@@ -184,8 +184,15 @@ async def import_product(product: dict, page_num: int) -> bool:
         return False
 
 
-async def run_import(start_page: int = 1, end_page: int = None, batch_size: int = 5):
-    """Run the catalog import process"""
+async def run_import(start_page: int = 1, end_page: int = None, batch_size: int = 5, page_offset: int = 235):
+    """Run the catalog import process
+    
+    Args:
+        start_page: Start file number (1-based)
+        end_page: End file number
+        batch_size: Number of pages per batch
+        page_offset: Offset to calculate real page number (e.g., 235 for pages 235-300)
+    """
     
     # Get list of page images
     pages_dir = Path(PDF_PAGES_DIR)
@@ -197,7 +204,8 @@ async def run_import(start_page: int = 1, end_page: int = None, batch_size: int 
     total_pages = end_page - start_page + 1
     print(f"\n🚀 Iniciando importación del catálogo")
     print(f"   📁 Directorio: {PDF_PAGES_DIR}")
-    print(f"   📄 Páginas: {start_page} a {end_page} ({total_pages} páginas)")
+    print(f"   📄 Archivos: {start_page} a {end_page} ({total_pages} páginas)")
+    print(f"   📄 Páginas del catálogo: {page_offset + start_page - 1} a {page_offset + end_page - 1}")
     print(f"   📦 Batch size: {batch_size}")
     
     total_products = 0
@@ -217,7 +225,7 @@ async def run_import(start_page: int = 1, end_page: int = None, batch_size: int 
                 continue
                 
             page_file = page_files[idx]
-            page_num = 95 + idx  # Pages in PDF start at 95
+            page_num = page_offset + idx  # Real page number in catalog
             
             result = await process_page(str(page_file), page_num)
             
@@ -229,7 +237,7 @@ async def run_import(start_page: int = 1, end_page: int = None, batch_size: int 
                     if await import_product(product, page_num):
                         total_imported += 1
             else:
-                errors.append({"page": page_num, "error": result.get("error")})
+                errors.append({"page": page_num, "file": page_file.name, "error": result.get("error")})
             
             # Small delay to avoid rate limits
             await asyncio.sleep(1)
@@ -247,8 +255,8 @@ async def run_import(start_page: int = 1, end_page: int = None, batch_size: int 
     
     if errors:
         print(f"\n   Páginas con errores:")
-        for err in errors[:10]:
-            print(f"      - Página {err['page']}: {err['error'][:50]}...")
+        for err in errors[:15]:
+            print(f"      - Página {err['page']} ({err['file']}): {err['error'][:50]}...")
     
     final_count = await db.products.count_documents({})
     print(f"\n   📊 Total productos en BD: {final_count}")
