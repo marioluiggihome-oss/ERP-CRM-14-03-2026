@@ -232,17 +232,36 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const codeUpper = p.code?.toUpperCase() || '';
       const nameUpper = p.name?.toUpperCase() || '';
       const nameLower = p.name?.toLowerCase() || '';
+      const qUpper = q.toUpperCase();
       
-      // Búsqueda estándar por código y nombre
-      let matchesSearch = codeUpper.toLowerCase().includes(q) || nameLower.includes(q);
+      // Búsqueda mejorada: priorizar coincidencias exactas y por inicio
+      let matchesSearch = false;
       
-      // Si no coincide, buscar por términos de herraje
-      if (!matchesSearch && q) {
-        const hardwareText = hardwareSearchTerms[q];
-        if (hardwareText) {
-          // Buscar en código O en nombre
-          if (codeUpper.includes(hardwareText) || nameUpper.includes(hardwareText)) {
-            matchesSearch = true;
+      if (q) {
+        // 1. Coincidencia exacta de código
+        if (codeUpper === qUpper) {
+          matchesSearch = true;
+        }
+        // 2. Código empieza con el término de búsqueda
+        else if (codeUpper.startsWith(qUpper)) {
+          matchesSearch = true;
+        }
+        // 3. Nombre contiene el término
+        else if (nameLower.includes(q)) {
+          matchesSearch = true;
+        }
+        // 4. Código contiene el término (búsqueda parcial)
+        else if (codeUpper.includes(qUpper)) {
+          matchesSearch = true;
+        }
+        
+        // Si no coincide, buscar por términos de herraje
+        if (!matchesSearch) {
+          const hardwareText = hardwareSearchTerms[q];
+          if (hardwareText) {
+            if (codeUpper.includes(hardwareText) || nameUpper.includes(hardwareText)) {
+              matchesSearch = true;
+            }
           }
         }
         
@@ -257,6 +276,9 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
             }
           }
         }
+      } else {
+        // Sin búsqueda, mostrar todo
+        matchesSearch = true;
       }
       
       const isCorrectModule = catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule;
@@ -266,8 +288,16 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       return matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory;
     });
     
-    // Ordenar por categoría y luego por código
+    // Ordenar: primero coincidencias exactas/por inicio, luego por categoría y código
+    const qUpper = q.toUpperCase();
     return filtered.sort((a, b) => {
+      // Priorizar coincidencias que empiezan con el término de búsqueda
+      if (q) {
+        const aStartsWith = a.code?.toUpperCase().startsWith(qUpper) ? 0 : 1;
+        const bStartsWith = b.code?.toUpperCase().startsWith(qUpper) ? 0 : 1;
+        if (aStartsWith !== bStartsWith) return aStartsWith - bStartsWith;
+      }
+      
       const catA = categoryOrder[a.category?.toUpperCase()] || 99;
       const catB = categoryOrder[b.category?.toUpperCase()] || 99;
       if (catA !== catB) return catA - catB;
