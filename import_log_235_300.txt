@@ -194,3 +194,20 @@
 
 📄 Procesando página 142: /app/pdf_pages_235_300/page-48.jpg
    ✅ Extraídos 22 productos - Módulos altos con sistema GOLA de 45cm de fondo estándar...
+   📊 Productos en BD: 5081
+
+📦 Procesando batch 17/22
+
+📄 Procesando página 143: /app/pdf_pages_235_300/page-49.jpg
+   ❌ Error parsing JSON: Expecting property name enclosed in double quotes: line 759 column 55 (char 17866)
+
+📄 Procesando página 144: /app/pdf_pages_235_300/page-50.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 776 column 9 (char 17833)
+
+📄 Procesando página 145: /app/pdf_pages_235_300/page-51.jpg
+   ✅ Extraídos 22 productos - Página del catálogo de muebles de cocina LUIGGI HOME con mue...
+   📊 Productos en BD: 5103
+
+📦 Procesando batch 18/22
+
+📄 Procesando página 146: /app/pdf_pages_235_300/page-52.jpg
