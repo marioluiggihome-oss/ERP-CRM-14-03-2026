@@ -157,9 +157,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     const c = code?.toUpperCase() || '';
     const n = name?.toUpperCase() || '';
     
-    // Por código primero
+    // Por código primero - ORDEN IMPORTANTE: detectar combinados primero
+    // HORNO + MICRO (HM en cualquier posición, CHM, PHM, VHM)
+    if (c.includes('HM') || c.includes('CHM') || c.includes('PHM') || c.includes('VHM')) return 'HORNO+MICRO';
+    // Solo MICRO (AM, BM)
     if (c.includes('AM') || c.includes('BM')) return 'MICRO';
-    if (c.includes('CHM') || c.includes('PHM') || c.includes('VHM')) return 'HORNO+MICRO';
+    // Solo HORNO (CH, BH, PH, VH)
     if (c.includes('CH') || c.includes('BH') || c.includes('PH') || c.includes('VH')) return 'HORNO';
     if (c.includes('BP')) return 'PLACA';
     if (c.includes('BF')) return 'FREG';
@@ -172,8 +175,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     if (c.includes('FRI')) return 'FRIGO';
     
     // Por nombre si no se detectó por código
-    if (n.includes('MICROONDAS') || n.includes('MICRO')) return 'MICRO';
     if (n.includes('HORNO') && n.includes('MICRO')) return 'HORNO+MICRO';
+    if (n.includes('MICROONDAS') || n.includes('MICRO')) return 'MICRO';
     if (n.includes('HORNO')) return 'HORNO';
     if (n.includes('PLACA') || n.includes('VITRO')) return 'PLACA';
     if (n.includes('FREGADERO') || n.includes('FREG')) return 'FREG';
