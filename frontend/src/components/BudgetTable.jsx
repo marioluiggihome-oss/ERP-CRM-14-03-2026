@@ -1504,8 +1504,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       else if (code.includes('HS')) iconType = 'HS';
                       else if (code.includes('HL')) iconType = 'HL';
                       else if (code.includes('HF')) iconType = 'HF';
+                      // HORNO+MICRO primero (HM en código o ambos en nombre)
+                      else if (code.includes('HM') || code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO-MICRO';
+                      // Solo MICRO
                       else if (code.includes('AM') || code.includes('BM') || p.name?.toUpperCase().includes('MICRO')) iconType = 'MICRO';
-                      else if (code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO-MICRO';
+                      // Solo HORNO
                       else if (code.includes('CH') || code.includes('BH') || code.includes('PH') || code.includes('VH') || p.name?.toUpperCase().includes('HORNO')) iconType = 'HORNO';
                       else if (code.includes('BP') || p.name?.toUpperCase().includes('PLACA')) iconType = 'PLACA';
                       else if (code.includes('BF') || p.name?.toUpperCase().includes('FREGADERO')) iconType = 'FREG';
@@ -1674,8 +1677,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       else if (code.includes('HS')) iconType = 'HS';
                       else if (code.includes('HL')) iconType = 'HL';
                       else if (code.includes('HF')) iconType = 'HF';
+                      // HORNO+MICRO primero (HM en código o ambos en nombre)
+                      else if (code.includes('HM') || code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO-MICRO';
+                      // Solo MICRO
                       else if (code.includes('AM') || code.includes('BM') || p.name?.toUpperCase().includes('MICRO')) iconType = 'MICRO';
-                      else if (code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO-MICRO';
+                      // Solo HORNO
                       else if (code.includes('CH') || code.includes('BH') || code.includes('PH') || code.includes('VH') || p.name?.toUpperCase().includes('HORNO')) iconType = 'HORNO';
                       else if (code.includes('BP') || p.name?.toUpperCase().includes('PLACA')) iconType = 'PLACA';
                       else if (code.includes('BF') || p.name?.toUpperCase().includes('FREGADERO')) iconType = 'FREG';
