@@ -143,8 +143,8 @@ async def process_page(page_path: str, page_num: int) -> dict:
             timeout=90
         )
         
-        # Parse response
-        response_text = response.text.strip()
+        # Parse response - response is already a string
+        response_text = response.strip() if isinstance(response, str) else response.text.strip()
         
         # Remove markdown code block if present
         if response_text.startswith('```'):
