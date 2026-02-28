@@ -266,10 +266,17 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Import catalog pages')
-    parser.add_argument('--start', type=int, default=1, help='Start page number')
-    parser.add_argument('--end', type=int, default=None, help='End page number')
+    parser.add_argument('--start', type=int, default=1, help='Start file number (1-based)')
+    parser.add_argument('--end', type=int, default=None, help='End file number')
     parser.add_argument('--batch', type=int, default=5, help='Batch size')
+    parser.add_argument('--offset', type=int, default=235, help='Page number offset (e.g., 235 for pages 235-300)')
+    parser.add_argument('--pages', type=str, default=None, help='Specific pages to process (comma-separated file numbers, e.g., "37,38,40")')
     
     args = parser.parse_args()
     
-    asyncio.run(run_import(args.start, args.end, args.batch))
+    if args.pages:
+        # Process specific pages
+        specific_pages = [int(p.strip()) for p in args.pages.split(',')]
+        asyncio.run(run_specific_pages(specific_pages, args.offset))
+    else:
+        asyncio.run(run_import(args.start, args.end, args.batch, args.offset))
