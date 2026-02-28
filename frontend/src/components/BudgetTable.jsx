@@ -247,17 +247,14 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       let matchesSearch = false;
       
       if (q && q.length > 0) {
-        // Si la búsqueda parece un código de producto (empieza con número o tiene más de 6 caracteres)
-        const looksLikeProductCode = /^\d/.test(q) || q.length >= 6;
-        
-        if (looksLikeProductCode) {
-          // Búsqueda estricta para códigos de producto
-          // Solo mostrar si el código coincide exactamente o contiene el término
-          matchesSearch = codeUpper === qUpper || codeUpper.includes(qUpper);
+        // Si la búsqueda tiene más de 5 caracteres, es probablemente un código de producto
+        // Hacer búsqueda ESTRICTA: solo códigos que coincidan exactamente o empiecen con el término
+        if (q.length >= 5) {
+          matchesSearch = codeUpper === qUpper || codeUpper.startsWith(qUpper);
         } else {
-          // Búsqueda flexible para términos cortos o palabras
-          // 1. Código empieza o contiene el término
-          if (codeUpper.startsWith(qUpper) || codeUpper.includes(qUpper)) {
+          // Búsqueda corta: más flexible
+          // 1. Código empieza con el término
+          if (codeUpper.startsWith(qUpper)) {
             matchesSearch = true;
           }
           // 2. Nombre contiene el término
