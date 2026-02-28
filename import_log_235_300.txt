@@ -181,3 +181,16 @@
    ✅ Extraídos 30 productos - Listado de muebles altos GOLA con una puerta abatible o una ...
 
 📄 Procesando página 139: /app/pdf_pages_235_300/page-45.jpg
+   ✅ Extraídos 22 productos - Página de catálogo de muebles altos Gola de 40cm de fondo y ...
+   📊 Productos en BD: 5060
+
+📦 Procesando batch 16/22
+
+📄 Procesando página 140: /app/pdf_pages_235_300/page-46.jpg
+   ❌ Error parsing JSON: Expecting property name enclosed in double quotes: line 752 column 20 (char 17737)
+
+📄 Procesando página 141: /app/pdf_pages_235_300/page-47.jpg
+   ❌ Error parsing JSON: Expecting property name enclosed in double quotes: line 742 column 19 (char 17882)
+
+📄 Procesando página 142: /app/pdf_pages_235_300/page-48.jpg
+   ✅ Extraídos 22 productos - Módulos altos con sistema GOLA de 45cm de fondo estándar...
