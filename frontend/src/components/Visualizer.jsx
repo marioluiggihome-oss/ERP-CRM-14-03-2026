@@ -162,18 +162,24 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         <div className="bg-white rounded-2xl p-6 shadow-xl border border-indigo-100 flex flex-col overflow-hidden max-h-full">
           <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
             <FileImage size={16} className="text-purple-600" />
-            Plano de Cocina
+            Planos de Cocina
+            {selectedImages.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-black">
+                {selectedImages.length} {selectedImages.length === 1 ? 'pared' : 'paredes'}
+              </span>
+            )}
           </h3>
           
-          {!selectedImage ? (
+          {selectedImages.length === 0 ? (
             <label className="flex-1 min-h-0 border-4 border-dashed border-indigo-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all group">
-              <Upload size={48} className="text-indigo-300 group-hover:text-purple-600 transition-colors mb-4" />
-              <p className="text-sm font-black text-indigo-900 uppercase">Subir plano o render</p>
-              <p className="text-xs text-indigo-400 mt-2">JPG, PNG - Planos de diseño</p>
+              <Layers size={48} className="text-indigo-300 group-hover:text-purple-600 transition-colors mb-4" />
+              <p className="text-sm font-black text-indigo-900 uppercase">Subir planos (1 o más paredes)</p>
+              <p className="text-xs text-indigo-400 mt-2">JPG, PNG - Selecciona varias imágenes a la vez</p>
               <input 
                 ref={fileInputRef}
                 type="file" 
-                accept="image/*" 
+                accept="image/*"
+                multiple
                 onChange={handleImageUpload}
                 className="hidden"
                 disabled={!canUseAI}
@@ -181,20 +187,53 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
             </label>
           ) : (
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Image container with max height */}
-              <div className="flex-1 min-h-0 max-h-[50vh] rounded-xl overflow-hidden border-2 border-indigo-100 relative">
-                <img 
-                  src={selectedImage.dataUrl} 
-                  alt="Plano" 
-                  className="w-full h-full object-contain bg-slate-100"
-                />
-                {analyzing && (
-                  <div className="absolute inset-0 bg-indigo-950/80 flex flex-col items-center justify-center">
-                    <Loader2 className="w-12 h-12 text-purple-400 animate-spin mb-4" />
-                    <p className="text-white font-black uppercase text-sm">Analizando plano con IA...</p>
-                    <p className="text-purple-300 text-xs mt-2">Detectando muebles</p>
-                  </div>
-                )}
+              {/* Images grid */}
+              <div className="flex-1 min-h-0 overflow-auto">
+                <div className={`grid gap-2 ${selectedImages.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  {selectedImages.map((img, idx) => (
+                    <div key={idx} className="relative rounded-xl overflow-hidden border-2 border-indigo-100 group">
+                      <img 
+                        src={img.dataUrl} 
+                        alt={`Pared ${idx + 1}`} 
+                        className="w-full h-auto object-contain bg-slate-100"
+                        style={{ maxHeight: selectedImages.length === 1 ? '40vh' : '25vh' }}
+                      />
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-indigo-900/80 text-white rounded-lg text-xs font-black">
+                        PARED {idx + 1}
+                      </div>
+                      <button
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Add more images */}
+                <label className="mt-2 border-2 border-dashed border-indigo-200 rounded-xl p-3 flex items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all">
+                  <Plus size={16} className="text-indigo-400 mr-2" />
+                  <span className="text-xs font-bold text-indigo-600 uppercase">Añadir más paredes</span>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={!canUseAI}
+                  />
+                </label>
+              </div>
+              
+              {/* Analyzing overlay */}
+              {analyzing && (
+                <div className="absolute inset-0 bg-indigo-950/80 flex flex-col items-center justify-center rounded-xl">
+                  <Loader2 className="w-12 h-12 text-purple-400 animate-spin mb-4" />
+                  <p className="text-white font-black uppercase text-sm">Analizando {selectedImages.length} {selectedImages.length === 1 ? 'plano' : 'planos'}...</p>
+                  <p className="text-purple-300 text-xs mt-2">Detectando muebles con IA</p>
+                </div>
+              )}
               </div>
               
               {/* Button always visible at the bottom */}
