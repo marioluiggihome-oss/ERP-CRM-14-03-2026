@@ -306,7 +306,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               <p className="text-xs text-slate-400 mt-4 text-center">Sube una imagen de un plano de cocina real para obtener mejores resultados</p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0">
               {/* Summary - Fixed at top */}
               {analysisResult.resumen && (
                 <div className="mb-4 shrink-0">
