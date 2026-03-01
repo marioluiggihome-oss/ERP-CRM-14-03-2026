@@ -5050,21 +5050,6 @@ async def export_usuarios_excel(credentials: HTTPAuthorizationCredentials = Depe
 # MAINTENANCE MODE API
 # ============================================
 
-class MaintenanceActivateRequest(BaseModel):
-    """Request to activate maintenance mode"""
-    message: str = "Sistema en actualización. Volvemos pronto."
-    estimatedMinutes: int = 30
-    adminUserId: str
-    createBackup: bool = True
-
-class MaintenanceStatusResponse(BaseModel):
-    """Response with maintenance status"""
-    active: bool
-    message: str
-    activatedAt: Optional[str] = None
-    activatedBy: Optional[str] = None
-    estimatedEndTime: Optional[str] = None
-    preUpdateBackupId: Optional[str] = None
 
 @api_router.get("/maintenance/status")
 async def get_maintenance_status():
