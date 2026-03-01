@@ -4813,8 +4813,13 @@ class DigitalizadorHistoryItem(BaseModel):
 # EXPEDIENTE NUMBER GENERATOR (Thread-safe)
 # ============================================
 
+class ExpedienteRequest(BaseModel):
+    """Request to generate expediente number"""
+    userId: Optional[str] = None
+    clientCode: Optional[str] = None
+
 @api_router.post("/digitalizador/generate-exp-number")
-async def generate_expediente_number(userId: str = None, clientCode: str = None):
+async def generate_expediente_number(request: ExpedienteRequest):
     """
     Generate a unique expediente number using atomic MongoDB operation.
     Format: {CLIENTE}-{YYYY}-{NNN} (e.g., CLI001-2026-001)
@@ -4824,6 +4829,8 @@ async def generate_expediente_number(userId: str = None, clientCode: str = None)
     """
     try:
         current_year = datetime.now().year
+        userId = request.userId
+        clientCode = request.clientCode
         
         # Use client code or default to EXP for global numbering
         prefix = clientCode.upper() if clientCode else "EXP"
