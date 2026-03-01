@@ -4862,18 +4862,22 @@ async def generate_expediente_number(userId: str = None, clientCode: str = None)
 
 
 @api_router.get("/digitalizador/current-exp-sequence")
-async def get_current_expediente_sequence():
-    """Get the current expediente sequence number for the current year"""
+async def get_current_expediente_sequence(clientCode: str = None):
+    """Get the current expediente sequence number for a client (or global if no client)"""
     try:
         current_year = datetime.now().year
-        counter = await db.counters.find_one({"_id": f"expediente_{current_year}"})
+        prefix = clientCode.upper() if clientCode else "EXP"
+        counter_id = f"expediente_{prefix}_{current_year}"
+        
+        counter = await db.counters.find_one({"_id": counter_id})
         
         current_seq = counter["seq"] if counter else 0
         
         return {
+            "clientCode": prefix,
             "year": current_year,
             "currentSequence": current_seq,
-            "nextExpNumber": f"EXP-{current_year}-{(current_seq + 1):03d}"
+            "nextExpNumber": f"{prefix}-{current_year}-{(current_seq + 1):03d}"
         }
     except Exception as e:
         logger.error(f"Get current expediente sequence error: {e}")
