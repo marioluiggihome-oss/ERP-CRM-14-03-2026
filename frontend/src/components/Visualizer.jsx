@@ -308,40 +308,59 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 {analysisResult.muebles_detectados?.map((furniture, idx) => (
                   <div 
                     key={idx}
-                    className="border border-slate-200 rounded-xl p-3 hover:border-purple-400 hover:bg-purple-50/50 transition-all group"
+                    className={`border rounded-xl p-3 hover:border-purple-400 hover:bg-purple-50/50 transition-all group ${
+                      furniture.producto_encontrado ? 'border-emerald-200 bg-emerald-50/30' : 'border-orange-200 bg-orange-50/30'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <div 
-                        className="w-10 h-10 flex items-center justify-center text-indigo-600 bg-indigo-50 rounded-lg"
-                        dangerouslySetInnerHTML={{ __html: getProductIcon(furniture.codigo_sugerido, furniture.subtipo) }}
+                        className={`w-10 h-10 flex items-center justify-center rounded-lg ${
+                          furniture.producto_encontrado ? 'text-emerald-600 bg-emerald-100' : 'text-orange-600 bg-orange-100'
+                        }`}
+                        dangerouslySetInnerHTML={{ __html: getProductIcon(furniture.codigo_catalogo || furniture.codigo_sugerido, furniture.subtipo) }}
                       />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-indigo-900 text-sm">{furniture.codigo_sugerido}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-black text-indigo-900 text-sm">{furniture.codigo_catalogo || furniture.codigo_sugerido}</span>
                           {furniture.pared && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600">
                               P{furniture.pared}
                             </span>
                           )}
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                            furniture.confianza === 'ALTA' ? 'bg-emerald-100 text-emerald-700' :
-                            furniture.confianza === 'MEDIA' ? 'bg-amber-100 text-amber-700' :
-                            'bg-slate-100 text-slate-600'
-                          }`}>
-                            {furniture.confianza}
-                          </span>
+                          {furniture.producto_encontrado ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-700">
+                              ✓ CATÁLOGO
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-orange-100 text-orange-700">
+                              ⚠ NO ENCONTRADO
+                            </span>
+                          )}
                         </div>
-                        <p className="text-xs text-slate-500">
-                          {furniture.tipo} {furniture.subtipo?.replace(/_/g, ' ')} • {furniture.ancho_estimado}×{furniture.alto_estimado}×{furniture.fondo_estimado}
+                        <p className="text-xs text-slate-600 font-medium truncate">
+                          {furniture.nombre_catalogo || `${furniture.tipo} ${furniture.subtipo?.replace(/_/g, ' ')}`}
                         </p>
-                        {furniture.posicion && (
-                          <p className="text-[10px] text-slate-400 italic">{furniture.posicion}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {furniture.ancho_real || furniture.ancho_estimado}×{furniture.alto_real ? furniture.alto_real/10 : furniture.alto_estimado}×{furniture.fondo_real ? furniture.fondo_real/10 : furniture.fondo_estimado} mm
+                          {furniture.categoria && ` • ${furniture.categoria}`}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {furniture.precio_pvp > 0 ? (
+                          <p className="font-black text-emerald-600 text-lg">{furniture.precio_pvp}€</p>
+                        ) : (
+                          <p className="font-bold text-orange-500 text-sm">Sin precio</p>
                         )}
                       </div>
                       <button
                         onClick={() => addFurnitureToBudget(furniture)}
-                        className="p-2 bg-emerald-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Añadir al presupuesto"
+                        disabled={!furniture.producto_encontrado}
+                        className={`p-2 rounded-lg transition-opacity ${
+                          furniture.producto_encontrado 
+                            ? 'bg-emerald-500 text-white opacity-0 group-hover:opacity-100' 
+                            : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-50'
+                        }`}
+                        title={furniture.producto_encontrado ? "Añadir al presupuesto" : "Producto no disponible en catálogo"}
                       >
                         <Plus size={16} />
                       </button>
@@ -349,6 +368,30 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                   </div>
                 ))}
               </div>
+
+              {/* Price Summary */}
+              {analysisResult.resumen_precios && (
+                <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-emerald-800">
+                        {analysisResult.resumen_precios.mensaje}
+                      </p>
+                      {analysisResult.resumen_precios.productos_no_encontrados > 0 && (
+                        <p className="text-xs text-orange-600 mt-1">
+                          ⚠ {analysisResult.resumen_precios.productos_no_encontrados} producto(s) requieren revisión manual
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-emerald-600 uppercase font-bold">Total Estimado</p>
+                      <p className="text-2xl font-black text-emerald-700">
+                        {analysisResult.resumen_precios.total_pvp?.toLocaleString('es-ES')}€
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Observations */}
               {analysisResult.observaciones && (
