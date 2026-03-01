@@ -413,10 +413,10 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               </div>
 
               {/* Fixed Bottom Section - Price Summary, Observations, Add Button */}
-              <div className="shrink-0 mt-4 space-y-3">
+              <div className="shrink-0 space-y-2 border-t border-slate-200 pt-3">
                 {/* Price Summary */}
                 {analysisResult.resumen_precios && (
-                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+                  <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-bold text-emerald-800">
@@ -429,8 +429,8 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-emerald-600 uppercase font-bold">Total Estimado</p>
-                        <p className="text-2xl font-black text-emerald-700">
+                        <p className="text-[10px] text-emerald-600 uppercase font-bold">Total Estimado</p>
+                        <p className="text-xl font-black text-emerald-700">
                           {analysisResult.resumen_precios.total_pvp?.toLocaleString('es-ES')}€
                         </p>
                       </div>
@@ -440,7 +440,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
 
                 {/* Observations */}
                 {analysisResult.observaciones && (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-xs font-bold text-amber-800">💡 {analysisResult.observaciones}</p>
                   </div>
                 )}
@@ -457,7 +457,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                   </button>
                 )}
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
