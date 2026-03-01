@@ -139,13 +139,13 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
             <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Detecta muebles automáticamente con Gemini Vision</p>
           </div>
         </div>
-        {selectedImage && (
+        {selectedImages.length > 0 && (
           <button
             onClick={clearAll}
             className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm hover:bg-slate-300"
           >
             <RefreshCw size={16} />
-            Nueva imagen
+            Limpiar todo
           </button>
         )}
       </div>
