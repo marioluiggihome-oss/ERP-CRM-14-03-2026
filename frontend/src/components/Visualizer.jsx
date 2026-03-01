@@ -415,23 +415,23 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               {/* Fixed Bottom Section - Price Summary, Observations, Add Button */}
               <div className="shrink-0 space-y-2 border-t border-slate-200 pt-3">
                 {/* Price Summary */}
-                {analysisResult.resumen_precios && (
+                {(analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios) && (
                   <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-bold text-emerald-800">
-                          {analysisResult.resumen_precios.mensaje}
+                          {(analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios)?.mensaje}
                         </p>
-                        {analysisResult.resumen_precios.productos_no_encontrados > 0 && (
+                        {((analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios)?.productos_no_encontrados > 0) && (
                           <p className="text-xs text-orange-600 mt-1">
-                            ⚠ {analysisResult.resumen_precios.productos_no_encontrados} producto(s) requieren revisión manual
+                            ⚠ {(analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios)?.productos_no_encontrados} producto(s) requieren revisión manual
                           </p>
                         )}
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-emerald-600 uppercase font-bold">Total Estimado</p>
                         <p className="text-xl font-black text-emerald-700">
-                          {analysisResult.resumen_precios.total_pvp?.toLocaleString('es-ES')}€
+                          {(analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios)?.total_pvp?.toLocaleString('es-ES')}€
                         </p>
                       </div>
                     </div>
@@ -446,14 +446,14 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 )}
 
                 {/* Add All Button */}
-                {analysisResult.muebles_detectados?.length > 0 && analysisResult.resumen_precios?.productos_encontrados > 0 && (
+                {analysisResult.muebles_detectados?.length > 0 && ((analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios)?.productos_encontrados > 0) && (
                   <button
                     onClick={addAllFurnitureToBudget}
                     data-testid="add-all-to-budget-btn"
                     className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg"
                   >
                     <Plus size={18} />
-                    + AÑADIR {analysisResult.resumen_precios.productos_encontrados} PRODUCTOS AL PRESUPUESTO ({analysisResult.resumen_precios.total_pvp?.toLocaleString('es-ES')}€)
+                    + AÑADIR {(analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios)?.productos_encontrados} PRODUCTOS AL PRESUPUESTO ({(analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios)?.total_pvp?.toLocaleString('es-ES')}€)
                   </button>
                 )}
               </div>
