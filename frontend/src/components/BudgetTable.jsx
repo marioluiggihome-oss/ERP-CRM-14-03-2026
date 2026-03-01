@@ -875,10 +875,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       onChange={(name) => setState(p => ({...p, customerName: name}))}
                       currentUser={state.currentUser}
                       onClientSelected={(client) => {
-                        // Guardar también el ID del cliente seleccionado
+                        // Guardar también el ID y código del cliente seleccionado
                         setState(p => ({
                           ...p, 
                           customerName: client.nombre,
+                          clientCode: client.codigo || client.id?.substring(0, 8).toUpperCase() || '',
                           selectedClientId: client.id,
                           customerPhone: client.telefono || '',
                           customerEmail: client.email || ''
@@ -886,6 +887,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       }}
                       placeholder="Buscar o crear cliente..."
                     />
+                    {/* Campo de código de cliente */}
+                    <div className="relative mt-1">
+                      <Hash size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-purple-400" />
+                      <input 
+                        type="text" 
+                        value={state.clientCode || ''} 
+                        onChange={e => setState(p => ({...p, clientCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')}))} 
+                        placeholder="Cód. Cliente (auto)" 
+                        className="w-full bg-purple-50/50 border border-purple-200 rounded-lg py-2 pl-7 pr-2 text-[9px] font-black outline-none focus:border-purple-500 uppercase text-purple-800"
+                        title="Código de cliente para agrupar presupuestos"
+                        maxLength={10}
+                      />
+                    </div>
                  </div>
               </section>
               
