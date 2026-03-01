@@ -901,11 +901,6 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                      </option>
                    ))}
                  </select>
-                 <div className="flex justify-center">
-                   <span className="px-4 py-1 bg-orange-500 text-white rounded-full text-[10px] font-black uppercase tracking-wider shadow">
-                     TARIFA {DOOR_FINISHES.find(f => f.name === state.globalFinish)?.group || 'Z1'}
-                   </span>
-                 </div>
                  <button 
                    onClick={() => window.open('/relacion-de-modelos.pdf', '_blank')}
                    className="w-full mt-2 bg-purple-500 hover:bg-purple-600 text-white py-1.5 rounded-lg font-black uppercase text-[8px] tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm"
