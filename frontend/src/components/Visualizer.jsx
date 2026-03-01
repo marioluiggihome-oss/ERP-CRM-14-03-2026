@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw } from 'lucide-react';
+import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw, Layers } from 'lucide-react';
 import { getProductIcon } from './FurnitureIcons';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -8,7 +8,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImages, setSelectedImages] = useState([]);  // Array de imágenes
   const fileInputRef = useRef(null);
   
   const canUseAI = state.currentUser?.canUseAIAnalysis || state.currentUser?.isAdmin || state.currentUser?.isGerente;
@@ -17,21 +17,37 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    const file = files[0];
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setSelectedImage({
-        dataUrl: e.target.result,
-        file: file
-      });
-      setAnalysisResult(null);
-      setError(null);
-    };
-    reader.readAsDataURL(file);
+    // Procesar todas las imágenes seleccionadas
+    const newImages = [];
+    let loadedCount = 0;
+    
+    files.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        newImages[index] = {
+          dataUrl: e.target.result,
+          file: file,
+          name: file.name
+        };
+        loadedCount++;
+        
+        // Cuando todas estén cargadas, actualizar el estado
+        if (loadedCount === files.length) {
+          setSelectedImages(prev => [...prev, ...newImages.filter(Boolean)]);
+          setAnalysisResult(null);
+          setError(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const analyzeKitchenPlan = async () => {
-    if (!selectedImage?.file) return;
+    if (selectedImages.length === 0) return;
     
     setAnalyzing(true);
     setError(null);
@@ -39,20 +55,42 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
 
     try {
       const formData = new FormData();
-      formData.append('file', selectedImage.file);
+      
+      // Si es una sola imagen, usar el endpoint simple
+      if (selectedImages.length === 1) {
+        formData.append('file', selectedImages[0].file);
+        
+        const response = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan`, {
+          method: 'POST',
+          body: formData
+        });
 
-      const response = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan`, {
-        method: 'POST',
-        body: formData
-      });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Error ${response.status}: Error al analizar el plano`);
+        }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Error ${response.status}: Error al analizar el plano`);
+        const data = await response.json();
+        setAnalysisResult(data.analysis);
+      } else {
+        // Múltiples imágenes - usar endpoint multi
+        selectedImages.forEach((img, idx) => {
+          formData.append('files', img.file);
+        });
+        
+        const response = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan-multi`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Error ${response.status}: Error al analizar los planos`);
+        }
+
+        const data = await response.json();
+        setAnalysisResult(data.analysis);
       }
-
-      const data = await response.json();
-      setAnalysisResult(data.analysis);
     } catch (err) {
       setError(err.message);
     } finally {
