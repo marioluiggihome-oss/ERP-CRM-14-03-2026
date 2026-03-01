@@ -2968,15 +2968,27 @@ async def check_budget_number(budget_number: str):
     return {"exists": False}
 
 @api_router.post("/projects", response_model=ProjectModel)
-async def create_project(project: ProjectCreate, user_id: str):
-    """Crear un nuevo proyecto"""
+async def create_project(project: ProjectCreate, user_id: str, client_code: Optional[str] = None):
+    """
+    Crear un nuevo proyecto/presupuesto.
+    El client_code se usa para agrupar presupuestos por cliente.
+    """
     project_data = project.model_dump()
     project_data["id"] = f"proj-{uuid.uuid4().hex[:8]}"
     project_data["userId"] = user_id
+    
+    # Usar clientCode del proyecto o del parámetro
+    if client_code and not project_data.get("clientCode"):
+        project_data["clientCode"] = client_code.upper()
+    elif project_data.get("clientCode"):
+        project_data["clientCode"] = project_data["clientCode"].upper()
+    
     project_data["createdAt"] = datetime.now(timezone.utc).isoformat()
     project_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
     
     await db.projects.insert_one(project_data)
+    
+    logger.info(f"Proyecto creado: {project_data['id']} para cliente: {project_data.get('clientCode', 'SIN CLIENTE')}")
     return project_data
 
 @api_router.put("/projects/{project_id}", response_model=ProjectModel)
