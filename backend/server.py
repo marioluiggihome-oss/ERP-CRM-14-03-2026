@@ -58,7 +58,18 @@ from models.schemas import (
     OpportunityModel, OpportunityCreate, OpportunityUpdate,
     CalendarEventModel, CalendarEventCreate, CalendarEventUpdate,
     ActivityModel, ActivityCreate, ActivityUpdate,
-    DistributorRequest
+    DistributorRequest,
+    # Despiece
+    DespieceItemInput, DespieceRequest, ComponentPiece, FurnitureDespiece, DespieceResponse,
+    # Digitalizador
+    DigitalizadorMatchedProduct, DigitalizadorLine, DigitalizadorRequest, DigitalizadorResponse,
+    DigitalizadorExportRequest, DigitalizadorSaveRequest, DigitalizadorHistoryItem,
+    ExpedienteRequest, DigitalizadorToProjectRequest,
+    # Armarios
+    ArmarioModuleConfig, ArmarioProject, ArmarioProjectCreate, ArmarioProjectUpdate,
+    IAConfigRequest, IARenderRequest, IALayoutRequest,
+    # Maintenance
+    MaintenanceActivateRequest, MaintenanceStatusResponse
 )
 
 
