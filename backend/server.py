@@ -5500,25 +5500,6 @@ async def create_opportunity_from_armario(project_id: str):
 # ARMARIOS - IA CONFIGURACIÓN Y RENDER
 # ============================================
 
-class IAConfigRequest(BaseModel):
-    """Solicitud para configurar armario con IA"""
-    instruction: str  # Ej: "Quiero un armario para una pareja con mucha ropa de colgar"
-    current_config: Dict = {}
-
-class IARenderRequest(BaseModel):
-    """Solicitud para generar render del armario"""
-    width: int
-    height: int
-    depth: int
-    modules: int
-    numDoors: int = 3  # Número de puertas (puede ser diferente del número de módulos)
-    doorType: str
-    exteriorColorName: str
-    exteriorColorHex: str
-    interiorColorName: str
-    handleColorName: str
-    moduleConfigs: List[Dict] = []
-    roomStyle: str = "moderno"  # moderno, clásico, nórdico, minimalista
 
 @api_router.post("/armarios/ia/configure")
 async def ia_configure_armario(request: IAConfigRequest):
