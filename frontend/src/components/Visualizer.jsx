@@ -401,13 +401,13 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               )}
 
               {/* Add All Button */}
-              {analysisResult.muebles_detectados?.length > 0 && (
+              {analysisResult.muebles_detectados?.length > 0 && analysisResult.resumen_precios?.productos_encontrados > 0 && (
                 <button
                   onClick={addAllFurnitureToBudget}
                   className="mt-4 w-full py-3 bg-emerald-600 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
                 >
                   <Plus size={18} />
-                  Añadir todos al presupuesto ({analysisResult.muebles_detectados.length})
+                  Añadir {analysisResult.resumen_precios.productos_encontrados} productos al presupuesto ({analysisResult.resumen_precios.total_pvp?.toLocaleString('es-ES')}€)
                 </button>
               )}
             </div>
