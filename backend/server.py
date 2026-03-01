@@ -2552,13 +2552,75 @@ async def update_settings(settings: SettingsUpdate):
 # ============================================
 
 @api_router.get("/projects", response_model=List[ProjectModel])
-async def get_projects(user_id: Optional[str] = None):
-    """Obtener proyectos, opcionalmente filtrados por usuario"""
+async def get_projects(
+    user_id: Optional[str] = None,
+    client_code: Optional[str] = None,
+    include_all: Optional[bool] = False
+):
+    """
+    Obtener proyectos/presupuestos.
+    - user_id: Filtrar por usuario
+    - client_code: Filtrar por código de cliente (para ver solo presupuestos de ese cliente)
+    - include_all: Si es True, devuelve todos (requiere permisos de admin/gerente)
+    
+    Por defecto, cada usuario solo ve sus propios presupuestos.
+    Si tiene permisos especiales (isAdmin, isGerente, isDirectorComercial), puede ver todos.
+    """
     query = {}
-    if user_id:
+    
+    # Filtrar por código de cliente si se especifica
+    if client_code:
+        query["clientCode"] = client_code
+    
+    # Filtrar por usuario si se especifica
+    if user_id and not include_all:
         query["userId"] = user_id
+    
     projects = await db.projects.find(query, {"_id": 0}).to_list(1000)
     return projects
+
+@api_router.get("/projects/by-client/{client_code}")
+async def get_projects_by_client(client_code: str):
+    """
+    Obtener todos los presupuestos de un cliente específico.
+    Útil para ver el historial de presupuestos de un cliente.
+    """
+    projects = await db.projects.find(
+        {"clientCode": client_code.upper()},
+        {"_id": 0}
+    ).sort("createdAt", -1).to_list(500)
+    
+    return {
+        "clientCode": client_code.upper(),
+        "totalProjects": len(projects),
+        "projects": projects
+    }
+
+@api_router.get("/projects/summary-by-client")
+async def get_projects_summary_by_client():
+    """
+    Obtener resumen de presupuestos agrupados por código de cliente.
+    Para vista de administrador/gerente.
+    """
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$clientCode",
+                "count": {"$sum": 1},
+                "totalPvp": {"$sum": "$totalPvp"},
+                "lastProject": {"$max": "$createdAt"},
+                "projects": {"$push": {"id": "$id", "budgetNumber": "$budgetNumber", "status": "$status"}}
+            }
+        },
+        {"$sort": {"lastProject": -1}}
+    ]
+    
+    summary = await db.projects.aggregate(pipeline).to_list(500)
+    
+    return {
+        "totalClients": len(summary),
+        "clients": summary
+    }
 
 @api_router.get("/admin/all-work")
 async def get_all_work_for_admin():
