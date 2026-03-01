@@ -150,7 +150,7 @@ const App = () => {
 
   // Save budget items to localStorage (these stay local for now)
   useEffect(() => {
-    const { budgetItemsMontada, budgetItemsDespiece, projects, customerName, customerAddress, budgetNumber, internalReference, budgetCount } = state;
+    const { budgetItemsMontada, budgetItemsDespiece, projects, customerName, customerAddress, clientCode, budgetNumber, internalReference, budgetCount } = state;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         budgetItemsMontada,
@@ -158,6 +158,7 @@ const App = () => {
         projects,
         customerName,
         customerAddress,
+        clientCode,
         budgetNumber,
         internalReference,
         budgetCount
@@ -165,7 +166,7 @@ const App = () => {
     } catch (err) {
       console.error("Storage error:", err);
     }
-  }, [state.budgetItemsMontada, state.budgetItemsDespiece, state.projects, state.customerName, state.customerAddress, state.budgetNumber, state.internalReference, state.budgetCount]);
+  }, [state.budgetItemsMontada, state.budgetItemsDespiece, state.projects, state.customerName, state.customerAddress, state.clientCode, state.budgetNumber, state.internalReference, state.budgetCount]);
 
   const activeBrandColor = useMemo(() => {
     return state.brandColor || DEFAULT_BRAND_COLOR;
