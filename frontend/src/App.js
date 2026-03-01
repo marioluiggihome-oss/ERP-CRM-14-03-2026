@@ -55,6 +55,7 @@ const App = () => {
       activeCatalogIds: ['cat-m-base', 'cat-d-base'],
       users: [],
       customerName: '', customerAddress: '', 
+      clientCode: '',  // Código de cliente para agrupar presupuestos
       budgetNumber: `EXP-2026-001`, 
       internalReference: '', logo: null,
       showDistributorPrice: false, showSettings: false,
@@ -74,6 +75,7 @@ const App = () => {
           projects: parsed.projects || [],
           customerName: parsed.customerName || '',
           customerAddress: parsed.customerAddress || '',
+          clientCode: parsed.clientCode || '',
           budgetNumber: parsed.budgetNumber || 'EXP-2026-001',
           internalReference: parsed.internalReference || '',
           budgetCount: parsed.budgetCount || 0
