@@ -45,6 +45,22 @@ from routes import (
     crm_router
 )
 
+# Modelos compartidos
+from models.schemas import (
+    StatusCheck, StatusCheckCreate,
+    UserModelInternal, UserResponse, UserCreate, UserUpdate,
+    ZonePoints, ProductModel, ProductCreate,
+    MaterialModel, MaterialCreate,
+    BudgetItemModel, ProjectModel, ProjectCreate, ProjectUpdate,
+    SettingsModel, SettingsUpdate,
+    ClientModel, ClientCreate, ClientUpdate,
+    ContactModel, ContactCreate, ContactUpdate,
+    OpportunityModel, OpportunityCreate, OpportunityUpdate,
+    CalendarEventModel, CalendarEventCreate, CalendarEventUpdate,
+    ActivityModel, ActivityCreate, ActivityUpdate,
+    DistributorRequest
+)
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
