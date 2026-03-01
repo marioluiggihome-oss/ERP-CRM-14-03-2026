@@ -87,10 +87,10 @@ const Digitalizador = ({ state }) => {
     }
   };
 
-  // Inicializar número de expediente cuando no hay uno
+  // Inicializar número de expediente cuando no hay uno (solo global)
   useEffect(() => {
-    if (!expNumber) {
-      generateExpNumber();
+    if (!expNumber && !customerCode) {
+      generateExpNumber(false);  // Generar número global inicial
     }
   }, []);
 
