@@ -932,14 +932,23 @@ const Digitalizador = ({ state }) => {
                     
                     {/* Número de expediente único */}
                     <div className="flex items-center justify-end gap-2 mt-2">
+                      <input
+                        type="text"
+                        value={customerCode}
+                        onChange={(e) => setCustomerCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                        placeholder="CÓD.CLI"
+                        className="w-20 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-lg font-black text-[10px] text-purple-800 uppercase tracking-wider outline-none focus:border-purple-500 text-center no-print"
+                        title="Código de cliente para numeración independiente"
+                        maxLength={10}
+                      />
                       <span className="px-3 py-1.5 bg-indigo-100 text-indigo-800 rounded-lg font-black text-sm tracking-wider">
                         {isGeneratingExp ? '...' : expNumber || 'SIN EXP'}
                       </span>
                       <button
-                        onClick={generateExpNumber}
+                        onClick={() => generateExpNumber(true)}
                         disabled={isGeneratingExp}
                         className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors no-print"
-                        title="Generar nuevo número de expediente"
+                        title={customerCode ? `Generar nuevo expediente para ${customerCode}` : "Generar nuevo número de expediente global"}
                       >
                         <RefreshCw size={14} className={isGeneratingExp ? 'animate-spin' : ''} />
                       </button>
