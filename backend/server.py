@@ -4814,19 +4814,25 @@ class DigitalizadorHistoryItem(BaseModel):
 # ============================================
 
 @api_router.post("/digitalizador/generate-exp-number")
-async def generate_expediente_number(userId: str = None):
+async def generate_expediente_number(userId: str = None, clientCode: str = None):
     """
     Generate a unique expediente number using atomic MongoDB operation.
-    Format: EXP-YYYY-NNN (e.g., EXP-2026-001)
+    Format: {CLIENTE}-{YYYY}-{NNN} (e.g., CLI001-2026-001)
+    Each client has their own independent sequence.
+    If no clientCode provided, uses global EXP prefix.
     Thread-safe for concurrent users.
     """
     try:
         current_year = datetime.now().year
         
+        # Use client code or default to EXP for global numbering
+        prefix = clientCode.upper() if clientCode else "EXP"
+        counter_id = f"expediente_{prefix}_{current_year}"
+        
         # Atomic find_and_modify to get next sequence number
         # Uses upsert to create the counter if it doesn't exist
         result = await db.counters.find_one_and_update(
-            {"_id": f"expediente_{current_year}"},
+            {"_id": counter_id},
             {"$inc": {"seq": 1}},
             upsert=True,
             return_document=True  # Return the document AFTER the update
@@ -4834,18 +4840,19 @@ async def generate_expediente_number(userId: str = None):
         
         seq_number = result["seq"]
         
-        # Format: EXP-YYYY-NNN (with padding for 3 digits, auto-expands if > 999)
+        # Format: {PREFIX}-YYYY-NNN (with padding for 3 digits, auto-expands if > 999)
         if seq_number < 1000:
-            exp_number = f"EXP-{current_year}-{seq_number:03d}"
+            exp_number = f"{prefix}-{current_year}-{seq_number:03d}"
         else:
-            exp_number = f"EXP-{current_year}-{seq_number}"
+            exp_number = f"{prefix}-{current_year}-{seq_number}"
         
         # Log for audit
-        logger.info(f"Generated expediente number: {exp_number} for user: {userId}")
+        logger.info(f"Generated expediente number: {exp_number} for user: {userId}, client: {clientCode}")
         
         return {
             "success": True,
             "expNumber": exp_number,
+            "clientCode": prefix,
             "year": current_year,
             "sequence": seq_number
         }
