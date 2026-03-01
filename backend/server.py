@@ -5596,14 +5596,6 @@ Genera la configuración óptima en formato JSON."""
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class IALayoutRequest(BaseModel):
-    """Request to generate wardrobe layout from text instructions"""
-    instruction: str
-    modules: int = 3
-    width: int = 2400
-    height: int = 2400
-    depth: int = 600
-
 
 @api_router.post("/armarios/ia/generate-layout")
 async def ia_generate_layout(request: IALayoutRequest):
