@@ -408,7 +408,8 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Fixed Bottom Section - Price Summary, Observations, Add Button */}
