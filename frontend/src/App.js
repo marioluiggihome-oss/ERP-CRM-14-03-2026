@@ -210,6 +210,7 @@ const App = () => {
       budgetItemsDespiece: [],
       customerName: '',
       customerAddress: '',
+      clientCode: '',  // Limpiar código de cliente
       internalReference: '',
       doorColorLow: '',
       doorColorHigh: '',
