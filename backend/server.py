@@ -35,6 +35,16 @@ from services.jwt_service import (
 from services.rate_limiter import limiter, get_limit, rate_limit_exceeded_handler
 from services.audit_service import audit, AuditAction
 
+# Routers modulares
+from routes import (
+    ia_lab_router,
+    auth_router,
+    products_router,
+    clients_router,
+    projects_router,
+    crm_router
+)
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -60,6 +70,11 @@ app.add_exception_handler(429, rate_limit_exceeded_handler)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+
+# Registrar routers modulares
+api_router.include_router(ia_lab_router)
+# Nota: auth, products, clients, projects, crm están duplicados en server.py
+# Se integrarán gradualmente para evitar conflictos
 
 # ============================================
 # MAINTENANCE MODE STATE
