@@ -118,7 +118,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   };
 
   const clearAll = () => {
-    setSelectedImage(null);
+    setSelectedImages([]);
     setAnalysisResult(null);
     setError(null);
     if (fileInputRef.current) {
