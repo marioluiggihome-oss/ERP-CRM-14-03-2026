@@ -51,13 +51,18 @@ const Digitalizador = ({ state }) => {
   const userDiscount = state?.currentUser?.discountMontada || state?.currentUser?.commercialDiscount || 0;
 
   // Generar número de expediente único desde el servidor (thread-safe)
-  const generateExpNumber = async () => {
+  // Si hay código de cliente, usa ese prefijo para numeración independiente
+  const generateExpNumber = async (useClientCode = true) => {
     setIsGeneratingExp(true);
     try {
+      const clientCodeToUse = useClientCode && customerCode ? customerCode : null;
       const response = await fetch(`${API_URL}/api/digitalizador/generate-exp-number`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: state?.currentUser?.id || 'anonymous' })
+        body: JSON.stringify({ 
+          userId: state?.currentUser?.id || 'anonymous',
+          clientCode: clientCodeToUse
+        })
       });
       
       if (response.ok) {
@@ -66,13 +71,15 @@ const Digitalizador = ({ state }) => {
         return data.expNumber;
       } else {
         // Fallback a generación local si falla el servidor
-        const fallback = `EXP-LOCAL-${Date.now()}`;
+        const prefix = customerCode || 'EXP';
+        const fallback = `${prefix}-LOCAL-${Date.now()}`;
         setExpNumber(fallback);
         return fallback;
       }
     } catch (err) {
       console.error('Error generating exp number:', err);
-      const fallback = `EXP-LOCAL-${Date.now()}`;
+      const prefix = customerCode || 'EXP';
+      const fallback = `${prefix}-LOCAL-${Date.now()}`;
       setExpNumber(fallback);
       return fallback;
     } finally {
