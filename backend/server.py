@@ -902,6 +902,128 @@ Responde SOLO con JSON válido:
         logger.error(f"Kitchen plan analysis error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.post("/ia-lab/analyze-kitchen-plan-multi")
+async def analyze_kitchen_plan_multi(files: List[UploadFile] = File(...)):
+    """
+    Analiza MÚLTIPLES planos de cocina (varias paredes) usando Gemini Vision.
+    Combina los resultados de todas las imágenes en una sola lista de muebles.
+    """
+    try:
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        
+        all_furniture = []
+        all_summaries = []
+        
+        for idx, file in enumerate(files):
+            # Read the image
+            file_content = await file.read()
+            base64_image = base64.b64encode(file_content).decode('utf-8')
+            
+            analysis_prompt = f"""Analiza este plano/diseño de cocina (PARED {idx + 1} de {len(files)}) y detecta TODOS los muebles.
+
+IDENTIFICA CON CUIDADO:
+1. Muebles ALTOS (armarios de pared superiores) - Incluye altillos sobre electrodomésticos
+2. Muebles BAJOS (armarios de base con encimera)
+3. COLUMNAS (muebles de altura completa - despensas, hornos)
+4. SEMICOLUMNAS (muebles de media altura)
+5. COSTADOS (paneles laterales decorativos)
+6. Electrodomésticos integrados
+
+SISTEMA DE CÓDIGOS:
+- ALTOS: {{altura}}A{{nPuertas}}P{{anchoMM}} → Ej: 60A1P600, 9A2P800
+- BAJOS: {{altura/10}}B{{nPuertas}}P{{anchoMM}} → Ej: 7B1P600, 7B2P800
+- COLUMNAS: {{altura/10}}CD{{nPuertas}}P{{anchoMM}} → Ej: 22CD1P600
+- SEMICOLUMNAS: {{altura/10}}SM{{nPuertas}}P{{anchoMM}}
+- VITRINAS: usar V en lugar de P → Ej: 9A1V600
+
+ANCHOS ESTÁNDAR: 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200mm
+
+Responde SOLO con JSON:
+{{
+  "pared": {idx + 1},
+  "muebles_detectados": [
+    {{
+      "tipo": "ALTO/BAJO/COLUMNA/SEMICOLUMNA/COSTADO/ELECTRODOMESTICO",
+      "subtipo": "1_PUERTA/2_PUERTAS/CAJON/VITRINA/HORNO/FREGADERO",
+      "ancho_estimado": 600,
+      "alto_estimado": 90,
+      "fondo_estimado": 33,
+      "posicion": "descripción",
+      "codigo_sugerido": "9A1P600",
+      "confianza": "ALTA/MEDIA/BAJA"
+    }}
+  ],
+  "resumen": {{
+    "total_altos": 0,
+    "total_bajos": 0,
+    "total_columnas": 0
+  }}
+}}"""
+
+            # Use Gemini Vision
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"kitchen-multi-{uuid.uuid4().hex[:8]}",
+                system_message="Eres un experto en diseño de cocinas."
+            ).with_model("gemini", "gemini-2.0-flash")
+            
+            image_content = ImageContent(image_base64=base64_image)
+            
+            response = await chat.send_message(
+                UserMessage(text=analysis_prompt, file_contents=[image_content])
+            )
+            
+            response_text = response.content if hasattr(response, 'content') else str(response)
+            
+            # Clean JSON
+            if '```json' in response_text:
+                response_text = response_text.split('```json')[1].split('```')[0]
+            elif '```' in response_text:
+                response_text = response_text.split('```')[1].split('```')[0]
+            
+            try:
+                data = json.loads(response_text.strip())
+                furniture = data.get('muebles_detectados', [])
+                # Add wall number to each item
+                for item in furniture:
+                    item['pared'] = idx + 1
+                    item['archivo'] = file.filename
+                all_furniture.extend(furniture)
+                all_summaries.append({
+                    'pared': idx + 1,
+                    'archivo': file.filename,
+                    'muebles': len(furniture),
+                    'resumen': data.get('resumen', {})
+                })
+            except json.JSONDecodeError:
+                logger.warning(f"Could not parse JSON for wall {idx + 1}")
+        
+        # Combine summaries
+        total_summary = {
+            'total_altos': sum(s.get('resumen', {}).get('total_altos', 0) for s in all_summaries),
+            'total_bajos': sum(s.get('resumen', {}).get('total_bajos', 0) for s in all_summaries),
+            'total_columnas': sum(s.get('resumen', {}).get('total_columnas', 0) for s in all_summaries),
+            'total_muebles': len(all_furniture),
+            'paredes_analizadas': len(files)
+        }
+        
+        logger.info(f"Multi-wall kitchen plan analyzed: {len(all_furniture)} furniture items from {len(files)} walls")
+        
+        return {
+            "success": True,
+            "analysis": {
+                "muebles_detectados": all_furniture,
+                "resumen": total_summary,
+                "paredes": all_summaries
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Multi-wall kitchen plan analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/analyze-product-sheets")
 async def analyze_product_sheets(
     module: str = Form(...),
