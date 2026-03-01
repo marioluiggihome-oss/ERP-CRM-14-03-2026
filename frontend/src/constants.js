@@ -1,16 +1,16 @@
 export const DOOR_FINISHES = [
-  { name: 'Z1: Naturmel / Seda / Slate / Hafax', group: 'Z1', zone: 1 },
-  { name: 'Z2: Universo / GM Brillo / Touch Seda', group: 'Z2', zone: 2 },
-  { name: 'Z3: Folios Especiales / Palma', group: 'Z3', zone: 3 },
-  { name: 'Z4: Polilaminado Folios Básicos', group: 'Z4', zone: 4 },
-  { name: 'Z5: Polilaminado Folios Especiales', group: 'Z5', zone: 5 },
-  { name: 'Z6: Fénix / Laca Blanco Standard', group: 'Z6', zone: 6 },
-  { name: 'Z7: Laca Color Standard', group: 'Z7', zone: 7 },
-  { name: 'Z8: Laca Blanco Diseño (Alzira/Arles...)', group: 'Z8', zone: 8 },
-  { name: 'Z9: Laca Color Diseño (Alzira/Arles...)', group: 'Z9', zone: 9 },
-  { name: 'Z10: Madera Natural S1 (Alasca/Asturias...)', group: 'Z10', zone: 10 },
-  { name: 'Z11: Madera Natural S2 (Andros/Corintia...)', group: 'Z11', zone: 11 },
-  { name: 'Z12: Madera Natural S3 (Amberes/Dekton)', group: 'Z12', zone: 12 },
+  { name: 'GRUPO 1', group: 'Z1', zone: 1 },
+  { name: 'GRUPO 2', group: 'Z2', zone: 2 },
+  { name: 'GRUPO 3', group: 'Z3', zone: 3 },
+  { name: 'GRUPO 4', group: 'Z4', zone: 4 },
+  { name: 'GRUPO 5', group: 'Z5', zone: 5 },
+  { name: 'GRUPO 6', group: 'Z6', zone: 6 },
+  { name: 'GRUPO 7', group: 'Z7', zone: 7 },
+  { name: 'GRUPO 8', group: 'Z8', zone: 8 },
+  { name: 'GRUPO 9', group: 'Z9', zone: 9 },
+  { name: 'GRUPO 10', group: 'Z10', zone: 10 },
+  { name: 'GRUPO 11', group: 'Z11', zone: 11 },
+  { name: 'GRUPO 12', group: 'Z12', zone: 12 },
 ];
 
 export const INITIAL_CARCASS_MATERIALS = [
