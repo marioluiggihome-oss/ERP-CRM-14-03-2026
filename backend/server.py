@@ -1135,12 +1135,27 @@ Responde SOLO con JSON:
             'paredes_analizadas': len(files)
         }
         
-        logger.info(f"Multi-wall kitchen plan analyzed: {len(all_furniture)} furniture items from {len(files)} walls")
+        # ENRIQUECER con datos del catálogo
+        enriched_furniture = await enrich_detected_furniture(all_furniture)
+        
+        # Calcular total de precios
+        total_pvp = sum(m.get('precio_pvp', 0) for m in enriched_furniture)
+        productos_encontrados = sum(1 for m in enriched_furniture if m.get('producto_encontrado'))
+        productos_no_encontrados = sum(1 for m in enriched_furniture if not m.get('producto_encontrado'))
+        
+        total_summary['resumen_precios'] = {
+            'total_pvp': total_pvp,
+            'productos_encontrados': productos_encontrados,
+            'productos_no_encontrados': productos_no_encontrados,
+            'mensaje': f"{productos_encontrados} productos cotizados de {len(enriched_furniture)} detectados"
+        }
+        
+        logger.info(f"Multi-wall kitchen plan analyzed: {len(enriched_furniture)} furniture items from {len(files)} walls")
         
         return {
             "success": True,
             "analysis": {
-                "muebles_detectados": all_furniture,
+                "muebles_detectados": enriched_furniture,
                 "resumen": total_summary,
                 "paredes": all_summaries
             }
