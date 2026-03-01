@@ -1005,6 +1005,22 @@ Responde SOLO con JSON válido:
             else:
                 data = {"error": "No se pudo analizar el plano", "raw_response": response_text[:500]}
         
+        # ENRIQUECER con datos del catálogo
+        if 'muebles_detectados' in data:
+            data['muebles_detectados'] = await enrich_detected_furniture(data['muebles_detectados'])
+            
+            # Calcular total de precios
+            total_pvp = sum(m.get('precio_pvp', 0) for m in data['muebles_detectados'])
+            productos_encontrados = sum(1 for m in data['muebles_detectados'] if m.get('producto_encontrado'))
+            productos_no_encontrados = sum(1 for m in data['muebles_detectados'] if not m.get('producto_encontrado'))
+            
+            data['resumen_precios'] = {
+                'total_pvp': total_pvp,
+                'productos_encontrados': productos_encontrados,
+                'productos_no_encontrados': productos_no_encontrados,
+                'mensaje': f"{productos_encontrados} productos cotizados de {len(data['muebles_detectados'])} detectados"
+            }
+        
         logger.info(f"Kitchen plan analyzed: {len(data.get('muebles_detectados', []))} furniture items detected")
         return {"success": True, "analysis": data}
         
