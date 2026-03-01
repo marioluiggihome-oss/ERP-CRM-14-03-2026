@@ -776,6 +776,113 @@ async def get_status_checks():
     
     return status_checks
 
+async def search_product_in_catalog(code: str, width: int = None, height: int = None) -> dict:
+    """
+    Busca un producto en el catálogo por código.
+    Intenta varias variantes del código si no encuentra exacto.
+    Devuelve el producto con sus precios reales.
+    """
+    if not code:
+        return None
+    
+    code = code.upper().strip()
+    
+    # 1. Búsqueda exacta
+    product = await db.products.find_one({"code": code}, {"_id": 0})
+    if product:
+        return product
+    
+    # 2. Buscar con referencia
+    product = await db.products.find_one({"reference": code}, {"_id": 0})
+    if product:
+        return product
+    
+    # 3. Buscar variantes del código
+    # Intentar sin el prefijo de altura si empieza con número
+    import re
+    
+    # Extraer componentes del código: 9A1P600 -> altura=9, tipo=A, puertas=1, ancho=600
+    match = re.match(r'^(\d+)([A-Z]+)(\d*)([A-Z]*)(\d+)$', code)
+    if match:
+        altura_prefix = match.group(1)
+        tipo = match.group(2)  # A, B, CD, SM, etc.
+        num_puertas = match.group(3)
+        tipo_puerta = match.group(4)  # P, V, etc.
+        ancho = match.group(5)
+        
+        # Buscar con regex flexible
+        pattern = f".*{tipo}.*{num_puertas}.*{tipo_puerta}.*{ancho}$"
+        product = await db.products.find_one(
+            {"code": {"$regex": pattern, "$options": "i"}},
+            {"_id": 0}
+        )
+        if product:
+            return product
+        
+        # Buscar solo por tipo y ancho
+        pattern_simple = f".*{tipo}.*{ancho}$"
+        product = await db.products.find_one(
+            {"code": {"$regex": pattern_simple, "$options": "i"}},
+            {"_id": 0}
+        )
+        if product:
+            return product
+    
+    # 4. Buscar por dimensiones si se proporcionan
+    if width and height:
+        # Buscar productos similares por dimensiones
+        products = await db.products.find({
+            "width": {"$gte": width - 50, "$lte": width + 50},
+            "height": {"$gte": height - 100, "$lte": height + 100}
+        }, {"_id": 0}).limit(5).to_list(5)
+        
+        if products:
+            # Devolver el más cercano en dimensiones
+            return products[0]
+    
+    return None
+
+async def enrich_detected_furniture(furniture_list: list) -> list:
+    """
+    Enriquece la lista de muebles detectados con información del catálogo.
+    Busca cada mueble en la librería y añade precio, código real, etc.
+    """
+    enriched = []
+    
+    for item in furniture_list:
+        code = item.get('codigo_sugerido', '')
+        width = item.get('ancho_estimado', 0)
+        height = item.get('alto_estimado', 0) * 10  # Convertir cm a mm
+        
+        # Buscar en catálogo
+        catalog_product = await search_product_in_catalog(code, width, height)
+        
+        enriched_item = {**item}
+        
+        if catalog_product:
+            enriched_item['producto_encontrado'] = True
+            enriched_item['codigo_catalogo'] = catalog_product.get('code', code)
+            enriched_item['nombre_catalogo'] = catalog_product.get('name', '')
+            enriched_item['puntos'] = catalog_product.get('points', 0)
+            enriched_item['precio_pvp'] = catalog_product.get('points', 0)  # 1 punto = 1€
+            enriched_item['categoria'] = catalog_product.get('category', '')
+            enriched_item['programa'] = catalog_product.get('programa', 'ESTÁNDAR')
+            enriched_item['ancho_real'] = catalog_product.get('width', width)
+            enriched_item['alto_real'] = catalog_product.get('height', height)
+            enriched_item['fondo_real'] = catalog_product.get('depth', item.get('fondo_estimado', 0) * 10)
+            enriched_item['product_id'] = catalog_product.get('id', '')
+        else:
+            enriched_item['producto_encontrado'] = False
+            enriched_item['codigo_catalogo'] = code
+            enriched_item['nombre_catalogo'] = f"{item.get('tipo', '')} {item.get('subtipo', '').replace('_', ' ')}"
+            enriched_item['puntos'] = 0
+            enriched_item['precio_pvp'] = 0
+            enriched_item['mensaje'] = "Producto no encontrado en catálogo - revisar manualmente"
+        
+        enriched.append(enriched_item)
+    
+    return enriched
+
 @api_router.post("/ia-lab/analyze-kitchen-plan")
 async def analyze_kitchen_plan(file: UploadFile = File(...)):
     """
