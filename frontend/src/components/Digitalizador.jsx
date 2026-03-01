@@ -14,6 +14,7 @@ const Digitalizador = ({ state }) => {
   const [successMessage, setSuccessMessage] = useState(null);
   const [projectName, setProjectName] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [customerCode, setCustomerCode] = useState('');  // Código de cliente para numeración propia
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [lines, setLines] = useState([]);
