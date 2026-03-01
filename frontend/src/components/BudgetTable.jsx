@@ -542,6 +542,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         customerName: '',
         internalReference: '',
         customerAddress: '',
+        clientCode: '',  // Limpiar código de cliente
         doorColorLow: '',
         doorColorHigh: '',
         doorColorColumns: '',
