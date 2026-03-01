@@ -338,8 +338,8 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 </div>
               )}
 
-              {/* Furniture List - Scrollable */}
-              <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+              {/* Furniture List - Scrollable with max-height */}
+              <div className="flex-1 overflow-y-auto space-y-2 min-h-0 max-h-[35vh]">
                 {(!analysisResult.muebles_detectados || analysisResult.muebles_detectados.length === 0) ? (
                   <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6">
                     <Package size={48} className="opacity-30 mb-3" />
