@@ -318,6 +318,11 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-black text-indigo-900 text-sm">{furniture.codigo_sugerido}</span>
+                          {furniture.pared && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600">
+                              P{furniture.pared}
+                            </span>
+                          )}
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                             furniture.confianza === 'ALTA' ? 'bg-emerald-100 text-emerald-700' :
                             furniture.confianza === 'MEDIA' ? 'bg-amber-100 text-amber-700' :
