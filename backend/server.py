@@ -3816,56 +3816,6 @@ async def create_opportunity_from_project(project_id: str, businessType: str = "
 # DESPIECE (BILL OF MATERIALS) API
 # ============================================
 
-class DespieceItemInput(BaseModel):
-    """Input for a single furniture item to calculate despiece"""
-    productId: str
-    productCode: str
-    productName: str
-    width: float  # in mm
-    height: float  # in mm
-    depth: float  # in mm
-    quantity: int = 1
-    category: str = ""  # ALTO, BAJO, COLUMNA, etc.
-
-class DespieceRequest(BaseModel):
-    """Request to calculate despiece for multiple items"""
-    items: List[DespieceItemInput]
-    carcassMaterial: str = "Melamina Blanca"
-    backPanelMaterial: str = "Tablero 8mm"  # Trasera siempre 8mm
-    grosor: float = 18  # Thickness in mm for carcass panels
-
-class ComponentPiece(BaseModel):
-    """A single piece/component in the despiece"""
-    id: str
-    name: str  # e.g., "Lateral izquierdo", "Tapa superior"
-    nameShort: str  # e.g., "LAT-I", "TAPA-S"
-    material: str
-    length: float  # Largo pieza in mm
-    width: float  # Ancho pieza in mm
-    thickness: float = 18  # Grosor in mm
-    quantity: int
-    area: float  # in m²
-    notes: str = ""
-
-class FurnitureDespiece(BaseModel):
-    """Despiece for a single furniture piece"""
-    productId: str
-    productCode: str
-    productName: str
-    category: str
-    originalWidth: float
-    originalHeight: float
-    originalDepth: float
-    itemQuantity: int
-    components: List[ComponentPiece]
-    totalPanels: int
-    totalArea: float  # in m²
-
-class DespieceResponse(BaseModel):
-    """Full despiece response"""
-    items: List[FurnitureDespiece]
-    summary: Dict
-    generatedAt: str
 
 def calculate_furniture_despiece(
     item: DespieceItemInput,
