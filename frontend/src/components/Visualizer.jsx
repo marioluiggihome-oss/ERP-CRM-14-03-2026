@@ -298,6 +298,13 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               <p className="font-bold text-sm">Sube un plano y analízalo</p>
               <p className="text-xs mt-1">La IA detectará los muebles automáticamente</p>
             </div>
+          ) : analysisResult.error ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-6">
+              <AlertCircle size={64} className="text-orange-400 mb-4" />
+              <p className="font-bold text-sm text-orange-600 text-center">La IA no pudo analizar esta imagen</p>
+              <p className="text-xs text-slate-500 mt-2 text-center max-w-md">{analysisResult.raw_response || analysisResult.error}</p>
+              <p className="text-xs text-slate-400 mt-4 text-center">Sube una imagen de un plano de cocina real para obtener mejores resultados</p>
+            </div>
           ) : (
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Summary - Fixed at top */}
