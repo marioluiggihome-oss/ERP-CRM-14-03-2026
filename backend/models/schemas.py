@@ -616,3 +616,265 @@ class DistributorRequest(BaseModel):
     currentActivity: str
     monthlyVolume: str
     message: str = ""
+
+
+
+# ============================================
+# DESPIECE MODELS
+# ============================================
+
+class DespieceItemInput(BaseModel):
+    """Input for a single furniture item to calculate despiece"""
+    productId: str
+    productCode: str
+    productName: str
+    width: float
+    height: float
+    depth: float
+    quantity: int = 1
+    category: str = ""
+
+
+class DespieceRequest(BaseModel):
+    """Request to calculate despiece for multiple items"""
+    items: List[DespieceItemInput]
+    carcassMaterial: str = "Melamina Blanca"
+    backPanelMaterial: str = "Tablero 8mm"
+    grosor: float = 18
+
+
+class ComponentPiece(BaseModel):
+    """A single piece/component in the despiece"""
+    id: str
+    name: str
+    nameShort: str
+    material: str
+    length: float
+    width: float
+    thickness: float = 18
+    quantity: int
+    area: float
+    notes: str = ""
+
+
+class FurnitureDespiece(BaseModel):
+    """Despiece for a single furniture piece"""
+    productId: str
+    productCode: str
+    productName: str
+    category: str
+    originalWidth: float
+    originalHeight: float
+    originalDepth: float
+    itemQuantity: int
+    components: List[ComponentPiece]
+    totalPanels: int
+    totalArea: float
+
+
+class DespieceResponse(BaseModel):
+    """Full despiece response"""
+    items: List[FurnitureDespiece]
+    summary: Dict
+    generatedAt: str
+
+
+# ============================================
+# DIGITALIZADOR MODELS
+# ============================================
+
+class DigitalizadorMatchedProduct(BaseModel):
+    """A product matched from the catalog"""
+    id: str
+    code: str
+    name: str
+    price: float = 0
+    score: float = 0
+
+
+class DigitalizadorLine(BaseModel):
+    """A single line extracted from the draft"""
+    id: str
+    quantity: int = 1
+    reference: str = ""
+    description: str
+    price: float = 0
+    discount: float = 0
+    isManual: bool = False
+    matchedProducts: List[DigitalizadorMatchedProduct] = []
+
+
+class DigitalizadorRequest(BaseModel):
+    """Request to analyze a draft image"""
+    imageBase64: str
+    filename: str = "draft.jpg"
+
+
+class DigitalizadorResponse(BaseModel):
+    """Response with extracted lines"""
+    success: bool
+    projectName: str = ""
+    lines: List[DigitalizadorLine]
+    rawText: str = ""
+    error: Optional[str] = None
+
+
+class DigitalizadorExportRequest(BaseModel):
+    """Request to export to CSV for cutting machine"""
+    lines: List[DigitalizadorLine]
+    materialCode: str = "40-ESTEITEX16"
+    materialThickness: float = 16.0
+
+
+class DigitalizadorSaveRequest(BaseModel):
+    """Request to save a digitalized budget to history"""
+    projectName: str
+    customerName: str = ""
+    acabado: str = ""
+    armazon: str = ""
+    costados: str = ""
+    lines: List[DigitalizadorLine]
+    globalDiscount: float = 0
+    globalMarkup: float = 0
+    ivaRate: float = 21
+    userId: str
+    expNumber: str = ""
+
+
+class DigitalizadorHistoryItem(BaseModel):
+    """A saved digitalized budget"""
+    id: str
+    projectName: str
+    customerName: str
+    acabado: str
+    armazon: str
+    costados: str
+    lines: List[DigitalizadorLine]
+    globalDiscount: float
+    globalMarkup: float = 0
+    ivaRate: float
+    totalBruto: float
+    totalNeto: float
+    totalConIva: float
+    userId: str
+    createdAt: str
+    filename: str = ""
+
+
+class ExpedienteRequest(BaseModel):
+    """Request to generate expediente number"""
+    userId: Optional[str] = None
+    clientCode: Optional[str] = None
+
+
+class DigitalizadorToProjectRequest(BaseModel):
+    """Request to convert digitalizador item to project"""
+    historyItemId: str
+    userId: str
+
+
+# ============================================
+# ARMARIOS MODELS
+# ============================================
+
+class ArmarioModuleConfig(BaseModel):
+    """Configuración de un módulo de armario"""
+    id: int
+    shelves: int = 4
+    drawers: int = 0
+    hangingRods: int = 1
+    hangingHeight: int = 1200
+    extras: Dict = {}
+
+
+class ArmarioProject(BaseModel):
+    """Proyecto de armario completo"""
+    name: str
+    customerName: str = ""
+    projectRef: str = ""
+    width: int = 2400
+    height: int = 2400
+    depth: int = 600
+    modules: int = 3
+    doorType: str = "sliding"
+    exteriorColor: str = "010"
+    interiorColor: str = "010"
+    handleColor: str = "231"
+    endLeft: str = "standard"
+    endRight: str = "standard"
+    moduleConfigs: List[ArmarioModuleConfig] = []
+    extras: Dict = {}
+    ivaRate: float = 21.0
+    customAccessories: List[Dict] = []
+    totalPrice: float = 0.0
+    totalArea: float = 0.0
+
+
+class ArmarioProjectCreate(ArmarioProject):
+    pass
+
+
+class ArmarioProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    customerName: Optional[str] = None
+    projectRef: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    depth: Optional[int] = None
+    modules: Optional[int] = None
+    doorType: Optional[str] = None
+    exteriorColor: Optional[str] = None
+    interiorColor: Optional[str] = None
+    handleColor: Optional[str] = None
+    endLeft: Optional[str] = None
+    endRight: Optional[str] = None
+    moduleConfigs: Optional[List[ArmarioModuleConfig]] = None
+    extras: Optional[Dict] = None
+    ivaRate: Optional[float] = None
+    customAccessories: Optional[List[Dict]] = None
+    totalPrice: Optional[float] = None
+    totalArea: Optional[float] = None
+
+
+class IAConfigRequest(BaseModel):
+    """Request for IA configuration"""
+    prompt: str
+    currentConfig: Dict
+
+
+class IARenderRequest(BaseModel):
+    """Request to render armario with IA"""
+    width: int
+    height: int
+    depth: int
+    modules: int
+    moduleConfigs: List[Dict]
+
+
+class IALayoutRequest(BaseModel):
+    """Request for IA layout generation"""
+    prompt: str
+    width: int
+    height: int
+    depth: int
+    modules: int
+
+
+# ============================================
+# MAINTENANCE MODELS
+# ============================================
+
+class MaintenanceActivateRequest(BaseModel):
+    """Request to activate maintenance mode"""
+    reason: str = "Mantenimiento programado"
+    estimatedDuration: int = 60
+    backupFirst: bool = True
+
+
+class MaintenanceStatusResponse(BaseModel):
+    """Response for maintenance status"""
+    isActive: bool
+    reason: str = ""
+    startedAt: Optional[str] = None
+    estimatedEndAt: Optional[str] = None
+    lastBackup: Optional[str] = None
