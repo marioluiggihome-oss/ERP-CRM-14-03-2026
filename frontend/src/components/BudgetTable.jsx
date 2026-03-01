@@ -458,6 +458,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
 
       // GUARDAR EN BACKEND - Persistir en MongoDB
       const projectData = {
+        clientCode: state.clientCode || '',  // Código de cliente para agrupar
         budgetNumber: state.budgetNumber,
         customerName: state.customerName || 'Cliente sin nombre',
         customerAddress: state.customerAddress || '',
