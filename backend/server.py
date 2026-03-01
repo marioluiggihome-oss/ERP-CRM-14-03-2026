@@ -5326,60 +5326,6 @@ async def fix_product_data():
 # ARMARIOS - PROYECTOS
 # ============================================
 
-class ArmarioModuleConfig(BaseModel):
-    """Configuración de un módulo de armario"""
-    id: int
-    shelves: int = 4
-    drawers: int = 0
-    hangingRods: int = 1
-    hangingHeight: int = 1200
-    extras: Dict = {}
-
-class ArmarioProject(BaseModel):
-    """Proyecto de armario completo"""
-    name: str
-    customerName: str = ""
-    projectRef: str = ""
-    width: int = 2400
-    height: int = 2400
-    depth: int = 600
-    modules: int = 3
-    doorType: str = "sliding"
-    exteriorColor: str = "010"
-    interiorColor: str = "010"
-    handleColor: str = "231"
-    endLeft: str = "standard"
-    endRight: str = "standard"
-    moduleConfigs: List[ArmarioModuleConfig] = []
-    extras: Dict = {}
-    ivaRate: float = 21.0
-    customAccessories: List[Dict] = []
-    totalPrice: float = 0.0
-    totalArea: float = 0.0
-
-class ArmarioProjectCreate(ArmarioProject):
-    pass
-
-class ArmarioProjectUpdate(BaseModel):
-    name: Optional[str] = None
-    customerName: Optional[str] = None
-    projectRef: Optional[str] = None
-    width: Optional[int] = None
-    height: Optional[int] = None
-    depth: Optional[int] = None
-    modules: Optional[int] = None
-    doorType: Optional[str] = None
-    exteriorColor: Optional[str] = None
-    interiorColor: Optional[str] = None
-    handleColor: Optional[str] = None
-    endLeft: Optional[str] = None
-    endRight: Optional[str] = None
-    moduleConfigs: Optional[List[ArmarioModuleConfig]] = None
-    extras: Optional[Dict] = None
-    ivaRate: Optional[float] = None
-    customAccessories: Optional[List[Dict]] = None
-    totalPrice: Optional[float] = None
-    totalArea: Optional[float] = None
 
 @api_router.post("/armarios/projects")
 async def create_armario_project(project: ArmarioProjectCreate, userId: str = ""):
