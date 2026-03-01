@@ -306,10 +306,10 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               <p className="text-xs text-slate-400 mt-4 text-center">Sube una imagen de un plano de cocina real para obtener mejores resultados</p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col min-h-0">
-              {/* Summary - Fixed at top */}
+            <>
+              {/* Summary Stats - Fixed at top */}
               {analysisResult.resumen && (
-                <div className="mb-4 shrink-0">
+                <div className="mb-3 shrink-0">
                   {analysisResult.resumen.paredes_analizadas > 1 && (
                     <div className="mb-2 px-3 py-2 bg-purple-100 rounded-lg text-center">
                       <span className="text-xs font-black text-purple-700 uppercase">
@@ -318,28 +318,28 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                     </div>
                   )}
                   <div className="grid grid-cols-4 gap-2">
-                    <div className="bg-indigo-50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-black text-indigo-600">{analysisResult.resumen.total_altos || 0}</p>
+                    <div className="bg-indigo-50 rounded-lg p-2 text-center">
+                      <p className="text-xl font-black text-indigo-600">{analysisResult.resumen.total_altos || 0}</p>
                       <p className="text-[10px] font-bold text-indigo-400 uppercase">Altos</p>
                     </div>
-                    <div className="bg-emerald-50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-black text-emerald-600">{analysisResult.resumen.total_bajos || 0}</p>
+                    <div className="bg-emerald-50 rounded-lg p-2 text-center">
+                      <p className="text-xl font-black text-emerald-600">{analysisResult.resumen.total_bajos || 0}</p>
                       <p className="text-[10px] font-bold text-emerald-400 uppercase">Bajos</p>
                     </div>
-                    <div className="bg-orange-50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-black text-orange-600">{analysisResult.resumen.total_columnas || 0}</p>
+                    <div className="bg-orange-50 rounded-lg p-2 text-center">
+                      <p className="text-xl font-black text-orange-600">{analysisResult.resumen.total_columnas || 0}</p>
                       <p className="text-[10px] font-bold text-orange-400 uppercase">Columnas</p>
                     </div>
-                    <div className="bg-purple-50 rounded-lg p-3 text-center">
-                      <p className="text-2xl font-black text-purple-600">{analysisResult.muebles_detectados?.length || 0}</p>
+                    <div className="bg-purple-50 rounded-lg p-2 text-center">
+                      <p className="text-xl font-black text-purple-600">{analysisResult.muebles_detectados?.length || 0}</p>
                       <p className="text-[10px] font-bold text-purple-400 uppercase">Total</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Furniture List - Scrollable with max-height */}
-              <div className="flex-1 overflow-y-auto space-y-2 min-h-0 max-h-[35vh]">
+              {/* Furniture List - Scrollable middle section */}
+              <div className="flex-1 overflow-y-auto space-y-2 min-h-0 mb-3">
                 {(!analysisResult.muebles_detectados || analysisResult.muebles_detectados.length === 0) ? (
                   <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6">
                     <Package size={48} className="opacity-30 mb-3" />
