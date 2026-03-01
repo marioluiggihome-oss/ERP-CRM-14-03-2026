@@ -99,22 +99,50 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   };
 
   const addFurnitureToBudget = (furniture, showAlert = true) => {
+    // Solo añadir si el producto fue encontrado en el catálogo
+    if (!furniture.producto_encontrado) {
+      if (showAlert) {
+        alert('⚠️ Este producto no se encontró en el catálogo. No se puede añadir al presupuesto.');
+      }
+      return;
+    }
+    
     if (onAddToBudget) {
-      // Pasar directamente el objeto de la IA con todas sus propiedades originales
-      onAddToBudget(furniture, showAlert);
+      // Pasar el objeto con los datos del catálogo
+      onAddToBudget({
+        ...furniture,
+        // Usar datos del catálogo
+        code: furniture.codigo_catalogo || furniture.codigo_sugerido,
+        name: furniture.nombre_catalogo,
+        points: furniture.puntos,
+        price: furniture.precio_pvp,
+        width: furniture.ancho_real || furniture.ancho_estimado,
+        height: furniture.alto_real || furniture.alto_estimado * 10,
+        depth: furniture.fondo_real || furniture.fondo_estimado * 10,
+        category: furniture.categoria,
+        programa: furniture.programa,
+        productId: furniture.product_id
+      }, showAlert);
     }
   };
 
   const addAllFurnitureToBudget = () => {
     if (!analysisResult?.muebles_detectados?.length) return;
     
-    const count = analysisResult.muebles_detectados.length;
-    analysisResult.muebles_detectados.forEach((f, i) => {
-      // Only show alert on the last one
+    // Filtrar solo los productos encontrados en el catálogo
+    const productosEncontrados = analysisResult.muebles_detectados.filter(f => f.producto_encontrado);
+    
+    if (productosEncontrados.length === 0) {
+      alert('⚠️ No hay productos del catálogo para añadir.\n\nRevisa manualmente los productos no encontrados.');
+      return;
+    }
+    
+    productosEncontrados.forEach((f) => {
       addFurnitureToBudget(f, false);
     });
     
-    alert(`✅ Se han añadido ${count} muebles al presupuesto.\n\nVe a la pestaña "Presupuesto" para verlos.`);
+    const totalPvp = productosEncontrados.reduce((sum, f) => sum + (f.precio_pvp || 0), 0);
+    alert(`✅ Se han añadido ${productosEncontrados.length} productos al presupuesto.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€\n\nVe a la pestaña "Presupuesto" para verlos.`);
   };
 
   const clearAll = () => {
