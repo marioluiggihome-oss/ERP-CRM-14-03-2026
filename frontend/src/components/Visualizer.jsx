@@ -274,22 +274,31 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Summary */}
               {analysisResult.resumen && (
-                <div className="grid grid-cols-4 gap-2 mb-4">
-                  <div className="bg-indigo-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-black text-indigo-600">{analysisResult.resumen.total_altos || 0}</p>
-                    <p className="text-[10px] font-bold text-indigo-400 uppercase">Altos</p>
-                  </div>
-                  <div className="bg-emerald-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-black text-emerald-600">{analysisResult.resumen.total_bajos || 0}</p>
-                    <p className="text-[10px] font-bold text-emerald-400 uppercase">Bajos</p>
-                  </div>
-                  <div className="bg-orange-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-black text-orange-600">{analysisResult.resumen.total_columnas || 0}</p>
-                    <p className="text-[10px] font-bold text-orange-400 uppercase">Columnas</p>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-black text-purple-600">{analysisResult.resumen.total_semicolumnas || 0}</p>
-                    <p className="text-[10px] font-bold text-purple-400 uppercase">Semicol.</p>
+                <div className="mb-4">
+                  {analysisResult.resumen.paredes_analizadas > 1 && (
+                    <div className="mb-2 px-3 py-2 bg-purple-100 rounded-lg text-center">
+                      <span className="text-xs font-black text-purple-700 uppercase">
+                        {analysisResult.resumen.paredes_analizadas} paredes analizadas
+                      </span>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="bg-indigo-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-black text-indigo-600">{analysisResult.resumen.total_altos || 0}</p>
+                      <p className="text-[10px] font-bold text-indigo-400 uppercase">Altos</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-black text-emerald-600">{analysisResult.resumen.total_bajos || 0}</p>
+                      <p className="text-[10px] font-bold text-emerald-400 uppercase">Bajos</p>
+                    </div>
+                    <div className="bg-orange-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-black text-orange-600">{analysisResult.resumen.total_columnas || 0}</p>
+                      <p className="text-[10px] font-bold text-orange-400 uppercase">Columnas</p>
+                    </div>
+                    <div className="bg-purple-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-black text-purple-600">{analysisResult.muebles_detectados?.length || 0}</p>
+                      <p className="text-[10px] font-bold text-purple-400 uppercase">Total</p>
+                    </div>
                   </div>
                 </div>
               )}
