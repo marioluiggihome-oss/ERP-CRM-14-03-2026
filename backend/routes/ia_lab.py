@@ -10,8 +10,7 @@ import logging
 from typing import List
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
-from emergentintegrations.llm.chat import LlmChat
-from emergentintegrations.llm.models import UserMessage, ImageContent
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 from config import db
 
