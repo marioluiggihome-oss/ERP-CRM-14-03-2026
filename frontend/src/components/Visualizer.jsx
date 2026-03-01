@@ -340,7 +340,14 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
 
               {/* Furniture List - Scrollable */}
               <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
-                {analysisResult.muebles_detectados?.map((furniture, idx) => (
+                {(!analysisResult.muebles_detectados || analysisResult.muebles_detectados.length === 0) ? (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6">
+                    <Package size={48} className="opacity-30 mb-3" />
+                    <p className="font-bold text-sm text-center">No se detectaron muebles</p>
+                    <p className="text-xs mt-1 text-center">Prueba con otra imagen de plano de cocina</p>
+                  </div>
+                ) : (
+                  analysisResult.muebles_detectados.map((furniture, idx) => (
                   <div 
                     key={idx}
                     className={`border rounded-xl p-3 hover:border-purple-400 hover:bg-purple-50/50 transition-all group ${
