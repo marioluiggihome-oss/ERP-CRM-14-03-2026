@@ -4233,21 +4233,6 @@ async def delete_digitalizador_item(item_id: str):
         raise HTTPException(status_code=500, detail=f"Error eliminando presupuesto: {str(e)}")
 
 
-class DigitalizadorToProjectRequest(BaseModel):
-    """Request to save digitalizador budget to main projects"""
-    expNumber: str
-    projectName: str = ""
-    customerName: str = ""
-    acabado: str = ""
-    armazon: str = ""
-    costados: str = ""
-    lines: List[DigitalizadorLine]
-    globalDiscount: float = 0
-    globalMarkup: float = 0
-    ivaRate: float = 21
-    userId: str = ""
-    totalPvp: float = 0
-
 
 @api_router.post("/presupuestos")
 async def save_digitalizador_to_presupuestos(request: DigitalizadorToProjectRequest):
