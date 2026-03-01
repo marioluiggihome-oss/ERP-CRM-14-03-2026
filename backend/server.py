@@ -318,6 +318,7 @@ class ProjectModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: f"proj-{uuid.uuid4().hex[:8]}")
     userId: str
+    clientCode: str = ""  # Código de cliente para agrupar presupuestos
     budgetNumber: str
     customerName: str = ""
     customerAddress: str = ""
@@ -335,6 +336,7 @@ class ProjectModel(BaseModel):
     status: str = "draft"  # draft, completed, archived
 
 class ProjectCreate(BaseModel):
+    clientCode: str = ""  # Código de cliente
     budgetNumber: str
     customerName: str = ""
     customerAddress: str = ""
@@ -350,6 +352,7 @@ class ProjectCreate(BaseModel):
     status: str = "draft"
 
 class ProjectUpdate(BaseModel):
+    clientCode: Optional[str] = None
     budgetNumber: Optional[str] = None
     customerName: Optional[str] = None
     customerAddress: Optional[str] = None
