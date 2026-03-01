@@ -228,13 +228,12 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
               
               {/* Analyzing overlay */}
               {analyzing && (
-                <div className="absolute inset-0 bg-indigo-950/80 flex flex-col items-center justify-center rounded-xl">
+                <div className="absolute inset-0 bg-indigo-950/80 flex flex-col items-center justify-center rounded-xl z-10">
                   <Loader2 className="w-12 h-12 text-purple-400 animate-spin mb-4" />
                   <p className="text-white font-black uppercase text-sm">Analizando {selectedImages.length} {selectedImages.length === 1 ? 'plano' : 'planos'}...</p>
                   <p className="text-purple-300 text-xs mt-2">Detectando muebles con IA</p>
                 </div>
               )}
-              </div>
               
               {/* Button always visible at the bottom */}
               {!analyzing && !analysisResult && (
@@ -244,7 +243,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                   data-testid="analyze-plan-btn"
                 >
                   <Wand2 size={20} />
-                  Analizar Plano con IA
+                  Analizar {selectedImages.length} {selectedImages.length === 1 ? 'Plano' : 'Planos'} con IA
                 </button>
               )}
             </div>
