@@ -4131,6 +4131,11 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
             seq = result["seq"]
             exp_number = f"EXP-{current_year}-{seq:03d}" if seq < 1000 else f"EXP-{current_year}-{seq}"
         
+        # Verificar que el número de expediente no exista ya
+        existing = await db.digitalizador_history.find_one({"expNumber": exp_number})
+        if existing:
+            raise HTTPException(status_code=400, detail=f"El número de expediente {exp_number} ya existe. Por favor genera uno nuevo.")
+        
         # Create history item
         history_item = {
             "id": f"digi-{uuid.uuid4().hex[:12]}",
