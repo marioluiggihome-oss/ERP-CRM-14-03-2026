@@ -766,8 +766,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         </div>
         
         <div className="flex gap-3 items-center">
-          {/* Pestaña ARMARIOS - Solo para usuarios con permiso */}
-          {(state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
+          {/* Pestaña ARMARIOS - Solo para usuarios con permiso específico */}
+          {state.currentUser?.canAccessArmarios && (
             <button 
               onClick={() => setState(p => ({...p, currentTab: 'armarios'}))} 
               className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-xl border border-purple-200 transition-all"
