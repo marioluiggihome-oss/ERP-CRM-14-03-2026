@@ -5069,12 +5069,11 @@ async def get_maintenance_status():
         maintenance_state = db_state.get("value", maintenance_state)
     
     return MaintenanceStatusResponse(
-        active=maintenance_state.get("active", False),
-        message=maintenance_state.get("message", ""),
-        activatedAt=maintenance_state.get("activatedAt"),
-        activatedBy=maintenance_state.get("activatedBy"),
-        estimatedEndTime=maintenance_state.get("estimatedEndTime"),
-        preUpdateBackupId=maintenance_state.get("preUpdateBackupId")
+        isActive=maintenance_state.get("active", False),
+        reason=maintenance_state.get("message", ""),
+        startedAt=maintenance_state.get("activatedAt"),
+        estimatedEndAt=maintenance_state.get("estimatedEndTime"),
+        lastBackup=maintenance_state.get("preUpdateBackupId")
     )
 
 @api_router.post("/maintenance/activate")
