@@ -2033,7 +2033,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   </div>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
-                    <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 pl-9 pr-3 text-[10px] font-bold outline-none uppercase" />
+                    <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 pl-9 pr-8 text-[10px] font-bold outline-none uppercase" />
+                    {searchQuery && (
+                      <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500" title="Limpiar búsqueda">
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
