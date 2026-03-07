@@ -1473,8 +1473,8 @@ const Digitalizador = ({ state }) => {
                 )}
               </div>
 
-              {/* Campos CRM si está marcado */}
-              {saveToCRM && (
+              {/* Campos CRM si está marcado y tiene permiso */}
+              {saveToCRM && state.currentUser?.canAccessCRM && (
                 <div className="space-y-3 pt-3 border-t border-purple-200">
                   <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Datos del Cliente para CRM</p>
                   <input
