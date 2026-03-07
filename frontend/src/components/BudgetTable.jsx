@@ -1670,24 +1670,31 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         {/* Catálogo - POSICIÓN VERTICAL (derecha) */}
         {catalogPosition === 'vertical' && (
           <div 
-            style={{ width: isCatalogOpen ? catalogWidth : 50 }} 
+            style={{ width: isCatalogOpen ? catalogWidth : 55 }} 
             className="absolute top-0 right-0 bottom-0 bg-white border-l border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl flex flex-col"
           >
             {/* Resizer horizontal */}
-            <div 
-              onMouseDown={() => { isResizingCatalogWidth.current = true; }} 
-              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-orange-600/30 z-10"
-            />
+            {isCatalogOpen && (
+              <div 
+                onMouseDown={() => { isResizingCatalogWidth.current = true; }} 
+                className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-orange-600/30 z-10"
+              />
+            )}
             
             {/* Header */}
-            <div className="h-[45px] px-3 bg-indigo-50/30 border-b border-indigo-50 flex items-center gap-2 shrink-0">
+            <div className={`${isCatalogOpen ? 'h-[45px]' : 'h-full'} px-2 bg-indigo-50/30 border-b border-indigo-50 flex ${isCatalogOpen ? 'items-center' : 'flex-col items-center justify-start pt-4'} gap-2 shrink-0`}>
               <button 
                 onClick={() => setIsCatalogOpen(!isCatalogOpen)}
-                className="p-2 bg-indigo-900 hover:bg-indigo-800 rounded-xl transition-colors shadow-lg"
+                className="p-2.5 bg-indigo-900 hover:bg-indigo-700 rounded-xl transition-colors shadow-lg border-2 border-indigo-600"
                 title={isCatalogOpen ? "Ocultar librería" : "Mostrar librería"}
               >
-                {isCatalogOpen ? <PanelLeftClose size={16} className="text-white"/> : <PanelLeftOpen size={16} className="text-white"/>}
+                {isCatalogOpen ? <PanelRightClose size={18} className="text-white"/> : <PanelRightOpen size={18} className="text-white"/>}
               </button>
+              {!isCatalogOpen && (
+                <span className="text-[8px] font-black text-indigo-600 uppercase tracking-widest mt-2" style={{writingMode: 'vertical-rl', transform: 'rotate(180deg)'}}>
+                  LIBRERÍA
+                </span>
+              )}
               {isCatalogOpen && (
                 <>
                   <div className="flex-1">
