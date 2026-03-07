@@ -239,6 +239,10 @@ async def verify_email(request: Request, data: EmailVerificationRequest):
     if not stored_code or not expires:
         raise HTTPException(status_code=400, detail="No hay código de verificación pendiente")
     
+    # Asegurar que expires tenga timezone
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    
     if datetime.now(timezone.utc) > expires:
         raise HTTPException(status_code=400, detail="El código ha expirado. Solicita uno nuevo.")
     
