@@ -599,7 +599,7 @@ const App = () => {
             {state.currentTab === 'digitalizador' && (state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && (
               <Digitalizador state={state} />
             )}
-            {state.currentTab === 'armarios' && (state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
+            {state.currentTab === 'armarios' && state.currentUser?.canAccessArmarios && (
               <Armarios state={state} setState={setState} />
             )}
             
