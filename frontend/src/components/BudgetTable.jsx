@@ -417,9 +417,15 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
          usedPoints = product.zonePoints?.[finishObj.group] ?? productBasePoints;
          finalProductName = product.name;
 
-         if (Number(item.customWidth) !== Number(product.width)) { cutsCost += state.specialIncrementWidth; cuts.push('Ancho'); }
-         if (Number(item.customHeight) !== Number(product.height)) { cutsCost += state.specialIncrementHeight; cuts.push('Alto'); }
-         if (Number(item.customDepth) !== Number(product.depth)) { cutsCost += state.specialIncrementDepth; cuts.push('Fondo'); }
+         // NO aplicar incrementos por medidas en COSTADOS y REGLETAS
+         const categoryUpper = (product.category || '').toUpperCase();
+         const isExcludedCategory = categoryUpper.includes('COSTADO') || categoryUpper.includes('REGLETA');
+         
+         if (!isExcludedCategory) {
+           if (Number(item.customWidth) !== Number(product.width)) { cutsCost += state.specialIncrementWidth; cuts.push('Ancho'); }
+           if (Number(item.customHeight) !== Number(product.height)) { cutsCost += state.specialIncrementHeight; cuts.push('Alto'); }
+           if (Number(item.customDepth) !== Number(product.depth)) { cutsCost += state.specialIncrementDepth; cuts.push('Fondo'); }
+         }
 
          const selectedMaterial = state.carcassMaterials.find(m => m.id === state.selectedCarcassMaterialId);
          carcassCost = selectedMaterial?.fixedIncrement || 0;
