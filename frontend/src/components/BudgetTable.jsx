@@ -317,20 +317,44 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const budgetKey = state.currentModule === 'montada' ? 'budgetItemsMontada' : 'budgetItemsDespiece';
 
   const addItemToBudget = (product) => {
-    const newItem = {
-      id: Math.random().toString(36).substr(2, 9),
-      productId: product.id,
-      catalogId: product.catalogId,
-      quantity: 1,
-      customReference: product.code,
-      customWidth: Number(product.width),
-      customHeight: Number(product.height),
-      customDepth: Number(product.depth),
-      openingDirection: 'Derecha',
-      notes: '',
-      hasVigaCut: false  // Nuevo campo para incremento de corte viga
-    };
-    setState(prev => ({ ...prev, [budgetKey]: [...prev[budgetKey], newItem] }));
+    setState(prev => {
+      const currentItems = prev[budgetKey];
+      
+      // Buscar si ya existe una línea con el mismo producto (mismo productId y mismas dimensiones)
+      const existingItemIndex = currentItems.findIndex(item => 
+        item.productId === product.id && 
+        !item.isManual &&
+        item.customWidth === Number(product.width) &&
+        item.customHeight === Number(product.height) &&
+        item.customDepth === Number(product.depth)
+      );
+      
+      if (existingItemIndex >= 0) {
+        // Si existe, incrementar la cantidad
+        const updatedItems = [...currentItems];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: updatedItems[existingItemIndex].quantity + 1
+        };
+        return { ...prev, [budgetKey]: updatedItems };
+      } else {
+        // Si no existe, crear nueva línea
+        const newItem = {
+          id: Math.random().toString(36).substr(2, 9),
+          productId: product.id,
+          catalogId: product.catalogId,
+          quantity: 1,
+          customReference: product.code,
+          customWidth: Number(product.width),
+          customHeight: Number(product.height),
+          customDepth: Number(product.depth),
+          openingDirection: 'Derecha',
+          notes: '',
+          hasVigaCut: false
+        };
+        return { ...prev, [budgetKey]: [...currentItems, newItem] };
+      }
+    });
   };
 
   const addManualItemToBudget = () => {
