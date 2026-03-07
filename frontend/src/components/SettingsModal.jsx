@@ -55,6 +55,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isActive: true,
     isAdmin: false,  // Director Comercial
     isGerente: false,  // Gerente - mismo acceso que Director
+    isDirectorComercial: false,  // Director Comercial (ve todo el CRM)
     isResponsableDelegacion: false,  // Responsable Delegación
     isRepresentative: false,
     isPrescriptor: false,
