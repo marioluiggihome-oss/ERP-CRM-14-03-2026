@@ -1544,11 +1544,18 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                        </div>
                      </>
                    )}
-                   {/* Botón cambiar posición */}
+                   {/* Botones cambiar posición */}
+                   <button 
+                     onClick={() => setCatalogPosition('top')} 
+                     className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
+                     title="Mover arriba"
+                   >
+                     <PanelTopOpen size={14} className="text-indigo-600"/>
+                   </button>
                    <button 
                      onClick={() => setCatalogPosition('vertical')} 
                      className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
-                     title="Cambiar a vista vertical (derecha)"
+                     title="Mover a la derecha"
                    >
                      <PanelRightOpen size={14} className="text-indigo-600"/>
                    </button>
