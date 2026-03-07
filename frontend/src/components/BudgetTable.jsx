@@ -1037,7 +1037,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         <div 
           className="flex-1 overflow-y-auto p-12 pb-64 bg-indigo-50/30 scrollbar-thin transition-all duration-300"
           style={{ 
-            paddingRight: catalogPosition === 'vertical' && isCatalogOpen ? catalogWidth + 48 : 48,
+            paddingRight: catalogPosition === 'vertical' ? (isCatalogOpen ? catalogWidth + 48 : 60) : 48,
             paddingBottom: catalogPosition === 'horizontal' && isCatalogOpen ? catalogHeight + 48 : 256
           }}
         >
