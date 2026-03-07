@@ -1995,30 +1995,30 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   {/* Filtros de medidas - Vista vertical */}
                   <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-2 border border-slate-200">
                     <span className="text-[9px] font-black text-slate-500">📐 MEDIDAS:</span>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1.5">
                       <input 
                         type="number" 
                         placeholder="AN" 
                         value={filterWidth} 
                         onChange={e => setFilterWidth(e.target.value)}
-                        className="w-12 bg-white border border-slate-200 rounded px-1 py-1 text-[10px] font-bold text-center outline-none"
-                        title="Filtrar por ancho (mm)"
+                        className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                        title="Filtrar por ancho (cm)"
                       />
                       <input 
                         type="number" 
                         placeholder="AL" 
                         value={filterHeight} 
                         onChange={e => setFilterHeight(e.target.value)}
-                        className="w-12 bg-white border border-slate-200 rounded px-1 py-1 text-[10px] font-bold text-center outline-none"
-                        title="Filtrar por alto (mm)"
+                        className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                        title="Filtrar por alto (cm)"
                       />
                       <input 
                         type="number" 
                         placeholder="FO" 
                         value={filterDepth} 
                         onChange={e => setFilterDepth(e.target.value)}
-                        className="w-12 bg-white border border-slate-200 rounded px-1 py-1 text-[10px] font-bold text-center outline-none"
-                        title="Filtrar por fondo (mm)"
+                        className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                        title="Filtrar por fondo (cm)"
                       />
                     </div>
                     {(filterWidth || filterHeight || filterDepth) && (
