@@ -292,7 +292,22 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
         }
       }
       
-      const result = matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory && matchesApertura;
+      // Filtro de medidas (ancho, alto, fondo)
+      let matchesMedidas = true;
+      if (filterWidth) {
+        const widthNum = parseInt(filterWidth);
+        matchesMedidas = matchesMedidas && p.width && Math.abs(Number(p.width) - widthNum) <= 5;
+      }
+      if (filterHeight) {
+        const heightNum = parseInt(filterHeight);
+        matchesMedidas = matchesMedidas && p.height && Math.abs(Number(p.height) - heightNum) <= 5;
+      }
+      if (filterDepth) {
+        const depthNum = parseInt(filterDepth);
+        matchesMedidas = matchesMedidas && p.depth && Math.abs(Number(p.depth) - depthNum) <= 5;
+      }
+      
+      const result = matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory && matchesApertura && matchesMedidas;
       
       // Log para depuración
       if (q && q.length > 5 && result) {
