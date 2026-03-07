@@ -1502,31 +1502,31 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
                        </select>
                        {/* Filtros de medidas */}
-                       <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1 border border-slate-200">
-                         <span className="text-[7px] font-black text-slate-500">📐</span>
+                       <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg px-2 py-1.5 border border-slate-200">
+                         <span className="text-[8px] font-black text-slate-500">📐</span>
                          <input 
                            type="number" 
                            placeholder="AN" 
                            value={filterWidth} 
                            onChange={e => setFilterWidth(e.target.value)}
-                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
-                           title="Filtrar por ancho (mm)"
+                           className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                           title="Filtrar por ancho (cm)"
                          />
                          <input 
                            type="number" 
                            placeholder="AL" 
                            value={filterHeight} 
                            onChange={e => setFilterHeight(e.target.value)}
-                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
-                           title="Filtrar por alto (mm)"
+                           className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                           title="Filtrar por alto (cm)"
                          />
                          <input 
                            type="number" 
                            placeholder="FO" 
                            value={filterDepth} 
                            onChange={e => setFilterDepth(e.target.value)}
-                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
-                           title="Filtrar por fondo (mm)"
+                           className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                           title="Filtrar por fondo (cm)"
                          />
                          {(filterWidth || filterHeight || filterDepth) && (
                            <button 
@@ -1534,7 +1534,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                              className="text-slate-400 hover:text-red-500 ml-1"
                              title="Limpiar filtros de medidas"
                            >
-                             <X size={10} />
+                             <X size={12} />
                            </button>
                          )}
                        </div>
@@ -1729,31 +1729,31 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
                        </select>
                        {/* Filtros de medidas */}
-                       <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1 border border-slate-200">
-                         <span className="text-[7px] font-black text-slate-500">📐</span>
+                       <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg px-2 py-1.5 border border-slate-200">
+                         <span className="text-[8px] font-black text-slate-500">📐</span>
                          <input 
                            type="number" 
                            placeholder="AN" 
                            value={filterWidth} 
                            onChange={e => setFilterWidth(e.target.value)}
-                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
-                           title="Filtrar por ancho (mm)"
+                           className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                           title="Filtrar por ancho (cm)"
                          />
                          <input 
                            type="number" 
                            placeholder="AL" 
                            value={filterHeight} 
                            onChange={e => setFilterHeight(e.target.value)}
-                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
-                           title="Filtrar por alto (mm)"
+                           className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                           title="Filtrar por alto (cm)"
                          />
                          <input 
                            type="number" 
                            placeholder="FO" 
                            value={filterDepth} 
                            onChange={e => setFilterDepth(e.target.value)}
-                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
-                           title="Filtrar por fondo (mm)"
+                           className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                           title="Filtrar por fondo (cm)"
                          />
                          {(filterWidth || filterHeight || filterDepth) && (
                            <button 
@@ -1761,7 +1761,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                              className="text-slate-400 hover:text-red-500 ml-1"
                              title="Limpiar filtros de medidas"
                            >
-                             <X size={10} />
+                             <X size={12} />
                            </button>
                          )}
                        </div>
