@@ -55,15 +55,27 @@ Todos los módulos requieren su permiso específico activo:
 3. O usar un remitente ya verificado (Single Sender Verification)
 4. Verificar que la API key tenga permisos de "Mail Send"
 
+## Completed Tasks - Session Mar 7, 2026 (Continuación)
+
+### 📚 Tercera Posición de Librería (TOP)
+- ✅ Implementada posición **horizontal arriba** para el catálogo de productos
+- 3 posiciones disponibles: `horizontal` (abajo), `top` (arriba), `vertical` (derecha)
+- Iconos `PanelTopOpen`/`PanelTopClose` para la nueva posición
+- Botones para cambiar entre las 3 posiciones en cada vista
+- Preferencia guardada en localStorage
+
+**Archivos modificados:**
+- `/app/frontend/src/components/BudgetTable.jsx` - Nueva sección para `catalogPosition === 'top'`
+
 ## Pending Tasks
 
-### P0 - Inmediato
+### P0 - Bloqueador
 - [ ] ⚠️ **Configurar SendGrid** - El usuario debe verificar dominio/remitente en su cuenta SendGrid
 
 ### P1 - Próximas Tareas
-- [ ] Botón para ocultar/mostrar el catálogo lateral (ya existe `isCatalogOpen` pero puede mejorarse el icono)
 - [ ] Revisar productos HS que ya no son Servo-Drive
 - [ ] Panel 2FA en perfil de usuario
+- [ ] Mejorar glitch visual del sidebar colapsado
 
 ### P2 - Technical Debt
 - [ ] Refactoring `server.py`, `BudgetTable.jsx`, `Armarios.jsx`
