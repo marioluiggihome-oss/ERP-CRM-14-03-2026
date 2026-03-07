@@ -1217,24 +1217,36 @@ const Digitalizador = ({ state }) => {
 
               {/* Totals Footer - Solo si valorado */}
               {isValorado && (
-              <div className="bg-indigo-950 text-white p-6">
+              <div className={`${showCostMode ? 'bg-purple-950' : 'bg-indigo-950'} text-white p-6 transition-colors`}>
+                {/* Indicador de modo COSTO */}
+                {showCostMode && (
+                  <div className="mb-4 text-center">
+                    <span className="bg-purple-600 text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+                      MODO COSTO — Descuento Usuario: {userDiscount}%
+                    </span>
+                  </div>
+                )}
                 <div className="grid grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-indigo-900/50 rounded-xl">
                     <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">Bruto Líneas</p>
-                    <p className="text-xl font-black">{totals.brutoLineas.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
+                    <p className="text-xl font-black">{(showCostMode ? costTotals : totals).brutoLineas.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
                   </div>
                   <div className="text-center p-4 bg-indigo-900/50 rounded-xl">
-                    <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">Base Imponible (Neto)</p>
-                    <p className="text-xl font-black text-indigo-300">{totals.baseImponible.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
-                    <p className="text-[9px] text-orange-500 font-bold mt-1">DTO GLOBAL APLICADO</p>
+                    <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">
+                      {showCostMode ? `Base Costo (-${userDiscount}%)` : 'Base Imponible (Neto)'}
+                    </p>
+                    <p className="text-xl font-black text-indigo-300">{(showCostMode ? costTotals : totals).baseImponible.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
+                    <p className="text-[9px] text-orange-500 font-bold mt-1">{showCostMode ? 'DTO USUARIO APLICADO' : 'DTO GLOBAL APLICADO'}</p>
                   </div>
                   <div className="text-center p-4 bg-indigo-900/50 rounded-xl">
                     <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">IVA ({ivaRate}%)</p>
-                    <p className="text-xl font-black text-indigo-300">{totals.iva.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
+                    <p className="text-xl font-black text-indigo-300">{(showCostMode ? costTotals : totals).iva.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
                   </div>
-                  <div className="text-center p-4 bg-orange-600 rounded-xl border-l-4 border-orange-400">
-                    <p className="text-[10px] font-bold text-orange-200 uppercase tracking-widest mb-1">Total Presupuesto</p>
-                    <p className="text-3xl font-black text-white">{totals.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
+                  <div className={`text-center p-4 ${showCostMode ? 'bg-purple-600' : 'bg-orange-600'} rounded-xl border-l-4 ${showCostMode ? 'border-purple-400' : 'border-orange-400'}`}>
+                    <p className={`text-[10px] font-bold ${showCostMode ? 'text-purple-200' : 'text-orange-200'} uppercase tracking-widest mb-1`}>
+                      {showCostMode ? 'Total COSTO' : 'Total Presupuesto'}
+                    </p>
+                    <p className="text-3xl font-black text-white">{(showCostMode ? costTotals : totals).total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
                   </div>
                 </div>
               </div>
