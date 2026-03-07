@@ -25,112 +25,105 @@ Spanish (es)
   - GOLA: 2,518 productos
   - ALUMINIO: 144 productos
 - **Categories:** 19+ unique categories
+- **Abatibles:**
+  - HK-TOP: 54 productos
+  - HF Bi-fold: 144 productos
+  - HL Aventos: 39 productos
+  - HS Servo-Drive: 69 productos
 
 ## Completed Tasks
 
-### Mar 7, 2026 - Permission Fix & Authentication Enhancement ✅
+### Mar 7, 2026 - Session 2: Critical Bugs & UX Improvements ✅
+
+#### Bug Fixes
+1. **Cálculo COSTO con descuento (P0)** - FIXED
+   - El modo COSTO ahora muestra correctamente los totales con descuento del usuario
+   - Footer cambia a color púrpura en modo COSTO con indicador visual
+   - Files: `/app/frontend/src/components/Digitalizador.jsx`
+
+2. **Expedientes duplicados (P0)** - FIXED
+   - Añadida validación de unicidad antes de guardar presupuesto
+   - Creado índice único en MongoDB para `expNumber`
+   - Error claro: "El número de expediente X ya existe"
+   - Files: `/app/backend/server.py`
+
+3. **Precios con 2 decimales (P1)** - FIXED
+   - Todos los precios ahora muestran exactamente 2 decimales
+   - Files: `/app/frontend/src/components/Digitalizador.jsx`
+
+#### New Features
+4. **Filtro de Tipos de Apertura Abatible** - NEW
+   - Nuevo selector en librería: 🚪 APERTURA
+   - Opciones: ABATIBLES, HK-TOP, HF BI-FOLD, HL AVENTOS, HS SERVO
+   - Disponible en vista horizontal y vertical
+   - Files: `/app/frontend/src/components/BudgetTable.jsx`
+
+#### Already Implemented (Verified)
+5. **Descuentos Montada/Despiece** - Ya existente
+   - Usuarios pueden tener descuentos diferentes por módulo
+   - Se aplica automáticamente según el módulo actual
+
+6. **Semicolumnas sin selector de mano** - Ya existente
+   - Semicolumnas con 2 puertas no muestran selector izq/der
+   - Muebles con cajones/gavetas tampoco
+
+### Mar 7, 2026 - Session 1: Permission Fix & Authentication ✅
 
 #### Bug Fixes
 1. **Armarios Permission Bug (P0)** - FIXED
-   - Root cause: Armarios module was rendered without checking `canAccessArmarios` permission
-   - Fix: Added permission check `(state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios)` in App.js
-   - Files modified: `/app/frontend/src/App.js` (line 598-600)
+   - Added permission check `(isAdmin || canAccessArmarios)` in App.js
 
-2. **DateTime Comparison Bug in Auth** - FIXED
-   - Root cause: MongoDB stores dates without timezone, causing comparison errors
-   - Fix: Added timezone normalization before comparison
-   - Files modified: `/app/backend/routes/auth_advanced.py`
+2. **DateTime Comparison Bug** - FIXED
+   - Added timezone normalization for MongoDB dates
 
-#### New Features Implemented
-1. **Email Registration System** - COMPLETE
-   - User registration with email/password
-   - Email verification with 6-digit code
-   - Password strength validation
-   - Backend: `/api/auth/register`, `/api/auth/verify-email`, `/api/auth/resend-verification`
-   - Frontend: `RegisterForm.jsx` integrated into `Login.jsx`
-
-2. **Two-Factor Authentication (2FA)** - COMPLETE
-   - TOTP-based 2FA using pyotp
-   - QR code generation for authenticator apps
-   - 8 backup codes for recovery
-   - Backend: `/api/auth/2fa/enable`, `/api/auth/2fa/verify`, `/api/auth/2fa/disable`
-   - Frontend: `TwoFactorSetup.jsx` component ready for integration
-
-3. **Enhanced Login Flow** - COMPLETE
-   - Login supports email or username
-   - 2FA code prompt when enabled
-   - Backup code support for account recovery
-   - Backend: `/api/auth/login-email`
-
-### Previous Sessions (Feb-Mar 2026)
-- Backend refactoring: Extracted routes to `/app/backend/routes/`
-- Pydantic models centralized: `/app/backend/models/schemas.py` (880+ lines)
-- Data audit: Corrected pricing errors in 7,148-item catalog
-- IA Lab button visibility fix
-- Icons for Foldable Doors (HK-TOP, HS, HL, HF) implemented
-- Digitalizador Analyzer Search implemented
-- Armarios Draggable Accessories implemented
+#### New Features
+3. **Email Registration System** - COMPLETE
+4. **Two-Factor Authentication (2FA)** - COMPLETE
+5. **Enhanced Login Flow** - COMPLETE
 
 ## Pending Tasks
 
-### P1 - User Verification Pending
-- [ ] Verify Digitalizador Analyzer Search functionality
-- [ ] Verify Armarios Draggable Accessories functionality
-- [ ] Investigate product catalog issues from DOCX file (categories like "BAJOS 640 FONDO 58")
+### P1 - Next Tasks
+- [ ] Normalización de SERIES en BD (BAJO vs BAJOS, ESTANDAR vs ESTÁNDAR)
+- [ ] Añadir configuración 2FA en perfil de usuario
+- [ ] Investigar otros problemas del catálogo del DOCX
 
-### P2 - Next Tasks
-- [ ] Add 2FA configuration option in user settings/profile
-- [ ] Continue product catalog import (pages 401+) when user provides more PDFs
+### P2 - Technical Debt
+- [ ] Refactoring `/app/backend/server.py` (~5,800 líneas)
+- [ ] Decompose `BudgetTable.jsx` (>1900 líneas)
+- [ ] Decompose `Armarios.jsx` (>3300 líneas)
+
+### P3 - Future Features
+- [ ] Rol "Gerente" con permisos específicos
 - [ ] Client-Sales Rep Assignment
-- [ ] Implement "Gerente" (Manager) role with specific permissions
 
-### P3 - Technical Debt / Refactoring
-- [ ] Complete refactoring `/app/backend/server.py` (still ~5,800 lines)
-- [ ] Decompose `/app/frontend/src/components/BudgetTable.jsx` (>1900 lines)
-- [ ] Decompose `/app/frontend/src/components/Armarios.jsx` (>3300 lines)
-
-## Key Files
+## Key Files Modified This Session
 
 ### Backend
-- `/app/backend/server.py` - Main backend API (refactoring in progress)
-- `/app/backend/routes/auth_advanced.py` - Email registration & 2FA endpoints
-- `/app/backend/routes/auth.py` - Traditional authentication
-- `/app/backend/routes/ia_lab.py` - AI analysis endpoints
-- `/app/backend/models/schemas.py` - Centralized Pydantic models
+- `/app/backend/server.py` - Validación expedientes duplicados, índice único
 
 ### Frontend
-- `/app/frontend/src/App.js` - Main app with permission-based navigation
-- `/app/frontend/src/components/Login.jsx` - Login with email/2FA support
-- `/app/frontend/src/components/RegisterForm.jsx` - Email registration form
-- `/app/frontend/src/components/TwoFactorSetup.jsx` - 2FA setup component
-- `/app/frontend/src/components/BudgetTable.jsx` - Product library & budget
-- `/app/frontend/src/components/Digitalizador.jsx` - Draft digitizer
-- `/app/frontend/src/components/Armarios.jsx` - Wardrobe designer
+- `/app/frontend/src/components/Digitalizador.jsx` - Modo COSTO, decimales
+- `/app/frontend/src/components/BudgetTable.jsx` - Filtro apertura abatible
 
 ## Test Credentials
 - **Admin User:** MARIO / MARIO
 - **Test Email User:** nuevo_usuario@example.com / Test1234
 
-## 3rd Party Integrations
-- **Google Gemini:** Via emergentintegrations (Emergent LLM Key)
-- **SendGrid:** Email sending (requires API key - not configured in preview)
-- **pyotp/qrcode:** TOTP-based 2FA
-- **jspdf/html2canvas:** Client-side PDF generation
-- **recharts:** Data visualization
+## Filtros de Librería Disponibles
+1. **PROGRAMA:** ESTÁNDAR, GOLA, ALUMINIO
+2. **CATEGORÍA:** BAJOS, ALTOS, COLUMNAS, etc.
+3. **SERIE:** Variantes por fondo y altura
+4. **APERTURA:** ABATIBLES, HK-TOP, HF, HL, HS (NUEVO)
 
-## API Endpoints - Authentication
+## API Endpoints - Digitalizador
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| /api/auth/register | POST | Register new user with email |
-| /api/auth/verify-email | POST | Verify email with 6-digit code |
-| /api/auth/resend-verification | POST | Resend verification code |
-| /api/auth/login-email | POST | Login with email (supports 2FA) |
-| /api/auth/2fa/enable | POST | Enable 2FA, returns QR code |
-| /api/auth/2fa/verify | POST | Verify 2FA setup |
-| /api/auth/2fa/disable | POST | Disable 2FA |
-| /api/auth/forgot-password | POST | Request password reset |
-| /api/auth/reset-password | POST | Reset password with code |
+| /api/digitalizador/generate-exp-number | POST | Genera número expediente único |
+| /api/digitalizador/save | POST | Guarda presupuesto (valida duplicados) |
+| /api/digitalizador/history | GET | Historial de presupuestos |
+| /api/digitalizador/analyze | POST | Análisis IA de imagen |
 
 ## Test Reports
-- Latest: `/app/test_reports/iteration_21.json` - All auth features PASS
+- Latest: `/app/test_reports/iteration_21.json`
