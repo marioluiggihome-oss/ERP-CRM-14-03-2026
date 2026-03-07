@@ -350,12 +350,21 @@ async def register_user(request: Request, data: UserRegisterRequest, background_
     
     await db.users.insert_one(user_doc)
     
-    # Enviar email de verificación en background
+    # Enviar email de verificación al usuario
     background_tasks.add_task(
         send_verification_email,
         data.email,
         verification_code,
         data.firstName
+    )
+    
+    # Enviar notificación al administrador
+    registration_time = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC")
+    background_tasks.add_task(
+        send_admin_notification,
+        data.email,
+        f"{data.firstName} {data.lastName}",
+        registration_time
     )
     
     logger.info(f"User registered: {data.email}")
