@@ -1457,13 +1457,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
              {isCatalogOpen && <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>}
              <div className={`${isCatalogOpen ? 'h-[40px]' : 'h-[40px]'} px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center`}>
                 <div className="flex items-center gap-2">
-                  {/* Botón ocultar/mostrar */}
+                  {/* Botón ocultar/mostrar - Icono de panel */}
                   <button 
                     onClick={() => setIsCatalogOpen(!isCatalogOpen)}
-                    className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
+                    className="p-2 bg-indigo-900 hover:bg-indigo-800 rounded-xl transition-colors shadow-lg"
                     title={isCatalogOpen ? "Ocultar librería" : "Mostrar librería"}
                   >
-                    {isCatalogOpen ? <ChevronDown size={14} className="text-indigo-600"/> : <ChevronUp size={14} className="text-indigo-600"/>}
+                    {isCatalogOpen ? <PanelBottomClose size={16} className="text-white"/> : <PanelBottomOpen size={16} className="text-white"/>}
                   </button>
                   <LayoutPanelTop size={14} className="text-orange-600"/>
                   <h3 className="text-[9px] font-black uppercase tracking-wider text-indigo-900">
