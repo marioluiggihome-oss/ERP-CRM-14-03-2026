@@ -81,8 +81,66 @@ def generate_backup_codes(count: int = 8) -> list[str]:
     return [secrets.token_hex(4).upper() for _ in range(count)]
 
 
+def get_email_template(content: str, title: str = "LUIGGI HOME") -> str:
+    """Genera una plantilla de email moderna con el estilo de LUIGGI HOME"""
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+                        <!-- Header con gradiente -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); padding: 40px; text-align: center;">
+                                <h1 style="margin: 0; font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: 4px; text-transform: uppercase;">
+                                    LUIGGI
+                                </h1>
+                                <p style="margin: 8px 0 0; font-size: 14px; color: #c7d2fe; letter-spacing: 6px; text-transform: uppercase;">
+                                    HOME
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Barra naranja decorativa -->
+                        <tr>
+                            <td style="background: linear-gradient(90deg, #ea580c 0%, #f97316 50%, #fb923c 100%); height: 6px;"></td>
+                        </tr>
+                        
+                        <!-- Contenido -->
+                        <tr>
+                            <td style="padding: 40px;">
+                                {content}
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #f1f5f9; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+                                <p style="margin: 0 0 10px; font-size: 12px; color: #64748b;">
+                                    LUIGGI HOME — Sistema de Gestión de Cocinas
+                                </p>
+                                <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                                    Este es un mensaje automático. Por favor no responda a este correo.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    '''
+
+
 async def send_verification_email(email: str, code: str, name: str = "Usuario"):
-    """Send verification email (placeholder - integrate with SendGrid)"""
+    """Send verification email with modern design"""
     try:
         from sendgrid import SendGridAPIClient
         from sendgrid.helpers.mail import Mail
@@ -92,21 +150,37 @@ async def send_verification_email(email: str, code: str, name: str = "Usuario"):
             logger.warning("SendGrid API key not configured, verification email not sent")
             return False
         
+        content = f'''
+        <h2 style="margin: 0 0 20px; font-size: 24px; font-weight: 700; color: #1e293b;">
+            ¡Hola {name}! 👋
+        </h2>
+        <p style="margin: 0 0 30px; font-size: 16px; color: #475569; line-height: 1.6;">
+            Gracias por registrarte en <strong>LUIGGI HOME</strong>. Para completar tu registro, introduce el siguiente código de verificación:
+        </p>
+        
+        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 30px; text-align: center; margin: 0 0 30px; border-radius: 12px; border: 2px solid #e2e8f0;">
+            <p style="margin: 0 0 10px; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 2px;">Tu código de verificación</p>
+            <span style="font-size: 42px; font-weight: 900; letter-spacing: 12px; color: #ea580c; font-family: monospace;">{code}</span>
+        </div>
+        
+        <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 0 0 20px;">
+            <p style="margin: 0; font-size: 14px; color: #92400e;">
+                ⏰ <strong>Este código expira en 15 minutos.</strong>
+            </p>
+        </div>
+        
+        <p style="margin: 0; font-size: 13px; color: #94a3b8;">
+            Si no solicitaste esta verificación, puedes ignorar este correo de forma segura.
+        </p>
+        '''
+        
+        html_content = get_email_template(content, "Verifica tu cuenta")
+        
         message = Mail(
             from_email='noreply@luiggihome.com',
             to_emails=email,
-            subject='Verifica tu cuenta - LUIGGI HOME',
-            html_content=f'''
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #ea580c;">¡Hola {name}!</h2>
-                <p>Tu código de verificación es:</p>
-                <div style="background: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-                    <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1e293b;">{code}</span>
-                </div>
-                <p>Este código expira en 15 minutos.</p>
-                <p style="color: #64748b; font-size: 12px;">Si no solicitaste esta verificación, ignora este correo.</p>
-            </div>
-            '''
+            subject='🔐 Verifica tu cuenta - LUIGGI HOME',
+            html_content=html_content
         )
         
         sg = SendGridAPIClient(api_key)
@@ -115,6 +189,79 @@ async def send_verification_email(email: str, code: str, name: str = "Usuario"):
         return True
     except Exception as e:
         logger.error(f"Error sending verification email: {e}")
+        return False
+
+
+async def send_admin_notification(new_user_email: str, new_user_name: str, registration_time: str):
+    """Send notification to admin when a new user registers"""
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
+        
+        api_key = os.environ.get('SENDGRID_API_KEY')
+        admin_email = os.environ.get('ADMIN_EMAIL', 'mario@luiggihome.es')
+        
+        if not api_key:
+            logger.warning("SendGrid API key not configured, admin notification not sent")
+            return False
+        
+        content = f'''
+        <div style="text-align: center; margin-bottom: 30px;">
+            <span style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                🎉 Nuevo Registro
+            </span>
+        </div>
+        
+        <h2 style="margin: 0 0 20px; font-size: 22px; font-weight: 700; color: #1e293b; text-align: center;">
+            Se ha registrado un nuevo usuario
+        </h2>
+        
+        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 25px; border-radius: 12px; border: 2px solid #e2e8f0; margin: 0 0 25px;">
+            <table width="100%" cellpadding="8" cellspacing="0">
+                <tr>
+                    <td style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; width: 120px;">Nombre:</td>
+                    <td style="font-size: 16px; font-weight: 600; color: #1e293b;">{new_user_name}</td>
+                </tr>
+                <tr>
+                    <td style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Email:</td>
+                    <td style="font-size: 16px; font-weight: 600; color: #4338ca;">{new_user_email}</td>
+                </tr>
+                <tr>
+                    <td style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Fecha:</td>
+                    <td style="font-size: 15px; color: #475569;">{registration_time}</td>
+                </tr>
+                <tr>
+                    <td style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Estado:</td>
+                    <td>
+                        <span style="display: inline-block; background-color: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                            ⏳ Pendiente de verificación
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        
+        <p style="margin: 0; font-size: 14px; color: #64748b; text-align: center;">
+            El usuario recibirá un código para verificar su email.<br>
+            Una vez verificado, podrás asignarle permisos desde el panel de administración.
+        </p>
+        '''
+        
+        html_content = get_email_template(content, "Nuevo Registro")
+        
+        message = Mail(
+            from_email='noreply@luiggihome.com',
+            to_emails=admin_email,
+            subject=f'👤 Nuevo registro: {new_user_name} - LUIGGI HOME',
+            html_content=html_content
+        )
+        
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
+        logger.info(f"Admin notification sent to {admin_email}: {response.status_code}")
+        return True
+    except Exception as e:
+        logger.error(f"Error sending admin notification: {e}")
         return False
 
 
