@@ -1683,9 +1683,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
             <div className="h-[45px] px-3 bg-indigo-50/30 border-b border-indigo-50 flex items-center gap-2 shrink-0">
               <button 
                 onClick={() => setIsCatalogOpen(!isCatalogOpen)}
-                className="p-1"
+                className="p-2 bg-indigo-900 hover:bg-indigo-800 rounded-xl transition-colors shadow-lg"
+                title={isCatalogOpen ? "Ocultar librería" : "Mostrar librería"}
               >
-                {isCatalogOpen ? <PanelRightClose size={16} className="text-indigo-600"/> : <PanelRightOpen size={16} className="text-indigo-600"/>}
+                {isCatalogOpen ? <PanelLeftClose size={16} className="text-white"/> : <PanelLeftOpen size={16} className="text-white"/>}
               </button>
               {isCatalogOpen && (
                 <>
