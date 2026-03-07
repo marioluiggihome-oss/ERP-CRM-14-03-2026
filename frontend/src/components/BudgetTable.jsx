@@ -1343,16 +1343,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          ) : (
                             <>
                                 <div className="w-11 shrink-0 text-center">
-                                    <input type="number" value={Math.round(item.customWidth / 10)} onChange={e => updateItem(item.id, 'customWidth', (parseInt(e.target.value) || 0) * 10)} className={`w-10 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
-                                    <span className="print-only font-bold text-[8px]">{item.customWidth ? Math.round(item.customWidth / 10) : '-'}</span>
+                                    <input type="number" value={item.customWidth || ''} onChange={e => updateItem(item.id, 'customWidth', parseInt(e.target.value) || 0)} className={`w-10 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[8px]">{item.customWidth || '-'}</span>
                                 </div>
                                 <div className="w-11 shrink-0 text-center">
-                                    <input type="number" value={Math.round(item.customHeight / 10)} onChange={e => updateItem(item.id, 'customHeight', (parseInt(e.target.value) || 0) * 10)} className={`w-10 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
-                                    <span className="print-only font-bold text-[8px]">{item.customHeight ? Math.round(item.customHeight / 10) : '-'}</span>
+                                    <input type="number" value={item.customHeight || ''} onChange={e => updateItem(item.id, 'customHeight', parseInt(e.target.value) || 0)} className={`w-10 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[8px]">{item.customHeight || '-'}</span>
                                 </div>
                                 <div className="w-11 shrink-0 text-center">
-                                    <input type="number" value={Math.round(item.customDepth / 10)} onChange={e => updateItem(item.id, 'customDepth', (parseInt(e.target.value) || 0) * 10)} className={`w-10 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product.depth) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
-                                    <span className="print-only font-bold text-[8px]">{item.customDepth ? Math.round(item.customDepth / 10) : '-'}</span>
+                                    <input type="number" value={item.customDepth || ''} onChange={e => updateItem(item.id, 'customDepth', parseInt(e.target.value) || 0)} className={`w-10 bg-indigo-50/50 rounded p-0.5 text-[8px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product.depth) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[8px]">{item.customDepth || '-'}</span>
                                 </div>
                                 <div className="w-8 shrink-0 text-center">
                                     {noNeedsOpeningSelector ? (
