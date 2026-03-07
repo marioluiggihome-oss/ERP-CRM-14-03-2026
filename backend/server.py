@@ -101,6 +101,7 @@ api_router = APIRouter(prefix="/api")
 
 # Registrar routers modulares
 api_router.include_router(ia_lab_router)
+api_router.include_router(auth_advanced_router)
 # Nota: auth, products, clients, projects, crm están duplicados en server.py
 # Se integrarán gradualmente para evitar conflictos
 
