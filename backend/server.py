@@ -5856,7 +5856,14 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    """Configure scheduled backups on startup"""
+    """Configure scheduled backups and database indexes on startup"""
+    # Crear índice único para números de expediente
+    try:
+        await db.digitalizador_history.create_index("expNumber", unique=True, sparse=True)
+        logger.info("Índice único creado para expNumber en digitalizador_history")
+    except Exception as e:
+        logger.warning(f"Error creando índice expNumber (puede que ya exista): {e}")
+    
     # Schedule backups at 8:00 AM and 8:00 PM (Spain timezone approx)
     scheduler.add_job(
         scheduled_backup_task,
