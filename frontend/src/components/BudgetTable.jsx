@@ -1253,13 +1253,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                              </>
                          ) : (
                             <div className="flex-1 min-w-[180px] pr-2">
-                                <input 
-                                    type="text" 
-                                    value={item.customDescription ?? product.name} 
-                                    onChange={e => updateItem(item.id, 'customDescription', e.target.value)}
-                                    className={`w-full bg-transparent text-[8px] font-bold uppercase italic leading-tight outline-none no-print hover:bg-indigo-50/50 focus:bg-white focus:border focus:border-orange-300 focus:rounded focus:px-1 ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}
-                                />
-                                <span className={`print-only text-[8px] font-bold uppercase italic leading-tight block ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}>{item.customDescription ?? product.name}</span>
+                                <span className={`text-[8px] font-bold uppercase italic leading-tight block ${isUnknown ? 'text-red-500' : 'text-indigo-800'}`}>{product.name}</span>
                                 {specialLabel && <span className="text-[6px] font-black text-orange-600 uppercase tracking-wide">{specialLabel}</span>}
                             </div>
                          )}
