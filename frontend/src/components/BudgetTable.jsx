@@ -1453,20 +1453,20 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
 
         {/* Catálogo - POSICIÓN HORIZONTAL (abajo) */}
         {catalogPosition === 'horizontal' && (
-          <div style={{ height: isCatalogOpen ? catalogHeight : 40 }} className="absolute bottom-0 left-0 right-0 bg-white border-t border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl">
+          <div style={{ height: isCatalogOpen ? catalogHeight : 50 }} className="absolute bottom-0 left-0 right-0 bg-white border-t border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl">
              {isCatalogOpen && <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>}
-             <div className={`${isCatalogOpen ? 'h-[40px]' : 'h-[40px]'} px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center`}>
-                <div className="flex items-center gap-2">
+             <div className={`h-[50px] px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center`}>
+                <div className="flex items-center gap-3">
                   {/* Botón ocultar/mostrar - Icono de panel */}
                   <button 
                     onClick={() => setIsCatalogOpen(!isCatalogOpen)}
-                    className="p-2 bg-indigo-900 hover:bg-indigo-800 rounded-xl transition-colors shadow-lg"
+                    className="p-2.5 bg-indigo-900 hover:bg-indigo-700 rounded-xl transition-colors shadow-lg border-2 border-indigo-600"
                     title={isCatalogOpen ? "Ocultar librería" : "Mostrar librería"}
                   >
-                    {isCatalogOpen ? <PanelBottomClose size={16} className="text-white"/> : <PanelBottomOpen size={16} className="text-white"/>}
+                    {isCatalogOpen ? <PanelBottomClose size={18} className="text-white"/> : <PanelBottomOpen size={18} className="text-white"/>}
                   </button>
-                  <LayoutPanelTop size={14} className="text-orange-600"/>
-                  <h3 className="text-[9px] font-black uppercase tracking-wider text-indigo-900">
+                  <LayoutPanelTop size={16} className="text-orange-600"/>
+                  <h3 className="text-[10px] font-black uppercase tracking-wider text-indigo-900">
                     LIBRERÍA <span className="text-orange-600">({filteredCatalog.length})</span>
                   </h3>
                 </div>
