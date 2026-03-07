@@ -617,7 +617,7 @@ const CRMContacts = ({ currentUser }) => {
               </div>
 
               {/* Asignar a Comercial / Representante - Solo visible para Admin */}
-              {(currentUser?.isAdmin || currentUser?.isGerente) && (
+              {(currentUser?.isAdmin || currentUser?.isGerente || currentUser?.isDirectorComercial) && (
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Asignar a Comercial / Representante</label>
                   <select
@@ -687,7 +687,7 @@ const CRMContacts = ({ currentUser }) => {
               </div>
 
               {/* Valores Personalizados - Solo para Admin y al editar */}
-              {(currentUser?.isAdmin || currentUser?.isGerente) && editingContact && (
+              {(currentUser?.isAdmin || currentUser?.isGerente || currentUser?.isDirectorComercial) && editingContact && (
                 <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mt-4">
                   <h4 className="text-xs font-black text-amber-700 uppercase mb-3 flex items-center gap-2">
                     <Settings size={14} />
