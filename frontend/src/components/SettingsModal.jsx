@@ -1918,13 +1918,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           <label className="flex items-center gap-3 cursor-pointer p-3 bg-orange-100 rounded-xl border border-orange-200">
                             <input
                               type="checkbox"
-                              checked={userForm.isAdmin}
-                              onChange={(e) => setUserForm({...userForm, isAdmin: e.target.checked, isGerente: false})}
+                              checked={userForm.isDirectorComercial}
+                              onChange={(e) => setUserForm({...userForm, isDirectorComercial: e.target.checked, isGerente: false})}
                               className="w-5 h-5 rounded border-2 border-orange-300"
                             />
                             <div>
                               <span className="text-sm font-black text-slate-900">Director Comercial</span>
-                              <p className="text-xs text-slate-500">Acceso total al sistema</p>
+                              <p className="text-xs text-slate-500">Ve todo el CRM y estadísticas</p>
                             </div>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
