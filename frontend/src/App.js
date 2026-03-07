@@ -507,8 +507,8 @@ const App = () => {
                 <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
               </button>
               
-              {/* Solo Admin y usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canUseAIAnalysis) && !state.currentUser?.isTienda && (
+              {/* Solo usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
+              {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
                   className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -529,8 +529,8 @@ const App = () => {
                 </button>
               )}
               
-              {/* Digitalizador - Solo Admin o usuarios con permiso (NO para Tienda) */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && !state.currentUser?.isTienda && (
+              {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
+              {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
                   className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
