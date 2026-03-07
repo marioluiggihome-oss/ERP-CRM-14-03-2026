@@ -133,6 +133,7 @@ class UserUpdate(BaseModel):
     isActive: Optional[bool] = None
     isAdmin: Optional[bool] = None
     isGerente: Optional[bool] = None
+    isDirectorComercial: Optional[bool] = None
     isResponsableDelegacion: Optional[bool] = None
     isRepresentative: Optional[bool] = None
     isPrescriptor: Optional[bool] = None
