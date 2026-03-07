@@ -483,8 +483,8 @@ const App = () => {
             </div>
             
             <div className="flex flex-col gap-6 flex-1 w-full px-2">
-              {/* CRM - Solo visible para Admin o usuarios con canAccessCRM (NO para Tienda/Punto de Venta) */}
-              {(state.currentUser?.isAdmin || state.currentUser?.canAccessCRM) && !state.currentUser?.isTienda && (
+              {/* CRM - Solo visible para usuarios con canAccessCRM (NO para Tienda/Punto de Venta) */}
+              {state.currentUser?.canAccessCRM && !state.currentUser?.isTienda && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
                   className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
