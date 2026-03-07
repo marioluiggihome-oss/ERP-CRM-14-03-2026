@@ -591,11 +591,17 @@ const App = () => {
                 onOpenManufacturing={() => setIsManufacturingView(true)} 
               />
             )}
-            {state.currentTab === 'visualizer' && <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />}
+            {state.currentTab === 'visualizer' && (state.currentUser?.isAdmin || state.currentUser?.canUseAIAnalysis) && (
+              <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
+            )}
             {state.currentTab === 'library' && <ProjectLibrary state={state} setState={setState} />}
             {state.currentTab === 'backup' && <BackupManager />}
-            {state.currentTab === 'digitalizador' && <Digitalizador state={state} />}
-            {state.currentTab === 'armarios' && <Armarios state={state} setState={setState} />}
+            {state.currentTab === 'digitalizador' && (state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && (
+              <Digitalizador state={state} />
+            )}
+            {state.currentTab === 'armarios' && (state.currentUser?.isAdmin || state.currentUser?.canAccessArmarios) && (
+              <Armarios state={state} setState={setState} />
+            )}
             
             {/* CRM - Single Component with internal navigation */}
             {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} />}
