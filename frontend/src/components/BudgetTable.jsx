@@ -1689,6 +1689,224 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
           </div>
         )}
 
+        {/* Catálogo - POSICIÓN HORIZONTAL ARRIBA (top) */}
+        {catalogPosition === 'top' && (
+          <div style={{ height: isCatalogOpen ? catalogHeight : 50 }} className="absolute top-0 left-0 right-0 bg-white border-b border-indigo-100 no-print transition-all duration-300 z-50 overflow-hidden shadow-2xl">
+             <div className={`h-[50px] px-4 bg-indigo-50/30 border-b border-indigo-50 flex justify-between items-center`}>
+                <div className="flex items-center gap-3">
+                  {/* Botón ocultar/mostrar - Icono de panel */}
+                  <button 
+                    onClick={() => setIsCatalogOpen(!isCatalogOpen)}
+                    className="p-2.5 bg-indigo-900 hover:bg-indigo-700 rounded-xl transition-colors shadow-lg border-2 border-indigo-600"
+                    title={isCatalogOpen ? "Ocultar librería" : "Mostrar librería"}
+                  >
+                    {isCatalogOpen ? <PanelTopClose size={18} className="text-white"/> : <PanelTopOpen size={18} className="text-white"/>}
+                  </button>
+                  <LayoutPanelTop size={16} className="text-orange-600"/>
+                  <h3 className="text-[10px] font-black uppercase tracking-wider text-indigo-900">
+                    LIBRERÍA <span className="text-orange-600">({filteredCatalog.length})</span>
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                   {/* Filtros solo cuando está abierto */}
+                   {isCatalogOpen && (
+                     <>
+                       <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-indigo-900 outline-none">
+                         <option value="TODOS">📁 PROGRAMA</option>
+                         {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
+                       </select>
+                       <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="bg-purple-100 border-2 border-purple-400 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-purple-900 outline-none" disabled={selectedPrograma === 'TODOS'}>
+                         <option value="TODAS">📂 CATEGORÍA</option>
+                         {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                       </select>
+                       <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="bg-amber-100 border-2 border-amber-400 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-amber-900 outline-none" disabled={selectedCategory === 'TODAS'}>
+                         <option value="TODAS">📄 SERIE</option>
+                         {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
+                       </select>
+                       {/* Filtros de medidas */}
+                       <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1 border border-slate-200">
+                         <span className="text-[7px] font-black text-slate-500">📐</span>
+                         <input 
+                           type="number" 
+                           placeholder="AN" 
+                           value={filterWidth} 
+                           onChange={e => setFilterWidth(e.target.value)}
+                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
+                           title="Filtrar por ancho (mm)"
+                         />
+                         <input 
+                           type="number" 
+                           placeholder="AL" 
+                           value={filterHeight} 
+                           onChange={e => setFilterHeight(e.target.value)}
+                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
+                           title="Filtrar por alto (mm)"
+                         />
+                         <input 
+                           type="number" 
+                           placeholder="FO" 
+                           value={filterDepth} 
+                           onChange={e => setFilterDepth(e.target.value)}
+                           className="w-10 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] font-bold text-center outline-none"
+                           title="Filtrar por fondo (mm)"
+                         />
+                         {(filterWidth || filterHeight || filterDepth) && (
+                           <button 
+                             onClick={() => { setFilterWidth(''); setFilterHeight(''); setFilterDepth(''); }}
+                             className="text-slate-400 hover:text-red-500 ml-1"
+                             title="Limpiar filtros de medidas"
+                           >
+                             <X size={10} />
+                           </button>
+                         )}
+                       </div>
+                       <div className="relative w-[180px]">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-300" size={12} />
+                          <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1 pl-7 pr-2 text-[8px] font-bold outline-none uppercase" />
+                       </div>
+                     </>
+                   )}
+                   {/* Botones cambiar posición */}
+                   <button 
+                     onClick={() => setCatalogPosition('horizontal')} 
+                     className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
+                     title="Mover abajo"
+                   >
+                     <PanelBottomOpen size={14} className="text-indigo-600"/>
+                   </button>
+                   <button 
+                     onClick={() => setCatalogPosition('vertical')} 
+                     className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
+                     title="Mover a la derecha"
+                   >
+                     <PanelRightOpen size={14} className="text-indigo-600"/>
+                   </button>
+                </div>
+             </div>
+             {isCatalogOpen && <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>}
+             
+             <div className="h-[calc(100%-56px)] overflow-y-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-indigo-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
+                    <tr>
+                      <th className="p-2 pl-3 w-[45px]"></th>
+                      <th className="p-2 w-[90px]">REF</th>
+                      <th className="p-2 min-w-[180px]">DESCRIPCIÓN</th>
+                      <th className="p-2 text-center w-[55px]">AN</th>
+                      <th className="p-2 text-center w-[55px]">AL</th>
+                      <th className="p-2 text-center w-[55px]">FO</th>
+                      <th className="p-2 text-center w-[60px]">PTS</th>
+                      <th className="p-2 pr-3 text-right w-[40px]"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-indigo-50">
+                    {filteredCatalog.map(p => {
+                      // Determinar tipo de icono basado en el código
+                      const code = p.code?.toUpperCase() || '';
+                      const isGola = code.startsWith('G') && /^G\d/.test(code);
+                      
+                      // Detectar tipo de herraje
+                      const hardwareType = getHardwareType(code);
+                      // Detectar tipo de mueble especial
+                      const specialType = getSpecialType(code, p.name);
+                      
+                      // Detectar tipo de mueble especial para icono
+                      let iconType = '1P';
+                      if ((code.includes('APABL') || code.includes('AVABL') || code.includes('APVBL')) && 
+                          !code.includes('HL') && !code.includes('HS') && !code.includes('HF')) {
+                        iconType = 'HK-TOP';
+                      }
+                      else if (code.includes('HS')) iconType = 'HS';
+                      else if (code.includes('HL')) iconType = 'HL';
+                      else if (code.includes('HF')) iconType = 'HF';
+                      else if (code.includes('HM') || code.includes('CHM') || code.includes('PHM') || (p.name?.toUpperCase().includes('HORNO') && p.name?.toUpperCase().includes('MICRO'))) iconType = 'HORNO+MICRO';
+                      else if (code.includes('AM') || code.includes('BM') || p.name?.toUpperCase().includes('MICRO')) iconType = 'MICRO';
+                      else if (code.includes('CH') || code.includes('BH') || code.includes('PH') || code.includes('VH') || p.name?.toUpperCase().includes('HORNO')) iconType = 'HORNO';
+                      else if (code.includes('BP') || p.name?.toUpperCase().includes('PLACA')) iconType = 'PLACA';
+                      else if (code.includes('BF') || p.name?.toUpperCase().includes('FREGADERO')) iconType = 'FREG';
+                      else if (code.includes('AT') || p.name?.toUpperCase().includes('TERMO')) iconType = 'TERMO';
+                      else if (code.includes('AE') || p.name?.toUpperCase().includes('ESCURRE')) iconType = 'ESCURRE';
+                      else if (code.includes('AC') || p.name?.toUpperCase().includes('CAMPANA')) iconType = 'CAMPANA';
+                      else if (code.includes('PE') || p.name?.toUpperCase().includes('EXTRAIBLE') || p.name?.toUpperCase().includes('EXTRAÍBLE')) iconType = 'EXTRAIBLE';
+                      else if (code.includes('BOT') || p.name?.toUpperCase().includes('BOTELLERO')) iconType = 'BOTELLERO';
+                      else if (code.includes('ESC') || p.name?.toUpperCase().includes('ESCOBERO')) iconType = 'ESCOBERO';
+                      else if (code.includes('FRI') || p.name?.toUpperCase().includes('FRIGO')) iconType = 'FRIGO';
+                      else if (p.name?.toUpperCase().includes('CACEROLERO') || p.name?.toUpperCase().includes('CAJONES') || p.name?.toUpperCase().includes('CAJÓN')) iconType = 'CAJONES';
+                      else if (code.includes('ARA') || code.includes('BRA') || code.includes('ARC') || code.includes('BRC')) iconType = 'RINCON';
+                      else if (code.includes('3C') || code.includes('4C') || code.includes('5C')) iconType = '3C';
+                      else if (code.startsWith('COS_') || p.category === 'COSTADOS') iconType = 'COSTADO';
+                      else if (code.startsWith('EST_') || p.category === 'ESTANTES') iconType = 'ESTANTE';
+                      else if (code.startsWith('REG_') || p.category === 'REGLETAS') iconType = 'REGLETA';
+                      else if (code.startsWith('PTA_') || p.category === 'PUERTAS') iconType = 'PUERTA';
+                      else if (code.startsWith('VIT_') || p.category === 'VITRINAS') iconType = 'VITRINA';
+                      else if (code.startsWith('COR_') || p.category === 'CORNISAS') iconType = 'CORNISA';
+                      else if (code.startsWith('ZOC_') || p.category === 'ZOCALOS') iconType = 'ZOCALO';
+                      else if (code.includes('2P')) iconType = '2P';
+                      else if (code.includes('1V') || code.includes('2V')) iconType = '1V';
+                      
+                      // Colores para badges de herraje
+                      const hardwareColors = {
+                        'HK': 'bg-red-500 text-white',
+                        'HS': 'bg-emerald-500 text-white', 
+                        'HL': 'bg-violet-500 text-white',
+                        'HF': 'bg-cyan-500 text-white'
+                      };
+                      
+                      // Colores para badges de tipo especial
+                      const specialColors = {
+                        'MICRO': 'bg-blue-100 text-blue-700',
+                        'HORNO': 'bg-amber-100 text-amber-700',
+                        'HORNO+MICRO': 'bg-orange-100 text-orange-700',
+                        'PLACA': 'bg-red-100 text-red-700',
+                        'FREG': 'bg-sky-100 text-sky-700',
+                        'TERMO': 'bg-teal-100 text-teal-700',
+                        'ESCURRE': 'bg-indigo-100 text-indigo-700',
+                        'CAMPANA': 'bg-purple-100 text-purple-700',
+                        'EXTRAÍBLE': 'bg-lime-100 text-lime-700',
+                        'BOTELLERO': 'bg-rose-100 text-rose-700',
+                        'ESCOBERO': 'bg-stone-100 text-stone-700',
+                        'FRIGO': 'bg-cyan-100 text-cyan-700',
+                        'CAJONES': 'bg-yellow-100 text-yellow-700'
+                      };
+                      
+                      return (
+                        <tr key={p.id} className="hover:bg-orange-50 group cursor-pointer transition-colors" onClick={() => addItemToBudget(p)}>
+                          <td className="p-1 pl-2 w-[45px]">
+                            <CabinetIcon type={iconType} isGola={isGola} className="w-8 h-8" />
+                          </td>
+                          <td className="p-2 font-bold text-indigo-900 text-[11px] w-[90px]">{p.code}</td>
+                          <td className="p-2 min-w-[180px]">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold text-indigo-600 uppercase">{p.name}</span>
+                              {hardwareType && (
+                                <span className={`px-1.5 py-0.5 rounded text-[7px] font-black ${hardwareColors[hardwareType]}`}>
+                                  {hardwareType}
+                                </span>
+                              )}
+                              {specialType && (
+                                <span className={`px-1.5 py-0.5 rounded text-[7px] font-bold ${specialColors[specialType]}`}>
+                                  {specialType}
+                                </span>
+                              )}
+                            </div>
+                            {p.series && <div className="text-[8px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
+                          </td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.width ? p.width : '-'}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
+                          <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
+                            {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
+                          </td>
+                          <td className="p-2 pr-3 text-right w-[40px]"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+             </div>
+          </div>
+        )}
+
         {/* Catálogo - POSICIÓN VERTICAL (derecha) */}
         {catalogPosition === 'vertical' && (
           <div 
