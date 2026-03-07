@@ -1783,9 +1783,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                    </button>
                 </div>
              </div>
-             {isCatalogOpen && <div onMouseDown={() => { isResizingCatalog.current = true; }} className="h-1.5 cursor-ns-resize hover:bg-orange-600/30"></div>}
+             {isCatalogOpen && <div onMouseDown={() => { isResizingCatalog.current = true; }} className="absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-orange-600/30 z-10"></div>}
              
-             <div className="h-[calc(100%-56px)] overflow-y-auto">
+             <div className="h-[calc(100%-50px)] overflow-y-auto">
                 <table className="w-full text-left">
                   <thead className="bg-indigo-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
                     <tr>
