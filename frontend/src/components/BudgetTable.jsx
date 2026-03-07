@@ -1744,6 +1744,45 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     <option value="HL">HL AVENTOS</option>
                     <option value="HS">HS SERVO</option>
                   </select>
+                  {/* Filtros de medidas - Vista vertical */}
+                  <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-2 border border-slate-200">
+                    <span className="text-[9px] font-black text-slate-500">📐 MEDIDAS:</span>
+                    <div className="flex gap-1">
+                      <input 
+                        type="number" 
+                        placeholder="AN" 
+                        value={filterWidth} 
+                        onChange={e => setFilterWidth(e.target.value)}
+                        className="w-12 bg-white border border-slate-200 rounded px-1 py-1 text-[10px] font-bold text-center outline-none"
+                        title="Filtrar por ancho (mm)"
+                      />
+                      <input 
+                        type="number" 
+                        placeholder="AL" 
+                        value={filterHeight} 
+                        onChange={e => setFilterHeight(e.target.value)}
+                        className="w-12 bg-white border border-slate-200 rounded px-1 py-1 text-[10px] font-bold text-center outline-none"
+                        title="Filtrar por alto (mm)"
+                      />
+                      <input 
+                        type="number" 
+                        placeholder="FO" 
+                        value={filterDepth} 
+                        onChange={e => setFilterDepth(e.target.value)}
+                        className="w-12 bg-white border border-slate-200 rounded px-1 py-1 text-[10px] font-bold text-center outline-none"
+                        title="Filtrar por fondo (mm)"
+                      />
+                    </div>
+                    {(filterWidth || filterHeight || filterDepth) && (
+                      <button 
+                        onClick={() => { setFilterWidth(''); setFilterHeight(''); setFilterDepth(''); }}
+                        className="text-slate-400 hover:text-red-500"
+                        title="Limpiar filtros"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
                     <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 pl-9 pr-3 text-[10px] font-bold outline-none uppercase" />
