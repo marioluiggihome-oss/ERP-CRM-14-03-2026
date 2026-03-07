@@ -267,9 +267,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       }
       
       const isCorrectModule = catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule;
-      const matchesPrograma = selectedPrograma === 'TODOS' || (p.programa || 'ESTÁNDAR') === selectedPrograma;
-      const matchesSeries = selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
-      const matchesCategory = selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
+      
+      // Si hay búsqueda activa, ignorar filtros de programa/categoría/serie
+      const hasActiveSearch = q && q.length >= 2;
+      const matchesPrograma = hasActiveSearch || selectedPrograma === 'TODOS' || (p.programa || 'ESTÁNDAR') === selectedPrograma;
+      const matchesSeries = hasActiveSearch || selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
+      const matchesCategory = hasActiveSearch || selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
       
       // Filtro de medidas (ancho, alto, fondo)
       let matchesMedidas = true;
