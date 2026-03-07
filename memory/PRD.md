@@ -1,107 +1,89 @@
 # LUIGGI HOME - Kitchen Budget ERP/CRM
 
 ## Original Problem Statement
-Replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME** with focus on:
-1. User-guided product catalog creation from master PDF (TARIFA-COMPLETA.pdf)
-2. Digitalizador (draft digitizer) with image analysis, PDF export, cost/margin calculation
-3. Armarios (wardrobes) component with AI-powered design
-4. User roles & permissions (Admin, Gerente, Director Comercial)
-5. Email registration and Two-Factor Authentication (2FA)
+Replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**.
 
 ## User's Preferred Language
 Spanish (es)
 
-## Core Architecture
-- **Frontend:** React + Shadcn/UI
-- **Backend:** FastAPI (server.py + modular routers)
-- **Database:** MongoDB (test_database)
-- **AI Integration:** Google Gemini via emergentintegrations
-- **Authentication:** JWT + TOTP (pyotp, qrcode)
-- **Email:** SendGrid
-
 ## Current Statistics (Mar 2026)
 - **Total Products:** 7,148
-- **Programs:** ESTÁNDAR, GOLA, ALUMINIO
-- **Categories:** 19+ unique categories
-- **Series normalizadas:** 2,428 productos actualizados
+- **Series Normalizadas:** 2,428 productos actualizados
 
-## Completed Tasks
+## Completed Tasks - Session Mar 7, 2026
 
-### Mar 7, 2026 - Session 3: Permisos, Filtros y Emails ✅
+### 🔐 Permisos por Módulo (Sin bypass Admin)
+Todos los módulos requieren su permiso específico activo:
+- **CRM** → `canAccessCRM`
+- **IA Lab** → `canUseAIAnalysis`
+- **Digitalizador** → `canUseDigitalizador`
+- **Armarios** → `canAccessArmarios`
 
-#### Bug Fixes
-1. **Permiso Armarios independiente de Admin** - FIXED
-   - Ahora SOLO se usa `canAccessArmarios` (sin bypass de isAdmin)
-   - Admin necesita tener el permiso activo para ver Armarios
-   - Files: `BudgetTable.jsx`, `App.js`
+### 👥 Roles CRM - Director Comercial y Gerente
+- **Director Comercial** (`isDirectorComercial`) y **Gerente** (`isGerente`) siempre ven TODO el CRM
+- Los **Comerciales** solo ven los clientes que tienen asignados
+- Los datos se acumulan aunque no haya comercial asignado
+- Al asignar comercial, ve toda la información histórica
 
-2. **Series duplicadas en librería** - FIXED
-   - Normalizado ALTOS→ALTO, BAJOS→BAJO, ESTANDAR→ESTÁNDAR
-   - 2,428 productos actualizados
+**Archivos modificados:**
+- `CRMDashboard.jsx`, `CRMContacts.jsx`, `CRMPipeline.jsx`, `CRMCalendar.jsx`
+- `SettingsModal.jsx` - Nuevo checkbox para Director Comercial
+- `/app/backend/models/schemas.py` - Nuevo campo `isDirectorComercial`
 
-#### New Features
-3. **Filtro de medidas (📐)** - NEW
-   - Campos: Ancho (AN), Alto (AL), Fondo (FO)
-   - Tolerancia de ±5mm para búsqueda flexible
-   - Botón X para limpiar filtros
-   - Disponible en vistas horizontal y vertical
+### 📐 Filtros de Librería
+- Programa, Categoría, Serie
+- 🚪 Tipo de Apertura (HK, HF, HL, HS)
+- 📐 Medidas (Ancho, Alto, Fondo con ±5mm tolerancia)
 
-4. **Emails con diseño profesional** - NEW
-   - Plantilla moderna con gradiente índigo/naranja
-   - Header "LUIGGI HOME" con estilo corporativo
-   - Email de verificación al usuario
-   - Notificación al admin (mario@luiggihome.es) en cada registro
-   - Email de recuperación de contraseña
+### 🗂️ Series Normalizadas
+- ALTOS→ALTO, BAJOS→BAJO, ESTANDAR→ESTÁNDAR
+- 2,428 productos corregidos
 
-### Mar 7, 2026 - Session 2 ✅
-- Cálculo COSTO con descuento
-- Expedientes duplicados
-- Filtro de apertura abatible (HK, HF, HL, HS)
+### 📧 Emails Modernizados
+- Plantilla profesional con diseño LUIGGI HOME
+- Notificación al admin en nuevos registros
 
-### Mar 7, 2026 - Session 1 ✅
-- Email registration y 2FA
-- Bug permiso Armarios (parcial)
+## ⚠️ PROBLEMA CONOCIDO: SendGrid
+
+**Error:** HTTP 403 Forbidden al enviar emails
+
+**Causa:** La API key de SendGrid no tiene permisos suficientes o el dominio remitente (`noreply@luiggihome.com`) no está verificado.
+
+**Solución requerida por el usuario:**
+1. Acceder a la cuenta de SendGrid
+2. Verificar el dominio `luiggihome.com` en Sender Authentication
+3. O usar un remitente ya verificado (Single Sender Verification)
+4. Verificar que la API key tenga permisos de "Mail Send"
 
 ## Pending Tasks
 
 ### P0 - Inmediato
-- [ ] Verificar que el botón ARMARIOS desaparezca para MARIO (tiene canAccessArmarios: false)
+- [ ] ⚠️ **Configurar SendGrid** - El usuario debe verificar dominio/remitente en su cuenta SendGrid
 
 ### P1 - Próximas Tareas
-- [ ] Revisar productos HS (35AVABLHS1200 y análogos) - ¿Ya no son Servo-Drive?
-- [ ] Verificar envío real de emails con SendGrid (puede requerir verificación de dominio)
-- [ ] Añadir panel de configuración 2FA en perfil de usuario
-- [ ] Investigar otros problemas del catálogo del DOCX
+- [ ] Botón para ocultar/mostrar el catálogo lateral (ya existe `isCatalogOpen` pero puede mejorarse el icono)
+- [ ] Revisar productos HS que ya no son Servo-Drive
+- [ ] Panel 2FA en perfil de usuario
 
 ### P2 - Technical Debt
-- [ ] Refactoring `/app/backend/server.py` (~5,800 líneas)
-- [ ] Decompose `BudgetTable.jsx` (>2000 líneas)
-- [ ] Decompose `Armarios.jsx` (>3300 líneas)
+- [ ] Refactoring `server.py`, `BudgetTable.jsx`, `Armarios.jsx`
 
-### P3 - Future Features
-- [ ] Rol "Gerente" con permisos específicos
-- [ ] Client-Sales Rep Assignment
-- [ ] Gestión de delegaciones
+## Roles del Sistema
 
-## Filtros de Librería Disponibles
-1. **📁 PROGRAMA:** ESTÁNDAR, GOLA, ALUMINIO
-2. **📂 CATEGORÍA:** BAJOS, ALTOS, COLUMNAS, etc.
-3. **📄 SERIE:** Variantes por fondo y altura
-4. **🚪 APERTURA:** ABATIBLES, HK-TOP, HF, HL, HS
-5. **📐 MEDIDAS:** Ancho, Alto, Fondo (±5mm tolerancia) - NUEVO
-
-## Configuration
-```
-ADMIN_EMAIL=mario@luiggihome.es
-SENDGRID_API_KEY=configured
-```
+| Rol | Permisos CRM | Permisos Generales |
+|-----|--------------|-------------------|
+| Gerente | Ve TODO | Acceso total |
+| Director Comercial | Ve TODO | Según permisos |
+| Admin | Ve TODO | Acceso total |
+| Responsable Delegación | Ve su delegación | Según permisos |
+| Comercial | Solo sus clientes | Según permisos |
+| Tienda | Solo sus datos | Limitado |
 
 ## Test Credentials
-- **Admin User:** MARIO / MARIO (canAccessArmarios: false)
-- **Test Email User:** nuevo_usuario@example.com / Test1234
+- **Admin User:** MARIO / MARIO
 
 ## Key Files Modified This Session
-- `/app/frontend/src/components/BudgetTable.jsx` - Filtros medidas, permiso Armarios
-- `/app/frontend/src/App.js` - Permiso Armarios
-- `/app/backend/routes/auth_advanced.py` - Emails modernos + notificación admin
-- `/app/backend/.env` - ADMIN_EMAIL
+- `/app/frontend/src/components/CRM*.jsx` - Lógica Director Comercial
+- `/app/frontend/src/components/SettingsModal.jsx` - Nuevo rol
+- `/app/frontend/src/components/Digitalizador.jsx` - Opción CRM condicional
+- `/app/backend/models/schemas.py` - Campo isDirectorComercial
