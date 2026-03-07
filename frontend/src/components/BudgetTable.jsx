@@ -250,12 +250,18 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const nameUpper = p.name?.toUpperCase() || '';
       const nameLower = p.name?.toLowerCase() || '';
       const qUpper = q.toUpperCase().trim();
+      const refUpper = (p.reference || '').toUpperCase();
+      const descUpper = (p.description || '').toUpperCase();
       
       let matchesSearch = false;
       
       if (q && q.length > 0) {
-        // Búsqueda ESTRICTA: solo códigos que coincidan exactamente o empiecen con el término
-        matchesSearch = codeUpper === qUpper || codeUpper.startsWith(qUpper);
+        // Búsqueda FLEXIBLE: busca en código, nombre, referencia y descripción
+        matchesSearch = 
+          codeUpper.includes(qUpper) || 
+          nameUpper.includes(qUpper) || 
+          refUpper.includes(qUpper) ||
+          descUpper.includes(qUpper);
       } else {
         // Sin búsqueda, mostrar todo
         matchesSearch = true;
