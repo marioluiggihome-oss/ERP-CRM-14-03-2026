@@ -1455,7 +1455,8 @@ const Digitalizador = ({ state }) => {
                   <FileText size={20} className="text-orange-400" />
                 </label>
 
-                {/* CRM */}
+                {/* CRM - Solo si tiene permiso */}
+                {state.currentUser?.canAccessCRM && (
                 <label className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl cursor-pointer hover:bg-purple-100 transition-colors">
                   <input
                     type="checkbox"
@@ -1469,6 +1470,7 @@ const Digitalizador = ({ state }) => {
                   </div>
                   <Briefcase size={20} className="text-purple-400" />
                 </label>
+                )}
               </div>
 
               {/* Campos CRM si está marcado */}
