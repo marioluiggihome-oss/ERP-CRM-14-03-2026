@@ -780,7 +780,7 @@ async def forgot_password(request: Request, data: PasswordResetRequest, backgrou
 
 
 async def send_reset_email(email: str, code: str, name: str):
-    """Enviar email de reset de contraseña"""
+    """Enviar email de reset de contraseña con diseño moderno"""
     try:
         from sendgrid import SendGridAPIClient
         from sendgrid.helpers.mail import Mail
@@ -790,21 +790,37 @@ async def send_reset_email(email: str, code: str, name: str):
             logger.warning("SendGrid not configured")
             return False
         
+        content = f'''
+        <h2 style="margin: 0 0 20px; font-size: 24px; font-weight: 700; color: #1e293b;">
+            Hola {name} 🔑
+        </h2>
+        <p style="margin: 0 0 30px; font-size: 16px; color: #475569; line-height: 1.6;">
+            Has solicitado restablecer tu contraseña en <strong>LUIGGI HOME</strong>. Usa el siguiente código para continuar:
+        </p>
+        
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); padding: 30px; text-align: center; margin: 0 0 30px; border-radius: 12px; border: 2px solid #fecaca;">
+            <p style="margin: 0 0 10px; font-size: 12px; color: #991b1b; text-transform: uppercase; letter-spacing: 2px;">Código de recuperación</p>
+            <span style="font-size: 42px; font-weight: 900; letter-spacing: 12px; color: #dc2626; font-family: monospace;">{code}</span>
+        </div>
+        
+        <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 0 0 20px;">
+            <p style="margin: 0; font-size: 14px; color: #92400e;">
+                ⏰ <strong>Este código expira en 30 minutos.</strong>
+            </p>
+        </div>
+        
+        <p style="margin: 0; font-size: 13px; color: #94a3b8;">
+            Si no solicitaste este cambio, puedes ignorar este correo. Tu contraseña no será modificada.
+        </p>
+        '''
+        
+        html_content = get_email_template(content, "Recuperar contraseña")
+        
         message = Mail(
             from_email='noreply@luiggihome.com',
             to_emails=email,
-            subject='Recuperar contraseña - LUIGGI HOME',
-            html_content=f'''
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #ea580c;">Hola {name}</h2>
-                <p>Has solicitado restablecer tu contraseña. Tu código es:</p>
-                <div style="background: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-                    <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1e293b;">{code}</span>
-                </div>
-                <p>Este código expira en 30 minutos.</p>
-                <p style="color: #64748b; font-size: 12px;">Si no solicitaste este cambio, ignora este correo.</p>
-            </div>
-            '''
+            subject='🔑 Recuperar contraseña - LUIGGI HOME',
+            html_content=html_content
         )
         
         sg = SendGridAPIClient(api_key)
