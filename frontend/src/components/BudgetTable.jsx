@@ -1682,7 +1682,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
                           <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
-                            {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
+                            {p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0}
                           </td>
                           <td className="p-2 pr-3 text-right w-[40px]"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
                         </tr>
@@ -1905,7 +1905,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
                           <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
-                            {typeof p.points === 'number' ? p.points : p.points?.Z1 || 0}
+                            {p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0}
                           </td>
                           <td className="p-2 pr-3 text-right w-[40px]"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
                         </tr>
