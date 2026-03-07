@@ -13,7 +13,6 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [selectedPrograma, setSelectedPrograma] = useState('TODOS');
   const [selectedSeries, setSelectedSeries] = useState('TODAS');
   const [selectedCategory, setSelectedCategory] = useState('TODAS');
-  const [selectedAperturaType, setSelectedAperturaType] = useState('TODOS'); // Filtro para tipos de apertura abatible
   // Filtros de medidas
   const [filterWidth, setFilterWidth] = useState('');
   const [filterHeight, setFilterHeight] = useState('');
