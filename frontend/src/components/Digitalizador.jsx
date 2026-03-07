@@ -1143,7 +1143,7 @@ const Digitalizador = ({ state }) => {
                           <div className="flex flex-col items-center">
                             <input
                               type="text"
-                              value={isLocked ? displayPrice.toFixed(2) : line.price}
+                              value={isLocked ? displayPrice.toFixed(2) : (typeof line.price === 'number' ? line.price.toFixed(2) : line.price)}
                               onChange={(e) => {
                                 if (!isLocked) {
                                   const value = e.target.value.replace(',', '.');
