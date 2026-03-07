@@ -463,7 +463,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
   // Filtrar usuarios según el rol del usuario actual
   const visibleUsers = useMemo(() => {
-    if (state.currentUser?.isAdmin || state.currentUser?.isGerente) {
+    if (state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) {
       // Director Comercial / Gerente ve todos los usuarios
       return state.users;
     } else if (state.currentUser?.isResponsableDelegacion || state.currentUser?.canAuthorizePermissions) {
@@ -607,7 +607,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     setEditingUserId(null);
     
     // Si es comercial, automáticamente crear como tienda asignada a él
-    const isCommercial = !(state.currentUser?.isAdmin || state.currentUser?.isGerente) && state.currentUser?.isRepresentative;
+    const isCommercial = !(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.isRepresentative;
     
     // Load clients if not already loaded
     if (clients.length === 0) {
@@ -714,7 +714,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
     
     // Comerciales solo pueden eliminar tiendas asignadas a ellos
-    if (!(state.currentUser?.isAdmin || state.currentUser?.isGerente) && state.currentUser?.isRepresentative) {
+    if (!(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.isRepresentative) {
       const userToDelete = state.users.find(u => u.id === userId);
       if (userToDelete && userToDelete.linkedRepresentativeId !== state.currentUser.id) {
         alert('No tienes permisos para eliminar este usuario');
@@ -1014,7 +1014,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         {/* Tabs */}
         <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto shrink-0">
           {/* Tab Panel Director - Solo Admin (antes era Panel Admin separado) */}
-          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
               onClick={() => setActiveTab('director')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1036,7 +1036,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           </button>
           
           {/* Tab Clientes - Solo Admin */}
-          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
               onClick={() => setActiveTab('clients')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1086,7 +1086,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           )}
           
           {/* Tab Backups - Solo Admin */}
-          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
               onClick={() => setActiveTab('backups')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1099,7 +1099,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           )}
           
           {/* Pestaña Mantenimiento - Solo Admin */}
-          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
               onClick={() => setActiveTab('maintenance')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1111,7 +1111,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </button>
           )}
           
-          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
               onClick={() => setActiveTab('telemetry')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1688,7 +1688,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg"
                     >
                       <UserPlus size={18} />
-                      {(state.currentUser?.isAdmin || state.currentUser?.isGerente) ? 'Nuevo Usuario' : 'Nueva Tienda'}
+                      {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) ? 'Nuevo Usuario' : 'Nueva Tienda'}
                     </button>
                   </div>
 
@@ -1897,7 +1897,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
 
                     {/* Role & Hierarchy */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
                       <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
                         <h4 className="text-sm font-black text-orange-900 uppercase mb-3">Rol y Jerarquía</h4>
                         <div className="space-y-3">
@@ -1941,7 +1941,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           </label>
 
                           {/* Checkbox Responsable Delegación - Solo visible para Director Comercial */}
-                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
                             <label className="flex items-center gap-3 cursor-pointer p-3 bg-red-50 rounded-xl border border-red-200">
                               <input
                                 type="checkbox"
@@ -1966,7 +1966,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           )}
 
                           {/* Checkbox Colaborador Comercial - Solo visible para Admin/Responsable */}
-                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isResponsableDelegacion) && (
+                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial || state.currentUser?.isResponsableDelegacion) && (
                             <label className="flex items-center gap-3 cursor-pointer p-3 bg-amber-50 rounded-xl border border-amber-200">
                               <input
                                 type="checkbox"
@@ -1982,7 +1982,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           )}
 
                           {/* Checkbox Tienda/Punto de Venta - Solo visible para Admin/Responsable */}
-                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isResponsableDelegacion || state.currentUser?.canAuthorizePermissions) && (
+                          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial || state.currentUser?.isResponsableDelegacion || state.currentUser?.canAuthorizePermissions) && (
                             <label className="flex items-center gap-3 cursor-pointer p-3 bg-green-50 rounded-xl border border-green-200">
                               <input
                                 type="checkbox"
@@ -2053,7 +2053,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     )}
 
                     {/* Si es comercial, mostrar info de asignación automática */}
-                    {!(state.currentUser?.isAdmin || state.currentUser?.isGerente) && state.currentUser?.isRepresentative && (
+                    {!(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.isRepresentative && (
                       <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
                         <div className="flex items-center gap-3">
                           <Briefcase size={20} className="text-indigo-600" />
