@@ -1464,6 +1464,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          <option value="TODAS">📄 SERIE</option>
                          {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
                        </select>
+                       <select 
+                         value={selectedAperturaType} 
+                         onChange={e => setSelectedAperturaType(e.target.value)} 
+                         className="bg-emerald-100 border-2 border-emerald-400 rounded-lg py-1 px-2 text-[8px] font-black uppercase text-emerald-900 outline-none"
+                         title="Filtrar por tipo de apertura abatible"
+                       >
+                         <option value="TODOS">🚪 APERTURA</option>
+                         <option value="ABATIBLE">ABATIBLES</option>
+                         <option value="HK">HK-TOP</option>
+                         <option value="HF">HF BI-FOLD</option>
+                         <option value="HL">HL AVENTOS</option>
+                         <option value="HS">HS SERVO</option>
+                       </select>
                        <div className="relative w-[180px]">
                           <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-300" size={12} />
                           <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1 pl-7 pr-2 text-[8px] font-bold outline-none uppercase" />
