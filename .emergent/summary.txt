@@ -1,82 +1,96 @@
 <analysis>**original_problem_statement:**
-The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The project's primary focus is a highly detailed, user-guided audit and reconstruction of the product catalog (mega-auditoría) by processing pages from master PDFs. The user is also requesting significant feature additions and bug fixes, particularly for the Digitalizador (draft digitizer), Armarios (wardrobes), and general CRM functionalities.
+The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The project's primary focus is a highly detailed, user-guided audit and reconstruction of the product catalog (mega-auditoría). The user is also requesting significant feature additions and bug fixes, particularly for the Digitalizador (draft digitizer), Armarios (wardrobes), and general CRM functionalities.
 
 **PRODUCT REQUIREMENTS:**
 1.  **Clone LUIGGI HOME application:** Replicate the design and functionality.
-2.  **User-Guided Product Catalog Creation:** Build a definitive product catalog by processing pages from  and subsequent PDFs as provided by the user. This is an ongoing, page-by-page process.
-3.  **Data Integrity:** Ensure the final database is a clean representation of the user-provided pages. All new products must include , , , , , , , , and .
-4.  **Digitalizador Component Enhancements:**
-    *   Implement COST mode with lock/unlock functionality.
-    *   Generate a unique, sequential expediente (record) number per client.
-    *   Improve Analyzer to search and price items from the product catalog.
-    *   Allow uploading multiple pages/walls for a single analysis.
-5.  **Armarios Component Enhancements:**
-    *   Allow natural language design for interiors.
-    *   Allow draggable accessories for visual configuration.
-6.  **User Roles & Permissions:** Add a Gerente (Manager) role.
-7.  **Data & Workflow:** Allow budgets from the Digitalizador to be saved to the main Presupuestos (Budgets) list, segregated by client.
+2.  **User-Guided Product Catalog Creation:** The user has confirmed that all catalog pages have been processed. The task is now to audit and maintain data integrity.
+3.  **Data Integrity:** Ensure the final database is a clean representation of the user-provided data.
+4.  **Digitalizador Component Enhancements:** Implement COST mode, generate unique expediente numbers, and improve the Analyzer.
+5.  **Armarios Component Enhancements:** Allow natural language design and draggable accessories.
+6.  **User Roles & Permissions:** Add a Gerente (Manager) role and enforce permissions.
+7.  **Authentication:** Implement user self-registration via email and an optional two-factor authentication (2FA) system.
+8.  **Catalog Issues:** Investigate and fix display/tabulation issues for specific product categories mentioned in a user-provided document.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The agent has successfully fixed the critical product library bugs (rendering and filtering). A massive data ingestion and cleaning effort has been completed, processing catalog pages up to page 469, bringing the total product count to **7,148**. All products now have complete data (price, dimensions, depth, etc.).
+A full-stack React/FastAPI/MongoDB application. The agent has recently completed a major UI bug fix in the IA Lab and a significant refactoring of the backend  monolith, extracting over 1,200 lines of code into modular routers and over 800 lines of Pydantic models into a central  file. A comprehensive data audit was performed, correcting pricing errors and missing data in the 7,148-item catalog.
 
-Key new features have been implemented:
-1.  **Per-Client Budgeting**: Budgets can be saved and numbered on a per-client basis (e.g., ).
-2.  **Enhanced IA Analyzer**: The IA Lab can now analyze multiple images (walls) at once and, crucially, searches the internal 7,148-item product catalog to find and price the detected furniture, providing a complete, costed bill of materials.
+A new authentication system is partially implemented:
+*   **Backend**: Endpoints for user registration with email and 2FA setup/verification () have been created using  and .
+*   **Frontend**: Basic components (, ) have been created, and the main  has been modified to accommodate the new flow.
 
-The application is currently focused on a minor UI bug in the IA Analyzer.
+The implementation was interrupted by the user with critical questions about application behavior.
 
 **Last working item**:
-- Last item agent was working: The user reported that the button to add detected items to the budget (volcar a presupuestos) was not visible in the IA Lab after analysis. The agent identified this as a CSS layout issue in , where a  container with  was hiding the button when the list of detected items was long. The agent attempted to fix this by restructuring the component's JSX to move the button outside the scrollable container.
-- Status: IN PROGRESS
+- Last item agent was working: The user interrupted the implementation of the new email/2FA registration feature to ask two questions:
+    1.  Why can users without permission see and access the Armarios (Wardrobes) module?
+    2.  How are code changes deployed automatically? (The user is observing hot-reloading in the development environment).
+- Status: BLOCKED
 - Agent Testing Done: N
-- Which testing method agent to use? screenshot tool
+- Which testing method agent to use? Frontend testing agent (to verify the new registration/login/2FA flow once complete).
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: IA Lab Add to Budget Button is Not Visible (P0)**
+- **Issue 1: Armarios Module Visible Without Permissions (P0 - BLOCKER)**
+- **Issue 2: Investigate Product Catalog Issues from DOCX file (P1)**
 
 **Issues Detail:**
-- **Issue 1: IA Lab Add to Budget Button is Not Visible**
-    - **Attempted fixes:** The agent modified  to change the flexbox layout, aiming to place the summary and action button in a fixed footer section, separate from the scrollable list of detected items. The fix has been applied but not visually verified.
+- **Issue 1: Armarios Module Visible Without Permissions**
+    - **Attempted fixes:** None. This is a newly reported issue.
     - **Next debug checklist:**
-        1.  Restart the frontend service if not already done.
-        2.  Navigate to the IA LAB, upload a test image (), and run the analysis.
-        3.  Use the  to visually confirm if the button + AÑADIR X PRODUCTOS AL PRESUPUESTO is now visible at the bottom of the screen, below the list of items.
-        4.  If not visible, re-examine the CSS classes in , specifically the parent containers of the list and the button.
-    - **Why fix this issue and what will be achieved with the fix?** This button is the final step in the IA Analyzer workflow, allowing the user to add the automatically priced furniture to a new budget. Fixing it makes the entire feature usable.
-    - **Status:** IN PROGRESS
+        1.  First, answer the user's question, explaining that this is a bug in the permission checks.
+        2.  Examine  or the main layout component where the navigation/sidebar is rendered.
+        3.  Find the logic that renders the navigation links and add a condition to check the  state for the appropriate role or permission before rendering the Armarios link.
+        4.  Verify that the user object returned from the backend upon login contains the necessary role/permission data.
+    - **Why fix this issue and what will be achieved with the fix?** This is a critical security and UX flaw. Fixing it will ensure that users can only access modules for which they are authorized.
+    - **Status:** NOT STARTED
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Frontend.
-    - **Blocked on other issue:** None.
+    - **Blocked on other issue:** None. This is the primary blocker.
+- **Issue 2: Investigate Product Catalog Issues from DOCX file**
+    - **Attempted fixes:** The agent performed a preliminary database query and found no exact category matches for BAJOS 640 FONDO 58 but confirmed the existence of BAJOS, BAX, and LUX as categories/series.
+    - **Next debug checklist:**
+        1.  Re-examine . The problem is likely a UI rendering or filtering issue, not a database issue.
+        2.  Investigate how categories and series are grouped and displayed. There might be incorrect client-side logic causing the tabulation problems the user mentioned.
+        3.  Clarify with the user what not well means (e.g., missing products, wrong grouping, visual glitch).
+    - **Why fix this issue and what will be achieved with the fix?** This will improve the usability and correctness of the main product library, which is a core part of the application.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Frontend.
+    - **Blocked on other issue:** Blocked on completing the P0 tasks (answering user questions and fixing permissions).
 
 **In progress Task List**:
-- None.
+- **Task 1: Implement Email Registration and 2FA (P0)**
+    - **Where to resume:**
+        1.  First, you **MUST** answer the user's two blocking questions regarding permissions and deployment.
+        2.  Once confirmed, resume frontend work. The agent has already modified  and created  and .
+        3.  The next step is to fully integrate these components into  to manage application states (showing registration, 2FA setup QR code, and 2FA input on login).
+    - **What will be achieved with this?** Users will be able to self-register with an email address and optionally enable two-factor authentication for enhanced security.
+    - **Status:** BLOCKED
+    - **Should Test frontend/backend/both after fix?** Both.
+    - **Blocked on something:** The user's pending questions about permissions and deployment.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P0) **User Verification of New Features**: Once the button is fixed, the user needs to test and approve the entire IA Lab workflow (multi-image upload, catalog pricing) and the per-client budget numbering/saving system.
-    - (P1) **Implement Full Client Management (CRM)**: Create a dedicated section to add, view, edit, and delete clients.
-    - (P1) **Verify/Implement PDF Export**: Test the PDF export functionality for budgets, ensuring it works with the new data structure.
-    - (P2) **Continue Product Catalog Ingestion (Pages 470 onwards)**: The user will likely provide more PDFs. The import script () is ready to be adapted for the next batch.
+    - (P0) **Answer User's Questions**:
+        - Explain the Armarios visibility is a permission bug that will be fixed.
+        - Explain that automatic updates are due to the preview environment's hot reload feature.
 - **Future Tasks:**
-    - (P2) User Verification of Armarios Draggable Accessories.
-    - (P3) Backend Refactoring: Decompose .
-    - (P3) Frontend Refactoring: Decompose  (1900+ lines).
+    - (P1) **Frontend Refactoring**: Decompose  (1900+ lines).
+    - (P1) **Frontend Refactoring**: Decompose  (3300+ lines).
+    - (P2) **Complete Backend Refactoring**: Finish migrating all remaining endpoints from  to their respective modular routers.
+    - (P2) **Implement Gerente (Manager) role** with specific permissions throughout the application.
 
 **Completed work in this session**
-- **Bug Fix:** Fixed the critical product library rendering and filtering bugs in .
-- **Data Import (Pages 301-469):** Processed two PDFs (, ), adding **2,502** new products.
-- **Comprehensive Data Audit & Cleaning:** Performed a full audit on all 7,148 products, fixing hundreds of items that were missing prices (), dimensions (/), depth (), program, or category.
-- **UI Enhancement:** Redesigned the Acabado / Tarifa dropdown to a cleaner GRUPO DE PRECIOS selector in .
-- **Feature: Per-Client Budget Numbering:** Implemented unique, sequential budget numbers per client (e.g., ).
-- **Feature: Per-Client Budget Saving:** Modified the save logic to associate budgets with a , allowing for filtering.
-- **Feature: IA Analyzer - Multi-Image Upload:** Enhanced the IA LAB () to accept multiple images for analysis.
-- **Feature: IA Analyzer - Catalog Integration:** The analyzer now searches the internal catalog for detected items, enriching them with real codes, names, and prices, and calculating a total estimated budget.
+- **Bug Fix:** Fixed the Add to Budget button in the IA Lab, which was previously hidden on long item lists due to CSS  issues in .
+- **Backend Refactoring (Major Progress):** Reduced  from over 7,100 lines to ~5,800. Extracted all Pydantic models to  and modularized the IA Lab endpoints.
+- **Data Audit & Cleaning:** Audited the 7,148-product catalog, correcting four products with highly anomalous prices and assigning default  values to 415 products.
+- **Deployment Readiness Check:** Added a missing  to the backend  file.
+- **Feature Verification:** Confirmed that the CRM, PDF Export, and Armarios drag-and-drop features were already fully implemented.
 
 **Earlier issues found/mentioned but not fixed**
-- The latent  React DOM error noted in previous handoffs remains unaddressed. It has not appeared in this session.
+- The latent  React DOM error noted in previous handoffs remains unaddressed, as it has not caused any visible problems in this session.
 
 **Known issue recurrence from previous fork**
 - None.
@@ -85,83 +99,77 @@ The application is currently focused on a minor UI bug in the IA Analyzer.
 
 
 **Key Technical Concepts**
-- **Frontend:** React, State Management (in ), , , Flexbox/CSS for layout.
-- **Backend:** FastAPI, Pydantic Models, Motor (async MongoDB driver).
-- **Database:** MongoDB. Total products increased to 7,148. Performed extensive data cleaning and updates.
-- **3rd Party:** Google Gemini () for the core image analysis in the IA Lab.
-- **Data Processing:** Python scripts for batch processing of PDF pages, data extraction, and database updates.
+- **Backend Refactoring:** Moving from a monolithic FastAPI application to a modular structure with Routers and a central  for models.
+- **Two-Factor Authentication (2FA):** Using  and  libraries on the backend to generate secrets and QR codes for TOTP.
+- **CSS Layout (Flexbox):** Deep debugging of  containers to fix a UI bug where an element was being hidden by an  parent.
 
 **key DB schema**
-- **products**: (7,148 items) , , , , , , , , , , , , , uid=0(root) gid=0(root) groups=0(root). Data quality is now high.
-- **projects**: uid=0(root) gid=0(root) groups=0(root), , , , , , . The  field is new.
-- **clients**: Stores client data.
-- **counters**: Stores the next sequential ID for  numbers, now with per-client logic.
+- **users**: Schema updated with  and .
 
 **All files of reference**
-- : File with the current UI bug. Heavily modified for new IA Lab features.
-- : Backend monolith. Modified for per-client budgeting and IA lab pricing logic.
-- : Bugs fixed, modified to handle .
-- : Main state management, updated to include .
-- Uso: python import_pages_401_469.py <start_page> <end_page>
-Ejemplo: python import_pages_401_469.py 401 310: Latest data import script, serves as a template for future imports.
-- : Modified for the GRUPO DE PRECIOS UI change.
+- : Needs to be modified to handle permissions for navigation.
+- : The main monolith, partially refactored.
+- : New backend logic for registration and 2FA.
+- : Modified to handle the new auth flows.
+- : New component for registration UI.
+- : New component for 2FA setup UI.
 
 **Areas that need refactoring**:
-- **/app/backend/server.py**: Now over 7,000 lines. Urgently needs to be broken down into a proper project structure (e.g., , , ).
-- **/app/frontend/src/components/BudgetTable.jsx**: Still over 1,900 lines and a major source of complexity.
-- **/app/frontend/src/components/Visualizer.jsx**: Has grown to over 450 lines and contains complex state logic that could be extracted into custom hooks.
+- **/app/backend/server.py**: Still over 5,800 lines. The migration to modular routers needs to be completed.
+- **/app/frontend/src/components/BudgetTable.jsx**: Over 1,900 lines.
+- **/app/frontend/src/components/Armarios.jsx**: Over 3,300 lines.
 
 **key api endpoints**
-- : Analyzes multiple images and enriches results with catalog data.
-- : Modified to accept  and generate per-client sequences.
-- : New endpoint to get a summary of projects grouped by client.
-- : Modified to save the  with the project.
-- : Can now be filtered by .
+- 
+-  (handles 2FA)
+- 
+- 
+- 
 
 **Critical Info for New Agent**
-- Your **immediate priority** is to verify the fix for the missing Add to Budget button in the IA Lab. Use the  on the  page after running an analysis to confirm the button is visible at the bottom.
-- The user's focus has shifted to the **IA Lab Analyzer**. This feature now correctly prices detected furniture using the internal catalog. Be prepared to receive feedback or enhancement requests on this feature.
-- The two other major features implemented—per-client budget numbering and multi-image analysis—are ready for user testing.
-- The database is now much larger (7,148 products) and has been thoroughly cleaned. Trust the data quality for now.
+- Your **immediate priority** is to address the user's two blocking questions before writing any code:
+    1.  **Permissions Issue**: Acknowledge the bug where the Armarios module is visible to all users. Explain you will fix it by adding a permission check in the frontend.
+    2.  **Deployment Process**: Explain that the automatic deployment they are seeing is the hot reload feature of the development environment, which automatically reflects code changes, and is different from a formal production deployment.
+- Once the user gives approval, proceed with fixing the permissions bug (Issue #1) first, then resume the **Email Registration & 2FA task**.
 
 **documents and test reports created in this job**
 - 
--  (updated)
+- , , and other router files.
 - 
-- Uso: python import_pages_401_469.py <start_page> <end_page>
-Ejemplo: python import_pages_401_469.py 401 310
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-- 10. : User reports the Add to budget button is missing in the IA Lab. (Current task)
-- 9. : User requests the IA analyzer to price items using the internal catalog. (Completed)
-- 8. : User confirms to proceed with implementing client-specific budgets. (Completed)
-- 7. : User uploads a document reiterating priorities: Client Management, PDF Export, Save Budgets.
-- 6. : User wants to move on from the IA Lab test to the next task.
-- 5. : User provides an image to test the multi-wall IA analyzer.
-- 4. : User asks for multi-image support in the IA Lab. (Completed)
-- 3. : User clarifies a previous image was for the IA Lab, not the Digitalizer.
-- 2. : User asks for a status update and suggestions for next steps.
-- 1. : User requests UI text and alignment changes for the price group selector. (Completed)
+- 1. **(LATEST - BLOCKER)**  - User asks why the Armarios module is visible without permissions and how deployment works. **You must answer this first.**
+- 2.  - User agrees to integrate modular routers into . (Completed)
+- 3.  - User confirms they want the full backend refactoring. (In Progress)
+- 4.  - User approves the agent's suggestion to start refactoring . (Completed)
+- 5.  - User confirms to move on to the next task after P1 tasks were found to be already complete. (Completed)
+- 6.  - User confirms to start P1 tasks and that catalog import is finished. (Completed)
+- 7.  - User provides context for the IA Lab button bug. (Resolved)
+- 8.  - User requests email/2FA registration and a review of a DOCX file. (In Progress)
+- 9.  - User requests deployment readiness check. (Completed)
+- 10.  - User requests a full audit of the product catalog. (Completed)
 
 **Project Health Check:**
-- **Broken:** The IA Lab UI is partially broken as the primary action button is not visible.
+- **Broken:** Frontend role-based access control is not implemented correctly, exposing modules like Armarios to unauthorized users.
 - **Mocked:** N/A
 
 **3rd Party Integrations**
-- **Google Gemini:** Via  using Emergent LLM Key. Used for analyzing catalog page images and kitchen plans.
-- **SendGrid:** For sending emails (requires User API Key).
+- **Google Gemini:** Via  (Emergent LLM Key).
+- **SendGrid:** (Requires User API Key).
 - **jspdf / html2canvas:** For client-side PDF generation.
 - **recharts:** For data visualization charts.
+- **pyotp / qrcode:** Newly added for 2FA implementation.
 
 **Testing status**
-- Testing agent used after significant changes: YES (for the product library bug fix)
+- Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
-- Known regressions: None.
+- Known regressions: A new permission flaw was discovered where modules are visible to unauthorized users.
 
 **Credentials to test flow:**
 - **User:** 
 - **Password:** 
 
 **What agent forgot to execute**
-- The latent  React DOM error remains unaddressed from previous sessions, but it has not been a blocker. No other tasks were forgotten; the agent is actively working on the user's latest request.</analysis>
+- The agent did not implement or verify role-based access control for frontend navigation, leading to the user discovering that the Armarios module was accessible to everyone. This should have been a standard check when reviewing the application structure.</analysis>
