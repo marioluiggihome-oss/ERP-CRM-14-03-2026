@@ -36,6 +36,7 @@ class UserModelInternal(BaseModel):
     isActive: bool = True
     isAdmin: bool = False
     isGerente: bool = False
+    isDirectorComercial: bool = False
     isResponsableDelegacion: bool = False
     isRepresentative: bool = False
     isPrescriptor: bool = False
@@ -68,6 +69,7 @@ class UserResponse(BaseModel):
     isActive: bool = True
     isAdmin: bool = False
     isGerente: bool = False
+    isDirectorComercial: bool = False
     isResponsableDelegacion: bool = False
     isRepresentative: bool = False
     isPrescriptor: bool = False
@@ -99,6 +101,7 @@ class UserCreate(BaseModel):
     isActive: bool = True
     isAdmin: bool = False
     isGerente: bool = False
+    isDirectorComercial: bool = False
     isResponsableDelegacion: bool = False
     isRepresentative: bool = False
     isPrescriptor: bool = False
