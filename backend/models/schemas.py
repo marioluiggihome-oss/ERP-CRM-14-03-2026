@@ -878,3 +878,81 @@ class MaintenanceStatusResponse(BaseModel):
     startedAt: Optional[str] = None
     estimatedEndAt: Optional[str] = None
     lastBackup: Optional[str] = None
+
+
+
+# ============================================
+# AUTHENTICATION & 2FA MODELS
+# ============================================
+
+class UserRegisterRequest(BaseModel):
+    """Request to register a new user with email"""
+    email: str
+    password: str
+    confirmPassword: str
+    firstName: str
+    lastName: str
+    company: str = ""
+    phone: str = ""
+
+
+class UserRegisterResponse(BaseModel):
+    """Response after successful registration"""
+    success: bool
+    message: str
+    userId: str = ""
+    requiresEmailVerification: bool = True
+
+
+class EmailVerificationRequest(BaseModel):
+    """Request to verify email with code"""
+    email: str
+    code: str
+
+
+class Enable2FARequest(BaseModel):
+    """Request to enable 2FA"""
+    userId: str
+
+
+class Enable2FAResponse(BaseModel):
+    """Response with 2FA setup info"""
+    success: bool
+    secret: str = ""
+    qrCodeUrl: str = ""
+    backupCodes: List[str] = []
+
+
+class Verify2FARequest(BaseModel):
+    """Request to verify 2FA code"""
+    userId: str
+    code: str
+
+
+class Login2FARequest(BaseModel):
+    """Request for login with 2FA"""
+    email: str
+    password: str
+    totpCode: str = ""
+
+
+class PasswordResetRequest(BaseModel):
+    """Request to reset password"""
+    email: str
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    """Request to confirm password reset with code"""
+    email: str
+    code: str
+    newPassword: str
+    confirmPassword: str
+
+
+class UserProfileUpdate(BaseModel):
+    """Update user profile"""
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    company: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
