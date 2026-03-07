@@ -222,6 +222,28 @@ const Login = ({ onLogin, customLogo }) => {
                 />
               </div>
 
+              {/* Campo 2FA - Solo visible cuando se requiere */}
+              {requires2FA && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-2 ml-1">
+                    <Shield size={12} className="text-emerald-500" /> Código 2FA
+                  </label>
+                  <input 
+                    type="text" 
+                    value={totpCode}
+                    onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full bg-emerald-50/90 border-2 border-emerald-200 rounded-xl p-4 text-slate-900 font-bold outline-none focus:border-emerald-500 focus:bg-white transition-all placeholder-slate-400 shadow-sm text-center text-xl tracking-widest"
+                    placeholder="000000"
+                    maxLength={6}
+                    autoFocus
+                    data-testid="login-2fa-code"
+                  />
+                  <p className="text-xs text-slate-500 text-center">
+                    Introduce el código de tu app autenticadora
+                  </p>
+                </div>
+              )}
+
               {error && (
                 <div className="bg-red-50/90 border border-red-200 p-3 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold shadow-sm">
                   <ShieldAlert size={16} />
