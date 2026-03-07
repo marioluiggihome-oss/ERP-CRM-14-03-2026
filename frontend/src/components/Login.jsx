@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { LogIn, User as UserIcon, Key, ShieldAlert, Loader, Building2, Mail, Phone, MapPin, Send, CheckCircle, ArrowLeft } from 'lucide-react';
+import { LogIn, User as UserIcon, Key, ShieldAlert, Loader, Building2, Mail, Phone, MapPin, Send, CheckCircle, ArrowLeft, Shield } from 'lucide-react';
 import Logo from './Logo';
 import { login } from '../services/authService';
+import RegisterForm from './RegisterForm';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const Login = ({ onLogin, customLogo }) => {
-  const [mode, setMode] = useState('login'); // 'login' or 'register'
+  const [mode, setMode] = useState('login'); // 'login', 'register', 'registerEmail', 'distributor'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   
