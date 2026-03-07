@@ -276,16 +276,37 @@ const Login = ({ onLogin, customLogo }) => {
                 </div>
               </div>
 
-              {/* Register Button */}
-              <button 
-                type="button"
-                onClick={() => { setMode('register'); setError(null); }}
-                className="w-full bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold uppercase tracking-wider py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm border-2 border-orange-100"
-                data-testid="goto-register"
-              >
-                <Building2 size={18} /> Solicitar Alta de Distribuidor
-              </button>
+              {/* Register Buttons */}
+              <div className="space-y-3">
+                <button 
+                  type="button"
+                  onClick={() => { setMode('registerEmail'); setError(null); }}
+                  className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold uppercase tracking-wider py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm border-2 border-emerald-100"
+                  data-testid="goto-register-email"
+                >
+                  <Mail size={18} /> Registrarse con Email
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setMode('register'); setError(null); }}
+                  className="w-full bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold uppercase tracking-wider py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs border-2 border-orange-100"
+                  data-testid="goto-register"
+                >
+                  <Building2 size={16} /> Solicitar Alta como Distribuidor
+                </button>
+              </div>
             </form>
+          ) : mode === 'registerEmail' ? (
+            /* EMAIL REGISTRATION FORM */
+            <RegisterForm 
+              onSuccess={() => {
+                setMode('login');
+                setError(null);
+                // Mostrar mensaje de éxito
+                alert('¡Cuenta verificada! Ya puedes iniciar sesión.');
+              }}
+              onSwitchToLogin={() => { setMode('login'); setError(null); }}
+            />
           ) : (
             /* REGISTER FORM */
             <form onSubmit={handleRegister} className="space-y-4">
