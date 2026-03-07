@@ -459,7 +459,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   }, [telemetryModule, isOpen, activeTab]);
 
   // Lista de usuarios que pueden tener tiendas asignadas (Director, Gerente, Responsable, Comercial)
-  const representatives = useMemo(() => state.users.filter(u => u.isAdmin || u.isGerente || u.isResponsableDelegacion || u.isRepresentative), [state.users]);
+  const representatives = useMemo(() => state.users.filter(u => u.isAdmin || u.isGerente || u.isDirectorComercial || u.isResponsableDelegacion || u.isRepresentative), [state.users]);
 
   // Filtrar usuarios según el rol del usuario actual
   const visibleUsers = useMemo(() => {
