@@ -14,6 +14,10 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [selectedSeries, setSelectedSeries] = useState('TODAS');
   const [selectedCategory, setSelectedCategory] = useState('TODAS');
   const [selectedAperturaType, setSelectedAperturaType] = useState('TODOS'); // Filtro para tipos de apertura abatible
+  // Filtros de medidas
+  const [filterWidth, setFilterWidth] = useState('');
+  const [filterHeight, setFilterHeight] = useState('');
+  const [filterDepth, setFilterDepth] = useState('');
   const [isCatalogOpen, setIsCatalogOpen] = useState(true);
   const [isConfigOpen, setIsConfigOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(300);
