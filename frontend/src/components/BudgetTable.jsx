@@ -1242,7 +1242,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                                                 productName.includes('cacerolero') ||
                                                 productCode.includes('CB') ||  // Cajón Bax
                                                 productCode.includes('CL') ||  // Cajón Lux
-                                                productCode.includes('G');     // Gaveta/Cacerolero
+                                                /^\d+[A-Z]*\d*C/.test(productCode);  // Código con C para cajones (ej: 7B3C, 10SC3C) pero no GOLA
                     
                     // Determinar si NO necesita selector de apertura
                     const noNeedsOpeningSelector = isTwoDoor || isSemicolumnaTwoDoor || hasDrawersOrGavetas;
