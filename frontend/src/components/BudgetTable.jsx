@@ -271,32 +271,6 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const matchesSeries = selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
       const matchesCategory = selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
       
-      // Filtro para tipos de apertura abatible (HK, HF, HL, HS/Servo)
-      let matchesApertura = true;
-      if (selectedAperturaType !== 'TODOS') {
-        const refUpper = (p.reference || '').toUpperCase();
-        const nameUpper = (p.name || '').toUpperCase();
-        switch (selectedAperturaType) {
-          case 'HK':
-            matchesApertura = refUpper.includes('HK') || nameUpper.includes('HK');
-            break;
-          case 'HF':
-            matchesApertura = refUpper.includes('HF') || nameUpper.includes('HF');
-            break;
-          case 'HL':
-            matchesApertura = refUpper.includes('HL') || nameUpper.includes('HL');
-            break;
-          case 'HS':
-            matchesApertura = refUpper.includes('HS') || nameUpper.includes('SERVO');
-            break;
-          case 'ABATIBLE':
-            matchesApertura = nameUpper.includes('ABATIBLE');
-            break;
-          default:
-            matchesApertura = true;
-        }
-      }
-      
       // Filtro de medidas (ancho, alto, fondo)
       let matchesMedidas = true;
       if (filterWidth) {
@@ -312,7 +286,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
         matchesMedidas = matchesMedidas && p.depth && Math.abs(Number(p.depth) - depthNum) <= 5;
       }
       
-      const result = matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory && matchesApertura && matchesMedidas;
+      const result = matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory && matchesMedidas;
       
       // Log para depuración
       if (q && q.length > 5 && result) {
