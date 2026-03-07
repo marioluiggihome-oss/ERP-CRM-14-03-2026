@@ -791,8 +791,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               )}
            </div>
            
-           <button onClick={() => setIsConfigOpen(!isConfigOpen)} className={`p-2.5 rounded-lg transition-all ${isConfigOpen ? 'bg-indigo-950 text-white shadow-md' : 'bg-white border text-indigo-200'}`}>
-              {isConfigOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+           {/* Botón para ocultar/mostrar barra lateral izquierda */}
+           <button 
+             onClick={() => setIsConfigOpen(!isConfigOpen)} 
+             className={`p-3 rounded-xl transition-all shadow-lg border-2 ${isConfigOpen ? 'bg-indigo-900 text-white border-indigo-700 hover:bg-indigo-800' : 'bg-orange-500 text-white border-orange-400 hover:bg-orange-600'}`}
+             title={isConfigOpen ? "Ocultar panel izquierdo" : "Mostrar panel izquierdo"}
+           >
+              {isConfigOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
            </button>
         </div>
         
