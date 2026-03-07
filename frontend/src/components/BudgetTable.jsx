@@ -1950,9 +1950,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   </h3>
                 </div>
                 <button 
+                  onClick={() => setCatalogPosition('top')} 
+                  className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
+                  title="Mover arriba"
+                >
+                  <PanelTopOpen size={14} className="text-indigo-600"/>
+                </button>
+                <button 
                   onClick={() => setCatalogPosition('horizontal')} 
                   className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
-                  title="Cambiar a vista horizontal (abajo)"
+                  title="Mover abajo"
                 >
                   <PanelBottomOpen size={14} className="text-indigo-600"/>
                 </button>
