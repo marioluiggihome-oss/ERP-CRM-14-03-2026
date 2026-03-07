@@ -312,7 +312,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       // Dentro de la misma categoría, ordenar por código
       return a.code.localeCompare(b.code);
     });
-  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory, selectedAperturaType, filterWidth, filterHeight, filterDepth]);
+  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory, filterWidth, filterHeight, filterDepth]);
 
   const budgetKey = state.currentModule === 'montada' ? 'budgetItemsMontada' : 'budgetItemsDespiece';
 
