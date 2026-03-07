@@ -1697,19 +1697,6 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     <option value="TODAS">📄 TODAS SERIES</option>
                     {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <select 
-                    value={selectedAperturaType} 
-                    onChange={e => setSelectedAperturaType(e.target.value)} 
-                    className="w-full bg-emerald-100 border-2 border-emerald-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-emerald-900 outline-none"
-                    title="Filtrar por tipo de apertura abatible"
-                  >
-                    <option value="TODOS">🚪 TIPO APERTURA</option>
-                    <option value="ABATIBLE">ABATIBLES</option>
-                    <option value="HK">HK-TOP</option>
-                    <option value="HF">HF BI-FOLD</option>
-                    <option value="HL">HL AVENTOS</option>
-                    <option value="HS">HS SERVO</option>
-                  </select>
                   {/* Filtros de medidas - Vista vertical */}
                   <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-2 border border-slate-200">
                     <span className="text-[9px] font-black text-slate-500">📐 MEDIDAS:</span>
