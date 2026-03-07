@@ -33,11 +33,47 @@ const Login = ({ onLogin, customLogo }) => {
     setError(null);
     
     try {
-      const result = await login(username.trim(), password.trim());
-      if (result.success && result.user) {
-        onLogin(result.user);
+      // Si requiere 2FA, usar endpoint especial
+      if (requires2FA || totpCode) {
+        const response = await fetch(`${API_URL}/api/auth/login-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: username.trim(),
+            password: password.trim(),
+            totpCode: totpCode.trim()
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.requires2FA) {
+          setRequires2FA(true);
+          setError(null);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (data.success && data.user) {
+          // Guardar tokens
+          if (data.tokens) {
+            localStorage.setItem('access_token', data.tokens.access_token);
+            localStorage.setItem('refresh_token', data.tokens.refresh_token);
+          }
+          onLogin(data.user);
+        } else {
+          setError(data.detail || 'Credenciales no válidas');
+        }
       } else {
-        setError('CREDENCIALES NO VÁLIDAS');
+        // Login tradicional
+        const result = await login(username.trim(), password.trim());
+        if (result.success && result.user) {
+          onLogin(result.user);
+        } else if (result.requires2FA) {
+          setRequires2FA(true);
+        } else {
+          setError('CREDENCIALES NO VÁLIDAS');
+        }
       }
     } catch (err) {
       setError(err.message || 'CREDENCIALES NO VÁLIDAS');
