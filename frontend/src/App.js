@@ -591,12 +591,12 @@ const App = () => {
                 onOpenManufacturing={() => setIsManufacturingView(true)} 
               />
             )}
-            {state.currentTab === 'visualizer' && (state.currentUser?.isAdmin || state.currentUser?.canUseAIAnalysis) && (
+            {state.currentTab === 'visualizer' && state.currentUser?.canUseAIAnalysis && (
               <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
             )}
             {state.currentTab === 'library' && <ProjectLibrary state={state} setState={setState} />}
             {state.currentTab === 'backup' && <BackupManager />}
-            {state.currentTab === 'digitalizador' && (state.currentUser?.isAdmin || state.currentUser?.canUseDigitalizador) && (
+            {state.currentTab === 'digitalizador' && state.currentUser?.canUseDigitalizador && (
               <Digitalizador state={state} />
             )}
             {state.currentTab === 'armarios' && state.currentUser?.canAccessArmarios && (
