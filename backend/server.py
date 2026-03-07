@@ -39,6 +39,7 @@ from services.audit_service import audit, AuditAction
 from routes import (
     ia_lab_router,
     auth_router,
+    auth_advanced_router,
     products_router,
     clients_router,
     projects_router,
