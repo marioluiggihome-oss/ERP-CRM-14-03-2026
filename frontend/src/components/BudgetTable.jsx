@@ -1540,7 +1540,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                        </div>
                        <div className="relative w-[180px]">
                           <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-300" size={12} />
-                          <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1 pl-7 pr-2 text-[8px] font-bold outline-none uppercase" />
+                          <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1 pl-7 pr-7 text-[8px] font-bold outline-none uppercase" />
+                          {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500" title="Limpiar búsqueda">
+                              <X size={12} />
+                            </button>
+                          )}
                        </div>
                      </>
                    )}
@@ -1762,7 +1767,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                        </div>
                        <div className="relative w-[180px]">
                           <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-indigo-300" size={12} />
-                          <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1 pl-7 pr-2 text-[8px] font-bold outline-none uppercase" />
+                          <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-1 pl-7 pr-7 text-[8px] font-bold outline-none uppercase" />
+                          {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500" title="Limpiar búsqueda">
+                              <X size={12} />
+                            </button>
+                          )}
                        </div>
                      </>
                    )}
