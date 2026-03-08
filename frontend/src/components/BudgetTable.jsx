@@ -106,6 +106,86 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     localStorage.setItem('luiggi_catalog_position', catalogPosition);
   }, [catalogPosition]);
 
+  // Cargar productos de despiece cuando cambie el módulo a despiece
+  useEffect(() => {
+    if (state.currentModule === 'despiece') {
+      loadDespieceFilterOptions();
+      loadDespieceProducts();
+    }
+  }, [state.currentModule]);
+
+  // Cargar filtros disponibles para despiece
+  const loadDespieceFilterOptions = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/despiece-budgeter/products/filters`);
+      const data = await response.json();
+      setDespieceFilterOptions(data);
+    } catch (error) {
+      console.error('Error loading despiece filter options:', error);
+    }
+  };
+
+  // Cargar productos de despiece con filtros
+  const loadDespieceProducts = async () => {
+    setLoadingDespiece(true);
+    try {
+      const params = new URLSearchParams();
+      if (despieceFilters.manufacturer) params.append('manufacturer', despieceFilters.manufacturer);
+      if (despieceFilters.collection) params.append('collection', despieceFilters.collection);
+      if (despieceFilters.finish) params.append('finish', despieceFilters.finish);
+      if (despieceFilters.thickness) params.append('thickness', despieceFilters.thickness);
+      
+      const response = await fetch(`${API_URL}/api/despiece-budgeter/products?${params.toString()}`);
+      const data = await response.json();
+      setDespieceProducts(data);
+    } catch (error) {
+      console.error('Error loading despiece products:', error);
+      setDespieceProducts([]);
+    } finally {
+      setLoadingDespiece(false);
+    }
+  };
+
+  // Recargar productos cuando cambien los filtros de despiece
+  useEffect(() => {
+    if (state.currentModule === 'despiece') {
+      const debounce = setTimeout(() => {
+        loadDespieceProducts();
+      }, 300);
+      return () => clearTimeout(debounce);
+    }
+  }, [despieceFilters]);
+
+  // Función para añadir producto de despiece al presupuesto
+  const addDespieceProductToBudget = (product, width, height, quantity = 1) => {
+    const areaM2 = (width / 1000) * (height / 1000);
+    const pricePerM2 = product.priceZ1 || 0;
+    const totalPrice = areaM2 * pricePerM2 * quantity;
+    
+    const newItem = {
+      id: `dp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      productId: product.id,
+      code: product.code,
+      name: product.name,
+      manufacturer: product.manufacturer,
+      collection: product.collection,
+      color: product.color,
+      finish: product.finish,
+      thickness: product.thickness,
+      width: width,
+      height: height,
+      depth: product.thickness,
+      quantity: quantity,
+      areaM2: areaM2,
+      pricePerM2: pricePerM2,
+      totalPrice: totalPrice,
+      category: product.category,
+      isDespiece: true
+    };
+    
+    setBudgetItemsDespiece(prev => [...prev, newItem]);
+  };
+
   // Funciones para gestionar items de despiece
   const handleAddDespieceItem = useCallback((item) => {
     setBudgetItemsDespiece(prev => [...prev, item]);
