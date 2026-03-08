@@ -5,190 +5,219 @@ The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIG
 1.  **Clone LUIGGI HOME application:** Replicate the design and functionality.
 2.  **Data Integrity:** Ensure the final database is a clean and consistent representation of the user-provided product data. This involves extensive data normalization of product  and dimensions.
 3.  **Digitalizador Component Enhancements:** Implement COST mode, generate unique expediente numbers, and improve the Analyzer.
-4.  **User Roles & Permissions:** Implement strict, independent permissions for each module (CRM, Armarios, etc.) that apply even to admin users. Add Gerente (Manager) and Director Comercial roles with full visibility in the CRM.
-5.  **Authentication:** Implement user self-registration via email and an optional two-factor authentication (2FA) system, including admin notifications for new sign-ups.
-6.  **UI/UX Improvements:** Add dimension-based filters, improve search functionality, add column sorting, and add UI controls to customize the layout (e.g., hiding sidebars).
+4.  **DESPIECE Module:** Implement a new module for despiece (component-based) budgeting with specific parameters (Manufacturer, Model, Color, etc.) based on user-provided tariffs.
+5.  **User Roles & Permissions:** Implement strict, independent permissions for each module (CRM, Armarios, etc.) that apply even to admin users. Add Gerente (Manager) and Director Comercial roles with full visibility in the CRM.
+6.  **Authentication & Notifications:** Implement user self-registration via email, optional 2FA, and admin notifications for new sign-ups. Emails should feature the company logo.
+7.  **UI/UX Improvements:** Add dimension-based filters, improve search functionality, add column sorting, and add UI controls to customize the layout (e.g., hiding sidebars).
+8.  **Data Export:** Provide functionality to export the product catalog to Excel and PDF formats, including product images.
+9.  **Backup/Restore:** Provide a mechanism for the user to manually create and restore database backups.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The agent has performed a massive amount of data normalization and UI improvements in this session.
+A full-stack React/FastAPI/MongoDB application that has undergone significant development. The application includes a detailed product library (Digitalizador) for creating budgets, a CRM module, and user authentication.
 
-*   **Data Integrity & Normalization:** Corrected thousands of product dimensions from  to . Standardized and consolidated product categories and series, notably merging  and  into standard  categories, moving products between , , and , and creating a distinct  series.
-*   **UI/UX Enhancements:**
-    *   Implemented a third, horizontal-top position for the product library.
-    *   Added clickable column headers to sort the product library table.
-    *   Increased the size of various UI elements (filters, inputs) as requested.
-    *   Added a clear () button to search bars.
-    *   Made the product reference field read-only for catalog items to prevent accidental edits.
-    *   Prioritized the display of products with 90cm height in the  category.
-*   **Bug Fixes:**
-    *   Resolved inconsistencies in dimension display (mm vs. cm) between the budget lines and the library.
-    *   Fixed a bug where product  were inconsistent between the library and the budget.
-    *   Fixed an issue preventing the left/right hand selector from appearing on GOLA products.
-    *   Correctly implemented a full database reset for projects and CRM data.
-    *   Fixed a backend  error on the  endpoint.
-*   **Workflow:** Added a confirmation prompt to prevent data loss when creating a new budget or logging out with unsaved changes.
+In this session, several key updates were made:
+*   **Email Service:** Migrated from a non-functional SendGrid integration to **Resend**. The system now successfully sends registration emails, with a fallback mechanism to a backup address due to domain verification limitations. Emails now include the LUIGGI HOME logo.
+*   **Discount Logic:** Fixed a critical bug where a 0% discount was not being respected due to a JavaScript  operator flaw; it now uses  for correct evaluation.
+*   **Budget Features:** Added new options for PERFILES GOLA (Alto/Bajo) to the budget specifications, which are saved with the project and included in PDF exports.
+*   **PDF Export Fix:** Corrected a bug that was dividing product widths by 10, causing incorrect dimension display (e.g., 90cm appeared as 9cm).
+*   **Catalog Export:** Implemented new backend endpoints ( and ) and frontend buttons to allow exporting the entire product catalog with product images.
+*   **Backup/Restore:** Added backend endpoints to allow manual download and restoration of the database.
 
 **Last working item**:
-- Last item agent was working: The user made two simultaneous requests:
-    1.  Add filtering capabilities by clicking the , ,  (width, height, depth) headers in the product library table.
-    2.  Fix the user registration email, which is failing. The agent diagnosed the SendGrid  error and, upon user request, is pivoting to implement **Resend** as an alternative email service since the user cannot manage DNS settings.
-- Status: IN PROGRESS
+- Last item agent was working: The agent was beginning to implement the DESPIECE (component-based) budgeting module. After receiving a PDF tariff from ALVIC, the agent extracted sample product data and was about to create a simplified data model to add these products for initial testing.
+- Status: NOT STARTED
 - Agent Testing Done: N
-- Which testing method agent to use?
-    - For column filters: screenshot tool to verify UI changes.
-    - For email fix: backend testing agent or  to trigger registration and check logs for email success.
+- Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Implement Resend for Email Delivery (P0 - BLOCKER)**
-- **Issue 2: Implement Column Header Filters (P0)**
-- **Issue 3: Visual Glitch with Collapsed Vertical Sidebar (P1 - Recurring)**
-- **Issue 4: Reclassify HS Products (P2 - Blocked on User)**
-- **Issue 5: Latent  React DOM Error (P2)**
+- **Issue 1: Implement DESPIECE Module (P0)**
+- **Issue 2: Re-implement Catalog Export (Excel/PDF) (P1)**
+- **Issue 3: Implement Combined Library Filters (P1)**
+- **Issue 4: Fix User Registration Email Flow (P1 - Partially Resolved)**
+- **Issue 5: Improve Column Header Filter UX (P2)**
+- **Issue 6: Visual Glitch with Collapsed Vertical Sidebar (P2 - Recurring)**
 
 **Issues Detail:**
-- **Issue 1: Implement Resend for Email Delivery**
-    - **Attempted fixes:** Diagnosed the SendGrid  error as a sender verification issue. The user cannot fix this, so the agreed-upon solution is to switch email providers.
+- **Issue 1: Implement DESPIECE Module**
+    - **Attempted fixes:** Agent extracted data from the user-provided ALVIC PDF.
     - **Next debug checklist:**
-        1.  Use the  tool to get the implementation plan for **Resend**.
-        2.  Request the Resend API key from the user and add it to .
-        3.  Modify  to use the Resend SDK for sending verification and admin notification emails.
-        4.  Test the registration flow to confirm emails are sent successfully.
-    - **Why fix this issue and what will be achieved with the fix?** This is a critical blocker for the entire user registration and email verification flow.
+        1.  Create a data structure/schema for despiece products based on the extracted data and the user's Word document (AL ENTRAR AL PRESUPUESTADOR DE DESPIECE...).
+        2.  Create a backend script or endpoint to import the sample ALVIC products into a new  collection or add them to the existing  collection with a new type/category.
+        3.  Build the frontend UI for the DESPIECE module, including the parameter selection modal (Fabricante, Modelo, Color, etc.).
+        4.  Connect the UI to the backend to fetch and display these new products.
+    - **Why fix this issue and what will be achieved with the fix?** This is a major new feature requested by the user and is the next logical step in the project.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** both
+    - **Blocked on other issue:** None.
+- **Issue 2: Re-implement Catalog Export (Excel/PDF)**
+    - **Attempted fixes:** The agent built a v1 (text-only) and v2 (with SVG images) export feature. The user rejected both, stating no me vale para nada (it's useless to me).
+    - **Next debug checklist:**
+        1.  Use  to ask the user for specific requirements for the catalog export. What layout is needed? What images should be used (the user stated los dibujos que debes poner en el excel son los del catalogo pdf, no los iconos del presupuestador)? What data is missing?
+        2.  Based on feedback, rewrite the export logic in .
+    - **Why fix this issue and what will be achieved with the fix?** The current implementation does not meet user needs, making the feature unusable.
+    - **Status:** BLOCKED
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Backend.
+    - **Blocked on other issue:** User feedback.
+- **Issue 3: Implement Combined Library Filters**
+    - **Attempted fixes:** None yet.
+    - **Next debug checklist:**
+        1.  In , add new state variables for  and .
+        2.  Add dropdowns or input fields to the product library UI to control these states.
+        3.  Update the   hook to apply these filters in conjunction with the existing dimension and text search filters.
+    - **Why fix this issue and what will be achieved with the fix?** Fulfills a direct user request from the EN EL PRESUPUESTO PDF.docx document for more powerful filtering.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Frontend.
+    - **Blocked on other issue:** None.
+- **Issue 4: Fix User Registration Email Flow**
+    - **Attempted fixes:** The agent successfully replaced SendGrid with Resend. However, Resend's free tier only allows sending emails *from*  and *to* the account owner's verified email. The agent implemented a workaround to redirect all emails to a hardcoded backup address ().
+    - **Next debug checklist:**
+        1.  Advise the user that to send emails to any address, they must verify their domain (e.g., ) in their Resend account.
+        2.  Once verified, update the  address in  in  to use the user's verified domain (e.g., ).
+        3.  Remove the backup email fallback logic.
+    - **Why fix this issue and what will be achieved with the fix?** The current solution is a temporary hack. A proper fix is needed for production use.
     - **Status:** IN PROGRESS
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Backend.
-    - **Blocked on other issue:** None (pivoting from SendGrid).
-- **Issue 2: Implement Column Header Filters**
-    - **Attempted fixes:** Agent viewed the relevant file () but was redirected by the user to the more critical email issue.
+    - **Blocked on other issue:** User action (domain verification in Resend).
+- **Issue 5: Improve Column Header Filter UX**
+    - **Attempted fixes:** None. The agent identified that the functionality exists but the UI might be confusing.
     - **Next debug checklist:**
-        1.  In , add state to manage the active filter column (, , ) and its value.
-        2.  Modify the table headers () to be clickable. On click, render an  field within the header.
-        3.  Update the   hook to apply these new dimension filters to the displayed product list.
-    - **Why fix this issue and what will be achieved with the fix?** Fulfills a direct user request for more advanced filtering capabilities in the product library.
+        1.  In , modify the CSS for the dimension filter inputs (, , ) to make them larger and more visually distinct.
+        2.  Consider adding a placeholder text like Filtrar... instead of --.
+    - **Why fix this issue and what will be achieved with the fix?** Addresses a user complaint that filtering is not intuitive.
     - **Status:** NOT STARTED
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Frontend.
     - **Blocked on other issue:** None.
-- **Issue 3: Visual Glitch with Collapsed Vertical Sidebar**
-    - **Attempted fixes:** Multiple CSS adjustments have been made in previous sessions, but the user still reports overlapping content when the sidebar is collapsed.
-    - **Next debug checklist:**
-        1.  Re-examine CSS in  for the collapsed sidebar.
-        2.  Focus on , , and main content padding.
-        3.  Consider using  for a smoother transition that avoids layout reflow.
-    - **Why fix this issue and what will be achieved with the fix?** It's a persistent UI complaint from the user that affects usability.
-    - **Status:** NOT STARTED
-    - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** Frontend.
-    - **Blocked on other issue:** None.
-- **Issue 4: Reclassify HS Products**
-    - **Attempted fixes:** None. The agent is awaiting user input.
-    - **Next debug checklist:** Ask the user for the correct classification for products that are no longer Servo-Drive.
-    - **Why fix this issue and what will be achieved with the fix?** Ensures data accuracy in the product catalog.
-    - **Status:** BLOCKED
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** N/A.
-    - **Blocked on other issue:** User input required.
-- **Issue 5: Latent  React DOM Error**
-    - **Attempted fixes:** None. It has not caused any visible user-facing problems.
-    - **Next debug checklist:** Ignore unless it starts causing noticeable bugs.
-    - **Why fix this issue and what will be achieved with the fix?** Improves code health.
+- **Issue 6: Visual Glitch with Collapsed Vertical Sidebar**
+    - **Attempted fixes:** Multiple CSS adjustments in previous sessions.
+    - **Next debug checklist:** Re-examine CSS in  for the collapsed sidebar, focusing on , , and main content padding.
+    - **Why fix this issue and what will be achieved with the fix?** A persistent, recurring UI complaint from the user.
     - **Status:** NOT STARTED
     - **Is recurring issue?** Y
     - **Should Test frontend/backend/both after fix?** Frontend.
     - **Blocked on other issue:** None.
 
 **In progress Task List**:
-- **Task 1: Implement Resend for Email Delivery (P0)**
-    - **Where to resume:** In . Start by calling .
-    - **What will be achieved with this?** A functional user registration and email notification system.
+- **Task 1: Create and import sample DESPIECE products (P0)**
+    - **Where to resume:** Create a Python script or a temporary backend endpoint to process the extracted ALVIC tariff data and insert it into the MongoDB database.
+    - **What will be achieved with this?** This will provide the necessary data to start building and testing the DESPIECE module's frontend.
     - **Status:** IN PROGRESS
     - **Should Test frontend/backend/both after fix?** Backend.
-    - **Blocked on something:** Waiting for user's Resend API key.
+    - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P1) **Add 2FA Management UI**: Create a section in the user's profile where they can enable/disable 2FA and view backup codes.
+    - (P0) **Build DESPIECE Module UI**: Create the frontend modal and logic as specified in the user's Word document.
+    - (P1) **Add 2FA Management UI**: Create a section in the user's profile where they can enable/disable 2FA.
 - **Future Tasks:**
-    - (P1) **Frontend Refactoring**: Decompose  (now over 2500 lines).
-    - (P1) **Frontend Refactoring**: Decompose  (over 4000 lines).
+    - (P1) **Frontend Refactoring**: Decompose  (now over 2700 lines).
+    - (P1) **Frontend Refactoring**: Decompose .
     - (P2) **Complete Backend Refactoring**: Finish migrating all remaining endpoints from  to modular routers.
-    - (P2) **Improve Sidebar Icons**: The user was not fully satisfied with the sidebar toggle icons; this could be revisited.
+    - (P2) **Reclassify HS Products**: Awaiting user input.
 
 **Completed work in this session**
-- **Massive Data Normalization**: Corrected thousands of product dimensions (mm to cm), consolidated / series into , and re-categorized hundreds of products across , , and  for data consistency.
-- **Library Sorting & Filtering**: Implemented clickable column headers to sort the product library table.
-- **UI Enhancements**: Added a third (horizontal-top) library position, added a clear button to search bars, made the budget reference field read-only for catalog items, and enlarged several UI controls per user request.
-- **Critical Bug Fixes**: Fixed incorrect dimension/point calculations, resolved a bug hiding the hand selector for GOLA products, and fixed a backend maintenance endpoint crash.
-- **Workflow Improvement**: Added a confirmation prompt to prevent data loss on logout or when starting a new budget.
-- **PDF Generation**: Increased the logo size and removed hardcoded company text from exported PDFs.
+- **Email Service Migration**: Successfully replaced a non-functional SendGrid setup with **Resend** to fix user registration emails.
+- **Email Logo Integration**: Modified the backend to embed a Base64 SVG of the LUIGGI HOME logo in all outgoing emails.
+- **Discount Logic Fix**: Corrected a critical bug where a 0% user discount was ignored by replacing the  operator with  in .
+- **GOLA Profiles Feature**: Added UI checkboxes for GOLA ALTO and GOLA BAJO in the budget sidebar. This data is now saved with the project and included in PDF exports.
+- **PDF Export Dimension Fix**: Resolved a bug in  that incorrectly divided product widths by 10, ensuring correct dimensions in exported PDFs.
+- **Catalog Export Feature**: Created backend endpoints and frontend buttons to export the entire product catalog to both Excel () and PDF formats, with embedded product images.
+- **User Workflow Guidance**: Explained the deployment, data update, and database backup/restore process to the user.
+
+**Earlier issues found/mentioned but not fixed**
+- **Issue 1: Catalog Export does not meet user needs**
+    - **Debug checklist:** Ask the user for specific examples or a mockup of the desired Excel/PDF layout. Clarify which images (dibujos del catalogo pdf) should be used and how to access them.
+    - **Why to solve this issue and what will be achieved with this?** The feature is currently useless to the user (no me vale para nada). Fixing it is necessary to provide the requested functionality.
+    - **Should Test frontend/backend/both after fix:** Backend.
+    - **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
-- **UI glitches with sidebars**: The user has repeatedly reported that the collapsible sidebars do not look or behave correctly. This remains a persistent point of friction and has not been addressed in this session.
+- **UI glitches with sidebars**: The user has repeatedly reported that the collapsible sidebars do not look or behave correctly. This remains a persistent point of friction.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Large-Scale Data Normalization:** Extensive use of  scripts to clean and standardize the  collection.
-- **Complex Frontend State Management:**  now manages state for multiple filters, UI positions, and dynamic column sorting ().
-- **Conditional Rendering:** Used to make the reference field read-only based on whether the item is manually added ().
-- **Client-Side Sorting:** Implemented sorting in React's  hook.
-- **API Integration Pivot:** Diagnosed a  error with SendGrid and pivoted to implementing Resend as an alternative.
+- **API Integration Pivot:** Migrated email service from SendGrid to Resend due to blocking errors.
+- **File Generation (Backend):** Used  to create Excel files and / to generate PDFs with embedded SVG images.
+- **File Streaming:** Endpoints return  for Excel/PDF downloads.
+- **Nullish Coalescing Operator ():** Used in JavaScript to correctly handle a discount value of  which was previously treated as falsy by the  operator.
+- **Base64 Image Embedding:** Converted an SVG logo to a Base64 string to embed it directly into the HTML of emails.
+- **Complex Frontend State:**  continues to grow in complexity, managing state for budget items, UI layout, multiple filters, and now GOLA profiles.
 
 **key DB schema**
-- **products**: No schema changes, but massive data updates to , , , , and  fields for thousands of documents.
+- **projects**: No schema change, but saved project documents now include , , and  fields.
 
 **All files of reference**
-- : The central file for almost all UI/UX changes, sorting logic, and data display.
-- : Contains the email logic that needs to be migrated to Resend.
-- : Contains the global logout logic.
-- : Contains the PDF export logic.
-- A large number of Python scripts were run via  to perform database migrations; these are not persisted as files but were crucial to the work done.
+- : Core file for the Resend email integration.
+- : Central hub for most UI changes, including the discount fix, GOLA profile UI, and export buttons.
+- : Location of the new catalog export and backup/restore endpoints.
+- : New service containing the logic for generating Excel and PDF catalog files with images.
+- : File where the product width dimension bug was fixed for budget PDFs.
+- : Modified to include GOLA-related fields in the global state.
 
 **Areas that need refactoring**:
-- **/app/frontend/src/components/BudgetTable.jsx**: Urgently needs to be broken down. Its complexity is becoming a liability.
-- **/app/frontend/src/components/SettingsModal.jsx**: Still over 4000 lines and untouched in this session.
-- **/app/frontend/src/components/Digitalizador.jsx**: Over 1600 lines.
+- **/app/frontend/src/components/BudgetTable.jsx**: Urgently needs to be broken down into smaller, manageable components. At over 2700 lines, it is extremely difficult to maintain.
+- **/app/backend/server.py**: The file is becoming a monolith. The catalog export and backup/restore logic should be moved to dedicated routers (e.g., , ).
 
 **key api endpoints**
-- : The endpoint for the user registration and email flow, which is currently broken.
+- : Endpoint for user registration, now using Resend.
+- : New endpoint to download the product catalog as an  file.
+- : New endpoint to download the product catalog as a  file.
+- : Creates a manual backup of the database.
+- : Downloads the latest database backup as a JSON file.
+- : Restores the database from an uploaded JSON backup file.
 
 **Critical Info for New Agent**
-- Your two highest priorities are **(1)** replacing SendGrid with **Resend** to fix the registration flow and **(2)** implementing the column header filters in the library. The email fix is a blocker for a core feature.
-- For the Resend integration, you **must** use the  tool and request the API key from the user.
-- The user is extremely detail-oriented regarding data accuracy (cm vs. mm, categories, series) and UI layout. Double-check all data-related changes.
-- The recurring visual glitch with the collapsed sidebar is a known point of user frustration and should be addressed if time permits.
--  is now extremely large. Be very careful when making changes to avoid introducing regressions.
+- **PRIORITY 1: Implement the DESPIECE module.** This is the user's current focus. Start by creating and importing the sample products from the ALVIC PDF. Then, build the UI for selecting parameters as per the user's Word document.
+- **PRIORITY 2: Clarify Catalog Export Requirements.** The user has rejected the current Excel/PDF export. **DO NOT** attempt to fix it without asking the user for specific requirements and a clear example of what they want. The user mentioned using drawings from a catalogo PDF, not the app icons.
+- **Resend Email is a Workaround:** The current email setup is not production-ready. It sends all emails to a single backup address. The user needs to verify their domain in their Resend account to enable sending to any recipient. You will need to guide them and then update the code to remove the workaround.
+- **The user is technically curious:** They ask questions about deployment, code modifications, and data management. Be prepared to explain these concepts clearly and simply. The backup/restore endpoints were added to give them control over their data post-deployment.
 
 **documents and test reports created in this job**
--  (Continuously updated)
+- 
+
+**User-provided artifacts in this session:**
+- 
+-  (x2, showing GOLA profile request and PDF width bug)
+-  (Resend API key)
+-  (Request for combined Serie/Category filters)
+-  (Request for Excel export with ZONA->GRUPO change)
+- 
+-  (Tariff for DESPIECE module)
+-  (Requirements for DESPIECE module UI)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **(LATEST)** User wants to filter the library by clicking the , ,  headers.
-- **(LATEST)** User confirms they cannot access DNS for SendGrid and requests the agent to find an alternative way to make emails work.
-- User reported several data inconsistencies (BAJOS series, SOBREMÓDULOS GOLA series) and requested fixes.
-- User requested clickable column headers for sorting the product library (Implemented).
-- User requested to make the product reference in the budget non-editable (Implemented).
-- User reported more products with dimensions in  instead of  (Fixed).
-- User requested that the app ask for confirmation before clearing budget lines on logout (Implemented).
-- User asked to re-categorize several products (e.g., / into ) and correct series names (Implemented).
-- User asked to make UI filter elements larger (Implemented).
-- User found products that should be in  and requested they be moved (Implemented).
+1.  **LATEST**: sí adelante despliega parte y hacemos pruebas, no hace falta que metas todo, de momento (Go ahead, deploy a part and we'll do tests, you don't need to include everything for now.) -> User giving go-ahead to start implementing DESPIECE.
+2.  User asked if they can make modifications and get a copy of the DB to be restored into a new version. They also provided PDFs/docs for the DESPIECE module.
+3.  User asked how to upload the despiece series after deployment.
+4.  User asked if they can make modifications to the code. They also requested changing the email header to the LUIGGI logo.
+5.  User stated the generated catalog files are not useful (no valen esos archivos). Asked how to proceed if they make changes after implementation.
+6.  User asked for the path to the generated Excel file and also requested a PDF version of the catalog.
+7.  User provided the Resend API key. Requested GOLA profile options (Alto/Bajo) and pointed out the width measurement was wrong in the exported PDF via images.
+8.  User reported multiple bugs in a Word doc (NO GUARDA LOS PRESUPUESTOS.docx).
+9.  Initial message after fork: User sent a Word doc reporting that budgets are not being saved.
 
 **Project Health Check:**
-- **Broken:** The user registration email flow is non-functional. It was blocked by a SendGrid  error and is pending a new implementation with Resend.
+- **Broken:**
+    - The Catalog Export feature, while technically functional, has been rejected by the user and does not meet their requirements.
 - **Mocked:** N/A
 
 **3rd Party Integrations**
+- **Resend:** (Requires User API Key) - **IMPLEMENTED (with caveats)**. Replaces SendGrid. Current implementation is a temporary workaround pending user domain verification.
+- **xlsxwriter / openpyxl:** For backend Excel file generation.
+- **reportlab / cairosvg:** For backend PDF file generation with SVG images.
+- **jspdf / html2canvas:** For client-side PDF generation of budgets.
+- **pyotp / qrcode:** For 2FA implementation (backend logic exists, UI pending).
 - **Google Gemini:** Via  (Emergent LLM Key).
-- **SendGrid:** (Requires User API Key) - **BLOCKED**, returning 403 Forbidden error.
-- **Resend:** **(PROPOSED)** New email integration to be implemented.
-- **jspdf / html2canvas:** For client-side PDF generation.
-- **recharts:** For data visualization charts.
-- **pyotp / qrcode:** For 2FA implementation.
+- **SendGrid:** (Requires User API Key) - **DEPRECATED/REPLACED**.
 
 **Testing status**
 - Testing agent used after significant changes: NO
@@ -201,4 +230,6 @@ A full-stack React/FastAPI/MongoDB application. The agent has performed a massiv
 - **Password:** 
 
 **What agent forgot to execute**
-- The 2FA management UI, carried over from the previous handoff, remains unimplemented due to the high volume of incoming user requests for data correction and UI tweaks.</analysis>
+- The agent has not yet implemented the combined  and  filters requested by the user.
+- The user request to improve the UX of the column header filters (, , ) has not been addressed.
+- The 2FA management UI, carried over from a previous handoff, remains unimplemented.</analysis>
