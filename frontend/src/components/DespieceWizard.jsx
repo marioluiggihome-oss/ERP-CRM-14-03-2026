@@ -1,19 +1,16 @@
 /**
  * DespieceWizard.jsx
  * Presupuestador de DESPIECE con flujo paso a paso
- * Según especificaciones del documento: Fabricante → Modelo → Color → Medidas → Tiradores
+ * Según especificaciones: Fabricante → Modelo → Medidas (con precio calculado)
+ * Las medidas se pueden modificar después de añadir
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Factory, Palette, Box, Ruler, Plus, X, ChevronRight, ChevronLeft,
-  Check, Save, Package, Grid, Calculator, Trash2, RefreshCw
+  Check, Save, Package, Grid, Calculator, Trash2, RefreshCw, Edit2
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
-
-// Dimensiones estándar para la matriz
-const STANDARD_WIDTHS = [156, 196, 246, 296, 346, 396, 446, 496, 596, 696, 796, 896, 996, 1096, 1196];
-const STANDARD_HEIGHTS = [296, 396, 496, 596, 696, 796, 896, 996, 1096, 1196, 1296, 1396, 1496, 1596, 1696, 1796, 1896, 1996, 2096, 2196];
 
 const DespieceWizard = ({ 
   isOpen, 
@@ -28,16 +25,11 @@ const DespieceWizard = ({
   // Selecciones del usuario
   const [selectedManufacturer, setSelectedManufacturer] = useState('');
   const [selectedCollection, setSelectedCollection] = useState('');
-  const [selectedColor, setSelectedColor] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('PUERTA');
   
-  // Opciones disponibles
-  const [filterOptions, setFilterOptions] = useState({
-    manufacturers: [],
-    collections: [],
-    colors: [],
-    categories: []
-  });
+  // Opciones disponibles (dinámicas)
+  const [manufacturers, setManufacturers] = useState([]);
+  const [collections, setCollections] = useState([]);
   
   // Productos y matriz de precios
   const [products, setProducts] = useState([]);
@@ -46,12 +38,26 @@ const DespieceWizard = ({
   // Items seleccionados para el presupuesto
   const [selectedItems, setSelectedItems] = useState([]);
   
-  // Cargar opciones iniciales
+  // Estado para edición de medidas
+  const [editingItem, setEditingItem] = useState(null);
+  const [editHeight, setEditHeight] = useState('');
+  const [editWidth, setEditWidth] = useState('');
+
+  // Cargar fabricantes iniciales
   useEffect(() => {
     if (isOpen) {
-      loadFilterOptions();
+      loadManufacturers();
     }
   }, [isOpen]);
+  
+  // Cargar colecciones cuando cambia el fabricante
+  useEffect(() => {
+    if (selectedManufacturer) {
+      loadCollections(selectedManufacturer);
+    } else {
+      setCollections([]);
+    }
+  }, [selectedManufacturer]);
   
   // Cargar productos cuando cambian las selecciones
   useEffect(() => {
@@ -60,13 +66,30 @@ const DespieceWizard = ({
     }
   }, [selectedManufacturer, selectedCollection, selectedCategory]);
   
-  const loadFilterOptions = async () => {
+  const loadManufacturers = async () => {
     try {
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products/filters`);
       const data = await response.json();
-      setFilterOptions(data);
+      setManufacturers(data.manufacturers || []);
     } catch (error) {
-      console.error('Error loading filter options:', error);
+      console.error('Error loading manufacturers:', error);
+    }
+  };
+  
+  const loadCollections = async (manufacturer) => {
+    try {
+      const response = await fetch(`${API_URL}/api/despiece-budgeter/products/filters?manufacturer=${encodeURIComponent(manufacturer)}`);
+      const data = await response.json();
+      // Filtrar colecciones según categoría - excluir tiradores si seleccionamos PUERTA
+      let cols = data.collections || [];
+      if (selectedCategory === 'PUERTA') {
+        cols = cols.filter(c => !c.toLowerCase().includes('tirador'));
+      } else if (selectedCategory === 'TIRADOR') {
+        cols = cols.filter(c => c.toLowerCase().includes('tirador'));
+      }
+      setCollections(cols);
+    } catch (error) {
+      console.error('Error loading collections:', error);
     }
   };
   
@@ -74,11 +97,12 @@ const DespieceWizard = ({
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedManufacturer) params.append('manufacturer', selectedManufacturer);
-      if (selectedCollection) params.append('collection', selectedCollection);
+      params.append('manufacturer', selectedManufacturer);
+      params.append('collection', selectedCollection);
       if (selectedCategory) params.append('category', selectedCategory);
+      params.append('limit', '3000');
       
-      const response = await fetch(`${API_URL}/api/despiece-budgeter/products?${params.toString()}&limit=2000`);
+      const response = await fetch(`${API_URL}/api/despiece-budgeter/products?${params.toString()}`);
       const data = await response.json();
       setProducts(data);
       
@@ -90,16 +114,12 @@ const DespieceWizard = ({
         if (h && w) {
           if (!matrix[h]) matrix[h] = {};
           matrix[h][w] = {
-            price: p.priceZ1 || 0,
+            price: p.priceZ1 || p.price || 0,
             product: p
           };
         }
       });
       setPriceMatrix(matrix);
-      
-      // Extraer colores únicos
-      const uniqueColors = [...new Set(data.map(p => p.color).filter(Boolean))];
-      setFilterOptions(prev => ({ ...prev, colors: uniqueColors }));
       
     } catch (error) {
       console.error('Error loading products:', error);
@@ -108,13 +128,6 @@ const DespieceWizard = ({
       setLoading(false);
     }
   };
-  
-  // Filtrar colecciones por fabricante
-  const availableCollections = useMemo(() => {
-    if (!selectedManufacturer) return filterOptions.collections;
-    // Filtrar colecciones que tengan productos del fabricante seleccionado
-    return filterOptions.collections;
-  }, [selectedManufacturer, filterOptions.collections]);
   
   // Obtener alturas y anchos disponibles en la matriz
   const availableHeights = useMemo(() => {
@@ -129,6 +142,36 @@ const DespieceWizard = ({
     return [...widths].sort((a, b) => a - b);
   }, [priceMatrix]);
   
+  // Función para encontrar el precio más cercano
+  const findClosestPrice = (height, width) => {
+    // Buscar precio exacto
+    if (priceMatrix[height]?.[width]) {
+      return priceMatrix[height][width].price;
+    }
+    
+    // Buscar el precio más cercano
+    let closestH = availableHeights.reduce((prev, curr) => 
+      Math.abs(curr - height) < Math.abs(prev - height) ? curr : prev
+    , availableHeights[0]);
+    
+    let closestW = availableWidths.reduce((prev, curr) => 
+      Math.abs(curr - width) < Math.abs(prev - width) ? curr : prev
+    , availableWidths[0]);
+    
+    if (priceMatrix[closestH]?.[closestW]) {
+      return priceMatrix[closestH][closestW].price;
+    }
+    
+    // Si no hay precio cercano, calcular por m²
+    const anyProduct = products[0];
+    if (anyProduct && anyProduct.pricePerM2) {
+      const area = (height / 1000) * (width / 1000);
+      return area * anyProduct.pricePerM2;
+    }
+    
+    return 0;
+  };
+  
   // Añadir item desde la matriz
   const addItemFromMatrix = (height, width) => {
     const cell = priceMatrix[height]?.[width];
@@ -138,11 +181,11 @@ const DespieceWizard = ({
       id: `dw-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       productId: cell.product.id,
       code: cell.product.code,
-      name: cell.product.name,
+      name: `${selectedCategory} ${selectedCollection} ${height}×${width}mm`,
       manufacturer: selectedManufacturer,
       collection: selectedCollection,
-      color: selectedColor || cell.product.color,
-      finish: cell.product.finish,
+      color: cell.product.color || 'Estándar',
+      finish: cell.product.finish || 'Estándar',
       category: selectedCategory,
       height: height,
       width: width,
@@ -150,7 +193,8 @@ const DespieceWizard = ({
       quantity: 1,
       unitPrice: cell.price,
       totalPrice: cell.price,
-      areaM2: (height / 1000) * (width / 1000)
+      areaM2: (height / 1000) * (width / 1000),
+      editable: true
     };
     
     setSelectedItems(prev => [...prev, item]);
@@ -166,6 +210,51 @@ const DespieceWizard = ({
         totalPrice: item.unitPrice * Math.max(1, quantity)
       };
     }));
+  };
+  
+  // Iniciar edición de medidas
+  const startEditingDimensions = (item) => {
+    setEditingItem(item.id);
+    setEditHeight(item.height.toString());
+    setEditWidth(item.width.toString());
+  };
+  
+  // Guardar medidas editadas
+  const saveEditedDimensions = (itemId) => {
+    const newHeight = parseInt(editHeight) || 0;
+    const newWidth = parseInt(editWidth) || 0;
+    
+    if (newHeight <= 0 || newWidth <= 0) {
+      alert('Las medidas deben ser mayores a 0');
+      return;
+    }
+    
+    // Calcular nuevo precio
+    const newPrice = findClosestPrice(newHeight, newWidth);
+    
+    setSelectedItems(prev => prev.map(item => {
+      if (item.id !== itemId) return item;
+      return {
+        ...item,
+        height: newHeight,
+        width: newWidth,
+        name: `${item.category} ${item.collection} ${newHeight}×${newWidth}mm`,
+        unitPrice: newPrice,
+        totalPrice: newPrice * item.quantity,
+        areaM2: (newHeight / 1000) * (newWidth / 1000)
+      };
+    }));
+    
+    setEditingItem(null);
+    setEditHeight('');
+    setEditWidth('');
+  };
+  
+  // Cancelar edición
+  const cancelEditing = () => {
+    setEditingItem(null);
+    setEditHeight('');
+    setEditWidth('');
   };
   
   // Eliminar item
@@ -189,7 +278,6 @@ const DespieceWizard = ({
       setStep(1);
       setSelectedManufacturer('');
       setSelectedCollection('');
-      setSelectedColor('');
       onClose?.();
     }
   };
@@ -199,10 +287,10 @@ const DespieceWizard = ({
     setStep(1);
     setSelectedManufacturer('');
     setSelectedCollection('');
-    setSelectedColor('');
     setSelectedItems([]);
     setProducts([]);
     setPriceMatrix({});
+    setEditingItem(null);
   };
   
   if (!isOpen) return null;
@@ -220,7 +308,7 @@ const DespieceWizard = ({
               <div>
                 <h2 className="text-xl font-black uppercase tracking-wider">Presupuestador DESPIECE</h2>
                 <p className="text-purple-300 text-xs font-medium mt-0.5">
-                  {selectedCategory === 'PUERTA' ? 'Puertas' : selectedCategory === 'COSTADO' ? 'Costados' : 'Regletas'}
+                  {selectedCategory === 'PUERTA' ? 'Puertas' : selectedCategory === 'TIRADOR' ? 'Tiradores' : 'Costados/Regletas'}
                   {selectedManufacturer && ` • ${selectedManufacturer}`}
                   {selectedCollection && ` • ${selectedCollection}`}
                 </p>
@@ -248,8 +336,7 @@ const DespieceWizard = ({
             {[
               { num: 1, label: 'Fabricante', icon: Factory },
               { num: 2, label: 'Modelo', icon: Box },
-              { num: 3, label: 'Color', icon: Palette },
-              { num: 4, label: 'Medidas', icon: Ruler }
+              { num: 3, label: 'Medidas', icon: Ruler }
             ].map((s, idx) => (
               <React.Fragment key={s.num}>
                 <button
@@ -267,7 +354,7 @@ const DespieceWizard = ({
                   <span className="text-xs font-bold uppercase">{s.label}</span>
                   {step > s.num && <Check size={14} className="text-green-400" />}
                 </button>
-                {idx < 3 && <ChevronRight size={16} className="text-purple-400" />}
+                {idx < 2 && <ChevronRight size={16} className="text-purple-400" />}
               </React.Fragment>
             ))}
           </div>
@@ -289,6 +376,7 @@ const DespieceWizard = ({
                 <div className="flex justify-center gap-3 mb-6">
                   {[
                     { value: 'PUERTA', label: 'Puertas' },
+                    { value: 'TIRADOR', label: 'Tiradores' },
                     { value: 'COSTADO', label: 'Costados' },
                     { value: 'REGLETA', label: 'Regletas' }
                   ].map(cat => (
@@ -307,7 +395,7 @@ const DespieceWizard = ({
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {filterOptions.manufacturers.map(mfr => (
+                  {manufacturers.map(mfr => (
                     <button
                       key={mfr}
                       onClick={() => {
@@ -336,25 +424,38 @@ const DespieceWizard = ({
                   <p className="text-slate-500 mt-2">Elige el modelo de {selectedManufacturer}</p>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {availableCollections.map(col => (
-                    <button
-                      key={col}
-                      onClick={() => {
-                        setSelectedCollection(col);
-                        setStep(3);
-                      }}
-                      className={`p-6 rounded-2xl border-2 transition-all hover:shadow-lg ${
-                        selectedCollection === col
-                          ? 'border-orange-500 bg-orange-50'
-                          : 'border-slate-200 bg-white hover:border-purple-400'
-                      }`}
-                    >
-                      <Box size={32} className="mx-auto text-purple-600 mb-3" />
-                      <p className="text-lg font-black text-slate-800">{col}</p>
-                    </button>
-                  ))}
-                </div>
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <RefreshCw size={40} className="animate-spin text-purple-500" />
+                  </div>
+                ) : collections.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {collections.map(col => (
+                      <button
+                        key={col}
+                        onClick={() => {
+                          setSelectedCollection(col);
+                          setStep(3);
+                        }}
+                        className={`p-4 rounded-2xl border-2 transition-all hover:shadow-lg text-left ${
+                          selectedCollection === col
+                            ? 'border-orange-500 bg-orange-50'
+                            : 'border-slate-200 bg-white hover:border-purple-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Box size={24} className="text-purple-600 shrink-0" />
+                          <p className="text-sm font-bold text-slate-800">{col}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Package size={48} className="mx-auto text-slate-300 mb-4" />
+                    <p className="text-slate-500">No hay modelos disponibles para {selectedManufacturer}</p>
+                  </div>
+                )}
                 
                 <div className="flex justify-start mt-6">
                   <button
@@ -368,74 +469,12 @@ const DespieceWizard = ({
               </div>
             )}
             
-            {/* Step 3: Color */}
+            {/* Step 3: Matriz de Medidas */}
             {step === 3 && (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-black text-slate-800 uppercase tracking-wider">Selecciona Color</h3>
-                  <p className="text-slate-500 mt-2">Elige el color para {selectedCollection}</p>
-                </div>
-                
-                {loading ? (
-                  <div className="flex justify-center py-12">
-                    <RefreshCw size={40} className="animate-spin text-purple-500" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    {filterOptions.colors.length > 0 ? (
-                      filterOptions.colors.map(color => (
-                        <button
-                          key={color}
-                          onClick={() => {
-                            setSelectedColor(color);
-                            setStep(4);
-                          }}
-                          className={`p-4 rounded-xl border-2 transition-all hover:shadow-lg ${
-                            selectedColor === color
-                              ? 'border-orange-500 bg-orange-50'
-                              : 'border-slate-200 bg-white hover:border-purple-400'
-                          }`}
-                        >
-                          <Palette size={24} className="mx-auto text-purple-600 mb-2" />
-                          <p className="text-sm font-bold text-slate-800 text-center">{color}</p>
-                        </button>
-                      ))
-                    ) : (
-                      <button
-                        onClick={() => setStep(4)}
-                        className="col-span-full p-6 rounded-xl border-2 border-slate-200 bg-white hover:border-purple-400 transition-all"
-                      >
-                        <p className="text-lg font-bold text-slate-600">Continuar sin seleccionar color específico</p>
-                      </button>
-                    )}
-                  </div>
-                )}
-                
-                <div className="flex justify-between mt-6">
-                  <button
-                    onClick={() => setStep(2)}
-                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg text-sm font-bold text-slate-600 flex items-center gap-2 transition-colors"
-                  >
-                    <ChevronLeft size={16} />
-                    Volver
-                  </button>
-                  <button
-                    onClick={() => setStep(4)}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
-                  >
-                    Saltar
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {/* Step 4: Matriz de Medidas */}
-            {step === 4 && (
               <div className="space-y-4">
                 <div className="text-center mb-4">
-                  <h3 className="text-xl font-black text-slate-800 uppercase tracking-wider">Matriz de Precios</h3>
-                  <p className="text-slate-500 text-sm">Haz clic en una celda para añadir al presupuesto</p>
+                  <h3 className="text-xl font-black text-slate-800 uppercase tracking-wider">Selecciona Medidas</h3>
+                  <p className="text-slate-500 text-sm">Haz clic en una celda para añadir al presupuesto. Las medidas se pueden modificar después.</p>
                 </div>
                 
                 {loading ? (
@@ -447,10 +486,10 @@ const DespieceWizard = ({
                     <div className="bg-purple-900 text-white px-4 py-2 flex items-center justify-between">
                       <span className="text-xs font-black uppercase tracking-wider">
                         <Calculator size={14} className="inline mr-2" />
-                        {selectedCategory} • {selectedCollection} {selectedColor && `• ${selectedColor}`}
+                        {selectedCategory} • {selectedCollection}
                       </span>
                       <span className="text-xs text-purple-300">
-                        Click = Añadir | {availableHeights.length} altos × {availableWidths.length} anchos
+                        {availableHeights.length} altos × {availableWidths.length} anchos | Click = Añadir
                       </span>
                     </div>
                     <div className="overflow-auto max-h-[400px]">
@@ -460,7 +499,7 @@ const DespieceWizard = ({
                             <th className="p-2 text-purple-800 font-black sticky left-0 bg-purple-100 z-20 min-w-[70px]">
                               <div className="flex items-center gap-1">
                                 <Ruler size={12} />
-                                Alto↓/Ancho→
+                                Alto↓ / Ancho→
                               </div>
                             </th>
                             {availableWidths.map(w => (
@@ -516,13 +555,14 @@ const DespieceWizard = ({
                 ) : (
                   <div className="text-center py-12">
                     <Package size={48} className="mx-auto text-slate-300 mb-4" />
-                    <p className="text-slate-500">No hay productos con matriz de precios para esta selección</p>
+                    <p className="text-slate-500">No hay precios disponibles para esta selección</p>
+                    <p className="text-slate-400 text-sm mt-2">Selecciona otro modelo o fabricante</p>
                   </div>
                 )}
                 
                 <div className="flex justify-between mt-4">
                   <button
-                    onClick={() => setStep(3)}
+                    onClick={() => setStep(2)}
                     className="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg text-sm font-bold text-slate-600 flex items-center gap-2 transition-colors"
                   >
                     <ChevronLeft size={16} />
@@ -534,7 +574,7 @@ const DespieceWizard = ({
           </div>
           
           {/* Sidebar - Items seleccionados */}
-          <div className="w-[300px] bg-slate-50 border-l border-slate-200 flex flex-col shrink-0">
+          <div className="w-[320px] bg-slate-50 border-l border-slate-200 flex flex-col shrink-0">
             <div className="bg-purple-800 text-white px-4 py-3">
               <h4 className="text-xs font-black uppercase tracking-wider">
                 Presupuesto ({totals.totalItems} líneas)
@@ -546,36 +586,107 @@ const DespieceWizard = ({
                 <div className="text-center py-8">
                   <Package size={32} className="mx-auto text-slate-300 mb-2" />
                   <p className="text-xs text-slate-400">Sin items seleccionados</p>
+                  <p className="text-[10px] text-slate-300 mt-1">Haz clic en la matriz para añadir</p>
                 </div>
               ) : (
                 selectedItems.map(item => (
-                  <div key={item.id} className="bg-white rounded-lg p-2 border border-slate-200 shadow-sm">
-                    <div className="flex justify-between items-start mb-1">
-                      <div>
-                        <p className="text-[10px] font-black text-purple-800">{item.category}</p>
-                        <p className="text-[9px] text-slate-500">{item.height}×{item.width}mm</p>
+                  <div key={item.id} className="bg-white rounded-lg p-3 border border-slate-200 shadow-sm">
+                    {editingItem === item.id ? (
+                      // Modo edición
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-purple-800">{item.category} - {item.collection}</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <label className="text-[9px] text-slate-400">Alto (mm)</label>
+                            <input
+                              type="number"
+                              value={editHeight}
+                              onChange={(e) => setEditHeight(e.target.value)}
+                              className="w-full bg-slate-100 rounded px-2 py-1 text-xs font-bold outline-none border border-purple-300 focus:border-purple-500"
+                              min={1}
+                            />
+                          </div>
+                          <span className="text-slate-400 mt-4">×</span>
+                          <div className="flex-1">
+                            <label className="text-[9px] text-slate-400">Ancho (mm)</label>
+                            <input
+                              type="number"
+                              value={editWidth}
+                              onChange={(e) => setEditWidth(e.target.value)}
+                              className="w-full bg-slate-100 rounded px-2 py-1 text-xs font-bold outline-none border border-purple-300 focus:border-purple-500"
+                              min={1}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEditedDimensions(item.id)}
+                            className="flex-1 bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-[10px] font-bold flex items-center justify-center gap-1"
+                          >
+                            <Check size={12} />
+                            Guardar
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            className="flex-1 bg-slate-400 hover:bg-slate-500 text-white px-2 py-1 rounded text-[10px] font-bold flex items-center justify-center gap-1"
+                          >
+                            <X size={12} />
+                            Cancelar
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="p-1 text-slate-300 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2 text-[9px]">
-                      <span className="text-slate-400">Cant:</span>
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
-                        className="w-12 bg-slate-100 rounded px-1 py-0.5 text-center font-bold outline-none"
-                        min={1}
-                      />
-                      <span className="text-slate-400">×</span>
-                      <span className="text-slate-600">{item.unitPrice.toFixed(2)}€</span>
-                      <span className="text-slate-400">=</span>
-                      <span className="font-black text-orange-600">{item.totalPrice.toFixed(2)}€</span>
-                    </div>
+                    ) : (
+                      // Modo visualización
+                      <>
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="text-[10px] font-black text-purple-800">{item.category}</p>
+                            <p className="text-[9px] text-slate-500 truncate max-w-[180px]" title={item.collection}>
+                              {item.collection}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => startEditingDimensions(item)}
+                              className="p-1 text-slate-400 hover:text-blue-500 transition-colors"
+                              title="Editar medidas"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                            <button
+                              onClick={() => removeItem(item.id)}
+                              className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Medidas destacadas */}
+                        <div className="bg-purple-50 rounded-lg px-2 py-1 mb-2">
+                          <div className="flex items-center justify-center gap-2 text-purple-700">
+                            <Ruler size={12} />
+                            <span className="font-black text-sm">{item.height} × {item.width} mm</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className="text-slate-400">Cant:</span>
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                            className="w-12 bg-slate-100 rounded px-1 py-0.5 text-center font-bold outline-none"
+                            min={1}
+                          />
+                          <span className="text-slate-400">×</span>
+                          <span className="text-slate-600">{item.unitPrice.toFixed(2)}€</span>
+                          <span className="text-slate-400">=</span>
+                          <span className="font-black text-orange-600">{item.totalPrice.toFixed(2)}€</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))
               )}
@@ -584,7 +695,7 @@ const DespieceWizard = ({
             {/* Totales */}
             <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white px-4 py-3">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[9px] text-purple-300 uppercase">Total</span>
+                <span className="text-[9px] text-purple-300 uppercase">Total ({totals.totalQuantity} uds)</span>
                 <span className="text-xl font-black text-orange-400">
                   {totals.totalPrice.toFixed(2)}€
                 </span>
