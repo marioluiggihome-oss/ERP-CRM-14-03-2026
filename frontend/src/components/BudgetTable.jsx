@@ -2103,28 +2103,30 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           setDespieceAddModal({
                             isOpen: true,
                             product: product,
-                            width: 600,
-                            height: 800,
+                            width: product.width || 600,
+                            height: product.height || 800,
                             quantity: 1
                           });
                         }}>
                           <td className="p-2 pl-3">
-                            <span className="text-[10px] font-black text-purple-800">{product.code}</span>
+                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                              product.type === 'PUERTA' ? 'bg-purple-600 text-white' :
+                              product.type === 'COSTADO' ? 'bg-blue-600 text-white' :
+                              'bg-orange-600 text-white'
+                            }`}>{product.type}</span>
                           </td>
                           <td className="p-2">
-                            <span className="text-[10px] font-bold text-slate-700">{product.name}</span>
+                            <span className="text-[10px] font-bold text-slate-700">{product.color}</span>
+                            <span className="text-[8px] text-slate-400 ml-1">({product.collection})</span>
                           </td>
                           <td className="p-2">
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-[9px] font-bold">{product.collection}</span>
-                          </td>
-                          <td className="p-2">
-                            <span className="text-[10px] font-bold text-slate-600">{product.color}</span>
+                            <span className="text-[9px] font-bold text-purple-700">{product.height}×{product.width}mm</span>
                           </td>
                           <td className="p-2">
                             <span className="text-[9px] text-slate-500">{product.finish}</span>
                           </td>
                           <td className="p-2 text-center">
-                            <span className="text-[10px] font-bold text-slate-700">{product.thickness}</span>
+                            <span className="text-[10px] font-bold text-slate-700">{product.thickness}mm</span>
                           </td>
                           <td className="p-2 text-right">
                             <span className="text-[11px] font-black text-purple-600">{product.priceZ1?.toFixed(2)}€</span>
