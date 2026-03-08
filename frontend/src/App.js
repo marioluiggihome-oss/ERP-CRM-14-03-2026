@@ -569,8 +569,20 @@ const App = () => {
               )}
               <button 
                   onClick={async () => {
+                    // Verificar si hay líneas de presupuesto sin guardar
+                    const hasUnsavedItems = (state.budgetItemsMontada?.length > 0) || (state.budgetItemsDespiece?.length > 0);
+                    
+                    if (hasUnsavedItems) {
+                      const confirmLogout = window.confirm(
+                        `Tienes ${(state.budgetItemsMontada?.length || 0) + (state.budgetItemsDespiece?.length || 0)} líneas de presupuesto sin guardar.\n\n¿Estás seguro de que quieres salir sin guardar?`
+                      );
+                      if (!confirmLogout) {
+                        return; // No cerrar sesión
+                      }
+                    }
+                    
                     await authLogout();
-                    setState(p => ({...p, currentUser: null}));
+                    setState(p => ({...p, currentUser: null, budgetItemsMontada: [], budgetItemsDespiece: []}));
                   }}
                   className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-red-500 transition-all"
               >
