@@ -1544,7 +1544,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                    {/* Filtros solo cuando está abierto */}
                    {isCatalogOpen && (
                      <>
-                       <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-1.5 px-3 text-[10px] font-black uppercase text-indigo-900 outline-none">
+                       <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-indigo-900 outline-none">
                          <option value="TODOS">📁 PROGRAMA</option>
                          {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
                        </select>
@@ -1771,7 +1771,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                    {/* Filtros solo cuando está abierto */}
                    {isCatalogOpen && (
                      <>
-                       <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-1.5 px-3 text-[10px] font-black uppercase text-indigo-900 outline-none">
+                       <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-indigo-900 outline-none">
                          <option value="TODOS">📁 PROGRAMA</option>
                          {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
                        </select>
