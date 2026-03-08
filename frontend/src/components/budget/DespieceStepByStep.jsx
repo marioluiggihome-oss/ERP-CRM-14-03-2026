@@ -3,7 +3,7 @@
  * Componente para el flujo paso a paso del presupuestador de despiece
  * Flujo: Fabricante → Modelo → Matriz de precios (Alto×Ancho)
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Factory, Box, Ruler, ChevronRight, ChevronLeft, Check, Plus,
   Package, Calculator, RefreshCw, Edit2, Trash2, ArrowLeft
@@ -33,28 +33,8 @@ const DespieceStepByStep = ({
   const [products, setProducts] = useState([]);
   const [priceMatrix, setPriceMatrix] = useState({});
 
-  // Cargar fabricantes al montar
-  useEffect(() => {
-    loadManufacturers();
-  }, []);
-  
-  // Cargar colecciones cuando cambie fabricante
-  useEffect(() => {
-    if (selectedManufacturer) {
-      loadCollections(selectedManufacturer);
-    } else {
-      setCollections([]);
-    }
-  }, [selectedManufacturer, selectedCategory]);
-  
-  // Cargar productos cuando cambie colección
-  useEffect(() => {
-    if (selectedManufacturer && selectedCollection) {
-      loadProducts();
-    }
-  }, [selectedManufacturer, selectedCollection]);
-  
-  const loadManufacturers = async () => {
+  // Cargar fabricantes
+  const loadManufacturers = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products/filters`);
       const data = await response.json();
@@ -62,9 +42,10 @@ const DespieceStepByStep = ({
     } catch (error) {
       console.error('Error loading manufacturers:', error);
     }
-  };
+  }, []);
   
-  const loadCollections = async (manufacturer) => {
+  // Cargar colecciones
+  const loadCollections = useCallback(async (manufacturer) => {
     setLoading(true);
     try {
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products/filters?manufacturer=${encodeURIComponent(manufacturer)}`);
@@ -84,18 +65,21 @@ const DespieceStepByStep = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory]);
   
-  const loadProducts = async () => {
+  // Cargar productos y construir matriz
+  const loadProducts = useCallback(async (manufacturer, collection) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.append('manufacturer', selectedManufacturer);
-      params.append('collection', selectedCollection);
+      params.append('manufacturer', manufacturer);
+      params.append('collection', collection);
       params.append('limit', '3000');
       
+      console.log('Loading products for:', manufacturer, collection);
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products?${params.toString()}`);
       const data = await response.json();
+      console.log('Products loaded:', data.length);
       setProducts(data);
       
       // Construir matriz de precios
@@ -111,13 +95,35 @@ const DespieceStepByStep = ({
           };
         }
       });
+      console.log('Matrix built:', Object.keys(matrix).length, 'heights');
       setPriceMatrix(matrix);
     } catch (error) {
       console.error('Error loading products:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Cargar fabricantes al montar
+  useEffect(() => {
+    loadManufacturers();
+  }, [loadManufacturers]);
+  
+  // Cargar colecciones cuando cambie fabricante
+  useEffect(() => {
+    if (selectedManufacturer) {
+      loadCollections(selectedManufacturer);
+    } else {
+      setCollections([]);
+    }
+  }, [selectedManufacturer, selectedCategory, loadCollections]);
+  
+  // Cargar productos cuando cambie colección
+  useEffect(() => {
+    if (selectedManufacturer && selectedCollection) {
+      loadProducts(selectedManufacturer, selectedCollection);
+    }
+  }, [selectedManufacturer, selectedCollection, loadProducts]);
   
   // Obtener alturas y anchos disponibles
   const availableHeights = useMemo(() => {
