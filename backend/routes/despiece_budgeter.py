@@ -180,15 +180,35 @@ async def get_despiece_products(
 
 
 @router.get("/products/filters")
-async def get_despiece_filters():
-    """Obtener opciones de filtros disponibles (fabricantes, colecciones, colores, etc.)"""
+async def get_despiece_filters(manufacturer: str = None, collection: str = None):
+    """Obtener opciones de filtros disponibles (fabricantes, colecciones, colores, etc.)
+    Opcionalmente filtrar por fabricante o colección para obtener valores relacionados"""
+    
+    # Filtro base
+    base_filter = {}
+    if manufacturer:
+        base_filter["manufacturer"] = manufacturer
+    if collection:
+        base_filter["collection"] = collection
+    
     # Obtener valores únicos de cada campo
     manufacturers = await db.despiece_products.distinct("manufacturer")
-    collections = await db.despiece_products.distinct("collection")
-    finishes = await db.despiece_products.distinct("finish")
-    thicknesses = await db.despiece_products.distinct("thickness")
-    colors = await db.despiece_products.distinct("color")
-    categories = await db.despiece_products.distinct("category")
+    
+    # Colecciones filtradas por fabricante si se especifica
+    collections = await db.despiece_products.distinct("collection", base_filter if manufacturer else {})
+    
+    # Colores filtrados por fabricante y/o colección
+    color_filter = {}
+    if manufacturer:
+        color_filter["manufacturer"] = manufacturer
+    if collection:
+        color_filter["collection"] = collection
+    colors = await db.despiece_products.distinct("color", color_filter if color_filter else {})
+    
+    # Otros filtros
+    finishes = await db.despiece_products.distinct("finish", base_filter if manufacturer else {})
+    thicknesses = await db.despiece_products.distinct("thickness", base_filter if manufacturer else {})
+    categories = await db.despiece_products.distinct("category", base_filter if manufacturer else {})
     
     return {
         "manufacturers": sorted([m for m in manufacturers if m]),
