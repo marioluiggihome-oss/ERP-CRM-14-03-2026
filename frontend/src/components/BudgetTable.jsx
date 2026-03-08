@@ -975,15 +975,6 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
             </button>
           )}
 
-          {/* Botón Presupuestador de Tableros */}
-          <button 
-            onClick={() => setIsDespieceBudgeterOpen(true)} 
-            className="bg-purple-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-3 hover:bg-purple-700 transition-all shadow-xl"
-            data-testid="despiece-budgeter-btn"
-          >
-            <Package size={16}/> TABLEROS
-          </button>
-
           {state.currentUser?.canViewTechnicalDespiece && (
             <button onClick={onOpenManufacturing} className="bg-indigo-950 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-3 hover:bg-indigo-800 transition-all shadow-xl">
               <FileText size={16}/> INFORME INDUSTRIAL
