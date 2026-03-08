@@ -336,7 +336,52 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     
     // Ordenar: primero coincidencias exactas/por inicio, luego por categoría y código
     const qUpper = q.toUpperCase();
-    return filtered.sort((a, b) => {
+    let sorted = filtered.sort((a, b) => {
+      // Si hay una columna de ordenación seleccionada, usar esa
+      if (sortColumn) {
+        let valA, valB;
+        switch (sortColumn) {
+          case 'code':
+            valA = a.code || '';
+            valB = b.code || '';
+            break;
+          case 'name':
+            valA = a.name || '';
+            valB = b.name || '';
+            break;
+          case 'width':
+            valA = Number(a.width) || 0;
+            valB = Number(b.width) || 0;
+            break;
+          case 'height':
+            valA = Number(a.height) || 0;
+            valB = Number(b.height) || 0;
+            break;
+          case 'depth':
+            valA = Number(a.depth) || 0;
+            valB = Number(b.depth) || 0;
+            break;
+          case 'points':
+            valA = Number(a.zonePoints?.Z1 || a.points) || 0;
+            valB = Number(b.zonePoints?.Z1 || b.points) || 0;
+            break;
+          default:
+            valA = a.code || '';
+            valB = b.code || '';
+        }
+        
+        // Comparar
+        let comparison = 0;
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          comparison = valA - valB;
+        } else {
+          comparison = String(valA).localeCompare(String(valB));
+        }
+        
+        return sortDirection === 'desc' ? -comparison : comparison;
+      }
+      
+      // Ordenación por defecto (sin columna seleccionada)
       // Priorizar coincidencias que empiezan con el término de búsqueda
       if (q) {
         const aStartsWith = a.code?.toUpperCase().startsWith(qUpper) ? 0 : 1;
@@ -363,7 +408,9 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       // Dentro de la misma categoría, ordenar por código
       return a.code.localeCompare(b.code);
     });
-  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory, filterWidth, filterHeight, filterDepth]);
+    
+    return sorted;
+  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory, filterWidth, filterHeight, filterDepth, sortColumn, sortDirection]);
 
   const budgetKey = state.currentModule === 'montada' ? 'budgetItemsMontada' : 'budgetItemsDespiece';
 
