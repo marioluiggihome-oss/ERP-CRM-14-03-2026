@@ -263,7 +263,6 @@ async def send_admin_notification(new_user_email: str, new_user_name: str, regis
             subject=f'👤 Nuevo registro: {new_user_name} - LUIGGI HOME',
             html_content=html_content
         )
-        return True
     except Exception as e:
         logger.error(f"Error sending admin notification: {e}")
         return False
