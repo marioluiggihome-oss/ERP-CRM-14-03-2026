@@ -2683,16 +2683,6 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         expedientNumber={state.budgetNumber || ''}
       />
 
-      {/* Presupuestador de Tableros DESPIECE */}
-      <DespieceBudgeter
-        isOpen={isDespieceBudgeterOpen}
-        onClose={() => setIsDespieceBudgeterOpen(false)}
-        currentUser={state.currentUser}
-        onBudgetSaved={(budget) => {
-          console.log('Presupuesto de tableros guardado:', budget);
-        }}
-      />
-
       {/* Modal Confirmar Pedido */}
       {isConfirmOrderOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
