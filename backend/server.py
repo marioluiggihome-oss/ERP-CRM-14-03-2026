@@ -4808,11 +4808,11 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
             ws_users.cell(row=row_num, column=7, value=u.get('delegation', ''))
             ws_users.cell(row=row_num, column=8, value='Sí' if u.get('isActive', True) else 'No')
         
-        # ===== PRODUCTOS =====
-        ws_products = wb.create_sheet("Productos")
+        # ===== PRODUCTOS MONTADA =====
+        ws_products = wb.create_sheet("Productos Montada")
         
         products = await db.products.find({}, {'_id': 0}).to_list(10000)
-        prod_headers = ['Código', 'Nombre', 'Categoría', 'Serie', 'Ancho', 'Alto', 'Fondo', 'Puntos', 'Z1', 'Z2', 'Z3', 'Z4']
+        prod_headers = ['Código', 'Nombre', 'Programa', 'Categoría', 'Serie', 'Ancho', 'Alto', 'Fondo', 'Puntos', 'Z1', 'Z2', 'Z3', 'Z4']
         for col, header in enumerate(prod_headers, 1):
             cell = ws_products.cell(row=1, column=col, value=header)
             cell.font = header_font
@@ -4822,16 +4822,40 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
             zp = p.get('zonePoints', {}) or {}
             ws_products.cell(row=row_num, column=1, value=p.get('code', ''))
             ws_products.cell(row=row_num, column=2, value=p.get('name', ''))
-            ws_products.cell(row=row_num, column=3, value=p.get('category', ''))
-            ws_products.cell(row=row_num, column=4, value=p.get('series', ''))
-            ws_products.cell(row=row_num, column=5, value=p.get('width', 0))
-            ws_products.cell(row=row_num, column=6, value=p.get('height', 0))
-            ws_products.cell(row=row_num, column=7, value=p.get('depth', 0))
-            ws_products.cell(row=row_num, column=8, value=p.get('points', 0))
-            ws_products.cell(row=row_num, column=9, value=zp.get('Z1', 0))
-            ws_products.cell(row=row_num, column=10, value=zp.get('Z2', 0))
-            ws_products.cell(row=row_num, column=11, value=zp.get('Z3', 0))
-            ws_products.cell(row=row_num, column=12, value=zp.get('Z4', 0))
+            ws_products.cell(row=row_num, column=3, value=p.get('programa', ''))
+            ws_products.cell(row=row_num, column=4, value=p.get('category', ''))
+            ws_products.cell(row=row_num, column=5, value=p.get('series', ''))
+            ws_products.cell(row=row_num, column=6, value=p.get('width', 0))
+            ws_products.cell(row=row_num, column=7, value=p.get('height', 0))
+            ws_products.cell(row=row_num, column=8, value=p.get('depth', 0))
+            ws_products.cell(row=row_num, column=9, value=p.get('points', 0))
+            ws_products.cell(row=row_num, column=10, value=zp.get('Z1', 0))
+            ws_products.cell(row=row_num, column=11, value=zp.get('Z2', 0))
+            ws_products.cell(row=row_num, column=12, value=zp.get('Z3', 0))
+            ws_products.cell(row=row_num, column=13, value=zp.get('Z4', 0))
+        
+        # ===== PRODUCTOS DESPIECE (Tableros) =====
+        ws_despiece = wb.create_sheet("Productos Despiece")
+        
+        despiece_products = await db.despiece_products.find({}, {'_id': 0}).to_list(10000)
+        desp_headers = ['Código', 'Nombre', 'Fabricante', 'Colección', 'Color', 'Acabado', 'Grosor', 'Categoría', 'Precio Z1', 'Precio Z2', 'Precio Z3']
+        for col, header in enumerate(desp_headers, 1):
+            cell = ws_despiece.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+        
+        for row_num, p in enumerate(despiece_products, 2):
+            ws_despiece.cell(row=row_num, column=1, value=p.get('code', ''))
+            ws_despiece.cell(row=row_num, column=2, value=p.get('name', ''))
+            ws_despiece.cell(row=row_num, column=3, value=p.get('manufacturer', ''))
+            ws_despiece.cell(row=row_num, column=4, value=p.get('collection', ''))
+            ws_despiece.cell(row=row_num, column=5, value=p.get('color', ''))
+            ws_despiece.cell(row=row_num, column=6, value=p.get('finish', ''))
+            ws_despiece.cell(row=row_num, column=7, value=p.get('thickness', 0))
+            ws_despiece.cell(row=row_num, column=8, value=p.get('category', ''))
+            ws_despiece.cell(row=row_num, column=9, value=p.get('priceZ1', 0))
+            ws_despiece.cell(row=row_num, column=10, value=p.get('priceZ2', 0))
+            ws_despiece.cell(row=row_num, column=11, value=p.get('priceZ3', 0))
         
         # ===== PROYECTOS =====
         ws_projects = wb.create_sheet("Proyectos")
