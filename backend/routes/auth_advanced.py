@@ -780,7 +780,7 @@ async def regenerate_backup_codes(data: dict, credentials: HTTPAuthorizationCred
         raise HTTPException(status_code=400, detail="2FA no está habilitado")
     
     # Generar nuevos códigos de respaldo
-    backup_codes = [generate_backup_code() for _ in range(8)]
+    backup_codes = generate_backup_codes(8)
     
     await db.users.update_one(
         {"id": user_id},
