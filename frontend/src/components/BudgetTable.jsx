@@ -1170,9 +1170,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside style={{ width: isConfigOpen ? sidebarWidth : 0 }} className="bg-white border-r border-indigo-50 flex flex-col no-print transition-all duration-300 relative overflow-hidden shadow-inner">
-           <div onMouseDown={() => { isResizingSidebar.current = true; }} className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-600 z-50"></div>
-           <div className="p-4 space-y-3 overflow-y-auto scrollbar-thin">
+        <aside 
+          style={{ width: isConfigOpen ? sidebarWidth : 0, minWidth: isConfigOpen ? sidebarWidth : 0 }} 
+          className={`bg-white border-r border-indigo-50 flex flex-col no-print transition-all duration-300 relative overflow-hidden shadow-inner ${!isConfigOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        >
+           {isConfigOpen && <div onMouseDown={() => { isResizingSidebar.current = true; }} className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-600 z-50"></div>}
+           <div className={`p-4 space-y-3 overflow-y-auto scrollbar-thin ${!isConfigOpen ? 'invisible' : 'visible'}`}>
               <section className="space-y-2">
                  <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic flex items-center gap-1">📂 DATOS EXPEDIENTE</h4>
                  <div className="space-y-1.5">
