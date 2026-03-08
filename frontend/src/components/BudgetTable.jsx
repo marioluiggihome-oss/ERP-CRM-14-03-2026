@@ -1,4 +1,4 @@
-import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, PanelBottomClose, PanelBottomOpen, PanelTopClose, PanelTopOpen, FileText, ChevronDown, ChevronUp, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download, Scissors, CheckCircle, Paperclip, Mail, X, Upload, Image, FileImage, LayoutGrid, LayoutList, ArrowRightLeft } from 'lucide-react';
+import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, PanelBottomClose, PanelBottomOpen, PanelTopClose, PanelTopOpen, FileText, ChevronDown, ChevronUp, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download, Scissors, CheckCircle, Paperclip, Mail, X, Upload, Image, FileImage, LayoutGrid, LayoutList, ArrowRightLeft, LogOut } from 'lucide-react';
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { exportToPdf } from '../utils/pdfHelper';
 import { generateBudgetPDF } from '../services/pdfGenerator';
@@ -35,9 +35,30 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [isSendingOrder, setIsSendingOrder] = useState(false);
   const [orderSent, setOrderSent] = useState(false);
   const [isValorado, setIsValorado] = useState(true);  // Toggle para mostrar/ocultar precios
+  const [showExitConfirm, setShowExitConfirm] = useState(false); // Diálogo de confirmación al salir
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
   const isResizingCatalogWidth = useRef(false);
+
+  // Detectar si hay líneas sin guardar
+  const hasUnsavedItems = useMemo(() => {
+    const montadaItems = state.budgetItemsMontada || [];
+    const despieceItems = state.budgetItemsDespiece || [];
+    return montadaItems.length > 0 || despieceItems.length > 0;
+  }, [state.budgetItemsMontada, state.budgetItemsDespiece]);
+
+  // Advertir al usuario si intenta cerrar la ventana con líneas sin guardar
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedItems) {
+        e.preventDefault();
+        e.returnValue = '¿Seguro que quieres salir? Tienes líneas sin guardar.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedItems]);
 
   // Guardar preferencia cuando cambie
   useEffect(() => {
