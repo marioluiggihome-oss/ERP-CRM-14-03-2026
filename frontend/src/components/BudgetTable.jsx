@@ -1518,84 +1518,28 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   </div>
                </div>
 
-               <div className="bg-indigo-50/30 p-2 rounded-xl border border-indigo-100 mb-2 space-y-2">
-                 <div className="grid grid-cols-3 gap-2">
-                    <div className="flex items-center gap-1.5">
-                       <div className="p-1 bg-indigo-950 text-white rounded-md"><Palette size={12}/></div>
-                       <div>
-                          <p className="text-[6px] font-black uppercase text-indigo-300 tracking-widest leading-none mb-0.5">ACABADO GLOBAL</p>
-                          <p className="text-[8px] font-black text-indigo-950 uppercase italic leading-none">{state.globalFinish}</p>
-                       </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                       <div className="p-1 bg-orange-600 text-white rounded-md"><Box size={12}/></div>
-                       <div>
-                          <p className="text-[6px] font-black uppercase text-indigo-300 tracking-widest leading-none mb-0.5">MATERIAL ARMAZÓN</p>
-                          <p className="text-[8px] font-black text-indigo-950 uppercase italic leading-none">{carcassMaterialName}</p>
-                       </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                       <div className="p-1 bg-indigo-700 text-white rounded-md"><Layers size={12}/></div>
-                       <div>
-                          <p className="text-[6px] font-black uppercase text-indigo-300 tracking-widest leading-none mb-0.5">COSTADOS / VISTOS</p>
-                          <p className="text-[8px] font-black text-indigo-950 uppercase italic leading-none">{state.sideColor || 'Igual a Frentes'}</p>
-                       </div>
-                    </div>
+               <div className="bg-indigo-50/30 p-1.5 rounded-xl border border-indigo-100 mb-2 space-y-1">
+                 {/* Fila 1: Acabado, Armazón, Costados */}
+                 <div className="flex items-center gap-2 text-[7px]">
+                    <span className="flex items-center gap-0.5 bg-indigo-950 text-white px-1 py-0.5 rounded text-[6px] font-black"><Palette size={8}/> {state.globalFinish}</span>
+                    <span className="flex items-center gap-0.5 bg-orange-600 text-white px-1 py-0.5 rounded text-[6px] font-black"><Box size={8}/> {carcassMaterialName?.split(' ').slice(0, 2).join(' ')}</span>
+                    <span className="flex items-center gap-0.5 bg-indigo-700 text-white px-1 py-0.5 rounded text-[6px] font-black"><Layers size={8}/> {state.sideColor || 'FRENTES'}</span>
                  </div>
 
+                 {/* Fila 2: Colores puertas (si hay) */}
                  {(state.doorColorLow || state.doorColorHigh || state.doorColorColumns) && (
-                   <div className="grid grid-cols-4 gap-2 pt-2 border-t border-indigo-100">
-                      {state.doorColorLow && (
-                        <div className="flex items-center gap-1.5">
-                          <PaintBucket size={10} className="text-indigo-400"/>
-                          <div>
-                            <p className="text-[5px] font-black uppercase text-indigo-300 leading-none">P. BAJOS</p>
-                            <p className="text-[7px] font-black text-indigo-900 uppercase leading-none">{state.doorColorLow}</p>
-                          </div>
-                        </div>
-                      )}
-                      {state.doorColorHigh && (
-                        <div className="flex items-center gap-1.5">
-                          <PaintBucket size={10} className="text-indigo-400"/>
-                          <div>
-                            <p className="text-[5px] font-black uppercase text-indigo-300 leading-none">P. ALTOS</p>
-                            <p className="text-[7px] font-black text-indigo-900 uppercase leading-none">{state.doorColorHigh}</p>
-                          </div>
-                        </div>
-                      )}
-                      {state.doorColorColumns && (
-                        <div className="flex items-center gap-1.5">
-                          <PaintBucket size={10} className="text-indigo-400"/>
-                          <div>
-                            <p className="text-[5px] font-black uppercase text-indigo-300 leading-none">P. COLUMNAS</p>
-                            <p className="text-[7px] font-black text-indigo-900 uppercase leading-none">{state.doorColorColumns}</p>
-                          </div>
-                        </div>
-                      )}
+                   <div className="flex flex-wrap gap-1 text-[6px]">
+                      {state.doorColorLow && <span className="px-1 py-0.5 bg-indigo-100 text-indigo-800 rounded font-bold">Bajos: {state.doorColorLow}</span>}
+                      {state.doorColorHigh && <span className="px-1 py-0.5 bg-indigo-100 text-indigo-800 rounded font-bold">Altos: {state.doorColorHigh}</span>}
+                      {state.doorColorColumns && <span className="px-1 py-0.5 bg-indigo-100 text-indigo-800 rounded font-bold">Col: {state.doorColorColumns}</span>}
                    </div>
                  )}
                  
-                 {/* Perfiles GOLA */}
+                 {/* Fila 3: GOLA (si hay) */}
                  {(state.golaAlto || state.golaBajo) && (
-                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-purple-100">
-                      {state.golaAlto && (
-                        <div className="flex items-center gap-1.5 bg-purple-50 p-1.5 rounded-lg">
-                          <Box size={10} className="text-purple-500"/>
-                          <div>
-                            <p className="text-[5px] font-black uppercase text-purple-400 leading-none">GOLA ALTO</p>
-                            <p className="text-[7px] font-black text-purple-900 uppercase leading-none">{state.golaAltoColor || 'Sí'}</p>
-                          </div>
-                        </div>
-                      )}
-                      {state.golaBajo && (
-                        <div className="flex items-center gap-1.5 bg-purple-50 p-1.5 rounded-lg">
-                          <Box size={10} className="text-purple-500"/>
-                          <div>
-                            <p className="text-[5px] font-black uppercase text-purple-400 leading-none">GOLA BAJO</p>
-                            <p className="text-[7px] font-black text-purple-900 uppercase leading-none">{state.golaBajoColor || 'Sí'}</p>
-                          </div>
-                        </div>
-                      )}
+                   <div className="flex gap-1 text-[6px]">
+                      {state.golaAlto && <span className="px-1 py-0.5 bg-purple-600 text-white rounded font-bold">G.Alto: {state.golaAltoColor || 'Sí'}</span>}
+                      {state.golaBajo && <span className="px-1 py-0.5 bg-purple-600 text-white rounded font-bold">G.Bajo: {state.golaBajoColor || 'Sí'}</span>}
                    </div>
                  )}
                </div>
