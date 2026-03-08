@@ -75,17 +75,29 @@ Componente avanzado con:
 ## Pending Tasks
 
 ### P0 - Prioridad Alta
-- [ ] Construir `DespieceWizard.jsx` - Wizard paso a paso para despiece
-- [ ] Integrar wizard en el modo "COCINA DESPIECE"
+- [x] ~~Construir `DespieceWizard.jsx`~~ ✅ Wizard paso a paso IMPLEMENTADO E INTEGRADO
+- [x] ~~Integrar wizard en el modo "COCINA DESPIECE"~~ ✅ Accesible desde sidebar izquierdo
 
 ### P1 - Próximas
 - [ ] Exportación de catálogo mejorada (solicitar especificaciones al usuario)
 - [ ] Verificar dominio Resend para emails
 
 ### P2 - Technical Debt
-- [x] ~~Refactoring `BudgetTable.jsx` (>3400 líneas)~~ ✅ Completado (3078 líneas)
+- [x] ~~Refactoring `BudgetTable.jsx` (>3400 líneas)~~ ✅ Completado (3122 líneas)
 - [ ] Refactoring `SettingsModal.jsx` (>4100 líneas)
 - [ ] Migrar endpoints de `server.py` a routers dedicados
+
+## Limpieza de Datos (Mar 8, 2026)
+- ✅ **Eliminados 144 productos de serie ALUMINIO**
+- Solo quedan series: **STANDARD** y **GOLA**
+
+## DespieceWizard - Flujo Paso a Paso
+1. **Paso 1 - Fabricante**: Seleccionar fabricante (ALVIC, etc.)
+2. **Paso 2 - Modelo**: Seleccionar colección (LUXE, ZENIT, SYNCRON, BASIK)
+3. **Paso 3 - Color**: Seleccionar color/acabado
+4. **Paso 4 - Medidas**: Matriz de precios Alto×Ancho con click para añadir
+
+Acceso: Sidebar izquierdo → Botón "WIZARD DESPIECE" (modo COCINA DESPIECE)
 
 ## Test Reports
 - `/app/test_reports/iteration_23.json` - Bug fix filtros librería (100% PASS)
