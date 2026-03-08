@@ -1830,14 +1830,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('width')}>
-                            AN {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            ANCHO {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterWidth} 
                             onChange={e => setFilterWidth(e.target.value)}
-                            placeholder="--"
-                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            placeholder="cm"
+                            className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
                         </div>
@@ -1845,14 +1845,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('height')}>
-                            AL {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            ALTO {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterHeight} 
                             onChange={e => setFilterHeight(e.target.value)}
-                            placeholder="--"
-                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            placeholder="cm"
+                            className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
                         </div>
@@ -1860,14 +1860,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('depth')}>
-                            FO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            FONDO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterDepth} 
                             onChange={e => setFilterDepth(e.target.value)}
-                            placeholder="--"
-                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            placeholder="cm"
+                            className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
                         </div>
@@ -2145,14 +2145,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('width')}>
-                            AN {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            ANCHO {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterWidth} 
                             onChange={e => setFilterWidth(e.target.value)}
-                            placeholder="--"
-                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            placeholder="cm"
+                            className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
                         </div>
@@ -2160,14 +2160,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('height')}>
-                            AL {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            ALTO {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterHeight} 
                             onChange={e => setFilterHeight(e.target.value)}
-                            placeholder="--"
-                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            placeholder="cm"
+                            className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
                         </div>
@@ -2175,14 +2175,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('depth')}>
-                            FO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            FONDO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterDepth} 
                             onChange={e => setFilterDepth(e.target.value)}
-                            placeholder="--"
-                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            placeholder="cm"
+                            className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
                         </div>
