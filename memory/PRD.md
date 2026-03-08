@@ -56,16 +56,25 @@ Componente avanzado con:
 - GET `/products` - Listar con filtros
 - GET `/products/filters` - Opciones de filtros
 - POST `/seed-alvic` - Poblar datos ALVIC
+- POST `/seed-syncron` - Poblar datos SYNCRON (900 productos)
 
 ## Test Credentials
 - **Admin User:** MARIO / MARIO
 
 ## Pending Tasks
 
+### P0 - Prioridad Alta
+- [ ] Construir `DespieceWizard.jsx` - Wizard paso a paso para despiece
+- [ ] Integrar wizard en el modo "COCINA DESPIECE"
+
 ### P1 - Próximas
-- [ ] Exportación de catálogo mejorada
-- [ ] Verificar dominio Resend
+- [ ] Exportación de catálogo mejorada (solicitar especificaciones al usuario)
+- [ ] Verificar dominio Resend para emails
 
 ### P2 - Technical Debt
-- [ ] Refactoring `BudgetTable.jsx` (>3000 líneas)
+- [ ] Refactoring `BudgetTable.jsx` (>3400 líneas)
 - [ ] Refactoring `SettingsModal.jsx` (>4100 líneas)
+- [ ] Migrar endpoints de `server.py` a routers dedicados
+
+## Test Reports
+- `/app/test_reports/iteration_23.json` - Bug fix filtros librería (100% PASS)
