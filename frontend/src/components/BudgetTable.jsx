@@ -941,7 +941,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                 companyName: 'LUIGGI HOME',
                 globalFinish: state.globalFinish,
                 allProducts: allProducts,
-                calculateLineDetails: calculateLineDetails
+                calculateLineDetails: calculateLineDetails,
+                golaAlto: state.golaAlto,
+                golaAltoColor: state.golaAltoColor,
+                golaBajo: state.golaBajo,
+                golaBajoColor: state.golaBajoColor
               });
             }}
             className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg"
