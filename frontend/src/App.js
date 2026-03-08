@@ -218,7 +218,9 @@ const App = () => {
       doorColorLow: '',
       doorColorHigh: '',
       doorColorColumns: '',
-      sideColor: ''
+      sideColor: '',
+      golaAlto: false, golaAltoColor: '',
+      golaBajo: false, golaBajoColor: ''
     }));
     // Limpiar localStorage también
     try {
