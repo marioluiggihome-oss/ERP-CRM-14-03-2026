@@ -36,9 +36,23 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [orderSent, setOrderSent] = useState(false);
   const [isValorado, setIsValorado] = useState(true);  // Toggle para mostrar/ocultar precios
   const [showExitConfirm, setShowExitConfirm] = useState(false); // Diálogo de confirmación al salir
+  const [sortColumn, setSortColumn] = useState(null); // Columna de ordenación: 'code', 'name', 'width', 'height', 'depth', 'points'
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' o 'desc'
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
   const isResizingCatalogWidth = useRef(false);
+
+  // Función para cambiar la ordenación
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      // Si ya está ordenado por esta columna, cambiar dirección
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nueva columna, ordenar ascendente
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
 
   // Detectar si hay líneas sin guardar
   const hasUnsavedItems = useMemo(() => {
