@@ -837,7 +837,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                 carcassMaterialName: carcassMat?.name || 'No especificado',
                 brandColor: state.brandColor,
                 logo: state.logo,
-                companyName: state.currentUser?.clientName || 'LUIGGI HOME',
+                companyName: 'LUIGGI HOME',
                 globalFinish: state.globalFinish,
                 allProducts: allProducts,
                 calculateLineDetails: calculateLineDetails
