@@ -2042,6 +2042,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                    )}
                    {/* Botones cambiar posición */}
                    <button 
+                     onClick={() => {
+                       const params = new URLSearchParams();
+                       if (state.currentModule) params.append('module', state.currentModule);
+                       if (selectedCategory !== 'TODAS') params.append('category', selectedCategory);
+                       if (selectedSeries !== 'TODAS') params.append('series', selectedSeries);
+                       window.open(`${process.env.REACT_APP_BACKEND_URL}/api/products/export/excel?${params.toString()}`, '_blank');
+                     }}
+                     className="p-1.5 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-colors"
+                     title="Exportar catálogo a Excel"
+                   >
+                     <Download size={14} className="text-emerald-600"/>
+                   </button>
+                   <button 
                      onClick={() => setCatalogPosition('horizontal')} 
                      className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors"
                      title="Mover abajo"
