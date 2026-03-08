@@ -143,6 +143,7 @@ async def get_despiece_products(
     finish: Optional[str] = None,
     thickness: Optional[float] = None,
     category: Optional[str] = None,
+    type: Optional[str] = None,
     search: Optional[str] = None,
     limit: int = Query(default=500, le=2000)
 ):
@@ -164,6 +165,8 @@ async def get_despiece_products(
         query["thickness"] = thickness
     if category:
         query["category"] = category
+    if type:
+        query["type"] = type
     if search:
         query["$or"] = [
             {"code": {"$regex": search, "$options": "i"}},
@@ -172,7 +175,7 @@ async def get_despiece_products(
             {"colorCode": {"$regex": search, "$options": "i"}}
         ]
     
-    products = await db.despiece_products.find(query, {"_id": 0}).limit(limit).to_list(limit)
+    products = await db.despiece_products.find(query, {"_id": 0}).sort([("type", 1), ("collection", 1), ("height", 1), ("width", 1)]).limit(limit).to_list(limit)
     return products
 
 
