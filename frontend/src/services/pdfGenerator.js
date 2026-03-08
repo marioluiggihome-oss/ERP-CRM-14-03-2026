@@ -105,7 +105,8 @@ export const generateBudgetPDF = ({
     // Aplicar capitalización a los nombres, especialmente líneas manuales
     const rawName = item.manualDescription || product?.name || '-';
     const name = item.isManual ? capitalizeName(rawName) : rawName;
-    const width = item.customWidth ? Math.round(item.customWidth / 10) : '-';
+    // Dimensiones ya están en cm, no dividir por 10
+    const width = item.customWidth || '-';
     const height = item.customHeight || '-';
     const depth = item.customDepth || '-';
     const apertura = item.openingDirection === 'Derecha' ? 'D' : item.openingDirection === 'Izquierda' ? 'I' : '-';
