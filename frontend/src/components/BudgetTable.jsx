@@ -30,7 +30,21 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     return saved || 'horizontal';
   });
   const [isDespieceOpen, setIsDespieceOpen] = useState(false);
-  const [isDespieceBudgeterOpen, setIsDespieceBudgeterOpen] = useState(false);
+  // Estados para el catálogo de tableros (modo despiece)
+  const [despieceProducts, setDespieceProducts] = useState([]);
+  const [despieceFilters, setDespieceFilters] = useState({
+    manufacturer: '',
+    collection: '',
+    finish: '',
+    thickness: ''
+  });
+  const [despieceFilterOptions, setDespieceFilterOptions] = useState({
+    manufacturers: [],
+    collections: [],
+    finishes: [],
+    thicknesses: []
+  });
+  const [loadingDespiece, setLoadingDespiece] = useState(false);
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
   const [orderEmail, setOrderEmail] = useState('');
