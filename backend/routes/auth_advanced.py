@@ -7,6 +7,7 @@ import uuid
 import base64
 import secrets
 import logging
+import asyncio
 from io import BytesIO
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -16,6 +17,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import bcrypt
 import pyotp
 import qrcode
+import resend
 
 from config import db
 from models.schemas import (
