@@ -88,8 +88,25 @@ Componente avanzado con:
 - [ ] Migrar endpoints de `server.py` a routers dedicados
 
 ## Limpieza de Datos (Mar 8, 2026)
-- ✅ **Eliminados 144 productos de serie ALUMINIO**
-- Solo quedan series: **STANDARD** y **GOLA**
+- ✅ **Eliminados 103+ productos de serie ALUMINIO** de la base de datos correcta
+- ✅ **Base de datos unificada y separada**:
+  - `products`: 7045 productos MONTADA (muebles ensamblados)
+    - ESTÁNDAR: 4409
+    - GOLA: 2636
+  - `despiece_products`: 918 productos DESPIECE (tableros)
+    - SYNCRON: 904
+    - LUXE: 5
+    - ZENIT: 4
+    - BASIK: 3
+    - CANTOS: 2
+- ✅ **Exportación Excel actualizada** con parámetro `tipo=montada|despiece`
+
+## API de Exportación Excel Actualizada
+```
+GET /api/products/export/excel?tipo=montada  → Exporta muebles
+GET /api/products/export/excel?tipo=despiece → Exporta tableros
+GET /api/admin/export-database → Excel con 2 hojas: "Productos Montada" y "Productos Despiece"
+```
 
 ## DespieceWizard - Flujo Paso a Paso
 1. **Paso 1 - Fabricante**: Seleccionar fabricante (ALVIC, etc.)
