@@ -2820,8 +2820,15 @@ async def restore_backup(request: Request, backup_data: Dict):
         
         restored_counts = {}
         
+        # Colecciones permitidas para restaurar
+        allowed_collections = [
+            "users", "products", "despiece_products", "materials", 
+            "projects", "settings", "clients", "opportunities",
+            "activities", "calendar_events", "orders", "armario_projects"
+        ]
+        
         for collection_name, documents in backup_data["data"].items():
-            if collection_name in ["users", "products", "materials", "projects", "settings"]:
+            if collection_name in allowed_collections:
                 # Clear existing data
                 await db[collection_name].delete_many({})
                 
