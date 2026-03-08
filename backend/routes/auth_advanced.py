@@ -140,7 +140,24 @@ def generate_backup_codes(count: int = 8) -> list[str]:
 
 
 def get_email_template(content: str, title: str = "LUIGGI HOME") -> str:
-    """Genera una plantilla de email moderna con el estilo de LUIGGI HOME"""
+    """Genera una plantilla de email moderna con el logo de LUIGGI HOME"""
+    # Logo SVG de LUIGGI HOME embebido en base64
+    logo_svg = '''
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#1e1b4b"/>
+          <stop offset="100%" style="stop-color:#4338ca"/>
+        </linearGradient>
+      </defs>
+      <rect width="200" height="60" rx="8" fill="url(#bgGrad)"/>
+      <text x="100" y="32" text-anchor="middle" font-family="Georgia, serif" font-size="28" font-weight="bold" font-style="italic" fill="white">luiggi</text>
+      <text x="100" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="900" letter-spacing="4" fill="#f97316">HOME</text>
+    </svg>
+    '''
+    import base64
+    logo_base64 = base64.b64encode(logo_svg.strip().encode()).decode()
+    
     return f'''
     <!DOCTYPE html>
     <html>
@@ -153,15 +170,10 @@ def get_email_template(content: str, title: str = "LUIGGI HOME") -> str:
             <tr>
                 <td align="center">
                     <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
-                        <!-- Header con gradiente -->
+                        <!-- Header con Logo -->
                         <tr>
-                            <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); padding: 40px; text-align: center;">
-                                <h1 style="margin: 0; font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: 4px; text-transform: uppercase;">
-                                    LUIGGI
-                                </h1>
-                                <p style="margin: 8px 0 0; font-size: 14px; color: #c7d2fe; letter-spacing: 6px; text-transform: uppercase;">
-                                    HOME
-                                </p>
+                            <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); padding: 30px; text-align: center;">
+                                <img src="data:image/svg+xml;base64,{logo_base64}" alt="LUIGGI HOME" style="max-width: 200px; height: auto;" />
                             </td>
                         </tr>
                         
