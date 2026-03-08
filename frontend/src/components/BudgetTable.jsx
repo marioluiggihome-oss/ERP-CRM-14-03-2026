@@ -31,8 +31,6 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     return saved || 'horizontal';
   });
   const [isDespieceOpen, setIsDespieceOpen] = useState(false);
-  // Items de presupuesto de despiece (tableros)
-  const [budgetItemsDespiece, setBudgetItemsDespiece] = useState([]);
   // Estados para el catálogo de tableros (modo despiece) - REQUERIDOS para la UI existente
   const [despieceProducts, setDespieceProducts] = useState([]);
   const [despieceFilters, setDespieceFilters] = useState({
