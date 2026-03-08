@@ -5,6 +5,7 @@ import { generateBudgetPDF } from '../services/pdfGenerator';
 import { DOOR_FINISHES, CabinetCategory } from '../constants';
 import Logo from './Logo';
 import DespieceModal from './DespieceModal';
+import DespieceCatalog from './DespieceCatalog';
 import ClientSelector from './ClientSelector';
 import CabinetIcon from './CabinetIcon';
 
