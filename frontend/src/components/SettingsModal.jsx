@@ -1130,6 +1130,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           >
             Identidad
           </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+              activeTab === 'security' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Shield size={16} /> Seguridad 2FA
+            </span>
+          </button>
         </div>
 
         {/* Content */}
