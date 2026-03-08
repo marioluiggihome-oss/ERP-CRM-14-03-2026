@@ -933,13 +933,10 @@ export const generateManufacturingPDF = ({
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bolditalic');
         doc.setTextColor(...primaryColor);
-        doc.text(companyName, margin, yPos + 10);
+        // Solo logo, sin texto
       }
     } else {
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bolditalic');
-      doc.setTextColor(...primaryColor);
-      doc.text(companyName, margin, yPos + 10);
+      // Solo espacio para logo
     }
 
     if (distributorName) {
