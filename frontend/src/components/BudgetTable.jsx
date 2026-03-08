@@ -176,32 +176,45 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       quantity: quantity,
       areaM2: areaM2,
       pricePerM2: pricePerM2,
+      unitPrice: totalPrice / quantity,
       totalPrice: totalPrice,
       category: product.category,
       isDespiece: true
     };
     
-    setBudgetItemsDespiece(prev => [...prev, newItem]);
+    setState(prev => ({
+      ...prev,
+      budgetItemsDespiece: [...(prev.budgetItemsDespiece || []), newItem]
+    }));
   };
 
   // Funciones para gestionar items de despiece
   const handleAddDespieceItem = useCallback((item) => {
-    setBudgetItemsDespiece(prev => [...prev, item]);
+    setState(prev => ({
+      ...prev,
+      budgetItemsDespiece: [...(prev.budgetItemsDespiece || []), item]
+    }));
   }, []);
 
   const handleRemoveDespieceItem = useCallback((itemId) => {
-    setBudgetItemsDespiece(prev => prev.filter(item => item.id !== itemId));
+    setState(prev => ({
+      ...prev,
+      budgetItemsDespiece: (prev.budgetItemsDespiece || []).filter(item => item.id !== itemId)
+    }));
   }, []);
 
   const handleUpdateDespieceItem = useCallback((itemId, field, value) => {
-    setBudgetItemsDespiece(prev => prev.map(item => {
-      if (item.id !== itemId) return item;
-      const updated = { ...item, [field]: value };
-      // Recalcular precio si cambia cantidad
-      if (field === 'quantity') {
-        updated.totalPrice = updated.unitPrice * value;
-      }
-      return updated;
+    setState(prev => ({
+      ...prev,
+      budgetItemsDespiece: (prev.budgetItemsDespiece || []).map(item => {
+        if (item.id !== itemId) return item;
+        const updated = { ...item, [field]: value };
+        // Recalcular precio si cambia cantidad
+        if (field === 'quantity') {
+          updated.totalPrice = updated.unitPrice * value;
+        }
+        return updated;
+      })
     }));
   }, []);
 
