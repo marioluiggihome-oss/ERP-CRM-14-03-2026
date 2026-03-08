@@ -40,6 +40,35 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# Configurar Resend
+resend.api_key = os.environ.get('RESEND_API_KEY')
+
+
+async def send_email_with_resend(to_email: str, subject: str, html_content: str) -> bool:
+    """Enviar email usando Resend API (async/non-blocking)"""
+    try:
+        api_key = os.environ.get('RESEND_API_KEY')
+        if not api_key:
+            logger.warning("RESEND_API_KEY not configured, email not sent")
+            return False
+        
+        resend.api_key = api_key
+        
+        params = {
+            "from": "LUIGGI HOME <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        }
+        
+        # Ejecutar en thread para mantener FastAPI non-blocking
+        email = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Email sent to {to_email} via Resend: {email.get('id')}")
+        return True
+    except Exception as e:
+        logger.error(f"Error sending email with Resend: {e}")
+        return False
+
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
