@@ -333,6 +333,19 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const catA = categoryOrder[a.category?.toUpperCase()] || 99;
       const catB = categoryOrder[b.category?.toUpperCase()] || 99;
       if (catA !== catB) return catA - catB;
+      
+      // Para ALTOS, ordenar primero los de altura 90 (más utilizados)
+      const isAltosA = a.category?.toUpperCase().includes('ALTOS');
+      const isAltosB = b.category?.toUpperCase().includes('ALTOS');
+      if (isAltosA && isAltosB) {
+        // Altura 90 tiene prioridad
+        const heightA = Number(a.height) || 0;
+        const heightB = Number(b.height) || 0;
+        const is90A = heightA >= 88 && heightA <= 92 ? 0 : 1;
+        const is90B = heightB >= 88 && heightB <= 92 ? 0 : 1;
+        if (is90A !== is90B) return is90A - is90B;
+      }
+      
       // Dentro de la misma categoría, ordenar por código
       return a.code.localeCompare(b.code);
     });
