@@ -144,6 +144,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       if (despieceFilters.collection) params.append('collection', despieceFilters.collection);
       if (despieceFilters.finish) params.append('finish', despieceFilters.finish);
       if (despieceFilters.thickness) params.append('thickness', despieceFilters.thickness);
+      if (despieceFilters.type) params.append('type', despieceFilters.type);
       
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products?${params.toString()}`);
       const data = await response.json();
