@@ -1977,7 +1977,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   </h3>
                 </div>
                 <div className="flex items-center gap-2">
-                   {/* Filtros solo cuando está abierto */}
+                   {/* Filtros solo cuando está abierto - Usando componentes extraídos */}
                    {isCatalogOpen && state.currentModule === 'despiece' && (
                      <>
                        {/* Filtros de Despiece (Tableros) */}
@@ -2411,7 +2411,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   </h3>
                 </div>
                 <div className="flex items-center gap-2">
-                   {/* Filtros solo cuando está abierto */}
+                   {/* Filtros solo cuando está abierto - Usando componentes extraídos */}
                    {isCatalogOpen && state.currentModule === 'despiece' && (
                      <>
                        {/* Filtros de Despiece (Tableros) */}
