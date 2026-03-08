@@ -4241,7 +4241,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           onClick={async () => {
                             if (window.confirm('¿Estás seguro de que quieres desactivar la autenticación 2FA? Tu cuenta será menos segura.')) {
                               try {
-                                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/2fa/disable`, {
+                                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth-advanced/2fa/disable-simple`, {
                                   method: 'POST',
                                   headers: {
                                     'Content-Type': 'application/json',
