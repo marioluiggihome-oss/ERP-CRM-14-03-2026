@@ -29,6 +29,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     return saved || 'horizontal';
   });
   const [isDespieceOpen, setIsDespieceOpen] = useState(false);
+  const [isDespieceBudgeterOpen, setIsDespieceBudgeterOpen] = useState(false);
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
   const [orderEmail, setOrderEmail] = useState('');
