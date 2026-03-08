@@ -344,7 +344,7 @@ export const generateBudgetPDF = ({
     doc.setFontSize(5);
     doc.setTextColor(148, 163, 184);
     doc.text('Presupuesto válido 30 días. Consulte condiciones de montaje y transporte.', pageWidth / 2, footerY + 18, { align: 'center' });
-    doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, footerY + 22, { align: 'center' });
+    doc.text(`${new Date().toLocaleString('es-ES')}`, pageWidth / 2, footerY + 22, { align: 'center' });
   };
 
   // ==========================================
