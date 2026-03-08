@@ -1932,12 +1932,28 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   <thead className="bg-indigo-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
                     <tr>
                       <th className="p-2 pl-3 w-[45px]"></th>
-                      <th className="p-2 w-[90px]">REF</th>
-                      <th className="p-2 min-w-[180px]">DESCRIPCIÓN</th>
-                      <th className="p-2 text-center w-[55px]">AN</th>
-                      <th className="p-2 text-center w-[55px]">AL</th>
-                      <th className="p-2 text-center w-[55px]">FO</th>
-                      <th className="p-2 text-center w-[60px]">PTS</th>
+                      <th className="p-2 w-[90px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('code')}>
+                        <div className="flex items-center gap-1">
+                          REF {sortColumn === 'code' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </div>
+                      </th>
+                      <th className="p-2 min-w-[180px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('name')}>
+                        <div className="flex items-center gap-1">
+                          DESCRIPCIÓN {sortColumn === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </div>
+                      </th>
+                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('width')}>
+                        AN {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('height')}>
+                        AL {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('depth')}>
+                        FO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th className="p-2 text-center w-[60px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('points')}>
+                        PTS {sortColumn === 'points' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
                       <th className="p-2 pr-3 text-right w-[40px]"></th>
                     </tr>
                   </thead>
