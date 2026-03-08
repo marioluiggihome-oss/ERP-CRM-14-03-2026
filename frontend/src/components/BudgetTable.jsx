@@ -45,6 +45,14 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     thicknesses: []
   });
   const [loadingDespiece, setLoadingDespiece] = useState(false);
+  // Modal para añadir producto de despiece
+  const [despieceAddModal, setDespieceAddModal] = useState({
+    isOpen: false,
+    product: null,
+    width: 600,
+    height: 800,
+    quantity: 1
+  });
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
   const [orderEmail, setOrderEmail] = useState('');
