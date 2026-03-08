@@ -2068,20 +2068,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   <table className="w-full text-left">
                     <thead className="bg-purple-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
                       <tr>
-                        <th className="p-2 pl-3 w-[80px]">CÓDIGO</th>
-                        <th className="p-2 min-w-[150px]">PRODUCTO</th>
-                        <th className="p-2 w-[80px]">COLECCIÓN</th>
-                        <th className="p-2 w-[90px]">COLOR</th>
-                        <th className="p-2 w-[70px]">ACABADO</th>
-                        <th className="p-2 w-[50px] text-center">mm</th>
-                        <th className="p-2 w-[80px] text-right">€/m²</th>
+                        <th className="p-2 pl-3 w-[70px]">TIPO</th>
+                        <th className="p-2 min-w-[150px]">COLOR / MODELO</th>
+                        <th className="p-2 w-[100px]">MEDIDAS</th>
+                        <th className="p-2 w-[80px]">ACABADO</th>
+                        <th className="p-2 w-[60px] text-center">GROSOR</th>
+                        <th className="p-2 w-[80px] text-right">PRECIO</th>
                         <th className="p-2 w-[40px]"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-purple-50">
                       {loadingDespiece ? (
                         <tr>
-                          <td colSpan={8} className="p-8 text-center">
+                          <td colSpan={7} className="p-8 text-center">
                             <div className="flex flex-col items-center gap-2">
                               <Package className="animate-pulse text-purple-400" size={32} />
                               <span className="text-sm text-purple-400 font-bold">Cargando tableros...</span>
@@ -2090,7 +2089,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                         </tr>
                       ) : despieceProducts.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="p-8 text-center">
+                          <td colSpan={7} className="p-8 text-center">
                             <div className="flex flex-col items-center gap-2">
                               <Package className="text-slate-300" size={48} />
                               <span className="text-sm text-slate-400 font-bold">No hay productos de tableros</span>
