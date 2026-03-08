@@ -2,6 +2,21 @@
 
 ## Completed Tasks - Session Mar 8, 2026
 
+### ✅ P0 - Bug Fix: Filtros de librería DESPIECE (NUEVO)
+**Corregido**: La librería derecha (vertical) ahora muestra los filtros correctos según el módulo activo:
+
+- **Modo COCINA DESPIECE:** 
+  - Sección "FILTROS DESPIECE" con: FABRICANTE, MODELO, ACABADO, GROSOR
+  - Contador "X tableros disponibles"
+- **Modo COCINA MONTADA:**
+  - Filtros: PROGRAMA, CATEGORÍA, SERIE, MEDIDAS
+  
+Todas las posiciones de librería (horizontal, vertical, top) funcionan correctamente.
+
+### ✅ P2 - Bug Fix: Glitch visual sidebar colapsado
+- Mejorado el comportamiento del sidebar izquierdo al colapsar
+- Agregado `opacity` y `pointer-events` condicionados para transición suave
+
 ### ✅ P0 - Módulo DESPIECE (Presupuestador de Tableros)
 **INTEGRADO en tab "COCINA DESPIECE"** - Funcionando al 100%
 
@@ -16,7 +31,7 @@
   - Campos: Ancho (mm), Alto (mm), Cantidad
   - Cálculo automático de área (m²) y precio estimado
   - Botón "AÑADIR AL PRESUPUESTO"
-- **18 productos ALVIC de muestra:** LUXE, ZENIT, SYNCRON, BASIK, CANTOS
+- **500+ productos DESPIECE:** LUXE, ZENIT, SYNCRON, BASIK, CANTOS
 
 ### ✅ P2 - Mejoras UX Filtros
 - Labels mejoradas: "ANCHO/ALTO/FONDO" en lugar de "AN/AL/FO"
