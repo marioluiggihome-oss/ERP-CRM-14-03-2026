@@ -210,17 +210,9 @@ async def send_verification_email(email: str, code: str, name: str = "Usuario"):
 
 
 async def send_admin_notification(new_user_email: str, new_user_name: str, registration_time: str):
-    """Send notification to admin when a new user registers"""
+    """Send notification to admin when a new user registers using Resend"""
     try:
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail
-        
-        api_key = os.environ.get('SENDGRID_API_KEY')
         admin_email = os.environ.get('ADMIN_EMAIL', 'mario@luiggihome.es')
-        
-        if not api_key:
-            logger.warning("SendGrid API key not configured, admin notification not sent")
-            return False
         
         content = f'''
         <div style="text-align: center; margin-bottom: 30px;">
@@ -266,16 +258,11 @@ async def send_admin_notification(new_user_email: str, new_user_name: str, regis
         
         html_content = get_email_template(content, "Nuevo Registro")
         
-        message = Mail(
-            from_email='noreply@luiggihome.com',
-            to_emails=admin_email,
+        return await send_email_with_resend(
+            to_email=admin_email,
             subject=f'👤 Nuevo registro: {new_user_name} - LUIGGI HOME',
             html_content=html_content
         )
-        
-        sg = SendGridAPIClient(api_key)
-        response = sg.send(message)
-        logger.info(f"Admin notification sent to {admin_email}: {response.status_code}")
         return True
     except Exception as e:
         logger.error(f"Error sending admin notification: {e}")
