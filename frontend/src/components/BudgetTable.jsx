@@ -1786,7 +1786,50 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                 </div>
                 <div className="flex items-center gap-2">
                    {/* Filtros solo cuando está abierto */}
-                   {isCatalogOpen && (
+                   {isCatalogOpen && state.currentModule === 'despiece' && (
+                     <>
+                       {/* Filtros de Despiece (Tableros) */}
+                       <div className="flex items-center gap-1 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl px-2 py-1 border-2 border-purple-300">
+                         <Factory size={14} className="text-purple-600" />
+                         <select 
+                           value={despieceFilters.manufacturer} 
+                           onChange={e => setDespieceFilters(prev => ({...prev, manufacturer: e.target.value}))} 
+                           className="bg-white border border-purple-300 rounded-lg py-1.5 px-2 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                         >
+                           <option value="">🏭 FABRICANTE</option>
+                           {despieceFilterOptions.manufacturers.map(m => <option key={m} value={m}>{m}</option>)}
+                         </select>
+                         <select 
+                           value={despieceFilters.collection} 
+                           onChange={e => setDespieceFilters(prev => ({...prev, collection: e.target.value}))} 
+                           className="bg-white border border-purple-300 rounded-lg py-1.5 px-2 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                         >
+                           <option value="">📦 MODELO</option>
+                           {despieceFilterOptions.collections.map(c => <option key={c} value={c}>{c}</option>)}
+                         </select>
+                         <select 
+                           value={despieceFilters.finish} 
+                           onChange={e => setDespieceFilters(prev => ({...prev, finish: e.target.value}))} 
+                           className="bg-white border border-purple-300 rounded-lg py-1.5 px-2 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                         >
+                           <option value="">✨ ACABADO</option>
+                           {despieceFilterOptions.finishes.map(f => <option key={f} value={f}>{f}</option>)}
+                         </select>
+                         <select 
+                           value={despieceFilters.thickness} 
+                           onChange={e => setDespieceFilters(prev => ({...prev, thickness: e.target.value}))} 
+                           className="bg-white border border-purple-300 rounded-lg py-1.5 px-2 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                         >
+                           <option value="">📏 GROSOR</option>
+                           {despieceFilterOptions.thicknesses.map(t => <option key={t} value={t}>{t}mm</option>)}
+                         </select>
+                       </div>
+                       <span className="text-[9px] font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded-lg">
+                         {despieceProducts.length} tableros
+                       </span>
+                     </>
+                   )}
+                   {isCatalogOpen && state.currentModule !== 'despiece' && (
                      <>
                        <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-indigo-900 outline-none">
                          <option value="TODOS">📁 PROGRAMA</option>
@@ -2100,7 +2143,50 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                 </div>
                 <div className="flex items-center gap-2">
                    {/* Filtros solo cuando está abierto */}
-                   {isCatalogOpen && (
+                   {isCatalogOpen && state.currentModule === 'despiece' && (
+                     <>
+                       {/* Filtros de Despiece (Tableros) */}
+                       <div className="flex items-center gap-1 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl px-2 py-1 border-2 border-purple-300">
+                         <Factory size={14} className="text-purple-600" />
+                         <select 
+                           value={despieceFilters.manufacturer} 
+                           onChange={e => setDespieceFilters(prev => ({...prev, manufacturer: e.target.value}))} 
+                           className="bg-white border border-purple-300 rounded-lg py-1.5 px-2 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                         >
+                           <option value="">🏭 FABRICANTE</option>
+                           {despieceFilterOptions.manufacturers.map(m => <option key={m} value={m}>{m}</option>)}
+                         </select>
+                         <select 
+                           value={despieceFilters.collection} 
+                           onChange={e => setDespieceFilters(prev => ({...prev, collection: e.target.value}))} 
+                           className="bg-white border border-purple-300 rounded-lg py-1.5 px-2 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                         >
+                           <option value="">📦 MODELO</option>
+                           {despieceFilterOptions.collections.map(c => <option key={c} value={c}>{c}</option>)}
+                         </select>
+                         <select 
+                           value={despieceFilters.finish} 
+                           onChange={e => setDespieceFilters(prev => ({...prev, finish: e.target.value}))} 
+                           className="bg-white border border-purple-300 rounded-lg py-1.5 px-2 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                         >
+                           <option value="">✨ ACABADO</option>
+                           {despieceFilterOptions.finishes.map(f => <option key={f} value={f}>{f}</option>)}
+                         </select>
+                         <select 
+                           value={despieceFilters.thickness} 
+                           onChange={e => setDespieceFilters(prev => ({...prev, thickness: e.target.value}))} 
+                           className="bg-white border border-purple-300 rounded-lg py-1.5 px-2 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                         >
+                           <option value="">📏 GROSOR</option>
+                           {despieceFilterOptions.thicknesses.map(t => <option key={t} value={t}>{t}mm</option>)}
+                         </select>
+                       </div>
+                       <span className="text-[9px] font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded-lg">
+                         {despieceProducts.length} tableros
+                       </span>
+                     </>
+                   )}
+                   {isCatalogOpen && state.currentModule !== 'despiece' && (
                      <>
                        <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-indigo-900 outline-none">
                          <option value="TODOS">📁 PROGRAMA</option>
