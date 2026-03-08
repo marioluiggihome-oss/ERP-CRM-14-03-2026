@@ -33,6 +33,28 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [isDespieceOpen, setIsDespieceOpen] = useState(false);
   // Items de presupuesto de despiece (tableros)
   const [budgetItemsDespiece, setBudgetItemsDespiece] = useState([]);
+  // Estados para el catálogo de tableros (modo despiece) - REQUERIDOS para la UI existente
+  const [despieceProducts, setDespieceProducts] = useState([]);
+  const [despieceFilters, setDespieceFilters] = useState({
+    manufacturer: '',
+    collection: '',
+    finish: '',
+    thickness: ''
+  });
+  const [despieceFilterOptions, setDespieceFilterOptions] = useState({
+    manufacturers: [],
+    collections: [],
+    finishes: [],
+    thicknesses: []
+  });
+  const [loadingDespiece, setLoadingDespiece] = useState(false);
+  const [despieceAddModal, setDespieceAddModal] = useState({
+    isOpen: false,
+    product: null,
+    width: 600,
+    height: 800,
+    quantity: 1
+  });
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
   const [orderEmail, setOrderEmail] = useState('');
