@@ -1085,7 +1085,7 @@ export const generateManufacturingPDF = ({
     // ==========================================
     doc.setFontSize(5);
     doc.setTextColor(148, 163, 184);
-    doc.text(`DOCUMENTO GENERADO POR ${companyName} MASTER INDUSTRIAL SYSTEM V2026`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+    doc.text(`DOCUMENTO GENERADO - MASTER INDUSTRIAL SYSTEM V2026`, pageWidth / 2, pageHeight - 8, { align: 'center' });
   }
 
   const fileName = `Orden_Fabricacion_${budgetNumber?.replace(/\s+/g, '_') || 'SinRef'}.pdf`;
