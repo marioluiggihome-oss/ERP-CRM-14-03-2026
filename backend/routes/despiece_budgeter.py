@@ -344,7 +344,7 @@ async def create_despiece_budget(budget: dict):
     }
     
     await db.despiece_budgets.insert_one(budget_data)
-    del budget_data["_id"] if "_id" in budget_data else None
+    budget_data.pop("_id", None)
     return budget_data
 
 
