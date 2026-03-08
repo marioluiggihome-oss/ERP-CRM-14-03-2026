@@ -1229,14 +1229,18 @@ async def get_products(module: Optional[str] = None):
     return products
 
 
+# Importar servicio de exportación de catálogo
+from services.catalog_export import generate_catalog_excel_with_images, generate_catalog_pdf_with_images
+
 @api_router.get("/products/export/excel")
 async def export_products_to_excel(
     module: Optional[str] = None,
     category: Optional[str] = None,
-    series: Optional[str] = None
+    series: Optional[str] = None,
+    with_images: bool = True
 ):
     """
-    Exportar catálogo de productos a Excel con formato técnico.
+    Exportar catálogo de productos a Excel con imágenes SVG.
     Cambia ZONA por GRUPO (Z1→G1, Z2→G2, etc.)
     """
     query = {}
@@ -1249,95 +1253,75 @@ async def export_products_to_excel(
     
     products = await db.products.find(query, {"_id": 0}).sort([("category", 1), ("series", 1), ("code", 1)]).to_list(10000)
     
-    # Crear archivo Excel en memoria
-    output = BytesIO()
-    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
-    worksheet = workbook.add_worksheet('Catálogo Productos')
-    
-    # Formatos
-    header_format = workbook.add_format({
-        'bold': True,
-        'bg_color': '#1e293b',
-        'font_color': 'white',
-        'align': 'center',
-        'valign': 'vcenter',
-        'border': 1,
-        'font_size': 11
-    })
-    cell_format = workbook.add_format({
-        'align': 'center',
-        'valign': 'vcenter',
-        'border': 1,
-        'font_size': 10
-    })
-    code_format = workbook.add_format({
-        'bold': True,
-        'align': 'center',
-        'valign': 'vcenter',
-        'border': 1,
-        'font_size': 10,
-        'bg_color': '#f1f5f9'
-    })
-    name_format = workbook.add_format({
-        'align': 'left',
-        'valign': 'vcenter',
-        'border': 1,
-        'font_size': 10,
-        'text_wrap': True
-    })
-    price_format = workbook.add_format({
-        'align': 'center',
-        'valign': 'vcenter',
-        'border': 1,
-        'font_size': 10,
-        'num_format': '0.00'
-    })
-    
-    # Encabezados - Cambiar ZONA por GRUPO
-    headers = ['REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'CATEGORÍA', 'SERIE', 'G1', 'G2', 'G3', 'G4', 'G5', 'G6']
-    col_widths = [15, 45, 8, 8, 8, 15, 15, 10, 10, 10, 10, 10, 10]
-    
-    for col, (header, width) in enumerate(zip(headers, col_widths)):
-        worksheet.write(0, col, header, header_format)
-        worksheet.set_column(col, col, width)
-    
-    # Filas de datos
-    for row_num, product in enumerate(products, start=1):
-        code = product.get('code', '')
-        name = product.get('name', '')
-        width = product.get('width', '')
-        height = product.get('height', '')
-        depth = product.get('depth', '')
-        category = product.get('category', '')
-        series = product.get('series', '')
-        zone_points = product.get('zonePoints', {}) or {}
+    if with_images:
+        output = await generate_catalog_excel_with_images(products, module)
+    else:
+        # Versión sin imágenes (más rápida)
+        output = BytesIO()
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        worksheet = workbook.add_worksheet('Catálogo Productos')
         
-        worksheet.write(row_num, 0, code, code_format)
-        worksheet.write(row_num, 1, name, name_format)
-        worksheet.write(row_num, 2, width, cell_format)
-        worksheet.write(row_num, 3, height, cell_format)
-        worksheet.write(row_num, 4, depth, cell_format)
-        worksheet.write(row_num, 5, category, cell_format)
-        worksheet.write(row_num, 6, series, cell_format)
+        header_format = workbook.add_format({'bold': True, 'bg_color': '#1e293b', 'font_color': 'white', 'align': 'center', 'valign': 'vcenter', 'border': 1})
+        cell_format = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'border': 1})
         
-        # Grupos de precios (antes Zonas) - G1, G2, G3, G4, G5, G6
-        for i, zone_key in enumerate(['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']):
-            value = zone_points.get(zone_key, 0) or 0
-            worksheet.write(row_num, 7 + i, value, price_format)
+        headers = ['REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'CATEGORÍA', 'SERIE', 'G1', 'G2', 'G3', 'G4', 'G5', 'G6']
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        
+        for row_num, product in enumerate(products, start=1):
+            worksheet.write(row_num, 0, product.get('code', ''), cell_format)
+            worksheet.write(row_num, 1, product.get('name', ''), cell_format)
+            worksheet.write(row_num, 2, product.get('width', ''), cell_format)
+            worksheet.write(row_num, 3, product.get('height', ''), cell_format)
+            worksheet.write(row_num, 4, product.get('depth', ''), cell_format)
+            worksheet.write(row_num, 5, product.get('category', ''), cell_format)
+            worksheet.write(row_num, 6, product.get('series', ''), cell_format)
+            zone_points = product.get('zonePoints', {}) or {}
+            for i, zk in enumerate(['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']):
+                worksheet.write(row_num, 7 + i, zone_points.get(zk, 0) or 0, cell_format)
+        
+        workbook.close()
+        output.seek(0)
     
-    # Añadir filtros automáticos
-    worksheet.autofilter(0, 0, len(products), len(headers) - 1)
-    
-    # Congelar primera fila
-    worksheet.freeze_panes(1, 0)
-    
-    workbook.close()
-    output.seek(0)
-    
-    # Nombre del archivo
     filename = f"catalogo_luiggi_{module or 'completo'}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
     
     return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@api_router.get("/products/export/pdf")
+async def export_products_to_pdf(
+    module: Optional[str] = None,
+    category: Optional[str] = None,
+    series: Optional[str] = None
+):
+    """
+    Exportar catálogo de productos a PDF con imágenes SVG.
+    Cambia ZONA por GRUPO (Z1→G1, Z2→G2, etc.)
+    Limitado a 500 productos por rendimiento (usar Excel para catálogo completo).
+    """
+    query = {}
+    if module:
+        query["module"] = module
+    if category:
+        query["category"] = category
+    if series:
+        query["series"] = series
+    
+    products = await db.products.find(query, {"_id": 0}).sort([("category", 1), ("series", 1), ("code", 1)]).to_list(10000)
+    
+    output = await generate_catalog_pdf_with_images(products, module)
+    
+    filename = f"catalogo_luiggi_{module or 'completo'}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
