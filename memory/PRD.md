@@ -45,6 +45,17 @@ Todas las posiciones de librería (horizontal, vertical, top) funcionan correcta
 
 ## Componentes Refactorizados
 
+### ✅ BudgetTable.jsx Refactorizado (Mar 8, 2026)
+**Reducido de 3413 a 3078 líneas (-335 líneas)**
+
+Componentes extraídos a `/app/frontend/src/components/budget/`:
+- `DespieceFilters.jsx` - DespieceFiltersHorizontal, DespieceFiltersVertical (109 líneas)
+- `MontadaFilters.jsx` - MontadaFiltersHorizontal, MontadaFiltersVertical (223 líneas)
+- `DespieceAddModal.jsx` - Modal para añadir tablero (136 líneas)
+- `CatalogProductRow.jsx` - CatalogProductRowTable, CatalogProductRowCard (201 líneas)
+- `BudgetItemRow.jsx` - Fila de ítem en presupuesto (234 líneas)
+- `index.js` - Exports centralizados
+
 ### DespieceCatalog.jsx (NUEVO)
 Componente avanzado con:
 - 3 modos de vista: Tabla | Cuadrícula | Matriz de precios
@@ -72,9 +83,10 @@ Componente avanzado con:
 - [ ] Verificar dominio Resend para emails
 
 ### P2 - Technical Debt
-- [ ] Refactoring `BudgetTable.jsx` (>3400 líneas)
+- [x] ~~Refactoring `BudgetTable.jsx` (>3400 líneas)~~ ✅ Completado (3078 líneas)
 - [ ] Refactoring `SettingsModal.jsx` (>4100 líneas)
 - [ ] Migrar endpoints de `server.py` a routers dedicados
 
 ## Test Reports
 - `/app/test_reports/iteration_23.json` - Bug fix filtros librería (100% PASS)
+- `/app/test_reports/iteration_24.json` - Refactorización BudgetTable.jsx (100% PASS)
