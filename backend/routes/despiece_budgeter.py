@@ -148,12 +148,17 @@ async def get_despiece_products(
     limit: int = Query(default=500, le=2000)
 ):
     """Obtener productos de despiece con filtros"""
+    import re
     query = {}
     
     if manufacturer:
-        query["manufacturer"] = {"$regex": manufacturer, "$options": "i"}
+        # Escapar caracteres especiales de regex
+        safe_manufacturer = re.escape(manufacturer)
+        query["manufacturer"] = {"$regex": safe_manufacturer, "$options": "i"}
     if collection:
-        query["collection"] = {"$regex": collection, "$options": "i"}
+        # Escapar caracteres especiales de regex
+        safe_collection = re.escape(collection)
+        query["collection"] = {"$regex": safe_collection, "$options": "i"}
     if color:
         query["$or"] = [
             {"color": {"$regex": color, "$options": "i"}},
