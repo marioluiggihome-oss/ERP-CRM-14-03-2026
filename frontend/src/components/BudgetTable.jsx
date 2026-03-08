@@ -1548,7 +1548,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          <option value="TODOS">📁 PROGRAMA</option>
                          {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
                        </select>
-                       <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="bg-purple-100 border-2 border-purple-400 rounded-lg py-1.5 px-3 text-[10px] font-black uppercase text-purple-900 outline-none" disabled={selectedPrograma === 'TODOS'}>
+                       <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="bg-purple-100 border-2 border-purple-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-purple-900 outline-none" disabled={selectedPrograma === 'TODOS'}>
                          <option value="TODAS">📂 CATEGORÍA</option>
                          {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
                        </select>
@@ -1775,7 +1775,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          <option value="TODOS">📁 PROGRAMA</option>
                          {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
                        </select>
-                       <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="bg-purple-100 border-2 border-purple-400 rounded-lg py-1.5 px-3 text-[10px] font-black uppercase text-purple-900 outline-none" disabled={selectedPrograma === 'TODOS'}>
+                       <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="bg-purple-100 border-2 border-purple-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-purple-900 outline-none" disabled={selectedPrograma === 'TODOS'}>
                          <option value="TODAS">📂 CATEGORÍA</option>
                          {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
                        </select>
