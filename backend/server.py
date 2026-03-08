@@ -20,6 +20,8 @@ from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileT
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import asyncio
+import xlsxwriter
+from io import BytesIO
 
 # Servicios de seguridad
 from services.jwt_service import (
