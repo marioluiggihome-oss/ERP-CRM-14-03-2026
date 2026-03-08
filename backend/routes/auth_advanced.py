@@ -783,16 +783,8 @@ async def forgot_password(request: Request, data: PasswordResetRequest, backgrou
 
 
 async def send_reset_email(email: str, code: str, name: str):
-    """Enviar email de reset de contraseña con diseño moderno"""
+    """Enviar email de reset de contraseña con diseño moderno usando Resend"""
     try:
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail
-        
-        api_key = os.environ.get('SENDGRID_API_KEY')
-        if not api_key:
-            logger.warning("SendGrid not configured")
-            return False
-        
         content = f'''
         <h2 style="margin: 0 0 20px; font-size: 24px; font-weight: 700; color: #1e293b;">
             Hola {name} 🔑
@@ -819,16 +811,11 @@ async def send_reset_email(email: str, code: str, name: str):
         
         html_content = get_email_template(content, "Recuperar contraseña")
         
-        message = Mail(
-            from_email='noreply@luiggihome.com',
-            to_emails=email,
+        return await send_email_with_resend(
+            to_email=email,
             subject='🔑 Recuperar contraseña - LUIGGI HOME',
             html_content=html_content
         )
-        
-        sg = SendGridAPIClient(api_key)
-        sg.send(message)
-        return True
     except Exception as e:
         logger.error(f"Error sending reset email: {e}")
         return False
