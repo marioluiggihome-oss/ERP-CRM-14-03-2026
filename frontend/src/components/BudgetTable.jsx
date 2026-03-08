@@ -1991,12 +1991,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                         </tr>
                       ) : despieceProducts.map(product => (
                         <tr key={product.id} className="hover:bg-purple-50 cursor-pointer transition-colors group" onClick={() => {
-                          const width = prompt('Ancho en mm:', '600');
-                          const height = prompt('Alto en mm:', '800');
-                          const qty = prompt('Cantidad:', '1');
-                          if (width && height && qty) {
-                            addDespieceProductToBudget(product, parseFloat(width), parseFloat(height), parseInt(qty));
-                          }
+                          setDespieceAddModal({
+                            isOpen: true,
+                            product: product,
+                            width: 600,
+                            height: 800,
+                            quantity: 1
+                          });
                         }}>
                           <td className="p-2 pl-3">
                             <span className="text-[10px] font-black text-purple-800">{product.code}</span>
