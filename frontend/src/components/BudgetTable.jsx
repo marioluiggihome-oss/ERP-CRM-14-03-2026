@@ -1772,6 +1772,47 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   </div>
                </div>
 
+               {/* Sección de items DESPIECE */}
+               {(state.budgetItemsDespiece?.length > 0 || state.currentModule === 'despiece') && (
+                 <div className="mt-4 mb-4">
+                   <div className="flex items-center justify-between px-2 py-2 bg-purple-900 text-white rounded-t-lg">
+                     <span className="text-[8px] font-black uppercase tracking-widest">
+                       <Package size={12} className="inline mr-1" />
+                       DESPIECE - TABLEROS ({state.budgetItemsDespiece?.length || 0})
+                     </span>
+                     <span className="text-[10px] font-black text-orange-400">
+                       {(state.budgetItemsDespiece || []).reduce((sum, item) => sum + (item.totalPrice || 0), 0).toFixed(2)}€
+                     </span>
+                   </div>
+                   <div className="border-x border-b border-purple-200 rounded-b-lg overflow-hidden max-h-[200px] overflow-y-auto">
+                     {(state.budgetItemsDespiece || []).length === 0 ? (
+                       <div className="p-4 text-center text-xs text-purple-400">
+                         No hay tableros en el presupuesto
+                       </div>
+                     ) : (
+                       (state.budgetItemsDespiece || []).map(item => (
+                         <div key={item.id} className="flex items-center justify-between px-2 py-1.5 bg-purple-50/50 hover:bg-purple-100 border-b border-purple-100 last:border-b-0 text-[9px]">
+                           <div className="flex-1">
+                             <span className="font-black text-purple-800">{item.code}</span>
+                             <span className="text-purple-500 ml-2">{item.width}×{item.height}mm</span>
+                             <span className="text-purple-400 ml-1">×{item.quantity}</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <span className="font-bold text-orange-600">{item.totalPrice?.toFixed(2)}€</span>
+                             <button
+                               onClick={() => handleRemoveDespieceItem(item.id)}
+                               className="p-0.5 text-purple-300 hover:text-red-500 transition-colors no-print"
+                             >
+                               <Trash2 size={10} />
+                             </button>
+                           </div>
+                         </div>
+                       ))
+                     )}
+                   </div>
+                 </div>
+               )}
+
                {/* Sección de totales - Solo si es valorado */}
                {isValorado && (
                <div className="pt-4 mt-auto border-t-4 border-indigo-950 mb-4">
