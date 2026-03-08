@@ -498,15 +498,10 @@ export const generateArmarioPresupuestoPDF = ({
   }
   
   // Título
-  doc.setFontSize(14);
-  doc.setTextColor(...primaryColor);
-  doc.setFont('helvetica', 'bold');
-  doc.text(companyName, logoEndX, yPos + 6);
-  
   doc.setFontSize(9);
   doc.setTextColor(...accentColor);
   doc.setFont('helvetica', 'bold');
-  doc.text('PRESUPUESTO ARMARIO', logoEndX, yPos + 12);
+  doc.text('PRESUPUESTO ARMARIO', logoEndX, yPos + 6);
   
   // Info proyecto (derecha)
   doc.setFontSize(9);
