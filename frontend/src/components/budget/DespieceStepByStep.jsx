@@ -28,6 +28,7 @@ const DespieceStepByStep = ({ onAddItems }) => {
   
   // Cargar productos cuando se selecciona colección
   useEffect(() => {
+    console.log('Collection changed:', selectedCollection);
     if (selectedCollection) {
       loadProducts(selectedCollection);
     }
