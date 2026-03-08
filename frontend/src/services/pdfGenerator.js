@@ -157,12 +157,12 @@ export const generateBudgetPDF = ({
   const drawHeader = (pageNum) => {
     let yPos = margin;
     
-    // Logo proporcionado (máximo 45mm ancho, mantener proporción)
+    // Logo proporcionado (máximo 60mm ancho, mantener proporción)
     let logoEndX = margin;
     if (logo && logo.startsWith('data:image')) {
       try {
-        const maxLogoWidth = 45;
-        const maxLogoHeight = 18;
+        const maxLogoWidth = 60;
+        const maxLogoHeight = 24;
         
         // Crear una imagen temporal para obtener las dimensiones reales
         const img = new Image();
