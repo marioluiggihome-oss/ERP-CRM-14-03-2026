@@ -2593,16 +2593,30 @@ async def create_backup_data():
     """Creates a JSON backup of all database collections"""
     backup = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "1.0",
+        "version": "2.0",
         "data": {}
     }
     
-    # Export all collections
-    collections = ["users", "products", "materials", "projects", "settings", "status_checks"]
+    # Export all important collections
+    collections = [
+        "users", 
+        "products",           # Productos MONTADA (muebles)
+        "despiece_products",  # Productos DESPIECE (tableros)
+        "materials", 
+        "projects", 
+        "settings",
+        "clients",
+        "opportunities",
+        "activities",
+        "calendar_events",
+        "orders",
+        "armario_projects",
+        "status_checks"
+    ]
     
     for collection_name in collections:
         try:
-            docs = await db[collection_name].find({}, {"_id": 0}).to_list(10000)
+            docs = await db[collection_name].find({}, {"_id": 0}).to_list(50000)
             backup["data"][collection_name] = docs
             logger.info(f"Backup: {collection_name} - {len(docs)} documentos")
         except Exception as e:
