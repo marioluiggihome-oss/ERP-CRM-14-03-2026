@@ -171,16 +171,8 @@ def get_email_template(content: str, title: str = "LUIGGI HOME") -> str:
 
 
 async def send_verification_email(email: str, code: str, name: str = "Usuario"):
-    """Send verification email with modern design"""
+    """Send verification email with modern design using Resend"""
     try:
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail
-        
-        api_key = os.environ.get('SENDGRID_API_KEY')
-        if not api_key:
-            logger.warning("SendGrid API key not configured, verification email not sent")
-            return False
-        
         content = f'''
         <h2 style="margin: 0 0 20px; font-size: 24px; font-weight: 700; color: #1e293b;">
             ¡Hola {name}! 👋
@@ -207,17 +199,11 @@ async def send_verification_email(email: str, code: str, name: str = "Usuario"):
         
         html_content = get_email_template(content, "Verifica tu cuenta")
         
-        message = Mail(
-            from_email='noreply@luiggihome.com',
-            to_emails=email,
+        return await send_email_with_resend(
+            to_email=email,
             subject='🔐 Verifica tu cuenta - LUIGGI HOME',
             html_content=html_content
         )
-        
-        sg = SendGridAPIClient(api_key)
-        response = sg.send(message)
-        logger.info(f"Verification email sent to {email}: {response.status_code}")
-        return True
     except Exception as e:
         logger.error(f"Error sending verification email: {e}")
         return False
