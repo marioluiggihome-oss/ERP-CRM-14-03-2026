@@ -145,6 +145,9 @@ export const generateBudgetPDF = ({
   if (doorColorColumns) specs.push(`Columnas: ${doorColorColumns}`);
   if (sideColor) specs.push(`Costados: ${sideColor}`);
   if (carcassMaterialName) specs.push(`Armazón: ${carcassMaterialName}`);
+  // Perfiles GOLA
+  if (golaAlto) specs.push(`Gola Alto: ${golaAltoColor || 'Sí'}`);
+  if (golaBajo) specs.push(`Gola Bajo: ${golaBajoColor || 'Sí'}`);
 
   // Calcular paginación
   const headerHeight = 50;
