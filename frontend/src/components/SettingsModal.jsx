@@ -4281,7 +4281,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           onClick={async () => {
                             if (window.confirm('¿Generar nuevos códigos de respaldo? Los códigos anteriores quedarán invalidados.')) {
                               try {
-                                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/2fa/regenerate-backup`, {
+                                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth-advanced/2fa/regenerate-backup`, {
                                   method: 'POST',
                                   headers: {
                                     'Content-Type': 'application/json',
