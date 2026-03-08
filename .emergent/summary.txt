@@ -3,68 +3,95 @@ The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIG
 
 **PRODUCT REQUIREMENTS:**
 1.  **Clone LUIGGI HOME application:** Replicate the design and functionality.
-2.  **Data Integrity:** Ensure the final database is a clean and consistent representation of the user-provided product data. This involves extensive data normalization of product .
+2.  **Data Integrity:** Ensure the final database is a clean and consistent representation of the user-provided product data. This involves extensive data normalization of product  and dimensions.
 3.  **Digitalizador Component Enhancements:** Implement COST mode, generate unique expediente numbers, and improve the Analyzer.
 4.  **User Roles & Permissions:** Implement strict, independent permissions for each module (CRM, Armarios, etc.) that apply even to admin users. Add Gerente (Manager) and Director Comercial roles with full visibility in the CRM.
 5.  **Authentication:** Implement user self-registration via email and an optional two-factor authentication (2FA) system, including admin notifications for new sign-ups.
-6.  **UI/UX Improvements:** Add dimension-based filters, improve search functionality, and add UI controls to customize the layout (e.g., hiding sidebars).
+6.  **UI/UX Improvements:** Add dimension-based filters, improve search functionality, add column sorting, and add UI controls to customize the layout (e.g., hiding sidebars).
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The agent has performed a massive amount of work in this session, including:
-*   **Data Normalization**: Cleaned and standardized hundreds of products across the BAJOS, BAX, and LUX series to ensure consistent naming and correct categorization based on dimensions.
-*   **Critical Bug Fixes**:
-    *   Resolved a core permission flaw where  users bypassed module-specific access rights. Now, permissions like  or  are strictly enforced for all users, including admins.
-    *   Fixed bugs in the Digitalizador related to cost calculation, duplicate project numbers (), and price formatting.
-    *   Fixed a bug where adding a duplicate item to the budget created a new line; it now correctly increments the quantity.
-*   **Feature Implementation**:
-    *   **Auth**: Implemented a full backend flow for user registration with email verification and 2FA. Created modern HTML email templates and a notification system to alert an admin () of new user sign-ups.
-    *   **Filters & Search**: Added dimension filters (width, height, depth) and significantly improved the library's search to be more flexible and ignore other active filters.
-    *   **UI**: Implemented logic to display product dimensions in  instead of .
+A full-stack React/FastAPI/MongoDB application. The agent has performed a massive amount of data normalization and UI improvements in this session.
+
+*   **Data Integrity & Normalization:** Corrected thousands of product dimensions from  to . Standardized and consolidated product categories and series, notably merging  and  into standard  categories, moving products between , , and , and creating a distinct  series.
+*   **UI/UX Enhancements:**
+    *   Implemented a third, horizontal-top position for the product library.
+    *   Added clickable column headers to sort the product library table.
+    *   Increased the size of various UI elements (filters, inputs) as requested.
+    *   Added a clear () button to search bars.
+    *   Made the product reference field read-only for catalog items to prevent accidental edits.
+    *   Prioritized the display of products with 90cm height in the  category.
+*   **Bug Fixes:**
+    *   Resolved inconsistencies in dimension display (mm vs. cm) between the budget lines and the library.
+    *   Fixed a bug where product  were inconsistent between the library and the budget.
+    *   Fixed an issue preventing the left/right hand selector from appearing on GOLA products.
+    *   Correctly implemented a full database reset for projects and CRM data.
+    *   Fixed a backend  error on the  endpoint.
+*   **Workflow:** Added a confirmation prompt to prevent data loss when creating a new budget or logging out with unsaved changes.
 
 **Last working item**:
-- Last item agent was working: The user requested a third position for the product library: **horizontal at the top**. The agent began by modifying the main content's padding in  to reserve space for this new top bar.
+- Last item agent was working: The user made two simultaneous requests:
+    1.  Add filtering capabilities by clicking the , ,  (width, height, depth) headers in the product library table.
+    2.  Fix the user registration email, which is failing. The agent diagnosed the SendGrid  error and, upon user request, is pivoting to implement **Resend** as an alternative email service since the user cannot manage DNS settings.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? screenshot tool (to verify the new UI layout and button functionality).
+- Which testing method agent to use?
+    - For column filters: screenshot tool to verify UI changes.
+    - For email fix: backend testing agent or  to trigger registration and check logs for email success.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: SendGrid Email Delivery Fails (P0 - BLOCKER)**
-- **Issue 2: Visual Glitch with Collapsed Vertical Sidebar (P1 - Recurring)**
-- **Issue 3: Reclassify HS Products (P2 - Blocked on User)**
-- **Issue 4: Latent  React DOM Error (P2)**
+- **Issue 1: Implement Resend for Email Delivery (P0 - BLOCKER)**
+- **Issue 2: Implement Column Header Filters (P0)**
+- **Issue 3: Visual Glitch with Collapsed Vertical Sidebar (P1 - Recurring)**
+- **Issue 4: Reclassify HS Products (P2 - Blocked on User)**
+- **Issue 5: Latent  React DOM Error (P2)**
 
 **Issues Detail:**
-- **Issue 1: SendGrid Email Delivery Fails**
-    - **Attempted fixes:** The agent confirmed the API key is present but diagnosed the issue as a  error, likely due to insufficient API key permissions or the sender domain () not being verified in the user's SendGrid account.
-    - **Next debug checklist:** This is blocked on the user. The next agent must inform the user that they need to take action within their SendGrid account to resolve the permission/verification issue. No code changes can fix this.
-    - **Why fix this issue and what will be achieved with the fix?** This is a critical blocker for the entire user registration and email verification flow.
-    - **Status:** BLOCKED
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** Backend (by triggering a registration).
-    - **Blocked on other issue:** User action required.
-- **Issue 2: Visual Glitch with Collapsed Vertical Sidebar**
-    - **Attempted fixes:** The agent has made multiple CSS adjustments to the collapsed state of the vertical library sidebar, but the user continues to report that it's still wrong and overlaps content.
+- **Issue 1: Implement Resend for Email Delivery**
+    - **Attempted fixes:** Diagnosed the SendGrid  error as a sender verification issue. The user cannot fix this, so the agreed-upon solution is to switch email providers.
     - **Next debug checklist:**
-        1.  Re-examine the CSS for the collapsed sidebar in .
-        2.  Focus on , , and the layout of the main content area () when the sidebar is collapsed.
-        3.  Consider a different approach, like using a CSS transform () instead of changing width, to avoid layout reflow issues.
+        1.  Use the  tool to get the implementation plan for **Resend**.
+        2.  Request the Resend API key from the user and add it to .
+        3.  Modify  to use the Resend SDK for sending verification and admin notification emails.
+        4.  Test the registration flow to confirm emails are sent successfully.
+    - **Why fix this issue and what will be achieved with the fix?** This is a critical blocker for the entire user registration and email verification flow.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Backend.
+    - **Blocked on other issue:** None (pivoting from SendGrid).
+- **Issue 2: Implement Column Header Filters**
+    - **Attempted fixes:** Agent viewed the relevant file () but was redirected by the user to the more critical email issue.
+    - **Next debug checklist:**
+        1.  In , add state to manage the active filter column (, , ) and its value.
+        2.  Modify the table headers () to be clickable. On click, render an  field within the header.
+        3.  Update the   hook to apply these new dimension filters to the displayed product list.
+    - **Why fix this issue and what will be achieved with the fix?** Fulfills a direct user request for more advanced filtering capabilities in the product library.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Frontend.
+    - **Blocked on other issue:** None.
+- **Issue 3: Visual Glitch with Collapsed Vertical Sidebar**
+    - **Attempted fixes:** Multiple CSS adjustments have been made in previous sessions, but the user still reports overlapping content when the sidebar is collapsed.
+    - **Next debug checklist:**
+        1.  Re-examine CSS in  for the collapsed sidebar.
+        2.  Focus on , , and main content padding.
+        3.  Consider using  for a smoother transition that avoids layout reflow.
     - **Why fix this issue and what will be achieved with the fix?** It's a persistent UI complaint from the user that affects usability.
     - **Status:** NOT STARTED
     - **Is recurring issue?** Y
     - **Should Test frontend/backend/both after fix?** Frontend.
     - **Blocked on other issue:** None.
-- **Issue 3: Reclassify HS Products**
-    - **Attempted fixes:** None. The agent identified the products but is awaiting user input.
+- **Issue 4: Reclassify HS Products**
+    - **Attempted fixes:** None. The agent is awaiting user input.
     - **Next debug checklist:** Ask the user for the correct classification for products that are no longer Servo-Drive.
     - **Why fix this issue and what will be achieved with the fix?** Ensures data accuracy in the product catalog.
     - **Status:** BLOCKED
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** N/A.
     - **Blocked on other issue:** User input required.
-- **Issue 4: Latent  React DOM Error**
+- **Issue 5: Latent  React DOM Error**
     - **Attempted fixes:** None. It has not caused any visible user-facing problems.
     - **Next debug checklist:** Ignore unless it starts causing noticeable bugs.
     - **Why fix this issue and what will be achieved with the fix?** Improves code health.
@@ -74,110 +101,104 @@ A full-stack React/FastAPI/MongoDB application. The agent has performed a massiv
     - **Blocked on other issue:** None.
 
 **In progress Task List**:
-- **Task 1: Add Horizontal-Top Position for Product Library (P0)**
-    - **Where to resume:** In . The padding adjustment is done. Now, you must:
-        1.  Add  as a possible value for the  state.
-        2.  Create the UI for the top horizontal panel, likely by copying and adapting the existing  block.
-        3.  Update the toggle buttons to cycle through three states:  ->  (bottom) ->  -> .
-    - **What will be achieved with this?** Fulfills a direct user request for more layout flexibility.
+- **Task 1: Implement Resend for Email Delivery (P0)**
+    - **Where to resume:** In . Start by calling .
+    - **What will be achieved with this?** A functional user registration and email notification system.
     - **Status:** IN PROGRESS
-    - **Should Test frontend/backend/both after fix?** Frontend.
-    - **Blocked on something:** None.
+    - **Should Test frontend/backend/both after fix?** Backend.
+    - **Blocked on something:** Waiting for user's Resend API key.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P1) **Add 2FA Management UI**: Create a section in the user's profile or settings modal where they can enable/disable 2FA and view their backup codes.
+    - (P1) **Add 2FA Management UI**: Create a section in the user's profile where they can enable/disable 2FA and view backup codes.
 - **Future Tasks:**
-    - (P1) **Frontend Refactoring**: Decompose  (over 2000 lines).
+    - (P1) **Frontend Refactoring**: Decompose  (now over 2500 lines).
     - (P1) **Frontend Refactoring**: Decompose  (over 4000 lines).
     - (P2) **Complete Backend Refactoring**: Finish migrating all remaining endpoints from  to modular routers.
     - (P2) **Improve Sidebar Icons**: The user was not fully satisfied with the sidebar toggle icons; this could be revisited.
 
 **Completed work in this session**
-- **Permissions Overhaul**: Fixed a critical security/UX flaw by ensuring module access (, , ) strictly respects specific permission flags () instead of being bypassed by the  role.
-- **Data Integrity**: Performed extensive normalization and re-categorization of hundreds of products in the , , and  series to fix inconsistencies in naming, height, and depth.
-- **Digitalizador Bug Fixes**: Corrected the cost calculation with discounts and prevented the creation of duplicate  numbers.
-- **BudgetTable UX**: Implemented logic to increment item quantity instead of adding duplicate lines. Added dimension filters and made the search bar more powerful. Changed dimension display to . Excluded  and  from automatic price increments.
-- **Email & Auth**: Built a complete backend system for user registration with email verification and admin notifications, including modern HTML templates.
-- **Role Management**: Added the  role with elevated privileges in the CRM, configurable in the user settings.
+- **Massive Data Normalization**: Corrected thousands of product dimensions (mm to cm), consolidated / series into , and re-categorized hundreds of products across , , and  for data consistency.
+- **Library Sorting & Filtering**: Implemented clickable column headers to sort the product library table.
+- **UI Enhancements**: Added a third (horizontal-top) library position, added a clear button to search bars, made the budget reference field read-only for catalog items, and enlarged several UI controls per user request.
+- **Critical Bug Fixes**: Fixed incorrect dimension/point calculations, resolved a bug hiding the hand selector for GOLA products, and fixed a backend maintenance endpoint crash.
+- **Workflow Improvement**: Added a confirmation prompt to prevent data loss on logout or when starting a new budget.
+- **PDF Generation**: Increased the logo size and removed hardcoded company text from exported PDFs.
 
 **Known issue recurrence from previous fork**
-- **UI glitches with sidebars**: The user has repeatedly reported that the collapsible sidebars (both left config and right catalog) do not look or behave correctly when collapsed. The agent has made multiple fixes, but it remains a persistent point of friction.
+- **UI glitches with sidebars**: The user has repeatedly reported that the collapsible sidebars do not look or behave correctly. This remains a persistent point of friction and has not been addressed in this session.
 
 **Code Architecture**
-isDirectorComercialisDirectorComercial
+
 
 **Key Technical Concepts**
-- **Data Normalization:** Extensive use of MongoDB  scripts to clean inconsistent product data (especially the  field).
-- **Strict RBAC:** Moving from  to a strict  check for all modules.
-- **Complex Frontend State:** Heavy reliance on  and  in  to manage multiple filters, UI states, and derived data.
-- **Backend Unique Constraints:** Using a MongoDB unique index and pre-save validation in FastAPI to enforce data integrity ().
-- **Dynamic Email Templates:** Using f-strings to build modern, responsive HTML emails for different notification types.
+- **Large-Scale Data Normalization:** Extensive use of  scripts to clean and standardize the  collection.
+- **Complex Frontend State Management:**  now manages state for multiple filters, UI positions, and dynamic column sorting ().
+- **Conditional Rendering:** Used to make the reference field read-only based on whether the item is manually added ().
+- **Client-Side Sorting:** Implemented sorting in React's  hook.
+- **API Integration Pivot:** Diagnosed a  error with SendGrid and pivoted to implementing Resend as an alternative.
 
 **key DB schema**
-- **users**: Added .
-- **projects**: Added a unique index on the  field.
-- **products**:  and  fields for hundreds of products have been updated.
+- **products**: No schema changes, but massive data updates to , , , , and  fields for thousands of documents.
 
 **All files of reference**
-- : The primary file for the current task and most of the previous work. It manages the product library, budget lines, and all related UI controls.
-- : Contains the top-level routing and permission checks for showing/hiding entire modules.
-- : Location of all new email and registration logic.
-- : Defines the user data structure, including roles.
-- : Contains the new  variable.
+- : The central file for almost all UI/UX changes, sorting logic, and data display.
+- : Contains the email logic that needs to be migrated to Resend.
+- : Contains the global logout logic.
+- : Contains the PDF export logic.
+- A large number of Python scripts were run via  to perform database migrations; these are not persisted as files but were crucial to the work done.
 
 **Areas that need refactoring**:
-- **/app/frontend/src/components/BudgetTable.jsx**: Now over 2000 lines and extremely complex.
-- **/app/frontend/src/components/SettingsModal.jsx**: Over 4000 lines.
+- **/app/frontend/src/components/BudgetTable.jsx**: Urgently needs to be broken down. Its complexity is becoming a liability.
+- **/app/frontend/src/components/SettingsModal.jsx**: Still over 4000 lines and untouched in this session.
 - **/app/frontend/src/components/Digitalizador.jsx**: Over 1600 lines.
 
 **key api endpoints**
-- : Triggers user creation and sends both verification and admin notification emails.
-- : Now validates for unique .
+- : The endpoint for the user registration and email flow, which is currently broken.
 
 **Critical Info for New Agent**
-- Your immediate task is to finish implementing the **horizontal-top library position** in .
-- You **must** inform the user about the **SendGrid blocker**. Explain that they need to fix permissions or verify their sender domain in their SendGrid account. You cannot proceed with testing the registration flow until they do.
-- Be aware that the user is very sensitive to UI layout issues, especially concerning the collapsible sidebars. Test any layout changes carefully.
-- The permissions logic is now strict:  flags are the single source of truth, even for admins. Maintain this pattern.
+- Your two highest priorities are **(1)** replacing SendGrid with **Resend** to fix the registration flow and **(2)** implementing the column header filters in the library. The email fix is a blocker for a core feature.
+- For the Resend integration, you **must** use the  tool and request the API key from the user.
+- The user is extremely detail-oriented regarding data accuracy (cm vs. mm, categories, series) and UI layout. Double-check all data-related changes.
+- The recurring visual glitch with the collapsed sidebar is a known point of user frustration and should be addressed if time permits.
+-  is now extremely large. Be very careful when making changes to avoid introducing regressions.
 
 **documents and test reports created in this job**
-- 
 -  (Continuously updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- 1. **(LATEST)** make a third area to put the library, right up there too, but horizontally
-- 2. they are 58 deep
-- 3. all these measurements must be in centimeters and not in millimeters
-- 4. Im still not seeing the button to hide the left sidebar, to hide the part where the logo is"
-- 5. "for sides and strips do not add increments even if I change measures, do not add the increments of height, width and depth"
-- 6. "its still wrong (referring to the collapsed sidebar)
-- 7. MAINTAIN THE SEPARATION. ON THE OTHER HAND, WHEN I WRITE HK, I WANT IT TO BE FOUND IN THE SEARCH BAR
-- 8. the CRM module, the same thing happens to it... if it is not active, it does not ask if it saves the budget in CRM
-- 9. the MARIO user, even being admin, has to have the permission button active, like everyone else
-- 10. can we put a measurement filter... and can you show all the furniture in the library...?
+- **(LATEST)** User wants to filter the library by clicking the , ,  headers.
+- **(LATEST)** User confirms they cannot access DNS for SendGrid and requests the agent to find an alternative way to make emails work.
+- User reported several data inconsistencies (BAJOS series, SOBREMÓDULOS GOLA series) and requested fixes.
+- User requested clickable column headers for sorting the product library (Implemented).
+- User requested to make the product reference in the budget non-editable (Implemented).
+- User reported more products with dimensions in  instead of  (Fixed).
+- User requested that the app ask for confirmation before clearing budget lines on logout (Implemented).
+- User asked to re-categorize several products (e.g., / into ) and correct series names (Implemented).
+- User asked to make UI filter elements larger (Implemented).
+- User found products that should be in  and requested they be moved (Implemented).
 
 **Project Health Check:**
-- **Broken:** The new user email verification flow is non-functional due to the SendGrid 403 error.
+- **Broken:** The user registration email flow is non-functional. It was blocked by a SendGrid  error and is pending a new implementation with Resend.
 - **Mocked:** N/A
 
 **3rd Party Integrations**
 - **Google Gemini:** Via  (Emergent LLM Key).
-- **SendGrid:** (Requires User API Key) - **Currently returning 403 Forbidden error.**
+- **SendGrid:** (Requires User API Key) - **BLOCKED**, returning 403 Forbidden error.
+- **Resend:** **(PROPOSED)** New email integration to be implemented.
 - **jspdf / html2canvas:** For client-side PDF generation.
 - **recharts:** For data visualization charts.
 - **pyotp / qrcode:** For 2FA implementation.
 
 **Testing status**
-- Testing agent used after significant changes: YES, the agent used the testing agent to verify the auth flow.
+- Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
-- Known regressions: None, but the visual glitch with the collapsed sidebar is a persistent, recurring issue.
+- Known regressions: The visual glitch with the collapsed sidebar is a persistent, recurring issue.
 
 **Credentials to test flow:**
 - **User:** 
 - **Password:** 
-(Note: User MARIO is an admin but now requires specific permissions for each module).
 
 **What agent forgot to execute**
-- The agent has been diligent in following user requests. The main outstanding forgotten item from the initial handoff is adding the 2FA management UI for the user, which has been superseded by more urgent bug fixes and feature requests.</analysis>
+- The 2FA management UI, carried over from the previous handoff, remains unimplemented due to the high volume of incoming user requests for data correction and UI tweaks.</analysis>
