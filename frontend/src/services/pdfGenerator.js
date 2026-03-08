@@ -606,7 +606,7 @@ export const generateArmarioPresupuestoPDF = ({
   // Footer
   doc.setFontSize(5);
   doc.setTextColor(148, 163, 184);
-  doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+  doc.text(`${new Date().toLocaleString('es-ES')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   const fileName = `Presupuesto_Armario_${projectName?.replace(/\s+/g, '_') || 'SinNombre'}.pdf`;
   doc.save(fileName);
@@ -834,7 +834,7 @@ export const generateArmariosDespiecePDF = ({
   // Footer
   doc.setFontSize(5);
   doc.setTextColor(148, 163, 184);
-  doc.text(`${companyName} - ${new Date().toLocaleString('es-ES')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+  doc.text(`${new Date().toLocaleString('es-ES')}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   const fileName = `Despiece_Armario_${projectRef?.replace(/\s+/g, '_') || 'SinRef'}.pdf`;
   doc.save(fileName);
