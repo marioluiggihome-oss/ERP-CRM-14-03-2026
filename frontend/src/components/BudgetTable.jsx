@@ -1376,60 +1376,52 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               </section>
 
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
-                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">✏️ COLORES ESPECÍFICOS</h4>
-                 <div className="space-y-1">
-                    <input type="text" value={state.doorColorLow} onChange={e => setState(p => ({...p, doorColorLow: e.target.value}))} className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-1.5 text-[9px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P. Bajos" />
-                    <input type="text" value={state.doorColorHigh} onChange={e => setState(p => ({...p, doorColorHigh: e.target.value}))} className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-1.5 text-[9px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P. Altos" />
-                    <input type="text" value={state.doorColorColumns} onChange={e => setState(p => ({...p, doorColorColumns: e.target.value}))} className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-1.5 text-[9px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P. Columnas" />
-                    <input type="text" value={state.sideColor} onChange={e => setState(p => ({...p, sideColor: e.target.value}))} className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-1.5 text-[9px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Costados" />
+                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">✏️ COLORES</h4>
+                 <div className="grid grid-cols-2 gap-1">
+                    <input type="text" value={state.doorColorLow} onChange={e => setState(p => ({...p, doorColorLow: e.target.value}))} className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[8px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P.Bajos" />
+                    <input type="text" value={state.doorColorHigh} onChange={e => setState(p => ({...p, doorColorHigh: e.target.value}))} className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[8px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P.Altos" />
+                    <input type="text" value={state.doorColorColumns} onChange={e => setState(p => ({...p, doorColorColumns: e.target.value}))} className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[8px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P.Colum" />
+                    <input type="text" value={state.sideColor} onChange={e => setState(p => ({...p, sideColor: e.target.value}))} className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[8px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Costados" />
                  </div>
               </section>
 
-              {/* PERFILES GOLA */}
-              <section className="space-y-1.5 pt-2 border-t border-orange-100">
-                 <h4 className="text-[9px] font-black text-purple-600 uppercase tracking-widest">🔲 PERFILES GOLA</h4>
-                 <div className="space-y-2">
+              {/* PERFILES GOLA - Compacto */}
+              <section className="space-y-1 pt-2 border-t border-orange-100">
+                 <h4 className="text-[9px] font-black text-purple-600 uppercase tracking-widest">🔲 GOLA</h4>
+                 <div className="grid grid-cols-2 gap-1">
                     {/* GOLA ALTO */}
-                    <div className="flex items-center gap-2">
-                       <label className="flex items-center gap-1 cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            checked={state.golaAlto || false} 
-                            onChange={e => setState(p => ({...p, golaAlto: e.target.checked, golaAltoColor: e.target.checked ? p.golaAltoColor : ''}))} 
-                            className="w-3.5 h-3.5 accent-purple-600"
-                          />
-                          <span className="text-[9px] font-bold text-purple-800">GOLA ALTO</span>
-                       </label>
-                       {state.golaAlto && (
-                         <input 
-                           type="text" 
-                           value={state.golaAltoColor || ''} 
-                           onChange={e => setState(p => ({...p, golaAltoColor: e.target.value}))} 
-                           className="flex-1 bg-purple-50 border-2 border-purple-200 rounded-lg p-1 text-[9px] font-bold outline-none focus:border-purple-500 text-purple-900" 
-                           placeholder="Color perfil"
-                         />
-                       )}
+                    <div className="flex items-center gap-1">
+                       <input 
+                         type="checkbox" 
+                         checked={state.golaAlto || false} 
+                         onChange={e => setState(p => ({...p, golaAlto: e.target.checked, golaAltoColor: e.target.checked ? p.golaAltoColor : ''}))} 
+                         className="w-3 h-3 accent-purple-600"
+                       />
+                       <input 
+                         type="text" 
+                         value={state.golaAltoColor || ''} 
+                         onChange={e => setState(p => ({...p, golaAltoColor: e.target.value, golaAlto: true}))} 
+                         className="flex-1 bg-purple-50 border border-purple-200 rounded p-1 text-[8px] font-bold outline-none focus:border-purple-500 text-purple-900" 
+                         placeholder="Alto"
+                         disabled={!state.golaAlto}
+                       />
                     </div>
                     {/* GOLA BAJO */}
-                    <div className="flex items-center gap-2">
-                       <label className="flex items-center gap-1 cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            checked={state.golaBajo || false} 
-                            onChange={e => setState(p => ({...p, golaBajo: e.target.checked, golaBajoColor: e.target.checked ? p.golaBajoColor : ''}))} 
-                            className="w-3.5 h-3.5 accent-purple-600"
-                          />
-                          <span className="text-[9px] font-bold text-purple-800">GOLA BAJO</span>
-                       </label>
-                       {state.golaBajo && (
-                         <input 
-                           type="text" 
-                           value={state.golaBajoColor || ''} 
-                           onChange={e => setState(p => ({...p, golaBajoColor: e.target.value}))} 
-                           className="flex-1 bg-purple-50 border-2 border-purple-200 rounded-lg p-1 text-[9px] font-bold outline-none focus:border-purple-500 text-purple-900" 
-                           placeholder="Color perfil"
-                         />
-                       )}
+                    <div className="flex items-center gap-1">
+                       <input 
+                         type="checkbox" 
+                         checked={state.golaBajo || false} 
+                         onChange={e => setState(p => ({...p, golaBajo: e.target.checked, golaBajoColor: e.target.checked ? p.golaBajoColor : ''}))} 
+                         className="w-3 h-3 accent-purple-600"
+                       />
+                       <input 
+                         type="text" 
+                         value={state.golaBajoColor || ''} 
+                         onChange={e => setState(p => ({...p, golaBajoColor: e.target.value, golaBajo: true}))} 
+                         className="flex-1 bg-purple-50 border border-purple-200 rounded p-1 text-[8px] font-bold outline-none focus:border-purple-500 text-purple-900" 
+                         placeholder="Bajo"
+                         disabled={!state.golaBajo}
+                       />
                     </div>
                  </div>
               </section>
