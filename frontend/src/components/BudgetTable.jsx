@@ -2875,6 +2875,39 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         }}
       />
 
+      {/* Wizard de Despiece - Modal a pantalla completa */}
+      <DespieceWizard
+        isOpen={isDespieceWizardOpen}
+        onClose={() => setIsDespieceWizardOpen(false)}
+        onAddItems={(wizardItems) => {
+          // Convertir items del wizard al formato del presupuesto despiece
+          const newItems = wizardItems.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            code: item.code,
+            name: item.name,
+            isDespiece: true,
+            width: item.width,
+            height: item.height,
+            thickness: item.thickness,
+            quantity: item.quantity,
+            unitPriceM2: item.unitPrice,
+            totalPrice: item.totalPrice,
+            manufacturer: item.manufacturer,
+            collection: item.collection,
+            color: item.color,
+            finish: item.finish,
+            category: item.category
+          }));
+          // Añadir al presupuesto despiece
+          setState(prev => ({
+            ...prev,
+            budgetItemsDespiece: [...(prev.budgetItemsDespiece || []), ...newItems]
+          }));
+        }}
+        currentUser={currentUser}
+      />
+
       {/* Modal Confirmar Pedido */}
       {isConfirmOrderOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
