@@ -9,76 +9,87 @@ Spanish (es)
 ## Current Statistics (Mar 2026)
 - **Total Products:** 7,148
 - **Series Normalizadas:** 2,428 productos actualizados
+- **DESPIECE Products (ALVIC):** 18 productos de muestra
 
-## Completed Tasks - Session Mar 7, 2026
+## Completed Tasks - Session Mar 8, 2026
 
-### 🔐 Permisos por Módulo (Sin bypass Admin)
-Todos los módulos requieren su permiso específico activo:
-- **CRM** → `canAccessCRM`
-- **IA Lab** → `canUseAIAnalysis`
-- **Digitalizador** → `canUseDigitalizador`
-- **Armarios** → `canAccessArmarios`
+### ✅ P0 - Módulo DESPIECE (Presupuestador de Tableros)
+- **Nuevo componente:** `DespieceBudgeter.jsx` - Modal completo para presupuestos de tableros
+- **Backend API:** `/api/despiece-budgeter/*` con endpoints para productos, presupuestos y filtros
+- **Productos ALVIC de muestra:** 18 productos de las colecciones LUXE, ZENIT, SYNCRON, BASIK y CANTOS
+- **Funcionalidades:**
+  - Filtros por fabricante, colección, acabado, grosor
+  - Cálculo automático de área (m²) y precio
+  - Gestión de cantos (L1, L2, W1, W2)
+  - Guardar presupuestos en base de datos
+- **Botón TABLEROS** añadido a la barra de herramientas principal
 
-### 👥 Roles CRM - Director Comercial y Gerente
-- **Director Comercial** (`isDirectorComercial`) y **Gerente** (`isGerente`) siempre ven TODO el CRM
-- Los **Comerciales** solo ven los clientes que tienen asignados
-- Los datos se acumulan aunque no haya comercial asignado
-- Al asignar comercial, ve toda la información histórica
+**Archivos creados:**
+- `/app/backend/routes/despiece_budgeter.py`
+- `/app/frontend/src/components/DespieceBudgeter.jsx`
 
-**Archivos modificados:**
-- `CRMDashboard.jsx`, `CRMContacts.jsx`, `CRMPipeline.jsx`, `CRMCalendar.jsx`
-- `SettingsModal.jsx` - Nuevo checkbox para Director Comercial
-- `/app/backend/models/schemas.py` - Nuevo campo `isDirectorComercial`
-
-### 📐 Filtros de Librería
-- Programa, Categoría, Serie
-- 🚪 Tipo de Apertura (HK, HF, HL, HS)
-- 📐 Medidas (Ancho, Alto, Fondo con ±5mm tolerancia)
-
-### 🗂️ Series Normalizadas
-- ALTOS→ALTO, BAJOS→BAJO, ESTANDAR→ESTÁNDAR
-- 2,428 productos corregidos
-
-### 📧 Emails Modernizados
-- Plantilla profesional con diseño LUIGGI HOME
-- Notificación al admin en nuevos registros
-
-## ⚠️ PROBLEMA CONOCIDO: SendGrid
-
-**Error:** HTTP 403 Forbidden al enviar emails
-
-**Causa:** La API key de SendGrid no tiene permisos suficientes o el dominio remitente (`noreply@luiggihome.com`) no está verificado.
-
-**Solución requerida por el usuario:**
-1. Acceder a la cuenta de SendGrid
-2. Verificar el dominio `luiggihome.com` en Sender Authentication
-3. O usar un remitente ya verificado (Single Sender Verification)
-4. Verificar que la API key tenga permisos de "Mail Send"
-
-## Completed Tasks - Session Mar 7, 2026 (Continuación)
-
-### 📚 Tercera Posición de Librería (TOP)
-- ✅ Implementada posición **horizontal arriba** para el catálogo de productos
-- 3 posiciones disponibles: `horizontal` (abajo), `top` (arriba), `vertical` (derecha)
-- Iconos `PanelTopOpen`/`PanelTopClose` para la nueva posición
-- Botones para cambiar entre las 3 posiciones en cada vista
-- Preferencia guardada en localStorage
+### ✅ P2 - Mejoras UX de Filtros de Dimensiones
+- **Labels mejoradas:** "AN", "AL", "FO" → "ANCHO", "ALTO", "FONDO"
+- **Placeholder:** "--" → "cm" (indica unidad de medida)
+- **Diseño visual:** Fondo azul claro con bordes prominentes
+- **Focus states:** Efectos de enfoque con anillos y transiciones
 
 **Archivos modificados:**
-- `/app/frontend/src/components/BudgetTable.jsx` - Nueva sección para `catalogPosition === 'top'`
+- `/app/frontend/src/components/BudgetTable.jsx` - Líneas 1715-1750, 1830-1875
+
+### ✅ P2 - UI de Gestión 2FA
+- **Nuevo tab:** "Seguridad 2FA" en Panel Maestro
+- **Estado visible:** Muestra si 2FA está activo/inactivo
+- **Acciones disponibles:**
+  - Activar 2FA (botón "Configurar 2FA")
+  - Desactivar 2FA (cuando está activo)
+  - Regenerar códigos de respaldo
+- **Información educativa:** Guía sobre cómo funciona 2FA
+
+**Archivos modificados:**
+- `/app/frontend/src/components/SettingsModal.jsx` - Tab de Seguridad 2FA
+- `/app/backend/routes/auth_advanced.py` - Endpoints `2fa/disable-simple`, `2fa/regenerate-backup`
+
+## Completed Tasks - Sessions Anteriores
+
+### 📧 Email Service (Resend)
+- Migrado de SendGrid a Resend
+- Logo LUIGGI HOME embebido en emails
+- Fallback a email de respaldo por limitaciones del tier gratuito
+
+### 💰 Discount Logic Fix
+- Corregido bug donde 0% descuento no se aplicaba
+- Operador `||` reemplazado por `??` (nullish coalescing)
+
+### 📄 PDF Export Fix
+- Corregido bug de dimensiones divididas por 10
+- Los anchos ahora se muestran correctamente (90cm en lugar de 9cm)
+
+### 🎨 GOLA Profiles
+- Añadidas opciones GOLA Alto/Bajo en el presupuesto
+- Guardado en proyecto y exportación a PDF
+
+### 📦 Catalog Export
+- Endpoints para exportar catálogo a Excel y PDF
+- Incluye imágenes de productos
+
+### 💾 Backup/Restore
+- Endpoints para crear y restaurar backups de base de datos
 
 ## Pending Tasks
 
-### P0 - Bloqueador
-- [ ] ⚠️ **Configurar SendGrid** - El usuario debe verificar dominio/remitente en su cuenta SendGrid
-
 ### P1 - Próximas Tareas
-- [ ] Revisar productos HS que ya no son Servo-Drive
-- [ ] Panel 2FA en perfil de usuario
-- [ ] Mejorar glitch visual del sidebar colapsado
+- [ ] **Exportación de Catálogo mejorada** - Usuario rechazó versión actual, necesita clarificación
+- [ ] **Verificar dominio Resend** - Para enviar emails a cualquier dirección
 
 ### P2 - Technical Debt
-- [ ] Refactoring `server.py`, `BudgetTable.jsx`, `Armarios.jsx`
+- [ ] **Refactoring `BudgetTable.jsx`** - >2800 líneas, urgente descomposición
+- [ ] **Refactoring `SettingsModal.jsx`** - >4100 líneas
+- [ ] **Migrar endpoints a routers** - `server.py` es monolítico
+
+### P3 - Backlog
+- [ ] Reclasificar productos "HS"
+- [ ] Mejorar glitch visual del sidebar colapsado (recurrente)
 
 ## Roles del Sistema
 
@@ -95,7 +106,26 @@ Todos los módulos requieren su permiso específico activo:
 - **Admin User:** MARIO / MARIO
 
 ## Key Files Modified This Session
-- `/app/frontend/src/components/CRM*.jsx` - Lógica Director Comercial
-- `/app/frontend/src/components/SettingsModal.jsx` - Nuevo rol
-- `/app/frontend/src/components/Digitalizador.jsx` - Opción CRM condicional
-- `/app/backend/models/schemas.py` - Campo isDirectorComercial
+- `/app/backend/routes/despiece_budgeter.py` - NUEVO: API DESPIECE
+- `/app/frontend/src/components/DespieceBudgeter.jsx` - NUEVO: UI DESPIECE
+- `/app/frontend/src/components/BudgetTable.jsx` - Filtros mejorados, botón TABLEROS
+- `/app/frontend/src/components/SettingsModal.jsx` - Tab Seguridad 2FA
+- `/app/backend/routes/auth_advanced.py` - Endpoints 2FA
+
+## API Endpoints Principales
+
+### DESPIECE Budgeter
+- `GET /api/despiece-budgeter/products` - Listar productos con filtros
+- `GET /api/despiece-budgeter/products/filters` - Obtener opciones de filtros
+- `POST /api/despiece-budgeter/products` - Crear producto
+- `POST /api/despiece-budgeter/products/bulk` - Crear productos masivamente
+- `POST /api/despiece-budgeter/seed-alvic` - Poblar productos ALVIC de muestra
+- `GET /api/despiece-budgeter/budgets` - Listar presupuestos
+- `POST /api/despiece-budgeter/budgets` - Crear presupuesto
+- `GET /api/despiece-budgeter/stats` - Estadísticas
+
+### Auth 2FA
+- `POST /api/auth-advanced/2fa/enable` - Iniciar configuración 2FA
+- `POST /api/auth-advanced/2fa/verify` - Verificar código 2FA
+- `POST /api/auth-advanced/2fa/disable-simple` - Desactivar 2FA (sin código)
+- `POST /api/auth-advanced/2fa/regenerate-backup` - Regenerar códigos de respaldo
