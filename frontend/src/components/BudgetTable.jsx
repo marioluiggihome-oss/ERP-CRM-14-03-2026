@@ -533,9 +533,10 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
      const unitPrice = pointsCost + cutsCost + carcassCost + vigaCost;
      
      // Usar descuento específico según el módulo actual
+     // IMPORTANTE: Usar ?? en lugar de || para respetar 0 como valor válido
      const discountPct = state.currentModule === 'despiece' 
-       ? (state.currentUser?.discountDespiece || state.currentUser?.commercialDiscount || 0)
-       : (state.currentUser?.discountMontada || state.currentUser?.commercialDiscount || 0);
+       ? (state.currentUser?.discountDespiece ?? state.currentUser?.commercialDiscount ?? 0)
+       : (state.currentUser?.discountMontada ?? state.currentUser?.commercialDiscount ?? 0);
      // Las líneas manuales NO se afectan por el cambio de modo PVP/COSTO
      const discountFactor = (state.showDistributorPrice && !item.isManual) ? (1 - discountPct / 100) : 1;
      
