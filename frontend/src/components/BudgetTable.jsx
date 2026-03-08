@@ -1316,6 +1316,30 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       )}
                    </div>
                  )}
+                 
+                 {/* Perfiles GOLA */}
+                 {(state.golaAlto || state.golaBajo) && (
+                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-purple-100">
+                      {state.golaAlto && (
+                        <div className="flex items-center gap-1.5 bg-purple-50 p-1.5 rounded-lg">
+                          <Box size={10} className="text-purple-500"/>
+                          <div>
+                            <p className="text-[5px] font-black uppercase text-purple-400 leading-none">GOLA ALTO</p>
+                            <p className="text-[7px] font-black text-purple-900 uppercase leading-none">{state.golaAltoColor || 'Sí'}</p>
+                          </div>
+                        </div>
+                      )}
+                      {state.golaBajo && (
+                        <div className="flex items-center gap-1.5 bg-purple-50 p-1.5 rounded-lg">
+                          <Box size={10} className="text-purple-500"/>
+                          <div>
+                            <p className="text-[5px] font-black uppercase text-purple-400 leading-none">GOLA BAJO</p>
+                            <p className="text-[7px] font-black text-purple-900 uppercase leading-none">{state.golaBajoColor || 'Sí'}</p>
+                          </div>
+                        </div>
+                      )}
+                   </div>
+                 )}
                </div>
 
                <div className="flex-1 mb-4">
