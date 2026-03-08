@@ -31,29 +31,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     return saved || 'horizontal';
   });
   const [isDespieceOpen, setIsDespieceOpen] = useState(false);
-  // Estados para el catálogo de tableros (modo despiece)
-  const [despieceProducts, setDespieceProducts] = useState([]);
-  const [despieceFilters, setDespieceFilters] = useState({
-    manufacturer: '',
-    collection: '',
-    finish: '',
-    thickness: ''
-  });
-  const [despieceFilterOptions, setDespieceFilterOptions] = useState({
-    manufacturers: [],
-    collections: [],
-    finishes: [],
-    thicknesses: []
-  });
-  const [loadingDespiece, setLoadingDespiece] = useState(false);
-  // Modal para añadir producto de despiece
-  const [despieceAddModal, setDespieceAddModal] = useState({
-    isOpen: false,
-    product: null,
-    width: 600,
-    height: 800,
-    quantity: 1
-  });
+  // Items de presupuesto de despiece (tableros)
+  const [budgetItemsDespiece, setBudgetItemsDespiece] = useState([]);
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
   const [orderEmail, setOrderEmail] = useState('');
