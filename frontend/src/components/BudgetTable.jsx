@@ -1698,14 +1698,50 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           DESCRIPCIÓN {sortColumn === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
                         </div>
                       </th>
-                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('width')}>
-                        AN {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <th className="p-1 text-center w-[65px]">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('width')}>
+                            AN {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                          </span>
+                          <input 
+                            type="number" 
+                            value={filterWidth} 
+                            onChange={e => setFilterWidth(e.target.value)}
+                            placeholder="--"
+                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            onClick={e => e.stopPropagation()}
+                          />
+                        </div>
                       </th>
-                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('height')}>
-                        AL {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <th className="p-1 text-center w-[65px]">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('height')}>
+                            AL {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                          </span>
+                          <input 
+                            type="number" 
+                            value={filterHeight} 
+                            onChange={e => setFilterHeight(e.target.value)}
+                            placeholder="--"
+                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            onClick={e => e.stopPropagation()}
+                          />
+                        </div>
                       </th>
-                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('depth')}>
-                        FO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <th className="p-1 text-center w-[65px]">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('depth')}>
+                            FO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                          </span>
+                          <input 
+                            type="number" 
+                            value={filterDepth} 
+                            onChange={e => setFilterDepth(e.target.value)}
+                            placeholder="--"
+                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            onClick={e => e.stopPropagation()}
+                          />
+                        </div>
                       </th>
                       <th className="p-2 text-center w-[60px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('points')}>
                         PTS {sortColumn === 'points' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -1942,14 +1978,50 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           DESCRIPCIÓN {sortColumn === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
                         </div>
                       </th>
-                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('width')}>
-                        AN {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <th className="p-1 text-center w-[65px]">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('width')}>
+                            AN {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                          </span>
+                          <input 
+                            type="number" 
+                            value={filterWidth} 
+                            onChange={e => setFilterWidth(e.target.value)}
+                            placeholder="--"
+                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            onClick={e => e.stopPropagation()}
+                          />
+                        </div>
                       </th>
-                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('height')}>
-                        AL {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <th className="p-1 text-center w-[65px]">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('height')}>
+                            AL {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                          </span>
+                          <input 
+                            type="number" 
+                            value={filterHeight} 
+                            onChange={e => setFilterHeight(e.target.value)}
+                            placeholder="--"
+                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            onClick={e => e.stopPropagation()}
+                          />
+                        </div>
                       </th>
-                      <th className="p-2 text-center w-[55px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('depth')}>
-                        FO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <th className="p-1 text-center w-[65px]">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('depth')}>
+                            FO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                          </span>
+                          <input 
+                            type="number" 
+                            value={filterDepth} 
+                            onChange={e => setFilterDepth(e.target.value)}
+                            placeholder="--"
+                            className="w-12 bg-indigo-900 border border-indigo-700 rounded px-1 py-0.5 text-[9px] font-bold text-center text-white outline-none placeholder-indigo-400"
+                            onClick={e => e.stopPropagation()}
+                          />
+                        </div>
                       </th>
                       <th className="p-2 text-center w-[60px] cursor-pointer hover:bg-indigo-800 select-none" onClick={() => handleSort('points')}>
                         PTS {sortColumn === 'points' && (sortDirection === 'asc' ? '↑' : '↓')}
