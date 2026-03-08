@@ -2819,59 +2819,111 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
 
             {isCatalogOpen && (
               <>
-                {/* Filtros verticales - Jerarquía PROGRAMA → CATEGORÍA → SERIE */}
+                {/* Filtros verticales - Diferentes según módulo MONTADA o DESPIECE */}
                 <div className="p-3 space-y-2 border-b border-indigo-50 shrink-0">
-                  <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="w-full bg-indigo-100 border-2 border-indigo-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-indigo-900 outline-none">
-                    <option value="TODOS">📁 TODOS PROGRAMAS</option>
-                    {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                  <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="w-full bg-purple-100 border-2 border-purple-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-purple-900 outline-none" disabled={selectedPrograma === 'TODOS'}>
-                    <option value="TODAS">📂 TODAS CATEGORÍAS</option>
-                    {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="w-full bg-amber-100 border-2 border-amber-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-amber-900 outline-none" disabled={selectedCategory === 'TODAS'}>
-                    <option value="TODAS">📄 TODAS SERIES</option>
-                    {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  {/* Filtros de medidas - Vista vertical */}
-                  <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-2 border border-slate-200">
-                    <span className="text-[9px] font-black text-slate-500">📐 MEDIDAS:</span>
-                    <div className="flex gap-1.5">
-                      <input 
-                        type="number" 
-                        placeholder="AN" 
-                        value={filterWidth} 
-                        onChange={e => setFilterWidth(e.target.value)}
-                        className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
-                        title="Filtrar por ancho (cm)"
-                      />
-                      <input 
-                        type="number" 
-                        placeholder="AL" 
-                        value={filterHeight} 
-                        onChange={e => setFilterHeight(e.target.value)}
-                        className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
-                        title="Filtrar por alto (cm)"
-                      />
-                      <input 
-                        type="number" 
-                        placeholder="FO" 
-                        value={filterDepth} 
-                        onChange={e => setFilterDepth(e.target.value)}
-                        className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
-                        title="Filtrar por fondo (cm)"
-                      />
-                    </div>
-                    {(filterWidth || filterHeight || filterDepth) && (
-                      <button 
-                        onClick={() => { setFilterWidth(''); setFilterHeight(''); setFilterDepth(''); }}
-                        className="text-slate-400 hover:text-red-500"
-                        title="Limpiar filtros"
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
+                  {state.currentModule === 'despiece' ? (
+                    /* FILTROS DESPIECE (Tableros) */
+                    <>
+                      <div className="bg-gradient-to-r from-purple-100 to-purple-50 rounded-xl p-2 border-2 border-purple-300">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Factory size={14} className="text-purple-600" />
+                          <span className="text-[9px] font-black text-purple-700 uppercase">Filtros Despiece</span>
+                        </div>
+                        <select 
+                          value={despieceFilters.manufacturer} 
+                          onChange={e => setDespieceFilters(prev => ({...prev, manufacturer: e.target.value}))} 
+                          className="w-full bg-white border border-purple-300 rounded-lg py-2 px-3 text-[10px] font-bold uppercase text-purple-900 outline-none mb-2"
+                        >
+                          <option value="">🏭 FABRICANTE</option>
+                          {despieceFilterOptions.manufacturers.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                        <select 
+                          value={despieceFilters.collection} 
+                          onChange={e => setDespieceFilters(prev => ({...prev, collection: e.target.value}))} 
+                          className="w-full bg-white border border-purple-300 rounded-lg py-2 px-3 text-[10px] font-bold uppercase text-purple-900 outline-none mb-2"
+                        >
+                          <option value="">📦 MODELO</option>
+                          {despieceFilterOptions.collections.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <select 
+                          value={despieceFilters.finish} 
+                          onChange={e => setDespieceFilters(prev => ({...prev, finish: e.target.value}))} 
+                          className="w-full bg-white border border-purple-300 rounded-lg py-2 px-3 text-[10px] font-bold uppercase text-purple-900 outline-none mb-2"
+                        >
+                          <option value="">✨ ACABADO</option>
+                          {despieceFilterOptions.finishes.map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                        <select 
+                          value={despieceFilters.thickness} 
+                          onChange={e => setDespieceFilters(prev => ({...prev, thickness: e.target.value}))} 
+                          className="w-full bg-white border border-purple-300 rounded-lg py-2 px-3 text-[10px] font-bold uppercase text-purple-900 outline-none"
+                        >
+                          <option value="">📏 GROSOR</option>
+                          {despieceFilterOptions.thicknesses.map(t => <option key={t} value={t}>{t}mm</option>)}
+                        </select>
+                      </div>
+                      <div className="text-center py-1">
+                        <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-lg">
+                          {despieceProducts.length} tableros disponibles
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    /* FILTROS MONTADA (Programa/Categoría/Serie) */
+                    <>
+                      <select value={selectedPrograma} onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} className="w-full bg-indigo-100 border-2 border-indigo-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-indigo-900 outline-none">
+                        <option value="TODOS">📁 TODOS PROGRAMAS</option>
+                        {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <select value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} className="w-full bg-purple-100 border-2 border-purple-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-purple-900 outline-none" disabled={selectedPrograma === 'TODOS'}>
+                        <option value="TODAS">📂 TODAS CATEGORÍAS</option>
+                        {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <select value={selectedSeries} onChange={e => setSelectedSeries(e.target.value)} className="w-full bg-amber-100 border-2 border-amber-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-amber-900 outline-none" disabled={selectedCategory === 'TODAS'}>
+                        <option value="TODAS">📄 TODAS SERIES</option>
+                        {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      {/* Filtros de medidas - Vista vertical */}
+                      <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-2 border border-slate-200">
+                        <span className="text-[9px] font-black text-slate-500">📐 MEDIDAS:</span>
+                        <div className="flex gap-1.5">
+                          <input 
+                            type="number" 
+                            placeholder="AN" 
+                            value={filterWidth} 
+                            onChange={e => setFilterWidth(e.target.value)}
+                            className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                            title="Filtrar por ancho (cm)"
+                          />
+                          <input 
+                            type="number" 
+                            placeholder="AL" 
+                            value={filterHeight} 
+                            onChange={e => setFilterHeight(e.target.value)}
+                            className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                            title="Filtrar por alto (cm)"
+                          />
+                          <input 
+                            type="number" 
+                            placeholder="FO" 
+                            value={filterDepth} 
+                            onChange={e => setFilterDepth(e.target.value)}
+                            className="w-14 bg-white border border-slate-200 rounded px-1.5 py-1 text-[10px] font-bold text-center outline-none"
+                            title="Filtrar por fondo (cm)"
+                          />
+                        </div>
+                        {(filterWidth || filterHeight || filterDepth) && (
+                          <button 
+                            onClick={() => { setFilterWidth(''); setFilterHeight(''); setFilterDepth(''); }}
+                            className="text-slate-400 hover:text-red-500"
+                            title="Limpiar filtros"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
                     <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 pl-9 pr-8 text-[10px] font-bold outline-none uppercase" />
