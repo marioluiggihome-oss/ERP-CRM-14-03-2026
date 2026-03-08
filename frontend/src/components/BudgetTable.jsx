@@ -1062,6 +1062,27 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                  <button onClick={() => exportToPdf('budget-pdf', `EXP_${state.budgetNumber}`)} className="w-full bg-indigo-800 text-white py-2 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-900 transition-all">
                     <Printer size={14}/> IMPRIMIR
                  </button>
+                 <button 
+                   onClick={() => {
+                     if (hasUnsavedItems) {
+                       setShowExitConfirm(true);
+                     } else {
+                       setState(prev => ({ 
+                         ...prev, 
+                         budgetItemsMontada: [], 
+                         budgetItemsDespiece: [],
+                         budgetNumber: '',
+                         customerName: '',
+                         customerAddress: '',
+                         internalReference: '',
+                         existingProjectId: null
+                       }));
+                     }
+                   }} 
+                   className="w-full bg-slate-600 text-white py-2 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-slate-700 transition-all"
+                 >
+                    <LogOut size={14}/> NUEVO PRESUPUESTO
+                 </button>
               </div>
            </div>
         </aside>
