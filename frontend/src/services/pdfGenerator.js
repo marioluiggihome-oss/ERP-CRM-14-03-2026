@@ -199,17 +199,11 @@ export const generateBudgetPDF = ({
       }
     }
     
-    // Nombre empresa y PRESUPUESTO TÉCNICO
-    doc.setFontSize(14);
-    doc.setTextColor(...primaryColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text(companyName, logoEndX, yPos + 6);
-    
-    // PRESUPUESTO TÉCNICO más grande
+    // PRESUPUESTO TÉCNICO más grande (sin nombre de empresa)
     doc.setFontSize(9);
     doc.setTextColor(...accentColor);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRESUPUESTO TÉCNICO', logoEndX, yPos + 12);
+    doc.text('PRESUPUESTO TÉCNICO', logoEndX, yPos + 6);
     
     // Número de expediente (derecha)
     doc.setFontSize(10);
