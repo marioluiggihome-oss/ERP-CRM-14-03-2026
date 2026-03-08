@@ -87,17 +87,34 @@ Componente avanzado con:
 - [ ] Refactoring `SettingsModal.jsx` (>4100 líneas)
 - [ ] Migrar endpoints de `server.py` a routers dedicados
 
+## Importación de Tarifa DF (Mar 9, 2026)
+- ✅ **Importados 5495 productos desde "Tarifa cocina Puertas DF (abr-2025).xlsx"**
+  - **PUERTAS:** 5306 combinaciones Alto x Ancho
+  - **TIRADORES:** 189 combinaciones Modelo x Ancho x Color
+
+### Colecciones de Puertas DF:
+- VIFORMING (2 cantos, 4 cantos): 602 productos
+- SYNCRON, SYNCRON FINGERPULL: 617 productos  
+- LUXE A, LUXE B, LUXE FINGERPULL: 998 productos
+- LUXE PLUS A, LUXE PLUS B: 762 productos
+- ZENIT METAL PLUS: 381 productos
+- QUADRO SLIM (Syncron, Zenit): 326 productos
+- MATTDECO (18MM, 22MM, Fingerpull): 998 productos
+- TR-MAX BLANCO: 381 productos
+- EUROFORMING: 241 productos
+
+### Modelos de Tiradores DF:
+- FORMENTERA, MALLORCA, MENORCA, IBIZA, TENERIFE, MADEIRA
+
 ## Limpieza de Datos (Mar 8, 2026)
 - ✅ **Eliminados 103+ productos de serie ALUMINIO** de la base de datos correcta
 - ✅ **Base de datos unificada y separada**:
   - `products`: 7045 productos MONTADA (muebles ensamblados)
     - ESTÁNDAR: 4409
     - GOLA: 2636
-  - `despiece_products`: 918 productos DESPIECE (tableros)
-    - SYNCRON: 904
-    - LUXE: 5
-    - ZENIT: 4
-    - BASIK: 3
+  - `despiece_products`: 5968 productos DESPIECE
+    - DF: 5495 (PUERTAS + TIRADORES, nueva tarifa ABR-2025)
+    - ALVIC: 473 (LUXE, ZENIT, SYNCRON, BASIK)
     - CANTOS: 2
 - ✅ **Exportación Excel actualizada** con parámetro `tipo=montada|despiece`
 
