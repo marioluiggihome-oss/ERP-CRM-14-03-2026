@@ -754,6 +754,93 @@ async def disable_2fa(data: Verify2FARequest, credentials: HTTPAuthorizationCred
     return {"success": True, "message": "Autenticación de dos factores desactivada"}
 
 
+@router.post("/2fa/regenerate-backup")
+async def regenerate_backup_codes(data: dict, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Regenerar códigos de respaldo. Requiere autenticación.
+    """
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Token requerido")
+    
+    try:
+        payload = verify_access_token(credentials.credentials)
+        token_user_id = payload.get("sub")
+    except:
+        raise HTTPException(status_code=401, detail="Token inválido")
+    
+    user_id = data.get("userId")
+    if token_user_id != user_id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    if not user.get("twoFactorEnabled"):
+        raise HTTPException(status_code=400, detail="2FA no está habilitado")
+    
+    # Generar nuevos códigos de respaldo
+    backup_codes = [generate_backup_code() for _ in range(8)]
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {
+            "$set": {
+                "twoFactorBackupCodes": backup_codes,
+                "updatedAt": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    logger.info(f"Backup codes regenerated for user: {user_id}")
+    
+    return {"success": True, "backupCodes": backup_codes}
+
+
+@router.post("/2fa/disable-simple")
+async def disable_2fa_simple(data: dict, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Desactivar 2FA sin requerir código (para admin o desde el panel de seguridad).
+    """
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Token requerido")
+    
+    try:
+        payload = verify_access_token(credentials.credentials)
+        token_user_id = payload.get("sub")
+    except:
+        raise HTTPException(status_code=401, detail="Token inválido")
+    
+    user_id = data.get("userId")
+    if token_user_id != user_id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    if not user.get("twoFactorEnabled"):
+        return {"success": True, "message": "2FA no está habilitado"}
+    
+    # Desactivar 2FA
+    await db.users.update_one(
+        {"id": user_id},
+        {
+            "$set": {
+                "twoFactorEnabled": False,
+                "twoFactorSecret": None,
+                "twoFactorBackupCodes": [],
+                "twoFactorPending": False,
+                "updatedAt": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    logger.info(f"2FA disabled (simple) for user: {user_id}")
+    
+    return {"success": True, "message": "Autenticación de dos factores desactivada"}
+
+
 @router.get("/2fa/status/{user_id}")
 async def get_2fa_status(user_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Obtener estado de 2FA de un usuario"""
