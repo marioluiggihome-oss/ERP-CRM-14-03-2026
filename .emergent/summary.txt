@@ -9,74 +9,88 @@ The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIG
 5.  **User Roles & Permissions:** Implement strict, independent permissions for each module.
 6.  **Authentication & Notifications:** Implement user self-registration, optional 2FA management, and admin notifications for new sign-ups. Emails should feature the company logo.
 7.  **UI/UX Improvements:** Add dimension-based filters, improve search functionality, add column sorting, and fix UI glitches. The user wants the UI to follow a specific design provided in documents.
-8.  **Data Export:** Provide functionality to export the product catalog to Excel and PDF formats.
-9.  **Backup/Restore:** Provide a mechanism for the user to manually create and restore database backups.
+8.  **Data Export:** Provide functionality to export the product catalog to Excel and PDF formats. The user has requested this be updated to show the current, audited data.
+9.  **Backup/Restore:** Provide a mechanism for the user to manually create and restore database backups. The user has also asked about automatic daily backups.
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The core is the  component, a massive component that handles budgeting for both assembled kitchens (montada) and component parts (despiece).
+A full-stack React/FastAPI/MongoDB application. The core is the  component, which handles budgeting for both assembled kitchens (montada) and component parts (despiece).
 
-In this session, the agent performed the following key actions:
-*   **DESPIECE Module Implementation & Refactor:**
-    *   Initially built as a separate modal but was rejected by the user.
-    *   It has now been correctly integrated into the COCINA DESPIECE tab within . This mode displays a specialized catalog for board products.
-    *   Fixed a bug where items added from the despiece catalog did not appear in the budget list.
-    *   The left sidebar UI now conditionally changes for despiece mode, showing material filters (Fabricante, Modelo) instead of Grupo de Precios, as requested.
-*   **Data Import:**
-    *   Created a new backend endpoint () to import products from a price matrix (Height x Width).
-    *   Successfully imported 900 SYNCRON products (doors, sides, rails) from a user-provided image.
-*   **Bug Fix (Filter Logic):**
-    *   Resolved a critical bug where filtering by dimensions (e.g., ) did not update the available options in the  and  dropdowns. This caused user confusion as the total item count did not seem to match the sum of the parts. The dropdowns are now reactive to dimension filters.
-*   **2FA Management UI:**
-    *   Added a SEGURIDAD 2FA tab to the  component.
-    *   Users can now view their 2FA status and access a new component () to enable/disable it.
-    *   Added supporting backend endpoints (, ).
+In this session, the agent performed a massive data audit and refactoring effort:
+*   **Database Unification & Cleaning:**
+    *   Identified and fixed a critical bug where the backend was reading from a stale  instead of the intended , causing old data (like the ALUMINIO product line) to persist.
+    *   Completely separated products into two distinct collections:  for assembled furniture (montada) and  for component boards (despiece).
+    *   Removed the entire ALUMINIO product line as requested.
+    *   Corrected product names and categories based on attributes (e.g., items with height > 180cm were moved from ALTOS to COLUMNAS).
+    *   Normalized product series names to reflect their actual dimensions (e.g., ALTO 127 FONDO 33 was renamed to ALTO 120 FONDO 33 for products that were 120cm high).
+*   **UI/UX Fixes & Improvements:**
+    *   Fixed a bug where the product library sidebars showed incorrect filters when in DESPIECE mode.
+    *   Compacted the layout of the sidebar summary indicators to use less vertical space.
+    *   Began removing export (Excel/PDF) icons from the main budget view, per user request.
+*   **Feature Implementation & Refactoring:**
+    *   Integrated the  component, providing a step-by-step modal for adding component-based products.
+    *   Partially refactored the massive  component (from >3400 to ~3000 lines) by extracting logic into new, smaller components (, , etc.).
+*   **Backend:**
+    *   Updated the automatic backup system to include the new  collection.
+    *   Updated the catalog export endpoint () to generate a two-sheet Excel file with both montada and despiece products.
 
 **Last working item**:
-- Last item agent was working: Based on the latest user feedback, the agent was tasked with creating a new, improved UI/UX for the DESPIECE module that follows a wizard-like flow described in a Word document (). The agent created the placeholder file for this new component.
+- Last item agent was working: The user uploaded an image of a product () and asked en q pagina está este producto (what page is this product on?). The agent has not yet addressed this question.
 - Status: NOT STARTED
 - Agent Testing Done: N
-- Which testing method agent to use? both
+- Which testing method agent to use? backend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Implement DESPIECE Wizard UI (P0)**
-- **Issue 2: Re-implement Catalog Export (Excel/PDF) (P1)**
+- **Issue 1: Find location of product  (P0)**
+- **Issue 2: Remove export icons from all catalog libraries (P1)**
 - **Issue 3: Visual Glitch with Collapsed Vertical Sidebar (P2 - Recurring)**
-- **Issue 4: Fix User Registration Email Flow (P1 - Partially Resolved)**
+- **Issue 4: Verify updated Catalog Export (Excel/PDF) format (P2)**
+- **Issue 5: Fix User Registration Email Flow (P3 - Blocked)**
 
 **Issues Detail:**
-- **Issue 1: Implement DESPIECE Wizard UI**
-    - **Attempted fixes:** The file  was created.
+- **Issue 1: Find location of product **
+    - **Attempted fixes:** None. This is the user's latest direct question.
     - **Next debug checklist:**
-        1.  Build the multi-step wizard UI inside  based on the user's Word document.
-        2.  Step 1: Select Fabricante/Modelo/Color.
-        3.  Step 2: Display a visual price matrix (Alto x Ancho) for the selected product.
-        4.  Step 3: Allow selection of dimensions and quantity, and optionally Tiradores (handles).
-        5.  Integrate this wizard, likely as a full-screen modal, to replace the current simple add item flow in the COCINA DESPIECE mode.
-    - **Why fix this issue and what will be achieved with the fix?** This is the user's explicit next requirement to create a more intuitive and powerful interface for component-based budgeting.
+        1.  Query the  collection in the  to find the details of the product with .
+        2.  Determine its category and series.
+        3.  Explain to the user how to navigate to that product in the UI using the filters (e.g., Select PROGRAMA: ESTÁNDAR, CATEGORÍA: ALTOS, SERIE: ALTO 90 FONDO 33).
+    - **Why fix this issue and what will be achieved with the fix?** To directly answer the user's question and demonstrate the data is now correctly organized.
     - **Status:** NOT STARTED
     - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** both
-    - **Blocked on other issue:** None.
-- **Issue 2: Re-implement Catalog Export (Excel/PDF)**
-    - **Attempted fixes:** The agent's v2 implementation was rejected by the user (no me vale para nada).
-    - **Next debug checklist:** Use  to request a specific mock-up or detailed requirements for the desired Excel/PDF layout from the user.
-    - **Why fix this issue and what will be achieved with the fix?** The feature is currently unusable as it doesn't meet the user's needs.
-    - **Status:** BLOCKED
-    - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Backend
-    - **Blocked on other issue:** User feedback.
+    - **Blocked on other issue:** None.
+- **Issue 2: Remove export icons from all catalog libraries**
+    - **Attempted fixes:** The agent successfully removed the icons from the horizontal () catalog library view inside .
+    - **Next debug checklist:**
+        1.  Edit .
+        2.  Locate the JSX for the  (right) and  library views.
+        3.  Remove the  and  icon buttons, leaving only the layout-switching icons.
+    - **Why fix this issue and what will be achieved with the fix?** Fulfills the user's request to declutter the main interface and centralize export functionality in the admin panel.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Frontend
+    - **Blocked on other issue:** None.
 - **Issue 3: Visual Glitch with Collapsed Vertical Sidebar**
-    - **Attempted fixes:** Multiple CSS adjustments in previous sessions failed.
-    - **Next debug checklist:** Re-examine CSS in , focusing on , , and how the main content's  or  is adjusted when the sidebar state changes.
+    - **Attempted fixes:** Multiple CSS adjustments in previous sessions failed. The agent added  in this session, but the issue may persist.
+    - **Next debug checklist:** Re-examine CSS in , focusing on , , and how the main content's  or  is adjusted when the sidebar state changes. A screenshot of the specific glitch would be helpful.
     - **Why fix this issue and what will be achieved with the fix?** It is a persistent UI complaint from the user.
     - **Status:** NOT STARTED
     - **Is recurring issue?** Y
     - **Should Test frontend/backend/both after fix?** Frontend
     - **Blocked on other issue:** None.
-- **Issue 4: Fix User Registration Email Flow**
+- **Issue 4: Verify updated Catalog Export (Excel/PDF) format**
+    - **Attempted fixes:** The agent updated the backend endpoint () to export both montada and despiece products.
+    - **Next debug checklist:**
+        1.  Ask the user to test the download from the Inventory section in the master panel.
+        2.  Confirm if the new two-sheet format and the audited data meet their needs.
+    - **Why fix this issue and what will be achieved with the fix?** The user previously rejected the export format. This new version needs validation.
+    - **Status:** USER VERIFICATION PENDING
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Backend
+    - **Blocked on other issue:** User feedback.
+- **Issue 5: Fix User Registration Email Flow**
     - **Attempted fixes:** Switched to Resend, but implemented a workaround to send all emails to a backup address due to domain verification limits on the free tier.
     - **Next debug checklist:** Advise the user that they must verify their domain in their Resend account to send emails to arbitrary addresses. Once they confirm, update  to remove the hardcoded backup email.
     - **Why fix this issue and what will be achieved with the fix?** The current implementation is a temporary hack and not suitable for production.
@@ -86,35 +100,36 @@ In this session, the agent performed the following key actions:
     - **Blocked on other issue:** User action (domain verification).
 
 **In progress Task List**:
-- **Task 1: Build the DespieceWizard component (P0)**
-    - **Where to resume:** Implement the UI and logic inside the newly created  file.
-    - **What will be achieved with this?** A user-friendly, step-by-step interface for creating component budgets, matching the user's requested design and workflow.
-    - **Status:** NOT STARTED
-    - **Should Test frontend/backend/both after fix?** both
+- **Task 1: Complete removal of export icons from BudgetTable.jsx (P1)**
+    - **Where to resume:** Modify  to remove the export buttons from the  and  catalog library views.
+    - **What will be achieved with this?** A cleaner UI in the main budget editor, as requested by the user.
+    - **Status:** IN PROGRESS
+    - **Should Test frontend/backend/both after fix?** Frontend
     - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P1) **Integrate **: Replace the current despiece item addition logic with the new wizard.
+    - (P0) **CRITICAL Frontend Refactoring**: Continue decomposing  (currently ~3000 lines). Extract the main catalog library and sidebar into their own components.
 - **Future Tasks:**
-    - (P0) **CRITICAL Frontend Refactoring**: Decompose  (now >3200 lines). Extracting the despiece logic into  is the first step.
-    - (P1) **Frontend Refactoring**: Decompose  (now >4100 lines).
+    - (P1) **Frontend Refactoring**: Decompose  (>4100 lines).
     - (P2) **Backend Refactoring**: Move all remaining endpoints from  into dedicated routers.
 
 **Completed work in this session**
-- **DESPIECE Module Integration**: Correctly integrated the component-based budgeting catalog into the COCINA DESPIECE tab, replacing a flawed initial implementation.
-- **DESPIECE Bug Fix**: Fixed the state management bug that prevented newly added component items from being displayed in the budget list.
-- **SYNCRON Data Import**: Created a backend endpoint to parse a price matrix and imported 900 new SYNCRON products.
-- **Filter Logic Bug Fix**: Corrected an issue where CATEGORÍA and SERIE dropdowns were not reactive to active dimension filters, resolving a major data inconsistency problem for the user.
-- **2FA Management UI**: Successfully implemented a new SEGURIDAD 2FA tab in the user settings modal, allowing users to manage their 2FA status.
-- **UI/UX Polish**: Improved visibility of dimension filters in the product library and adjusted the left sidebar layout for despiece mode as requested by the user.
+- **Database Audit & Unification**: Corrected the DB connection to use , separated montada () and despiece () items, and removed the ALUMINIO line.
+- **Data Normalization**: Corrected hundreds of product names, categories, and series to match their actual dimensions and types (e.g., ALTOS with height 220cm became COLUMNAS).
+- **UI Bug Fix**: Resolved issue where DESPIECE libraries showed MONTADA filters.
+- **UI Compaction**: Reduced the vertical space used by sidebar summary indicators.
+- **Partial Refactor of **: Reduced line count from >3400 to ~3000 and created several new components under .
+- ** Integration**: The new wizard component is now active and opens from the DESPIECE module.
+- **Backup System Improvement**: The daily automatic backup job was updated to include the  collection.
+- **Excel Export Update**: The backend endpoint for exporting the catalog now includes both montada and despiece products in separate sheets.
 
 **Earlier issues found/mentioned but not fixed**
-- **Issue 1: Catalog Export does not meet user needs**
-    - **Debug checklist:** Ask the user for specific examples or a mockup of the desired Excel/PDF layout. Clarify which images (dibujos del catalogo pdf) should be used.
-    - **Why to solve this issue and what will be achieved with this?** The feature is currently useless to the user.
+- **Issue 1: Catalog Export format might still not meet user needs**
+    - **Debug checklist:** Ask the user for specific examples or a mockup of the desired Excel/PDF layout. The current implementation needs to be verified.
+    - **Why to solve this issue and what will be achieved with this?** The feature was previously rejected and is a core requirement.
     - **Should Test frontend/backend/both after fix:** Backend.
-    - **Is recurring issue?** N
+    - **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
 - **UI glitches with sidebars**: The user has repeatedly reported that the collapsible sidebars do not look or behave correctly. This remains a persistent point of friction.
@@ -123,73 +138,75 @@ In this session, the agent performed the following key actions:
 
 
 **Key Technical Concepts**
-- **Conditional Rendering & State Management:** The core of the current implementation relies on complex conditional rendering in  based on  to switch between montada and despiece views. Debugging state updates (local vs. global) was key.
-- **Reactive Filtering:** Fixed and implemented reactive dropdown filters (, ) that update their options based on other active filters (like ) using  hooks.
-- **Dynamic Data Import:** Created a flexible backend endpoint to import data from a structured price matrix (H x W), allowing for rapid addition of new product lines like SYNCRON.
-- **Component Refactoring (Urgent Need):** The session highlighted the critical need to refactor massive components (, ), which are becoming unmaintainable. Creating  is the start of this process.
+- **Component Refactoring:** The process of breaking down the massive  into smaller, manageable components under  has begun.
+- **Database Auditing & Normalization:** The session involved extensive, direct manipulation of MongoDB collections to clean, separate, and correct thousands of product records. This was critical to fix data integrity issues.
+- **Fixing Environment Mismatches:** A key bug was traced to the backend using  while the agent was debugging , leading to stale data. All operations now correctly target .
+- **Conditional UI:** The application heavily relies on  to render different filters and layouts for montada vs. despiece modes. This was debugged and fixed.
 
 **key DB schema**
-- **products_despiece**: (New or extended) Contains component-based products. Schema includes , , , ,  (e.g., 'PUERTA', 'COSTADO'), and pricing models ( for boards, or , , and  for matrix-based items).
+- **products**: (in ) Stores montada (assembled) products. Contains , , , , , , , , .
+- **despiece_products**: (in ) Stores despiece (component) products. Contains , ,  (e.g., 'PUERTA'), , , , .
+- **backup_history**: Logs of all manual and automatic database backups.
+
+**changes in tech stack**
+- No changes in the core tech stack. The most significant change was the database schema organization, splitting one overloaded collection into two distinct ones ( and ).
 
 **All files of reference**
-- : The central and most modified file. Contains the logic for both budget types and all filter interactions.
-- : New backend service for all despiece module logic, including data import and retrieval.
-- : Modified to include the 2FA management UI.
-- : Modified to add endpoints supporting the 2FA UI.
-- : The file where the next major feature will be built.
-- : User document outlining the required flow for the new Despiece Wizard.
+- : Central component, partially refactored but still the main focus.
+- : Heavily modified to perform data audits, update export logic, and improve backup functionality.
+- : Updated to support new filtering criteria.
+- : New directory containing the extracted components from .
+- : The file for the new despiece UI wizard.
 
 **Areas that need refactoring**:
-- **/app/frontend/src/components/BudgetTable.jsx**: **CRITICAL**. This >3200 line component must be broken down. The creation of  is the first step to offload the despiece logic from it.
-- **/app/frontend/src/components/SettingsModal.jsx**: This >4100 line file is also extremely difficult to maintain and should be refactored into smaller components for each tab.
-- **/app/backend/server.py**: Still contains logic that should be migrated to dedicated routers to improve modularity.
+- **/app/frontend/src/components/BudgetTable.jsx**: **CRITICAL**. Despite being reduced to ~3000 lines, it is still a god component and must be broken down further.
+- **/app/frontend/src/components/SettingsModal.jsx**: This >4100 line file is extremely difficult to maintain and should be refactored into smaller components for each tab.
 
 **key api endpoints**
-- : Fetches products for the despiece catalog.
-- : Fetches available filter options (manufacturers, collections, etc.).
-- : Imports the 900 SYNCRON products from a predefined matrix structure.
-- : Disables 2FA for the logged-in user.
-- : Generates new backup codes for 2FA.
+- : Fetches montada products from the  collection.
+- : Fetches despiece products from the  collection.
+- : Exports a two-sheet Excel file containing data from both product collections.
+- : Checks the status of the automated backup scheduler.
 
 **Critical Info for New Agent**
-- **Refactoring is Priority #1:** The  component is dangerously large. The immediate task is to build the  component to extract a significant chunk of logic from it. Do not add more logic to  if it can be avoided.
-- **Follow User's Vision:** The user has a very specific vision for the DESPIECE module, detailed in their Word document. Adhere to that flow (select manufacturer -> model -> color -> see price matrix -> add to budget).
-- **Bug Fixes were Successful:** The bug with items not appearing in the despiece budget is **fixed**. The bug with filter dropdowns not updating is also **fixed**. Do not reinvestigate these.
-- **Catalog Export is Blocked:** Do not attempt to fix the catalog export without first getting clear, specific requirements from the user.
+- **Database is Key:** The database has been heavily audited. The correct DB is . Montada items are in , Despiece items are in . Do not mix them.
+- **Answer User First:** The user's last question is en q pagina está este producto (). This should be your first action.
+- **Refactoring is In-Progress:** The  refactor is not complete. You are expected to continue this work to improve maintainability.
+- **Export Icons:** The task to remove export icons from the catalog views is half-done. You need to remove them from the  and  views in .
 
 **documents and test reports created in this job**
 - 
 - 
-- 
+-  (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **LATEST**: User asks to continue with the next steps outlined in their feedback.
-2.  User provided detailed feedback on the despiece module: remove grupo de precios from the sidebar, fix items not being added visually, and import the Syncron series with a specific price matrix. Provided two images and one Word document with requirements.
-3.  User asks to verify the fix for the filter inconsistency.
-4.  Agent confirms the data is correct and explains the fix is working as intended. Proposes adding item counts to the dropdowns for clarity.
-5.  Agent confirms the filter logic bug fix.
-6.  User reports a data inconsistency issue with filters: the total count of items when filtering by height (ALTO=70) doesn't seem to match the sum of the items in the series dropdowns. Provided an image.
-7.  User asks the agent to proceed with the next steps.
-8.  Agent summarizes the successful refactor and improvement of the DESPIECE module.
-9.  User asks to refactor and improve the despiece module further.
-10. Agent updates the PRD and asks for the next steps.
+1.  **LATEST/PENDING**: User asks on which page a specific product is located (), providing a screenshot. (UNADDRESSED)
+2.  User asks to remove export icons from the budget view and move them to the inventory section in the master panel. (IN PROGRESS)
+3.  User points out that a product with 220cm height is mislabeled as ALTO (high cabinet) when it should be a COLUMNA (column), and asks to make the sidebar indicators more compact. (RESOLVED)
+4.  User provides an image of the DESPIECE library and asks to prepare it so each item is a line of door measurements, with modifiable dimensions. (RESOLVED)
+5.  User asks to rename product series to reflect real dimensions and to ensure the ALTO FONDO 33 series disappears. (RESOLVED)
+6.  User points out that products with specific dimensions (ALTO=127, FONDO=33) are in the wrong series. (RESOLVED)
+7.  User provides a screenshot of a product in the COLUMNAS category that is incorrectly named ALTO 1 puerta instead of COLUMNA 1 puerta. (RESOLVED)
+8.  User asks if databases can always be exported and if daily backups are scheduled. (RESOLVED, system confirmed)
+9.  User asks for the database of montada and despiece items to be unified, audited, and for the inventory export to be updated. (RESOLVED)
+10. User provides a screenshot showing the ALUMINIO program still visible in the UI and asks to fix it. (RESOLVED, was a backend cache/wrong DB issue)
 
 **Project Health Check:**
 - **Broken:**
-    - The **Catalog Export** feature is functionally useless as it was rejected by the user and does not meet their needs. It is blocked pending user feedback.
+    - The format of the **Catalog Export** feature is still pending user verification. Although the backend logic was updated to include all products, the user may still reject the layout/format.
 - **Mocked:** N/A
 
 **3rd Party Integrations**
-- **Resend:** (Requires User API Key) - Implemented with a temporary workaround.
+- **Resend:** (Requires User API Key) - Used for sending emails, currently with a temporary workaround.
 - **xlsxwriter / openpyxl:** For backend Excel file generation.
-- **reportlab / cairosvg:** For backend PDF file generation with SVG images.
-- **jspdf / html2canvas:** For client-side PDF generation of budgets.
+- **reportlab / cairosvg:** For backend PDF file generation.
+- **jspdf / html2canvas:** For client-side PDF generation.
 - **pyotp / qrcode:** For 2FA implementation.
 - **Google Gemini:** Via  (Emergent LLM Key).
-- **SendGrid:** **DEPRECATED/REPLACED**.
+- **apscheduler:** For running daily automatic database backups.
 
 **Testing status**
-- Testing agent used after significant changes: YES. An early version passed 100%, but major refactoring and bug fixes occurred afterward.
+- Testing agent used after significant changes: YES. Two test runs were executed after major bug fixes and refactoring, with 100% success reported.
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
 - Known regressions: The visual glitch with the collapsed sidebar is a persistent, recurring issue.
@@ -199,5 +216,5 @@ In this session, the agent performed the following key actions:
 - **Password:** 
 
 **What agent forgot to execute**
-- The agent has not proactively asked for the specific requirements needed to unblock the rejected **Catalog Export** feature.
-- The recurring visual glitch with the sidebar has not been addressed in this session.</analysis>
+- The agent has not yet answered the user's most recent question about finding a product's location.
+- The agent was interrupted while removing the export icons from  and only completed the task for one of the three library positions.</analysis>
