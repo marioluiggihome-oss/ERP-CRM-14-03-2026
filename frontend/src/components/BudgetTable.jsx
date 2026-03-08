@@ -281,9 +281,24 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     filteredProducts = selectedCategory === 'TODAS' 
       ? filteredProducts 
       : filteredProducts.filter(p => (p.category || 'OTROS') === selectedCategory);
+    
+    // También aplicar filtros de medidas si están activos
+    if (filterHeight) {
+      const heightNum = parseInt(filterHeight);
+      filteredProducts = filteredProducts.filter(p => p.height && Math.abs(Number(p.height) - heightNum) <= 5);
+    }
+    if (filterWidth) {
+      const widthNum = parseInt(filterWidth);
+      filteredProducts = filteredProducts.filter(p => p.width && Math.abs(Number(p.width) - widthNum) <= 5);
+    }
+    if (filterDepth) {
+      const depthNum = parseInt(filterDepth);
+      filteredProducts = filteredProducts.filter(p => p.depth && Math.abs(Number(p.depth) - depthNum) <= 5);
+    }
+    
     const series = new Set(filteredProducts.map(p => p.series || 'GENERAL'));
     return Array.from(series).sort();
-  }, [allProducts, state.currentModule, catalogs, selectedPrograma, selectedCategory]);
+  }, [allProducts, state.currentModule, catalogs, selectedPrograma, selectedCategory, filterWidth, filterHeight, filterDepth]);
 
   const sortedItems = useMemo(() => {
     return [...items].sort((a, b) => {
