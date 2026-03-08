@@ -2471,44 +2471,51 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
 
             {isCatalogOpen && (
               <>
-                {/* Filtros verticales - Usando componentes extraídos */}
-                <div className="p-3 space-y-2 border-b border-indigo-50 shrink-0">
-                  {state.currentModule === 'despiece' ? (
-                    <DespieceFiltersVertical
+                {state.currentModule === 'despiece' ? (
+                  /* Modo Despiece: Flujo paso a paso */
+                  <div className="flex-1 overflow-hidden">
+                    <DespieceStepByStep
+                      onAddItems={(items) => {
+                        setState(prev => ({
+                          ...prev,
+                          budgetItemsDespiece: [...(prev.budgetItemsDespiece || []), ...items]
+                        }));
+                      }}
                       despieceFilters={despieceFilters}
                       setDespieceFilters={setDespieceFilters}
-                      despieceFilterOptions={despieceFilterOptions}
-                      despieceProductsCount={despieceProducts.length}
                     />
-                  ) : (
-                    <MontadaFiltersVertical
-                      selectedPrograma={selectedPrograma}
-                      setSelectedPrograma={setSelectedPrograma}
-                      selectedCategory={selectedCategory}
-                      setSelectedCategory={setSelectedCategory}
-                      selectedSeries={selectedSeries}
-                      setSelectedSeries={setSelectedSeries}
-                      uniqueProgramas={uniqueProgramas}
-                      uniqueCategories={uniqueCategories}
-                      uniqueSeries={uniqueSeries}
-                      filterWidth={filterWidth}
-                      setFilterWidth={setFilterWidth}
-                      filterHeight={filterHeight}
-                      setFilterHeight={setFilterHeight}
-                      filterDepth={filterDepth}
-                      setFilterDepth={setFilterDepth}
-                    />
-                  )}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
-                    <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 pl-9 pr-8 text-[10px] font-bold outline-none uppercase" />
-                    {searchQuery && (
-                      <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500" title="Limpiar búsqueda">
-                        <X size={14} />
-                      </button>
-                    )}
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Filtros verticales - Modo Montada */}
+                    <div className="p-3 space-y-2 border-b border-indigo-50 shrink-0">
+                      <MontadaFiltersVertical
+                        selectedPrograma={selectedPrograma}
+                        setSelectedPrograma={setSelectedPrograma}
+                        selectedCategory={selectedCategory}
+                        setSelectedCategory={setSelectedCategory}
+                        selectedSeries={selectedSeries}
+                        setSelectedSeries={setSelectedSeries}
+                        uniqueProgramas={uniqueProgramas}
+                        uniqueCategories={uniqueCategories}
+                        uniqueSeries={uniqueSeries}
+                        filterWidth={filterWidth}
+                        setFilterWidth={setFilterWidth}
+                        filterHeight={filterHeight}
+                        setFilterHeight={setFilterHeight}
+                        filterDepth={filterDepth}
+                        setFilterDepth={setFilterDepth}
+                      />
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={14} />
+                        <input type="text" placeholder="BUSCAR..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white border border-indigo-100 rounded-lg py-2 pl-9 pr-8 text-[10px] font-bold outline-none uppercase" />
+                        {searchQuery && (
+                          <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500" title="Limpiar búsqueda">
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
                 {/* Lista de productos - más visible */}
                 <div className="flex-1 overflow-y-auto" key={`catalog-${searchQuery}-${selectedPrograma}-${selectedCategory}-${selectedSeries}`}>
