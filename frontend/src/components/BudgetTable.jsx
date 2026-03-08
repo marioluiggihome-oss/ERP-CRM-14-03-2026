@@ -1349,7 +1349,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                                 </>
                             ) : (
                                 <>
-                                    <input type="text" value={item.customReference ?? product.code} onChange={e => updateItem(item.id, 'customReference', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-100 rounded px-1 py-0.5 text-[7px] font-black uppercase italic text-indigo-900 outline-none no-print focus:border-orange-500" />
+                                    <span className="w-full bg-indigo-50/50 border border-indigo-100 rounded px-1 py-0.5 text-[7px] font-black uppercase italic text-indigo-900">{item.customReference ?? product.code}</span>
                                     <span className="print-only text-[7px] font-black uppercase italic text-indigo-900">{item.customReference ?? product.code}</span>
                                 </>
                             )}
