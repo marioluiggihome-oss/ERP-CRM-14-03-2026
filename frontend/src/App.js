@@ -43,6 +43,9 @@ const App = () => {
       carcassMaterials: INITIAL_CARCASS_MATERIALS,
       selectedCarcassMaterialId: INITIAL_CARCASS_MATERIALS[0].id,
       doorColorLow: '', doorColorHigh: '', doorColorColumns: '', sideColor: '',
+      // Opciones GOLA (perfiles)
+      golaAlto: false, golaAltoColor: '',
+      golaBajo: false, golaBajoColor: '',
       pointValueMontada: 1.0, pointValueDespiece: 0.88, 
       specialIncrementWidth: 45,
       specialIncrementHeight: 45,
