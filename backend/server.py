@@ -1239,53 +1239,100 @@ async def export_products_to_excel(
     module: Optional[str] = None,
     category: Optional[str] = None,
     series: Optional[str] = None,
+    programa: Optional[str] = None,
+    tipo: Optional[str] = Query(default="montada", description="montada o despiece"),
     with_images: bool = True
 ):
     """
     Exportar catálogo de productos a Excel con imágenes SVG.
+    - tipo=montada: Exporta productos de muebles ensamblados (colección 'products')
+    - tipo=despiece: Exporta productos de tableros (colección 'despiece_products')
     Cambia ZONA por GRUPO (Z1→G1, Z2→G2, etc.)
     """
-    query = {}
-    if module:
-        query["module"] = module
-    if category:
-        query["category"] = category
-    if series:
-        query["series"] = series
-    
-    products = await db.products.find(query, {"_id": 0}).sort([("category", 1), ("series", 1), ("code", 1)]).to_list(10000)
-    
-    if with_images:
-        output = await generate_catalog_excel_with_images(products, module)
-    else:
-        # Versión sin imágenes (más rápida)
+    if tipo == "despiece":
+        # Exportar productos de DESPIECE (tableros)
+        query = {}
+        if category:
+            query["category"] = category
+        
+        products = await db.despiece_products.find(query, {"_id": 0}).sort([("collection", 1), ("color", 1)]).to_list(10000)
+        
         output = BytesIO()
         workbook = xlsxwriter.Workbook(output, {'in_memory': True})
-        worksheet = workbook.add_worksheet('Catálogo Productos')
+        worksheet = workbook.add_worksheet('Catálogo Despiece')
         
-        header_format = workbook.add_format({'bold': True, 'bg_color': '#1e293b', 'font_color': 'white', 'align': 'center', 'valign': 'vcenter', 'border': 1})
+        header_format = workbook.add_format({'bold': True, 'bg_color': '#7c3aed', 'font_color': 'white', 'align': 'center', 'valign': 'vcenter', 'border': 1})
         cell_format = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'border': 1})
+        price_format = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'border': 1, 'num_format': '#,##0.00 €'})
         
-        headers = ['REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'CATEGORÍA', 'SERIE', 'G1', 'G2', 'G3', 'G4', 'G5', 'G6']
+        headers = ['CÓDIGO', 'NOMBRE', 'FABRICANTE', 'COLECCIÓN', 'COLOR', 'ACABADO', 'GROSOR', 'CATEGORÍA', 'G1 €/m²', 'G2 €/m²', 'G3 €/m²']
         for col, header in enumerate(headers):
             worksheet.write(0, col, header, header_format)
+            worksheet.set_column(col, col, 15 if col < 2 else 12)
         
         for row_num, product in enumerate(products, start=1):
             worksheet.write(row_num, 0, product.get('code', ''), cell_format)
             worksheet.write(row_num, 1, product.get('name', ''), cell_format)
-            worksheet.write(row_num, 2, product.get('width', ''), cell_format)
-            worksheet.write(row_num, 3, product.get('height', ''), cell_format)
-            worksheet.write(row_num, 4, product.get('depth', ''), cell_format)
-            worksheet.write(row_num, 5, product.get('category', ''), cell_format)
-            worksheet.write(row_num, 6, product.get('series', ''), cell_format)
-            zone_points = product.get('zonePoints', {}) or {}
-            for i, zk in enumerate(['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']):
-                worksheet.write(row_num, 7 + i, zone_points.get(zk, 0) or 0, cell_format)
+            worksheet.write(row_num, 2, product.get('manufacturer', ''), cell_format)
+            worksheet.write(row_num, 3, product.get('collection', ''), cell_format)
+            worksheet.write(row_num, 4, product.get('color', ''), cell_format)
+            worksheet.write(row_num, 5, product.get('finish', ''), cell_format)
+            worksheet.write(row_num, 6, product.get('thickness', 0), cell_format)
+            worksheet.write(row_num, 7, product.get('category', ''), cell_format)
+            worksheet.write(row_num, 8, product.get('priceZ1', 0), price_format)
+            worksheet.write(row_num, 9, product.get('priceZ2', 0), price_format)
+            worksheet.write(row_num, 10, product.get('priceZ3', 0), price_format)
         
         workbook.close()
         output.seek(0)
-    
-    filename = f"catalogo_luiggi_{module or 'completo'}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        
+        filename = f"catalogo_despiece_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    else:
+        # Exportar productos de MONTADA (muebles)
+        query = {}
+        if module:
+            query["module"] = module
+        if category:
+            query["category"] = category
+        if series:
+            query["series"] = series
+        if programa:
+            query["programa"] = programa
+        
+        products = await db.products.find(query, {"_id": 0}).sort([("programa", 1), ("category", 1), ("series", 1), ("code", 1)]).to_list(10000)
+        
+        if with_images:
+            output = await generate_catalog_excel_with_images(products, module)
+        else:
+            # Versión sin imágenes (más rápida)
+            output = BytesIO()
+            workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+            worksheet = workbook.add_worksheet('Catálogo Montada')
+            
+            header_format = workbook.add_format({'bold': True, 'bg_color': '#1e293b', 'font_color': 'white', 'align': 'center', 'valign': 'vcenter', 'border': 1})
+            cell_format = workbook.add_format({'align': 'center', 'valign': 'vcenter', 'border': 1})
+            
+            headers = ['REF', 'DESCRIPCIÓN', 'PROGRAMA', 'AN', 'AL', 'FO', 'CATEGORÍA', 'SERIE', 'G1', 'G2', 'G3', 'G4', 'G5', 'G6']
+            for col, header in enumerate(headers):
+                worksheet.write(0, col, header, header_format)
+            
+            for row_num, product in enumerate(products, start=1):
+                worksheet.write(row_num, 0, product.get('code', ''), cell_format)
+                worksheet.write(row_num, 1, product.get('name', ''), cell_format)
+                worksheet.write(row_num, 2, product.get('programa', ''), cell_format)
+                worksheet.write(row_num, 3, product.get('width', ''), cell_format)
+                worksheet.write(row_num, 4, product.get('height', ''), cell_format)
+                worksheet.write(row_num, 5, product.get('depth', ''), cell_format)
+                worksheet.write(row_num, 6, product.get('category', ''), cell_format)
+                worksheet.write(row_num, 7, product.get('series', ''), cell_format)
+                zone_points = product.get('zonePoints', {}) or {}
+                for i, zk in enumerate(['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6']):
+                    worksheet.write(row_num, 8 + i, zone_points.get(zk, 0) or 0, cell_format)
+            
+            workbook.close()
+            output.seek(0)
+        
+        filename = f"catalogo_montada_{programa or 'completo'}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
     
     return StreamingResponse(
         output,
