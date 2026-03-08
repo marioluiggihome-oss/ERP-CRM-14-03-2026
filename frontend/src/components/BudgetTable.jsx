@@ -64,6 +64,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     height: 800,
     quantity: 1
   });
+  const [isDespieceWizardOpen, setIsDespieceWizardOpen] = useState(false);
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
   const [orderEmail, setOrderEmail] = useState('');
