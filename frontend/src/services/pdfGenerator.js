@@ -48,7 +48,11 @@ export const generateBudgetPDF = ({
   globalFinish = '',
   allProducts = [],
   calculateLineDetails = null,
-  ivaRate = 21
+  ivaRate = 21,
+  golaAlto = false,
+  golaAltoColor = '',
+  golaBajo = false,
+  golaBajoColor = ''
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
