@@ -1,4 +1,4 @@
-import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, PanelBottomClose, PanelBottomOpen, PanelTopClose, PanelTopOpen, FileText, ChevronDown, ChevronUp, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download, Scissors, CheckCircle, Paperclip, Mail, X, Upload, Image, FileImage, LayoutGrid, LayoutList, ArrowRightLeft, LogOut, Package, Factory } from 'lucide-react';
+import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, PanelBottomClose, PanelBottomOpen, PanelTopClose, PanelTopOpen, FileText, ChevronDown, ChevronUp, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download, Scissors, CheckCircle, Paperclip, Mail, X, Upload, Image, FileImage, LayoutGrid, LayoutList, ArrowRightLeft, LogOut, Package, Factory, Wand2 } from 'lucide-react';
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { exportToPdf } from '../utils/pdfHelper';
 import { generateBudgetPDF } from '../services/pdfGenerator';
@@ -6,6 +6,7 @@ import { DOOR_FINISHES, CabinetCategory } from '../constants';
 import Logo from './Logo';
 import DespieceModal from './DespieceModal';
 import DespieceCatalog from './DespieceCatalog';
+import DespieceWizard from './DespieceWizard';
 import ClientSelector from './ClientSelector';
 import CabinetIcon from './CabinetIcon';
 // Componentes refactorizados
