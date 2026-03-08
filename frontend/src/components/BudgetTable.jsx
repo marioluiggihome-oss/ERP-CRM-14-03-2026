@@ -2905,7 +2905,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
             budgetItemsDespiece: [...(prev.budgetItemsDespiece || []), ...newItems]
           }));
         }}
-        currentUser={currentUser}
+        currentUser={state.currentUser}
       />
 
       {/* Modal Confirmar Pedido */}
