@@ -8,6 +8,16 @@ import DespieceModal from './DespieceModal';
 import DespieceCatalog from './DespieceCatalog';
 import ClientSelector from './ClientSelector';
 import CabinetIcon from './CabinetIcon';
+// Componentes refactorizados
+import { 
+  DespieceAddModal,
+  DespieceFiltersHorizontal, 
+  DespieceFiltersVertical,
+  MontadaFiltersHorizontal,
+  MontadaFiltersVertical,
+  CatalogProductRowTable,
+  CatalogProductRowCard
+} from './budget';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
