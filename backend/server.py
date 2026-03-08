@@ -4886,7 +4886,7 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
         output.seek(0)
         
         # Log audit
-        await log_audit("database_export", user_id, "admin", True, {"tables": ["users", "products", "projects"]})
+        await log_audit("database_export", user_id, "admin", True, {"tables": ["users", "products_montada", "products_despiece", "projects"]})
         
         filename = f"LUIGGI_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
