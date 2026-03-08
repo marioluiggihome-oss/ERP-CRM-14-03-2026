@@ -54,6 +54,8 @@ async def send_email_with_resend(to_email: str, subject: str, html_content: str)
         
         resend.api_key = api_key
         
+        # Resend con cuenta gratuita solo permite enviar a emails verificados
+        # Usamos onboarding@resend.dev como remitente (dominio de prueba de Resend)
         params = {
             "from": "LUIGGI HOME <onboarding@resend.dev>",
             "to": [to_email],
@@ -66,7 +68,32 @@ async def send_email_with_resend(to_email: str, subject: str, html_content: str)
         logger.info(f"Email sent to {to_email} via Resend: {email.get('id')}")
         return True
     except Exception as e:
-        logger.error(f"Error sending email with Resend: {e}")
+        error_msg = str(e)
+        logger.error(f"Error sending email with Resend to {to_email}: {error_msg}")
+        
+        # Si el error es por restricción de dominio, intentar enviar al email de backup
+        if "only send testing emails to your own email" in error_msg:
+            backup_email = os.environ.get('BACKUP_EMAIL', 'marioluiggihome@gmail.com')
+            logger.info(f"Resend domain restriction - redirecting email to backup: {backup_email}")
+            try:
+                # Modificar el contenido para indicar el destinatario original
+                modified_html = f'''
+                <div style="background: #fef3c7; padding: 10px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                    <strong>📧 Email originalmente para:</strong> {to_email}
+                </div>
+                {html_content}
+                '''
+                params_backup = {
+                    "from": "LUIGGI HOME <onboarding@resend.dev>",
+                    "to": [backup_email],
+                    "subject": f"[REDIRIGIDO] {subject}",
+                    "html": modified_html
+                }
+                email = await asyncio.to_thread(resend.Emails.send, params_backup)
+                logger.info(f"Email redirected to backup {backup_email} via Resend: {email.get('id')}")
+                return True
+            except Exception as e2:
+                logger.error(f"Error sending to backup email: {e2}")
         return False
 
 
