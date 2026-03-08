@@ -1322,10 +1322,6 @@ async def export_products_to_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
-        output,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
 
 
 @api_router.get("/products/{product_id}", response_model=ProductModel)
