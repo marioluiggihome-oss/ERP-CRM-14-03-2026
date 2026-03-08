@@ -2634,6 +2634,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                 </div>
               </>
             )}
+              </>
+            )}
 
             {/* Cuando está cerrado, mostrar solo icono */}
             {!isCatalogOpen && (
