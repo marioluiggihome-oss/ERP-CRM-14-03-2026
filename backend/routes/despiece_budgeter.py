@@ -214,7 +214,7 @@ async def create_despiece_product(product: DespieceProductCreate):
     product_data["createdAt"] = datetime.now(timezone.utc).isoformat()
     
     await db.despiece_products.insert_one(product_data)
-    del product_data["_id"] if "_id" in product_data else None
+    product_data.pop("_id", None)
     return product_data
 
 
