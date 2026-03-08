@@ -1341,6 +1341,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                  <p className="text-[8px] text-purple-400 text-center font-bold">
                    {despieceProducts.length} productos
                  </p>
+                 {/* Botón para abrir el Wizard de Despiece */}
+                 <button 
+                   onClick={() => setIsDespieceWizardOpen(true)}
+                   className="w-full mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 rounded-xl font-black uppercase text-[9px] tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg"
+                   data-testid="despiece-wizard-btn"
+                 >
+                   <Wand2 size={14}/> WIZARD DESPIECE
+                 </button>
               </section>
               )}
               
