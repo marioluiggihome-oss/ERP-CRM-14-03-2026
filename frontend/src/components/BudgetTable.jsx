@@ -1973,82 +1973,20 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                 </div>
              </div>
              
-             <div className="h-[calc(100%-45px)] overflow-y-auto">
-                {/* Tabla de productos según modo */}
+             <div className="h-[calc(100%-45px)] overflow-hidden">
+                {/* Contenido según modo */}
                 {state.currentModule === 'despiece' ? (
-                  /* TABLA DE TABLEROS (Modo Despiece) */
-                  <table className="w-full text-left">
-                    <thead className="bg-purple-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
-                      <tr>
-                        <th className="p-2 pl-3 w-[70px]">TIPO</th>
-                        <th className="p-2 min-w-[150px]">COLOR / MODELO</th>
-                        <th className="p-2 w-[100px]">MEDIDAS</th>
-                        <th className="p-2 w-[80px]">ACABADO</th>
-                        <th className="p-2 w-[60px] text-center">GROSOR</th>
-                        <th className="p-2 w-[80px] text-right">PRECIO</th>
-                        <th className="p-2 w-[40px]"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-purple-50">
-                      {loadingDespiece ? (
-                        <tr>
-                          <td colSpan={7} className="p-8 text-center">
-                            <div className="flex flex-col items-center gap-2">
-                              <Package className="animate-pulse text-purple-400" size={32} />
-                              <span className="text-sm text-purple-400 font-bold">Cargando tableros...</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : despieceProducts.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="p-8 text-center">
-                            <div className="flex flex-col items-center gap-2">
-                              <Package className="text-slate-300" size={48} />
-                              <span className="text-sm text-slate-400 font-bold">No hay productos de tableros</span>
-                              <span className="text-xs text-slate-300">Selecciona filtros o verifica que haya datos cargados</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : despieceProducts.map(product => (
-                        <tr key={product.id} className="hover:bg-purple-50 cursor-pointer transition-colors group" onClick={() => {
-                          setDespieceAddModal({
-                            isOpen: true,
-                            product: product,
-                            width: product.width || 600,
-                            height: product.height || 800,
-                            quantity: 1
-                          });
-                        }}>
-                          <td className="p-2 pl-3">
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                              product.type === 'PUERTA' ? 'bg-purple-600 text-white' :
-                              product.type === 'COSTADO' ? 'bg-blue-600 text-white' :
-                              'bg-orange-600 text-white'
-                            }`}>{product.type}</span>
-                          </td>
-                          <td className="p-2">
-                            <span className="text-[10px] font-bold text-slate-700">{product.color}</span>
-                            <span className="text-[8px] text-slate-400 ml-1">({product.collection})</span>
-                          </td>
-                          <td className="p-2">
-                            <span className="text-[9px] font-bold text-purple-700">{product.height}×{product.width}mm</span>
-                          </td>
-                          <td className="p-2">
-                            <span className="text-[9px] text-slate-500">{product.finish}</span>
-                          </td>
-                          <td className="p-2 text-center">
-                            <span className="text-[10px] font-bold text-slate-700">{product.thickness}mm</span>
-                          </td>
-                          <td className="p-2 text-right">
-                            <span className="text-[11px] font-black text-purple-600">{product.priceZ1?.toFixed(2)}€</span>
-                          </td>
-                          <td className="p-2">
-                            <Plus size={16} className="text-slate-300 group-hover:text-purple-600 transition-colors" />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  /* FLUJO PASO A PASO (Modo Despiece) */
+                  <DespieceStepByStep
+                    onAddItems={(items) => {
+                      setState(prev => ({
+                        ...prev,
+                        budgetItemsDespiece: [...(prev.budgetItemsDespiece || []), ...items]
+                      }));
+                    }}
+                    despieceFilters={despieceFilters}
+                    setDespieceFilters={setDespieceFilters}
+                  />
                 ) : (
                   /* TABLA DE MUEBLES (Modo Montada) */
                   <table className="w-full text-left">
