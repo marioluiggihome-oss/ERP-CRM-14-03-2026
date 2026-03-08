@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import os
 import uuid
 
-router = APIRouter(prefix="/api/despiece-budgeter", tags=["despiece-budgeter"])
+router = APIRouter(prefix="/despiece-budgeter", tags=["despiece-budgeter"])
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL')
