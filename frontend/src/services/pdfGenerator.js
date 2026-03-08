@@ -670,15 +670,10 @@ export const generateArmariosDespiecePDF = ({
   }
   
   // Título
-  doc.setFontSize(14);
-  doc.setTextColor(...primaryColor);
-  doc.setFont('helvetica', 'bold');
-  doc.text(companyName, margin + 45, yPos + 6);
-  
   doc.setFontSize(9);
   doc.setTextColor(...accentColor);
   doc.setFont('helvetica', 'bold');
-  doc.text('DESPIECE ARMARIO', margin + 45, yPos + 12);
+  doc.text('DESPIECE ARMARIO', margin + 45, yPos + 6);
   
   doc.setFontSize(8);
   doc.setTextColor(...primaryColor);
