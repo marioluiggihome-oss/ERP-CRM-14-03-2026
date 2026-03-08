@@ -12,6 +12,7 @@ import CabinetIcon from './CabinetIcon';
 // Componentes refactorizados
 import { 
   DespieceAddModal,
+  DespieceStepByStep,
   DespieceFiltersHorizontal, 
   DespieceFiltersVertical,
   MontadaFiltersHorizontal,
