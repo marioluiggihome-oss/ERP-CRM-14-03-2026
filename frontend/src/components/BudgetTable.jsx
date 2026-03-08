@@ -1240,6 +1240,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                  </div>
               </section>
               
+              {/* GRUPO DE PRECIOS - Solo en modo MONTADA */}
+              {state.currentModule === 'montada' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
                  <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">GRUPO DE PRECIOS</h4>
                  <select 
@@ -1261,13 +1263,81 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                    <FileText size={12}/> CATÁLOGO MODELOS
                  </button>
               </section>
+              )}
+
+              {/* SELECCIÓN MATERIAL DESPIECE - Solo en modo DESPIECE */}
+              {state.currentModule === 'despiece' && (
+              <section className="space-y-1.5 pt-2 border-t border-purple-200">
+                 <h4 className="text-[9px] font-black text-purple-600 uppercase tracking-widest">
+                   <Factory size={10} className="inline mr-1" />
+                   MATERIAL DESPIECE
+                 </h4>
+                 <select 
+                   className="w-full bg-purple-50 text-purple-900 border-2 border-purple-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-purple-500 text-center" 
+                   value={despieceFilters.manufacturer}
+                   onChange={e => setDespieceFilters(prev => ({...prev, manufacturer: e.target.value}))}
+                 >
+                   <option value="">🏭 TODOS FABRICANTES</option>
+                   {despieceFilterOptions.manufacturers.map(m => (
+                     <option key={m} value={m}>{m}</option>
+                   ))}
+                 </select>
+                 <select 
+                   className="w-full bg-purple-50 text-purple-900 border-2 border-purple-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-purple-500 text-center" 
+                   value={despieceFilters.collection}
+                   onChange={e => setDespieceFilters(prev => ({...prev, collection: e.target.value}))}
+                 >
+                   <option value="">📦 TODAS COLECCIONES</option>
+                   {despieceFilterOptions.collections.map(c => (
+                     <option key={c} value={c}>{c}</option>
+                   ))}
+                 </select>
+                 <select 
+                   className="w-full bg-purple-50 text-purple-900 border-2 border-purple-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-purple-500 text-center" 
+                   value={despieceFilters.finish}
+                   onChange={e => setDespieceFilters(prev => ({...prev, finish: e.target.value}))}
+                 >
+                   <option value="">✨ TODOS ACABADOS</option>
+                   {despieceFilterOptions.finishes.map(f => (
+                     <option key={f} value={f}>{f}</option>
+                   ))}
+                 </select>
+                 <div className="flex gap-1">
+                   <select 
+                     className="flex-1 bg-purple-50 text-purple-900 border-2 border-purple-200 rounded-xl p-2 text-[9px] font-black outline-none cursor-pointer focus:border-purple-500 text-center" 
+                     value={despieceFilters.thickness}
+                     onChange={e => setDespieceFilters(prev => ({...prev, thickness: e.target.value}))}
+                   >
+                     <option value="">📏 GROSOR</option>
+                     {despieceFilterOptions.thicknesses.map(t => (
+                       <option key={t} value={t}>{t}mm</option>
+                     ))}
+                   </select>
+                   {(despieceFilters.manufacturer || despieceFilters.collection || despieceFilters.finish || despieceFilters.thickness) && (
+                     <button 
+                       onClick={() => setDespieceFilters({manufacturer: '', collection: '', finish: '', thickness: ''})}
+                       className="p-2 bg-red-100 text-red-500 rounded-xl hover:bg-red-200 transition-colors"
+                       title="Limpiar filtros"
+                     >
+                       <X size={12} />
+                     </button>
+                   )}
+                 </div>
+                 <p className="text-[8px] text-purple-400 text-center font-bold">
+                   {despieceProducts.length} productos
+                 </p>
+              </section>
+              )}
               
+              {/* ARMAZÓN - Solo en modo MONTADA */}
+              {state.currentModule === 'montada' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
                  <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">🏗️ ARMAZÓN</h4>
                  <select className="w-full bg-orange-50 text-orange-900 border-2 border-orange-200 rounded-xl p-2 text-[9px] font-black outline-none cursor-pointer focus:border-orange-500" value={state.selectedCarcassMaterialId} onChange={e => setState(p => ({...p, selectedCarcassMaterialId: e.target.value}))}>
                     {state.carcassMaterials.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                  </select>
               </section>
+              )}
 
               {/* Botón para añadir línea manual */}
               <section className="pt-2 border-t border-orange-100">
