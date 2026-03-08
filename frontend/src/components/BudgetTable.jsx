@@ -1114,6 +1114,55 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                  </div>
               </section>
 
+              {/* PERFILES GOLA */}
+              <section className="space-y-1.5 pt-2 border-t border-orange-100">
+                 <h4 className="text-[9px] font-black text-purple-600 uppercase tracking-widest">🔲 PERFILES GOLA</h4>
+                 <div className="space-y-2">
+                    {/* GOLA ALTO */}
+                    <div className="flex items-center gap-2">
+                       <label className="flex items-center gap-1 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={state.golaAlto || false} 
+                            onChange={e => setState(p => ({...p, golaAlto: e.target.checked, golaAltoColor: e.target.checked ? p.golaAltoColor : ''}))} 
+                            className="w-3.5 h-3.5 accent-purple-600"
+                          />
+                          <span className="text-[9px] font-bold text-purple-800">GOLA ALTO</span>
+                       </label>
+                       {state.golaAlto && (
+                         <input 
+                           type="text" 
+                           value={state.golaAltoColor || ''} 
+                           onChange={e => setState(p => ({...p, golaAltoColor: e.target.value}))} 
+                           className="flex-1 bg-purple-50 border-2 border-purple-200 rounded-lg p-1 text-[9px] font-bold outline-none focus:border-purple-500 text-purple-900" 
+                           placeholder="Color perfil"
+                         />
+                       )}
+                    </div>
+                    {/* GOLA BAJO */}
+                    <div className="flex items-center gap-2">
+                       <label className="flex items-center gap-1 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={state.golaBajo || false} 
+                            onChange={e => setState(p => ({...p, golaBajo: e.target.checked, golaBajoColor: e.target.checked ? p.golaBajoColor : ''}))} 
+                            className="w-3.5 h-3.5 accent-purple-600"
+                          />
+                          <span className="text-[9px] font-bold text-purple-800">GOLA BAJO</span>
+                       </label>
+                       {state.golaBajo && (
+                         <input 
+                           type="text" 
+                           value={state.golaBajoColor || ''} 
+                           onChange={e => setState(p => ({...p, golaBajoColor: e.target.value}))} 
+                           className="flex-1 bg-purple-50 border-2 border-purple-200 rounded-lg p-1 text-[9px] font-bold outline-none focus:border-purple-500 text-purple-900" 
+                           placeholder="Color perfil"
+                         />
+                       )}
+                    </div>
+                 </div>
+              </section>
+
               <div className="pt-3 space-y-1.5">
                  {items.length > 0 ? (
                    <>
