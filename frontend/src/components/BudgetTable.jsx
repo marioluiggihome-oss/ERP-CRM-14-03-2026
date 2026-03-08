@@ -623,6 +623,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         doorColorHigh: state.doorColorHigh || '',
         doorColorColumns: state.doorColorColumns || '',
         sideColor: state.sideColor || '',
+        // Perfiles GOLA
+        golaAlto: state.golaAlto || false,
+        golaAltoColor: state.golaAltoColor || '',
+        golaBajo: state.golaBajo || false,
+        golaBajoColor: state.golaBajoColor || '',
         selectedCarcassMaterialId: state.selectedCarcassMaterialId,
         status: 'activo',
         totalPvp: total // Incluir el total del presupuesto
