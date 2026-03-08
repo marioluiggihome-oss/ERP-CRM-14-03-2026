@@ -2340,6 +2340,77 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
           </div>
         </div>
       )}
+
+      {/* Modal de confirmación al salir con líneas sin guardar */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4 no-print">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-t-4 border-amber-500">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertCircle size={24} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-indigo-900">LÍNEAS SIN GUARDAR</h3>
+                <p className="text-sm text-slate-500">Tienes {(state.budgetItemsMontada?.length || 0) + (state.budgetItemsDespiece?.length || 0)} líneas pendientes</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-6">
+              ¿Qué deseas hacer con las líneas del presupuesto actual antes de salir?
+            </p>
+            
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={async () => {
+                  // Guardar y salir
+                  await handleSaveBudget();
+                  setShowExitConfirm(false);
+                  setState(prev => ({ 
+                    ...prev, 
+                    budgetItemsMontada: [], 
+                    budgetItemsDespiece: [],
+                    budgetNumber: '',
+                    customerName: '',
+                    customerAddress: '',
+                    internalReference: '',
+                    existingProjectId: null
+                  }));
+                }}
+                className="w-full bg-green-600 text-white py-3 rounded-xl font-bold uppercase text-sm flex items-center justify-center gap-2 hover:bg-green-700 transition-all"
+              >
+                <Save size={18} /> GUARDAR Y SALIR
+              </button>
+              
+              <button
+                onClick={() => {
+                  // Borrar y salir
+                  setShowExitConfirm(false);
+                  setState(prev => ({ 
+                    ...prev, 
+                    budgetItemsMontada: [], 
+                    budgetItemsDespiece: [],
+                    budgetNumber: '',
+                    customerName: '',
+                    customerAddress: '',
+                    internalReference: '',
+                    existingProjectId: null
+                  }));
+                }}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-bold uppercase text-sm flex items-center justify-center gap-2 hover:bg-red-700 transition-all"
+              >
+                <Trash2 size={18} /> DESCARTAR Y SALIR
+              </button>
+              
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="w-full bg-slate-200 text-slate-700 py-3 rounded-xl font-bold uppercase text-sm flex items-center justify-center gap-2 hover:bg-slate-300 transition-all"
+              >
+                <X size={18} /> CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
