@@ -227,9 +227,23 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule
     );
     // Filtrar por programa si está seleccionado
-    const programaFilteredProducts = selectedPrograma === 'TODOS'
+    let programaFilteredProducts = selectedPrograma === 'TODOS'
       ? currentModuleProducts
       : currentModuleProducts.filter(p => (p.programa || 'ESTÁNDAR') === selectedPrograma);
+    
+    // También aplicar filtros de medidas si están activos
+    if (filterHeight) {
+      const heightNum = parseInt(filterHeight);
+      programaFilteredProducts = programaFilteredProducts.filter(p => p.height && Math.abs(Number(p.height) - heightNum) <= 5);
+    }
+    if (filterWidth) {
+      const widthNum = parseInt(filterWidth);
+      programaFilteredProducts = programaFilteredProducts.filter(p => p.width && Math.abs(Number(p.width) - widthNum) <= 5);
+    }
+    if (filterDepth) {
+      const depthNum = parseInt(filterDepth);
+      programaFilteredProducts = programaFilteredProducts.filter(p => p.depth && Math.abs(Number(p.depth) - depthNum) <= 5);
+    }
     
     // Las categorías vienen directamente de los productos filtrados por programa
     // No necesitamos filtrado adicional por nombre
@@ -267,7 +281,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const orderB = categoryOrder[b] || 50;
       return orderA - orderB;
     });
-  }, [allProducts, state.currentModule, catalogs, selectedPrograma]);
+  }, [allProducts, state.currentModule, catalogs, selectedPrograma, filterWidth, filterHeight, filterDepth]);
 
   const uniqueSeries = useMemo(() => {
     const currentModuleProducts = allProducts.filter(p => 
