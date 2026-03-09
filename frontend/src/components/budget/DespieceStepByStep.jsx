@@ -65,7 +65,7 @@ const DespieceStepByStep = ({ onAddItems }) => {
       const params = new URLSearchParams();
       params.append('manufacturer', 'ALVIC');
       params.append('collection', collection);
-      params.append('limit', '3000');
+      params.append('limit', '2000');
       
       const url = `${API_URL}/api/despiece-budgeter/products?${params.toString()}`;
       console.log('Fetching:', url);
