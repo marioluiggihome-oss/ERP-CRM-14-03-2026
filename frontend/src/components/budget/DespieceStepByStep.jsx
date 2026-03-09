@@ -58,14 +58,27 @@ const DespieceStepByStep = ({ onAddItems }) => {
   
   const loadProducts = async (collection) => {
     setLoading(true);
+    setPriceMatrix({});
+    setProducts([]);
+    
     try {
       const params = new URLSearchParams();
       params.append('manufacturer', 'ALVIC');
       params.append('collection', collection);
       params.append('limit', '3000');
       
-      const response = await fetch(`${API_URL}/api/despiece-budgeter/products?${params.toString()}`);
+      const url = `${API_URL}/api/despiece-budgeter/products?${params.toString()}`;
+      console.log('Fetching:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        console.error('Response not ok:', response.status);
+        return;
+      }
+      
       const data = await response.json();
+      console.log('Products loaded:', data.length);
       setProducts(data);
       
       // Construir matriz Alto x Ancho
@@ -74,14 +87,15 @@ const DespieceStepByStep = ({ onAddItems }) => {
         const h = p.height || 0;
         const w = p.width || 0;
         const price = p.priceZ1 || p.price || 0;
-        if (h && w && price > 0) {
+        if (h > 0 && w > 0 && price > 0) {
           if (!matrix[h]) matrix[h] = {};
           matrix[h][w] = { price, product: p };
         }
       });
+      console.log('Matrix heights:', Object.keys(matrix).length);
       setPriceMatrix(matrix);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error loading products:', error);
     } finally {
       setLoading(false);
     }
