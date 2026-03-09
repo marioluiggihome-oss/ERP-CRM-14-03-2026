@@ -1,5 +1,37 @@
 # LUIGGI HOME - Kitchen Budget ERP/CRM
 
+## Completed Tasks - Session Mar 9, 2026
+
+### ✅ P0 - Importación Tarifa Puertas ALVIC (Excel)
+- Importados **5,495 productos** desde "Tarifa cocina Puertas DF (abr-2025).xlsx"
+- **PUERTAS:** 5,306 combinaciones Alto × Ancho
+- **TIRADORES:** 189 combinaciones (6 modelos)
+- Colecciones: VIFORMING, SYNCRON, LUXE (A, B), LUXE PLUS, ZENIT, MATTDECO, TR-MAX, EUROFORMING
+- Dimensiones: Alto 138-2498mm × Ancho 100-1197mm
+- Precios: 7.92€ - 406.09€
+
+### ✅ P0 - Unificación Fabricantes DF → ALVIC
+- DF y ALVIC son la misma empresa
+- Todos los productos unificados bajo **ALVIC**
+- Total: **5,968 productos** en `despiece_products`
+
+### ✅ P0 - Nuevo Flujo Presupuestador DESPIECE
+**Componente `DespieceStepByStep.jsx`** - Flujo paso a paso:
+1. **Paso 1:** Seleccionar Categoría (Puertas/Tiradores)
+2. **Paso 2:** Seleccionar Modelo/Colección
+3. **Paso 3:** Ver **Matriz de Precios** (Alto × Ancho)
+4. **Click en celda** → Añade item al presupuesto
+
+**Características:**
+- Matriz visual con precios exactos según tarifa
+- Breadcrumb navegable (PUERTA → MODELO → MEDIDAS)
+- Añadir múltiples items desde la matriz
+- Sección "DESPIECE - TABLEROS" en presupuesto
+
+### ✅ P1 - Eliminación Iconos de Exportación
+- Removidos iconos Excel/PDF de las 3 vistas del catálogo
+- Funcionalidad disponible solo en Panel Maestro
+
 ## Completed Tasks - Session Mar 8, 2026
 
 ### ✅ P0 - Bug Fix: Filtros de librería DESPIECE (NUEVO)
