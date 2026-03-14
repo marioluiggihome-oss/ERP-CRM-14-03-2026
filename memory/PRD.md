@@ -92,10 +92,10 @@ Colecciones:
 
 ## BIBLIOTECAS/TARIFAS
 
-| Código | Nombre | Sistema Precios | Productos | Estado |
-|--------|--------|-----------------|-----------|--------|
-| ZC | Zona Cocinas | ZONAS (Z1-Z12) | 7,045 | ✅ Activa |
-| MV | Muebles Valencia | TARIFAS (T1-T21) | 575 | ✅ Activa (precios parciales) |
+| Código | Nombre | Sistema Precios | Productos | Con Precios | Estado |
+|--------|--------|-----------------|-----------|-------------|--------|
+| ZC | ZC | ZONAS (Z1-Z12) | 7,045 | 7,045 | ✅ Activa |
+| MV | MV | TARIFAS (T1-T21) | 656 | 384 | ✅ Activa |
 
 ---
 
