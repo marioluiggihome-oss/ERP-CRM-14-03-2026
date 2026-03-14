@@ -75,29 +75,37 @@ async def get_libraries():
     
     # Si no hay bibliotecas, crear las predeterminadas
     if not libraries:
+        # ZC: Sistema de ZONAS (Z1-Z12)
+        zc_zones = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"]
+        
+        # MV: Sistema de TARIFAS (T1-T21)
+        mv_tariffs = [f"T{i}" for i in range(1, 22)]  # T1, T2, ..., T21
+        
         default_libraries = [
             {
                 "id": "lib-zc",
                 "code": "ZC",
                 "name": "Zona Cocinas",
-                "description": "Catálogo de muebles de cocina Zona Cocinas",
+                "description": "Catálogo de muebles de cocina Zona Cocinas - Sistema de ZONAS",
                 "currency": "points",
                 "pointValue": 1.0,
                 "isActive": True,
                 "productCount": await db.products.count_documents({"library": "ZC"}),
-                "zones": ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"],
+                "pricingSystem": "zones",
+                "priceLevels": zc_zones,
                 "createdAt": datetime.now(timezone.utc).isoformat()
             },
             {
                 "id": "lib-mv",
                 "code": "MV",
                 "name": "Muebles Valencia",
-                "description": "Catálogo de muebles Valencia (pendiente importación)",
+                "description": "Catálogo Muebles Valencia - Sistema de TARIFAS (T1-T21)",
                 "currency": "points",
                 "pointValue": 1.0,
                 "isActive": False,
                 "productCount": 0,
-                "zones": ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"],
+                "pricingSystem": "tariffs",
+                "priceLevels": mv_tariffs,
                 "createdAt": datetime.now(timezone.utc).isoformat()
             }
         ]
