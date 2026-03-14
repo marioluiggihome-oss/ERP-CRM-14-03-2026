@@ -47,7 +47,8 @@ from routes import (
     clients_router,
     projects_router,
     crm_router,
-    despiece_budgeter_router
+    despiece_budgeter_router,
+    libraries_router
 )
 
 # Modelos compartidos
