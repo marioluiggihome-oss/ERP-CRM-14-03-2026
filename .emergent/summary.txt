@@ -1,128 +1,128 @@
 <analysis>**original_problem_statement:**
 The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The project's primary focus is a highly detailed, user-guided audit and reconstruction of the product catalog (mega-auditoría). The user is also requesting significant feature additions and bug fixes, particularly for the Digitalizador (draft digitizer), Armarios (wardrobes), and general CRM functionalities.
 
+In this session, the user's requests evolved:
+1.  **Import New Tariff:** Import, parse, and integrate a new despiece (component) price list from an Excel file.
+2.  **Fix Despiece Budgeter:** The user rejected the existing despiece UI and requested a new step-by-step flow: . Clicking a price in the matrix should add the item to the budget, and its dimensions should be editable.
+3.  **Unify Manufacturers:** The user requested that the DF and ALVIC manufacturers be merged into a single ALVIC entity.
+4.  **Fix Budget Calculation:** The user reported a critical bug where items added via the new despiece module are not included in the main budget's total calculation.
+5.  **Create Multi-Library System:** The user requested a new feature to support multiple, distinct product libraries for montada (assembled) items. The current library is to be named ZC, and a new one, MV, needs to be created from product data provided in PDF files. The MV library uses a points system instead of currency. Admins should be able to assign which libraries a user can access.
+
 **PRODUCT REQUIREMENTS:**
+(From previous sessions, with new items in bold)
 1.  **Clone LUIGGI HOME application:** Replicate the design and functionality.
-2.  **Data Integrity:** Ensure the final database is a clean and consistent representation of the user-provided product data. This involves extensive data normalization of product  and dimensions.
+2.  **Data Integrity:** Ensure a clean and consistent database.
 3.  **Digitalizador Component Enhancements:** Implement COST mode, generate unique expediente numbers, and improve the Analyzer.
-4.  **DESPIECE Module:** Implement a new module for despiece (component-based) budgeting with specific parameters (Manufacturer, Model, Color, etc.) based on user-provided tariffs and price matrices. This should be integrated into a COCINA DESPIECE tab, not a separate modal.
+4.  **DESPIECE Module:** **Implement a step-by-step, matrix-based budgeting system for component parts.**
 5.  **User Roles & Permissions:** Implement strict, independent permissions for each module.
-6.  **Authentication & Notifications:** Implement user self-registration, optional 2FA management, and admin notifications for new sign-ups. Emails should feature the company logo.
-7.  **UI/UX Improvements:** Add dimension-based filters, improve search functionality, add column sorting, and fix UI glitches. The user wants the UI to follow a specific design provided in documents.
-8.  **Data Export:** Provide functionality to export the product catalog to Excel and PDF formats. The user has requested this be updated to show the current, audited data.
-9.  **Backup/Restore:** Provide a mechanism for the user to manually create and restore database backups. The user has also asked about automatic daily backups.
+6.  **Authentication & Notifications:** Implement user self-registration, optional 2FA, and admin notifications.
+7.  **UI/UX Improvements:** Add dimension-based filters, improve search, add column sorting, and fix UI glitches.
+8.  **Data Export:** Provide functionality to export the product catalog to Excel and PDF formats.
+9.  **Backup/Restore:** Provide a mechanism for manual and automatic database backups.
+10. **Multi-Library System:** **Create a system for multiple montada libraries (e.g., ZC, MV) and allow admins to control user access to them.**
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The core is the  component, which handles budgeting for both assembled kitchens (montada) and component parts (despiece).
+A full-stack React/FastAPI/MongoDB application. The agent has successfully imported a new despiece (component) tariff from an Excel file, parsing and inserting over 5,400 new products into the  collection. All despiece products from DF and ALVIC have been unified under a single manufacturer, ALVIC.
 
-In this session, the agent performed a massive data audit and refactoring effort:
-*   **Database Unification & Cleaning:**
-    *   Identified and fixed a critical bug where the backend was reading from a stale  instead of the intended , causing old data (like the ALUMINIO product line) to persist.
-    *   Completely separated products into two distinct collections:  for assembled furniture (montada) and  for component boards (despiece).
-    *   Removed the entire ALUMINIO product line as requested.
-    *   Corrected product names and categories based on attributes (e.g., items with height > 180cm were moved from ALTOS to COLUMNAS).
-    *   Normalized product series names to reflect their actual dimensions (e.g., ALTO 127 FONDO 33 was renamed to ALTO 120 FONDO 33 for products that were 120cm high).
-*   **UI/UX Fixes & Improvements:**
-    *   Fixed a bug where the product library sidebars showed incorrect filters when in DESPIECE mode.
-    *   Compacted the layout of the sidebar summary indicators to use less vertical space.
-    *   Began removing export (Excel/PDF) icons from the main budget view, per user request.
-*   **Feature Implementation & Refactoring:**
-    *   Integrated the  component, providing a step-by-step modal for adding component-based products.
-    *   Partially refactored the massive  component (from >3400 to ~3000 lines) by extracting logic into new, smaller components (, , etc.).
-*   **Backend:**
-    *   Updated the automatic backup system to include the new  collection.
-    *   Updated the catalog export endpoint () to generate a two-sheet Excel file with both montada and despiece products.
+The despiece budgeting module has been completely overhauled. The old filter-based library has been replaced with a new step-by-step component, , which guides the user through . This new component successfully fetches data and displays an interactive price matrix. Users can click on a price to add the corresponding item to a dedicated DESPIECE - TABLEROS section in the budget.
+
+However, a critical bug was introduced: the prices of these new despiece items are not being summed into the main budget's total ().
 
 **Last working item**:
-- Last item agent was working: The user uploaded an image of a product () and asked en q pagina está este producto (what page is this product on?). The agent has not yet addressed this question.
+- Last item agent was working: The user introduced a major new feature request: create a multi-library system (ZC and MV) for montada products, with the MV library data to be extracted from PDFs. The agent had just started analyzing the provided PDFs. However, this task interrupted the critical debugging of the budget calculation bug. The immediate priority is to fix the budget calculation.
 - Status: NOT STARTED
 - Agent Testing Done: N
 - Which testing method agent to use? backend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Find location of product  (P0)**
-- **Issue 2: Remove export icons from all catalog libraries (P1)**
+- **Issue 1: Despiece items are not added to the total budget (P0 - CRITICAL)**
+- **Issue 2: Create MV Library and Multi-Library System (P0)**
 - **Issue 3: Visual Glitch with Collapsed Vertical Sidebar (P2 - Recurring)**
 - **Issue 4: Verify updated Catalog Export (Excel/PDF) format (P2)**
 - **Issue 5: Fix User Registration Email Flow (P3 - Blocked)**
 
 **Issues Detail:**
-- **Issue 1: Find location of product **
-    - **Attempted fixes:** None. This is the user's latest direct question.
-    - **Next debug checklist:**
-        1.  Query the  collection in the  to find the details of the product with .
-        2.  Determine its category and series.
-        3.  Explain to the user how to navigate to that product in the UI using the filters (e.g., Select PROGRAMA: ESTÁNDAR, CATEGORÍA: ALTOS, SERIE: ALTO 90 FONDO 33).
-    - **Why fix this issue and what will be achieved with the fix?** To directly answer the user's question and demonstrate the data is now correctly organized.
-    - **Status:** NOT STARTED
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** Backend
-    - **Blocked on other issue:** None.
-- **Issue 2: Remove export icons from all catalog libraries**
-    - **Attempted fixes:** The agent successfully removed the icons from the horizontal () catalog library view inside .
+- **Issue 1: Despiece items are not added to the total budget**
+    - **Attempted fixes:** The agent identified that the  calculation in  only considers  (from the  state for montada products) and ignores the  state. The investigation was interrupted before a fix could be implemented.
     - **Next debug checklist:**
         1.  Edit .
-        2.  Locate the JSX for the  (right) and  library views.
-        3.  Remove the  and  icon buttons, leaving only the layout-switching icons.
-    - **Why fix this issue and what will be achieved with the fix?** Fulfills the user's request to declutter the main interface and centralize export functionality in the admin panel.
+        2.  Locate the  hook that calculates the  (around line 748).
+        3.  Modify the calculation to reduce and sum the prices from both  (montada) and .
+        4.  Ensure the grand total correctly reflects the sum of both sections.
+    - **Why fix this issue and what will be achieved with the fix?** This is a critical, show-stopping bug. The entire despiece module is unusable for budgeting until the totals are calculated correctly.
     - **Status:** IN PROGRESS
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Frontend
     - **Blocked on other issue:** None.
+- **Issue 2: Create MV Library and Multi-Library System**
+    - **Attempted fixes:** The agent started analyzing the user-provided PDFs.
+    - **Next debug checklist:** This is a large feature.
+        1.  **Backend:**
+            -   Modify the  schema to include a  field (e.g., 'ZC', 'MV').
+            -   Modify the  schema to include an array of .
+            -   Update all product-fetching endpoints to filter by the user's .
+            -   Create admin endpoints to manage  for users.
+        2.  **Data Extraction:**
+            -   Develop a robust script to extract product data (code, name, category, points) from the provided PDFs for the 'MV' library. This may require OCR or advanced PDF parsing.
+        3.  **Frontend:**
+            -   Update the UI to allow users with multiple libraries to switch between them.
+            -   Create an admin panel interface for managing library access.
+    - **Why fix this issue and what will be achieved with the fix?** Fulfills a major user requirement for business expansion, allowing different product catalogs for different client segments.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Both
+    - **Blocked on other issue:** Should be started after Issue 1 is resolved.
 - **Issue 3: Visual Glitch with Collapsed Vertical Sidebar**
-    - **Attempted fixes:** Multiple CSS adjustments in previous sessions failed. The agent added  in this session, but the issue may persist.
-    - **Next debug checklist:** Re-examine CSS in , focusing on , , and how the main content's  or  is adjusted when the sidebar state changes. A screenshot of the specific glitch would be helpful.
-    - **Why fix this issue and what will be achieved with the fix?** It is a persistent UI complaint from the user.
+    - **Attempted fixes:** Multiple CSS adjustments in previous sessions failed.
+    - **Next debug checklist:** Re-examine CSS in , focusing on , , and layout shifts.
+    - **Why fix this issue and what will be achieved with the fix?** It is a persistent UI complaint.
     - **Status:** NOT STARTED
     - **Is recurring issue?** Y
     - **Should Test frontend/backend/both after fix?** Frontend
     - **Blocked on other issue:** None.
 - **Issue 4: Verify updated Catalog Export (Excel/PDF) format**
-    - **Attempted fixes:** The agent updated the backend endpoint () to export both montada and despiece products.
-    - **Next debug checklist:**
-        1.  Ask the user to test the download from the Inventory section in the master panel.
-        2.  Confirm if the new two-sheet format and the audited data meet their needs.
-    - **Why fix this issue and what will be achieved with the fix?** The user previously rejected the export format. This new version needs validation.
+    - **Attempted fixes:** The backend endpoint was updated to export both montada and despiece products.
+    - **Next debug checklist:** Ask the user to test the download from the Inventory section and confirm if the format is correct.
+    - **Why fix this issue and what will be achieved with the fix?** The feature was previously rejected and needs validation.
     - **Status:** USER VERIFICATION PENDING
     - **Is recurring issue?** Y
     - **Should Test frontend/backend/both after fix?** Backend
     - **Blocked on other issue:** User feedback.
 - **Issue 5: Fix User Registration Email Flow**
-    - **Attempted fixes:** Switched to Resend, but implemented a workaround to send all emails to a backup address due to domain verification limits on the free tier.
-    - **Next debug checklist:** Advise the user that they must verify their domain in their Resend account to send emails to arbitrary addresses. Once they confirm, update  to remove the hardcoded backup email.
-    - **Why fix this issue and what will be achieved with the fix?** The current implementation is a temporary hack and not suitable for production.
+    - **Attempted fixes:** Implemented a workaround using a backup email address.
+    - **Next debug checklist:** Advise the user to verify their domain in Resend.
+    - **Why fix this issue and what will be achieved with the fix?** The current implementation is a temporary hack.
     - **Status:** BLOCKED
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Backend
     - **Blocked on other issue:** User action (domain verification).
 
 **In progress Task List**:
-- **Task 1: Complete removal of export icons from BudgetTable.jsx (P1)**
-    - **Where to resume:** Modify  to remove the export buttons from the  and  catalog library views.
-    - **What will be achieved with this?** A cleaner UI in the main budget editor, as requested by the user.
+- **Task 1: Fix Despiece Budget Calculation (P0)**
+    - **Where to resume:** .
+    - **What will be achieved with this?** The main budget total will correctly sum the prices of both montada and despiece items, making the new despiece module functional.
     - **Status:** IN PROGRESS
     - **Should Test frontend/backend/both after fix?** Frontend
     - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P0) **CRITICAL Frontend Refactoring**: Continue decomposing  (currently ~3000 lines). Extract the main catalog library and sidebar into their own components.
+    - (P0) **Implement Multi-Library System:** Create the MV and ZC libraries and the admin functionality to manage user access, as described in Issue 2.
+    - (P1) **CRITICAL Frontend Refactoring**: Continue decomposing  (currently ~2900 lines).
 - **Future Tasks:**
-    - (P1) **Frontend Refactoring**: Decompose  (>4100 lines).
-    - (P2) **Backend Refactoring**: Move all remaining endpoints from  into dedicated routers.
+    - (P2) **Frontend Refactoring**: Decompose  (>4100 lines).
+    - (P3) **Backend Refactoring**: Move all remaining endpoints from  into dedicated routers.
 
 **Completed work in this session**
-- **Database Audit & Unification**: Corrected the DB connection to use , separated montada () and despiece () items, and removed the ALUMINIO line.
-- **Data Normalization**: Corrected hundreds of product names, categories, and series to match their actual dimensions and types (e.g., ALTOS with height 220cm became COLUMNAS).
-- **UI Bug Fix**: Resolved issue where DESPIECE libraries showed MONTADA filters.
-- **UI Compaction**: Reduced the vertical space used by sidebar summary indicators.
-- **Partial Refactor of **: Reduced line count from >3400 to ~3000 and created several new components under .
-- ** Integration**: The new wizard component is now active and opens from the DESPIECE module.
-- **Backup System Improvement**: The daily automatic backup job was updated to include the  collection.
-- **Excel Export Update**: The backend endpoint for exporting the catalog now includes both montada and despiece products in separate sheets.
+- **Despiece Tariff Import:** Successfully parsed and imported over 5,400 component products (doors, handles) from the user-provided Excel file into the  collection.
+- **Manufacturer Unification:** Merged all DF and ALVIC products in the database into a single ALVIC manufacturer, simplifying the data model.
+- **Despiece Module Overhaul:** Replaced the old filterable list with a new, step-by-step UI () that implements the user-requested  flow.
+- **Backend API Enhancement:** Created a new endpoint () to provide dynamically filtered collections for the new UI.
+- **Bug Fix (Price Matrix):** Resolved multiple frontend and backend bugs, including a regex issue with special characters and a Pydantic validation error, to make the price matrix display correctly.
+- **UI Decluttering:** Removed all export icons (Excel/PDF) from the three different catalog library views (, , ) in .
 
 **Earlier issues found/mentioned but not fixed**
 - **Issue 1: Catalog Export format might still not meet user needs**
@@ -138,67 +138,64 @@ In this session, the agent performed a massive data audit and refactoring effort
 
 
 **Key Technical Concepts**
-- **Component Refactoring:** The process of breaking down the massive  into smaller, manageable components under  has begun.
-- **Database Auditing & Normalization:** The session involved extensive, direct manipulation of MongoDB collections to clean, separate, and correct thousands of product records. This was critical to fix data integrity issues.
-- **Fixing Environment Mismatches:** A key bug was traced to the backend using  while the agent was debugging , leading to stale data. All operations now correctly target .
-- **Conditional UI:** The application heavily relies on  to render different filters and layouts for montada vs. despiece modes. This was debugged and fixed.
+- **Step-by-Step UI Flow:** The despiece module was rebuilt around a multi-step component () that guides the user through selections rather than presenting a large, filterable dataset.
+- **Dynamic Backend Filtering:** A new endpoint was created to serve filtered data based on user selections in the frontend, enabling the step-by-step UI.
+- **Database Data Unification:** A script was run to merge two manufacturers (DF, ALVIC) into one (ALVIC), cleaning the data and simplifying frontend logic.
+- **Complex Data Parsing:** The agent wrote Python scripts using  to parse a complex, multi-sheet Excel file with matrix-based pricing.
+- **State Management for Totals:** The current bug highlights the separation of state for montada () and despiece () items and the need to combine them for final calculations.
 
 **key DB schema**
-- **products**: (in ) Stores montada (assembled) products. Contains , , , , , , , , .
-- **despiece_products**: (in ) Stores despiece (component) products. Contains , ,  (e.g., 'PUERTA'), , , , .
-- **backup_history**: Logs of all manual and automatic database backups.
+- **products**: (in ) Stores montada (assembled) products.
+- **despiece_products**: (in ) Stores despiece (component) products. Heavily populated in this session with new ALVIC products from the Excel tariff. All have .
+- **backup_history**: Logs of database backups.
 
 **changes in tech stack**
-- No changes in the core tech stack. The most significant change was the database schema organization, splitting one overloaded collection into two distinct ones ( and ).
+- No changes in the core tech stack.
 
 **All files of reference**
-- : Central component, partially refactored but still the main focus.
-- : Heavily modified to perform data audits, update export logic, and improve backup functionality.
-- : Updated to support new filtering criteria.
-- : New directory containing the extracted components from .
-- : The file for the new despiece UI wizard.
+- : The main component, modified to integrate the new despiece flow and where the budget total bug resides.
+- : The new, central component for the entire despiece budgeting flow.
+- : Modified to add a new endpoint for filtering collections and to fix a regex bug.
+- : Updated with the new features and fixes.
 
 **Areas that need refactoring**:
-- **/app/frontend/src/components/BudgetTable.jsx**: **CRITICAL**. Despite being reduced to ~3000 lines, it is still a god component and must be broken down further.
-- **/app/frontend/src/components/SettingsModal.jsx**: This >4100 line file is extremely difficult to maintain and should be refactored into smaller components for each tab.
+- **/app/frontend/src/components/BudgetTable.jsx**: **CRITICAL**. Still over 2900 lines.
+- **/app/frontend/src/components/SettingsModal.jsx**: Over 4100 lines and needs to be broken down.
 
 **key api endpoints**
-- : Fetches montada products from the  collection.
-- : Fetches despiece products from the  collection.
-- : Exports a two-sheet Excel file containing data from both product collections.
-- : Checks the status of the automated backup scheduler.
+- : **NEW**. Fetches collections for a specific manufacturer.
+- : Fetches despiece products. Heavily used and debugged.
+- : Fetches available filters for despiece products.
 
 **Critical Info for New Agent**
-- **Database is Key:** The database has been heavily audited. The correct DB is . Montada items are in , Despiece items are in . Do not mix them.
-- **Answer User First:** The user's last question is en q pagina está este producto (). This should be your first action.
-- **Refactoring is In-Progress:** The  refactor is not complete. You are expected to continue this work to improve maintainability.
-- **Export Icons:** The task to remove export icons from the catalog views is half-done. You need to remove them from the  and  views in .
+- **PRIORITIZE THE BUG FIX:** The most important first step is to fix the bug where despiece items are not added to the budget total. This is in . Without this fix, the main feature worked on in this session is incomplete.
+- **New Feature Request is Large:** The user's request for a multi-library system (ZC / MV) is a significant architectural change. Plan it carefully after fixing the budget bug.
+- **Despiece Flow is New:** The entire despiece module now relies on . All future changes to this flow should start there.
+- **Database is Cleaned:** All despiece products from the user's Excel file are now in the  collection under the manufacturer ALVIC.
 
 **documents and test reports created in this job**
-- 
-- 
--  (updated)
+-  (updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **LATEST/PENDING**: User asks on which page a specific product is located (), providing a screenshot. (UNADDRESSED)
-2.  User asks to remove export icons from the budget view and move them to the inventory section in the master panel. (IN PROGRESS)
-3.  User points out that a product with 220cm height is mislabeled as ALTO (high cabinet) when it should be a COLUMNA (column), and asks to make the sidebar indicators more compact. (RESOLVED)
-4.  User provides an image of the DESPIECE library and asks to prepare it so each item is a line of door measurements, with modifiable dimensions. (RESOLVED)
-5.  User asks to rename product series to reflect real dimensions and to ensure the ALTO FONDO 33 series disappears. (RESOLVED)
-6.  User points out that products with specific dimensions (ALTO=127, FONDO=33) are in the wrong series. (RESOLVED)
-7.  User provides a screenshot of a product in the COLUMNAS category that is incorrectly named ALTO 1 puerta instead of COLUMNA 1 puerta. (RESOLVED)
-8.  User asks if databases can always be exported and if daily backups are scheduled. (RESOLVED, system confirmed)
-9.  User asks for the database of montada and despiece items to be unified, audited, and for the inventory export to be updated. (RESOLVED)
-10. User provides a screenshot showing the ALUMINIO program still visible in the UI and asks to fix it. (RESOLVED, was a backend cache/wrong DB issue)
+1.  **LATEST/NEW FEATURE**: User asks to create a new MV product library from PDFs, separate from the existing ZC one, and create an admin system to manage access. (NOT STARTED)
+2.  User asks for a test. (AGENT REPLIED)
+3.  **BUG REPORT**: User provides a screenshot showing that despiece items are added but the total budget remains at €0.00. (IN PROGRESS)
+4.  User approves the implemented despiece flow.
+5.  User clarifies that ALVIC and DF are the same company and asks the agent to unify them and optimize the library. (RESOLVED)
+6.  Agent's attempt to fix the UI with useCallback timed out.
+7.  User chooses Option A to integrate the step-by-step wizard directly into the despiece tab. (RESOLVED)
+8.  Agent asks for clarification on how to proceed with the despiece UI redesign. (USER REPLIED)
+9.  **BUG REPORT**: User states the despiece budgeter is wrong and explains the correct flow should be Manufacturer -> Model -> Price Matrix. (RESOLVED, new UI implemented)
+10. User confirms to proceed with removing export icons. (RESOLVED)
 
 **Project Health Check:**
 - **Broken:**
-    - The format of the **Catalog Export** feature is still pending user verification. Although the backend logic was updated to include all products, the user may still reject the layout/format.
+    - **Budget Total Calculation:** The main budget total in  does not include items from the despiece section. This is a critical functionality bug.
 - **Mocked:** N/A
 
 **3rd Party Integrations**
-- **Resend:** (Requires User API Key) - Used for sending emails, currently with a temporary workaround.
-- **xlsxwriter / openpyxl:** For backend Excel file generation.
+- **Resend:** (Requires User API Key) - For emails, currently has a workaround.
+- **xlsxwriter / openpyxl:** Used for backend Excel file generation and parsing.
 - **reportlab / cairosvg:** For backend PDF file generation.
 - **jspdf / html2canvas:** For client-side PDF generation.
 - **pyotp / qrcode:** For 2FA implementation.
@@ -206,15 +203,16 @@ In this session, the agent performed a massive data audit and refactoring effort
 - **apscheduler:** For running daily automatic database backups.
 
 **Testing status**
-- Testing agent used after significant changes: YES. Two test runs were executed after major bug fixes and refactoring, with 100% success reported.
+- Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: None
-- Known regressions: The visual glitch with the collapsed sidebar is a persistent, recurring issue.
+- Known regressions:
+    - The visual glitch with the collapsed sidebar is a persistent, recurring issue.
+    - A new major regression was introduced: budget total calculation is broken for despiece items.
 
 **Credentials to test flow:**
 - **User:** 
 - **Password:** 
 
 **What agent forgot to execute**
-- The agent has not yet answered the user's most recent question about finding a product's location.
-- The agent was interrupted while removing the export icons from  and only completed the task for one of the three library positions.</analysis>
+- The agent was interrupted while debugging the critical budget calculation bug. The fix for this issue in  was identified but not implemented. This must be the next action.</analysis>
