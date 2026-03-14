@@ -207,10 +207,15 @@ const App = () => {
   const handleLogin = (user) => {
     // Al hacer login, limpiar los items del presupuesto para evitar 
     // que un usuario vea los datos de otro usuario
+    const userLibraries = user.allowedLibraries || ['ZC'];
+    const defaultLibrary = userLibraries[0] || 'ZC';
+    
     setState(prev => ({ 
       ...prev, 
       currentUser: user,
       currentModule: user.allowedModules?.[0] || 'montada',
+      currentLibrary: defaultLibrary,
+      allowedLibraries: userLibraries,
       // Limpiar presupuesto actual al cambiar de usuario
       budgetItemsMontada: [],
       budgetItemsDespiece: [],
@@ -225,12 +230,42 @@ const App = () => {
       golaAlto: false, golaAltoColor: '',
       golaBajo: false, golaBajoColor: ''
     }));
+    
+    // Recargar productos de la biblioteca del usuario
+    loadProductsByLibrary(defaultLibrary);
+    
     // Limpiar localStorage también
     try {
       localStorage.removeItem('luiggi_budget_data');
     } catch (e) {
       console.error("Error clearing localStorage:", e);
     }
+  };
+
+  // Función para cargar productos de una biblioteca específica
+  const loadProductsByLibrary = async (libraryCode) => {
+    try {
+      const [productsMontada, productsDespiece] = await Promise.all([
+        productsAPI.getAll('montada', libraryCode),
+        productsAPI.getAll('despiece', libraryCode)
+      ]);
+      
+      setState(prev => ({
+        ...prev,
+        currentLibrary: libraryCode,
+        catalogs: [
+          { id: 'cat-m-base', name: `${libraryCode} - Montada`, manufacturer: libraryCode, products: productsMontada, module: 'montada', library: libraryCode },
+          { id: 'cat-d-base', name: `${libraryCode} - Despiece`, manufacturer: libraryCode, products: productsDespiece, module: 'despiece', library: libraryCode }
+        ]
+      }));
+    } catch (error) {
+      console.error('Error loading library products:', error);
+    }
+  };
+
+  // Handler para cambio de biblioteca
+  const handleLibraryChange = (libraryCode) => {
+    loadProductsByLibrary(libraryCode);
   };
 
   // Function to generate possible product codes from furniture dimensions
