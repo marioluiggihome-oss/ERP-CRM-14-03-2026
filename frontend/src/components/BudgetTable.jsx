@@ -1418,12 +1418,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               </section>
               )}
               
-              {/* ARMAZÓN - Solo en modo MONTADA */}
+              {/* ARMAZÓN - Solo en modo MONTADA - Filtrado por biblioteca */}
               {state.currentModule === 'montada' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
-                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">🏗️ ARMAZÓN</h4>
+                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">🏗️ ARMAZÓN ({state.currentLibrary})</h4>
                  <select className="w-full bg-orange-50 text-orange-900 border-2 border-orange-200 rounded-xl p-2 text-[9px] font-black outline-none cursor-pointer focus:border-orange-500" value={state.selectedCarcassMaterialId} onChange={e => setState(p => ({...p, selectedCarcassMaterialId: e.target.value}))}>
-                    {state.carcassMaterials.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    {state.carcassMaterials
+                      .filter(m => !m.library || m.library === state.currentLibrary)
+                      .map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                  </select>
               </section>
               )}
