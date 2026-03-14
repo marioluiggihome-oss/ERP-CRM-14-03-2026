@@ -44,7 +44,8 @@ class LibraryCreate(BaseModel):
     description: str = ""
     currency: str = "points"
     pointValue: float = 1.0
-    zones: List[str] = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"]
+    pricingSystem: str = "zones"  # "zones" o "tariffs"
+    priceLevels: List[str] = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"]
 
 
 class LibraryUpdate(BaseModel):
@@ -53,7 +54,8 @@ class LibraryUpdate(BaseModel):
     currency: Optional[str] = None
     pointValue: Optional[float] = None
     isActive: Optional[bool] = None
-    zones: Optional[List[str]] = None
+    pricingSystem: Optional[str] = None
+    priceLevels: Optional[List[str]] = None
 
 
 class UserLibraryAccess(BaseModel):
