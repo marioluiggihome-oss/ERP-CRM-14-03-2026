@@ -628,6 +628,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       isTienda: false,
       linkedRepresentativeId: isCommercial ? state.currentUser.id : '',
       allowedModules: ['montada'],
+      allowedLibraries: ['ZC'],  // Por defecto ZC
       allowedCatalogIds: state.catalogs.map(c => c.id),
       commercialDiscount: 0,
       canSeeCost: false,
@@ -662,7 +663,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     
     setIsEditingUser(true);
     setEditingUserId(user.id);
-    setUserForm({ ...user, linkedClientId: user.linkedClientId || '' });
+    // Asegurar que allowedLibraries tenga valor por defecto
+    setUserForm({ 
+      ...user, 
+      linkedClientId: user.linkedClientId || '',
+      allowedLibraries: user.allowedLibraries || ['ZC']
+    });
   };
 
   const handleSaveUser = async () => {
