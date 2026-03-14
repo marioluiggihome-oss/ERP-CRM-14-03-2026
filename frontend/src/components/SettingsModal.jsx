@@ -1823,6 +1823,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   {user.allowedModules?.join(', ').toUpperCase() || 'N/A'}
                                 </p>
                               </div>
+                              <div className="bg-amber-50 p-2 rounded-lg">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Tarifas</p>
+                                <p className="text-xs font-bold text-amber-700">
+                                  {user.allowedLibraries?.join(', ') || 'ZC'}
+                                </p>
+                              </div>
                             </div>
 
                             {/* Capabilities badges */}
