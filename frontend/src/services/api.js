@@ -339,8 +339,19 @@ export const productsAPI = {
 // ============================================
 
 export const materialsAPI = {
-  getAll: async () => {
-    const response = await fetch(`${API_URL}/api/materials`);
+  getAll: async (library = null) => {
+    const params = new URLSearchParams();
+    if (library) params.append('library', library);
+    const url = params.toString() 
+      ? `${API_URL}/api/materials?${params.toString()}`
+      : `${API_URL}/api/materials`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener materiales');
+    return response.json();
+  },
+
+  getByLibrary: async (libraryCode) => {
+    const response = await fetch(`${API_URL}/api/materials?library=${libraryCode}`);
     if (!response.ok) throw new Error('Error al obtener materiales');
     return response.json();
   },
