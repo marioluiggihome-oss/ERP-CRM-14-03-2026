@@ -76,6 +76,7 @@ class UserResponse(BaseModel):
     isTienda: bool = False
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
+    allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
     allowedCatalogIds: List[str] = []
     commercialDiscount: float = 0
     discountMontada: float = 0
