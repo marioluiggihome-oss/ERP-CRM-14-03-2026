@@ -229,12 +229,14 @@ class MaterialModel(BaseModel):
     name: str
     fixedIncrement: float = 0
     thickness: float = 16
+    library: str = "ZC"  # Biblioteca asociada (ZC, MV)
 
 
 class MaterialCreate(BaseModel):
     name: str
     fixedIncrement: float = 0
     thickness: float = 16
+    library: str = "ZC"
 
 
 # ============================================
