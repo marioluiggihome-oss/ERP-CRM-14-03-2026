@@ -1257,6 +1257,50 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                  </div>
               </section>
               
+              {/* SELECTOR DE TARIFA/BIBLIOTECA - Solo si el usuario tiene más de una */}
+              {state.allowedLibraries?.length > 1 && (
+              <section className="space-y-1.5 pt-2 border-t border-amber-200">
+                 <h4 className="text-[9px] font-black text-amber-700 uppercase tracking-widest flex items-center gap-1">
+                   <Library size={10} />
+                   TARIFA ACTIVA
+                 </h4>
+                 <select 
+                   className="w-full bg-amber-50 text-amber-900 border-2 border-amber-300 rounded-xl p-2 text-[11px] font-black outline-none cursor-pointer focus:border-amber-500 text-center" 
+                   value={state.currentLibrary || 'ZC'}
+                   onChange={e => {
+                     const newLib = e.target.value;
+                     // Llamar a la función de cambio de biblioteca del padre
+                     if (setState) {
+                       // Cargar productos de la nueva biblioteca
+                       fetch(`${API_URL}/api/products?library=${newLib}&module=montada`)
+                         .then(r => r.json())
+                         .then(productsMontada => {
+                           fetch(`${API_URL}/api/products?library=${newLib}&module=despiece`)
+                             .then(r => r.json())
+                             .then(productsDespiece => {
+                               setState(prev => ({
+                                 ...prev,
+                                 currentLibrary: newLib,
+                                 catalogs: [
+                                   { id: 'cat-m-base', name: `${newLib} - Montada`, manufacturer: newLib, products: productsMontada, module: 'montada', library: newLib },
+                                   { id: 'cat-d-base', name: `${newLib} - Despiece`, manufacturer: newLib, products: productsDespiece, module: 'despiece', library: newLib }
+                                 ]
+                               }));
+                             });
+                         });
+                     }
+                   }}
+                   data-testid="library-selector"
+                 >
+                   {state.allowedLibraries?.map(lib => (
+                     <option key={lib} value={lib}>
+                       {lib === 'ZC' ? '📦 ZC (Zonas Z1-Z12)' : lib === 'MV' ? '📦 MV (Tarifas T1-T21)' : `📦 ${lib}`}
+                     </option>
+                   ))}
+                 </select>
+              </section>
+              )}
+              
               {/* GRUPO DE PRECIOS - Solo en modo MONTADA */}
               {state.currentModule === 'montada' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
