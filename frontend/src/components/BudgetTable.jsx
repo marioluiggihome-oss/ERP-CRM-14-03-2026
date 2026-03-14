@@ -671,7 +671,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   }, [state.carcassMaterials, state.selectedCarcassMaterialId]);
 
   const calculateLineDetails = useCallback((item, product) => {
-     const pointValue = state.currentModule === 'montada' ? state.pointValueMontada : state.pointValueDespiece;
+     // Para montada, usar el valor de punto de la biblioteca activa
+     // Para despiece, usar pointValueDespiece (común)
+     const currentLibrary = state.currentLibrary || 'ZC';
+     const libraryPointValue = state.libraryPointValues?.[currentLibrary] || state.pointValueMontada || 1.0;
+     const pointValue = state.currentModule === 'montada' ? libraryPointValue : state.pointValueDespiece;
+     
      let usedPoints = 0;
      let carcassCost = 0;
      let cutsCost = 0;
