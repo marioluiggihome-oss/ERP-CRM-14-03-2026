@@ -241,12 +241,30 @@ export const clientsAPI = {
 // ============================================
 
 export const productsAPI = {
-  getAll: async (module = null) => {
-    const url = module 
-      ? `${API_URL}/api/products?module=${module}`
+  getAll: async (module = null, library = null) => {
+    const params = new URLSearchParams();
+    if (module) params.append('module', module);
+    if (library) params.append('library', library);
+    const url = params.toString() 
+      ? `${API_URL}/api/products?${params.toString()}`
       : `${API_URL}/api/products`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('Error al obtener productos');
+    return response.json();
+  },
+
+  getByLibrary: async (libraryCode, options = {}) => {
+    const { module, category, programa, series, search, limit = 500 } = options;
+    const params = new URLSearchParams();
+    if (module) params.append('module', module);
+    if (category) params.append('category', category);
+    if (programa) params.append('programa', programa);
+    if (series) params.append('series', series);
+    if (search) params.append('search', search);
+    params.append('limit', limit);
+    
+    const response = await fetch(`${API_URL}/api/libraries/${libraryCode}/products?${params.toString()}`);
+    if (!response.ok) throw new Error('Error al obtener productos de biblioteca');
     return response.json();
   },
 
