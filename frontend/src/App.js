@@ -115,7 +115,8 @@ const App = () => {
           fetchWithTimeout(productsAPI.getAll('montada', 'ZC')), // Filtrar por biblioteca ZC
           fetchWithTimeout(productsAPI.getAll('despiece', 'ZC')),
           fetchWithTimeout(materialsAPI.getAll()),
-          fetchWithTimeout(settingsAPI.get())
+          fetchWithTimeout(settingsAPI.get()),
+          fetchWithTimeout(librariesAPI.getAll()) // Cargar bibliotecas con sus pointValues
         ]);
 
         const users = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -123,6 +124,13 @@ const App = () => {
         const productsDespiece = results[2].status === 'fulfilled' ? results[2].value : [];
         const materials = results[3].status === 'fulfilled' ? results[3].value : [];
         const settings = results[4].status === 'fulfilled' ? results[4].value : {};
+        const libraries = results[5].status === 'fulfilled' ? results[5].value : [];
+
+        // Construir objeto de pointValues por biblioteca
+        const libraryPointValues = {};
+        libraries.forEach(lib => {
+          libraryPointValues[lib.code] = lib.pointValue || 1.0;
+        });
 
         // Determinar el material de casco predeterminado
         const defaultMaterialId = settings.defaultCarcassMaterialId || 
@@ -131,6 +139,8 @@ const App = () => {
         setState(prev => ({
           ...prev,
           users,
+          libraries, // Lista completa de bibliotecas
+          libraryPointValues, // Valores de punto por biblioteca
           currentLibrary: 'ZC', // Biblioteca por defecto
           catalogs: [
             { id: 'cat-m-base', name: 'Zona Cocinas - Montada', manufacturer: 'Zona Cocinas', products: productsMontada, module: 'montada', library: 'ZC' },
