@@ -685,13 +685,23 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
          if (!product) return { total: 0, breakdown: '', hasExtras: false, usedPoints: 0 };
          
          const currentFinish = item.specificFinish || state.globalFinish;
-         const finishObj = DOOR_FINISHES.find(f => f.name === currentFinish) || DOOR_FINISHES[0];
+         const isMV = state.currentLibrary === 'MV';
+         
+         // Para MV, buscar en MV_TARIFFS; para ZC, buscar en DOOR_FINISHES
+         const finishObj = isMV 
+           ? (MV_TARIFFS.find(f => f.name === currentFinish) || MV_TARIFFS[0])
+           : (DOOR_FINISHES.find(f => f.name === currentFinish) || DOOR_FINISHES[0]);
          
          let productBasePoints = 100;
          if (typeof product.points === 'number') productBasePoints = product.points;
          else if (typeof product.points === 'object' && product.points !== null) productBasePoints = product.points.Z1 || 100;
          
-         usedPoints = product.zonePoints?.[finishObj.group] ?? productBasePoints;
+         // Para MV, usar tariffPrices; para ZC, usar zonePoints
+         if (isMV && product.tariffPrices) {
+           usedPoints = product.tariffPrices[finishObj.group] ?? productBasePoints;
+         } else {
+           usedPoints = product.zonePoints?.[finishObj.group] ?? productBasePoints;
+         }
          finalProductName = product.name;
 
          // NO aplicar incrementos por medidas en COSTADOS y REGLETAS
