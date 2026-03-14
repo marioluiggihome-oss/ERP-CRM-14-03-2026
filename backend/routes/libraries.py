@@ -32,7 +32,9 @@ class Library(BaseModel):
     pointValue: float = 1.0  # Valor de 1 punto en EUR
     isActive: bool = True
     productCount: int = 0
-    zones: List[str] = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"]
+    # Sistema de precios: ZC usa "zonas" (Z1-Z12), MV usa "tarifas" (T1-T21)
+    pricingSystem: str = "zones"  # "zones" para ZC, "tariffs" para MV
+    priceLevels: List[str] = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"]
     createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
