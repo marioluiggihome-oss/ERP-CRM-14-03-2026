@@ -3472,27 +3472,68 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2">
                   💰 Valor de Punto Base
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">Montada (€/punto)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={state.pointValueMontada}
-                      onChange={(e) => setState(prev => ({ ...prev, pointValueMontada: parseFloat(e.target.value) || 1.0 }))}
-                      className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center"
-                    />
+                
+                {/* Valor de punto por BIBLIOTECA (MONTADA) */}
+                <div className="mb-4">
+                  <label className="text-xs font-black text-indigo-600 uppercase mb-3 block">
+                    📚 Valor de Punto por Tarifa (Montada)
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {(state.libraries || []).map(lib => (
+                      <div key={lib.code} className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-4">
+                        <label className="text-xs font-black text-indigo-500 uppercase mb-2 flex items-center gap-2">
+                          <span className={`w-3 h-3 rounded-full ${lib.code === 'ZC' ? 'bg-blue-500' : 'bg-amber-500'}`}></span>
+                          {lib.code} (€/punto)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={state.libraryPointValues?.[lib.code] || lib.pointValue || 1.0}
+                          onChange={async (e) => {
+                            const newValue = parseFloat(e.target.value) || 1.0;
+                            // Actualizar estado local
+                            setState(prev => ({
+                              ...prev,
+                              libraryPointValues: {
+                                ...prev.libraryPointValues,
+                                [lib.code]: newValue
+                              }
+                            }));
+                            // Guardar en backend
+                            try {
+                              await librariesAPI.update(lib.code, { pointValue: newValue });
+                            } catch (err) {
+                              console.error('Error guardando valor de punto:', err);
+                            }
+                          }}
+                          className="w-full bg-white border-2 border-indigo-300 rounded-xl p-3 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center"
+                        />
+                      </div>
+                    ))}
+                    {(!state.libraries || state.libraries.length === 0) && (
+                      <div className="col-span-2 text-center text-indigo-400 py-4">
+                        <Loader className="w-6 h-6 animate-spin inline mr-2" />
+                        Cargando bibliotecas...
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">Despiece (€/punto)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={state.pointValueDespiece}
-                      onChange={(e) => setState(prev => ({ ...prev, pointValueDespiece: parseFloat(e.target.value) || 0.88 }))}
-                      className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center"
-                    />
-                  </div>
+                </div>
+
+                {/* Separador */}
+                <div className="border-t border-indigo-100 my-4"></div>
+                
+                {/* Valor de punto DESPIECE (común) */}
+                <div>
+                  <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">
+                    🔧 Despiece (€/punto) - Común a todas las tarifas
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={state.pointValueDespiece}
+                    onChange={(e) => setState(prev => ({ ...prev, pointValueDespiece: parseFloat(e.target.value) || 0.88 }))}
+                    className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center max-w-xs"
+                  />
                 </div>
               </div>
 
