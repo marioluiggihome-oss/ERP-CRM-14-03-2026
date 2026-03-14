@@ -107,3 +107,4 @@ frontend/node_modules/.cache/default-development/19.pack
 # Environment files
 *.env
 *.env.*
+MV_images/tarifa_mv.zip
