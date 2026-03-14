@@ -2146,7 +2146,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             data-testid="library-zc-checkbox"
                           />
                           <div>
-                            <span className="text-sm font-black text-slate-900 block">ZC - Zona Cocinas</span>
+                            <span className="text-sm font-black text-slate-900 block">ZC</span>
                             <span className="text-[10px] text-slate-500">Sistema Zonas Z1-Z12</span>
                           </div>
                         </label>
@@ -2165,7 +2165,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             data-testid="library-mv-checkbox"
                           />
                           <div>
-                            <span className="text-sm font-black text-slate-900 block">MV - Muebles Valencia</span>
+                            <span className="text-sm font-black text-slate-900 block">MV</span>
                             <span className="text-[10px] text-slate-500">Sistema Tarifas T1-T21</span>
                           </div>
                         </label>
