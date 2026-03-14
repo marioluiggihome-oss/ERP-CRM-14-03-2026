@@ -1288,9 +1288,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                            fetch(`${API_URL}/api/products?library=${newLib}&module=despiece`)
                              .then(r => r.json())
                              .then(productsDespiece => {
+                               // Resetear el grupo de precios al primer grupo de la nueva biblioteca
+                               const defaultFinish = newLib === 'MV' ? 'TARIFA 1' : 'GRUPO 1';
                                setState(prev => ({
                                  ...prev,
                                  currentLibrary: newLib,
+                                 globalFinish: defaultFinish,
                                  catalogs: [
                                    { id: 'cat-m-base', name: `${newLib} - Montada`, manufacturer: newLib, products: productsMontada, module: 'montada', library: newLib },
                                    { id: 'cat-d-base', name: `${newLib} - Despiece`, manufacturer: newLib, products: productsDespiece, module: 'despiece', library: newLib }
