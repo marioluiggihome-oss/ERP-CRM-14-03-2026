@@ -109,8 +109,8 @@ const App = () => {
 
         const results = await Promise.allSettled([
           fetchWithTimeout(usersAPI.getAll()),
-          fetchWithTimeout(productsAPI.getAll('montada')),
-          fetchWithTimeout(productsAPI.getAll('despiece')),
+          fetchWithTimeout(productsAPI.getAll('montada', 'ZC')), // Filtrar por biblioteca ZC
+          fetchWithTimeout(productsAPI.getAll('despiece', 'ZC')),
           fetchWithTimeout(materialsAPI.getAll()),
           fetchWithTimeout(settingsAPI.get())
         ]);
@@ -128,9 +128,10 @@ const App = () => {
         setState(prev => ({
           ...prev,
           users,
+          currentLibrary: 'ZC', // Biblioteca por defecto
           catalogs: [
-            { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: productsMontada, module: 'montada' },
-            { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: productsDespiece, module: 'despiece' }
+            { id: 'cat-m-base', name: 'Zona Cocinas - Montada', manufacturer: 'Zona Cocinas', products: productsMontada, module: 'montada', library: 'ZC' },
+            { id: 'cat-d-base', name: 'Zona Cocinas - Despiece', manufacturer: 'Zona Cocinas', products: productsDespiece, module: 'despiece', library: 'ZC' }
           ],
           carcassMaterials: materials.length > 0 ? materials : INITIAL_CARCASS_MATERIALS,
           selectedCarcassMaterialId: defaultMaterialId,
