@@ -757,7 +757,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
 `.trim();
 
      return { total: finalPrice, breakdown, hasExtras: (carcassCost > 0 || cutsCost > 0 || vigaCost > 0), usedPoints, vigaCost };
-  }, [state.globalFinish, state.currentModule, state.pointValueMontada, state.pointValueDespiece, state.specialIncrementWidth, state.specialIncrementHeight, state.specialIncrementDepth, state.showDistributorPrice, state.currentUser?.commercialDiscount, state.currentUser?.discountMontada, state.currentUser?.discountDespiece, state.selectedCarcassMaterialId, state.carcassMaterials, state.vigaCutIncrement]);
+  }, [state.globalFinish, state.currentModule, state.pointValueMontada, state.pointValueDespiece, state.libraryPointValues, state.currentLibrary, state.specialIncrementWidth, state.specialIncrementHeight, state.specialIncrementDepth, state.showDistributorPrice, state.currentUser?.commercialDiscount, state.currentUser?.discountMontada, state.currentUser?.discountDespiece, state.selectedCarcassMaterialId, state.carcassMaterials, state.vigaCutIncrement]);
 
 
   const total = useMemo(() => sortedItems.reduce((acc, item) => {
