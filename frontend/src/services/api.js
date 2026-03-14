@@ -949,3 +949,74 @@ export const adminMetricsAPI = {
     return response.json();
   }
 };
+
+// ============================================
+// LIBRARIES (Multi-Library System)
+// ============================================
+
+export const librariesAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_URL}/api/libraries`);
+    if (!response.ok) throw new Error('Error al obtener bibliotecas');
+    return response.json();
+  },
+
+  getById: async (code) => {
+    const response = await fetch(`${API_URL}/api/libraries/${code}`);
+    if (!response.ok) throw new Error('Biblioteca no encontrada');
+    return response.json();
+  },
+
+  getStats: async (code) => {
+    const response = await fetch(`${API_URL}/api/libraries/${code}/stats`);
+    if (!response.ok) throw new Error('Error al obtener estadísticas');
+    return response.json();
+  },
+
+  getUserAccess: async (userId) => {
+    const response = await fetch(`${API_URL}/api/libraries/users/${userId}/access`);
+    if (!response.ok) throw new Error('Error al obtener acceso de usuario');
+    return response.json();
+  },
+
+  updateUserAccess: async (userId, libraries) => {
+    const response = await fetch(`${API_URL}/api/libraries/users/${userId}/access`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, libraries })
+    });
+    if (!response.ok) throw new Error('Error al actualizar acceso');
+    return response.json();
+  },
+
+  create: async (library) => {
+    const response = await fetch(`${API_URL}/api/libraries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(library)
+    });
+    if (!response.ok) throw new Error('Error al crear biblioteca');
+    return response.json();
+  },
+
+  update: async (code, data) => {
+    const response = await fetch(`${API_URL}/api/libraries/${code}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error('Error al actualizar biblioteca');
+    return response.json();
+  },
+
+  delete: async (code) => {
+    const response = await fetch(`${API_URL}/api/libraries/${code}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al eliminar biblioteca');
+    }
+    return response.json();
+  }
+};
