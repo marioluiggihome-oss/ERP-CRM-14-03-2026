@@ -62,6 +62,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isTienda: false,  // Tienda/Punto de Venta
     linkedRepresentativeId: '',
     allowedModules: ['montada'],
+    allowedLibraries: ['ZC'],  // Tarifas/Bibliotecas activas (ZC, MV, etc.)
     commercialDiscount: 0,
     discountMontada: 0,
     discountDespiece: 0,
