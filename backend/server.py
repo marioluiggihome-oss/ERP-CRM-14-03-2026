@@ -1214,11 +1214,13 @@ async def get_current_user_info(
 # ============================================
 
 @api_router.get("/products")
-async def get_products(module: Optional[str] = None):
-    """Obtener todos los productos, opcionalmente filtrados por módulo"""
+async def get_products(module: Optional[str] = None, library: Optional[str] = None):
+    """Obtener todos los productos, opcionalmente filtrados por módulo y biblioteca"""
     query = {}
     if module:
         query["module"] = module
+    if library:
+        query["library"] = library.upper()
     products = await db.products.find(query, {"_id": 0}).to_list(10000)
     
     # Asegurar que todos los productos tengan los campos mínimos requeridos
