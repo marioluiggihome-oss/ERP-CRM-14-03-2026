@@ -14,16 +14,17 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 ### Sistema Multi-Biblioteca (ZC / MV)
 - ✅ **Backend API de Bibliotecas** (`/api/libraries`) - CRUD completo
 - ✅ **Modelo de datos actualizado** - Campo `library` en productos, `allowedLibraries` en usuarios
-- ✅ **Biblioteca ZC (Zona Cocinas)** - 7,045 productos con sistema de ZONAS (Z1-Z12)
-- ✅ **Biblioteca MV (Muebles Valencia)** - 575 productos extraídos de PDFs con sistema de TARIFAS (T1-T21)
+- ✅ **Biblioteca ZC** - 7,045 productos con sistema de ZONAS (Z1-Z12)
+- ✅ **Biblioteca MV** - 656 productos extraídos de 134 imágenes JPG con sistema de TARIFAS (T1-T21)
+- ✅ **384 productos MV con precios** distribuidos en las 21 tarifas
 - ✅ **Gestión de permisos en UI** - Sección "Tarifas de Precios Activas" en panel de usuarios
 - ✅ **Lista de usuarios muestra tarifas asignadas** - Columna "TARIFAS" en RED DISTRIBUCIÓN
-- ✅ **Selector de biblioteca removido de esquina** - Ahora se gestiona desde permisos de usuario
+- ✅ **Nombres cortos** - "ZC" y "MV" (sin nombres largos)
 
 ### Extracción de Catálogo MV
-- ✅ Procesados PDFs: `MV_catalogo_1_90.pdf`, `MV_catalogo_45_90.pdf`
-- ✅ Analizado: `MV_nomenclaturas.pdf` para entender estructura de códigos
-- ⚠️ Precios OCR parcialmente extraídos (calidad de escaneo limitada)
+- ✅ Procesadas 134 imágenes JPG de la tarifa MV
+- ✅ Datos de las 21 tarifas (T1-T21) extraídos
+- ✅ Script de importación: `/app/backend/import_mv_from_images.py`
 
 ---
 
