@@ -1712,9 +1712,12 @@ async def delete_products_bulk(product_ids: List[str]):
 # ============================================
 
 @api_router.get("/materials", response_model=List[MaterialModel])
-async def get_materials():
-    """Obtener todos los materiales"""
-    materials = await db.materials.find({}, {"_id": 0}).to_list(1000)
+async def get_materials(library: str = None):
+    """Obtener todos los materiales, opcionalmente filtrados por biblioteca"""
+    query = {}
+    if library:
+        query["library"] = library.upper()
+    materials = await db.materials.find(query, {"_id": 0}).to_list(1000)
     return materials
 
 @api_router.post("/materials", response_model=MaterialModel)
