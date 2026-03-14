@@ -108,6 +108,7 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(ia_lab_router)
 api_router.include_router(auth_advanced_router)
 api_router.include_router(despiece_budgeter_router)
+api_router.include_router(libraries_router)
 # Nota: auth, products, clients, projects, crm están duplicados en server.py
 # Se integrarán gradualmente para evitar conflictos
 
