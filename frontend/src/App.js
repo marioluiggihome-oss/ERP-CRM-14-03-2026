@@ -37,6 +37,7 @@ const App = () => {
       currentTab: 'budget', 
       currentLibrary: 'ZC', // Biblioteca activa (ZC, MV, etc.)
       allowedLibraries: ['ZC'], // Bibliotecas permitidas para el usuario actual
+      libraries: [], // Lista de bibliotecas con sus pointValues
       uploadedImages: [], 
       budgetItemsMontada: [], 
       budgetItemsDespiece: [], 
@@ -48,7 +49,9 @@ const App = () => {
       // Opciones GOLA (perfiles)
       golaAlto: false, golaAltoColor: '',
       golaBajo: false, golaBajoColor: '',
-      pointValueMontada: 1.0, pointValueDespiece: 0.88, 
+      pointValueMontada: 1.0, pointValueDespiece: 0.88,
+      // Valor de punto por biblioteca (para montada)
+      libraryPointValues: { ZC: 1.0, MV: 1.0 }, 
       specialIncrementWidth: 45,
       specialIncrementHeight: 45,
       specialIncrementDepth: 45,
