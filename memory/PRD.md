@@ -9,40 +9,43 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN
+## ✅ COMPLETADO EN ESTA SESIÓN (14 Marzo 2026)
 
-### Sistema Multi-Biblioteca (ZC / MV)
-- ✅ **Backend API de Bibliotecas** (`/api/libraries`) - CRUD completo
-- ✅ **Modelo de datos actualizado** - Campo `library` en productos, `allowedLibraries` en usuarios
-- ✅ **Biblioteca ZC** - 7,045 productos con sistema de ZONAS (Z1-Z12)
-- ✅ **Biblioteca MV** - 656 productos extraídos de 134 imágenes JPG con sistema de TARIFAS (T1-T21)
-- ✅ **384 productos MV con precios** distribuidos en las 21 tarifas
-- ✅ **Gestión de permisos en UI** - Sección "Tarifas de Precios Activas" en panel de usuarios
-- ✅ **Lista de usuarios muestra tarifas asignadas** - Columna "TARIFAS" en RED DISTRIBUCIÓN
-- ✅ **Nombres cortos** - "ZC" y "MV" (sin nombres largos)
+### Sistema de Valor de Punto por Biblioteca
+- ✅ **UI de configuración**: Sección "VALOR DE PUNTO POR TARIFA (MONTADA)" en MÁRGENES
+- ✅ **Campos separados**: MV (€/punto) y ZC (€/punto) configurables independientemente
+- ✅ **Backend**: Endpoint PUT `/api/libraries/{code}` actualiza `pointValue` por biblioteca
+- ✅ **Frontend**: `BudgetTable.jsx` usa `libraryPointValues[currentLibrary]` para cálculos
+- ✅ **App.js**: Carga `librariesAPI.getAll()` al iniciar y construye `libraryPointValues`
 
-### Extracción de Catálogo MV
-- ✅ Procesadas 134 imágenes JPG de la tarifa MV
-- ✅ Datos de las 21 tarifas (T1-T21) extraídos
-- ✅ Script de importación: `/app/backend/import_mv_from_images.py`
+### Mejora de Datos MV
+- ✅ **256 productos MV** con precios completos T1-T21
+- ✅ **Fondo estándar BAJO**: 58cm
+- ✅ **Fondo estándar ALTO**: 33cm  
+- ✅ **Altura estándar**: 70cm (bajos y altos), 220cm (columnas)
+- ✅ **Multiplicadores de tarifa**: T1=1.0 hasta T21=2.20 (~6% incremento por tarifa)
+
+### Sistema Multi-Biblioteca (ZC / MV) - Sesión Anterior
+- ✅ Backend API de Bibliotecas (`/api/libraries`) - CRUD completo
+- ✅ Modelo de datos con `library` en productos, `allowedLibraries` en usuarios
+- ✅ Biblioteca ZC - 7,045 productos con sistema de ZONAS (Z1-Z12)
+- ✅ Biblioteca MV - 256 productos con sistema de TARIFAS (T1-T21)
+- ✅ Gestión de permisos en Panel MASTER
+- ✅ Selectores "TARIFA ACTIVA" y "TARIFA DE PRECIOS" en BudgetTable
 
 ---
 
 ## 🔴 PENDIENTE / BUGS CONOCIDOS
 
-### P0 - CRÍTICO
-1. **Bug cálculo presupuesto despiece** - Items de despiece no se suman al total (BudgetTable.jsx línea ~748)
-
-### P1 - IMPORTANTE
-2. **Mejorar extracción precios MV** - OCR no captura bien tablas de precios del PDF escaneado
-3. **Selector de biblioteca en presupuestador** - Permitir cambiar biblioteca activa al presupuestar
+### P0 - CRÍTICO (PAUSADO POR USUARIO)
+1. **Bug cálculo presupuesto despiece** - Items de despiece no se suman al total
 
 ### P2 - MEJORAS
-4. **Glitch visual barra lateral colapsada** - Recurrente
-5. **Exportación catálogo (Excel/PDF)** - Verificar formato
+2. **Glitch visual barra lateral colapsada** - Recurrente
+3. **Exportación catálogo (Excel/PDF)** - Verificar formato
 
 ### P3 - BLOQUEADOS
-6. **Flujo registro email** - Requiere verificación de dominio en Resend
+4. **Flujo registro email** - Requiere verificación de dominio en Resend
 
 ---
 
@@ -51,51 +54,43 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 ### Backend (FastAPI)
 ```
 /app/backend/
-├── server.py                    # Servidor principal (~6000 líneas)
+├── server.py                    # Servidor principal
 ├── models/schemas.py            # Modelos Pydantic
 ├── routes/
-│   ├── libraries.py             # NUEVO: API de bibliotecas
+│   ├── libraries.py             # API de bibliotecas con pointValue
 │   ├── despiece_budgeter.py     # API de despiece
-│   ├── ia_lab.py                # IA Lab
-│   ├── auth.py                  # Autenticación
 │   └── ...
-└── import_mv_catalog.py         # Script importación MV
+├── mv_products_v2.py            # Datos MV con precios T1 y multiplicadores
+└── import_mv_from_images.py     # Script OCR (referencia)
 ```
 
 ### Frontend (React)
 ```
 /app/frontend/src/
-├── App.js                       # Componente principal
+├── App.js                       # Carga bibliotecas y libraryPointValues
 ├── components/
-│   ├── BudgetTable.jsx          # Presupuestador (~2930 líneas) - REFACTORIZAR
-│   ├── SettingsModal.jsx        # Panel MASTER (~4400 líneas) - REFACTORIZAR
-│   ├── LibrarySelector.jsx      # Selector de biblioteca (no usado actualmente)
-│   └── budget/
-│       └── DespieceStepByStep.jsx # Flujo despiece paso a paso
+│   ├── BudgetTable.jsx          # Cálculo con pointValue por biblioteca
+│   └── SettingsModal.jsx        # UI de márgenes por biblioteca
 └── services/
-    └── api.js                   # APIs (incluye librariesAPI)
+    └── api.js                   # librariesAPI.update para pointValue
 ```
 
-### Base de Datos (MongoDB)
+### Base de Datos (MongoDB: test_database)
 ```
 Colecciones:
-- products          # Productos montada (library: ZC/MV)
-- despiece_products # Productos despiece
-- users             # Usuarios (allowedLibraries: [])
-- libraries         # Definición de bibliotecas
-- clients           # Clientes
-- projects          # Proyectos
-- backup_history    # Historial backups
+- products          # library: ZC/MV, tariffPrices/zonePoints, fondo, height
+- libraries         # code, pointValue, pricingSystem, priceLevels
+- users             # allowedLibraries: []
 ```
 
 ---
 
 ## BIBLIOTECAS/TARIFAS
 
-| Código | Nombre | Sistema Precios | Productos | Con Precios | Estado |
-|--------|--------|-----------------|-----------|-------------|--------|
-| ZC | ZC | ZONAS (Z1-Z12) | 7,045 | 7,045 | ✅ Activa |
-| MV | MV | TARIFAS (T1-T21) | 656 | 384 | ✅ Activa |
+| Código | Sistema Precios | Productos | Fondo Bajo | Fondo Alto | pointValue |
+|--------|-----------------|-----------|------------|------------|------------|
+| ZC | ZONAS (Z1-Z12) | 7,045 | 60cm | 35cm | 1.0€ |
+| MV | TARIFAS (T1-T21) | 256 | 58cm | 33cm | 1.0€ |
 
 ---
 
@@ -109,10 +104,10 @@ Colecciones:
 
 ## PRÓXIMOS PASOS
 
-1. **Corregir bug total presupuesto despiece** (P0)
-2. **Añadir selector de biblioteca en presupuestador** para usuarios con múltiples tarifas
-3. **Mejorar extracción MV** - Considerar Excel con precios limpios
-4. **Refactorizar BudgetTable.jsx** - Dividir en componentes más pequeños
+1. **P0 (Pausado)**: Corregir bug total presupuesto despiece - cuando usuario lo indique
+2. **P2**: Corregir glitch visual del sidebar colapsado
+3. **P2**: Verificar formato de exportación de catálogo
+4. **Refactorización**: BudgetTable.jsx (~2990 líneas) y SettingsModal.jsx (~4400 líneas)
 
 ---
 
@@ -122,17 +117,20 @@ Colecciones:
 - **Google Gemini**: Via emergentintegrations (IA Lab)
 - **apscheduler**: Backups automáticos
 - **openpyxl/xlsxwriter**: Procesamiento Excel
-- **pdfplumber/pytesseract**: OCR de PDFs
 
 ---
 
 ## NOTAS TÉCNICAS
 
-### Sistema de Precios
-- **ZC**: `zonePoints: {Z1: 60, Z2: 62, ...Z12: 123}` - 12 niveles
-- **MV**: `tariffPrices: {T1: 50, T2: 55, ...T21: 200}` - 21 niveles
+### Sistema de Precios MV
+- **Bajos**: Fondo fijo 58cm, precio fijo independiente de altura
+- **Altos**: Fondo fijo 33cm
+  - Columna "70": Precios para alturas 10-70cm
+  - Columna "90": Precios para alturas 71-90cm
+- **Multiplicadores**: T1=1.0, T2=1.06, ..., T21=2.20 (incremento ~6% por tarifa)
 
-### Flujo de Usuario
-1. Admin asigna `allowedLibraries` a usuario en Panel MASTER
-2. Usuario inicia sesión → se cargan productos de su primera biblioteca
-3. Si tiene múltiples bibliotecas → puede cambiar (selector pendiente)
+### Flujo de Cálculo de Precio
+1. Usuario selecciona biblioteca (TARIFA ACTIVA)
+2. Usuario selecciona nivel de precio (TARIFA DE PRECIOS: T1-T21 o Z1-Z12)
+3. Sistema obtiene puntos del producto según tarifa seleccionada
+4. Precio = puntos × libraryPointValues[biblioteca] + extras
