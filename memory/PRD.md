@@ -1,170 +1,137 @@
-# LUIGGI HOME - Kitchen Budget ERP/CRM
+# LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
-## Completed Tasks - Session Mar 9, 2026
+## Estado del Proyecto: EN DESARROLLO ACTIVO
 
-### ✅ P0 - Importación Tarifa Puertas ALVIC (Excel)
-- Importados **5,495 productos** desde "Tarifa cocina Puertas DF (abr-2025).xlsx"
-- **PUERTAS:** 5,306 combinaciones Alto × Ancho
-- **TIRADORES:** 189 combinaciones (6 modelos)
-- Colecciones: VIFORMING, SYNCRON, LUXE (A, B), LUXE PLUS, ZENIT, MATTDECO, TR-MAX, EUROFORMING
-- Dimensiones: Alto 138-2498mm × Ancho 100-1197mm
-- Precios: 7.92€ - 406.09€
+## Problema Original
+Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME con múltiples módulos, sistemas de precios y gestión de usuarios.
 
-### ✅ P0 - Unificación Fabricantes DF → ALVIC
-- DF y ALVIC son la misma empresa
-- Todos los productos unificados bajo **ALVIC**
-- Total: **5,968 productos** en `despiece_products`
+## Última Actualización: 14 Marzo 2026
 
-### ✅ P0 - Nuevo Flujo Presupuestador DESPIECE
-**Componente `DespieceStepByStep.jsx`** - Flujo paso a paso:
-1. **Paso 1:** Seleccionar Categoría (Puertas/Tiradores)
-2. **Paso 2:** Seleccionar Modelo/Colección
-3. **Paso 3:** Ver **Matriz de Precios** (Alto × Ancho)
-4. **Click en celda** → Añade item al presupuesto
+---
 
-**Características:**
-- Matriz visual con precios exactos según tarifa
-- Breadcrumb navegable (PUERTA → MODELO → MEDIDAS)
-- Añadir múltiples items desde la matriz
-- Sección "DESPIECE - TABLEROS" en presupuesto
+## ✅ COMPLETADO EN ESTA SESIÓN
 
-### ✅ P1 - Eliminación Iconos de Exportación
-- Removidos iconos Excel/PDF de las 3 vistas del catálogo
-- Funcionalidad disponible solo en Panel Maestro
+### Sistema Multi-Biblioteca (ZC / MV)
+- ✅ **Backend API de Bibliotecas** (`/api/libraries`) - CRUD completo
+- ✅ **Modelo de datos actualizado** - Campo `library` en productos, `allowedLibraries` en usuarios
+- ✅ **Biblioteca ZC (Zona Cocinas)** - 7,045 productos con sistema de ZONAS (Z1-Z12)
+- ✅ **Biblioteca MV (Muebles Valencia)** - 575 productos extraídos de PDFs con sistema de TARIFAS (T1-T21)
+- ✅ **Gestión de permisos en UI** - Sección "Tarifas de Precios Activas" en panel de usuarios
+- ✅ **Lista de usuarios muestra tarifas asignadas** - Columna "TARIFAS" en RED DISTRIBUCIÓN
+- ✅ **Selector de biblioteca removido de esquina** - Ahora se gestiona desde permisos de usuario
 
-## Completed Tasks - Session Mar 8, 2026
+### Extracción de Catálogo MV
+- ✅ Procesados PDFs: `MV_catalogo_1_90.pdf`, `MV_catalogo_45_90.pdf`
+- ✅ Analizado: `MV_nomenclaturas.pdf` para entender estructura de códigos
+- ⚠️ Precios OCR parcialmente extraídos (calidad de escaneo limitada)
 
-### ✅ P0 - Bug Fix: Filtros de librería DESPIECE (NUEVO)
-**Corregido**: La librería derecha (vertical) ahora muestra los filtros correctos según el módulo activo:
+---
 
-- **Modo COCINA DESPIECE:** 
-  - Sección "FILTROS DESPIECE" con: FABRICANTE, MODELO, ACABADO, GROSOR
-  - Contador "X tableros disponibles"
-- **Modo COCINA MONTADA:**
-  - Filtros: PROGRAMA, CATEGORÍA, SERIE, MEDIDAS
-  
-Todas las posiciones de librería (horizontal, vertical, top) funcionan correctamente.
+## 🔴 PENDIENTE / BUGS CONOCIDOS
 
-### ✅ P2 - Bug Fix: Glitch visual sidebar colapsado
-- Mejorado el comportamiento del sidebar izquierdo al colapsar
-- Agregado `opacity` y `pointer-events` condicionados para transición suave
+### P0 - CRÍTICO
+1. **Bug cálculo presupuesto despiece** - Items de despiece no se suman al total (BudgetTable.jsx línea ~748)
 
-### ✅ P0 - Módulo DESPIECE (Presupuestador de Tableros)
-**INTEGRADO en tab "COCINA DESPIECE"** - Funcionando al 100%
+### P1 - IMPORTANTE
+2. **Mejorar extracción precios MV** - OCR no captura bien tablas de precios del PDF escaneado
+3. **Selector de biblioteca en presupuestador** - Permitir cambiar biblioteca activa al presupuestar
 
-- **Modo COCINA DESPIECE:** Al seleccionar el tab, el catálogo muestra tableros ALVIC
-- **Filtros de tableros:**
-  - 🏭 FABRICANTE (ALVIC, etc.)
-  - 📦 MODELO/COLECCIÓN (LUXE, ZENIT, SYNCRON, BASIK)
-  - ✨ ACABADO (Brillo, Supermatte, Textura Madera)
-  - 📏 GROSOR (18mm, 0.8mm para cantos)
-- **Tabla de productos:** CÓDIGO | PRODUCTO | COLECCIÓN | COLOR | ACABADO | MM | €/M²
-- **Modal "AÑADIR TABLERO":**
-  - Campos: Ancho (mm), Alto (mm), Cantidad
-  - Cálculo automático de área (m²) y precio estimado
-  - Botón "AÑADIR AL PRESUPUESTO"
-- **500+ productos DESPIECE:** LUXE, ZENIT, SYNCRON, BASIK, CANTOS
+### P2 - MEJORAS
+4. **Glitch visual barra lateral colapsada** - Recurrente
+5. **Exportación catálogo (Excel/PDF)** - Verificar formato
 
-### ✅ P2 - Mejoras UX Filtros
-- Labels mejoradas: "ANCHO/ALTO/FONDO" en lugar de "AN/AL/FO"
-- Placeholder "cm" en lugar de "--"
-- Diseño visual con fondo azul
+### P3 - BLOQUEADOS
+6. **Flujo registro email** - Requiere verificación de dominio en Resend
 
-### ✅ P2 - UI de Gestión 2FA
-- Tab "Seguridad 2FA" en Panel Maestro
-- Estado visible (activo/inactivo)
-- Botones para configurar, desactivar y regenerar códigos
+---
 
-## Componentes Refactorizados
+## ARQUITECTURA
 
-### ✅ BudgetTable.jsx Refactorizado (Mar 8, 2026)
-**Reducido de 3413 a 3078 líneas (-335 líneas)**
-
-Componentes extraídos a `/app/frontend/src/components/budget/`:
-- `DespieceFilters.jsx` - DespieceFiltersHorizontal, DespieceFiltersVertical (109 líneas)
-- `MontadaFilters.jsx` - MontadaFiltersHorizontal, MontadaFiltersVertical (223 líneas)
-- `DespieceAddModal.jsx` - Modal para añadir tablero (136 líneas)
-- `CatalogProductRow.jsx` - CatalogProductRowTable, CatalogProductRowCard (201 líneas)
-- `BudgetItemRow.jsx` - Fila de ítem en presupuesto (234 líneas)
-- `index.js` - Exports centralizados
-
-### DespieceCatalog.jsx (NUEVO)
-Componente avanzado con:
-- 3 modos de vista: Tabla | Cuadrícula | Matriz de precios
-- Filtros integrados
-- Panel lateral de presupuesto
-- Modal de añadir con cantos
-
-### Backend API: /api/despiece-budgeter/*
-- GET `/products` - Listar con filtros
-- GET `/products/filters` - Opciones de filtros
-- POST `/seed-alvic` - Poblar datos ALVIC
-- POST `/seed-syncron` - Poblar datos SYNCRON (900 productos)
-
-## Test Credentials
-- **Admin User:** MARIO / MARIO
-
-## Pending Tasks
-
-### P0 - Prioridad Alta
-- [x] ~~Construir `DespieceWizard.jsx`~~ ✅ Wizard paso a paso IMPLEMENTADO E INTEGRADO
-- [x] ~~Integrar wizard en el modo "COCINA DESPIECE"~~ ✅ Accesible desde sidebar izquierdo
-
-### P1 - Próximas
-- [ ] Exportación de catálogo mejorada (solicitar especificaciones al usuario)
-- [ ] Verificar dominio Resend para emails
-
-### P2 - Technical Debt
-- [x] ~~Refactoring `BudgetTable.jsx` (>3400 líneas)~~ ✅ Completado (3122 líneas)
-- [ ] Refactoring `SettingsModal.jsx` (>4100 líneas)
-- [ ] Migrar endpoints de `server.py` a routers dedicados
-
-## Importación de Tarifa DF (Mar 9, 2026)
-- ✅ **Importados 5495 productos desde "Tarifa cocina Puertas DF (abr-2025).xlsx"**
-  - **PUERTAS:** 5306 combinaciones Alto x Ancho
-  - **TIRADORES:** 189 combinaciones Modelo x Ancho x Color
-
-### Colecciones de Puertas DF:
-- VIFORMING (2 cantos, 4 cantos): 602 productos
-- SYNCRON, SYNCRON FINGERPULL: 617 productos  
-- LUXE A, LUXE B, LUXE FINGERPULL: 998 productos
-- LUXE PLUS A, LUXE PLUS B: 762 productos
-- ZENIT METAL PLUS: 381 productos
-- QUADRO SLIM (Syncron, Zenit): 326 productos
-- MATTDECO (18MM, 22MM, Fingerpull): 998 productos
-- TR-MAX BLANCO: 381 productos
-- EUROFORMING: 241 productos
-
-### Modelos de Tiradores DF:
-- FORMENTERA, MALLORCA, MENORCA, IBIZA, TENERIFE, MADEIRA
-
-## Limpieza de Datos (Mar 8, 2026)
-- ✅ **Eliminados 103+ productos de serie ALUMINIO** de la base de datos correcta
-- ✅ **Base de datos unificada y separada**:
-  - `products`: 7045 productos MONTADA (muebles ensamblados)
-    - ESTÁNDAR: 4409
-    - GOLA: 2636
-  - `despiece_products`: 5968 productos DESPIECE
-    - DF: 5495 (PUERTAS + TIRADORES, nueva tarifa ABR-2025)
-    - ALVIC: 473 (LUXE, ZENIT, SYNCRON, BASIK)
-    - CANTOS: 2
-- ✅ **Exportación Excel actualizada** con parámetro `tipo=montada|despiece`
-
-## API de Exportación Excel Actualizada
+### Backend (FastAPI)
 ```
-GET /api/products/export/excel?tipo=montada  → Exporta muebles
-GET /api/products/export/excel?tipo=despiece → Exporta tableros
-GET /api/admin/export-database → Excel con 2 hojas: "Productos Montada" y "Productos Despiece"
+/app/backend/
+├── server.py                    # Servidor principal (~6000 líneas)
+├── models/schemas.py            # Modelos Pydantic
+├── routes/
+│   ├── libraries.py             # NUEVO: API de bibliotecas
+│   ├── despiece_budgeter.py     # API de despiece
+│   ├── ia_lab.py                # IA Lab
+│   ├── auth.py                  # Autenticación
+│   └── ...
+└── import_mv_catalog.py         # Script importación MV
 ```
 
-## DespieceWizard - Flujo Paso a Paso
-1. **Paso 1 - Fabricante**: Seleccionar fabricante (ALVIC, etc.)
-2. **Paso 2 - Modelo**: Seleccionar colección (LUXE, ZENIT, SYNCRON, BASIK)
-3. **Paso 3 - Color**: Seleccionar color/acabado
-4. **Paso 4 - Medidas**: Matriz de precios Alto×Ancho con click para añadir
+### Frontend (React)
+```
+/app/frontend/src/
+├── App.js                       # Componente principal
+├── components/
+│   ├── BudgetTable.jsx          # Presupuestador (~2930 líneas) - REFACTORIZAR
+│   ├── SettingsModal.jsx        # Panel MASTER (~4400 líneas) - REFACTORIZAR
+│   ├── LibrarySelector.jsx      # Selector de biblioteca (no usado actualmente)
+│   └── budget/
+│       └── DespieceStepByStep.jsx # Flujo despiece paso a paso
+└── services/
+    └── api.js                   # APIs (incluye librariesAPI)
+```
 
-Acceso: Sidebar izquierdo → Botón "WIZARD DESPIECE" (modo COCINA DESPIECE)
+### Base de Datos (MongoDB)
+```
+Colecciones:
+- products          # Productos montada (library: ZC/MV)
+- despiece_products # Productos despiece
+- users             # Usuarios (allowedLibraries: [])
+- libraries         # Definición de bibliotecas
+- clients           # Clientes
+- projects          # Proyectos
+- backup_history    # Historial backups
+```
 
-## Test Reports
-- `/app/test_reports/iteration_23.json` - Bug fix filtros librería (100% PASS)
-- `/app/test_reports/iteration_24.json` - Refactorización BudgetTable.jsx (100% PASS)
+---
+
+## BIBLIOTECAS/TARIFAS
+
+| Código | Nombre | Sistema Precios | Productos | Estado |
+|--------|--------|-----------------|-----------|--------|
+| ZC | Zona Cocinas | ZONAS (Z1-Z12) | 7,045 | ✅ Activa |
+| MV | Muebles Valencia | TARIFAS (T1-T21) | 575 | ✅ Activa (precios parciales) |
+
+---
+
+## CREDENCIALES TEST
+- **Usuario**: MARIO
+- **Password**: MARIO
+- **Rol**: Admin / Director Comercial
+- **Bibliotecas**: ZC, MV
+
+---
+
+## PRÓXIMOS PASOS
+
+1. **Corregir bug total presupuesto despiece** (P0)
+2. **Añadir selector de biblioteca en presupuestador** para usuarios con múltiples tarifas
+3. **Mejorar extracción MV** - Considerar Excel con precios limpios
+4. **Refactorizar BudgetTable.jsx** - Dividir en componentes más pequeños
+
+---
+
+## INTEGRACIONES
+
+- **Resend**: Email (requiere verificación de dominio)
+- **Google Gemini**: Via emergentintegrations (IA Lab)
+- **apscheduler**: Backups automáticos
+- **openpyxl/xlsxwriter**: Procesamiento Excel
+- **pdfplumber/pytesseract**: OCR de PDFs
+
+---
+
+## NOTAS TÉCNICAS
+
+### Sistema de Precios
+- **ZC**: `zonePoints: {Z1: 60, Z2: 62, ...Z12: 123}` - 12 niveles
+- **MV**: `tariffPrices: {T1: 50, T2: 55, ...T21: 200}` - 21 niveles
+
+### Flujo de Usuario
+1. Admin asigna `allowedLibraries` a usuario en Panel MASTER
+2. Usuario inicia sesión → se cargan productos de su primera biblioteca
+3. Si tiene múltiples bibliotecas → puede cambiar (selector pendiente)
