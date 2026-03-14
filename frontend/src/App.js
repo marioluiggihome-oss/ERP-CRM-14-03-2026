@@ -277,8 +277,18 @@ const App = () => {
   };
 
   // Handler para cambio de biblioteca
-  const handleLibraryChange = (libraryCode) => {
+  const handleLibraryChange = async (libraryCode) => {
+    // Cargar productos de la nueva biblioteca
     loadProductsByLibrary(libraryCode);
+    
+    // Seleccionar un armazón válido para la nueva biblioteca
+    const materialsForLibrary = state.carcassMaterials.filter(m => m.library === libraryCode);
+    if (materialsForLibrary.length > 0) {
+      setState(prev => ({
+        ...prev,
+        selectedCarcassMaterialId: materialsForLibrary[0].id
+      }));
+    }
   };
 
   // Function to generate possible product codes from furniture dimensions
