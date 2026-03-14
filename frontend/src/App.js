@@ -35,6 +35,8 @@ const App = () => {
       currentUser: null,
       currentModule: 'montada', 
       currentTab: 'budget', 
+      currentLibrary: 'ZC', // Biblioteca activa (ZC, MV, etc.)
+      allowedLibraries: ['ZC'], // Bibliotecas permitidas para el usuario actual
       uploadedImages: [], 
       budgetItemsMontada: [], 
       budgetItemsDespiece: [], 
