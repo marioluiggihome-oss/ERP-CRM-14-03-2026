@@ -1304,13 +1304,15 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               {/* GRUPO DE PRECIOS - Solo en modo MONTADA */}
               {state.currentModule === 'montada' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
-                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">GRUPO DE PRECIOS</h4>
+                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">
+                   {state.currentLibrary === 'MV' ? 'TARIFA DE PRECIOS' : 'GRUPO DE PRECIOS'}
+                 </h4>
                  <select 
                    className="w-full bg-orange-50 text-orange-900 border-2 border-orange-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-orange-500 text-center" 
                    value={state.globalFinish} 
                    onChange={e => setState(p => ({...p, globalFinish: e.target.value}))}
                  >
-                   {DOOR_FINISHES.map(f => (
+                   {(state.currentLibrary === 'MV' ? MV_TARIFFS : DOOR_FINISHES).map(f => (
                      <option key={f.name} value={f.name}>
                        {f.name}
                      </option>
