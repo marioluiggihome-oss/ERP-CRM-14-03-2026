@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, CheckCircle, Building2, FileSpreadsheet, Download, HardDrive, Database, Clock, AlertTriangle, Wrench, Power, ShieldAlert, Timer, Maximize2, Minimize2, Target, Award, TrendingUp, BarChart3, FolderOpen, FileText, ChevronDown, ChevronUp, UserCheck, Layers } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
-import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI } from '../services/api';
+import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, librariesAPI } from '../services/api';
 import CatalogImporter from './CatalogImporter';
 
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
