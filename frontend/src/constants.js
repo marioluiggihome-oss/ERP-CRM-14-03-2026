@@ -13,6 +13,31 @@ export const DOOR_FINISHES = [
   { name: 'GRUPO 12', group: 'Z12', zone: 12 },
 ];
 
+// Tarifas MV (T1-T21)
+export const MV_TARIFFS = [
+  { name: 'TARIFA 1', group: 'T1', tariff: 1 },
+  { name: 'TARIFA 2', group: 'T2', tariff: 2 },
+  { name: 'TARIFA 3', group: 'T3', tariff: 3 },
+  { name: 'TARIFA 4', group: 'T4', tariff: 4 },
+  { name: 'TARIFA 5', group: 'T5', tariff: 5 },
+  { name: 'TARIFA 6', group: 'T6', tariff: 6 },
+  { name: 'TARIFA 7', group: 'T7', tariff: 7 },
+  { name: 'TARIFA 8', group: 'T8', tariff: 8 },
+  { name: 'TARIFA 9', group: 'T9', tariff: 9 },
+  { name: 'TARIFA 10', group: 'T10', tariff: 10 },
+  { name: 'TARIFA 11', group: 'T11', tariff: 11 },
+  { name: 'TARIFA 12', group: 'T12', tariff: 12 },
+  { name: 'TARIFA 13', group: 'T13', tariff: 13 },
+  { name: 'TARIFA 14', group: 'T14', tariff: 14 },
+  { name: 'TARIFA 15', group: 'T15', tariff: 15 },
+  { name: 'TARIFA 16', group: 'T16', tariff: 16 },
+  { name: 'TARIFA 17', group: 'T17', tariff: 17 },
+  { name: 'TARIFA 18', group: 'T18', tariff: 18 },
+  { name: 'TARIFA 19', group: 'T19', tariff: 19 },
+  { name: 'TARIFA 20', group: 'T20', tariff: 20 },
+  { name: 'TARIFA 21', group: 'T21', tariff: 21 },
+];
+
 export const INITIAL_CARCASS_MATERIALS = [
   { id: 'mat-blanco', name: 'Blanco Ártico Standard', fixedIncrement: 0, thickness: 16 },
   { id: 'mat-gris', name: 'Gris Antracita Pro', fixedIncrement: 18, thickness: 16 },
