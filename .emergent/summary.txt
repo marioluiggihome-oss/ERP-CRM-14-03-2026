@@ -1,206 +1,172 @@
 <analysis>**original_problem_statement:**
-The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The project's primary focus is a highly detailed, user-guided audit and reconstruction of the product catalog (mega-auditoría). The user is also requesting significant feature additions and bug fixes, particularly for the Digitalizador (draft digitizer), Armarios (wardrobes), and general CRM functionalities.
+The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The project's primary focus is a highly detailed, user-guided audit and reconstruction of the product catalog (mega-auditoría).
 
-In this session, the user's requests evolved:
+In the last sessions, the user's requests evolved to:
 1.  **Import New Tariff:** Import, parse, and integrate a new despiece (component) price list from an Excel file.
-2.  **Fix Despiece Budgeter:** The user rejected the existing despiece UI and requested a new step-by-step flow: . Clicking a price in the matrix should add the item to the budget, and its dimensions should be editable.
-3.  **Unify Manufacturers:** The user requested that the DF and ALVIC manufacturers be merged into a single ALVIC entity.
-4.  **Fix Budget Calculation:** The user reported a critical bug where items added via the new despiece module are not included in the main budget's total calculation.
-5.  **Create Multi-Library System:** The user requested a new feature to support multiple, distinct product libraries for montada (assembled) items. The current library is to be named ZC, and a new one, MV, needs to be created from product data provided in PDF files. The MV library uses a points system instead of currency. Admins should be able to assign which libraries a user can access.
+2.  **Fix Despiece Budgeter:** The user rejected the existing despiece UI and requested a new step-by-step flow.
+3.  **Unify Manufacturers:** Merge the DF and ALVIC manufacturers into a single ALVIC entity.
+4.  **Fix Budget Calculation:** The user reported a critical bug where items added via the despiece module are not included in the main budget's total calculation.
+5.  **Create Multi-Library System:** The user requested a new feature to support multiple, distinct product libraries for montada (assembled) items. The current library is to be named ZC, and a new one, MV, needs to be created from product data provided in PDFs/images. The MV library uses a points system with 21 tariff levels, distinct from ZC's 12 zones. Admins should be able to assign which libraries a user can access.
+6.  **Configure different valor del punto** (point value) for each library (ZC vs MV) in the margin settings.
 
 **PRODUCT REQUIREMENTS:**
 (From previous sessions, with new items in bold)
 1.  **Clone LUIGGI HOME application:** Replicate the design and functionality.
-2.  **Data Integrity:** Ensure a clean and consistent database.
-3.  **Digitalizador Component Enhancements:** Implement COST mode, generate unique expediente numbers, and improve the Analyzer.
-4.  **DESPIECE Module:** **Implement a step-by-step, matrix-based budgeting system for component parts.**
-5.  **User Roles & Permissions:** Implement strict, independent permissions for each module.
-6.  **Authentication & Notifications:** Implement user self-registration, optional 2FA, and admin notifications.
-7.  **UI/UX Improvements:** Add dimension-based filters, improve search, add column sorting, and fix UI glitches.
-8.  **Data Export:** Provide functionality to export the product catalog to Excel and PDF formats.
-9.  **Backup/Restore:** Provide a mechanism for manual and automatic database backups.
-10. **Multi-Library System:** **Create a system for multiple montada libraries (e.g., ZC, MV) and allow admins to control user access to them.**
+2.  **DESPIECE Module:** Implement a step-by-step, matrix-based budgeting system for component parts.
+3.  **User Roles & Permissions:** Implement strict, independent permissions for each module.
+4.  **Multi-Library System:** **Create a system for multiple montada libraries (e.g., ZC, MV) and allow admins to control user access to them.**
+5.  **Library-Specific Pricing:** **The MV library uses a 21-tier Tariff system, while ZC uses a 12-tier Zone system. The value of a point must also be configurable separately for each library.**
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The agent has successfully imported a new despiece (component) tariff from an Excel file, parsing and inserting over 5,400 new products into the  collection. All despiece products from DF and ALVIC have been unified under a single manufacturer, ALVIC.
+A full-stack React/FastAPI/MongoDB application. The agent has successfully implemented the multi-library system.
 
-The despiece budgeting module has been completely overhauled. The old filter-based library has been replaced with a new step-by-step component, , which guides the user through . This new component successfully fetches data and displays an interactive price matrix. Users can click on a price to add the corresponding item to a dedicated DESPIECE - TABLEROS section in the budget.
+- **Backend:** A  collection now stores metadata for ZC and MV, including their distinct pricing systems (zones vs tariffs). The  collection has a  field, and the  collection has an  field to control access. New API endpoints in  manage this logic.
+- **Data Extraction:** The agent successfully used OCR and AI analysis to extract product data and a 21-tier pricing matrix for ~256 products for the MV library from scanned PDFs and JPGs provided by the user.
+- **Frontend:**
+    - As requested by the user, library access is now managed in the PANEL MAESTRO (Admin Panel) under user permissions, where an admin can enable/disable libraries for each user. The global library selector was removed.
+    - The main budgeting interface () now features two new dynamic dropdowns:
+        1.  **TARIFA ACTIVA**: Allows users to switch between the libraries they have access to (e.g., ZC and MV).
+        2.  **TARIFA DE PRECIOS**: Dynamically updates to show Z1-Z12 for the ZC library or T1-T21 for the MV library.
+    - The price calculation logic correctly uses  for ZC products and  for MV products.
 
-However, a critical bug was introduced: the prices of these new despiece items are not being summed into the main budget's total ().
+The work on a critical despiece budget calculation bug was explicitly **paused** by the user to prioritize this multi-library feature.
 
 **Last working item**:
-- Last item agent was working: The user introduced a major new feature request: create a multi-library system (ZC and MV) for montada products, with the MV library data to be extracted from PDFs. The agent had just started analyzing the provided PDFs. However, this task interrupted the critical debugging of the budget calculation bug. The immediate priority is to fix the budget calculation.
+- Last item agent was working: The user introduced a new requirement after the multi-library system was implemented: the value of a point (valor del punto) must be configurable separately for the ZC and MV libraries within the margin settings. The agent acknowledged this request and was about to begin implementation.
 - Status: NOT STARTED
 - Agent Testing Done: N
-- Which testing method agent to use? backend testing agent
+- Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Despiece items are not added to the total budget (P0 - CRITICAL)**
-- **Issue 2: Create MV Library and Multi-Library System (P0)**
-- **Issue 3: Visual Glitch with Collapsed Vertical Sidebar (P2 - Recurring)**
-- **Issue 4: Verify updated Catalog Export (Excel/PDF) format (P2)**
-- **Issue 5: Fix User Registration Email Flow (P3 - Blocked)**
+- **Issue 1: Configure different valor del punto for ZC and MV libraries (P0 - CRITICAL)**
+- **Issue 2: Despiece items are not added to the total budget (P0 - PAUSED)**
+- **Issue 3: Improve accuracy of OCR data for the 'MV' library (P1)**
+- **Issue 4: Visual Glitch with Collapsed Vertical Sidebar (P2 - Recurring)**
+- **Issue 5: Verify updated Catalog Export (Excel/PDF) format (P2)**
+- **Issue 6: Fix User Registration Email Flow (P3 - BLOCKED)**
 
 **Issues Detail:**
-- **Issue 1: Despiece items are not added to the total budget**
-    - **Attempted fixes:** The agent identified that the  calculation in  only considers  (from the  state for montada products) and ignores the  state. The investigation was interrupted before a fix could be implemented.
+- **Issue 1: Configure different valor del punto for ZC and MV libraries**
+    - **Attempted fixes:** None. This is a new requirement from the last user message.
     - **Next debug checklist:**
-        1.  Edit .
-        2.  Locate the  hook that calculates the  (around line 748).
-        3.  Modify the calculation to reduce and sum the prices from both  (montada) and .
-        4.  Ensure the grand total correctly reflects the sum of both sections.
-    - **Why fix this issue and what will be achieved with the fix?** This is a critical, show-stopping bug. The entire despiece module is unusable for budgeting until the totals are calculated correctly.
-    - **Status:** IN PROGRESS
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** Frontend
-    - **Blocked on other issue:** None.
-- **Issue 2: Create MV Library and Multi-Library System**
-    - **Attempted fixes:** The agent started analyzing the user-provided PDFs.
-    - **Next debug checklist:** This is a large feature.
-        1.  **Backend:**
-            -   Modify the  schema to include a  field (e.g., 'ZC', 'MV').
-            -   Modify the  schema to include an array of .
-            -   Update all product-fetching endpoints to filter by the user's .
-            -   Create admin endpoints to manage  for users.
-        2.  **Data Extraction:**
-            -   Develop a robust script to extract product data (code, name, category, points) from the provided PDFs for the 'MV' library. This may require OCR or advanced PDF parsing.
-        3.  **Frontend:**
-            -   Update the UI to allow users with multiple libraries to switch between them.
-            -   Create an admin panel interface for managing library access.
-    - **Why fix this issue and what will be achieved with the fix?** Fulfills a major user requirement for business expansion, allowing different product catalogs for different client segments.
+        1.  **Backend:** Modify the  schema or the application's margin/settings configuration to store a unique  for each library ('ZC' and 'MV').
+        2.  **Backend:** Create/update an endpoint to manage these values.
+        3.  **Frontend:** Update the UI in  (likely in the margins/commercial conditions section) to allow an admin to set a different point value for each library.
+        4.  **Frontend:** Modify the final budget calculation logic to fetch and apply the correct  based on the item's library.
+    - **Why fix this issue and what will be achieved with the fix?** This is a critical requirement for generating accurate budgets, as the two main product lines have different pricing structures.
     - **Status:** NOT STARTED
     - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Both
-    - **Blocked on other issue:** Should be started after Issue 1 is resolved.
-- **Issue 3: Visual Glitch with Collapsed Vertical Sidebar**
-    - **Attempted fixes:** Multiple CSS adjustments in previous sessions failed.
-    - **Next debug checklist:** Re-examine CSS in , focusing on , , and layout shifts.
-    - **Why fix this issue and what will be achieved with the fix?** It is a persistent UI complaint.
-    - **Status:** NOT STARTED
-    - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** Frontend
     - **Blocked on other issue:** None.
-- **Issue 4: Verify updated Catalog Export (Excel/PDF) format**
-    - **Attempted fixes:** The backend endpoint was updated to export both montada and despiece products.
-    - **Next debug checklist:** Ask the user to test the download from the Inventory section and confirm if the format is correct.
-    - **Why fix this issue and what will be achieved with the fix?** The feature was previously rejected and needs validation.
-    - **Status:** USER VERIFICATION PENDING
-    - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** Backend
-    - **Blocked on other issue:** User feedback.
-- **Issue 5: Fix User Registration Email Flow**
-    - **Attempted fixes:** Implemented a workaround using a backup email address.
-    - **Next debug checklist:** Advise the user to verify their domain in Resend.
-    - **Why fix this issue and what will be achieved with the fix?** The current implementation is a temporary hack.
+- **Issue 2: Despiece items are not added to the total budget**
+    - **Attempted fixes:** The agent previously identified that 's total calculation only sums  and ignores .
+    - **Why fix this issue and what will be achieved with the fix?** The despiece module is unusable for budgeting until fixed.
     - **Status:** BLOCKED
     - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Frontend
+    - **Blocked on other issue:** User has explicitly paused this task (dejamos despiece de momento). **DO NOT** work on this until the user reprioritizes it.
+- **Issue 3: Improve accuracy of OCR data for the 'MV' library**
+    - **Attempted fixes:** The agent performed multiple rounds of data extraction from PDFs and JPGs, improving the dataset from ~160 products with poor pricing to ~256 products with a full 21-tariff price matrix.
+    - **Next debug checklist:** The OCR data is still not 100% accurate due to the scanned source material. The next step would be to ask the user if they can provide the 'MV' tariff data in a structured format like Excel/CSV for a perfect import.
+    - **Why fix this issue and what will be achieved with the fix?** To ensure the 'MV' product catalog and its pricing are completely accurate.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** Backend
-    - **Blocked on other issue:** User action (domain verification).
+    - **Blocked on other issue:** Awaiting cleaner data source from user.
+- **Issue 4: Visual Glitch with Collapsed Vertical Sidebar**
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** Y
+- **Issue 5: Verify updated Catalog Export (Excel/PDF) format**
+    - **Status:** USER VERIFICATION PENDING
+    - **Is recurring issue?** Y
+- **Issue 6: Fix User Registration Email Flow**
+    - **Status:** BLOCKED
+    - **Is recurring issue?** N
+    - **Blocked on other issue:** User action (Resend domain verification).
 
 **In progress Task List**:
-- **Task 1: Fix Despiece Budget Calculation (P0)**
-    - **Where to resume:** .
-    - **What will be achieved with this?** The main budget total will correctly sum the prices of both montada and despiece items, making the new despiece module functional.
-    - **Status:** IN PROGRESS
-    - **Should Test frontend/backend/both after fix?** Frontend
+- **Task 1: Implement library-specific valor del punto (P0)**
+    - **Where to resume:** Start by analyzing  to find the current margin settings and  to decide where to store the new value.
+    - **What will be achieved with this?** Budgets for MV and ZC libraries will be calculated using their respective, distinct point values, fulfilling a critical business logic requirement.
+    - **Status:** NOT STARTED
+    - **Should Test frontend/backend/both after fix?** Both
     - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - (P0) **Implement Multi-Library System:** Create the MV and ZC libraries and the admin functionality to manage user access, as described in Issue 2.
-    - (P1) **CRITICAL Frontend Refactoring**: Continue decomposing  (currently ~2900 lines).
+    - (P0 - Paused) Fix Despiece Budget Calculation Bug.
+    - (P1) **CRITICAL Frontend Refactoring**: Continue decomposing  (currently ~2986 lines).
 - **Future Tasks:**
-    - (P2) **Frontend Refactoring**: Decompose  (>4100 lines).
+    - (P2) **Frontend Refactoring**: Decompose  (>4300 lines).
     - (P3) **Backend Refactoring**: Move all remaining endpoints from  into dedicated routers.
 
 **Completed work in this session**
-- **Despiece Tariff Import:** Successfully parsed and imported over 5,400 component products (doors, handles) from the user-provided Excel file into the  collection.
-- **Manufacturer Unification:** Merged all DF and ALVIC products in the database into a single ALVIC manufacturer, simplifying the data model.
-- **Despiece Module Overhaul:** Replaced the old filterable list with a new, step-by-step UI () that implements the user-requested  flow.
-- **Backend API Enhancement:** Created a new endpoint () to provide dynamically filtered collections for the new UI.
-- **Bug Fix (Price Matrix):** Resolved multiple frontend and backend bugs, including a regex issue with special characters and a Pydantic validation error, to make the price matrix display correctly.
-- **UI Decluttering:** Removed all export icons (Excel/PDF) from the three different catalog library views (, , ) in .
-
-**Earlier issues found/mentioned but not fixed**
-- **Issue 1: Catalog Export format might still not meet user needs**
-    - **Debug checklist:** Ask the user for specific examples or a mockup of the desired Excel/PDF layout. The current implementation needs to be verified.
-    - **Why to solve this issue and what will be achieved with this?** The feature was previously rejected and is a core requirement.
-    - **Should Test frontend/backend/both after fix:** Backend.
-    - **Is recurring issue?** Y
-
-**Known issue recurrence from previous fork**
-- **UI glitches with sidebars**: The user has repeatedly reported that the collapsible sidebars do not look or behave correctly. This remains a persistent point of friction.
+- **Multi-Library System Implemented:**
+    - Created backend infrastructure (schemas, APIs) to support multiple product libraries ('ZC', 'MV') with distinct pricing systems.
+    - Extracted product data for the 'MV' library from scanned PDFs and JPGs using OCR, creating ~256 products with a full 21-tier price matrix.
+    - Moved library access management to the admin user permissions panel in , per user request.
+    - Added a TARIFA ACTIVA dropdown to  for users to switch between their assigned libraries.
+    - Fixed the GRUPO DE PRECIOS dropdown to dynamically display the correct pricing levels (Z1-Z12 for ZC, T1-T21 for MV).
+- **Data & UI Renaming:** Renamed Muebles Valencia to MV and Zona Cocinas to ZC across the application.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Step-by-Step UI Flow:** The despiece module was rebuilt around a multi-step component () that guides the user through selections rather than presenting a large, filterable dataset.
-- **Dynamic Backend Filtering:** A new endpoint was created to serve filtered data based on user selections in the frontend, enabling the step-by-step UI.
-- **Database Data Unification:** A script was run to merge two manufacturers (DF, ALVIC) into one (ALVIC), cleaning the data and simplifying frontend logic.
-- **Complex Data Parsing:** The agent wrote Python scripts using  to parse a complex, multi-sheet Excel file with matrix-based pricing.
-- **State Management for Totals:** The current bug highlights the separation of state for montada () and despiece () items and the need to combine them for final calculations.
+- **Multi-Library Architecture:** The core change, enabling data segregation via  and  fields.
+- **Dynamic Frontend UI:** The budgeting interface now adapts its dropdowns and pricing logic based on the  state.
+- **OCR & AI-Powered Data Extraction:** Used  and the platform's  to parse scanned documents (PDFs, JPGs) and build a structured product database from them.
+- **Backend Refactoring:** Created a new  router, separating concerns from the monolithic .
+- **State Management:** Utilized React state in  and  to manage the currently active library and update the UI accordingly.
 
 **key DB schema**
-- **products**: (in ) Stores montada (assembled) products.
-- **despiece_products**: (in ) Stores despiece (component) products. Heavily populated in this session with new ALVIC products from the Excel tariff. All have .
-- **backup_history**: Logs of database backups.
-
-**changes in tech stack**
-- No changes in the core tech stack.
+- **products**: 
+- **users**: 
+- **libraries**: (NEW) 
 
 **All files of reference**
-- : The main component, modified to integrate the new despiece flow and where the budget total bug resides.
-- : The new, central component for the entire despiece budgeting flow.
-- : Modified to add a new endpoint for filtering collections and to fix a regex bug.
-- : Updated with the new features and fixes.
-
-**Areas that need refactoring**:
-- **/app/frontend/src/components/BudgetTable.jsx**: **CRITICAL**. Still over 2900 lines.
-- **/app/frontend/src/components/SettingsModal.jsx**: Over 4100 lines and needs to be broken down.
-
-**key api endpoints**
-- : **NEW**. Fetches collections for a specific manufacturer.
-- : Fetches despiece products. Heavily used and debugged.
-- : Fetches available filters for despiece products.
+- : Core component for budgeting, heavily modified for multi-library UI and logic.
+- : Core component for admin settings, modified for library permissions.
+- : Main backend file, modified to integrate the new library system.
+- : Contains all Pydantic models; updated for libraries.
+- : New FastAPI router for all library-related endpoints.
+- : Updated with .
+- : Updated to communicate with new backend endpoints.
 
 **Critical Info for New Agent**
-- **PRIORITIZE THE BUG FIX:** The most important first step is to fix the bug where despiece items are not added to the budget total. This is in . Without this fix, the main feature worked on in this session is incomplete.
-- **New Feature Request is Large:** The user's request for a multi-library system (ZC / MV) is a significant architectural change. Plan it carefully after fixing the budget bug.
-- **Despiece Flow is New:** The entire despiece module now relies on . All future changes to this flow should start there.
-- **Database is Cleaned:** All despiece products from the user's Excel file are now in the  collection under the manufacturer ALVIC.
-
-**documents and test reports created in this job**
--  (updated multiple times)
+- **Highest Priority:** Implement the ability to set a different **valor del punto (point value)** for each library (ZC and MV). This is a new, critical requirement from the user.
+- **Paused Task:** The user explicitly paused work on the despiece budget calculation bug. **DO NOT** resume work on it unless the user specifically asks.
+- **MV Data Source:** The 'MV' product data was extracted via OCR from scanned documents and may contain inaccuracies. The user is aware. Proposing an Excel/CSV import as a way to perfect the data would be a good next step after the current task.
+- **UI Flow:** The main workflow is: Admin enables libraries for a user in Settings -> User logs in -> User selects an active library in the  dropdown -> The UI updates to show products and pricing levels for that library.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **LATEST/NEW FEATURE**: User asks to create a new MV product library from PDFs, separate from the existing ZC one, and create an admin system to manage access. (NOT STARTED)
-2.  User asks for a test. (AGENT REPLIED)
-3.  **BUG REPORT**: User provides a screenshot showing that despiece items are added but the total budget remains at €0.00. (IN PROGRESS)
-4.  User approves the implemented despiece flow.
-5.  User clarifies that ALVIC and DF are the same company and asks the agent to unify them and optimize the library. (RESOLVED)
-6.  Agent's attempt to fix the UI with useCallback timed out.
-7.  User chooses Option A to integrate the step-by-step wizard directly into the despiece tab. (RESOLVED)
-8.  Agent asks for clarification on how to proceed with the despiece UI redesign. (USER REPLIED)
-9.  **BUG REPORT**: User states the despiece budgeter is wrong and explains the correct flow should be Manufacturer -> Model -> Price Matrix. (RESOLVED, new UI implemented)
-10. User confirms to proceed with removing export icons. (RESOLVED)
+1.  **LATEST:**  (User requests separate point values for each library). (NOT STARTED)
+2.   (User reports that the price group dropdown is incorrect for the MV library). (RESOLVED)
+3.   (User confirms the plan to add the selector and import remaining prices). (RESOLVED)
+4.   (User asks to re-analyze images for better data extraction). (RESOLVED)
+5.   (User requests name changes and provides JPG images for better OCR). (RESOLVED)
+6.   (User provides more files and rejects the library selector's UI placement, asking for it to be moved to user permissions). (RESOLVED)
+7.   (User uploads the first part of the MV catalog). (PROCESSED)
+8.   (User clarifies the different pricing systems for ZC and MV). (IMPLEMENTED)
+9.   (User explicitly pauses the despiece bug fix and prioritizes the MV library import). (ACTIONED)
+10.  (Agent asks for the correct MV file). (USER REPLIED)
 
 **Project Health Check:**
 - **Broken:**
-    - **Budget Total Calculation:** The main budget total in  does not include items from the despiece section. This is a critical functionality bug.
+    - Despiece total calculation (Functionality is paused by user).
 - **Mocked:** N/A
 
 **3rd Party Integrations**
-- **Resend:** (Requires User API Key) - For emails, currently has a workaround.
-- **xlsxwriter / openpyxl:** Used for backend Excel file generation and parsing.
-- **reportlab / cairosvg:** For backend PDF file generation.
-- **jspdf / html2canvas:** For client-side PDF generation.
-- **pyotp / qrcode:** For 2FA implementation.
+- **Resend:** (Requires User API Key) - For emails.
+- **xlsxwriter / openpyxl:** For backend Excel file handling.
+- **reportlab / cairosvg / jspdf / html2canvas:** For PDF generation.
+- **pyotp / qrcode:** For 2FA.
 - **Google Gemini:** Via  (Emergent LLM Key).
-- **apscheduler:** For running daily automatic database backups.
+- **apscheduler:** For automatic database backups.
+- **pytesseract / pdfplumber:** Used for OCR and PDF data extraction.
 
 **Testing status**
 - Testing agent used after significant changes: NO
@@ -208,11 +174,10 @@ However, a critical bug was introduced: the prices of these new despiece items a
 - Test files created: None
 - Known regressions:
     - The visual glitch with the collapsed sidebar is a persistent, recurring issue.
-    - A new major regression was introduced: budget total calculation is broken for despiece items.
 
 **Credentials to test flow:**
 - **User:** 
 - **Password:** 
 
 **What agent forgot to execute**
-- The agent was interrupted while debugging the critical budget calculation bug. The fix for this issue in  was identified but not implemented. This must be the next action.</analysis>
+- The user's final request to implement different valor del punto for each library has not yet been started. This is the immediate next step.</analysis>
