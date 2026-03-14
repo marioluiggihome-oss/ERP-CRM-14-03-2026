@@ -2110,6 +2110,56 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       </div>
                     </div>
 
+                    {/* Tarifas/Bibliotecas Activas */}
+                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                      <h4 className="text-sm font-black text-amber-900 uppercase mb-3">
+                        📦 Tarifas de Precios Activas
+                      </h4>
+                      <p className="text-xs text-amber-700 mb-3">
+                        Selecciona las tarifas/catálogos a los que tiene acceso este usuario para presupuestar
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg border border-amber-200 hover:border-amber-400 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={userForm.allowedLibraries?.includes('ZC')}
+                            onChange={() => {
+                              const libs = userForm.allowedLibraries || [];
+                              const newLibs = libs.includes('ZC') 
+                                ? libs.filter(l => l !== 'ZC') 
+                                : [...libs, 'ZC'];
+                              setUserForm({...userForm, allowedLibraries: newLibs});
+                            }}
+                            className="w-5 h-5 rounded border-2 border-amber-400 accent-amber-500"
+                            data-testid="library-zc-checkbox"
+                          />
+                          <div>
+                            <span className="text-sm font-black text-slate-900 block">ZC - Zona Cocinas</span>
+                            <span className="text-[10px] text-slate-500">Sistema Zonas Z1-Z12</span>
+                          </div>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg border border-amber-200 hover:border-amber-400 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={userForm.allowedLibraries?.includes('MV')}
+                            onChange={() => {
+                              const libs = userForm.allowedLibraries || [];
+                              const newLibs = libs.includes('MV') 
+                                ? libs.filter(l => l !== 'MV') 
+                                : [...libs, 'MV'];
+                              setUserForm({...userForm, allowedLibraries: newLibs});
+                            }}
+                            className="w-5 h-5 rounded border-2 border-amber-400 accent-amber-500"
+                            data-testid="library-mv-checkbox"
+                          />
+                          <div>
+                            <span className="text-sm font-black text-slate-900 block">MV - Muebles Valencia</span>
+                            <span className="text-[10px] text-slate-500">Sistema Tarifas T1-T21</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
                     {/* Technical Capabilities */}
                     <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
                       <h4 className="text-sm font-black text-purple-900 uppercase mb-3">Capacidades Técnicas</h4>
