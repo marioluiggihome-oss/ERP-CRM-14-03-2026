@@ -2,7 +2,7 @@ import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, Pane
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { exportToPdf } from '../utils/pdfHelper';
 import { generateBudgetPDF } from '../services/pdfGenerator';
-import { DOOR_FINISHES, CabinetCategory } from '../constants';
+import { DOOR_FINISHES, MV_TARIFFS, CabinetCategory } from '../constants';
 import Logo from './Logo';
 import DespieceModal from './DespieceModal';
 import DespieceCatalog from './DespieceCatalog';
