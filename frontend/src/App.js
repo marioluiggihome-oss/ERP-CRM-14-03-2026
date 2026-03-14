@@ -637,6 +637,17 @@ const App = () => {
           </aside>
 
           <main className="flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10">
+            {/* Selector de Biblioteca - Solo si hay múltiples bibliotecas */}
+            {state.allowedLibraries?.length > 1 && (
+              <div className="absolute top-4 right-6 z-40">
+                <LibrarySelector
+                  currentLibrary={state.currentLibrary}
+                  onLibraryChange={handleLibraryChange}
+                  allowedLibraries={state.allowedLibraries}
+                />
+              </div>
+            )}
+            
             {state.currentTab === 'budget' && (
               <BudgetTable 
                 items={state.currentModule === 'montada' ? state.budgetItemsMontada : state.budgetItemsDespiece} 
