@@ -109,6 +109,7 @@ class UserCreate(BaseModel):
     isTienda: bool = False
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
+    allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
     allowedCatalogIds: List[str] = []
     commercialDiscount: float = 0
     discountMontada: float = 0
@@ -141,6 +142,7 @@ class UserUpdate(BaseModel):
     isTienda: Optional[bool] = None
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
+    allowedLibraries: Optional[List[str]] = None  # Tarifas/Bibliotecas activas
     allowedCatalogIds: Optional[List[str]] = None
     commercialDiscount: Optional[float] = None
     discountMontada: Optional[float] = None
