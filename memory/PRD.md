@@ -5,44 +5,37 @@
 ## Problema Original
 Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME con múltiples módulos, sistemas de precios y gestión de usuarios.
 
-## Última Actualización: 14 Marzo 2026
+## Última Actualización: 15 Marzo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (14 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (15 Marzo 2026)
 
-### Sistema de Valor de Punto por Biblioteca
-- ✅ **UI de configuración**: Sección "VALOR DE PUNTO POR TARIFA (MONTADA)" en MÁRGENES
-- ✅ **Campos separados**: MV (€/punto) y ZC (€/punto) configurables independientemente
-- ✅ **Backend**: Endpoint PUT `/api/libraries/{code}` actualiza `pointValue` por biblioteca
-- ✅ **Frontend**: `BudgetTable.jsx` usa `libraryPointValues[currentLibrary]` para cálculos
-- ✅ **App.js**: Carga `librariesAPI.getAll()` al iniciar y construye `libraryPointValues`
+### P0 - Mejoras UI/Datos
+- ✅ **Botón CATÁLOGO MODELOS**: Solo visible para tarifa ZC (oculto en MV)
+- ✅ **Variantes de altura COLUMNAS MV**: 68 productos con H200 y H220 (34 cada uno)
 
-### Mejora de Datos MV
-- ✅ **256 productos MV** con precios completos T1-T21
-- ✅ **Fondo estándar BAJO**: 58cm
-- ✅ **Fondo estándar ALTO**: 33cm  
-- ✅ **Altura estándar**: 70cm (bajos y altos), 220cm (columnas)
-- ✅ **Multiplicadores de tarifa**: T1=1.0 hasta T21=2.20 (~6% incremento por tarifa)
+### P1 - Corte Viga por Biblioteca
+- ✅ **UI configuración separada**: Campos "Corte Viga ZC (€)" y "Corte Viga MV (€)" en MÁRGENES
+- ✅ **Backend**: Campo `libraryVigaCutIncrements` en SettingsModel
+- ✅ **Cálculo de precios**: BudgetTable usa el valor correcto según biblioteca activa
 
-### Sistema Multi-Biblioteca (ZC / MV) - Sesión Anterior
-- ✅ Backend API de Bibliotecas (`/api/libraries`) - CRUD completo
-- ✅ Modelo de datos con `library` en productos, `allowedLibraries` en usuarios
-- ✅ Biblioteca ZC - 7,045 productos con sistema de ZONAS (Z1-Z12)
-- ✅ Biblioteca MV - 256 productos con sistema de TARIFAS (T1-T21)
-- ✅ Gestión de permisos en Panel MASTER
-- ✅ Selectores "TARIFA ACTIVA" y "TARIFA DE PRECIOS" en BudgetTable
+### P1 - Exportación Catálogo por Biblioteca
+- ✅ **Endpoint API**: `GET /api/products/export/library/{ZC|MV}` genera Excel
+- ✅ **Botones UI**: En tab INVENTARIO - botones "ZC" y "MV" para descarga directa
+- ✅ **Formato ZC**: Columnas REF, DESC, CATEGORÍA, SERIE, AN, AL, FO, Z1-Z12
+- ✅ **Formato MV**: Columnas REF, DESC, CATEGORÍA, SERIE, AN, AL, FO, T1-T21
 
 ---
 
 ## 🔴 PENDIENTE / BUGS CONOCIDOS
 
 ### P0 - CRÍTICO (PAUSADO POR USUARIO)
-1. **Bug cálculo presupuesto despiece** - Items de despiece no se suman al total
+1. **Bug cálculo presupuesto despiece** - Items de despiece no se suman al total (PAUSADO)
 
 ### P2 - MEJORAS
 2. **Glitch visual barra lateral colapsada** - Recurrente
-3. **Exportación catálogo (Excel/PDF)** - Verificar formato
+3. **Refactorización componentes grandes** - BudgetTable.jsx (~3078 líneas), SettingsModal.jsx (~4647 líneas)
 
 ### P3 - BLOQUEADOS
 4. **Flujo registro email** - Requiere verificación de dominio en Resend
@@ -54,43 +47,42 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 ### Backend (FastAPI)
 ```
 /app/backend/
-├── server.py                    # Servidor principal
-├── models/schemas.py            # Modelos Pydantic
+├── server.py                    # Servidor principal + endpoint exportación
+├── models/schemas.py            # SettingsModel con libraryVigaCutIncrements
 ├── routes/
 │   ├── libraries.py             # API de bibliotecas con pointValue
-│   ├── despiece_budgeter.py     # API de despiece
 │   └── ...
 ├── mv_products_v2.py            # Datos MV con precios T1 y multiplicadores
-└── import_mv_from_images.py     # Script OCR (referencia)
+└── add_columna_height_variants.py # Script para crear variantes H200/H220
 ```
 
 ### Frontend (React)
 ```
 /app/frontend/src/
-├── App.js                       # Carga bibliotecas y libraryPointValues
+├── App.js                       # Estado libraryVigaCutIncrements
 ├── components/
-│   ├── BudgetTable.jsx          # Cálculo con pointValue por biblioteca
-│   └── SettingsModal.jsx        # UI de márgenes por biblioteca
+│   ├── BudgetTable.jsx          # Cálculo con viga por biblioteca, botón CATÁLOGO condicional
+│   └── SettingsModal.jsx        # UI Corte Viga ZC/MV, botones exportación
 └── services/
-    └── api.js                   # librariesAPI.update para pointValue
+    └── api.js                   # API calls
 ```
 
-### Base de Datos (MongoDB: test_database)
+### Base de Datos (MongoDB: luiggi_home)
 ```
 Colecciones:
-- products          # library: ZC/MV, tariffPrices/zonePoints, fondo, height
-- libraries         # code, pointValue, pricingSystem, priceLevels
-- users             # allowedLibraries: []
+- products          # library: ZC/MV, height: 200/220 para COLUMNAS MV
+- system_settings   # libraryVigaCutIncrements: {ZC: €, MV: €}
+- users             # allowedLibraries: ['ZC', 'MV']
 ```
 
 ---
 
 ## BIBLIOTECAS/TARIFAS
 
-| Código | Sistema Precios | Productos | Fondo Bajo | Fondo Alto | pointValue |
-|--------|-----------------|-----------|------------|------------|------------|
-| ZC | ZONAS (Z1-Z12) | 7,045 | 60cm | 35cm | 1.0€ |
-| MV | TARIFAS (T1-T21) | 256 | 58cm | 33cm | 1.0€ |
+| Código | Sistema Precios | Productos | Columnas | Viga Cut Default |
+|--------|-----------------|-----------|----------|------------------|
+| ZC | ZONAS (Z1-Z12) | ~4505 | Z1-Z12 | 0€ |
+| MV | TARIFAS (T1-T21) | ~290 | T1-T21 | 0€ |
 
 ---
 
@@ -102,35 +94,28 @@ Colecciones:
 
 ---
 
-## PRÓXIMOS PASOS
+## PRÓXIMAS TAREAS
 
-1. **P0 (Pausado)**: Corregir bug total presupuesto despiece - cuando usuario lo indique
-2. **P2**: Corregir glitch visual del sidebar colapsado
-3. **P2**: Verificar formato de exportación de catálogo
-4. **Refactorización**: BudgetTable.jsx (~2990 líneas) y SettingsModal.jsx (~4400 líneas)
-
----
-
-## INTEGRACIONES
-
-- **Resend**: Email (requiere verificación de dominio)
-- **Google Gemini**: Via emergentintegrations (IA Lab)
-- **apscheduler**: Backups automáticos
-- **openpyxl/xlsxwriter**: Procesamiento Excel
+### Backlog
+1. (P2 - PAUSADO) Fix cálculo total presupuesto despiece
+2. (P2) Fix glitch sidebar colapsado
+3. (P3) Refactorización BudgetTable.jsx
+4. (P3) Refactorización SettingsModal.jsx
+5. (P3) Verificar flujo registro email
 
 ---
 
-## NOTAS TÉCNICAS
+## HISTORIAL DE CAMBIOS
 
-### Sistema de Precios MV
-- **Bajos**: Fondo fijo 58cm, precio fijo independiente de altura
-- **Altos**: Fondo fijo 33cm
-  - Columna "70": Precios para alturas 10-70cm
-  - Columna "90": Precios para alturas 71-90cm
-- **Multiplicadores**: T1=1.0, T2=1.06, ..., T21=2.20 (incremento ~6% por tarifa)
+### 15 Marzo 2026
+- ✅ P0: Botón CATÁLOGO MODELOS solo visible en ZC
+- ✅ P0: Variantes de altura COLUMNAS MV (H200, H220)
+- ✅ P1: Corte Viga independiente por biblioteca (ZC/MV)
+- ✅ P1: Endpoint y UI para exportación catálogo ZC/MV
+- 🔧 Fix: DB_NAME en .env (de test_database a luiggi_home)
+- 🔧 Fix: allowedLibraries para usuario MARIO
 
-### Flujo de Cálculo de Precio
-1. Usuario selecciona biblioteca (TARIFA ACTIVA)
-2. Usuario selecciona nivel de precio (TARIFA DE PRECIOS: T1-T21 o Z1-Z12)
-3. Sistema obtiene puntos del producto según tarifa seleccionada
-4. Precio = puntos × libraryPointValues[biblioteca] + extras
+### 14 Marzo 2026
+- Sistema de valor de punto por biblioteca
+- Mejora de datos MV (256 productos)
+- Sistema Multi-Biblioteca ZC/MV
