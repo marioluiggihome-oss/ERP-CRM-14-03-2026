@@ -1852,6 +1852,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.canManageArticles && <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[9px] font-black">INVENTARIO</span>}
                               {user.canAccessCRM && <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[9px] font-black">CRM</span>}
                               {user.canUseDigitalizador && <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-[9px] font-black">DIGITALIZADOR</span>}
+                              {user.canAccessMontajes && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">MONTAJES</span>}
+                              {user.isMontador && <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[9px] font-black">MONTADOR</span>}
                               {user.useCustomBranding && <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded text-[9px] font-black">PERSONALIZAR</span>}
                             </div>
                           </div>
