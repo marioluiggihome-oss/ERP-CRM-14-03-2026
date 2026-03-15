@@ -61,6 +61,11 @@ const App = () => {
         ZC: { width: 45, height: 45, depth: 45 },
         MV: { width: 45, height: 45, depth: 45 }
       },
+      // Corte de viga POR BIBLIOTECA
+      libraryVigaCutIncrements: {
+        ZC: 0,
+        MV: 0
+      },
       ivaRate: 21, // IVA editable (por defecto 21%)
       catalogs: [
         { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: [], module: 'montada' },
@@ -165,6 +170,11 @@ const App = () => {
             MV: { width: 45, height: 45, depth: 45 }
           },
           vigaCutIncrement: settings.vigaCutIncrement || 0,
+          // Corte de viga por biblioteca
+          libraryVigaCutIncrements: settings.libraryVigaCutIncrements || {
+            ZC: 0,
+            MV: 0
+          },
           brandColor: settings.brandColor || DEFAULT_BRAND_COLOR,
           logo: settings.logo || null
         }));
