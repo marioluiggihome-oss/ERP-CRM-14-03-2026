@@ -4821,10 +4821,10 @@ IMPORTANTE:
 
 
 @api_router.get("/digitalizador/search-catalog")
-async def search_digitalizador_catalog(q: str, limit: int = 5):
+async def search_digitalizador_catalog(q: str, limit: int = 5, library: str = "ZC"):
     """
     Search products in catalog for digitalizador autocomplete.
-    Returns matching products with fuzzy search.
+    Returns matching products with fuzzy search, filtered by library.
     """
     try:
         if not q or len(q) < 2:
@@ -4835,15 +4835,23 @@ async def search_digitalizador_catalog(q: str, limit: int = 5):
         
         results = []
         
+        # Filter by library
+        base_filter = {"library": library}
+        
         # Search by exact code match first
+        exact_query = {**base_filter, "code": search_upper}
         exact_match = await db.products.find_one(
-            {"code": search_upper},
-            {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "category": 1}
+            exact_query,
+            {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "category": 1, "library": 1}
         )
         if exact_match:
             price = exact_match.get("points", 0) or 0
             if exact_match.get("zonePoints"):
-                price = exact_match["zonePoints"].get("Z1", price)
+                # Para MV usar T1, para ZC usar Z1
+                if library == "MV":
+                    price = exact_match["zonePoints"].get("T1", price)
+                else:
+                    price = exact_match["zonePoints"].get("Z1", price)
             results.append({
                 "id": exact_match.get("id", ""),
                 "code": exact_match.get("code", ""),
@@ -4861,10 +4869,10 @@ async def search_digitalizador_catalog(q: str, limit: int = 5):
                 regex_patterns.append({"name": {"$regex": word, "$options": "i"}})
         
         if regex_patterns:
-            query = {"$or": regex_patterns}
+            query = {"$and": [base_filter, {"$or": regex_patterns}]}
             cursor = db.products.find(
                 query,
-                {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "category": 1}
+                {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "category": 1, "library": 1}
             ).limit(limit * 3)
             products = await cursor.to_list(limit * 3)
             
