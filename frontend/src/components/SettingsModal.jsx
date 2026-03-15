@@ -62,6 +62,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isRepresentative: false,
     isPrescriptor: false,
     isTienda: false,  // Tienda/Punto de Venta
+    isMontador: false,  // Montador/Instalador
     linkedRepresentativeId: '',
     allowedModules: ['montada'],
     allowedLibraries: ['ZC'],  // Tarifas/Bibliotecas activas (ZC, MV, etc.)
@@ -76,6 +77,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessCRM: false,
     canUseDigitalizador: false,
     canAccessArmarios: false,
+    canAccessMontajes: false,  // Acceso a Agenda de Montajes
     canAuthorizePermissions: false,
     useCustomBranding: false,
     canChangeLogo: false,
