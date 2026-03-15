@@ -329,6 +329,10 @@ class SettingsModel(BaseModel):
     specialIncrementHeight: float = 45
     specialIncrementDepth: float = 45
     vigaCutIncrement: float = 0
+    # Incrementos especiales por biblioteca
+    librarySpecialIncrements: Optional[Dict] = None
+    # Corte de viga por biblioteca  
+    libraryVigaCutIncrements: Optional[Dict] = None
     brandColor: str = "#ea580c"
     logo: Optional[str] = None
     defaultCarcassMaterialId: Optional[str] = None
@@ -341,6 +345,8 @@ class SettingsUpdate(BaseModel):
     specialIncrementHeight: Optional[float] = None
     specialIncrementDepth: Optional[float] = None
     vigaCutIncrement: Optional[float] = None
+    librarySpecialIncrements: Optional[Dict] = None
+    libraryVigaCutIncrements: Optional[Dict] = None
     brandColor: Optional[str] = None
     logo: Optional[str] = None
     defaultCarcassMaterialId: Optional[str] = None
