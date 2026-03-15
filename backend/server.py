@@ -4725,8 +4725,8 @@ IMPORTANTE:
                 regex_patterns.extend([{"name": {"$regex": word, "$options": "i"}} for word in search_words if len(word) >= 3])
                 
                 if regex_patterns:
-                    query = {"$or": regex_patterns}
-                    cursor = db.products.find(query, {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1}).limit(limit * 3)
+                    query = {"$and": [base_filter, {"$or": regex_patterns}]}
+                    cursor = db.products.find(query, {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1, "library": 1}).limit(limit * 3)
                     products = await cursor.to_list(limit * 3)
                     
                     for p in products:
@@ -4750,7 +4750,11 @@ IMPORTANTE:
                         if score > 0.2:
                             price = p.get("points", 0) or 0
                             if p.get("zonePoints"):
-                                price = p["zonePoints"].get("Z1", price)
+                                # Para MV usar T1, para ZC usar Z1
+                                if library == "MV":
+                                    price = p["zonePoints"].get("T1", price)
+                                else:
+                                    price = p["zonePoints"].get("Z1", price)
                             matches.append(DigitalizadorMatchedProduct(
                                 id=p.get("id", ""),
                                 code=p.get("code", ""),
