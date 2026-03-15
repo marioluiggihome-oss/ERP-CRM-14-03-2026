@@ -370,6 +370,13 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     return null;
   }, []);
 
+  // Función para limpiar código (quitar D/I de la referencia)
+  const cleanCode = useCallback((code) => {
+    if (!code) return '';
+    // Quitar D/I, /I del código para mostrar
+    return code.replace(/D\/I/g, '').replace(/\/I/g, '').trim();
+  }, []);
+
   // Función helper para detectar tipo de mueble especial
   const getSpecialType = useCallback((code, name) => {
     const c = code?.toUpperCase() || '';
