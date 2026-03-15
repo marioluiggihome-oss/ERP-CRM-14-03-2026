@@ -1,7 +1,6 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado del Proyecto: EN DESARROLLO ACTIVO
-
 ## Última Actualización: 15 Marzo 2026
 
 ---
@@ -9,88 +8,75 @@
 ## ✅ COMPLETADO EN ESTA SESIÓN
 
 ### Correcciones de Datos MV
-- ✅ **Productos ALTO H70/H90**: Creadas 93 variantes H70 y 93 variantes H90 para muebles ALTO de la biblioteca MV
-- ✅ Códigos actualizados: A25D/I/70, A25D/I/90, A30/70, A30/90, etc.
+- ✅ **Productos ALTO H70/H90**: Creadas 93 variantes H70 y 93 variantes H90
+- ✅ **IDs únicos**: Corregidos IDs duplicados (ahora prod-mv-{code}-70, prod-mv-{code}-90)
+- ✅ **Precios Tarifa 1 corregidos**: 
+  - A100/70: 77 pts, A100/90: 85 pts
+  - A25/70: 36 pts, A25/90: 39 pts
+  - A30/70: 38 pts, A30/90: 41 pts
+
+### Bug "Desconocidos" en Presupuesto
+- ✅ **SOLUCIONADO**: Los productos MV ya no aparecen como "REFERENCIA DESCONOCIDA"
+- Causa: IDs duplicados en productos con variantes de altura
+- Solución: IDs únicos basados en código completo incluyendo variante
 
 ### Mejoras en Filtros
-- ✅ **Filtro de cascos por biblioteca**: Materiales separados para ZC y MV en constants.js
-- ✅ **Filtro por librería en Inventario**: Añadido selector ZC/MV/TODAS en el panel de Inventario
+- ✅ **Filtro de cascos por biblioteca**: ZC y MV separados
+- ✅ **Filtro por librería en Inventario**: Selector ZC/MV/TODAS
 
-### Agenda de Montajes - Mejoras
+### Agenda de Montajes
 - ✅ **Fechas separadas**:
-  - 📦 **Fecha Recepción Cocina**: Fecha prevista de llegada del material
-  - 🔧 **Fecha Montaje Comprometido**: Fecha de instalación acordada con el cliente
-- ✅ Vista de lista muestra ambas fechas con iconos distintivos
+  - 📦 Fecha Recepción Cocina
+  - 🔧 Fecha Montaje Comprometido
 
 ### Correcciones UI
-- ✅ **Label "Nombre"**: Cambiado de "Nombre Público Tienda" a "Nombre"
+- ✅ **Label "Nombre"**: Corregido
 
 ---
 
-## ARQUITECTURA DE DATOS
+## PRECIOS TARIFA 1 (MV) - ACTUALIZADOS
 
-### Materiales/Cascos
-```javascript
-// En constants.js - INITIAL_CARCASS_MATERIALS
-ZC: mat-blanco-zc, mat-gris-zc, mat-roble-zc, mat-nogal-zc
-MV: mat-blanco-mv, mat-gris-mv, mat-roble-mv
-```
-
-### Productos ALTO MV
-```
-Formato: {código}/70 y {código}/90
-Ejemplos: A25D/I/70, A25D/I/90, A30/70, A30/90
-Total: 186 productos ALTO (93 H70 + 93 H90)
-```
-
-### Montajes (MongoDB: luiggi_home.montajes)
-```javascript
-{
-  montadorId: string,
-  clientName: string,
-  clientAddress: string,
-  expectedDeliveryDate: string,  // 📦 Fecha recepción cocina
-  scheduledDate: string,         // 🔧 Fecha montaje comprometido
-  scheduledTime: string,
-  estimatedDuration: string,
-  status: 'pendiente' | 'en_curso' | 'completado' | 'cancelado',
-  budgetRef: string,
-  notes: string
-}
-```
+### ALTOS (H70 / H90)
+| Código | H70 | H90 |
+|--------|-----|-----|
+| A25 | 36 | 39 |
+| A30 | 38 | 41 |
+| A35 | 40 | 44 |
+| A40 | 43 | 46 |
+| A45 | 46 | 49 |
+| A50 | 48 | 52 |
+| A60 | 57 | 62 |
+| A70 | 63 | 70 |
+| A80 | 69 | 77 |
+| A90 | 77 | 83 |
+| A100 | 77 | 85 |
 
 ---
 
 ## 🔴 PENDIENTE
 
 ### P0 - PAUSADO
-1. **Cálculo presupuesto despiece** - Items no se suman al total (PAUSADO por usuario)
+1. **Cálculo presupuesto despiece** - PAUSADO por usuario
 
 ### P2 - MEJORAS PENDIENTES
-2. **Casco predeterminado por SECCIÓN**: Configurar casco default para BAJOS, ALTOS, COLUMNAS por biblioteca
-3. **Logo**: Usuario debe volver a subir el logo
+2. **Casco predeterminado por SECCIÓN** (BAJOS/ALTOS/COLUMNAS)
+3. **Logo**: Usuario debe volver a subir
 4. **Glitch sidebar colapsado**: Recurrente
-
-### P3 - BACKLOG
-5. Refactorización componentes grandes
-6. Preview visual catálogo antes de exportar
+5. **Revisar precios completos** de todas las categorías MV
 
 ---
 
 ## CREDENCIALES TEST
-- **Usuario**: MARIO / MARIO (Admin)
-- **Otros**: ALBERTO, EDU
+- **Usuario**: MARIO / MARIO
 
 ---
 
-## HISTORIAL DE CAMBIOS
+## HISTORIAL
 
-### 15 Marzo 2026 (Sesión actual)
-- ✅ Creadas variantes H90 para productos ALTO MV
-- ✅ Materiales/cascos separados por biblioteca (ZC/MV)
-- ✅ Filtro por librería en Inventario
+### 15 Marzo 2026
+- ✅ IDs únicos para productos MV con variantes
+- ✅ Precios ALTOS MV actualizados según Tarifa 1
+- ✅ Bug "desconocidos" en presupuesto SOLUCIONADO
+- ✅ Variantes H70/H90 para ALTOS MV
+- ✅ Filtro librería en Inventario
 - ✅ Fechas recepción/montaje en Agenda de Montajes
-- ✅ Agenda de Montajes completa
-- ✅ Digitalizador filtra por biblioteca
-- ✅ Exportación catálogo ZC/MV
-- ✅ Corte Viga independiente por biblioteca
