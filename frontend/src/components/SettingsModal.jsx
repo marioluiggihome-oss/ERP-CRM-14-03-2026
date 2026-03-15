@@ -558,6 +558,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       p.name.toLowerCase().includes(query)
     );
     
+    // Filtrar por biblioteca (ZC/MV)
+    if (inventoryLibraryFilter) {
+      filtered = filtered.filter(p => p.library === inventoryLibraryFilter);
+    }
+    
     // Filtrar por programa
     if (productProgramaFilter) {
       filtered = filtered.filter(p => (p.programa || 'SIN PROGRAMA') === productProgramaFilter);
@@ -583,7 +588,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     
     // Ordenar por código de referencia
     return filtered.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-  }, [currentCatalog, productSearch, productProgramaFilter, productTipoMuebleFilter, productSeriesFilter, productZeroPriceFilter]);
+  }, [currentCatalog, productSearch, inventoryLibraryFilter, productProgramaFilter, productTipoMuebleFilter, productSeriesFilter, productZeroPriceFilter]);
 
   if (!isOpen) return null;
 
