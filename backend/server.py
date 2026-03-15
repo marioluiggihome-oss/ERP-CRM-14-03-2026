@@ -6180,22 +6180,6 @@ Generate ONE high-quality photorealistic image."""
         logger.error(f"Error en IA render: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# Include the router in the main app (AFTER all endpoints are defined)
-app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ============================================
-# STARTUP / SHUTDOWN EVENTS
-# ============================================
-
 # ==========================================
 # AGENDA DE MONTAJES (Montadores/Instaladores)
 # ==========================================
