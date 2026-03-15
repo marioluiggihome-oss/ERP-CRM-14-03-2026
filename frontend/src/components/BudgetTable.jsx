@@ -1765,8 +1765,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                                 </>
                             ) : (
                                 <>
-                                    <span className="w-full bg-indigo-50/50 border border-indigo-100 rounded px-1 py-0.5 text-[7px] font-black uppercase italic text-indigo-900">{item.customReference ?? product.code}</span>
-                                    <span className="print-only text-[7px] font-black uppercase italic text-indigo-900">{item.customReference ?? product.code}</span>
+                                    <span className="w-full bg-indigo-50/50 border border-indigo-100 rounded px-1 py-0.5 text-[7px] font-black uppercase italic text-indigo-900">{cleanCode(item.customReference ?? product.code)}</span>
+                                    <span className="print-only text-[7px] font-black uppercase italic text-indigo-900">{cleanCode(item.customReference ?? product.code)}</span>
                                 </>
                             )}
                          </div>
