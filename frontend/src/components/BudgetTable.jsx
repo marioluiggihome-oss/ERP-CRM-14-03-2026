@@ -2207,7 +2207,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           <td className="p-1 pl-2 w-[45px]">
                             <CabinetIcon type={iconType} isGola={isGola} className="w-8 h-8" />
                           </td>
-                          <td className="p-2 font-bold text-indigo-900 text-[11px] w-[90px]">{p.code}</td>
+                          <td className="p-2 font-bold text-indigo-900 text-[11px] w-[90px]">{cleanCode(p.code)}</td>
                           <td className="p-2 min-w-[180px]">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] font-bold text-indigo-600 uppercase">{p.name}</span>
@@ -2460,7 +2460,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           <td className="p-1 pl-2 w-[45px]">
                             <CabinetIcon type={iconType} isGola={isGola} className="w-8 h-8" />
                           </td>
-                          <td className="p-2 font-bold text-indigo-900 text-[11px] w-[90px]">{p.code}</td>
+                          <td className="p-2 font-bold text-indigo-900 text-[11px] w-[90px]">{cleanCode(p.code)}</td>
                           <td className="p-2 min-w-[180px]">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] font-bold text-indigo-600 uppercase">{p.name}</span>
