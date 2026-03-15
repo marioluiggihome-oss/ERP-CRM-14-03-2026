@@ -741,10 +741,18 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
          const categoryUpper = (product.category || '').toUpperCase();
          const isExcludedCategory = categoryUpper.includes('COSTADO') || categoryUpper.includes('REGLETA');
          
+         // Obtener incrementos de la biblioteca activa (o usar los globales como fallback)
+         const currentLibrary = state.currentLibrary || 'ZC';
+         const libIncrements = state.librarySpecialIncrements?.[currentLibrary] || {
+           width: state.specialIncrementWidth,
+           height: state.specialIncrementHeight,
+           depth: state.specialIncrementDepth
+         };
+         
          if (!isExcludedCategory) {
-           if (Number(item.customWidth) !== Number(product.width)) { cutsCost += state.specialIncrementWidth; cuts.push('Ancho'); }
-           if (Number(item.customHeight) !== Number(product.height)) { cutsCost += state.specialIncrementHeight; cuts.push('Alto'); }
-           if (Number(item.customDepth) !== Number(product.depth)) { cutsCost += state.specialIncrementDepth; cuts.push('Fondo'); }
+           if (Number(item.customWidth) !== Number(product.width)) { cutsCost += libIncrements.width; cuts.push('Ancho'); }
+           if (Number(item.customHeight) !== Number(product.height)) { cutsCost += libIncrements.height; cuts.push('Alto'); }
+           if (Number(item.customDepth) !== Number(product.depth)) { cutsCost += libIncrements.depth; cuts.push('Fondo'); }
          }
 
          const selectedMaterial = state.carcassMaterials.find(m => m.id === state.selectedCarcassMaterialId);
