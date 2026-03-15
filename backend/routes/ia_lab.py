@@ -19,10 +19,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ia-lab", tags=["IA Lab"])
 
 
-async def search_product_in_catalog(code: str, width: int = None, height: int = None) -> dict:
+async def search_product_in_catalog(code: str, width: int = None, height: int = None, library: str = None) -> dict:
     """
     Busca un producto en el catálogo por código.
     Intenta varias variantes del código si no encuentra exacto.
+    Filtra por biblioteca si se especifica.
     Devuelve el producto con sus precios reales.
     """
     if not code:
@@ -30,13 +31,20 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
     
     code = code.upper().strip()
     
+    # Construir filtro base con biblioteca si se especifica
+    base_filter = {}
+    if library:
+        base_filter["library"] = library.upper()
+    
     # 1. Búsqueda exacta
-    product = await db.products.find_one({"code": code}, {"_id": 0})
+    search_filter = {**base_filter, "code": code}
+    product = await db.products.find_one(search_filter, {"_id": 0})
     if product:
         return product
     
     # 2. Buscar con referencia
-    product = await db.products.find_one({"reference": code}, {"_id": 0})
+    search_filter = {**base_filter, "reference": code}
+    product = await db.products.find_one(search_filter, {"_id": 0})
     if product:
         return product
     
@@ -50,27 +58,25 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
         ancho = match.group(5)
         
         pattern = f".*{tipo}.*{num_puertas}.*{tipo_puerta}.*{ancho}$"
-        product = await db.products.find_one(
-            {"code": {"$regex": pattern, "$options": "i"}},
-            {"_id": 0}
-        )
+        search_filter = {**base_filter, "code": {"$regex": pattern, "$options": "i"}}
+        product = await db.products.find_one(search_filter, {"_id": 0})
         if product:
             return product
         
         pattern_simple = f".*{tipo}.*{ancho}$"
-        product = await db.products.find_one(
-            {"code": {"$regex": pattern_simple, "$options": "i"}},
-            {"_id": 0}
-        )
+        search_filter = {**base_filter, "code": {"$regex": pattern_simple, "$options": "i"}}
+        product = await db.products.find_one(search_filter, {"_id": 0})
         if product:
             return product
     
     # 4. Buscar por dimensiones si se proporcionan
     if width and height:
-        products = await db.products.find({
+        search_filter = {
+            **base_filter,
             "width": {"$gte": width - 50, "$lte": width + 50},
             "height": {"$gte": height - 100, "$lte": height + 100}
-        }, {"_id": 0}).limit(5).to_list(5)
+        }
+        products = await db.products.find(search_filter, {"_id": 0}).limit(5).to_list(5)
         
         if products:
             return products[0]
