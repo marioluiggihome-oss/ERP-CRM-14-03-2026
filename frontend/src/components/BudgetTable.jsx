@@ -340,6 +340,25 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     return Array.from(series).sort();
   }, [allProducts, state.currentModule, catalogs, selectedPrograma, selectedCategory, filterWidth, filterHeight, filterDepth]);
 
+  // Aperturas únicas (solo para MV o productos con apertura definida)
+  const uniqueAperturas = useMemo(() => {
+    let filteredProducts = allProducts;
+    
+    if (state.currentModule === 'montada') {
+      filteredProducts = catalogs
+        .filter(c => c.module === 'montada')
+        .flatMap(c => c.products || []);
+    }
+    
+    // Filtrar por serie si está seleccionada
+    if (selectedSeries !== 'TODAS') {
+      filteredProducts = filteredProducts.filter(p => (p.series || 'GENERAL') === selectedSeries);
+    }
+    
+    const aperturas = new Set(filteredProducts.filter(p => p.apertura).map(p => p.apertura));
+    return Array.from(aperturas).sort();
+  }, [allProducts, state.currentModule, catalogs, selectedSeries]);
+
   const sortedItems = useMemo(() => {
     return [...items].sort((a, b) => {
       if (a.isManual) return 1;
