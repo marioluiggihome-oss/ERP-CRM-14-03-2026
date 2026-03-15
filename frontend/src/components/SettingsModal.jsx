@@ -3757,6 +3757,48 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     {editingMaterialId ? 'Editar Material' : 'Nuevo Material'}
                   </h4>
                   <div className="space-y-4">
+                    {/* Selector de Tarifa - Solo al crear */}
+                    {!editingMaterialId && (
+                      <div>
+                        <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Tarifa *</label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setMaterialForm({...materialForm, library: 'ZC'})}
+                            className={`flex-1 py-3 rounded-xl font-black uppercase text-sm transition-all ${
+                              materialForm.library === 'ZC'
+                                ? 'bg-blue-600 text-white shadow-lg'
+                                : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                            }`}
+                          >
+                            ZC
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMaterialForm({...materialForm, library: 'MV'})}
+                            className={`flex-1 py-3 rounded-xl font-black uppercase text-sm transition-all ${
+                              materialForm.library === 'MV'
+                                ? 'bg-amber-600 text-white shadow-lg'
+                                : 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                            }`}
+                          >
+                            MV
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-amber-500 mt-1 italic">Una vez creado, no se puede cambiar la tarifa</p>
+                      </div>
+                    )}
+                    {/* Mostrar tarifa actual al editar (no editable) */}
+                    {editingMaterialId && (
+                      <div className="bg-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-xs font-black text-slate-500 uppercase">Tarifa: </span>
+                        <span className={`px-3 py-1 rounded-lg text-sm font-black ${
+                          materialForm.library === 'MV' ? 'bg-amber-200 text-amber-800' : 'bg-blue-200 text-blue-800'
+                        }`}>
+                          {materialForm.library || 'ZC'}
+                        </span>
+                      </div>
+                    )}
                     <div>
                       <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Nombre del Material *</label>
                       <input
