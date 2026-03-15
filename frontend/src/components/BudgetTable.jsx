@@ -2214,6 +2214,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                                   {specialType}
                                 </span>
                               )}
+                              {/* Apertura para MV */}
+                              {p.apertura && (
+                                <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${
+                                  p.apertura === '1P D/I' ? 'bg-blue-100 text-blue-700' :
+                                  p.apertura === '2P' ? 'bg-green-100 text-green-700' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {p.apertura === '1P D/I' ? '1P↔' : p.apertura}
+                                </span>
+                              )}
                             </div>
                             {p.series && <div className="text-[8px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                           </td>
@@ -2455,6 +2465,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                               {specialType && (
                                 <span className={`px-1.5 py-0.5 rounded text-[7px] font-bold ${specialColors[specialType]}`}>
                                   {specialType}
+                                </span>
+                              )}
+                              {/* Apertura para MV */}
+                              {p.apertura && (
+                                <span className={`px-1 py-0.5 rounded text-[7px] font-bold ${
+                                  p.apertura === '1P D/I' ? 'bg-blue-100 text-blue-700' :
+                                  p.apertura === '2P' ? 'bg-green-100 text-green-700' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {p.apertura === '1P D/I' ? '1P↔' : p.apertura}
                                 </span>
                               )}
                             </div>
