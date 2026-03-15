@@ -188,14 +188,22 @@ Responde SOLO con JSON válido:
 
 
 @router.post("/analyze-kitchen-plan")
-async def analyze_kitchen_plan(file: UploadFile = File(...)):
+async def analyze_kitchen_plan(
+    file: UploadFile = File(...),
+    library: Optional[str] = Form(default="ZC")
+):
     """
     Analiza un plano de cocina usando Gemini Vision y detecta los muebles.
+    Filtra productos por la biblioteca especificada (ZC o MV).
     """
     try:
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        
+        # Normalizar biblioteca
+        active_library = (library or "ZC").upper()
+        logger.info(f"Analyzing kitchen plan for library: {active_library}")
         
         file_content = await file.read()
         base64_image = base64.b64encode(file_content).decode('utf-8')
@@ -231,9 +239,9 @@ async def analyze_kitchen_plan(file: UploadFile = File(...)):
             else:
                 data = {"error": "No se pudo analizar el plano", "raw_response": response_text[:500]}
         
-        # Enrich with catalog data
+        # Enrich with catalog data - FILTRANDO POR BIBLIOTECA
         if 'muebles_detectados' in data:
-            data['muebles_detectados'] = await enrich_detected_furniture(data['muebles_detectados'])
+            data['muebles_detectados'] = await enrich_detected_furniture(data['muebles_detectados'], active_library)
             
             total_pvp = sum(m.get('precio_pvp', 0) for m in data['muebles_detectados'])
             productos_encontrados = sum(1 for m in data['muebles_detectados'] if m.get('producto_encontrado'))
@@ -243,11 +251,12 @@ async def analyze_kitchen_plan(file: UploadFile = File(...)):
                 'total_pvp': total_pvp,
                 'productos_encontrados': productos_encontrados,
                 'productos_no_encontrados': productos_no_encontrados,
-                'mensaje': f"{productos_encontrados} productos cotizados de {len(data['muebles_detectados'])} detectados"
+                'mensaje': f"{productos_encontrados} productos cotizados de {len(data['muebles_detectados'])} detectados",
+                'biblioteca': active_library
             }
         
-        logger.info(f"Kitchen plan analyzed: {len(data.get('muebles_detectados', []))} furniture items detected")
-        return {"success": True, "analysis": data}
+        logger.info(f"Kitchen plan analyzed: {len(data.get('muebles_detectados', []))} furniture items detected for {active_library}")
+        return {"success": True, "analysis": data, "library": active_library}
         
     except Exception as e:
         logger.error(f"Kitchen plan analysis error: {e}")
