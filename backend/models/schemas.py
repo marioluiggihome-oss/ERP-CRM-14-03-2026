@@ -1030,7 +1030,8 @@ class MontajeBase(BaseModel):
     clientPhone: str = ""
     clientAddress: str
     projectDescription: str = ""
-    scheduledDate: str  # ISO date
+    expectedDeliveryDate: str = ""  # Fecha prevista de recepción de cocina
+    scheduledDate: str  # Fecha de montaje comprometida
     scheduledTime: str = ""  # HH:MM
     estimatedDuration: str = ""  # e.g., "2 días"
     status: str = "pendiente"  # pendiente, en_curso, completado, cancelado
