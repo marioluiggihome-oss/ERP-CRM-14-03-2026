@@ -4684,8 +4684,8 @@ IMPORTANTE:
             parsed = json.loads(response_text)
             
             # Helper function for fuzzy search in catalog
-            async def search_catalog_fuzzy(search_text: str, limit: int = 3):
-                """Search products by reference or description using fuzzy matching"""
+            async def search_catalog_fuzzy(search_text: str, limit: int = 3, library: str = "ZC"):
+                """Search products by reference or description using fuzzy matching, filtered by library"""
                 if not search_text or len(search_text) < 2:
                     return []
                 
@@ -4694,15 +4694,23 @@ IMPORTANTE:
                 
                 matches = []
                 
+                # Filter by library
+                base_filter = {"library": library}
+                
                 # Search by exact code match first
+                exact_query = {**base_filter, "code": search_upper}
                 exact_match = await db.products.find_one(
-                    {"code": search_upper},
+                    exact_query,
                     {"_id": 0, "id": 1, "code": 1, "name": 1, "points": 1, "zonePoints": 1}
                 )
                 if exact_match:
                     price = exact_match.get("points", 0) or 0
                     if exact_match.get("zonePoints"):
-                        price = exact_match["zonePoints"].get("Z1", price)
+                        # Para MV usar T1, para ZC usar Z1
+                        if library == "MV":
+                            price = exact_match["zonePoints"].get("T1", price)
+                        else:
+                            price = exact_match["zonePoints"].get("Z1", price)
                     matches.append(DigitalizadorMatchedProduct(
                         id=exact_match.get("id", ""),
                         code=exact_match.get("code", ""),
