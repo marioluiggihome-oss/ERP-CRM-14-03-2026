@@ -3669,13 +3669,26 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
               {!isEditingMaterial ? (
                 <div className="grid grid-cols-2 gap-4">
-                  {state.carcassMaterials.map(material => {
+                  {state.carcassMaterials
+                    .filter(m => materialLibraryFilter === 'TODAS' || m.library === materialLibraryFilter)
+                    .map(material => {
                     const isDefault = material.id === state.selectedCarcassMaterialId;
+                    const matLibrary = material.library || 'ZC';
                     return (
                     <div key={material.id} className={`bg-white border-2 ${isDefault ? 'border-emerald-400 shadow-lg shadow-emerald-100' : 'border-amber-200'} rounded-xl p-5 hover:shadow-lg transition-all`}>
                       <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h4 className="text-base font-black text-amber-900">{material.name}</h4>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-base font-black text-amber-900">{material.name}</h4>
+                            {/* Badge de tarifa */}
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                              matLibrary === 'MV' 
+                                ? 'bg-amber-100 text-amber-700' 
+                                : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {matLibrary}
+                            </span>
+                          </div>
                           {isDefault && (
                             <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black uppercase">
                               <CheckCircle size={10} /> PREDETERMINADO
@@ -3683,6 +3696,31 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           )}
                         </div>
                         <div className="flex gap-1">
+                          {/* Botón para cambiar tarifa */}
+                          <button
+                            onClick={async () => {
+                              const newLibrary = matLibrary === 'ZC' ? 'MV' : 'ZC';
+                              setState(prev => ({
+                                ...prev,
+                                carcassMaterials: prev.carcassMaterials.map(m =>
+                                  m.id === material.id ? { ...m, library: newLibrary } : m
+                                )
+                              }));
+                              try {
+                                await materialsAPI.update(material.id, { ...material, library: newLibrary });
+                              } catch (err) {
+                                console.error('Error updating material library:', err);
+                              }
+                            }}
+                            className={`p-1.5 rounded-lg transition-all ${
+                              matLibrary === 'MV' 
+                                ? 'bg-amber-100 hover:bg-amber-200' 
+                                : 'bg-blue-100 hover:bg-blue-200'
+                            }`}
+                            title={`Cambiar a ${matLibrary === 'ZC' ? 'MV' : 'ZC'}`}
+                          >
+                            <RefreshCw size={14} className={matLibrary === 'MV' ? 'text-amber-600' : 'text-blue-600'} />
+                          </button>
                           <button
                             onClick={() => handleEditMaterial(material)}
                             className="p-1.5 hover:bg-amber-100 rounded-lg transition-all"
