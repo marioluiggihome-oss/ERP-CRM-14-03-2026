@@ -52,9 +52,15 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     setAnalyzing(true);
     setError(null);
     setAnalysisResult(null);
+    
+    // Obtener la biblioteca activa del estado
+    const activeLibrary = state?.currentLibrary || 'ZC';
 
     try {
       const formData = new FormData();
+      
+      // Agregar la biblioteca activa al FormData
+      formData.append('library', activeLibrary);
       
       // Si es una sola imagen, usar el endpoint simple
       if (selectedImages.length === 1) {
