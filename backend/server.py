@@ -4899,7 +4899,11 @@ async def search_digitalizador_catalog(q: str, limit: int = 5, library: str = "Z
                 if score > 0.1:
                     price = p.get("points", 0) or 0
                     if p.get("zonePoints"):
-                        price = p["zonePoints"].get("Z1", price)
+                        # Para MV usar T1, para ZC usar Z1
+                        if library == "MV":
+                            price = p["zonePoints"].get("T1", price)
+                        else:
+                            price = p["zonePoints"].get("Z1", price)
                     results.append({
                         "id": p.get("id", ""),
                         "code": p.get("code", ""),
