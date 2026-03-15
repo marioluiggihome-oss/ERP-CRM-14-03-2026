@@ -7,8 +7,8 @@ import json
 import uuid
 import base64
 import logging
-from typing import List
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
