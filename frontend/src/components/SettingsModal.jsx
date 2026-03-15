@@ -2242,6 +2242,24 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
+                            checked={userForm.canAccessMontajes}
+                            onChange={(e) => setUserForm({...userForm, canAccessMontajes: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">Agenda de Montajes</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={userForm.isMontador}
+                            onChange={(e) => setUserForm({...userForm, isMontador: e.target.checked})}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-xs font-bold text-slate-900">Es Montador/Instalador</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
                             checked={userForm.useCustomBranding}
                             onChange={(e) => setUserForm({...userForm, useCustomBranding: e.target.checked})}
                             className="w-4 h-4 rounded"
