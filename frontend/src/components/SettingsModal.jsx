@@ -3618,7 +3618,40 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-indigo-950 uppercase">Gestión de Armazones / Cascos</h3>
-                    <p className="text-xs text-indigo-400">Configura los materiales de estructura</p>
+                    <p className="text-xs text-indigo-400">Configura los materiales de estructura por tarifa</p>
+                  </div>
+                  {/* Filtro por tarifa */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setMaterialLibraryFilter('TODAS')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
+                        (!materialLibraryFilter || materialLibraryFilter === 'TODAS')
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                      }`}
+                    >
+                      TODAS
+                    </button>
+                    <button
+                      onClick={() => setMaterialLibraryFilter('ZC')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
+                        materialLibraryFilter === 'ZC'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                      }`}
+                    >
+                      ZC
+                    </button>
+                    <button
+                      onClick={() => setMaterialLibraryFilter('MV')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
+                        materialLibraryFilter === 'MV'
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                      }`}
+                    >
+                      MV
+                    </button>
                   </div>
                 </div>
                 {!isEditingMaterial && (
