@@ -2695,7 +2695,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                             <CabinetIcon type={iconType} isGola={isGola} className="w-12 h-12 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-[13px] font-black text-indigo-900">{p.code}</span>
+                                <span className="text-[13px] font-black text-indigo-900">{cleanCode(p.code)}</span>
                                 <span className="text-[14px] font-black text-orange-600">{p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0} pts</span>
                               </div>
                               <div className="flex items-center gap-1.5 flex-wrap mt-1">
