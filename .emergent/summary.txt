@@ -1,183 +1,211 @@
 <analysis>**original_problem_statement:**
 The user wants to replicate a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The project's primary focus is a highly detailed, user-guided audit and reconstruction of the product catalog (mega-auditoría).
 
-In the last sessions, the user's requests evolved to:
-1.  **Import New Tariff:** Import, parse, and integrate a new despiece (component) price list from an Excel file.
-2.  **Fix Despiece Budgeter:** The user rejected the existing despiece UI and requested a new step-by-step flow.
-3.  **Unify Manufacturers:** Merge the DF and ALVIC manufacturers into a single ALVIC entity.
-4.  **Fix Budget Calculation:** The user reported a critical bug where items added via the despiece module are not included in the main budget's total calculation.
-5.  **Create Multi-Library System:** The user requested a new feature to support multiple, distinct product libraries for montada (assembled) items. The current library is to be named ZC, and a new one, MV, needs to be created from product data provided in PDFs/images. The MV library uses a points system with 21 tariff levels, distinct from ZC's 12 zones. Admins should be able to assign which libraries a user can access.
-6.  **Configure different valor del punto** (point value) for each library (ZC vs MV) in the margin settings.
+In this session, the user's requests focused on refining the multi-library system and product data accuracy:
+1.  **Refine MV Library Data:** Correct pricing logic for altos (high cabinets) and bajos (low cabinets), including default dimensions (, ), door configurations ( for 1-door,  for 2-doors), and product categorization ().
+2.  **Separate Pricing Logic per Library:** Implement distinct valor del punto (point value), incrementos especiales (special cut increments), and corte viga (beam cut increment) for the ZC and MV libraries.
+3.  **Strictly Separate Library Assets:** Ensure armazones/cascos (carcass materials) are exclusive to their assigned library (ZC or MV) and cannot be interchanged.
+4.  **Create Product Variants:** Generate separate product entries for different heights of the same model (e.g., ALTOS with heights 70 and 90, COLUMNAS with heights 200 and 220).
+5.  **Improve UI/UX:** Add a catalog filter for apertura (door type), hide the CATÁLOGO MODELOS button when the MV library is active, and clean up product codes by removing D/I from the display.
+6.  **Full Data Import:** Re-import the entire MV Tariff 1 from new images provided by the user, including previously missing PUERTAS (doors).
+7.  **Export ZC Catalog:** The user requested a way to download the ZC tariff to prepare it with images for distributors.
 
 **PRODUCT REQUIREMENTS:**
 (From previous sessions, with new items in bold)
-1.  **Clone LUIGGI HOME application:** Replicate the design and functionality.
-2.  **DESPIECE Module:** Implement a step-by-step, matrix-based budgeting system for component parts.
-3.  **User Roles & Permissions:** Implement strict, independent permissions for each module.
-4.  **Multi-Library System:** **Create a system for multiple montada libraries (e.g., ZC, MV) and allow admins to control user access to them.**
-5.  **Library-Specific Pricing:** **The MV library uses a 21-tier Tariff system, while ZC uses a 12-tier Zone system. The value of a point must also be configurable separately for each library.**
+1.  Clone LUIGGI HOME application.
+2.  DESPIECE Module: Implement a step-by-step, matrix-based budgeting system for component parts.
+3.  User Roles & Permissions.
+4.  Multi-Library System: Create a system for multiple montada libraries (e.g., ZC, MV) and allow admins to control user access.
+5.  **Library-Specific Pricing:** **The MV library uses a 21-tier Tariff system, while ZC uses a 12-tier Zone system. The value of a point, special cut increments, and other pricing modifiers must be configurable separately for each library.**
+6.  **Strict Asset Association:** **Assets like armazones must be exclusively tied to a single library.**
+7.  **Product Variants:** **Support for multiple product variants based on attributes like height.**
 
 **User's preferred language**: es
 
 **what currently exists?**
-A full-stack React/FastAPI/MongoDB application. The agent has successfully implemented the multi-library system.
+The application's multi-library system is now significantly more robust. The agent successfully fixed a critical database configuration issue (the app was using a stale ) and then implemented several layers of library-specific logic.
 
-- **Backend:** A  collection now stores metadata for ZC and MV, including their distinct pricing systems (zones vs tariffs). The  collection has a  field, and the  collection has an  field to control access. New API endpoints in  manage this logic.
-- **Data Extraction:** The agent successfully used OCR and AI analysis to extract product data and a 21-tier pricing matrix for ~256 products for the MV library from scanned PDFs and JPGs provided by the user.
-- **Frontend:**
-    - As requested by the user, library access is now managed in the PANEL MAESTRO (Admin Panel) under user permissions, where an admin can enable/disable libraries for each user. The global library selector was removed.
-    - The main budgeting interface () now features two new dynamic dropdowns:
-        1.  **TARIFA ACTIVA**: Allows users to switch between the libraries they have access to (e.g., ZC and MV).
-        2.  **TARIFA DE PRECIOS**: Dynamically updates to show Z1-Z12 for the ZC library or T1-T21 for the MV library.
-    - The price calculation logic correctly uses  for ZC products and  for MV products.
+-   **Backend:**
+    -   The  collection now stores  and other settings.
+    -   The  (armazones) collection now includes a  field, tying each material to either ZC or MV. The API endpoint  supports filtering by library.
+    -   The MV product catalog has been repeatedly re-imported and refined. It now includes  (category),  (door type),  (door-hand option), and correct default dimensions (, ). ALTO products exist as distinct variants for height 70 and 90.
 
-The work on a critical despiece budget calculation bug was explicitly **paused** by the user to prioritize this multi-library feature.
+-   **Frontend:**
+    -   **Settings Panel ():**
+        -   Admins can configure Valor de Punto and Incrementos Especiales separately for ZC and MV.
+        -   The Armazones section now has filters to show materials by library (TODAS, ZC, MV). The ability to change an armazón's library has been removed; it's now set only upon creation, enforcing strict separation.
+    -   **Budgeting Interface ():**
+        -   A new APERTURA filter has been added to the catalog view.
+        -   The product display has been enhanced to show  tags (e.g., 1P↔, 2P) and cleaned-up product codes (hiding the internal D/I suffix).
+        -   Price calculation logic now correctly uses the  and  corresponding to the active library.
+        -   The list of available Armazones correctly filters based on the active library (ZC or MV).
 
 **Last working item**:
-- Last item agent was working: The user introduced a new requirement after the multi-library system was implemented: the value of a point (valor del punto) must be configurable separately for the ZC and MV libraries within the margin settings. The agent acknowledged this request and was about to begin implementation.
-- Status: NOT STARTED
+- Last item agent was working: The user issued a set of final requests. The agent was actively working on two of them:
+    1.  Making the CATÁLOGO MODELOS button visible only for the ZC tariff.
+    2.  Creating separate height variants for COLUMNAS (e.g., C60/200 and C60/220).
+- Status: IN PROGRESS
 - Agent Testing Done: N
 - Which testing method agent to use? both
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Configure different valor del punto for ZC and MV libraries (P0 - CRITICAL)**
-- **Issue 2: Despiece items are not added to the total budget (P0 - PAUSED)**
-- **Issue 3: Improve accuracy of OCR data for the 'MV' library (P1)**
-- **Issue 4: Visual Glitch with Collapsed Vertical Sidebar (P2 - Recurring)**
-- **Issue 5: Verify updated Catalog Export (Excel/PDF) format (P2)**
-- **Issue 6: Fix User Registration Email Flow (P3 - BLOCKED)**
+-   **Issue 1: Finalize User Requests (P0)**
+-   **Issue 2: Implement Independent Corte Viga Increment (P1)**
+-   **Issue 3: Provide ZC Catalog Export/Layout Guide (P1)**
+-   **Issue 4: Despiece items are not added to the total budget (P2 - PAUSED)**
+-   **Issue 5: Visual Glitch with Collapsed Vertical Sidebar (P2 - Recurring)**
+-   **Issue 6: Verify updated Catalog Export (Excel/PDF) format (P2)**
+-   **Issue 7: Fix User Registration Email Flow (P3 - BLOCKED)**
 
 **Issues Detail:**
-- **Issue 1: Configure different valor del punto for ZC and MV libraries**
-    - **Attempted fixes:** None. This is a new requirement from the last user message.
-    - **Next debug checklist:**
-        1.  **Backend:** Modify the  schema or the application's margin/settings configuration to store a unique  for each library ('ZC' and 'MV').
-        2.  **Backend:** Create/update an endpoint to manage these values.
-        3.  **Frontend:** Update the UI in  (likely in the margins/commercial conditions section) to allow an admin to set a different point value for each library.
-        4.  **Frontend:** Modify the final budget calculation logic to fetch and apply the correct  based on the item's library.
-    - **Why fix this issue and what will be achieved with the fix?** This is a critical requirement for generating accurate budgets, as the two main product lines have different pricing structures.
-    - **Status:** NOT STARTED
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** Both
-    - **Blocked on other issue:** None.
-- **Issue 2: Despiece items are not added to the total budget**
-    - **Attempted fixes:** The agent previously identified that 's total calculation only sums  and ignores .
-    - **Why fix this issue and what will be achieved with the fix?** The despiece module is unusable for budgeting until fixed.
-    - **Status:** BLOCKED
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** Frontend
-    - **Blocked on other issue:** User has explicitly paused this task (dejamos despiece de momento). **DO NOT** work on this until the user reprioritizes it.
-- **Issue 3: Improve accuracy of OCR data for the 'MV' library**
-    - **Attempted fixes:** The agent performed multiple rounds of data extraction from PDFs and JPGs, improving the dataset from ~160 products with poor pricing to ~256 products with a full 21-tariff price matrix.
-    - **Next debug checklist:** The OCR data is still not 100% accurate due to the scanned source material. The next step would be to ask the user if they can provide the 'MV' tariff data in a structured format like Excel/CSV for a perfect import.
-    - **Why fix this issue and what will be achieved with the fix?** To ensure the 'MV' product catalog and its pricing are completely accurate.
-    - **Status:** IN PROGRESS
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** Backend
-    - **Blocked on other issue:** Awaiting cleaner data source from user.
-- **Issue 4: Visual Glitch with Collapsed Vertical Sidebar**
-    - **Status:** NOT STARTED
-    - **Is recurring issue?** Y
-- **Issue 5: Verify updated Catalog Export (Excel/PDF) format**
-    - **Status:** USER VERIFICATION PENDING
-    - **Is recurring issue?** Y
-- **Issue 6: Fix User Registration Email Flow**
-    - **Status:** BLOCKED
-    - **Is recurring issue?** N
-    - **Blocked on other issue:** User action (Resend domain verification).
+-   **Issue 1: Finalize User Requests**
+    -   **Next debug checklist:**
+        1.  **Frontend:** In , wrap the CATÁLOGO MODELOS button in a conditional render that checks if .
+        2.  **Backend:** Modify the MV product import script to generate two variants for each COLUMNA product, one for height 200 and one for height 220, similar to how ALTOS were handled. Re-run the import.
+    -   **Why fix this issue and what will be achieved with the fix?** To fulfill the user's latest specific requirements for UI behavior and data structure.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both
+-   **Issue 2: Implement Independent Corte Viga Increment**
+    -   **Next debug checklist:**
+        1.  Follow the established pattern for library-specific settings.
+        2.  **Backend:** Add  to the  (or similar).
+        3.  **Frontend ():** Add state for  for ZC and MV.
+        4.  **Frontend ():** Add UI inputs for the new fields.
+        5.  **Frontend ():** Update calculation logic to use the new library-specific value.
+    -   **Why fix this issue and what will be achieved with the fix?** It's a required pricing feature for accurate budgeting.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both
+-   **Issue 3: Provide ZC Catalog Export/Layout Guide**
+    -   **Next debug checklist:** This is a new feature request.
+        1.  Clarify the desired format with the user (Excel, PDF?).
+        2.  Develop a backend endpoint that queries all products where .
+        3.  Generate the file using  (for Excel) or  (for PDF).
+        4.  Provide a button in the frontend (likely in ) to trigger the download.
+    -   **Why fix this issue and what will be achieved with the fix?** To provide the user with a tool for their own marketing and distribution efforts.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both
+-   **Issue 4: Despiece items are not added to the total budget**
+    -   **Status:** BLOCKED (User has explicitly paused this task). **DO NOT** work on this.
+-   **Issue 5, 6, 7:** Status unchanged from previous forks.
 
 **In progress Task List**:
-- **Task 1: Implement library-specific valor del punto (P0)**
-    - **Where to resume:** Start by analyzing  to find the current margin settings and  to decide where to store the new value.
-    - **What will be achieved with this?** Budgets for MV and ZC libraries will be calculated using their respective, distinct point values, fulfilling a critical business logic requirement.
-    - **Status:** NOT STARTED
-    - **Should Test frontend/backend/both after fix?** Both
-    - **Blocked on something:** None.
+-   **Task 1: Finalize UI/Data changes from last user message (P0)**
+    -   **Where to resume:**  for the CATÁLOGO MODELOS button visibility. The MV import script for the COLUMNAS height variants.
+    -   **What will be achieved with this?** The UI and data will perfectly match the user's latest requests.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Both
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-    - (P0 - Paused) Fix Despiece Budget Calculation Bug.
-    - (P1) **CRITICAL Frontend Refactoring**: Continue decomposing  (currently ~2986 lines).
-- **Future Tasks:**
-    - (P2) **Frontend Refactoring**: Decompose  (>4300 lines).
-    - (P3) **Backend Refactoring**: Move all remaining endpoints from  into dedicated routers.
+-   **Upcoming Tasks:**
+    -   (P1) Implement independent corte viga increment.
+    -   (P1) Develop ZC catalog export feature.
+    -   (P2 - Paused) Fix Despiece Budget Calculation Bug.
+    -   (P2) **CRITICAL Frontend Refactoring**: Continue decomposing  (now ~3065 lines).
+-   **Future Tasks:**
+    -   (P2) Design and implement the despiece interpretation system (bandas, tablero, casco).
+    -   (P3) **Frontend Refactoring**: Decompose  (now >4600 lines).
+    -   (P3) **Backend Refactoring**: Move remaining endpoints from  into dedicated routers.
 
 **Completed work in this session**
-- **Multi-Library System Implemented:**
-    - Created backend infrastructure (schemas, APIs) to support multiple product libraries ('ZC', 'MV') with distinct pricing systems.
-    - Extracted product data for the 'MV' library from scanned PDFs and JPGs using OCR, creating ~256 products with a full 21-tier price matrix.
-    - Moved library access management to the admin user permissions panel in , per user request.
-    - Added a TARIFA ACTIVA dropdown to  for users to switch between their assigned libraries.
-    - Fixed the GRUPO DE PRECIOS dropdown to dynamically display the correct pricing levels (Z1-Z12 for ZC, T1-T21 for MV).
-- **Data & UI Renaming:** Renamed Muebles Valencia to MV and Zona Cocinas to ZC across the application.
+-   **Critical DB Fix:** Identified and resolved an issue where the backend was using a stale  instead of the correct  database.
+-   **Library-Specific Pricing:**
+    -   Implemented separate **valor del punto** for ZC and MV libraries.
+    -   Implemented separate **incrementos especiales** (for custom cuts) for ZC and MV.
+-   **MV Product Data Overhaul (Multiple Iterations):**
+    -   Re-imported the entire MV catalog from new user-provided images, adding doors and other missing items.
+    -   Correctly set default dimensions (, ) for product types (e.g.,  for BAJOS,  for BAJOS).
+    -   Created distinct product variants for ALTOS with  and .
+    -   Enriched product data with  (e.g., ALTO, BAJO) and  (e.g., 1P D/I, 2P) attributes.
+-   **UI/UX Enhancements:**
+    -   Added a new APERTURA filter to the product catalog.
+    -   Added UI tags to product cards to display their door configuration (1P↔, 2P).
+    -   Modified the UI to hide the /D/I suffix from product codes for a cleaner display.
+-   **Strict Asset Separation (Armazones):**
+    -   Modified the Armazones management panel to enforce a strict library assignment (set on creation, cannot be changed).
+    -   Added filters to view armazones by library (ZC or MV).
+    -   The main budget table now correctly loads only the armazones relevant to the active library.
+
+**Earlier issues found/mentioned but not fixed**
+-   The recurring visual glitch with the collapsed vertical sidebar remains unresolved.
+
+**Known issue recurrence from previous fork**
+-   Issue recurrence in previous fork: Visual Glitch with Collapsed Vertical Sidebar.
+-   Recurrence count: 2+
+-   Status: NOT STARTED
 
 **Code Architecture**
-
+library
 
 **Key Technical Concepts**
-- **Multi-Library Architecture:** The core change, enabling data segregation via  and  fields.
-- **Dynamic Frontend UI:** The budgeting interface now adapts its dropdowns and pricing logic based on the  state.
-- **OCR & AI-Powered Data Extraction:** Used  and the platform's  to parse scanned documents (PDFs, JPGs) and build a structured product database from them.
-- **Backend Refactoring:** Created a new  router, separating concerns from the monolithic .
-- **State Management:** Utilized React state in  and  to manage the currently active library and update the UI accordingly.
+-   **State-Driven UI:** Heavily relied on React state in  passed down as props to drive dynamic, library-aware UI in  and .
+-   **Iterative Data Refinement:** The process of repeatedly re-importing and cleaning the MV product data based on continuous user feedback was central to this session.
+-   **Configuration Management:** Established a clear pattern for creating library-specific settings by adding fields to backend models and creating corresponding state and UI components in the frontend.
+-   **Root Cause Analysis:** Successfully diagnosed a critical environment issue (wrong database) by systematically eliminating possibilities from the frontend API down to direct database inspection.
 
 **key DB schema**
-- **products**: 
-- **users**: 
-- **libraries**: (NEW) 
+-   **products**: 
+-   **users**: 
+-   **libraries**: 
+-   **materials**:  (NEWLY ADDED)
+-   **system_settings**: 
 
 **All files of reference**
-- : Core component for budgeting, heavily modified for multi-library UI and logic.
-- : Core component for admin settings, modified for library permissions.
-- : Main backend file, modified to integrate the new library system.
-- : Contains all Pydantic models; updated for libraries.
-- : New FastAPI router for all library-related endpoints.
-- : Updated with .
-- : Updated to communicate with new backend endpoints.
+-   : Core component for budgeting, heavily modified.
+-   : Core component for admin settings, heavily modified.
+-   : Top-level state management for libraries and settings.
+-   : New component for catalog filters.
+-   : The latest script for importing MV product data.
+-   : Modified to support library filtering for materials.
+-   : Updated with  field for materials.
 
 **Critical Info for New Agent**
-- **Highest Priority:** Implement the ability to set a different **valor del punto (point value)** for each library (ZC and MV). This is a new, critical requirement from the user.
-- **Paused Task:** The user explicitly paused work on the despiece budget calculation bug. **DO NOT** resume work on it unless the user specifically asks.
-- **MV Data Source:** The 'MV' product data was extracted via OCR from scanned documents and may contain inaccuracies. The user is aware. Proposing an Excel/CSV import as a way to perfect the data would be a good next step after the current task.
-- **UI Flow:** The main workflow is: Admin enables libraries for a user in Settings -> User logs in -> User selects an active library in the  dropdown -> The UI updates to show products and pricing levels for that library.
+-   **User Interaction Model:** The user provides frequent, iterative feedback that often corrects or overrides previous instructions. Be prepared to re-do work (especially data imports) and always prioritize the user's latest message.
+-   **Paused Task:** The despiece budget calculation bug remains explicitly paused. **DO NOT** work on it.
+-   **Established Pattern:** There is a clear, successful pattern for adding new library-specific settings (like for corte viga): update the backend model/settings, add state to , add UI to , and consume the state in .
+-   **Database is Correct:** The agent fixed a major issue with  in . The application now correctly uses the  database (previously was ). Trust that the DB connection is now correct.
+-   **Last Request is Multi-Part:** The user's last message contains several tasks. The agent was mid-way through implementing two of them. Address all parts of the user's latest requests.
+
+**documents and test reports created in this job**
+-    (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **LATEST:**  (User requests separate point values for each library). (NOT STARTED)
-2.   (User reports that the price group dropdown is incorrect for the MV library). (RESOLVED)
-3.   (User confirms the plan to add the selector and import remaining prices). (RESOLVED)
-4.   (User asks to re-analyze images for better data extraction). (RESOLVED)
-5.   (User requests name changes and provides JPG images for better OCR). (RESOLVED)
-6.   (User provides more files and rejects the library selector's UI placement, asking for it to be moved to user permissions). (RESOLVED)
-7.   (User uploads the first part of the MV catalog). (PROCESSED)
-8.   (User clarifies the different pricing systems for ZC and MV). (IMPLEMENTED)
-9.   (User explicitly pauses the despiece bug fix and prioritizes the MV library import). (ACTIONED)
-10.  (Agent asks for the correct MV file). (USER REPLIED)
+1.  **LATEST:** Create separate items for column heights /200 and /220.
+2.  **LATEST:** The CATÁLOGO MODELOS button (shown in an image) should only be visible for the ZC tariff.
+3.  **LATEST:** Make the corte viga increment independent per library. Provide the full Tariff 1 for MV via 6 images for re-import. Request a way to download/layout the ZC tariff with images.
+4.  Increments for special furniture should be different for MV and ZC.
+5.  Create separate products for ALTOs with height 70 and 90. Cascos must not be interchangeable between libraries; remove the UI button for switching their library.
+6.  The price for ALTOS in column 70 should apply to height 90. Also, remove D/I from the displayed product code.
+7.  All items with D/I are 1-door and should be marked as such.
+8.  Add a button in the armazones panel to assign a library (MV/ZC). Add the proposed apertura filter.
+9.  Height of BAJOS should always be 80cm. Add  and  logic. Think about the despiece system.
+10. More details on MV pricing, armazones, and product code parsing.
 
 **Project Health Check:**
-- **Broken:**
-    - Despiece total calculation (Functionality is paused by user).
-- **Mocked:** N/A
+-   **Broken:**
+    -   Despiece total calculation (Functionality is paused by user).
+-   **Mocked:** N/A
 
 **3rd Party Integrations**
-- **Resend:** (Requires User API Key) - For emails.
-- **xlsxwriter / openpyxl:** For backend Excel file handling.
-- **reportlab / cairosvg / jspdf / html2canvas:** For PDF generation.
-- **pyotp / qrcode:** For 2FA.
-- **Google Gemini:** Via  (Emergent LLM Key).
-- **apscheduler:** For automatic database backups.
-- **pytesseract / pdfplumber:** Used for OCR and PDF data extraction.
+-   (Unchanged from previous fork)
 
 **Testing status**
-- Testing agent used after significant changes: NO
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None
-- Known regressions:
-    - The visual glitch with the collapsed sidebar is a persistent, recurring issue.
+-   Testing agent used after significant changes: NO
+-   Troubleshoot agent used after agent stuck in loop: NO
+-   Test files created: None
+-   Known regressions:
+    -   The visual glitch with the collapsed sidebar is a persistent, recurring issue.
 
 **Credentials to test flow:**
-- **User:** 
-- **Password:** 
+-   **User:** 
+-   **Password:** 
 
 **What agent forgot to execute**
-- The user's final request to implement different valor del punto for each library has not yet been started. This is the immediate next step.</analysis>
+-   The agent did not forget but was in the middle of implementing the user's final set of requests when the session ended. The following are pending from the last user messages:
+    -   Conditionally render the CATÁLOGO MODELOS button.
+    -   Create height variants for COLUMNAS.
+    -   Implement library-specific corte viga increment.
+    -   Develop the feature to export the ZC catalog.</analysis>
