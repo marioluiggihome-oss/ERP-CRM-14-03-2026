@@ -2688,6 +2688,18 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                                 <span className="text-[10px] font-bold text-slate-500">
                                   AN: {p.width || '-'} | AL: {p.height || '-'} | FO: {p.depth || '-'}
                                 </span>
+                                {/* Mostrar info de apertura para MV */}
+                                {p.apertura && (
+                                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                                    p.apertura === '1P D/I' ? 'bg-blue-100 text-blue-700' :
+                                    p.apertura === '2P' ? 'bg-green-100 text-green-700' :
+                                    p.apertura === '2P FREGADERO' ? 'bg-cyan-100 text-cyan-700' :
+                                    p.apertura === 'ELECTRO' ? 'bg-amber-100 text-amber-700' :
+                                    'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    {p.apertura === '1P D/I' ? '1P ↔ D/I' : p.apertura}
+                                  </span>
+                                )}
                               </div>
                               {p.series && <div className="text-[9px] text-orange-500 font-medium mt-1">{p.series}</div>}
                             </div>
