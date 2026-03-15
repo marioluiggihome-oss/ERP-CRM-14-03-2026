@@ -238,6 +238,7 @@ const AgendaMontajes = ({ currentUser }) => {
       clientPhone: montaje.clientPhone || '',
       clientAddress: montaje.clientAddress || '',
       projectDescription: montaje.projectDescription || '',
+      expectedDeliveryDate: montaje.expectedDeliveryDate || '',
       scheduledDate: montaje.scheduledDate || '',
       scheduledTime: montaje.scheduledTime || '',
       estimatedDuration: montaje.estimatedDuration || '',
