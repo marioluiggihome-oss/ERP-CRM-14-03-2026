@@ -1054,6 +1054,7 @@ class MontajeUpdate(BaseModel):
     clientPhone: Optional[str] = None
     clientAddress: Optional[str] = None
     projectDescription: Optional[str] = None
+    expectedDeliveryDate: Optional[str] = None
     scheduledDate: Optional[str] = None
     scheduledTime: Optional[str] = None
     estimatedDuration: Optional[str] = None
