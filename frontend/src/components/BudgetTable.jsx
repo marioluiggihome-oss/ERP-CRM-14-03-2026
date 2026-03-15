@@ -1372,6 +1372,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                      </option>
                    ))}
                  </select>
+                 {/* Botón solo visible para tarifa ZC */}
+                 {state.currentLibrary === 'ZC' && (
                  <button 
                    onClick={() => window.open('/relacion-de-modelos.pdf', '_blank')}
                    className="w-full mt-2 bg-purple-500 hover:bg-purple-600 text-white py-1.5 rounded-lg font-black uppercase text-[8px] tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm"
@@ -1379,6 +1381,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                  >
                    <FileText size={12}/> CATÁLOGO MODELOS
                  </button>
+                 )}
               </section>
               )}
 
