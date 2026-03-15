@@ -12,9 +12,12 @@ export const MontadaFiltersHorizontal = ({
   setSelectedCategory,
   selectedSeries,
   setSelectedSeries,
+  selectedApertura,
+  setSelectedApertura,
   uniqueProgramas,
   uniqueCategories,
   uniqueSeries,
+  uniqueAperturas,
   filterWidth,
   setFilterWidth,
   filterHeight,
@@ -27,7 +30,7 @@ export const MontadaFiltersHorizontal = ({
   <>
     <select 
       value={selectedPrograma} 
-      onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} 
+      onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); setSelectedApertura && setSelectedApertura('TODAS'); }} 
       className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-indigo-900 outline-none"
     >
       <option value="TODOS">📁 PROGRAMA</option>
@@ -35,7 +38,7 @@ export const MontadaFiltersHorizontal = ({
     </select>
     <select 
       value={selectedCategory} 
-      onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} 
+      onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); setSelectedApertura && setSelectedApertura('TODAS'); }} 
       className="bg-purple-100 border-2 border-purple-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-purple-900 outline-none" 
       disabled={selectedPrograma === 'TODOS'}
     >
@@ -44,13 +47,24 @@ export const MontadaFiltersHorizontal = ({
     </select>
     <select 
       value={selectedSeries} 
-      onChange={e => setSelectedSeries(e.target.value)} 
+      onChange={e => { setSelectedSeries(e.target.value); setSelectedApertura && setSelectedApertura('TODAS'); }}
       className="bg-amber-100 border-2 border-amber-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-amber-900 outline-none" 
       disabled={selectedCategory === 'TODAS'}
     >
       <option value="TODAS">📄 SERIE</option>
       {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
     </select>
+    {/* Filtro de Apertura (1P, 2P, etc.) */}
+    {uniqueAperturas && uniqueAperturas.length > 0 && (
+      <select 
+        value={selectedApertura || 'TODAS'} 
+        onChange={e => setSelectedApertura && setSelectedApertura(e.target.value)}
+        className="bg-green-100 border-2 border-green-400 rounded-lg py-2 px-4 text-[11px] font-black uppercase text-green-900 outline-none"
+      >
+        <option value="TODAS">🚪 APERTURA</option>
+        {uniqueAperturas.map(a => <option key={a} value={a}>{a === '1P D/I' ? '1P ↔ D/I' : a}</option>)}
+      </select>
+    )}
     
     {/* Filtros de medidas */}
     <div className="flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl px-3 py-2 border-2 border-blue-300 shadow-sm">
