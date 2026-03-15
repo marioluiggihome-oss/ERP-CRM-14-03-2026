@@ -43,10 +43,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   // Carcass material states
   const [isEditingMaterial, setIsEditingMaterial] = useState(false);
   const [editingMaterialId, setEditingMaterialId] = useState(null);
+  const [materialLibraryFilter, setMaterialLibraryFilter] = useState('TODAS');
   const [materialForm, setMaterialForm] = useState({
     name: '',
     fixedIncrement: 0,
-    thickness: 16
+    thickness: 16,
+    library: 'ZC'
   });
   const [userForm, setUserForm] = useState({
     username: '',
