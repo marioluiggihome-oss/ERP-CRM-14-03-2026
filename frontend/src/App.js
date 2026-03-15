@@ -714,6 +714,9 @@ const App = () => {
             {state.currentTab === 'armarios' && state.currentUser?.canAccessArmarios && (
               <Armarios state={state} setState={setState} />
             )}
+            {state.currentTab === 'montajes' && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
+              <AgendaMontajes currentUser={state.currentUser} />
+            )}
             
             {/* CRM - Single Component with internal navigation */}
             {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} />}
