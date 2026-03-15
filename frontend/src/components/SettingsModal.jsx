@@ -164,7 +164,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         specialIncrementHeight: state.specialIncrementHeight,
         specialIncrementDepth: state.specialIncrementDepth,
         librarySpecialIncrements: state.librarySpecialIncrements,
-        vigaCutIncrement: state.vigaCutIncrement || 0
+        vigaCutIncrement: state.vigaCutIncrement || 0,
+        libraryVigaCutIncrements: state.libraryVigaCutIncrements || { ZC: 0, MV: 0 }
       });
       alert('✅ Configuración guardada correctamente');
     } catch (err) {
