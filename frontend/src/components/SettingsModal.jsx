@@ -913,7 +913,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const handleCreateMaterial = () => {
     setIsEditingMaterial(true);
     setEditingMaterialId(null);
-    setMaterialForm({ name: '', fixedIncrement: 0, thickness: 16 });
+    // Al crear, usar el filtro activo como tarifa por defecto
+    const defaultLibrary = materialLibraryFilter !== 'TODAS' ? materialLibraryFilter : 'ZC';
+    setMaterialForm({ name: '', fixedIncrement: 0, thickness: 16, library: defaultLibrary });
   };
 
   const handleEditMaterial = (material) => {
@@ -922,7 +924,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     setMaterialForm({
       name: material.name,
       fixedIncrement: material.fixedIncrement || 0,
-      thickness: material.thickness || 16
+      thickness: material.thickness || 16,
+      library: material.library || 'ZC'  // Mantener la tarifa actual (no editable)
     });
   };
 
