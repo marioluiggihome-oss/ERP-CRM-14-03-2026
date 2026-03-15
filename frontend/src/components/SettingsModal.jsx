@@ -3039,7 +3039,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             <div className="space-y-6">
               {!isEditingProduct ? (
                 <>
-                  {/* Header with module selector, search and add button */}
+                  {/* Header with module selector, library filter, search and add button */}
                   <div className="flex justify-between items-center mb-6 gap-4">
                     <div className="flex gap-3">
                       <button
@@ -3058,6 +3058,17 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       >
                         Formato Despiece
                       </button>
+                      
+                      {/* Filtro por biblioteca */}
+                      <select
+                        value={inventoryLibraryFilter}
+                        onChange={(e) => setInventoryLibraryFilter(e.target.value)}
+                        className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase outline-none"
+                      >
+                        <option value="">TODAS</option>
+                        <option value="ZC">ZC</option>
+                        <option value="MV">MV</option>
+                      </select>
                     </div>
                     
                     <div className="flex gap-3 flex-1 max-w-2xl">
