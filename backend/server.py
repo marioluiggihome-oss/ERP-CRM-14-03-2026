@@ -6253,7 +6253,8 @@ async def create_montador(montador: MontadorCreate):
         }
         
         await db.montadores.insert_one(montador_data)
-        del montador_data["_id"] if "_id" in montador_data else None
+        if "_id" in montador_data:
+            del montador_data["_id"]
         
         return montador_data
     except Exception as e:
