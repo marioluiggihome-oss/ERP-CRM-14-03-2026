@@ -760,7 +760,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
      }
      
      // Añadir incremento por corte de viga si está marcado (por biblioteca)
-     const currentLibrary = state.currentLibrary || 'ZC';
+     // Usamos currentLibrary ya declarada arriba
      const vigaCutValue = state.libraryVigaCutIncrements?.[currentLibrary] || state.vigaCutIncrement || 0;
      const vigaCost = item.hasVigaCut ? vigaCutValue : 0;
      
