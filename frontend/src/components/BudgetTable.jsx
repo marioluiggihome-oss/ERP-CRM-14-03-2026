@@ -759,8 +759,10 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
          carcassCost = selectedMaterial?.fixedIncrement || 0;
      }
      
-     // Añadir incremento por corte de viga si está marcado
-     const vigaCost = item.hasVigaCut ? (state.vigaCutIncrement || 0) : 0;
+     // Añadir incremento por corte de viga si está marcado (por biblioteca)
+     const currentLibrary = state.currentLibrary || 'ZC';
+     const vigaCutValue = state.libraryVigaCutIncrements?.[currentLibrary] || state.vigaCutIncrement || 0;
+     const vigaCost = item.hasVigaCut ? vigaCutValue : 0;
      
      const pointsCost = usedPoints * pointValue;
      const unitPrice = pointsCost + cutsCost + carcassCost + vigaCost;

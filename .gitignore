@@ -108,3 +108,4 @@ frontend/node_modules/.cache/default-development/19.pack
 *.env
 *.env.*
 MV_images/tarifa_mv.zip
+frontend/node_modules/.cache/default-development/2.pack_
