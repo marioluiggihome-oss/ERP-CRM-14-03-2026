@@ -163,6 +163,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         specialIncrementWidth: state.specialIncrementWidth,
         specialIncrementHeight: state.specialIncrementHeight,
         specialIncrementDepth: state.specialIncrementDepth,
+        librarySpecialIncrements: state.librarySpecialIncrements,
         vigaCutIncrement: state.vigaCutIncrement || 0
       });
       alert('✅ Configuración guardada correctamente');
