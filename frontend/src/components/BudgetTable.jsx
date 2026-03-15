@@ -2641,6 +2641,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                         setFilterHeight={setFilterHeight}
                         filterDepth={filterDepth}
                         setFilterDepth={setFilterDepth}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
                       />
                     </div>
 
