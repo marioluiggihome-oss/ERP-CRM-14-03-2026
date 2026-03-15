@@ -723,6 +723,7 @@ class DigitalizadorRequest(BaseModel):
     """Request to analyze a draft image"""
     imageBase64: str
     filename: str = "draft.jpg"
+    library: str = "ZC"  # Biblioteca activa (ZC o MV)
 
 
 class DigitalizadorResponse(BaseModel):
