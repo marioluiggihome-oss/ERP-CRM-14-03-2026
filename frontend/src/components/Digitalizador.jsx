@@ -356,13 +356,15 @@ const Digitalizador = ({ state }) => {
         reader.readAsDataURL(file);
       });
 
-      // Send to API
+      // Send to API - include active library for filtering
+      const activeLibrary = state?.currentLibrary || 'ZC';
       const response = await fetch(`${API_URL}/api/digitalizador/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: base64,
-          filename: file.name
+          filename: file.name,
+          library: activeLibrary
         })
       });
 
