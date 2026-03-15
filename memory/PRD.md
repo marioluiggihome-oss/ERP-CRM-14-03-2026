@@ -26,6 +26,15 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 - ✅ **Formato ZC**: Columnas REF, DESC, CATEGORÍA, SERIE, AN, AL, FO, Z1-Z12
 - ✅ **Formato MV**: Columnas REF, DESC, CATEGORÍA, SERIE, AN, AL, FO, T1-T21
 
+### Correcciones Adicionales (Solicitud del Usuario)
+- ✅ **Digitalizador por Biblioteca**: Ahora detecta muebles según la biblioteca activa (ZC o MV)
+  - Backend: `/api/digitalizador/analyze` acepta parámetro `library`
+  - Backend: `/api/digitalizador/search-catalog` acepta parámetro `library`
+  - Frontend: Envía `state.currentLibrary` en las solicitudes
+- ✅ **Barra de búsqueda duplicada**: Eliminada la barra de búsqueda extra en el catálogo
+- ✅ **Migración de usuarios**: Usuarios (ALBERTO, EDU, MARIOLUIGGIHOME) migrados de test_database a luiggi_home
+- ✅ **Permisos de bibliotecas**: Todos los usuarios tienen acceso a ZC y MV
+
 ---
 
 ## 🔴 PENDIENTE / BUGS CONOCIDOS
@@ -34,11 +43,12 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 1. **Bug cálculo presupuesto despiece** - Items de despiece no se suman al total (PAUSADO)
 
 ### P2 - MEJORAS
-2. **Glitch visual barra lateral colapsada** - Recurrente
-3. **Refactorización componentes grandes** - BudgetTable.jsx (~3078 líneas), SettingsModal.jsx (~4647 líneas)
+2. **Logo perdido** - El logo no se migró con los settings. Usuario debe subir de nuevo.
+3. **Glitch visual barra lateral colapsada** - Recurrente
+4. **Refactorización componentes grandes** - BudgetTable.jsx (~3069 líneas), SettingsModal.jsx (~4647 líneas)
 
 ### P3 - BLOQUEADOS
-4. **Flujo registro email** - Requiere verificación de dominio en Resend
+5. **Flujo registro email** - Requiere verificación de dominio en Resend
 
 ---
 
@@ -47,8 +57,8 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 ### Backend (FastAPI)
 ```
 /app/backend/
-├── server.py                    # Servidor principal + endpoint exportación
-├── models/schemas.py            # SettingsModel con libraryVigaCutIncrements
+├── server.py                    # Servidor principal + endpoints digitalizador actualizados
+├── models/schemas.py            # DigitalizadorRequest con campo `library`
 ├── routes/
 │   ├── libraries.py             # API de bibliotecas con pointValue
 │   └── ...
@@ -61,8 +71,11 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 /app/frontend/src/
 ├── App.js                       # Estado libraryVigaCutIncrements
 ├── components/
-│   ├── BudgetTable.jsx          # Cálculo con viga por biblioteca, botón CATÁLOGO condicional
-│   └── SettingsModal.jsx        # UI Corte Viga ZC/MV, botones exportación
+│   ├── BudgetTable.jsx          # Cálculo con viga por biblioteca, sin barra duplicada
+│   ├── Digitalizador.jsx        # Envía currentLibrary al backend
+│   ├── SettingsModal.jsx        # UI Corte Viga ZC/MV, botones exportación
+│   └── budget/
+│       └── MontadaFilters.jsx   # Filtros con barra de búsqueda integrada
 └── services/
     └── api.js                   # API calls
 ```
@@ -72,7 +85,8 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 Colecciones:
 - products          # library: ZC/MV, height: 200/220 para COLUMNAS MV
 - system_settings   # libraryVigaCutIncrements: {ZC: €, MV: €}
-- users             # allowedLibraries: ['ZC', 'MV']
+- users             # 4 usuarios: MARIO, ALBERTO, EDU, MARIOLUIGGIHOME@GMAIL.COM
+                    # allowedLibraries: ['ZC', 'MV']
 ```
 
 ---
@@ -92,6 +106,11 @@ Colecciones:
 - **Rol**: Admin / Director Comercial
 - **Bibliotecas**: ZC, MV
 
+**Otros usuarios:**
+- ALBERTO / ALBERTO
+- EDU / EDU
+- MARIOLUIGGIHOME@GMAIL.COM / [password original]
+
 ---
 
 ## PRÓXIMAS TAREAS
@@ -99,13 +118,20 @@ Colecciones:
 ### Backlog
 1. (P2 - PAUSADO) Fix cálculo total presupuesto despiece
 2. (P2) Fix glitch sidebar colapsado
-3. (P3) Refactorización BudgetTable.jsx
-4. (P3) Refactorización SettingsModal.jsx
-5. (P3) Verificar flujo registro email
+3. (P2) Usuario debe volver a subir el logo
+4. (P3) Refactorización BudgetTable.jsx
+5. (P3) Refactorización SettingsModal.jsx
+6. (P3) Verificar flujo registro email
 
 ---
 
 ## HISTORIAL DE CAMBIOS
+
+### 15 Marzo 2026 (Continuación)
+- ✅ Digitalizador filtra por biblioteca activa (ZC/MV)
+- ✅ Eliminada barra de búsqueda duplicada en catálogo
+- ✅ Migrados usuarios de test_database a luiggi_home
+- ✅ Todos los usuarios tienen acceso a ZC y MV
 
 ### 15 Marzo 2026
 - ✅ P0: Botón CATÁLOGO MODELOS solo visible en ZC
