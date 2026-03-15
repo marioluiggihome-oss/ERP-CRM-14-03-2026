@@ -10,6 +10,7 @@ import Login from './components/Login';
 import BackupManager from './components/BackupManager';
 import CRMLayout from './components/CRMLayout';
 import Digitalizador from './components/Digitalizador';
+import AgendaMontajes from './components/AgendaMontajes';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import MaintenancePanel from './components/MaintenancePanel';
 import AdminWorkView from './components/AdminWorkView';
