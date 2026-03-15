@@ -629,6 +629,18 @@ const App = () => {
                 </button>
               )}
               
+              {/* Agenda de Montajes - Solo usuarios con permiso */}
+              {(state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
+                <button 
+                  onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                  data-testid="montajes-nav-btn"
+                >
+                  <Wrench size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Montajes</span>
+                </button>
+              )}
+              
               {/* Armarios ahora está en la barra del presupuesto, no aquí */}
               
               {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
