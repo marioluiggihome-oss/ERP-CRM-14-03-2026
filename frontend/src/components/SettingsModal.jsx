@@ -632,6 +632,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       isRepresentative: false,
       isPrescriptor: false,
       isTienda: false,
+      isMontador: false,
       linkedRepresentativeId: isCommercial ? state.currentUser.id : '',
       allowedModules: ['montada'],
       allowedLibraries: ['ZC'],  // Por defecto ZC
@@ -645,6 +646,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessCRM: false,
       canUseDigitalizador: false,
       canAccessArmarios: false,
+      canAccessMontajes: false,
       canAuthorizePermissions: false,
       useCustomBranding: false,
       canChangeLogo: false
