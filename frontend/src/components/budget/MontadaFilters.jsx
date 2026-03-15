@@ -137,9 +137,12 @@ export const MontadaFiltersVertical = ({
   setSelectedCategory,
   selectedSeries,
   setSelectedSeries,
+  selectedApertura,
+  setSelectedApertura,
   uniqueProgramas,
   uniqueCategories,
   uniqueSeries,
+  uniqueAperturas,
   filterWidth,
   setFilterWidth,
   filterHeight,
@@ -152,7 +155,7 @@ export const MontadaFiltersVertical = ({
   <>
     <select 
       value={selectedPrograma} 
-      onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); }} 
+      onChange={e => { setSelectedPrograma(e.target.value); setSelectedCategory('TODAS'); setSelectedSeries('TODAS'); setSelectedApertura && setSelectedApertura('TODAS'); }} 
       className="w-full bg-indigo-100 border-2 border-indigo-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-indigo-900 outline-none"
     >
       <option value="TODOS">📁 TODOS PROGRAMAS</option>
@@ -160,7 +163,7 @@ export const MontadaFiltersVertical = ({
     </select>
     <select 
       value={selectedCategory} 
-      onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); }} 
+      onChange={e => { setSelectedCategory(e.target.value); setSelectedSeries('TODAS'); setSelectedApertura && setSelectedApertura('TODAS'); }} 
       className="w-full bg-purple-100 border-2 border-purple-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-purple-900 outline-none" 
       disabled={selectedPrograma === 'TODOS'}
     >
@@ -169,13 +172,24 @@ export const MontadaFiltersVertical = ({
     </select>
     <select 
       value={selectedSeries} 
-      onChange={e => setSelectedSeries(e.target.value)} 
+      onChange={e => { setSelectedSeries(e.target.value); setSelectedApertura && setSelectedApertura('TODAS'); }}
       className="w-full bg-amber-100 border-2 border-amber-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-amber-900 outline-none" 
       disabled={selectedCategory === 'TODAS'}
     >
       <option value="TODAS">📄 TODAS SERIES</option>
       {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
     </select>
+    {/* Filtro de Apertura (1P, 2P, etc.) */}
+    {uniqueAperturas && uniqueAperturas.length > 0 && (
+      <select 
+        value={selectedApertura || 'TODAS'} 
+        onChange={e => setSelectedApertura && setSelectedApertura(e.target.value)}
+        className="w-full bg-green-100 border-2 border-green-400 rounded-lg py-2 px-3 text-[10px] font-black uppercase text-green-900 outline-none"
+      >
+        <option value="TODAS">🚪 TODAS APERTURAS</option>
+        {uniqueAperturas.map(a => <option key={a} value={a}>{a === '1P D/I' ? '1P ↔ D/I' : a}</option>)}
+      </select>
+    )}
     
     {/* Filtros de medidas - Vista vertical */}
     <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-2 border border-slate-200">
