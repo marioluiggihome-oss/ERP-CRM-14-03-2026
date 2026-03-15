@@ -159,6 +159,11 @@ const App = () => {
           specialIncrementWidth: settings.specialIncrementWidth || 45,
           specialIncrementHeight: settings.specialIncrementHeight || 45,
           specialIncrementDepth: settings.specialIncrementDepth || 45,
+          // Incrementos por biblioteca
+          librarySpecialIncrements: settings.librarySpecialIncrements || {
+            ZC: { width: 45, height: 45, depth: 45 },
+            MV: { width: 45, height: 45, depth: 45 }
+          },
           vigaCutIncrement: settings.vigaCutIncrement || 0,
           brandColor: settings.brandColor || DEFAULT_BRAND_COLOR,
           logo: settings.logo || null
