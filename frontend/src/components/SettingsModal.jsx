@@ -3659,16 +3659,40 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   </div>
                 </div>
                 
-                {/* Corte Viga (común) */}
-                <div className="bg-slate-50 rounded-xl p-4">
-                  <div className="max-w-xs">
-                    <label className="text-xs font-black text-slate-600 uppercase mb-2 block">🪵 Corte Viga (€) - Común</label>
+                {/* Corte Viga por biblioteca */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Corte Viga ZC */}
+                  <div className="bg-blue-50 rounded-xl p-4">
+                    <label className="text-xs font-black text-blue-600 uppercase mb-2 block">🪵 Corte Viga ZC (€)</label>
                     <input
                       type="number"
                       step="0.5"
-                      value={state.vigaCutIncrement || 0}
-                      onChange={(e) => setState(prev => ({ ...prev, vigaCutIncrement: parseFloat(e.target.value) || 0 }))}
-                      className="w-full bg-white border-2 border-slate-300 rounded-xl p-3 text-xl font-black text-slate-800 outline-none focus:border-slate-500 text-center"
+                      value={state.libraryVigaCutIncrements?.ZC || state.vigaCutIncrement || 0}
+                      onChange={(e) => setState(prev => ({ 
+                        ...prev, 
+                        libraryVigaCutIncrements: {
+                          ...prev.libraryVigaCutIncrements,
+                          ZC: parseFloat(e.target.value) || 0
+                        }
+                      }))}
+                      className="w-full bg-white border-2 border-blue-300 rounded-xl p-3 text-xl font-black text-blue-800 outline-none focus:border-blue-500 text-center"
+                    />
+                  </div>
+                  {/* Corte Viga MV */}
+                  <div className="bg-green-50 rounded-xl p-4">
+                    <label className="text-xs font-black text-green-600 uppercase mb-2 block">🪵 Corte Viga MV (€)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={state.libraryVigaCutIncrements?.MV || 0}
+                      onChange={(e) => setState(prev => ({ 
+                        ...prev, 
+                        libraryVigaCutIncrements: {
+                          ...prev.libraryVigaCutIncrements,
+                          MV: parseFloat(e.target.value) || 0
+                        }
+                      }))}
+                      className="w-full bg-white border-2 border-green-300 rounded-xl p-3 text-xl font-black text-green-800 outline-none focus:border-green-500 text-center"
                     />
                   </div>
                 </div>
