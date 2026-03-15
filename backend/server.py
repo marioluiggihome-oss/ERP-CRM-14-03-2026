@@ -1377,6 +1377,119 @@ async def export_products_to_pdf(
     )
 
 
+@api_router.get("/products/export/library/{library_code}")
+async def export_library_catalog(library_code: str):
+    """
+    Exportar catálogo completo de una biblioteca específica (ZC o MV) a Excel.
+    - ZC: Exporta con columnas Z1-Z12 (puntos por zona)
+    - MV: Exporta con columnas T1-T21 (puntos por tarifa)
+    """
+    library_code = library_code.upper()
+    
+    # Validar biblioteca
+    if library_code not in ['ZC', 'MV']:
+        raise HTTPException(status_code=400, detail=f"Biblioteca '{library_code}' no válida. Use 'ZC' o 'MV'.")
+    
+    # Obtener productos de la biblioteca
+    query = {"library": library_code}
+    products = await db.products.find(query, {"_id": 0}).sort([
+        ("category", 1), ("series", 1), ("code", 1)
+    ]).to_list(10000)
+    
+    if not products:
+        raise HTTPException(status_code=404, detail=f"No se encontraron productos para la biblioteca {library_code}")
+    
+    # Crear Excel
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    worksheet = workbook.add_worksheet(f'Catálogo {library_code}')
+    
+    # Formatos
+    header_format = workbook.add_format({
+        'bold': True, 
+        'bg_color': '#1e3a5f' if library_code == 'ZC' else '#2d5016',
+        'font_color': 'white', 
+        'align': 'center', 
+        'valign': 'vcenter', 
+        'border': 1,
+        'font_size': 10
+    })
+    cell_format = workbook.add_format({
+        'align': 'center', 
+        'valign': 'vcenter', 
+        'border': 1,
+        'font_size': 9
+    })
+    text_format = workbook.add_format({
+        'align': 'left', 
+        'valign': 'vcenter', 
+        'border': 1,
+        'font_size': 9
+    })
+    number_format = workbook.add_format({
+        'align': 'center', 
+        'valign': 'vcenter', 
+        'border': 1,
+        'font_size': 9,
+        'num_format': '0'
+    })
+    
+    # Definir columnas según biblioteca
+    if library_code == 'ZC':
+        # ZC usa zonas Z1-Z12
+        zone_headers = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6', 'Z7', 'Z8', 'Z9', 'Z10', 'Z11', 'Z12']
+        headers = ['REF', 'DESCRIPCIÓN', 'CATEGORÍA', 'SERIE', 'AN', 'AL', 'FO'] + zone_headers
+    else:
+        # MV usa tarifas T1-T21
+        tariff_headers = [f'T{i}' for i in range(1, 22)]
+        headers = ['REF', 'DESCRIPCIÓN', 'CATEGORÍA', 'SERIE', 'AN', 'AL', 'FO'] + tariff_headers
+    
+    # Escribir encabezados
+    col_widths = [12, 35, 20, 15, 6, 6, 6] + [6] * (len(headers) - 7)
+    for col, (header, width) in enumerate(zip(headers, col_widths)):
+        worksheet.write(0, col, header, header_format)
+        worksheet.set_column(col, col, width)
+    
+    # Escribir datos
+    for row_num, product in enumerate(products, start=1):
+        # Datos básicos
+        worksheet.write(row_num, 0, product.get('code', ''), cell_format)
+        worksheet.write(row_num, 1, product.get('name', ''), text_format)
+        worksheet.write(row_num, 2, product.get('category', ''), cell_format)
+        worksheet.write(row_num, 3, product.get('series', ''), cell_format)
+        worksheet.write(row_num, 4, product.get('width', 0) or 0, number_format)
+        worksheet.write(row_num, 5, product.get('height', 0) or 0, number_format)
+        worksheet.write(row_num, 6, product.get('depth', 0) or 0, number_format)
+        
+        # Puntos por zona/tarifa
+        zone_points = product.get('zonePoints', {}) or {}
+        if library_code == 'ZC':
+            for i, zk in enumerate(['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6', 'Z7', 'Z8', 'Z9', 'Z10', 'Z11', 'Z12']):
+                worksheet.write(row_num, 7 + i, zone_points.get(zk, 0) or 0, number_format)
+        else:
+            for i in range(1, 22):
+                tk = f'T{i}'
+                worksheet.write(row_num, 7 + i - 1, zone_points.get(tk, 0) or 0, number_format)
+    
+    # Ajustar altura de filas
+    worksheet.set_default_row(18)
+    worksheet.set_row(0, 25)  # Header más alto
+    
+    # Congelar encabezados
+    worksheet.freeze_panes(1, 0)
+    
+    workbook.close()
+    output.seek(0)
+    
+    filename = f"catalogo_{library_code}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @api_router.get("/products/{product_id}", response_model=ProductModel)
 async def get_product(product_id: str):
     """Obtener un producto por ID"""
