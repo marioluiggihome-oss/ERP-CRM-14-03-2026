@@ -751,16 +751,30 @@ const AgendaMontajes = ({ currentUser }) => {
                 />
               </div>
               
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Fecha *</label>
+                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">📦 Recepción Cocina</label>
+                  <input
+                    type="date"
+                    value={montajeForm.expectedDeliveryDate}
+                    onChange={e => setMontajeForm({...montajeForm, expectedDeliveryDate: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-sm outline-none focus:border-blue-500"
+                  />
+                  <p className="text-[9px] text-blue-500 mt-0.5">Fecha prevista de recepción</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">🔧 Montaje Comprometido *</label>
                   <input
                     type="date"
                     value={montajeForm.scheduledDate}
                     onChange={e => setMontajeForm({...montajeForm, scheduledDate: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-orange-500"
+                    className="w-full px-4 py-2.5 bg-orange-50 border border-orange-200 rounded-xl text-sm outline-none focus:border-orange-500"
                   />
+                  <p className="text-[9px] text-orange-500 mt-0.5">Fecha comprometida de instalación</p>
                 </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">Hora</label>
                   <input
