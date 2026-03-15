@@ -51,10 +51,16 @@ const App = () => {
       golaBajo: false, golaBajoColor: '',
       pointValueMontada: 1.0, pointValueDespiece: 0.88,
       // Valor de punto por biblioteca (para montada)
-      libraryPointValues: { ZC: 1.0, MV: 1.0 }, 
+      libraryPointValues: { ZC: 1.0, MV: 1.0 },
+      // Incrementos muebles especiales GLOBALES (legacy)
       specialIncrementWidth: 45,
       specialIncrementHeight: 45,
       specialIncrementDepth: 45,
+      // Incrementos muebles especiales POR BIBLIOTECA
+      librarySpecialIncrements: {
+        ZC: { width: 45, height: 45, depth: 45 },
+        MV: { width: 45, height: 45, depth: 45 }
+      },
       ivaRate: 21, // IVA editable (por defecto 21%)
       catalogs: [
         { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: [], module: 'montada' },
