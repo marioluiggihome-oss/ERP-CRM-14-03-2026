@@ -3542,51 +3542,137 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 </div>
               </div>
 
-              {/* Incrementos Cortes Especiales */}
+              {/* Incrementos Cortes Especiales POR TARIFA */}
               <div className="bg-white border border-orange-100 rounded-2xl p-6 shadow-sm">
                 <h3 className="text-sm font-black text-orange-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  ✂️ Incrementos Cortes Especiales
+                  ✂️ Incrementos Cortes Especiales por Tarifa
                 </h3>
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-orange-400 uppercase mb-2 block">Ancho (€)</label>
-                    <input
-                      type="number"
-                      value={state.specialIncrementWidth}
-                      onChange={(e) => setState(prev => ({ ...prev, specialIncrementWidth: parseInt(e.target.value) || 45 }))}
-                      className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-2xl font-black text-orange-900 outline-none focus:border-orange-500 text-center"
-                    />
+                
+                {/* Incrementos ZC */}
+                <div className="mb-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4">
+                  <label className="text-xs font-black text-blue-600 uppercase mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                    TARIFA ZC
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-black text-blue-400 uppercase mb-1 block">Ancho (€)</label>
+                      <input
+                        type="number"
+                        value={state.librarySpecialIncrements?.ZC?.width ?? state.specialIncrementWidth}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          librarySpecialIncrements: {
+                            ...prev.librarySpecialIncrements,
+                            ZC: { ...prev.librarySpecialIncrements?.ZC, width: parseInt(e.target.value) || 45 }
+                          }
+                        }))}
+                        className="w-full bg-white border-2 border-blue-200 rounded-xl p-3 text-xl font-black text-blue-900 outline-none focus:border-blue-500 text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-blue-400 uppercase mb-1 block">Alto (€)</label>
+                      <input
+                        type="number"
+                        value={state.librarySpecialIncrements?.ZC?.height ?? state.specialIncrementHeight}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          librarySpecialIncrements: {
+                            ...prev.librarySpecialIncrements,
+                            ZC: { ...prev.librarySpecialIncrements?.ZC, height: parseInt(e.target.value) || 45 }
+                          }
+                        }))}
+                        className="w-full bg-white border-2 border-blue-200 rounded-xl p-3 text-xl font-black text-blue-900 outline-none focus:border-blue-500 text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-blue-400 uppercase mb-1 block">Fondo (€)</label>
+                      <input
+                        type="number"
+                        value={state.librarySpecialIncrements?.ZC?.depth ?? state.specialIncrementDepth}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          librarySpecialIncrements: {
+                            ...prev.librarySpecialIncrements,
+                            ZC: { ...prev.librarySpecialIncrements?.ZC, depth: parseInt(e.target.value) || 45 }
+                          }
+                        }))}
+                        className="w-full bg-white border-2 border-blue-200 rounded-xl p-3 text-xl font-black text-blue-900 outline-none focus:border-blue-500 text-center"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-black text-orange-400 uppercase mb-2 block">Alto (€)</label>
-                    <input
-                      type="number"
-                      value={state.specialIncrementHeight}
-                      onChange={(e) => setState(prev => ({ ...prev, specialIncrementHeight: parseInt(e.target.value) || 45 }))}
-                      className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-2xl font-black text-orange-900 outline-none focus:border-orange-500 text-center"
-                    />
+                </div>
+                
+                {/* Incrementos MV */}
+                <div className="mb-4 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4">
+                  <label className="text-xs font-black text-amber-600 uppercase mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                    TARIFA MV
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-black text-amber-400 uppercase mb-1 block">Ancho (€)</label>
+                      <input
+                        type="number"
+                        value={state.librarySpecialIncrements?.MV?.width ?? state.specialIncrementWidth}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          librarySpecialIncrements: {
+                            ...prev.librarySpecialIncrements,
+                            MV: { ...prev.librarySpecialIncrements?.MV, width: parseInt(e.target.value) || 45 }
+                          }
+                        }))}
+                        className="w-full bg-white border-2 border-amber-200 rounded-xl p-3 text-xl font-black text-amber-900 outline-none focus:border-amber-500 text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-amber-400 uppercase mb-1 block">Alto (€)</label>
+                      <input
+                        type="number"
+                        value={state.librarySpecialIncrements?.MV?.height ?? state.specialIncrementHeight}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          librarySpecialIncrements: {
+                            ...prev.librarySpecialIncrements,
+                            MV: { ...prev.librarySpecialIncrements?.MV, height: parseInt(e.target.value) || 45 }
+                          }
+                        }))}
+                        className="w-full bg-white border-2 border-amber-200 rounded-xl p-3 text-xl font-black text-amber-900 outline-none focus:border-amber-500 text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-amber-400 uppercase mb-1 block">Fondo (€)</label>
+                      <input
+                        type="number"
+                        value={state.librarySpecialIncrements?.MV?.depth ?? state.specialIncrementDepth}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          librarySpecialIncrements: {
+                            ...prev.librarySpecialIncrements,
+                            MV: { ...prev.librarySpecialIncrements?.MV, depth: parseInt(e.target.value) || 45 }
+                          }
+                        }))}
+                        className="w-full bg-white border-2 border-amber-200 rounded-xl p-3 text-xl font-black text-amber-900 outline-none focus:border-amber-500 text-center"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-black text-orange-400 uppercase mb-2 block">Fondo (€)</label>
-                    <input
-                      type="number"
-                      value={state.specialIncrementDepth}
-                      onChange={(e) => setState(prev => ({ ...prev, specialIncrementDepth: parseInt(e.target.value) || 45 }))}
-                      className="w-full bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-2xl font-black text-orange-900 outline-none focus:border-orange-500 text-center"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-black text-amber-600 uppercase mb-2 block">🪵 Corte Viga (€)</label>
+                </div>
+                
+                {/* Corte Viga (común) */}
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <div className="max-w-xs">
+                    <label className="text-xs font-black text-slate-600 uppercase mb-2 block">🪵 Corte Viga (€) - Común</label>
                     <input
                       type="number"
                       step="0.5"
                       value={state.vigaCutIncrement || 0}
                       onChange={(e) => setState(prev => ({ ...prev, vigaCutIncrement: parseFloat(e.target.value) || 0 }))}
-                      className="w-full bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-2xl font-black text-amber-800 outline-none focus:border-amber-500 text-center"
+                      className="w-full bg-white border-2 border-slate-300 rounded-xl p-3 text-xl font-black text-slate-800 outline-none focus:border-slate-500 text-center"
                     />
                   </div>
                 </div>
-                <p className="text-xs text-slate-500 mt-3 italic">Los incrementos se aplican por línea cuando hay corte especial o corte de viga activado.</p>
+                
+                <p className="text-xs text-slate-500 mt-3 italic">Los incrementos se aplican según la tarifa activa cuando hay corte especial.</p>
                 
                 {/* Botón Guardar Configuración */}
                 <div className="mt-6 flex justify-end">
