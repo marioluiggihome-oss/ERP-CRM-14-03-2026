@@ -16,6 +16,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   
   // Inventory states
   const [inventoryModule, setInventoryModule] = useState('montada');
+  const [inventoryLibraryFilter, setInventoryLibraryFilter] = useState(''); // Filtro por biblioteca (ZC/MV)
   const [productSearch, setProductSearch] = useState('');
   const [productSeriesFilter, setProductSeriesFilter] = useState(''); // Filtro por serie
   const [productProgramaFilter, setProductProgramaFilter] = useState(''); // Filtro por programa
