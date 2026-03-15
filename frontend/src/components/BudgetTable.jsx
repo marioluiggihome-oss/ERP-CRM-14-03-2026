@@ -2616,9 +2616,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                         setSelectedCategory={setSelectedCategory}
                         selectedSeries={selectedSeries}
                         setSelectedSeries={setSelectedSeries}
+                        selectedApertura={selectedApertura}
+                        setSelectedApertura={setSelectedApertura}
                         uniqueProgramas={uniqueProgramas}
                         uniqueCategories={uniqueCategories}
                         uniqueSeries={uniqueSeries}
+                        uniqueAperturas={uniqueAperturas}
                         filterWidth={filterWidth}
                         setFilterWidth={setFilterWidth}
                         filterHeight={filterHeight}
