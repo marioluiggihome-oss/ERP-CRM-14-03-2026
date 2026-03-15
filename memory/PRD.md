@@ -26,14 +26,32 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 - ✅ **Formato ZC**: Columnas REF, DESC, CATEGORÍA, SERIE, AN, AL, FO, Z1-Z12
 - ✅ **Formato MV**: Columnas REF, DESC, CATEGORÍA, SERIE, AN, AL, FO, T1-T21
 
-### Correcciones Adicionales (Solicitud del Usuario)
-- ✅ **Digitalizador por Biblioteca**: Ahora detecta muebles según la biblioteca activa (ZC o MV)
-  - Backend: `/api/digitalizador/analyze` acepta parámetro `library`
-  - Backend: `/api/digitalizador/search-catalog` acepta parámetro `library`
-  - Frontend: Envía `state.currentLibrary` en las solicitudes
-- ✅ **Barra de búsqueda duplicada**: Eliminada la barra de búsqueda extra en el catálogo
-- ✅ **Migración de usuarios**: Usuarios (ALBERTO, EDU, MARIOLUIGGIHOME) migrados de test_database a luiggi_home
-- ✅ **Permisos de bibliotecas**: Todos los usuarios tienen acceso a ZC y MV
+### Correcciones Adicionales
+- ✅ **Digitalizador por Biblioteca**: Detecta muebles según la biblioteca activa (ZC o MV)
+- ✅ **Barra de búsqueda duplicada**: Eliminada
+- ✅ **Migración de usuarios**: Usuarios migrados de test_database a luiggi_home
+- ✅ **Label "Nombre Público Tienda"**: Cambiado a "Nombre" en formulario de usuario
+
+### 🆕 NUEVO: Agenda de Montajes
+- ✅ **Componente**: `AgendaMontajes.jsx` - Gestión completa de montadores e instaladores
+- ✅ **API Backend**: CRUD completo para montadores y montajes
+  - `GET/POST /api/montadores` - Listar/crear montadores
+  - `GET/PUT/DELETE /api/montadores/{id}` - Gestionar montador individual
+  - `GET/POST /api/montajes` - Listar/crear montajes
+  - `GET/PUT/DELETE /api/montajes/{id}` - Gestionar montaje individual
+  - `GET /api/montadores/{id}/montajes` - Montajes por montador
+- ✅ **Frontend API**: `montadoresAPI` y `montajesAPI` en api.js
+- ✅ **Permisos de usuario**:
+  - `canAccessMontajes` - Permiso para ver la agenda
+  - `isMontador` - Rol de montador/instalador
+- ✅ **Navegación**: Botón "MONTAJES" en el sidebar (icono de llave)
+- ✅ **Funcionalidades**:
+  - Gestión de montadores (nombre, empresa, teléfono, email, zona, especialidad, rating)
+  - Programación de montajes (cliente, dirección, fecha, hora, duración, estado)
+  - Estados: activo/inactivo/vacaciones para montadores
+  - Estados: pendiente/en_curso/completado/cancelado para montajes
+  - Valoración con estrellas (1-5)
+  - Filtros por estado y búsqueda
 
 ---
 
@@ -43,9 +61,9 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 1. **Bug cálculo presupuesto despiece** - Items de despiece no se suman al total (PAUSADO)
 
 ### P2 - MEJORAS
-2. **Logo perdido** - El logo no se migró con los settings. Usuario debe subir de nuevo.
+2. **Logo perdido** - Usuario debe volver a subir el logo desde Panel Maestro
 3. **Glitch visual barra lateral colapsada** - Recurrente
-4. **Refactorización componentes grandes** - BudgetTable.jsx (~3069 líneas), SettingsModal.jsx (~4647 líneas)
+4. **Refactorización componentes grandes** - BudgetTable.jsx (~3069 líneas), SettingsModal.jsx (~4671 líneas)
 
 ### P3 - BLOQUEADOS
 5. **Flujo registro email** - Requiere verificación de dominio en Resend
@@ -57,59 +75,50 @@ Replicar una aplicación de presupuestos de cocina ERP/CRM llamada LUIGGI HOME c
 ### Backend (FastAPI)
 ```
 /app/backend/
-├── server.py                    # Servidor principal + endpoints digitalizador actualizados
-├── models/schemas.py            # DigitalizadorRequest con campo `library`
+├── server.py                    # Servidor principal + endpoints montadores/montajes
+├── models/schemas.py            # MontadorCreate, MontajeCreate, etc.
 ├── routes/
-│   ├── libraries.py             # API de bibliotecas con pointValue
+│   ├── libraries.py
 │   └── ...
-├── mv_products_v2.py            # Datos MV con precios T1 y multiplicadores
-└── add_columna_height_variants.py # Script para crear variantes H200/H220
 ```
 
 ### Frontend (React)
 ```
 /app/frontend/src/
-├── App.js                       # Estado libraryVigaCutIncrements
+├── App.js                       # Navegación a AgendaMontajes
 ├── components/
-│   ├── BudgetTable.jsx          # Cálculo con viga por biblioteca, sin barra duplicada
-│   ├── Digitalizador.jsx        # Envía currentLibrary al backend
-│   ├── SettingsModal.jsx        # UI Corte Viga ZC/MV, botones exportación
-│   └── budget/
-│       └── MontadaFilters.jsx   # Filtros con barra de búsqueda integrada
+│   ├── AgendaMontajes.jsx       # NUEVO: Gestión de montadores
+│   ├── BudgetTable.jsx
+│   ├── SettingsModal.jsx        # Permisos canAccessMontajes, isMontador
+│   └── ...
 └── services/
-    └── api.js                   # API calls
+    └── api.js                   # montadoresAPI, montajesAPI
 ```
 
 ### Base de Datos (MongoDB: luiggi_home)
 ```
 Colecciones:
-- products          # library: ZC/MV, height: 200/220 para COLUMNAS MV
-- system_settings   # libraryVigaCutIncrements: {ZC: €, MV: €}
-- users             # 4 usuarios: MARIO, ALBERTO, EDU, MARIOLUIGGIHOME@GMAIL.COM
-                    # allowedLibraries: ['ZC', 'MV']
+- products          # library: ZC/MV
+- system_settings   # libraryVigaCutIncrements
+- users             # canAccessMontajes, isMontador
+- montadores        # NUEVA: montadores/instaladores
+- montajes          # NUEVA: instalaciones programadas
 ```
 
 ---
 
 ## BIBLIOTECAS/TARIFAS
 
-| Código | Sistema Precios | Productos | Columnas | Viga Cut Default |
-|--------|-----------------|-----------|----------|------------------|
-| ZC | ZONAS (Z1-Z12) | ~4505 | Z1-Z12 | 0€ |
-| MV | TARIFAS (T1-T21) | ~290 | T1-T21 | 0€ |
+| Código | Sistema Precios | Productos |
+|--------|-----------------|-----------|
+| ZC | ZONAS (Z1-Z12) | ~4505 |
+| MV | TARIFAS (T1-T21) | ~290 |
 
 ---
 
 ## CREDENCIALES TEST
-- **Usuario**: MARIO
-- **Password**: MARIO
-- **Rol**: Admin / Director Comercial
-- **Bibliotecas**: ZC, MV
-
-**Otros usuarios:**
-- ALBERTO / ALBERTO
-- EDU / EDU
-- MARIOLUIGGIHOME@GMAIL.COM / [password original]
+- **Usuario**: MARIO / MARIO (Admin)
+- **Otros**: ALBERTO, EDU
 
 ---
 
@@ -117,31 +126,22 @@ Colecciones:
 
 ### Backlog
 1. (P2 - PAUSADO) Fix cálculo total presupuesto despiece
-2. (P2) Fix glitch sidebar colapsado
-3. (P2) Usuario debe volver a subir el logo
-4. (P3) Refactorización BudgetTable.jsx
-5. (P3) Refactorización SettingsModal.jsx
-6. (P3) Verificar flujo registro email
+2. (P2) Usuario debe volver a subir el logo
+3. (P2) Fix glitch sidebar colapsado
+4. (P3) Refactorización componentes grandes
+5. (P3) Preview visual del catálogo antes de exportar
 
 ---
 
 ## HISTORIAL DE CAMBIOS
 
-### 15 Marzo 2026 (Continuación)
-- ✅ Digitalizador filtra por biblioteca activa (ZC/MV)
-- ✅ Eliminada barra de búsqueda duplicada en catálogo
-- ✅ Migrados usuarios de test_database a luiggi_home
-- ✅ Todos los usuarios tienen acceso a ZC y MV
-
-### 15 Marzo 2026
+### 15 Marzo 2026 (Sesión completa)
 - ✅ P0: Botón CATÁLOGO MODELOS solo visible en ZC
 - ✅ P0: Variantes de altura COLUMNAS MV (H200, H220)
 - ✅ P1: Corte Viga independiente por biblioteca (ZC/MV)
-- ✅ P1: Endpoint y UI para exportación catálogo ZC/MV
-- 🔧 Fix: DB_NAME en .env (de test_database a luiggi_home)
-- 🔧 Fix: allowedLibraries para usuario MARIO
-
-### 14 Marzo 2026
-- Sistema de valor de punto por biblioteca
-- Mejora de datos MV (256 productos)
-- Sistema Multi-Biblioteca ZC/MV
+- ✅ P1: Exportación catálogo ZC/MV
+- ✅ Digitalizador filtra por biblioteca activa
+- ✅ Eliminada barra de búsqueda duplicada
+- ✅ Migrados usuarios de test_database
+- ✅ Label "Nombre Público Tienda" → "Nombre"
+- ✅ **NUEVO: Agenda de Montajes completa**
