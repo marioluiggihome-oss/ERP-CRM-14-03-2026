@@ -255,6 +255,7 @@ const AgendaMontajes = ({ currentUser }) => {
       clientPhone: '',
       clientAddress: '',
       projectDescription: '',
+      expectedDeliveryDate: '',
       scheduledDate: '',
       scheduledTime: '',
       estimatedDuration: '',
