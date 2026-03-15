@@ -3696,31 +3696,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           )}
                         </div>
                         <div className="flex gap-1">
-                          {/* Botón para cambiar tarifa */}
-                          <button
-                            onClick={async () => {
-                              const newLibrary = matLibrary === 'ZC' ? 'MV' : 'ZC';
-                              setState(prev => ({
-                                ...prev,
-                                carcassMaterials: prev.carcassMaterials.map(m =>
-                                  m.id === material.id ? { ...m, library: newLibrary } : m
-                                )
-                              }));
-                              try {
-                                await materialsAPI.update(material.id, { ...material, library: newLibrary });
-                              } catch (err) {
-                                console.error('Error updating material library:', err);
-                              }
-                            }}
-                            className={`p-1.5 rounded-lg transition-all ${
-                              matLibrary === 'MV' 
-                                ? 'bg-amber-100 hover:bg-amber-200' 
-                                : 'bg-blue-100 hover:bg-blue-200'
-                            }`}
-                            title={`Cambiar a ${matLibrary === 'ZC' ? 'MV' : 'ZC'}`}
-                          >
-                            <RefreshCw size={14} className={matLibrary === 'MV' ? 'text-amber-600' : 'text-blue-600'} />
-                          </button>
+                          {/* Los cascos son FIJOS a su tarifa - no se pueden cambiar */}
                           <button
                             onClick={() => handleEditMaterial(material)}
                             className="p-1.5 hover:bg-amber-100 rounded-lg transition-all"
