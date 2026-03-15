@@ -202,6 +202,14 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 {selectedImages.length} {selectedImages.length === 1 ? 'pared' : 'paredes'}
               </span>
             )}
+            {/* Indicador de biblioteca activa */}
+            <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-black ${
+              state?.currentLibrary === 'MV' 
+                ? 'bg-emerald-100 text-emerald-700' 
+                : 'bg-blue-100 text-blue-700'
+            }`}>
+              Catálogo: {state?.currentLibrary || 'ZC'}
+            </span>
           </h3>
           
           {selectedImages.length === 0 ? (
