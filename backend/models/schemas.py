@@ -972,3 +972,98 @@ class UserProfileUpdate(BaseModel):
     company: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+
+
+
+# ==========================================
+# AGENDA DE MONTAJES (Montadores/Instaladores)
+# ==========================================
+
+class MontadorBase(BaseModel):
+    """Base model for montadores (installers)"""
+    name: str
+    phone: str = ""
+    email: str = ""
+    company: str = ""  # Empresa/autónomo
+    specialty: str = ""  # Especialidad: cocinas, armarios, etc.
+    zone: str = ""  # Zona de trabajo
+    address: str = ""
+    notes: str = ""
+    status: str = "active"  # active, inactive, vacation
+    rating: float = 0  # 0-5 estrellas
+    tags: List[str] = []
+
+
+class MontadorCreate(MontadorBase):
+    """Create a new montador"""
+    pass
+
+
+class MontadorUpdate(BaseModel):
+    """Update montador - all fields optional"""
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    company: Optional[str] = None
+    specialty: Optional[str] = None
+    zone: Optional[str] = None
+    address: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+    rating: Optional[float] = None
+    tags: Optional[List[str]] = None
+
+
+class MontadorResponse(MontadorBase):
+    """Response with montador data"""
+    id: str
+    createdAt: str = ""
+    updatedAt: str = ""
+    totalMontajes: int = 0
+
+
+class MontajeBase(BaseModel):
+    """Base model for montajes (installations)"""
+    montadorId: str
+    montadorName: str = ""
+    clientName: str
+    clientPhone: str = ""
+    clientAddress: str
+    projectDescription: str = ""
+    scheduledDate: str  # ISO date
+    scheduledTime: str = ""  # HH:MM
+    estimatedDuration: str = ""  # e.g., "2 días"
+    status: str = "pendiente"  # pendiente, en_curso, completado, cancelado
+    budgetId: str = ""  # ID del presupuesto asociado
+    budgetRef: str = ""  # Referencia del presupuesto
+    notes: str = ""
+    assignedBy: str = ""  # Usuario que asignó el montaje
+
+
+class MontajeCreate(MontajeBase):
+    """Create a new montaje"""
+    pass
+
+
+class MontajeUpdate(BaseModel):
+    """Update montaje - all fields optional"""
+    montadorId: Optional[str] = None
+    montadorName: Optional[str] = None
+    clientName: Optional[str] = None
+    clientPhone: Optional[str] = None
+    clientAddress: Optional[str] = None
+    projectDescription: Optional[str] = None
+    scheduledDate: Optional[str] = None
+    scheduledTime: Optional[str] = None
+    estimatedDuration: Optional[str] = None
+    status: Optional[str] = None
+    budgetId: Optional[str] = None
+    budgetRef: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class MontajeResponse(MontajeBase):
+    """Response with montaje data"""
+    id: str
+    createdAt: str = ""
+    updatedAt: str = ""
