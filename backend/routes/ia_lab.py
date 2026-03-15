@@ -264,14 +264,22 @@ async def analyze_kitchen_plan(
 
 
 @router.post("/analyze-kitchen-plan-multi")
-async def analyze_kitchen_plan_multi(files: List[UploadFile] = File(...)):
+async def analyze_kitchen_plan_multi(
+    files: List[UploadFile] = File(...),
+    library: Optional[str] = Form(default="ZC")
+):
     """
     Analiza MÚLTIPLES planos de cocina (varias paredes).
+    Filtra productos por la biblioteca especificada (ZC o MV).
     """
     try:
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        
+        # Normalizar biblioteca
+        active_library = (library or "ZC").upper()
+        logger.info(f"Analyzing multiple kitchen plans for library: {active_library}")
         
         all_furniture = []
         all_summaries = []
@@ -361,10 +369,12 @@ Responde SOLO con JSON:
             'total_bajos': sum(s.get('resumen', {}).get('total_bajos', 0) for s in all_summaries),
             'total_columnas': sum(s.get('resumen', {}).get('total_columnas', 0) for s in all_summaries),
             'total_muebles': len(all_furniture),
-            'paredes_analizadas': len(files)
+            'paredes_analizadas': len(files),
+            'biblioteca': active_library
         }
         
-        enriched_furniture = await enrich_detected_furniture(all_furniture)
+        # Enriquecer con datos del catálogo - FILTRANDO POR BIBLIOTECA
+        enriched_furniture = await enrich_detected_furniture(all_furniture, active_library)
         
         total_pvp = sum(m.get('precio_pvp', 0) for m in enriched_furniture)
         productos_encontrados = sum(1 for m in enriched_furniture if m.get('producto_encontrado'))
@@ -377,10 +387,11 @@ Responde SOLO con JSON:
             'mensaje': f"{productos_encontrados} productos cotizados de {len(enriched_furniture)} detectados"
         }
         
-        logger.info(f"Multi-wall kitchen plan analyzed: {len(enriched_furniture)} furniture items from {len(files)} walls")
+        logger.info(f"Multi-wall kitchen plan analyzed: {len(enriched_furniture)} furniture items from {len(files)} walls for {active_library}")
         
         return {
             "success": True,
+            "library": active_library,
             "analysis": {
                 "muebles_detectados": enriched_furniture,
                 "resumen": total_summary,
