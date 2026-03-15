@@ -3066,24 +3066,26 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         Nueva Alta
                       </button>
                       
-                      {/* Botón descargar catálogo Excel */}
+                      {/* Botones descargar catálogo por biblioteca */}
                       <a
-                        href="/catalogo_productos_completo.xlsx"
-                        download="LUIGGI_Catalogo_Productos.xlsx"
-                        className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl font-black uppercase text-xs hover:bg-green-700 transition-all shadow-lg whitespace-nowrap"
-                        data-testid="download-catalog-xlsx-btn"
+                        href={`${process.env.REACT_APP_BACKEND_URL}/api/products/export/library/ZC`}
+                        download="catalogo_ZC.xlsx"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-black uppercase text-xs hover:bg-blue-700 transition-all shadow-lg whitespace-nowrap"
+                        data-testid="download-catalog-zc-btn"
+                        title="Descargar catálogo ZC (Zonas Z1-Z12)"
                       >
-                        <Download size={18} />
-                        Excel
+                        <Download size={16} />
+                        ZC
                       </a>
                       <a
-                        href="/catalogo_productos_completo.xls"
-                        download="LUIGGI_Catalogo_Productos.xls"
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs hover:bg-emerald-700 transition-all shadow-lg whitespace-nowrap"
-                        data-testid="download-catalog-xls-btn"
+                        href={`${process.env.REACT_APP_BACKEND_URL}/api/products/export/library/MV`}
+                        download="catalogo_MV.xlsx"
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-black uppercase text-xs hover:bg-green-700 transition-all shadow-lg whitespace-nowrap"
+                        data-testid="download-catalog-mv-btn"
+                        title="Descargar catálogo MV (Tarifas T1-T21)"
                       >
-                        <FileSpreadsheet size={18} />
-                        XLS
+                        <Download size={16} />
+                        MV
                       </a>
                     </div>
                   </div>
