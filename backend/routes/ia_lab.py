@@ -84,9 +84,10 @@ async def search_product_in_catalog(code: str, width: int = None, height: int = 
     return None
 
 
-async def enrich_detected_furniture(furniture_list: list) -> list:
+async def enrich_detected_furniture(furniture_list: list, library: str = None) -> list:
     """
     Enriquece la lista de muebles detectados con información del catálogo.
+    Filtra por biblioteca si se especifica.
     """
     enriched = []
     
@@ -95,7 +96,7 @@ async def enrich_detected_furniture(furniture_list: list) -> list:
         width = item.get('ancho_estimado', 0)
         height = item.get('alto_estimado', 0) * 10
         
-        catalog_product = await search_product_in_catalog(code, width, height)
+        catalog_product = await search_product_in_catalog(code, width, height, library)
         
         enriched_item = {**item}
         
@@ -103,21 +104,22 @@ async def enrich_detected_furniture(furniture_list: list) -> list:
             enriched_item['producto_encontrado'] = True
             enriched_item['codigo_catalogo'] = catalog_product.get('code', code)
             enriched_item['nombre_catalogo'] = catalog_product.get('name', '')
-            enriched_item['puntos'] = catalog_product.get('points', 0)
-            enriched_item['precio_pvp'] = catalog_product.get('points', 0)
+            enriched_item['puntos'] = catalog_product.get('points', 0) or catalog_product.get('T1', 0)
+            enriched_item['precio_pvp'] = catalog_product.get('points', 0) or catalog_product.get('T1', 0)
             enriched_item['categoria'] = catalog_product.get('category', '')
             enriched_item['programa'] = catalog_product.get('programa', 'ESTÁNDAR')
             enriched_item['ancho_real'] = catalog_product.get('width', width)
             enriched_item['alto_real'] = catalog_product.get('height', height)
             enriched_item['fondo_real'] = catalog_product.get('depth', item.get('fondo_estimado', 0) * 10)
             enriched_item['product_id'] = catalog_product.get('id', '')
+            enriched_item['biblioteca'] = catalog_product.get('library', library or 'ZC')
         else:
             enriched_item['producto_encontrado'] = False
             enriched_item['codigo_catalogo'] = code
             enriched_item['nombre_catalogo'] = f"{item.get('tipo', '')} {item.get('subtipo', '').replace('_', ' ')}"
             enriched_item['puntos'] = 0
             enriched_item['precio_pvp'] = 0
-            enriched_item['mensaje'] = "Producto no encontrado en catálogo - revisar manualmente"
+            enriched_item['mensaje'] = f"Producto no encontrado en catálogo {library or 'ZC'} - revisar manualmente"
         
         enriched.append(enriched_item)
     
