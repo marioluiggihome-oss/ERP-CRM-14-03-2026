@@ -4770,18 +4770,21 @@ IMPORTANTE:
                 return []
             
             # Build response lines with catalog matching
+            # Usar la biblioteca de la solicitud
+            active_library = request.library or "ZC"
+            
             extracted_lines = []
             for idx, line in enumerate(parsed.get("lines", [])):
                 reference = str(line.get("reference") or "")
                 description = str(line.get("description") or "")
                 
-                # Search for matching products
+                # Search for matching products in the active library
                 search_text = reference if reference else description
-                matched_products = await search_catalog_fuzzy(search_text)
+                matched_products = await search_catalog_fuzzy(search_text, library=active_library)
                 
                 # If no match by reference, try by description keywords
                 if not matched_products and description:
-                    matched_products = await search_catalog_fuzzy(description)
+                    matched_products = await search_catalog_fuzzy(description, library=active_library)
                 
                 extracted_lines.append(DigitalizadorLine(
                     id=f"LINE-{uuid.uuid4().hex[:8]}",
