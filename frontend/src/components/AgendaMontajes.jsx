@@ -479,13 +479,22 @@ const AgendaMontajes = ({ currentUser }) => {
                 <div key={montaje.id} className="bg-white rounded-2xl shadow-sm p-5 hover:shadow-md transition-all">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex flex-col items-center justify-center">
-                        <span className="text-xs font-bold text-blue-600">
-                          {new Date(montaje.scheduledDate).toLocaleDateString('es-ES', { day: '2-digit' })}
-                        </span>
-                        <span className="text-[10px] font-medium text-blue-500 uppercase">
-                          {new Date(montaje.scheduledDate).toLocaleDateString('es-ES', { month: 'short' })}
-                        </span>
+                      {/* Fechas: Recepción y Montaje */}
+                      <div className="flex flex-col gap-1">
+                        {montaje.expectedDeliveryDate && (
+                          <div className="w-14 h-10 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg flex flex-col items-center justify-center" title="Recepción Cocina">
+                            <span className="text-[9px] font-bold text-blue-600">
+                              {new Date(montaje.expectedDeliveryDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                            </span>
+                            <span className="text-[7px] font-medium text-blue-400">📦 RECEP</span>
+                          </div>
+                        )}
+                        <div className="w-14 h-10 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg flex flex-col items-center justify-center" title="Montaje Comprometido">
+                          <span className="text-[9px] font-bold text-orange-600">
+                            {new Date(montaje.scheduledDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                          </span>
+                          <span className="text-[7px] font-medium text-orange-400">🔧 MONT</span>
+                        </div>
                       </div>
                       
                       <div>
