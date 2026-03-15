@@ -6368,7 +6368,8 @@ async def create_montaje(montaje: MontajeCreate):
         }
         
         await db.montajes.insert_one(montaje_data)
-        del montaje_data["_id"] if "_id" in montaje_data else None
+        if "_id" in montaje_data:
+            del montaje_data["_id"]
         
         return montaje_data
     except Exception as e:
