@@ -26,112 +26,79 @@ COLUMNA_CATEGORIES = [
 def add_height_variants():
     """
     Para cada producto de tipo COLUMNA en la biblioteca MV:
-    1. Si no tiene height definido, crear dos variantes (200 y 220)
-    2. Si ya tiene height, verificar que existan ambas variantes
+    1. Si no tiene height definido o height=0, crear variantes 200 y 220
+    2. Eliminar el producto original sin altura
     """
     products_collection = db['products']
     
-    # Buscar todos los productos COLUMNA de la biblioteca MV
+    # Buscar todos los productos COLUMNA de la biblioteca MV SIN variante de altura
     columnas = list(products_collection.find({
         'library': 'MV',
-        'category': {'$in': COLUMNA_CATEGORIES}
+        'category': {'$in': COLUMNA_CATEGORIES},
+        'code': {'$not': {'$regex': '/(200|220)$'}}  # Excluir los que ya tienen /200 o /220
     }))
     
-    print(f"Encontradas {len(columnas)} columnas MV")
+    print(f"Encontradas {len(columnas)} columnas MV originales (sin variante de altura)")
     
     products_to_insert = []
-    products_to_update = []
-    
-    # Agrupar por código base (sin el sufijo de altura)
-    existing_codes_by_height = {}
-    for col in columnas:
-        code = col.get('code', '')
-        height = col.get('height', 0)
-        if code not in existing_codes_by_height:
-            existing_codes_by_height[code] = {}
-        existing_codes_by_height[code][height] = col
-    
-    # Procesar cada columna única
-    processed_base_codes = set()
+    products_to_delete = []
     
     for col in columnas:
         base_code = col.get('code', '')
+        base_name = col.get('name', '')
         
-        # Evitar procesar el mismo código base múltiples veces
-        if base_code in processed_base_codes:
-            continue
-        processed_base_codes.add(base_code)
+        # Verificar si ya existen variantes
+        existing_200 = products_collection.find_one({
+            'library': 'MV',
+            'code': f"{base_code}/200"
+        })
+        existing_220 = products_collection.find_one({
+            'library': 'MV', 
+            'code': f"{base_code}/220"
+        })
         
-        heights_present = existing_codes_by_height.get(base_code, {})
-        
-        # Si el producto no tiene height o tiene height=0, crear ambas variantes
-        if 0 in heights_present or len(heights_present) == 0:
-            original = heights_present.get(0, col)
-            
-            # Crear variante altura 200
-            if 200 not in heights_present:
-                variant_200 = {
-                    **{k: v for k, v in original.items() if k != '_id'},
-                    'code': f"{base_code}/200",
-                    'name': f"{original.get('name', '')} H200",
-                    'height': 200,
-                    'updated_at': datetime.now(timezone.utc).isoformat()
-                }
-                products_to_insert.append(variant_200)
-            
-            # Crear variante altura 220
-            if 220 not in heights_present:
-                variant_220 = {
-                    **{k: v for k, v in original.items() if k != '_id'},
-                    'code': f"{base_code}/220",
-                    'name': f"{original.get('name', '')} H220",
-                    'height': 220,
-                    'updated_at': datetime.now(timezone.utc).isoformat()
-                }
-                products_to_insert.append(variant_220)
-            
-            # Marcar el producto original con height=0 para eliminarlo después
-            if 0 in heights_present:
-                products_to_update.append(original['_id'])
-        
-        # Si ya tiene altura específica pero falta alguna variante
-        elif 200 in heights_present and 220 not in heights_present:
-            original = heights_present[200]
-            variant_220 = {
-                **{k: v for k, v in original.items() if k != '_id'},
-                'code': base_code.replace('/200', '/220') if '/200' in base_code else f"{base_code}/220",
-                'name': original.get('name', '').replace('H200', 'H220') if 'H200' in original.get('name', '') else f"{original.get('name', '')} H220",
-                'height': 220,
-                'updated_at': datetime.now(timezone.utc).isoformat()
-            }
-            products_to_insert.append(variant_220)
-            
-        elif 220 in heights_present and 200 not in heights_present:
-            original = heights_present[220]
+        # Crear variante altura 200 si no existe
+        if not existing_200:
             variant_200 = {
-                **{k: v for k, v in original.items() if k != '_id'},
-                'code': base_code.replace('/220', '/200') if '/220' in base_code else f"{base_code}/200",
-                'name': original.get('name', '').replace('H220', 'H200') if 'H220' in original.get('name', '') else f"{original.get('name', '')} H200",
+                **{k: v for k, v in col.items() if k != '_id'},
+                'code': f"{base_code}/200",
+                'name': f"{base_name} H200",
                 'height': 200,
                 'updated_at': datetime.now(timezone.utc).isoformat()
             }
             products_to_insert.append(variant_200)
+        
+        # Crear variante altura 220 si no existe
+        if not existing_220:
+            variant_220 = {
+                **{k: v for k, v in col.items() if k != '_id'},
+                'code': f"{base_code}/220",
+                'name': f"{base_name} H220",
+                'height': 220,
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }
+            products_to_insert.append(variant_220)
+        
+        # Marcar el producto original para eliminación
+        products_to_delete.append(col['_id'])
     
     # Insertar nuevas variantes
     if products_to_insert:
         print(f"\nInsertando {len(products_to_insert)} variantes de altura...")
-        for p in products_to_insert:
+        for p in products_to_insert[:10]:  # Mostrar solo los primeros 10
             print(f"  + {p['code']}: {p['name']} (H={p['height']})")
+        if len(products_to_insert) > 10:
+            print(f"  ... y {len(products_to_insert) - 10} más")
         
         result = products_collection.insert_many(products_to_insert)
         print(f"Insertados {len(result.inserted_ids)} productos")
     
-    # Eliminar productos originales sin altura definida (si hay variantes)
-    if products_to_update:
-        print(f"\nEliminando {len(products_to_update)} productos originales sin altura...")
-        for pid in products_to_update:
+    # Eliminar productos originales sin altura definida
+    if products_to_delete:
+        print(f"\nEliminando {len(products_to_delete)} productos originales sin altura...")
+        for pid in products_to_delete:
             products_collection.delete_one({'_id': pid})
-        print(f"Eliminados {len(products_to_update)} productos")
+        print(f"Eliminados {len(products_to_delete)} productos")
     
     # Mostrar resumen
     final_count = products_collection.count_documents({
@@ -139,6 +106,20 @@ def add_height_variants():
         'category': {'$in': COLUMNA_CATEGORIES}
     })
     print(f"\n✅ Total columnas MV después de actualización: {final_count}")
+    
+    # Mostrar desglose por altura
+    count_200 = products_collection.count_documents({
+        'library': 'MV',
+        'category': {'$in': COLUMNA_CATEGORIES},
+        'height': 200
+    })
+    count_220 = products_collection.count_documents({
+        'library': 'MV',
+        'category': {'$in': COLUMNA_CATEGORIES},
+        'height': 220
+    })
+    print(f"  - Variantes H200: {count_200}")
+    print(f"  - Variantes H220: {count_220}")
 
 if __name__ == '__main__':
     print("=" * 60)
