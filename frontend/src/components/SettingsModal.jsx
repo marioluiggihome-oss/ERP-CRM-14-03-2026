@@ -1894,7 +1894,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     {/* Basic Info */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Nombre Público Tienda *</label>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Nombre *</label>
                         <input
                           type="text"
                           value={userForm.clientName}
