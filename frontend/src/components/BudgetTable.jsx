@@ -517,6 +517,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const matchesPrograma = hasActiveSearch || selectedPrograma === 'TODOS' || (p.programa || 'ESTÁNDAR') === selectedPrograma;
       const matchesSeries = hasActiveSearch || selectedSeries === 'TODAS' || (p.series || 'GENERAL') === selectedSeries;
       const matchesCategory = hasActiveSearch || selectedCategory === 'TODAS' || (p.category || 'OTROS') === selectedCategory;
+      const matchesApertura = hasActiveSearch || selectedApertura === 'TODAS' || !p.apertura || p.apertura === selectedApertura;
       
       // Filtro de medidas (ancho, alto, fondo)
       let matchesMedidas = true;
@@ -533,7 +534,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
         matchesMedidas = matchesMedidas && p.depth && Math.abs(Number(p.depth) - depthNum) <= 5;
       }
       
-      const result = matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory && matchesMedidas;
+      const result = matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory && matchesApertura && matchesMedidas;
       
       // Log para depuración
       if (q && q.length > 5 && result) {
