@@ -5,78 +5,102 @@
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN
+## ✅ COMPLETADO EN ESTA SESIÓN (15 Marzo 2026)
 
-### Correcciones de Datos MV
-- ✅ **Productos ALTO H70/H90**: Creadas 93 variantes H70 y 93 variantes H90
-- ✅ **IDs únicos**: Corregidos IDs duplicados (ahora prod-mv-{code}-70, prod-mv-{code}-90)
-- ✅ **Precios Tarifa 1 corregidos**: 
-  - A100/70: 77 pts, A100/90: 85 pts
-  - A25/70: 36 pts, A25/90: 39 pts
-  - A30/70: 38 pts, A30/90: 41 pts
+### 1. Precios MV Tarifa 1 - COMPLETADOS AL 100%
+- ✅ **383 productos MV** actualizados con precios T1 correctos
+- ✅ Todas las categorías cubiertas:
+  - BAJOS (B25-B100, BF, BH, BC, BG, BPC, etc.)
+  - ALTOS H70 y H90 (A25-A100, AD, AV, AE, etc.)
+  - COLUMNAS (CH, CHM, CD, CE, CF)
+  - MEDIACOLUMNAS (M, MH, MM, MCV)
+  - SOBREENCIMERAS (S, SC, SV, SVC)
+  - ALTILLOS (L, LV, LD)
 
-### Bug "Desconocidos" en Presupuesto
-- ✅ **SOLUCIONADO**: Los productos MV ya no aparecen como "REFERENCIA DESCONOCIDA"
-- Causa: IDs duplicados en productos con variantes de altura
-- Solución: IDs únicos basados en código completo incluyendo variante
-
-### Mejoras en Filtros
-- ✅ **Filtro de cascos por biblioteca**: ZC y MV separados
-- ✅ **Filtro por librería en Inventario**: Selector ZC/MV/TODAS
-
-### Agenda de Montajes
-- ✅ **Fechas separadas**:
-  - 📦 Fecha Recepción Cocina
-  - 🔧 Fecha Montaje Comprometido
-
-### Correcciones UI
-- ✅ **Label "Nombre"**: Corregido
+### 2. Analizador de Planos IA - Filtro por Biblioteca
+- ✅ **Frontend modificado**: Envía biblioteca activa al backend
+- ✅ **Backend modificado**: Filtra búsqueda de productos por biblioteca (ZC/MV)
+- ✅ **Indicador visual**: Muestra "CATÁLOGO: ZC" o "CATÁLOGO: MV" en la UI
+- ✅ Archivos modificados:
+  - `/app/frontend/src/components/Visualizer.jsx`
+  - `/app/backend/routes/ia_lab.py`
 
 ---
 
-## PRECIOS TARIFA 1 (MV) - ACTUALIZADOS
+## PRECIOS TARIFA 1 (MV) - MUESTRA
+
+### BAJOS
+| Código | T1 | Código | T1 |
+|--------|-----|--------|-----|
+| B25D/I | 58 | B60 | 60 |
+| B30D/I | 62 | B70 | 70 |
+| B40D/I | 64 | B80 | 80 |
+| B50D/I | 68 | B100 | 100 |
+| BF60D/I | 72 | BH60 | 77 |
 
 ### ALTOS (H70 / H90)
 | Código | H70 | H90 |
 |--------|-----|-----|
-| A25 | 36 | 39 |
-| A30 | 38 | 41 |
-| A35 | 40 | 44 |
-| A40 | 43 | 46 |
-| A45 | 46 | 49 |
-| A50 | 48 | 52 |
-| A60 | 57 | 62 |
-| A70 | 63 | 70 |
-| A80 | 69 | 77 |
-| A90 | 77 | 83 |
-| A100 | 77 | 85 |
+| A25 | 35 | 38 |
+| A30 | 38 | 42 |
+| A40 | 42 | 46 |
+| A60 | 56 | 61 |
+| A100 | 75 | 82 |
+
+### COLUMNAS
+| Código | T1 |
+|--------|-----|
+| CH60D/I/200 | 97 |
+| CHM60D/I/200 | 136 |
+| CD30D/I/200 | 65 |
+| CF60D/I/200 | 152 |
 
 ---
 
-## 🔴 PENDIENTE
+## 📋 PENDIENTE
 
-### P0 - PAUSADO
-1. **Cálculo presupuesto despiece** - PAUSADO por usuario
+### P1 - Prioridad Alta
+- [ ] Implementar casco por defecto por sección/biblioteca
+- [ ] Restaurar logo de empresa (requiere re-subida por usuario)
 
-### P2 - MEJORAS PENDIENTES
-2. **Casco predeterminado por SECCIÓN** (BAJOS/ALTOS/COLUMNAS)
-3. **Logo**: Usuario debe volver a subir
-4. **Glitch sidebar colapsado**: Recurrente
-5. **Revisar precios completos** de todas las categorías MV
+### P2 - Media
+- [ ] Refactorización de BudgetTable.jsx (3071 líneas)
+- [ ] Bug cálculo "Despiece" (PAUSADO)
+
+### P3 - Baja
+- [ ] Refactorización de SettingsModal.jsx (4685 líneas)
+- [ ] Refactorización de server.py (6470 líneas)
+- [ ] Glitch visual sidebar colapsado
 
 ---
 
-## CREDENCIALES TEST
-- **Usuario**: MARIO / MARIO
+## ARQUITECTURA DE ARCHIVOS
+
+```
+/app/backend/
+├── server.py           # API principal (~6470 líneas)
+├── routes/
+│   └── ia_lab.py       # MODIFICADO: Análisis de planos con filtro biblioteca
+└── models/schemas.py   # Modelos Pydantic
+
+/app/frontend/src/
+├── App.js              # Estado global, routing
+├── components/
+│   ├── BudgetTable.jsx     # Presupuesto principal
+│   ├── Visualizer.jsx      # MODIFICADO: Analizador planos con biblioteca
+│   ├── Digitalizador.jsx   # Ya tiene filtro biblioteca
+│   ├── SettingsModal.jsx   # Panel admin
+│   └── AgendaMontajes.jsx  # Agenda instaladores
+└── services/api.js     # Llamadas API
+```
 
 ---
 
-## HISTORIAL
+## CREDENCIALES DE PRUEBA
+- **Usuario:** MARIO
+- **Contraseña:** MARIO
 
-### 15 Marzo 2026
-- ✅ IDs únicos para productos MV con variantes
-- ✅ Precios ALTOS MV actualizados según Tarifa 1
-- ✅ Bug "desconocidos" en presupuesto SOLUCIONADO
-- ✅ Variantes H70/H90 para ALTOS MV
-- ✅ Filtro librería en Inventario
-- ✅ Fechas recepción/montaje en Agenda de Montajes
+## BASE DE DATOS
+- **DB:** luiggi_home
+- **Productos ZC:** 4542
+- **Productos MV:** 383 (todos con precios T1)
