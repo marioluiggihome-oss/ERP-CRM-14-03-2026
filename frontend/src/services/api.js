@@ -1031,3 +1031,150 @@ export const librariesAPI = {
     return response.json();
   }
 };
+
+// ============================================
+// MONTADORES (Instaladores) API
+// ============================================
+
+export const montadoresAPI = {
+  getAll: async (status = null) => {
+    const url = status 
+      ? `${API_URL}/api/montadores?status=${status}`
+      : `${API_URL}/api/montadores`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener montadores');
+    }
+    return response.json();
+  },
+
+  getOne: async (id) => {
+    const response = await fetch(`${API_URL}/api/montadores/${id}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener montador');
+    }
+    return response.json();
+  },
+
+  create: async (montador) => {
+    const response = await fetch(`${API_URL}/api/montadores`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(montador)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al crear montador');
+    }
+    return response.json();
+  },
+
+  update: async (id, montador) => {
+    const response = await fetch(`${API_URL}/api/montadores/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(montador)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al actualizar montador');
+    }
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/montadores/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al eliminar montador');
+    }
+    return response.json();
+  },
+
+  getMontajes: async (montadorId, status = null) => {
+    const url = status
+      ? `${API_URL}/api/montadores/${montadorId}/montajes?status=${status}`
+      : `${API_URL}/api/montadores/${montadorId}/montajes`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener montajes');
+    }
+    return response.json();
+  }
+};
+
+// ============================================
+// MONTAJES (Instalaciones) API
+// ============================================
+
+export const montajesAPI = {
+  getAll: async (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.montadorId) params.append('montador_id', filters.montadorId);
+    if (filters.startDate) params.append('start_date', filters.startDate);
+    if (filters.endDate) params.append('end_date', filters.endDate);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/montajes?${params.toString()}`
+      : `${API_URL}/api/montajes`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener montajes');
+    }
+    return response.json();
+  },
+
+  getOne: async (id) => {
+    const response = await fetch(`${API_URL}/api/montajes/${id}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener montaje');
+    }
+    return response.json();
+  },
+
+  create: async (montaje) => {
+    const response = await fetch(`${API_URL}/api/montajes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(montaje)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al crear montaje');
+    }
+    return response.json();
+  },
+
+  update: async (id, montaje) => {
+    const response = await fetch(`${API_URL}/api/montajes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(montaje)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al actualizar montaje');
+    }
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const response = await fetch(`${API_URL}/api/montajes/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al eliminar montaje');
+    }
+    return response.json();
+  }
+};
+
