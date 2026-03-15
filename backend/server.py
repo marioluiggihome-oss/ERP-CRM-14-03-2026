@@ -75,7 +75,10 @@ from models.schemas import (
     ArmarioModuleConfig, ArmarioProject, ArmarioProjectCreate, ArmarioProjectUpdate,
     IAConfigRequest, IARenderRequest, IALayoutRequest,
     # Maintenance
-    MaintenanceActivateRequest, MaintenanceStatusResponse
+    MaintenanceActivateRequest, MaintenanceStatusResponse,
+    # Montadores/Instaladores
+    MontadorCreate, MontadorUpdate, MontadorResponse,
+    MontajeCreate, MontajeUpdate, MontajeResponse
 )
 
 
