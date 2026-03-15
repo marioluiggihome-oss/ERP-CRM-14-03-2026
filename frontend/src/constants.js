@@ -39,10 +39,15 @@ export const MV_TARIFFS = [
 ];
 
 export const INITIAL_CARCASS_MATERIALS = [
-  { id: 'mat-blanco', name: 'Blanco Ártico Standard', fixedIncrement: 0, thickness: 16 },
-  { id: 'mat-gris', name: 'Gris Antracita Pro', fixedIncrement: 18, thickness: 16 },
-  { id: 'mat-roble', name: 'Roble Natural Veta', fixedIncrement: 25, thickness: 19 },
-  { id: 'mat-nogal', name: 'Nogal Luiggi Exclusive', fixedIncrement: 40, thickness: 19 }
+  // Materiales ZC
+  { id: 'mat-blanco-zc', name: 'Blanco Ártico Standard', fixedIncrement: 0, thickness: 16, library: 'ZC' },
+  { id: 'mat-gris-zc', name: 'Gris Antracita Pro', fixedIncrement: 18, thickness: 16, library: 'ZC' },
+  { id: 'mat-roble-zc', name: 'Roble Natural Veta', fixedIncrement: 25, thickness: 19, library: 'ZC' },
+  { id: 'mat-nogal-zc', name: 'Nogal Luiggi Exclusive', fixedIncrement: 40, thickness: 19, library: 'ZC' },
+  // Materiales MV
+  { id: 'mat-blanco-mv', name: 'Blanco MV', fixedIncrement: 0, thickness: 16, library: 'MV' },
+  { id: 'mat-gris-mv', name: 'Gris MV', fixedIncrement: 15, thickness: 16, library: 'MV' },
+  { id: 'mat-roble-mv', name: 'Roble MV', fixedIncrement: 22, thickness: 19, library: 'MV' },
 ];
 
 export const CabinetCategory = {
