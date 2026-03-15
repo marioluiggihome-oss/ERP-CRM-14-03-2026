@@ -72,7 +72,8 @@ const AgendaMontajes = ({ currentUser }) => {
     clientPhone: '',
     clientAddress: '',
     projectDescription: '',
-    scheduledDate: '',
+    expectedDeliveryDate: '',  // Fecha recepción cocina
+    scheduledDate: '',         // Fecha montaje comprometida
     scheduledTime: '',
     estimatedDuration: '',
     status: 'pendiente',
