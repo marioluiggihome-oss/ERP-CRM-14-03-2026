@@ -513,10 +513,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     });
   }, [visibleUsers, userSearch, userRoleFilter]);
 
-  // Product management  
+  // Product management - Usar inventoryCatalogs para tener TODOS los productos
   const currentCatalog = useMemo(() => {
+    // Para el inventario, usar el catálogo de inventario que tiene todos los productos
+    const invCatalogs = state.inventoryCatalogs || [];
+    const invCatalog = invCatalogs.find(c => c.module === inventoryModule);
+    if (invCatalog) return invCatalog;
+    // Fallback al catálogo normal si no hay inventoryCatalogs
     return state.catalogs.find(c => c.module === inventoryModule);
-  }, [state.catalogs, inventoryModule]);
+  }, [state.catalogs, state.inventoryCatalogs, inventoryModule]);
 
   // Obtener lista de programas únicos para el filtro
   const availableProgramas = useMemo(() => {
