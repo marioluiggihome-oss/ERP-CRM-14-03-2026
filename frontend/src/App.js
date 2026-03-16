@@ -160,6 +160,10 @@ const App = () => {
             { id: 'cat-m-base', name: 'Zona Cocinas - Montada', manufacturer: 'Zona Cocinas', products: productsMontada, module: 'montada', library: 'ZC' },
             { id: 'cat-d-base', name: 'Zona Cocinas - Despiece', manufacturer: 'Zona Cocinas', products: productsDespiece, module: 'despiece', library: 'ZC' }
           ],
+          // Catálogo de inventario con TODOS los productos de todas las bibliotecas
+          inventoryCatalogs: [
+            { id: 'inv-montada', name: 'Inventario Montada', products: allProductsMontada, module: 'montada' },
+          ],
           carcassMaterials: materials.length > 0 ? materials : INITIAL_CARCASS_MATERIALS,
           selectedCarcassMaterialId: defaultMaterialId,
           settings: settings,  // Guardar settings completo para montajesEnabled y otros
