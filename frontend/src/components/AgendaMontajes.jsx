@@ -42,7 +42,8 @@ const AgendaMontajes = ({ currentUser }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [activeTab, setActiveTab] = useState('montadores'); // montadores | montajes
+  const [activeTab, setActiveTab] = useState('montadores'); // montadores | montajes | calendario
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   
   // Modal states
   const [showMontadorModal, setShowMontadorModal] = useState(false);
