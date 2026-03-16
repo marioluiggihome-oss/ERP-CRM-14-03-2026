@@ -328,8 +328,19 @@ const AgendaMontajes = ({ currentUser }) => {
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <Calendar size={16} className="inline mr-2" />
+              <Wrench size={16} className="inline mr-2" />
               Montajes ({montajes.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('calendario')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'calendario' 
+                  ? 'bg-orange-500 text-white shadow-md' 
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Calendar size={16} className="inline mr-2" />
+              Calendario
             </button>
           </div>
         </div>
