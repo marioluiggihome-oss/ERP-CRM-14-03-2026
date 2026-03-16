@@ -561,7 +561,129 @@ const AgendaMontajes = ({ currentUser }) => {
               </div>
             )}
           </div>
-        )}
+        ) : activeTab === 'calendario' ? (
+          /* Calendario View */
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            {/* Header del calendario */}
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <h3 className="text-xl font-black text-slate-900 uppercase">
+                {currentMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+              </h3>
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                <ChevronRight size={24} />
+              </button>
+            </div>
+            
+            {/* Días de la semana */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
+                <div key={day} className="text-center text-xs font-bold text-slate-500 uppercase py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            {/* Días del mes */}
+            <div className="grid grid-cols-7 gap-1">
+              {(() => {
+                const year = currentMonth.getFullYear();
+                const month = currentMonth.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const startDayOfWeek = (firstDay.getDay() + 6) % 7; // Lunes = 0
+                const daysInMonth = lastDay.getDate();
+                const days = [];
+                
+                // Días vacíos al inicio
+                for (let i = 0; i < startDayOfWeek; i++) {
+                  days.push(<div key={`empty-${i}`} className="h-24" />);
+                }
+                
+                // Días del mes
+                for (let day = 1; day <= daysInMonth; day++) {
+                  const date = new Date(year, month, day);
+                  const dateStr = date.toISOString().split('T')[0];
+                  const dayMontajes = montajes.filter(m => {
+                    const mDate = m.scheduledDate?.split('T')[0];
+                    return mDate === dateStr;
+                  });
+                  const isToday = new Date().toDateString() === date.toDateString();
+                  
+                  days.push(
+                    <div 
+                      key={day} 
+                      className={`h-24 border border-slate-100 rounded-xl p-1 overflow-hidden transition-colors ${
+                        isToday ? 'bg-orange-50 border-orange-300' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className={`text-right text-sm font-bold ${isToday ? 'text-orange-600' : 'text-slate-600'}`}>
+                        {day}
+                      </div>
+                      <div className="space-y-0.5 overflow-y-auto max-h-16">
+                        {dayMontajes.map(m => {
+                          const montador = montadores.find(mt => mt.id === m.montadorId);
+                          return (
+                            <div 
+                              key={m.id}
+                              className="text-[10px] bg-gradient-to-r from-orange-500 to-amber-500 text-white px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80"
+                              title={`${m.clientName} - ${montador?.name || 'Sin asignar'}`}
+                              onClick={() => {
+                                setEditingMontaje(m);
+                                setMontajeForm({
+                                  montadorId: m.montadorId || '',
+                                  clientName: m.clientName || '',
+                                  clientPhone: m.clientPhone || '',
+                                  clientAddress: m.clientAddress || '',
+                                  projectDescription: m.projectDescription || '',
+                                  expectedDeliveryDate: m.expectedDeliveryDate || '',
+                                  scheduledDate: m.scheduledDate || '',
+                                  scheduledTime: m.scheduledTime || '',
+                                  estimatedDuration: m.estimatedDuration || '',
+                                  status: m.status || 'pendiente',
+                                  budgetRef: m.budgetRef || '',
+                                  notes: m.notes || ''
+                                });
+                                setShowMontajeModal(true);
+                              }}
+                            >
+                              {m.scheduledTime && <span className="font-bold">{m.scheduledTime} </span>}
+                              {m.clientName}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+                
+                return days;
+              })()}
+            </div>
+            
+            {/* Leyenda */}
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-4 text-xs text-slate-500">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-gradient-to-r from-orange-500 to-amber-500"></div>
+                  <span>Montaje programado</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-orange-100 border border-orange-300"></div>
+                  <span>Hoy</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Modal Montador */}
