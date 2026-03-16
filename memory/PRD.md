@@ -5,52 +5,63 @@
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN
+## ✅ COMPLETADO EN ESTA SESIÓN (16 Marzo 2026)
 
-### Catálogo MV TARIFA 1 - COMPLETO (524 productos)
+### Catálogo MV TARIFA 1 - COMPLETO (611 productos)
 
-#### Páginas 1-5 (452 productos originales):
+#### Páginas 1-5 (538 productos):
 - **PUERTAS:** 50 productos (P25-P60, alturas 14-147)
 - **VITRINA:** 36 productos (PV30-PV60)
 - **REJILLA CONFESIONARIO:** 24 productos (PR30-PR60)
-- **BAJOS:** 72 productos (todos los tipos)
-- **ALTOS:** 136 productos (H70/H90)
-- **COLUMNAS:** 72 productos (H200/H220)
-- **OTROS:** ALTILLOS, SOBREENCIMERA, BOTELLEROS, etc.
+- **BAJOS:** 22 productos (B25-B100, H70/H80)
+- **BAJO FREGADERO:** 32 productos
+- **BAJO RINCON:** 14 productos
+- **BAJO HORNO:** 8 productos
+- **BAJO TERMINAL:** 6 productos
+- **BAJO 2/3 CAJONES:** 56 productos
+- **ALTOS:** 22 productos (H70/H90)
+- **ALTO CAMPANA, RINCON, DECORATIVO, TERMINAL, etc.**
+- **COLUMNAS:** DESPENSERO, FRIGO, HORNO (36 productos)
+- **SOBREENCIMERA:** 28 productos
+- **ALTILLOS:** 29 productos
+- **BOTELLEROS:** 3 productos
 
-#### Página 6 (72 productos nuevos con anchos/fondos):
+#### Página 6 (73 productos nuevos):
 - **LATERALES COLOR:** 12 productos (Ancho 15)
 - **REGLETA COLOR:** 8 productos (Ancho 15)
 - **COSTADOS MELAMINA:** 6 productos (Ancho 10)
-- **COSTADOS COLOR:** 10 productos (Ancho 10)
+- **COSTADOS COLOR:** 8 productos (Ancho 10)
 - **REGLETA MELAMINA:** 6 productos (Ancho 10)
 - **TECHO COLOR:** 14 productos (TEC100-TEC360)
-- **ELEMENTOS LINEALES:** 16 productos (COR, POR, ZOC, etc.)
+- **ELEMENTOS LINEALES:** 19 productos (COR, POR, ZOC, etc.)
 
 ### Precios Verificados:
+- B25 = **40 PTS** ✓ (confirmado por usuario)
+- B30 = **41 PTS** ✓ (confirmado por usuario)
+- B100 = **64 PTS** ✓ (corregido por usuario)
 - A100 H70 = **62 PTS** ✓
 - A100 H90 = **70 PTS** ✓
-- P30 H70 = **11 PTS** ✓
-- PR60 H70 = **63 PTS** ✓
-- LCA H70 = **10 PTS** (Ancho 15) ✓
-- TEC200 = **20.4 PTS** (Ancho 200) ✓
+
+### UI Verificada:
+- ✅ Las categorías NO muestran "MV" (UI limpia)
+- ✅ Las series están limpias
+- ✅ Los precios se visualizan correctamente
 
 ---
 
 ## 📋 PENDIENTE
 
-### P1 - Alta
-- [ ] Casco por defecto por sección/biblioteca
-
 ### P2 - Media
+- [ ] Casco por defecto por sección/biblioteca
 - [ ] Restaurar logo empresa (requiere que usuario lo re-suba)
-- [ ] Refactorización BudgetTable.jsx (~3071 líneas)
-- [ ] Bug "Despiece" (PAUSADO por usuario)
+- [ ] Reporte exportable "Agenda de Montajes"
 
 ### P3 - Baja
+- [ ] Refactorización BudgetTable.jsx (~3071 líneas)
 - [ ] Refactorización SettingsModal.jsx (~4727 líneas)
 - [ ] Refactorización server.py (~6470 líneas)
 - [ ] Glitch visual sidebar colapsado
+- [ ] Bug "Despiece" (PAUSADO por usuario)
 
 ---
 
@@ -62,7 +73,9 @@
 ├── routes/ia_lab.py
 ├── models/schemas.py
 └── scripts/
-    └── seed_mv_products.py    # Script para poblar productos MV
+    ├── seed_mv_products.py         # Script original
+    ├── update_mv_prices_tarifa1.py # Actualización precios p1-5
+    └── add_mv_page6_products.py    # Productos página 6
 
 /app/frontend/src/
 ├── App.js
@@ -82,8 +95,8 @@
 
 ## BASE DE DATOS
 - **DB:** luiggi_home
-- **Productos MV:** 524 (TARIFA 1 completa, 6 páginas)
-- **Productos ZC:** 2206
+- **Productos MV:** 611 (TARIFA 1 completa, 6 páginas)
+- **Productos ZC:** 4542
 - **Bibliotecas:** ZC (Zona Cocinas), MV (Muebles Valencia)
 
 ---
@@ -99,7 +112,7 @@ Los productos MV tienen las siguientes características:
 - `height`: Alto del mueble en cm
 - `depth`: Fondo del mueble en cm
 
-### Categorías con Dimensiones Específicas:
+### Categorías con Dimensiones Específicas (Página 6):
 - **LATERALES COLOR:** Ancho 15 cm
 - **REGLETA COLOR:** Ancho 15 cm  
 - **COSTADOS MELAMINA:** Ancho 10 cm
@@ -112,3 +125,24 @@ Los productos MV tienen las siguientes características:
 - ECO = T1
 - MOTA = T1
 - TEXTIL = T1
+
+---
+
+## 3RD PARTY INTEGRATIONS
+- `xlsxwriter`: Excel exports
+- `pymongo`: MongoDB
+- `sendgrid/resend`: Email
+
+---
+
+## SCRIPTS DE MANTENIMIENTO
+
+### Actualizar precios TARIFA 1 (Páginas 1-5):
+```bash
+cd /app/backend && python3 scripts/update_mv_prices_tarifa1.py
+```
+
+### Añadir productos Página 6:
+```bash
+cd /app/backend && python3 scripts/add_mv_page6_products.py
+```
