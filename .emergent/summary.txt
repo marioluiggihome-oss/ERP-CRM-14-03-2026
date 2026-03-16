@@ -1,84 +1,77 @@
 <analysis>**original_problem_statement:**
 The user wants to build a kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The primary goal is a multi-library system (for ZC and MV product lines) with detailed, library-specific pricing and asset management.
 
-Recent user requests have focused on correcting data integrity, adding/refining features, and fixing bugs:
-1.  **Data & Pricing Accuracy (Ongoing):** The main focus has been correcting all product prices for the MV library. The user has repeatedly reported discrepancies between the app's prices and their tariff sheets, requiring multiple rounds of fixes for , , and now . A bug was also reported where the budget line price didn't match the catalog price due to inconsistent data in the database.
-2.  **New Feature - Agenda de Montajes:** The user requested a scheduling system for installers. The initial implementation was completed, but the user reported it was always visible and lacked a calendar.
+Recent user requests have focused on correcting data integrity and refining features:
+1.  **Data & Pricing Accuracy (Ongoing):** The main focus has been on correctly populating the MV library. The agent discovered the MV product database was empty and had to rebuild it from scratch using tariff sheets provided by the user.
+2.  **Data Structure Correction (New):** The user has provided specific rules for product dimensions and variants that must be applied to the newly created database:
+    *   **ALTOS:** Width should be parsed from the product code (e.g., A100 -> 100cm width). Depth must always be 33cm. H70 and H90 height variants are required.
+    *   **BAJOS:** Width should be parsed from the code (e.g., B25 -> 25cm width). Depth must always be 58cm. H70 and H80 height variants are required (at the same price).
+    *   **BAJO FREGADERO (Sink Units):** Require two variants: with and without an aluminum protection sheet.
 3.  **UI/UX & Bug Fixes:**
-    *   The user requested that the Analizador de planos IA (AI Plan Analyzer) be made aware of the active library (ZC or MV).
-    *   A bug was reported where saving a modified casco (carcass) would fail.
-    *   A bug was reported where the inventory filter for the MV library showed no products.
-4.  **New Feature Request (from previous session):** Allow setting a default carcass material for each product *section* (e.g., BAJOS, ALTOS) specific to each *library* (ZC/MV).
+    *   **MV Labeling:** All external references to MV must be removed from the UI (e.g., product categories should say PUERTAS, not PUERTAS MV).
+    *   **Agenda de Montajes:** The user reported that this module is visible even when disabled for their user ().
+4.  **New Feature Request:** An exportable/printable report for the Agenda de Montajes module, showing schedule status, dates, etc.
 
 **PRODUCT REQUIREMENTS:**
 1.  Clone LUIGGI HOME application.
-2.  DESPIECE Module: Step-by-step budgeting system (Currently PAUSED).
-3.  User Roles & Permissions (Expanded to include Montador).
+2.  DESPIECE Module: (Currently PAUSED).
+3.  User Roles & Permissions.
 4.  Multi-Library System (ZC, MV) with admin-controlled access.
-5.  Library-Specific Pricing (Ongoing priority).
-6.  Strict Asset Association (carcasses tied to a library).
-7.  Product Variants (e.g., based on height H70/H80/H90).
-8.  **Agenda de Montajes:** A CRM/scheduling tool for installers (Now with calendar and feature flag).
-9.  **Default Asset Configuration:** Ability to set default carcasses per product type and library.
+5.  **Library-Specific Pricing & Data Structure (Ongoing priority).**
+6.  Product Variants (based on height, materials, etc.).
+7.  **Agenda de Montajes:** A CRM/scheduling tool for installers.
+8.  **Default Asset Configuration:** Ability to set default carcasses per product type and library.
+9.  **Montajes Report:** A new printable report for the scheduling module.
 
 **User's preferred language**: es
 
 **what currently exists?**
-The application is a full-stack React/FastAPI/MongoDB app. A significant amount of work in this session was dedicated to data correction and feature refinement based on user feedback.
+The application is a full-stack React/FastAPI/MongoDB app. The most significant event in this session was the discovery that the **MV product database was empty**, likely due to a reset between sessions.
 
-*   **Core Bug Fixes & Data Integrity:**
-    *   **MV Price Overhaul:** Prices for  and  in the MV library were corrected multiple times. Variants for  (H70/H80) were created. A critical bug causing incorrect budget totals was fixed by synchronizing the  and  fields in the database for all products.
-    *   **Carcass/Material Saving:** A bug preventing the saving of materials was fixed by seeding the  collection in the database with initial values.
-    *   **Inventory Filter:** A bug where the inventory filter for the MV library showed no items was resolved by creating a separate, complete product catalog state () in  specifically for the inventory view.
-
-*   **Feature Enhancements:**
-    *   **Agenda de Montajes:** The feature was enhanced significantly. It is now hidden behind a global feature flag () controllable from the admin panel. A full-page calendar view was implemented within the component.
-    *   **IA Plan Analyzer (Visualizer):** The analyzer was made library-aware. The frontend () now sends the active library context to the backend (), which filters its product search accordingly. A UI indicator shows the active catalog.
+*   **MV Catalog Restoration:** The agent's primary accomplishment was rebuilding the entire MV product catalog from scratch.
+    *   A new script, , was created to process tariff sheet images.
+    *   **524 products** for the MV library were created in the database based on 6 images provided by the user, covering , , , , and other components with their correct T1 prices.
+*   **Bug Investigation & Fixes:**
+    *   **PUERTAS MV Label:** The agent corrected the  field in the database for all 524 products to remove the  MV suffix.
+    *   **Agenda de Montajes Visibility:** The agent investigated why the module was visible when disabled. It found two database collections for settings ( and ) and updated the correct one () to . However, the user reports the issue persists, pointing to a potential override in the frontend logic due to the user's admin permissions.
 
 **Last working item**:
-- Last item agent was working: The user reported that the prices for  (doors) in the MV library are incorrect or mixed between Tarifa 1 and Tarifa 2. The agent began investigating, determined that simple -code products didn't exist in the MV library, and analyzed a Tarifa 2 image. The agent concluded it needs the Tarifa 1 image for doors to proceed.
-- Status: BLOCKED
+- Last item agent was working: The user provided a comprehensive list of corrections for the newly created MV product database. This includes specific rules for , , and  variants for all  and  products, variants for sink units, and a reminder to remove all external MV references. The agent has acknowledged these requirements and is poised to begin implementation.
+- Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? backend testing agent. After the user provides the correct tariff image, the agent will need a script to extract prices, identify or create the corresponding 'PUERTA' products, and update their  and  values in the database.
+- Which testing method agent to use? backend testing agent. The agent needs to create a migration script to iterate through the 524 existing MV products, parse their codes, and update them or create new variants to match the user's precise specifications for width, depth, and height.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Correct and Verify MV  Prices (P0)**
--   **Issue 2: Implement Default Carcass per Section/Library (P1)**
--   **Issue 3: Restore Missing Company Logo (P2)**
--   **Issue 4: Despiece items are not added to the total budget (P2 - PAUSED)**
--   **Issue 5: Visual Glitch with Collapsed Vertical Sidebar (P3 - Recurring)**
+-   **Issue 1: Correct MV Product Data (Width, Depth, Height Variants) (P0 - HIGHEST)**
+-   **Issue 2: Agenda de Montajes is visible when disabled (P1)**
+-   **Issue 3: Implement Default Carcass per Section/Library (P2)**
+-   **Issue 4: Restore Missing Company Logo (P2)**
+-   **Issue 5: Despiece items are not added to the total budget (P3 - PAUSED)**
+-   **Issue 6: Visual Glitch with Collapsed Vertical Sidebar (P3 - Recurring)**
 
 **Issues Detail:**
--   **Issue 1: Correct and Verify MV  Prices**
-    -   **Attempted fixes:** The agent searched for door products and analyzed a Tarifa 2 image provided by the user. It could not find PUERTA products with simple 'P' codes in the database.
+-   **Issue 1: Correct MV Product Data (Width, Depth, Height Variants)**
+    -   **Attempted fixes:** None. The agent just received the detailed requirements.
     -   **Next debug checklist:**
-        1.  Receive the TARIFA 1 image for  from the user.
-        2.  Analyze the image to extract the correct T1 prices for all door types.
-        3.  Query the database to identify which products correspond to the doors on the tariff sheet (they may have different codes like ).
-        4.  Create and execute a script to update both the  and  fields for all relevant door products to ensure consistency.
-        5.  Verify the fix by checking the product prices in both the catalog and a new budget line.
-    -   **Why fix this issue and what will be achieved with the fix?** Data accuracy is the user's highest priority and essential for the app's function.
-    -   **Status:** BLOCKED
-    -   **Is recurring issue?** Y (Pricing data inconsistency has been a recurring theme).
-    -   **Should Test frontend/backend/both after fix?** Both
--   **Issue 2: Implement Default Carcass per Section/Library**
-    -   **Next debug checklist:**
-        1.  **Backend:** Add a new field to the  model, e.g., .
-        2.  **Backend:** Update the  endpoints to manage this new setting.
-        3.  **Frontend ():** Implement a UI to let admins select a default carcass for each product section (BAJOS, ALTOS, etc.) for each library (ZC/MV).
-        4.  **Frontend ():** When adding a product, automatically assign the configured default carcass.
-    -   **Why fix this issue and what will be achieved with the fix?** It's a requested quality-of-life feature to streamline the user's workflow.
+        1.  Create a new database migration script (or modify ).
+        2.  For all 'ALTOS' products: parse code for width, set  to 33, and ensure / height variants exist with their respective prices.
+        3.  For all 'BAJOS' products: parse code for width, set  to 58, and create / height variants with the same price.
+        4.  For 'BAJO FREGADERO' products: create two variants for each (with/without aluminum sheet protection), likely by modifying the product name or adding a new field.
+        5.  Run the script to apply these changes to the entire MV catalog in the database.
+    -   **Why fix this issue and what will be achieved with the fix?** The current data is incomplete and does not match the user's business rules, making the budgeting tool inaccurate. This is the highest priority.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y (Data accuracy is a recurring theme).
     -   **Should Test frontend/backend/both after fix?** Both
--   **Issue 3: Restore Missing Company Logo**
+-   **Issue 2: Agenda de Montajes is visible when disabled**
+    -   **Attempted fixes:** The agent set  in the correct  database collection.
     -   **Next debug checklist:**
-        1.  Inform the user that the logo data was lost during a previous database change and needs to be re-uploaded.
-        2.  Guide the user to the existing settings panel where they can upload the logo again.
-    -   **Why fix this issue and what will be achieved with the fix?** Restores user-specific branding.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
+        1.  Analyze the frontend logic in  (around line 640). The condition is likely  which needs to be  as the primary gate.
+        2.  Change the frontend logic to ensure the global  flag is the absolute authority, regardless of user role. The user-role check should be secondary.
+        3.  Verify the fix with a screenshot showing the Montajes link is hidden for user MARIO.
+    -   **Why fix this issue and what will be achieved with the fix?** Fixes a bug where disabled features are still accessible.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Frontend
 
 **In progress Task List**:
@@ -86,27 +79,23 @@ The application is a full-stack React/FastAPI/MongoDB app. A significant amount 
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P1) Implement setting a default carcass per product section and library.
+    -   (P1) **New Feature:** Create an exportable/printable report for the Agenda de Montajes module.
+    -   (P2) Implement setting a default carcass per product section and library.
     -   (P2) Restore the company logo by guiding the user to re-upload it.
-    -   (P2) **CRITICAL Frontend Refactoring**: Decompose  (~3071 lines).
-    -   (P3) **Frontend Refactoring**: Decompose  (~4727 lines).
+    -   (P3) **CRITICAL Frontend Refactoring**: Decompose  and .
+    -   (P3) **Backend Refactoring**: Decompose .
 -   **Future Tasks:**
-    -   (P2 - Paused) Fix Despiece Budget Calculation Bug.
-    -   (P2) Design and implement the despiece interpretation system.
-    -   (P3) **Backend Refactoring**: Decompose  (~6470 lines).
+    -   (P3 - Paused) Fix Despiece Budget Calculation Bug.
+    -   (P3) Design and implement the despiece interpretation system.
 
 **Completed work in this session**
--   **Feature: Agenda de Montajes Enhancements:**
-    -   Added a global feature flag () to show/hide the module, with a toggle in the admin panel.
-    -   Implemented a full-page calendar view with month navigation.
--   **Bug Fix: Price Calculation in Budget:** Fixed a critical bug where budget line items showed an incorrect price. The root cause was an inconsistency between the  field and the  field in the database, which has been corrected.
--   **Data Correction: MV Library Prices (ALTOS & BAJOS):**
-    -   Corrected prices for  products (e.g.,  is now 62,  is 70).
-    -   Corrected prices for  products (e.g.,  is now 41).
-    -   Created  height variants for all  products with the same price as their  counterparts.
--   **Bug Fix: Saving Materials/Carcasses:** Resolved an issue where saving materials would fail by running a one-off script to populate the empty  collection in the database.
--   **Bug Fix: Inventory Filter for MV Library:** Fixed a bug where the MV filter in the inventory showed no products by creating a separate state in  to hold all products from all libraries for the inventory view.
--   **Feature: Library-Aware AI Plan Analyzer:** The Visualizer tool was updated to send the active library (ZC/MV) to the backend, allowing it to perform library-specific product detection.
+-   **Database Restoration: Rebuilt Entire MV Product Catalog:**
+    -   Created and executed a script () to populate the database from 6 user-provided tariff images.
+    -   Successfully inserted **524 MV products** with their base T1 prices.
+-   **Bug Fix: MV Labels:** Corrected the  field for all 524 MV products to remove the  MV suffix, fixing a UI bug.
+-   **Bug Investigation: Agenda de Montajes Visibility:**
+    -   Identified and corrected a data issue caused by a duplicate  collection in the database.
+    -   Pinpointed the likely cause of the persistent bug to a frontend logic override based on user roles.
 
 **Earlier issues found/mentioned but not fixed**
 -   The recurring visual glitch with the collapsed vertical sidebar remains unresolved.
@@ -118,60 +107,55 @@ The application is a full-stack React/FastAPI/MongoDB app. A significant amount 
 -   Status: NOT STARTED
 
 **Code Architecture**
-montajesEnabled
+
 
 **Key Technical Concepts**
--   **Data Inconsistency:** This was the root cause of most bugs in this session. The application logic suffered from different database fields (, , ) holding conflicting values for the same product price. The key fix was creating scripts to synchronize these values.
--   **Feature Flagging:** The Agenda de Montajes feature was placed behind a global feature flag () stored in the  collection and controlled via the admin UI. This allows modules to be toggled on or off for all users.
--   **Database Seeding:** A bug with saving cascos (materials) was resolved by running a one-time script to populate the empty  collection from a frontend constants file, establishing a pattern for fixing missing initial data.
--   **Frontend State Management for Decoupled Views:** The inventory filter bug was fixed by creating a separate, comprehensive product state () in . This decouples the inventory's data needs from the main budgeting view's data, which is filtered by the active library.
+-   **Database Seeding/Migration:** The core of this session was creating and running a script for a mass data insertion from external image files. This is now the primary method for managing the MV catalog.
+-   **Configuration Management:** The agent discovered and navigated an issue with duplicate configuration collections ( vs. ), a common source of bugs. The correct source of truth is the  collection.
+-   **Data Model Correction:** The agent first had to discover the intended schema for MV products and then received very specific instructions from the user to refine it further (width, depth, height variants).
 
 **key DB schema**
--   **products**: The  field was discovered to be the source of truth for the budget UI. It must be kept in sync with the main  field. New variants for  with  were created, and the  field was added to them.
--   **system_settings**: The schema was updated to include .
--   **materials**: This collection was empty, causing errors. It was populated with initial data from a constants file.
+-   **products**: The established schema for MV products includes , , , , , , , , and . This will be heavily modified to implement the user's latest data structure rules.
+-   **settings**: The collection the backend uses for global settings like . **This is the correct collection to modify for global settings.**
+-   **system_settings**: A duplicate, legacy collection that should be ignored to avoid bugs.
 
 **All files of reference**
--    (Central state management, feature flag logic)
--    (Inventory filtering, admin toggles)
--    (Calendar implementation)
--    (Price calculation logic)
--    (Database models)
--    (AI analyzer backend)
--    (AI analyzer frontend)
--    (API endpoint logic)
+-    (New script to manage the MV catalog)
+-    (Contains endpoint logic for settings)
+-    (Contains frontend logic for feature visibility)
+-    (Updated with latest status)
 
 **Areas that need refactoring**:
--   **CRITICAL:** , , and  remain extremely large and are accumulating more logic, increasing technical debt. They urgently need to be decomposed into smaller, manageable components and routes.
+-   **CRITICAL:** , , and  remain extremely large and complex. The logic for seeding data should be cleanly separated from the main  file.
 
 **key api endpoints**
--   : (Modified) Now accepts  as a form parameter.
--   : (Modified) The response model  now includes the  field.
--   : (Modified) The endpoint now handles updates to the  flag.
+-   : Verified to correctly return the 524 newly seeded MV products.
+-   : Found to be reading from the  collection, which was the source of the  bug.
 
 **Critical Info for New Agent**
--   **Data Consistency is Priority #1:** The user's primary frustration stems from data inconsistencies, especially with pricing. When a price is reported as incorrect, you must verify and correct **all** related fields in the database for that product (e.g., , , and especially ). The  object is what the budgeting UI uses to calculate line totals.
--   **The Inventory Has Its Own Data State:** The fix for the inventory filter involved creating a separate, complete list of products () in . Be aware that if products are added/deleted, this state may need to be updated, or a more robust solution where the inventory component fetches its own data should be considered.
--   **Agenda de Montajes Feature Flag:** The visibility of the Agenda de Montajes link in the sidebar is controlled by a global setting  in the database. If the user reports it missing, first check this flag in the admin panel.
--   **The / issue is resolved.** The underlying problem was an empty database collection, which has been seeded. Saving materials should now function correctly.
+-   **The MV DATABASE WAS REBUILT FROM SCRATCH.** Do not assume any prior data exists. The current state is based on the  script. The user has warned about this data loss, so be careful with database operations.
+-   **PRIORITY #1: Correct Product Data.** Your immediate task is to implement the user's new, specific rules for , , and  variants for all ALTOS and BAJOS in the MV catalog. The app is not usable for budgeting until this is done.
+-   **MV is an INTERNAL concept.** All user-facing labels (e.g., in category selectors) must not contain the MV string.
+-   **Beware of Duplicate Settings.** There are two settings collections. The backend uses . Only modify this one.
 
 **documents and test reports created in this job**
 -   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **LATEST:** las puertas las has metido de la tarifa 1 y 2 (You've mixed the doors from tariff 1 and 2).
-2.  **User:** Why when I add this furniture to a budget line does it add more value than the furniture is worth? The furniture is worth sixty-two and it adds sixty-eight. - **[RESOLVED]**
-3.  **User:** in the MV tariff lows, it gives two options for H70 and H80 furniture, the price would be the same. the 30 low tariff 1 its point is 41 points and you show 56 - **[RESOLVED]**
-4.  **User:** FILTER BY MV TARIFF AND IT IS NOT VISIBLE, IT DOES NOT FILTER - **[RESOLVED]**
-5.  **User:** hey the assembly schedule has no calendar and also something happens, it should not be shown when that function is not active in the master. on the other hand, the prices are not right, A100 h70 62 points AND A100 h90 70 points - **[RESOLVED]**
-6.  **User:** gives error when saving the modified carcass - **[RESOLVED]**
-7.  **User:** by the way, the items uploaded in images are from MV library, not ZC
-8.  **User:** prices dont add up, for example A100 H 70 its value in tariff 1 is 62 and in tariff H 90 is 70 and now it doesnt show that - **[RESOLVED]**
-9.  **Agent:** Provides a  summary.
-10. **User:** completa la verificación de precios MV, y también revisa el analizador de planos IA, para que detecte muebles en función de la librería seleccionada MV ó ZC (complete the MV price verification, and also review the AI plan analyzer, so that it detects furniture based on the selected MV or ZC library)
+1.  **LATEST/CRITICAL:** User provides detailed specifications for product data: ALTOS must have 33cm depth, BAJOS 58cm depth, with widths parsed from codes. Requires H70/H80 variants for BAJOS and H70/H90 for ALTOS. Mentions sink units have two variants. Warns not to lose the database again. (NOT STARTED)
+2.  **User:** Reports PUERTAS MV label bug, Montajes visibility bug, and requests a new printable report for the Montajes feature. (IN PROGRESS)
+3.  **User:** Provides the final tariff sheet image (Página 6). (COMPLETED)
+4.  **User:** States they are sending the final tariff sheet image. (COMPLETED)
+5.  **Agent:** Finishes inserting the first 524 MV products. (COMPLETED)
+6.  **User:** Provides the first 5 tariff sheet images for the MV library. (COMPLETED)
+7.  **Agent:** Asks for confirmation to rebuild the entire (currently empty) MV product catalog. (COMPLETED)
+8.  **Agent:** Confirms that the MV product database is completely empty. (COMPLETED)
+9.  **User:** Provides the first image of TARIFA 1 for doors. (COMPLETED)
+10. **Agent:** Proposes a plan to fix the prices for MV PUERTAS. (SUPERSEDED by DB rebuild)
 
 **Project Health Check:**
--   **Broken:** None.
+-   **Broken:** The MV product data is functionally incorrect as it's missing crucial width, depth, and height variant information. This makes the budgeting feature unusable for the MV library.
 -   **Mocked:** N/A.
 
 **3rd Party Integrations**
@@ -181,13 +165,13 @@ montajesEnabled
 -   Testing agent used after significant changes: NO
 -   Troubleshoot agent used after agent stuck in loop: NO
 -   Test files created: []
--   Known regressions: None in this session.
+-   Known regressions: The entire MV product database was lost and had to be rebuilt, which can be considered a major regression from a previous state.
 
 **Credentials to test flow:**
 -   **User:** 
 -   **Password:** 
 
 **What agent forgot to execute**
--   The default carcass per section/library feature, carried over from the previous handoff, has not been started.
--   The issue of the missing company logo has been identified but requires prompting the user to re-upload.
--   The recurring visual glitch with the collapsed sidebar has not been addressed.</analysis>
+-   The agent has not yet started on the new feature request for an exportable Montajes report.
+-   The agent has not fully resolved the Montajes visibility bug; a frontend logic change is still required.
+-   Older pending tasks (default carcass per section, restore logo, sidebar visual glitch) remain unaddressed.</analysis>
