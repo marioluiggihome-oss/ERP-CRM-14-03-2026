@@ -336,6 +336,8 @@ class SettingsModel(BaseModel):
     brandColor: str = "#ea580c"
     logo: Optional[str] = None
     defaultCarcassMaterialId: Optional[str] = None
+    # Módulos del sistema
+    montajesEnabled: bool = False
 
 
 class SettingsUpdate(BaseModel):
@@ -350,6 +352,7 @@ class SettingsUpdate(BaseModel):
     brandColor: Optional[str] = None
     logo: Optional[str] = None
     defaultCarcassMaterialId: Optional[str] = None
+    montajesEnabled: Optional[bool] = None
 
 
 # ============================================
