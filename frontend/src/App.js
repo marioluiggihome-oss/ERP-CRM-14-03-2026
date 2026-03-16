@@ -629,8 +629,8 @@ const App = () => {
                 </button>
               )}
               
-              {/* Agenda de Montajes - Solo usuarios con permiso */}
-              {(state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
+              {/* Agenda de Montajes - Solo si está habilitada en settings Y usuario tiene permiso */}
+              {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
                   className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -714,7 +714,7 @@ const App = () => {
             {state.currentTab === 'armarios' && state.currentUser?.canAccessArmarios && (
               <Armarios state={state} setState={setState} />
             )}
-            {state.currentTab === 'montajes' && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
+            {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
               <AgendaMontajes currentUser={state.currentUser} />
             )}
             
