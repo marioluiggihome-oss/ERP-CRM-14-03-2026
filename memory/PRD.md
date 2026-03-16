@@ -7,39 +7,33 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN
 
-### 1. Catálogo MV TARIFA 1 - COMPLETO (452 productos)
-- ✅ **PUERTAS (50 productos):** P25-P60 con alturas 14-147
-- ✅ **VITRINA (36 productos):** PV30-PV60 con alturas 28-147
-- ✅ **REJILLA CONFESIONARIO (24 productos):** PR30-PR60 con alturas 70-147
-- ✅ **BAJOS (72 productos):** Todos los tipos incluyendo:
-  - BAJO básico (B25D/I - B100)
-  - BAJO FREGADERO, RINCON ESCUADRA, RINCON CIEGO
-  - BAJO HORNO, TERMINAL
-  - BAJO PUERTA Y CAJON, 2 CAJONES, 2 GAVETAS, 3 CAJONES
-- ✅ **ALTOS (136 productos):** Incluyendo:
-  - ALTO básico H70/H90
-  - ALTO CAMPANA, DECORATIVO, TERMINAL
-  - ALTO RINCON CIEGO, ESCUADRA, CHAFLAN
-  - ALTO SOBREFRIGO, CALDERA, CALENTADOR
-  - ALTO MICROONDAS, ESCURREPLATOS, VITRINA
-  - ALTO ABATIBLE, COMBINADO PLUS
-- ✅ **ALTILLOS (29 productos):** ALTILLO y ALTILLO VITRINA H70/H90
-- ✅ **SOBREENCIMERA (34 productos):** Normal, CAJON, VITRINA, VITRINA CAJON
-- ✅ **COLUMNAS (72 productos):** 
-  - COLUMNA DESPENSERO H200/H220
-  - COLUMNA FRIGO H200/H220
-  - COLUMNA HORNO H200/H220
-  - MEDIACOLUMNA, MEDIACOLUMNA HORNO
-  - MEDIACOLUMNA VITRINA, MEDIACOL VITRINA GAVETA
-  - MEDIA PUERTA GAVETA
-- ✅ **OTROS (13 productos):** BOTELLEROS, ALTILLOS DECORATIVOS
+### Catálogo MV TARIFA 1 - COMPLETO (524 productos)
 
-### 2. Precios Verificados
+#### Páginas 1-5 (452 productos originales):
+- **PUERTAS:** 50 productos (P25-P60, alturas 14-147)
+- **VITRINA:** 36 productos (PV30-PV60)
+- **REJILLA CONFESIONARIO:** 24 productos (PR30-PR60)
+- **BAJOS:** 72 productos (todos los tipos)
+- **ALTOS:** 136 productos (H70/H90)
+- **COLUMNAS:** 72 productos (H200/H220)
+- **OTROS:** ALTILLOS, SOBREENCIMERA, BOTELLEROS, etc.
+
+#### Página 6 (72 productos nuevos con anchos/fondos):
+- **LATERALES COLOR:** 12 productos (Ancho 15)
+- **REGLETA COLOR:** 8 productos (Ancho 15)
+- **COSTADOS MELAMINA:** 6 productos (Ancho 10)
+- **COSTADOS COLOR:** 10 productos (Ancho 10)
+- **REGLETA MELAMINA:** 6 productos (Ancho 10)
+- **TECHO COLOR:** 14 productos (TEC100-TEC360)
+- **ELEMENTOS LINEALES:** 16 productos (COR, POR, ZOC, etc.)
+
+### Precios Verificados:
 - A100 H70 = **62 PTS** ✓
 - A100 H90 = **70 PTS** ✓
 - P30 H70 = **11 PTS** ✓
 - PR60 H70 = **63 PTS** ✓
-- B30D/I = **35 PTS** ✓
+- LCA H70 = **10 PTS** (Ancho 15) ✓
+- TEC200 = **20.4 PTS** (Ancho 200) ✓
 
 ---
 
@@ -47,7 +41,6 @@
 
 ### P1 - Alta
 - [ ] Casco por defecto por sección/biblioteca
-- [ ] **FALTA PÁGINA 6 DE TARIFA MV** - Usuario pendiente de subir
 
 ### P2 - Media
 - [ ] Restaurar logo empresa (requiere que usuario lo re-suba)
@@ -69,7 +62,7 @@
 ├── routes/ia_lab.py
 ├── models/schemas.py
 └── scripts/
-    └── seed_mv_products.py    # NUEVO: Script para poblar productos MV
+    └── seed_mv_products.py    # Script para poblar productos MV
 
 /app/frontend/src/
 ├── App.js
@@ -89,9 +82,8 @@
 
 ## BASE DE DATOS
 - **DB:** luiggi_home
-- **Productos MV:** 452 (TARIFA 1 completa)
+- **Productos MV:** 524 (TARIFA 1 completa, 6 páginas)
 - **Productos ZC:** 2206
-- **Materiales:** 7 (4 ZC, 3 MV)
 - **Bibliotecas:** ZC (Zona Cocinas), MV (Muebles Valencia)
 
 ---
@@ -99,12 +91,24 @@
 ## NOTAS TÉCNICAS
 
 ### Estructura de Productos MV
-Los productos MV usan el campo `library: "MV"` y almacenan precios en:
+Los productos MV tienen las siguientes características:
+- `library: "MV"` - Identificador de biblioteca
 - `points`: Precio T1 (valor principal)
 - `zonePoints.T1`: Precio Tarifa 1 (usado por el frontend)
+- `width`: Ancho del mueble en cm
+- `height`: Alto del mueble en cm
+- `depth`: Fondo del mueble en cm
 
-### Script de Semilla
-El script `/app/backend/scripts/seed_mv_products.py` puede ejecutarse para:
-- Eliminar productos MV existentes
-- Insertar todos los productos de TARIFA 1
-- Comando: `MONGO_URL=mongodb://localhost:27017 DB_NAME=luiggi_home python3 scripts/seed_mv_products.py`
+### Categorías con Dimensiones Específicas:
+- **LATERALES COLOR:** Ancho 15 cm
+- **REGLETA COLOR:** Ancho 15 cm  
+- **COSTADOS MELAMINA:** Ancho 10 cm
+- **COSTADOS COLOR:** Ancho 10 cm
+- **REGLETA MELAMINA:** Ancho 10 cm
+- **TECHO COLOR:** Ancho variable (100-360 cm)
+
+### Notas de Tarifa:
+- SYNCRO = T1 + 5%
+- ECO = T1
+- MOTA = T1
+- TEXTIL = T1
