@@ -3517,6 +3517,38 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 <p className="text-xs text-indigo-600 font-bold uppercase">Configuración Global de Costos y Valores</p>
               </div>
 
+              {/* Módulos del Sistema */}
+              <div className="bg-white border border-orange-200 rounded-2xl p-6 shadow-sm">
+                <h3 className="text-sm font-black text-orange-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  🔧 Módulos del Sistema
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center gap-3 cursor-pointer bg-orange-50 p-4 rounded-xl border border-orange-200 hover:border-orange-400 transition-all">
+                    <input
+                      type="checkbox"
+                      checked={state.settings?.montajesEnabled || false}
+                      onChange={async (e) => {
+                        const newValue = e.target.checked;
+                        setState(prev => ({
+                          ...prev,
+                          settings: { ...prev.settings, montajesEnabled: newValue }
+                        }));
+                        try {
+                          await settingsAPI.update({ montajesEnabled: newValue });
+                        } catch (err) {
+                          console.error('Error guardando configuración:', err);
+                        }
+                      }}
+                      className="w-6 h-6 rounded border-2 border-orange-400 accent-orange-600"
+                    />
+                    <div>
+                      <span className="text-sm font-black text-orange-900">Agenda de Montajes</span>
+                      <p className="text-xs text-orange-600">Habilitar módulo de gestión de instaladores</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               {/* Valores de Punto */}
               <div className="bg-white border border-indigo-100 rounded-2xl p-6 shadow-sm">
                 <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 flex items-center gap-2">
