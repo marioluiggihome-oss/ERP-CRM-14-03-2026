@@ -128,7 +128,8 @@ const App = () => {
           fetchWithTimeout(productsAPI.getAll('despiece', 'ZC')),
           fetchWithTimeout(materialsAPI.getAll()),
           fetchWithTimeout(settingsAPI.get()),
-          fetchWithTimeout(librariesAPI.getAll()) // Cargar bibliotecas con sus pointValues
+          fetchWithTimeout(librariesAPI.getAll()), // Cargar bibliotecas con sus pointValues
+          fetchWithTimeout(productsAPI.getAll('montada')), // TODOS los productos montada para inventario
         ]);
 
         const users = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -137,6 +138,7 @@ const App = () => {
         const materials = results[3].status === 'fulfilled' ? results[3].value : [];
         const settings = results[4].status === 'fulfilled' ? results[4].value : {};
         const libraries = results[5].status === 'fulfilled' ? results[5].value : [];
+        const allProductsMontada = results[6].status === 'fulfilled' ? results[6].value : [];
 
         // Construir objeto de pointValues por biblioteca
         const libraryPointValues = {};
