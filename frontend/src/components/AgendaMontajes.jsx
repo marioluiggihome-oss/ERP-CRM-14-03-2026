@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, Search, Plus, Phone, Mail, MapPin, Star, 
   Edit2, Trash2, X, Save, Loader2, Wrench, Calendar,
-  Building2, Tag, CheckCircle, Clock, AlertCircle, Pause
+  Building2, Tag, CheckCircle, Clock, AlertCircle, Pause,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { montadoresAPI, montajesAPI } from '../services/api';
 
