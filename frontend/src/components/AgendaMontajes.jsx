@@ -481,7 +481,7 @@ const AgendaMontajes = ({ currentUser }) => {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'montajes' ? (
           /* Montajes List */
           <div className="space-y-3">
             {filteredMontajes.map(montaje => {
