@@ -160,6 +160,7 @@ const App = () => {
           ],
           carcassMaterials: materials.length > 0 ? materials : INITIAL_CARCASS_MATERIALS,
           selectedCarcassMaterialId: defaultMaterialId,
+          settings: settings,  // Guardar settings completo para montajesEnabled y otros
           pointValueMontada: settings.pointValueMontada || 1.0,
           pointValueDespiece: settings.pointValueDespiece || 0.88,
           specialIncrementWidth: settings.specialIncrementWidth || 45,
