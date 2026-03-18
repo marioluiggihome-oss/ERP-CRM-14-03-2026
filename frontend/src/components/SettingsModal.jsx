@@ -2202,105 +2202,137 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     {/* Technical Capabilities */}
                     <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
                       <h4 className="text-sm font-black text-purple-900 uppercase mb-3">Capacidades Técnicas</h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                        {/* Columna 1: Análisis y Visualización */}
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.canUseAIAnalysis}
                             onChange={(e) => setUserForm({...userForm, canUseAIAnalysis: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-purple-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">IA Lab (Reconocimiento)</span>
+                          <span className="text-xs font-bold text-slate-700">IA Lab</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.canSeeCost}
                             onChange={(e) => setUserForm({...userForm, canSeeCost: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-purple-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Visualizar Costo Fábrica</span>
+                          <span className="text-xs font-bold text-slate-700">Ver Costo</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.canViewTechnicalDespiece}
                             onChange={(e) => setUserForm({...userForm, canViewTechnicalDespiece: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-purple-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Informes Industriales</span>
+                          <span className="text-xs font-bold text-slate-700">Informes</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={userForm.canManageArticles}
-                            onChange={(e) => setUserForm({...userForm, canManageArticles: e.target.checked})}
-                            className="w-4 h-4 rounded"
-                          />
-                          <span className="text-xs font-bold text-slate-900">Gestionar Inventario</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        
+                        {/* Columna 2: Acceso a Módulos */}
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.canAccessCRM}
                             onChange={(e) => setUserForm({...userForm, canAccessCRM: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-blue-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Acceso al CRM</span>
+                          <span className="text-xs font-bold text-slate-700">CRM</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.canUseDigitalizador}
                             onChange={(e) => setUserForm({...userForm, canUseDigitalizador: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-orange-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Digitalizador Borradores</span>
+                          <span className="text-xs font-bold text-slate-700">Digitalizador</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer bg-emerald-100 px-2 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors border border-emerald-300">
                           <input
                             type="checkbox"
                             checked={userForm.canAccessFabrica}
                             onChange={(e) => setUserForm({...userForm, canAccessFabrica: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-emerald-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Acceso Portal Fábrica</span>
+                          <span className="text-xs font-black text-emerald-800">FÁBRICA</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        
+                        {/* Columna 3: Otros permisos */}
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.canAccessMontajes}
                             onChange={(e) => setUserForm({...userForm, canAccessMontajes: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-orange-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Agenda de Montajes</span>
+                          <span className="text-xs font-bold text-slate-700">Montajes</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canManageArticles}
+                            onChange={(e) => setUserForm({...userForm, canManageArticles: e.target.checked})}
+                            className="w-4 h-4 rounded accent-green-600"
+                          />
+                          <span className="text-xs font-bold text-slate-700">Inventario</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.isMontador}
                             onChange={(e) => setUserForm({...userForm, isMontador: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-rose-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Es Montador/Instalador</span>
+                          <span className="text-xs font-bold text-slate-700">Montador</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        
+                        {/* Fila extra: Personalización */}
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.useCustomBranding}
                             onChange={(e) => setUserForm({...userForm, useCustomBranding: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-pink-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Personalizar Interfaz</span>
+                          <span className="text-xs font-bold text-slate-700">Personalizar</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
                             checked={userForm.canChangeLogo}
                             onChange={(e) => setUserForm({...userForm, canChangeLogo: e.target.checked})}
-                            className="w-4 h-4 rounded"
+                            className="w-4 h-4 rounded accent-pink-600"
                           />
-                          <span className="text-xs font-bold text-slate-900">Modificar Logo Corporativo</span>
+                          <span className="text-xs font-bold text-slate-700">Cambiar Logo</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canAuthorizePermissions}
+                            onChange={(e) => setUserForm({...userForm, canAuthorizePermissions: e.target.checked})}
+                            className="w-4 h-4 rounded accent-red-600"
+                          />
+                          <span className="text-xs font-bold text-slate-700">Autorizar</span>
+                        </label>
+                      </div>
+                      
+                      {/* Checkbox especial para usuario SOLO fábrica */}
+                      <div className="mt-3 pt-3 border-t border-purple-200">
+                        <label className="flex items-center gap-3 cursor-pointer bg-emerald-50 px-3 py-2 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200">
+                          <input
+                            type="checkbox"
+                            checked={userForm.isFabrica}
+                            onChange={(e) => setUserForm({...userForm, isFabrica: e.target.checked})}
+                            className="w-5 h-5 rounded accent-emerald-600"
+                          />
+                          <div>
+                            <span className="text-sm font-black text-emerald-800 block">Usuario SOLO Fábrica</span>
+                            <span className="text-[10px] text-emerald-600">Solo verá el módulo de Fábrica, sin acceso a presupuestos, clientes ni otros módulos</span>
+                          </div>
                         </label>
                       </div>
                     </div>

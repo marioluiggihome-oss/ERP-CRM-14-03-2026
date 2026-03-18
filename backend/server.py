@@ -15,6 +15,7 @@ import base64
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 import json
 import bcrypt
+import jwt  # Para decodificar tokens en endpoints de export
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -32,6 +33,8 @@ from services.jwt_service import (
     get_current_user,
     require_auth,
     require_admin,
+    JWT_SECRET,
+    JWT_ALGORITHM,
     get_token_from_request,
     security
 )
@@ -5201,20 +5204,17 @@ async def export_clientes_excel(credentials: HTTPAuthorizationCredentials = Depe
     """Exportar clientes a Excel"""
     try:
         token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = payload.get("sub")
         
-        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user or not user.get("isAdmin"):
             raise HTTPException(status_code=403, detail="Solo administradores pueden exportar")
         
         # Obtener clientes
         clients = await db.clients.find({}).to_list(length=None)
         
-        if not clients:
-            raise HTTPException(status_code=404, detail="No hay clientes para exportar")
-        
-        # Crear Excel
+        # Crear Excel (vacío si no hay clientes)
         import pandas as pd
         from io import BytesIO
         
@@ -5263,10 +5263,10 @@ async def export_presupuestos_excel(credentials: HTTPAuthorizationCredentials = 
     """Exportar presupuestos a Excel"""
     try:
         token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = payload.get("sub")
         
-        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=403, detail="Usuario no encontrado")
         
@@ -5328,10 +5328,10 @@ async def export_crm_excel(credentials: HTTPAuthorizationCredentials = Depends(s
     """Exportar datos CRM a Excel (oportunidades, actividades, calendario)"""
     try:
         token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = payload.get("sub")
         
-        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user or not user.get("canAccessCRM"):
             raise HTTPException(status_code=403, detail="Sin acceso a CRM")
         
@@ -5412,10 +5412,10 @@ async def export_usuarios_excel(credentials: HTTPAuthorizationCredentials = Depe
     """Exportar usuarios a Excel (solo admin)"""
     try:
         token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = payload.get("sub")
         
-        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user or not user.get("isAdmin"):
             raise HTTPException(status_code=403, detail="Solo administradores")
         

@@ -579,106 +579,136 @@ const App = () => {
             </div>
             
             <div className="flex flex-col gap-6 flex-1 w-full px-2">
-              {/* CRM - Solo visible para usuarios con canAccessCRM (NO para Tienda/Punto de Venta) */}
-              {state.currentUser?.canAccessCRM && !state.currentUser?.isTienda && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
-                    state.currentTab?.startsWith('crm-') 
-                      ? 'bg-indigo-600 text-white shadow-xl scale-110' 
-                      : 'text-slate-500 hover:text-white hover:bg-white/10'
-                  }`}
-                  data-testid="crm-dashboard-nav"
-                >
-                  <Target size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">CRM</span>
-                </button>
-              )}
+              {/* 
+                IMPORTANTE: Usuarios con isFabrica o que SOLO tienen canAccessFabrica
+                no deben ver otros módulos - solo ven el botón de FÁBRICA
+              */}
+              {(() => {
+                // Determinar si es un usuario SOLO de fábrica (no admin, no tiene otros permisos importantes)
+                const isFabricaOnly = state.currentUser?.isFabrica && 
+                  !state.currentUser?.isAdmin && 
+                  !state.currentUser?.isGerente && 
+                  !state.currentUser?.isDirectorComercial &&
+                  !state.currentUser?.isRepresentative;
+                
+                // Si es usuario solo fábrica, mostrar solo el botón de fábrica
+                if (isFabricaOnly) {
+                  return (
+                    <button 
+                      onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
+                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      data-testid="fabrica-nav-btn"
+                    >
+                      <Factory size={22}/>
+                      <span className="text-[7px] font-black uppercase tracking-widest">Fábrica</span>
+                    </button>
+                  );
+                }
+                
+                // Para otros usuarios, mostrar navegación normal
+                return (
+                  <>
+                    {/* CRM - Solo visible para usuarios con canAccessCRM (NO para Tienda/Punto de Venta) */}
+                    {state.currentUser?.canAccessCRM && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
+                          state.currentTab?.startsWith('crm-') 
+                            ? 'bg-indigo-600 text-white shadow-xl scale-110' 
+                            : 'text-slate-500 hover:text-white hover:bg-white/10'
+                        }`}
+                        data-testid="crm-dashboard-nav"
+                      >
+                        <Target size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">CRM</span>
+                      </button>
+                    )}
 
-              <button 
-                onClick={() => setState(p => ({...p, currentTab: 'budget'}))} 
-                className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-              >
-                <FileText size={22}/>
-                <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
-              </button>
-              
-              {/* Solo usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
-              {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                >
-                  <Sparkles size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
-                </button>
-              )}
-              
-              {/* Archivo - NO visible para Tienda/Punto de Venta */}
-              {!state.currentUser?.isTienda && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                >
-                  <FolderOpen size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
-                </button>
-              )}
-              
-              {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
-              {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                  data-testid="digitalizador-nav-btn"
-                >
-                  <ScanLine size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Digitalizador</span>
-                </button>
-              )}
-              
-              {/* Agenda de Montajes - Solo si está habilitada en settings Y usuario tiene permiso */}
-              {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                  data-testid="montajes-nav-btn"
-                >
-                  <Wrench size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Montajes</span>
-                </button>
-              )}
-              
-              {/* Portal de Fábrica - SOLO usuarios con permiso explícito canAccessFabrica o rol isFabrica */}
-              {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica) && (
-                <button 
-                  onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                  data-testid="fabrica-nav-btn"
-                >
-                  <Factory size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Fábrica</span>
-                </button>
-              )}
-              
-              {/* Armarios ahora está en la barra del presupuesto, no aquí */}
-              
-              {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
-              {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
-                <button 
-                  onClick={() => setShowCommercialWorkView(true)} 
-                  className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all text-purple-400 hover:text-white hover:bg-purple-500/30"
-                  data-testid="commercial-panel-nav-btn"
-                >
-                  <Users size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Mis Tiendas</span>
-                </button>
-              )}
+                    <button 
+                      onClick={() => setState(p => ({...p, currentTab: 'budget'}))} 
+                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                    >
+                      <FileText size={22}/>
+                      <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
+                    </button>
+                    
+                    {/* Solo usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
+                    {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <Sparkles size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
+                      </button>
+                    )}
+                    
+                    {/* Archivo - NO visible para Tienda/Punto de Venta */}
+                    {!state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <FolderOpen size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
+                      </button>
+                    )}
+                    
+                    {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
+                    {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="digitalizador-nav-btn"
+                      >
+                        <ScanLine size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Digitalizador</span>
+                      </button>
+                    )}
+                    
+                    {/* Agenda de Montajes - Solo si está habilitada en settings Y usuario tiene permiso */}
+                    {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="montajes-nav-btn"
+                      >
+                        <Wrench size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Montajes</span>
+                      </button>
+                    )}
+                    
+                    {/* Portal de Fábrica - usuarios con permiso */}
+                    {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica) && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="fabrica-nav-btn"
+                      >
+                        <Factory size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Fábrica</span>
+                      </button>
+                    )}
+                    
+                    {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
+                    {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setShowCommercialWorkView(true)} 
+                        className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all text-purple-400 hover:text-white hover:bg-purple-500/30"
+                        data-testid="commercial-panel-nav-btn"
+                      >
+                        <Users size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Mis Tiendas</span>
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             <div className="mt-auto flex flex-col gap-6 w-full px-2">
-              {/* Solo mostrar Panel Maestro si es Admin o Comercial (NO para Tienda) */}
-              {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && !state.currentUser?.isTienda && (
+              {/* Solo mostrar Panel Maestro si es Admin o Comercial (NO para Tienda ni usuario solo Fábrica) */}
+              {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && (
                 <button 
                     onClick={() => setState(p => ({...p, showSettings: true}))} 
                     className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
