@@ -4,9 +4,11 @@ import {
   Plus, Search, Filter, Calendar, FileText, Upload, Download,
   ChevronDown, ChevronRight, Edit3, Trash2, Eye, Printer,
   BarChart3, TrendingUp, Box, Scissors, RefreshCw, X,
-  FolderOpen, Check, Play, Pause, Square
+  FolderOpen, Check, Play, Pause, Square, History, Building2
 } from 'lucide-react';
 import { fabricaAPI, projectsAPI } from '../services/api';
+import ProductionDashboard from './ProductionDashboard';
+import OrderHistory from './OrderHistory';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -145,12 +147,43 @@ const PortalFabrica = ({ currentUser }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [filters, setFilters] = useState({ status: '', priority: '', search: '' });
   const [expandedOrders, setExpandedOrders] = useState({});
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'dashboard', 'history'
+  const [factories, setFactories] = useState([]);
   
   // Modals
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showImportFromProjectsModal, setShowImportFromProjectsModal] = useState(false);
   const [showDeliveryDateModal, setShowDeliveryDateModal] = useState(null);
+
+  // Cargar fábricas
+  useEffect(() => {
+    const loadFactories = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/fabrica/factories`);
+        if (response.ok) {
+          const data = await response.json();
+          setFactories(data.filter(f => f.isActive !== false));
+        }
+      } catch (err) {
+        console.error('Error loading factories:', err);
+      }
+    };
+    loadFactories();
+  }, []);
+
+  // Filtrar órdenes por fábrica del usuario si tiene una asignada
+  const filteredOrdersByFactory = React.useMemo(() => {
+    if (currentUser?.factoryId) {
+      return orders.filter(o => o.factoryId === currentUser.factoryId || !o.factoryId);
+    }
+    // Gerentes, Directores Comerciales y Responsables de Delegación pueden ver todas
+    if (currentUser?.isGerente || currentUser?.isDirectorComercial || currentUser?.isResponsableDelegacion || currentUser?.isAdmin) {
+      return orders;
+    }
+    // Por defecto mostrar todas si tiene acceso a fábrica
+    return orders;
+  }, [orders, currentUser]);
 
   // Cargar datos
   const loadData = useCallback(async () => {
@@ -248,7 +281,7 @@ const PortalFabrica = ({ currentUser }) => {
   // Vista de lista de órdenes
   const OrderListView = () => (
     <div className="space-y-3">
-      {orders.length === 0 ? (
+      {filteredOrdersByFactory.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-indigo-200">
           <Factory size={48} className="mx-auto text-indigo-200 mb-4" />
           <p className="text-indigo-400 font-bold">No hay órdenes de fabricación</p>
@@ -269,11 +302,12 @@ const PortalFabrica = ({ currentUser }) => {
           </div>
         </div>
       ) : (
-        orders.map(order => {
+        filteredOrdersByFactory.map(order => {
           const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.draft;
           const priorityConfig = PRIORITY_CONFIG[order.priority] || PRIORITY_CONFIG.normal;
           const StatusIcon = statusConfig.icon;
           const isExpanded = expandedOrders[order.id];
+          const assignedFactory = factories.find(f => f.id === order.factoryId);
 
           return (
             <div key={order.id} className="bg-white rounded-2xl border border-indigo-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -287,7 +321,7 @@ const PortalFabrica = ({ currentUser }) => {
                     {isExpanded ? <ChevronDown size={20} className="text-indigo-400" /> : <ChevronRight size={20} className="text-indigo-400" />}
                   </button>
                   <div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-black text-indigo-900">{order.orderNumber}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusConfig.color}`}>
                         <StatusIcon size={12} className="inline mr-1" />
@@ -296,6 +330,12 @@ const PortalFabrica = ({ currentUser }) => {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${priorityConfig.color}`}>
                         {priorityConfig.label}
                       </span>
+                      {assignedFactory && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                          <Building2 size={10} />
+                          {assignedFactory.code}
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-indigo-600 mt-0.5">{order.customerName || 'Sin cliente'}</p>
                   </div>
@@ -1175,97 +1215,161 @@ const PortalFabrica = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* Stats Dashboard */}
-      {stats && (
-        <div className="grid grid-cols-5 gap-4 mb-6">
-          <StatCard 
-            title="Activas" 
-            value={stats.totalActive || 0} 
-            icon={Package} 
-            color="indigo"
-            subtitle="Órdenes en proceso"
-          />
-          <StatCard 
-            title="En Producción" 
-            value={stats.byStatus?.in_production || 0} 
-            icon={Factory} 
-            color="amber"
-          />
-          <StatCard 
-            title="Listas" 
-            value={stats.byStatus?.ready || 0} 
-            icon={CheckCircle} 
-            color="emerald"
-          />
-          <StatCard 
-            title="Entrega Esta Semana" 
-            value={stats.pendingThisWeek || 0} 
-            icon={Truck} 
-            color="blue"
-          />
-          <StatCard 
-            title="Piezas Producción" 
-            value={stats.piecesInProduction || 0} 
-            icon={Box} 
-            color="orange"
-          />
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="bg-white rounded-2xl p-4 mb-6 flex items-center justify-between shadow-sm border border-indigo-100">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" />
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              placeholder="Buscar orden, cliente..."
-              className="pl-10 pr-4 py-2 border border-indigo-200 rounded-xl w-64 text-sm focus:border-indigo-500 outline-none"
-              data-testid="search-input"
-            />
-          </div>
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-            className="px-4 py-2 border border-indigo-200 rounded-xl text-sm font-bold text-indigo-700"
-            data-testid="filter-status"
-          >
-            <option value="">Todos los estados</option>
-            <option value="draft">Borrador</option>
-            <option value="confirmed">Confirmada</option>
-            <option value="in_production">En Producción</option>
-            <option value="ready">Lista</option>
-            <option value="delivered">Entregada</option>
-          </select>
-          <select
-            value={filters.priority}
-            onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
-            className="px-4 py-2 border border-indigo-200 rounded-xl text-sm font-bold text-indigo-700"
-            data-testid="filter-priority"
-          >
-            <option value="">Todas las prioridades</option>
-            <option value="low">Baja</option>
-            <option value="normal">Normal</option>
-            <option value="high">Alta</option>
-            <option value="urgent">Urgente</option>
-          </select>
-        </div>
-        <p className="text-sm text-indigo-400 font-bold">
-          {orders.length} órdenes encontradas
-        </p>
+      {/* Tabs de navegación */}
+      <div className="bg-white rounded-2xl p-1 mb-6 flex items-center gap-1 shadow-sm border border-indigo-100 w-fit">
+        <button
+          onClick={() => setActiveTab('orders')}
+          className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'orders' 
+              ? 'bg-indigo-600 text-white' 
+              : 'text-indigo-600 hover:bg-indigo-50'
+          }`}
+          data-testid="tab-orders"
+        >
+          <Package size={16} />
+          Órdenes
+        </button>
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'dashboard' 
+              ? 'bg-indigo-600 text-white' 
+              : 'text-indigo-600 hover:bg-indigo-50'
+          }`}
+          data-testid="tab-dashboard"
+        >
+          <BarChart3 size={16} />
+          Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'history' 
+              ? 'bg-indigo-600 text-white' 
+              : 'text-indigo-600 hover:bg-indigo-50'
+          }`}
+          data-testid="tab-history"
+        >
+          <History size={16} />
+          Historial
+        </button>
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin">
-            <RefreshCw size={32} className="text-indigo-600" />
-          </div>
-        </div>
+      {/* Content based on active tab */}
+      {activeTab === 'dashboard' ? (
+        <ProductionDashboard 
+          currentUser={currentUser}
+          orders={filteredOrdersByFactory}
+          factories={factories}
+        />
+      ) : activeTab === 'history' ? (
+        <OrderHistory 
+          orders={filteredOrdersByFactory}
+          currentUser={currentUser}
+          factories={factories}
+        />
       ) : (
-        <OrderListView />
+        <>
+          {/* Stats Dashboard - Solo en pestaña órdenes */}
+          {stats && (
+            <div className="grid grid-cols-5 gap-4 mb-6">
+              <StatCard 
+                title="Activas" 
+                value={stats.totalActive || 0} 
+                icon={Package} 
+                color="indigo"
+                subtitle="Órdenes en proceso"
+              />
+              <StatCard 
+                title="En Producción" 
+                value={stats.byStatus?.in_production || 0} 
+                icon={Factory} 
+                color="amber"
+              />
+              <StatCard 
+                title="Listas" 
+                value={stats.byStatus?.ready || 0} 
+                icon={CheckCircle} 
+                color="emerald"
+              />
+              <StatCard 
+                title="Entrega Esta Semana" 
+                value={stats.pendingThisWeek || 0} 
+                icon={Truck} 
+                color="blue"
+              />
+              <StatCard 
+                title="Piezas Producción" 
+                value={stats.piecesInProduction || 0} 
+                icon={Box} 
+                color="orange"
+              />
+            </div>
+          )}
+
+          {/* Filters */}
+          <div className="bg-white rounded-2xl p-4 mb-6 flex items-center justify-between shadow-sm border border-indigo-100">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  placeholder="Buscar orden, cliente..."
+                  className="pl-10 pr-4 py-2 border border-indigo-200 rounded-xl w-64 text-sm focus:border-indigo-500 outline-none"
+                  data-testid="search-input"
+                />
+              </div>
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                className="px-4 py-2 border border-indigo-200 rounded-xl text-sm font-bold text-indigo-700"
+                data-testid="filter-status"
+              >
+                <option value="">Todos los estados</option>
+                <option value="draft">Borrador</option>
+                <option value="confirmed">Confirmada</option>
+                <option value="in_production">En Producción</option>
+                <option value="ready">Lista</option>
+                <option value="delivered">Entregada</option>
+              </select>
+              <select
+                value={filters.priority}
+                onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+                className="px-4 py-2 border border-indigo-200 rounded-xl text-sm font-bold text-indigo-700"
+                data-testid="filter-priority"
+              >
+                <option value="">Todas las prioridades</option>
+                <option value="low">Baja</option>
+                <option value="normal">Normal</option>
+                <option value="high">Alta</option>
+                <option value="urgent">Urgente</option>
+              </select>
+              {/* Info de fábrica asignada */}
+              {currentUser?.factoryId && (
+                <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-sm font-bold flex items-center gap-2">
+                  <Building2 size={14} />
+                  {factories.find(f => f.id === currentUser.factoryId)?.name || 'Tu Fábrica'}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-indigo-400 font-bold">
+              {filteredOrdersByFactory.length} órdenes encontradas
+            </p>
+          </div>
+
+          {/* Content */}
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin">
+                <RefreshCw size={32} className="text-indigo-600" />
+              </div>
+            </div>
+          ) : (
+            <OrderListView />
+          )}
+        </>
       )}
 
       {/* Modals */}

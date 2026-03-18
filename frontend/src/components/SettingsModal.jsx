@@ -83,8 +83,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAuthorizePermissions: false,
     useCustomBranding: false,
     canChangeLogo: false,
-    linkedClientId: ''
+    linkedClientId: '',
+    factoryId: ''  // ID de la fábrica asignada
   });
+
+  // Lista de fábricas disponibles
+  const [factories, setFactories] = useState([]);
 
   // Telemetry states
   const [telemetryModule, setTelemetryModule] = useState('montada');
@@ -187,6 +191,25 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       loadSegments();
     }
   }, [isOpen, activeTab]);
+
+  // Load factories when needed (for user form)
+  useEffect(() => {
+    if (isOpen && (activeTab === 'network' || activeTab === 'clients')) {
+      loadFactories();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadFactories = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fabrica/factories`);
+      if (response.ok) {
+        const data = await response.json();
+        setFactories(data.filter(f => f.isActive !== false));
+      }
+    } catch (err) {
+      console.error('Error loading factories:', err);
+    }
+  };
 
   const loadSegments = async () => {
     try {
@@ -1865,7 +1888,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.canManageArticles && <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[9px] font-black">INVENTARIO</span>}
                               {user.canAccessCRM && <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[9px] font-black">CRM</span>}
                               {user.canUseDigitalizador && <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-[9px] font-black">DIGITALIZADOR</span>}
-                              {user.canAccessFabrica && <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black">FÁBRICA</span>}
+                              {user.canAccessFabrica && (
+                                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black">
+                                  FÁBRICA{user.factoryId && factories.find(f => f.id === user.factoryId) ? ` (${factories.find(f => f.id === user.factoryId).code})` : ''}
+                                </span>
+                              )}
                               {user.canAccessMontajes && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">MONTAJES</span>}
                               {user.isMontador && <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[9px] font-black">MONTADOR</span>}
                               {user.useCustomBranding && <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded text-[9px] font-black">PERSONALIZAR</span>}
@@ -2334,6 +2361,31 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <span className="text-[10px] text-emerald-600">Solo verá el módulo de Fábrica, sin acceso a presupuestos, clientes ni otros módulos</span>
                           </div>
                         </label>
+                        
+                        {/* Selector de fábrica asignada */}
+                        {(userForm.isFabrica || userForm.canAccessFabrica) && factories.length > 0 && (
+                          <div className="mt-3 bg-white rounded-lg p-3 border border-emerald-200">
+                            <label className="text-xs font-bold text-emerald-700 mb-2 block">
+                              🏭 Fábrica Asignada
+                            </label>
+                            <select
+                              value={userForm.factoryId || ''}
+                              onChange={(e) => setUserForm({...userForm, factoryId: e.target.value})}
+                              className="w-full px-3 py-2 border-2 border-emerald-300 rounded-xl text-sm font-bold text-emerald-800 focus:border-emerald-500 outline-none"
+                              data-testid="factory-selector"
+                            >
+                              <option value="">-- Sin asignar --</option>
+                              {factories.map(factory => (
+                                <option key={factory.id} value={factory.id}>
+                                  {factory.name} ({factory.code})
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[10px] text-emerald-500 mt-1">
+                              El usuario solo verá las órdenes de esta fábrica
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
