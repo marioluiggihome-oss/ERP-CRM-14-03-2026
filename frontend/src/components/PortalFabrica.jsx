@@ -32,9 +32,17 @@ const classifyFurniture = (productCode, productName) => {
   const code = (productCode || '').toUpperCase();
   const name = (productName || '').toUpperCase();
   
+  // Altos: A*
   if (code.startsWith('A') || name.includes('ALTO')) return 'altos';
+  // Bajos: B*
   if (code.startsWith('B') || name.includes('BAJO')) return 'bajos';
-  if (code.startsWith('CH') || code.startsWith('CO') || name.includes('COLUMNA') || name.includes('SEMICOLUMNA')) return 'columnas';
+  // Columnas: CH*, CO*
+  if (code.startsWith('CH') || name.includes('COLUMNA')) return 'columnas';
+  // Semicolumnas: SCH*, SC*
+  if (code.startsWith('SCH') || code.startsWith('SC') || name.includes('SEMICOLUMNA')) return 'semicolumnas';
+  // Sobremódulos: SM*, SO*
+  if (code.startsWith('SM') || code.startsWith('SO') || name.includes('SOBREMODULO') || name.includes('SOBREMÓDULO')) return 'sobremodulos';
+  // Especiales: resto
   return 'especiales';
 };
 
@@ -55,7 +63,7 @@ const FabricationProgressBar = ({ items = [] }) => {
   let statusText = 'Sin empezar';
   if (completedPercent === 100) {
     statusColor = 'bg-emerald-500';
-    statusText = 'Completado';
+    statusText = 'Fabricado';
   } else if (completedPercent > 0 || inProgressPercent > 0) {
     statusColor = 'bg-blue-500';
     statusText = 'En proceso';
@@ -72,7 +80,7 @@ const FabricationProgressBar = ({ items = [] }) => {
         </span>
       </div>
       <div className="h-3 bg-red-200 rounded-full overflow-hidden flex">
-        {/* Parte completada (verde) */}
+        {/* Parte fabricada (verde) */}
         <div 
           className="h-full bg-emerald-500 transition-all duration-500"
           style={{ width: `${completedPercent}%` }}
@@ -87,7 +95,7 @@ const FabricationProgressBar = ({ items = [] }) => {
       <div className="flex justify-between text-[10px] text-gray-400 mt-1">
         <span>{pending} pendientes</span>
         <span>{inProgress} en proceso</span>
-        <span>{completed} completados</span>
+        <span>{completed} fabricados</span>
       </div>
     </div>
   );
@@ -95,7 +103,7 @@ const FabricationProgressBar = ({ items = [] }) => {
 
 // Resumen por categoría de muebles
 const CategorySummary = ({ items = [] }) => {
-  const summary = { altos: 0, bajos: 0, columnas: 0, especiales: 0 };
+  const summary = { altos: 0, bajos: 0, columnas: 0, semicolumnas: 0, sobremodulos: 0, especiales: 0 };
   
   items.forEach(item => {
     const category = classifyFurniture(item.productCode, item.productName);
@@ -103,20 +111,29 @@ const CategorySummary = ({ items = [] }) => {
   });
   
   const categories = [
-    { key: 'altos', label: 'Altos', color: 'bg-sky-100 text-sky-700 border-sky-300', icon: '⬆️' },
-    { key: 'bajos', label: 'Bajos', color: 'bg-amber-100 text-amber-700 border-amber-300', icon: '⬇️' },
-    { key: 'columnas', label: 'Columnas', color: 'bg-violet-100 text-violet-700 border-violet-300', icon: '📏' },
-    { key: 'especiales', label: 'Especiales', color: 'bg-rose-100 text-rose-700 border-rose-300', icon: '⭐' }
+    { key: 'altos', label: 'Altos', color: 'bg-sky-100 text-sky-700 border-sky-300' },
+    { key: 'bajos', label: 'Bajos', color: 'bg-amber-100 text-amber-700 border-amber-300' },
+    { key: 'columnas', label: 'Columnas', color: 'bg-violet-100 text-violet-700 border-violet-300' },
+    { key: 'semicolumnas', label: 'Semicol.', color: 'bg-teal-100 text-teal-700 border-teal-300' },
+    { key: 'sobremodulos', label: 'Sobremód.', color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
+    { key: 'especiales', label: 'Especiales', color: 'bg-rose-100 text-rose-700 border-rose-300' }
   ];
   
+  // Solo mostrar categorías con items
+  const activeCategories = categories.filter(cat => summary[cat.key] > 0);
+  
   return (
-    <div className="grid grid-cols-4 gap-2 my-3">
-      {categories.map(cat => (
-        <div key={cat.key} className={`${cat.color} border rounded-lg p-2 text-center`}>
-          <div className="text-lg font-black">{summary[cat.key]}</div>
-          <div className="text-[10px] font-bold uppercase">{cat.label}</div>
-        </div>
-      ))}
+    <div className="flex flex-wrap gap-2 my-3">
+      {activeCategories.length === 0 ? (
+        <span className="text-gray-400 text-sm">Sin muebles</span>
+      ) : (
+        activeCategories.map(cat => (
+          <div key={cat.key} className={`${cat.color} border rounded-lg px-3 py-1 text-center`}>
+            <span className="text-lg font-black">{summary[cat.key]}</span>
+            <span className="text-[10px] font-bold uppercase ml-1">{cat.label}</span>
+          </div>
+        ))
+      )}
     </div>
   );
 };
@@ -344,7 +361,7 @@ const PortalFabrica = ({ currentUser }) => {
                               const fabStatusConfig = {
                                 pending: { label: 'Pendiente', color: 'bg-red-500', icon: Square },
                                 in_progress: { label: 'En proceso', color: 'bg-blue-500', icon: Play },
-                                completed: { label: 'Completado', color: 'bg-emerald-500', icon: Check }
+                                completed: { label: 'Fabricado', color: 'bg-emerald-500', icon: Check }
                               };
                               
                               const statusConf = fabStatusConfig[fabStatus] || fabStatusConfig.pending;
@@ -381,7 +398,7 @@ const PortalFabrica = ({ currentUser }) => {
                                       <button
                                         onClick={(e) => { e.stopPropagation(); handleMarkItemFabricated(order.id, item.id, 'completed'); }}
                                         className={`p-1.5 rounded-lg transition-all ${fabStatus === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-500 hover:bg-emerald-200'}`}
-                                        title="Completado"
+                                        title="Fabricado"
                                       >
                                         <Check size={14} />
                                       </button>

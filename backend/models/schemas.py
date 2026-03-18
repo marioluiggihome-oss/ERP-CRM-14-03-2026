@@ -378,7 +378,8 @@ class SettingsUpdate(BaseModel):
 class ClientModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: f"cli-{uuid.uuid4().hex[:8]}")
-    code: str = ""
+    code: str = ""  # Código interno del sistema
+    externalCode: str = ""  # Código del programa de gestión externo
     name: str
     company: str = ""
     email: str = ""
@@ -400,6 +401,7 @@ class ClientModel(BaseModel):
 
 class ClientCreate(BaseModel):
     code: str = ""
+    externalCode: str = ""  # Código del programa de gestión externo
     name: str
     company: str = ""
     email: str = ""
@@ -418,6 +420,7 @@ class ClientCreate(BaseModel):
 
 class ClientUpdate(BaseModel):
     code: Optional[str] = None
+    externalCode: Optional[str] = None  # Código del programa de gestión externo
     name: Optional[str] = None
     company: Optional[str] = None
     email: Optional[str] = None

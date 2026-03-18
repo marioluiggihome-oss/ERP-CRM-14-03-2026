@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle } from 'lucide-react';
 import "./App.css";
 import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
@@ -18,6 +18,7 @@ import CommercialWorkView from './components/CommercialWorkView';
 import PrescriptorAgenda from './components/PrescriptorAgenda';
 import Armarios from './components/Armarios';
 import PortalFabrica from './components/PortalFabrica';
+import UserManualModal from './components/UserManualModal';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI } from './services/api';
 import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './services/authService';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
@@ -31,6 +32,7 @@ const App = () => {
   const [showMaintenancePanel, setShowMaintenancePanel] = useState(false);
   const [showAdminWorkView, setShowAdminWorkView] = useState(false);
   const [showCommercialWorkView, setShowCommercialWorkView] = useState(false);
+  const [showUserManual, setShowUserManual] = useState(false);
   
   const [state, setState] = useState(() => {
     const defaultState = {
@@ -707,6 +709,16 @@ const App = () => {
             </div>
 
             <div className="mt-auto flex flex-col gap-6 w-full px-2">
+              {/* Botón de Ayuda - Disponible para todos los usuarios */}
+              <button 
+                  onClick={() => setShowUserManual(true)} 
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all"
+                  data-testid="help-button"
+              >
+                  <HelpCircle size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Ayuda</span>
+              </button>
+              
               {/* Solo mostrar Panel Maestro si es Admin o Comercial (NO para Tienda ni usuario solo Fábrica) */}
               {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && (
                 <button 
@@ -831,6 +843,13 @@ const App = () => {
           <CommercialWorkView 
             isOpen={showCommercialWorkView}
             onClose={() => setShowCommercialWorkView(false)}
+            currentUser={state.currentUser}
+          />
+
+          {/* User Manual Modal - Disponible para todos los usuarios */}
+          <UserManualModal 
+            isOpen={showUserManual}
+            onClose={() => setShowUserManual(false)}
             currentUser={state.currentUser}
           />
         </>
