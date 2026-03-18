@@ -4177,23 +4177,23 @@ def calculate_furniture_despiece(
     add_component(
         "Lateral izquierdo", "LAT-I",
         carcass_material,
-        h, d, g, 1,  # ALTO COMPLETO x FONDO
-        "Canto frontal visto"
+        h, d, g, 1,  # ALTO COMPLETO x FONDO (en cm)
+        "1L canto"
     )
     
     # LATERAL DERECHO (Side panel - full height)
     add_component(
         "Lateral derecho", "LAT-D",
         carcass_material,
-        h, d, g, 1,  # ALTO COMPLETO x FONDO
-        "Canto frontal visto"
+        h, d, g, 1,  # ALTO COMPLETO x FONDO (en cm)
+        "1L canto"
     )
     
     # =============================================
     # HORIZONTALES - Descontar grosor de los laterales
     # =============================================
     
-    # Ancho interior (entre laterales)
+    # Ancho interior (entre laterales) en cm
     ancho_interior = w - (2 * g)
     
     # TAPA SUPERIOR (Top panel - between sides)
@@ -4201,7 +4201,7 @@ def calculate_furniture_despiece(
         "Tapa superior", "TAPA-S", 
         carcass_material,
         ancho_interior, d, g, 1,
-        "Canto frontal visto"
+        "1L canto"
     )
     
     # TAPA INFERIOR (Bottom panel) - not always present in ALTOS
@@ -4210,38 +4210,39 @@ def calculate_furniture_despiece(
             "Tapa inferior", "TAPA-I",
             carcass_material,
             ancho_interior, d, g, 1,
-            "Canto frontal visto" if is_bajo else ""
+            "1L canto" if is_bajo else ""
         )
     else:
-        # ALTOS use a narrower bottom rail
+        # ALTOS use a narrower bottom rail (8cm de ancho)
         add_component(
             "Travesaño inferior", "TRAV-I",
             carcass_material,
-            ancho_interior, 80, g, 1,  # 80mm rail
-            "Travesaño de sujeción"
+            ancho_interior, 8, g, 1,  # 8cm rail
+            ""
         )
     
     # TRASERA (Back panel) - siempre más fina (8mm o 6mm)
-    back_thickness = 8 if g >= 18 else 6
-    back_height = h - 6  # Encajada en ranuras (3mm arriba y abajo)
+    # Grosor en cm: 0.8cm o 0.6cm
+    back_thickness_cm = 0.8 if g >= 1.8 else 0.6
+    back_height = h - 0.6  # Encajada en ranuras (0.3cm arriba y abajo)
     add_component(
         "Trasera modulo", "TRAS",
         back_material,
-        ancho_interior + 6, back_height, back_thickness, 1,
-        "Panel trasero encastrado"
+        ancho_interior, back_height, back_thickness_cm, 1,
+        f"Tablero {int(back_thickness_cm * 10)}mm"
     )
     
     # BALDAS / ESTANTES (Shelves) - estimate based on height
     # Los estantes son HORIZONTALES, descontar grosor de laterales
     shelf_count = 0
-    if h >= 700:  # Tall units get more shelves
-        shelf_count = 2 if h < 1200 else 3 if h < 1800 else 4
-    elif h >= 350:
+    if h >= 70:  # Tall units get more shelves (70cm+)
+        shelf_count = 2 if h < 120 else 3 if h < 180 else 4
+    elif h >= 35:
         shelf_count = 1
     
     if shelf_count > 0:
         shelf_length = ancho_interior  # Entre laterales
-        shelf_width = d - 20  # Ligeramente retranqueado del frontal
+        shelf_width = d - 2  # Ligeramente retranqueado del frontal (2cm)
         add_component(
             "Balda interior", "BALDA",
             carcass_material,
