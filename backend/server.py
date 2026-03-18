@@ -4120,6 +4120,8 @@ def calculate_furniture_despiece(
     """
     Calculate the despiece (bill of materials) for a single furniture piece.
     
+    TODAS LAS MEDIDAS EN CENTÍMETROS (cm)
+    
     REGLA FUNDAMENTAL:
     - VERTICALES (laterales/costados): Usan el ALTO COMPLETO del mueble
     - HORIZONTALES (tapas, estantes): Se les descuenta el GROSOR del casco (x2)
@@ -4129,14 +4131,15 @@ def calculate_furniture_despiece(
     - LATERAL DERECHO: height x depth (ALTO COMPLETO)
     - TAPA SUPERIOR: (width - 2*grosor) x depth (entre laterales)
     - TAPA INFERIOR: (width - 2*grosor) x depth (entre laterales)
-    - TRASERA: (width - 2*grosor) x (height - 6mm) (encajada en ranuras)
-    - BALDA/ESTANTE: (width - 2*grosor) x (depth - 3mm) - optional shelves
+    - TRASERA: (width - 2*grosor) x (height - 0.6cm) (encajada en ranuras)
+    - BALDA/ESTANTE: (width - 2*grosor) x (depth - 2cm) - optional shelves
     """
     
-    w = item.width  # Width in mm
-    h = item.height * 10  # Height comes in cm, convert to mm  
-    d = item.depth * 10  # Depth comes in cm, convert to mm
-    g = grosor  # Panel thickness
+    # Todas las dimensiones en cm
+    w = float(item.width)   # Ancho en cm
+    h = float(item.height)  # Alto en cm  
+    d = float(item.depth)   # Fondo en cm
+    g = grosor / 10  # Grosor viene en mm, convertir a cm (18mm = 1.8cm)
     
     components = []
     component_id = 0
