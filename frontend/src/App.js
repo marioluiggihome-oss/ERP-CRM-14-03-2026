@@ -649,8 +649,8 @@ const App = () => {
                 </button>
               )}
               
-              {/* Portal de Fábrica - Solo usuarios con permiso canAccessFabrica o isFabrica */}
-              {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica || state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+              {/* Portal de Fábrica - SOLO usuarios con permiso explícito canAccessFabrica o rol isFabrica */}
+              {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica) && (
                 <button 
                   onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
                   className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -738,8 +738,8 @@ const App = () => {
               <AgendaMontajes currentUser={state.currentUser} />
             )}
             
-            {/* Portal de Fábrica */}
-            {state.currentTab === 'fabrica' && (state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica || state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+            {/* Portal de Fábrica - SOLO usuarios con permiso explícito */}
+            {state.currentTab === 'fabrica' && (state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica) && (
               <PortalFabrica currentUser={state.currentUser} />
             )}
             

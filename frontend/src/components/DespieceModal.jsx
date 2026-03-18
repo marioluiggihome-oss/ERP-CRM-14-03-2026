@@ -270,17 +270,26 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     };
   }, [despieceData]);
 
-  // Exportar PDF
+  // Exportar PDF - Genera contenido según la pestaña activa
   const handleExportPDF = () => {
     const printWindow = window.open('', '_blank');
     const fechaHoy = new Date().toLocaleDateString('es-ES');
+    
+    // Determinar título y contenido según la vista activa
+    const viewTitles = {
+      'montaje': 'ORDEN DE MONTAJE',
+      'corte': 'LISTA DE CORTE',
+      'bandas': 'BANDAS Y TRASERAS',
+      'herrajes': 'CASCO, PUERTA Y HERRAJE'
+    };
+    const viewTitle = viewTitles[activeView] || 'DESPIECE';
     
     let html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Despiece - ${editableExpedient || 'PRESUPUESTO'}</title>
+        <title>${viewTitle} - ${editableExpedient || 'PRESUPUESTO'}</title>
         <style>
           @page { 
             size: A4 portrait; 
@@ -323,12 +332,19 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           .font-bold { font-weight: bold; }
           .bg-amber { background: #fef3c7; }
           .bg-emerald { background: #d1fae5; }
+          .bg-orange { background: #ffedd5; }
+          .bg-blue { background: #dbeafe; }
+          .casco-box { background: #d1fae5; border: 2px solid #10b981; padding: 10px; margin: 8px 0; border-radius: 4px; }
+          .casco-dims { display: flex; gap: 15px; justify-content: center; margin-top: 8px; }
+          .casco-dim { text-align: center; }
+          .casco-dim .label { font-size: 7px; color: #047857; text-transform: uppercase; }
+          .casco-dim .value { font-size: 16px; font-weight: bold; color: #065f46; }
         </style>
       </head>
       <body>
         <div class="header">
           <div>
-            <h1>ORDEN DE DESPIECE</h1>
+            <h1>${viewTitle}</h1>
           </div>
           <div class="header-right">
             LUIGGI HOME ERP<br/>
@@ -354,7 +370,13 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <div class="info-value">${carcassMaterialName || '-'}</div>
           </div>
         </div>
-        
+    `;
+    
+    // ========== CONTENIDO ESPECÍFICO POR VISTA ==========
+    
+    if (activeView === 'montaje') {
+      // ORDEN DE MONTAJE - Lista completa de piezas por mueble
+      html += `
         <div class="summary">
           <div class="summary-box">
             <div class="summary-number">${despieceData?.summary?.totalFurniture || 0}</div>
@@ -374,72 +396,296 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           </div>
         </div>
 
-        <div class="section-title">LISTA DE PIEZAS</div>
+        <div class="section-title">LISTA DE PIEZAS POR MUEBLE</div>
         <table>
           <thead>
             <tr>
               <th style="width:25%">Pieza</th>
               <th style="width:15%">Material</th>
-              <th style="width:12%" class="text-center">Largo</th>
-              <th style="width:12%" class="text-center">Ancho</th>
-              <th style="width:8%" class="text-center">Gr.</th>
+              <th style="width:12%" class="text-center">Largo cm</th>
+              <th style="width:12%" class="text-center">Ancho cm</th>
+              <th style="width:8%" class="text-center">Gr.mm</th>
               <th style="width:8%" class="text-center">Ud.</th>
-              <th style="width:10%" class="text-center">Canto</th>
+              <th style="width:10%" class="text-center">Canto ml</th>
               <th style="width:10%">Notas</th>
             </tr>
           </thead>
           <tbody>
-    `;
-    
-    despieceData?.items?.forEach(item => {
-      html += `
-        <tr class="furniture-header avoid-break">
-          <td colspan="8"><strong>${item.productCode}</strong> - ${item.productName} (${item.originalWidth}×${item.originalHeight}×${item.originalDepth} cm) × ${item.itemQuantity || 1}</td>
-        </tr>
       `;
       
-      item.components?.forEach(comp => {
-        const qty = (comp.quantity || 1) * (item.itemQuantity || 1);
-        const { totalMl } = calculateCantoForComponent(comp, qty);
+      despieceData?.items?.forEach(item => {
         html += `
-          <tr class="component-row avoid-break">
-            <td>${comp.name || '-'}</td>
-            <td>${comp.material || carcassMaterialName || '-'}</td>
-            <td class="text-center">${comp.length || 0}</td>
-            <td class="text-center">${comp.width || 0}</td>
-            <td class="text-center">${comp.thickness || 18}</td>
-            <td class="text-center font-bold">${qty}</td>
-            <td class="text-center">${totalMl.toFixed(1)}</td>
-            <td>${comp.notes || ''}</td>
+          <tr class="furniture-header avoid-break">
+            <td colspan="8"><strong>${item.productCode}</strong> - ${item.productName} (${item.originalWidth}×${item.originalHeight}×${item.originalDepth} cm) × ${item.itemQuantity || 1}</td>
           </tr>
         `;
+        
+        item.components?.forEach(comp => {
+          const qty = (comp.quantity || 1) * (item.itemQuantity || 1);
+          const { totalMl } = calculateCantoForComponent(comp, qty);
+          html += `
+            <tr class="component-row avoid-break">
+              <td>${comp.name || '-'}</td>
+              <td>${comp.material || carcassMaterialName || '-'}</td>
+              <td class="text-center">${comp.length || 0}</td>
+              <td class="text-center">${comp.width || 0}</td>
+              <td class="text-center">${comp.thickness || 18}</td>
+              <td class="text-center font-bold">${qty}</td>
+              <td class="text-center">${totalMl.toFixed(1)}</td>
+              <td>${comp.notes || ''}</td>
+            </tr>
+          `;
+        });
       });
-    });
-    
-    html += `
+      
+      html += `</tbody></table>`;
+      
+    } else if (activeView === 'corte') {
+      // LISTA DE CORTE - Agrupada por material para seccionadora
+      html += `
+        <div class="summary">
+          <div class="summary-box">
+            <div class="summary-number">${despieceData?.summary?.totalPieces || 0}</div>
+            <div class="summary-label">Piezas Totales</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-number">${despieceData?.summary?.totalArea || 0}</div>
+            <div class="summary-label">Área (m²)</div>
+          </div>
+        </div>
+        <div class="section-title">PIEZAS AGRUPADAS POR MATERIAL</div>
+      `;
+      
+      // Agrupar por material
+      const byMaterial = {};
+      despieceData?.items?.forEach(item => {
+        const itemQty = item.itemQuantity || 1;
+        item.components?.forEach(comp => {
+          const mat = comp.material || carcassMaterialName || 'MELAMINA';
+          if (!byMaterial[mat]) byMaterial[mat] = [];
+          byMaterial[mat].push({
+            ...comp,
+            productCode: item.productCode,
+            productName: item.productName,
+            itemQuantity: itemQty
+          });
+        });
+      });
+      
+      Object.entries(byMaterial).forEach(([material, pieces]) => {
+        const totalPieces = pieces.reduce((acc, p) => acc + ((p.quantity || 1) * (p.itemQuantity || 1)), 0);
+        html += `
+          <div class="section-title bg-orange">${material} (${totalPieces} piezas)</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:10%">Mueble</th>
+                <th style="width:20%">Pieza</th>
+                <th style="width:15%" class="text-center">Largo cm</th>
+                <th style="width:15%" class="text-center">Ancho cm</th>
+                <th style="width:10%" class="text-center">Grosor mm</th>
+                <th style="width:10%" class="text-center">Cantidad</th>
+                <th style="width:20%">Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        pieces.forEach(piece => {
+          const qty = (piece.quantity || 1) * (piece.itemQuantity || 1);
+          html += `
+            <tr class="avoid-break">
+              <td class="font-bold">${piece.productCode}</td>
+              <td>${piece.name || '-'}</td>
+              <td class="text-center">${piece.length || 0}</td>
+              <td class="text-center">${piece.width || 0}</td>
+              <td class="text-center">${piece.thickness || 18}</td>
+              <td class="text-center font-bold">${qty}</td>
+              <td>${piece.notes || ''}</td>
+            </tr>
+          `;
+        });
+        
+        html += `</tbody></table>`;
+      });
+      
+    } else if (activeView === 'bandas') {
+      // BANDAS Y TRASERAS
+      html += `
+        <div class="summary">
+          <div class="summary-box bg-emerald">
+            <div class="summary-number">${calculateBandasYTraseras?.totalCanto || 0}</div>
+            <div class="summary-label">Canto Total (ml)</div>
+          </div>
+          <div class="summary-box bg-amber">
+            <div class="summary-number">${calculateBandasYTraseras?.cascoTotalArea || 0}</div>
+            <div class="summary-label">Área Casco (m²)</div>
+          </div>
+          <div class="summary-box bg-orange">
+            <div class="summary-number">${calculateBandasYTraseras?.traseraTotalArea || 0}</div>
+            <div class="summary-label">Área Traseras (m²)</div>
+          </div>
+        </div>
+        
+        <div class="section-title">RESUMEN DE CANTO POR MATERIAL</div>
+        <table class="mini-table">
+          <thead><tr><th>Material</th><th class="text-right">Metros Lineales</th></tr></thead>
+          <tbody>
+      `;
+      
+      Object.entries(calculateBandasYTraseras?.cantoByMaterial || {}).forEach(([mat, ml]) => {
+        html += `<tr><td>${mat}</td><td class="text-right font-bold">${ml.toFixed(2)} ml</td></tr>`;
+      });
+      
+      html += `
           </tbody>
         </table>
         
-        <div class="two-col">
-          <div>
-            <div class="section-title">RESUMEN MATERIALES</div>
-            <table class="mini-table">
-              <tr class="bg-amber"><td>Tablero Casco</td><td class="text-right font-bold">${calculateBandasYTraseras?.cascoTotalArea || 0} m²</td></tr>
-              <tr class="bg-amber"><td>Tablero Trasera</td><td class="text-right font-bold">${calculateBandasYTraseras?.traseraTotalArea || 0} m²</td></tr>
-              <tr class="bg-emerald"><td>Canto Total</td><td class="text-right font-bold">${calculateBandasYTraseras?.totalCanto || 0} ml</td></tr>
-            </table>
+        <div class="section-title">RESUMEN DE TRASERAS POR ESPESOR</div>
+        <table class="mini-table">
+          <thead><tr><th>Espesor</th><th class="text-right">Área (m²)</th><th class="text-right">Piezas</th></tr></thead>
+          <tbody>
+      `;
+      
+      Object.entries(calculateBandasYTraseras?.traserasByThickness || {}).forEach(([thickness, data]) => {
+        html += `<tr><td>${thickness}</td><td class="text-right">${data.area.toFixed(3)}</td><td class="text-right font-bold">${data.pieces}</td></tr>`;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+        
+        <div class="section-title">DETALLE DE TRASERAS</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Mueble</th>
+              <th class="text-center">Largo cm</th>
+              <th class="text-center">Ancho cm</th>
+              <th class="text-center">Espesor</th>
+              <th class="text-center">Cantidad</th>
+              <th class="text-right">Área m²</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      despieceData?.items?.forEach(item => {
+        const traseras = item.components?.filter(c => c.name?.toLowerCase().includes('trasera')) || [];
+        traseras.forEach(t => {
+          const qty = (t.quantity || 1) * (item.itemQuantity || 1);
+          const area = ((t.length || 0) * (t.width || 0) * qty / 10000).toFixed(3);
+          html += `
+            <tr class="avoid-break">
+              <td class="font-bold">${item.productCode} - ${item.productName}</td>
+              <td class="text-center">${t.length || 0}</td>
+              <td class="text-center">${t.width || 0}</td>
+              <td class="text-center">${t.thickness || 8}mm</td>
+              <td class="text-center font-bold">${qty}</td>
+              <td class="text-right">${area}</td>
+            </tr>
+          `;
+        });
+      });
+      
+      html += `</tbody></table>`;
+      
+    } else if (activeView === 'herrajes') {
+      // CASCO, PUERTA Y HERRAJE
+      html += `
+        <div class="section-title">DIMENSIONES DE CASCO POR MUEBLE</div>
+      `;
+      
+      despieceData?.items?.forEach((item, idx) => {
+        html += `
+          <div class="casco-box avoid-break">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="font-size:11px;">${idx + 1}. ${item.productCode}</strong>
+                <span style="color:#666; font-size:9px;"> - ${item.productName}</span>
+              </div>
+              <div style="font-size:10px; color:#ea580c; font-weight:bold;">×${item.itemQuantity || 1}</div>
+            </div>
+            <div class="casco-dims">
+              <div class="casco-dim"><div class="label">Ancho</div><div class="value">${item.originalWidth} cm</div></div>
+              <div class="casco-dim"><div class="label">Alto</div><div class="value">${item.originalHeight} cm</div></div>
+              <div class="casco-dim"><div class="label">Fondo</div><div class="value">${item.originalDepth} cm</div></div>
+            </div>
           </div>
-          <div>
-            <div class="section-title">HERRAJES ESTIMADOS</div>
-            <table class="mini-table">
-              <tr><td>Bisagras</td><td class="text-right font-bold">${calculateHerrajes?.bisagras || 0} uds</td></tr>
-              <tr><td>Correderas (pares)</td><td class="text-right font-bold">${calculateHerrajes?.correderas || 0}</td></tr>
-              <tr><td>Tiradores</td><td class="text-right font-bold">${calculateHerrajes?.tiradores || 0} uds</td></tr>
-              <tr><td>Soportes Baldas</td><td class="text-right font-bold">${calculateHerrajes?.soportesBaldas || 0} uds</td></tr>
-            </table>
-          </div>
-        </div>
-
+        `;
+      });
+      
+      // Puertas
+      const puertas = [];
+      despieceData?.items?.forEach(item => {
+        const puertaComp = item.components?.find(c => c.name?.toLowerCase().includes('puerta'));
+        if (puertaComp) {
+          puertas.push({
+            productCode: item.productCode,
+            productName: item.productName,
+            itemQuantity: item.itemQuantity || 1,
+            doorHeight: puertaComp.length,
+            doorWidth: puertaComp.width,
+            doorQty: puertaComp.quantity || 1
+          });
+        }
+      });
+      
+      if (puertas.length > 0) {
+        html += `
+          <div class="section-title">PUERTAS</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Mueble</th>
+                <th class="text-center">Alto Puerta (cm)</th>
+                <th class="text-center">Ancho Puerta (cm)</th>
+                <th class="text-center">Puertas/Mueble</th>
+                <th class="text-center">Total Puertas</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        let totalPuertas = 0;
+        puertas.forEach(p => {
+          const total = p.doorQty * p.itemQuantity;
+          totalPuertas += total;
+          html += `
+            <tr class="avoid-break">
+              <td class="font-bold">${p.productCode}</td>
+              <td class="text-center">${p.doorHeight}</td>
+              <td class="text-center">${p.doorWidth}</td>
+              <td class="text-center">${p.doorQty}</td>
+              <td class="text-center font-bold">${total}</td>
+            </tr>
+          `;
+        });
+        
+        html += `
+            <tr class="bg-amber"><td colspan="4" class="text-right font-bold">TOTAL PUERTAS:</td><td class="text-center font-bold">${totalPuertas}</td></tr>
+            </tbody>
+          </table>
+        `;
+      }
+      
+      // Herrajes estimados
+      html += `
+        <div class="section-title">HERRAJES ESTIMADOS</div>
+        <table class="mini-table">
+          <thead><tr><th>Herraje</th><th class="text-right">Cantidad</th></tr></thead>
+          <tbody>
+            <tr><td>Bisagras</td><td class="text-right font-bold">${calculateHerrajes?.bisagras || 0} uds</td></tr>
+            <tr><td>Correderas (pares)</td><td class="text-right font-bold">${calculateHerrajes?.correderas || 0}</td></tr>
+            <tr><td>Tiradores</td><td class="text-right font-bold">${calculateHerrajes?.tiradores || 0} uds</td></tr>
+            <tr><td>Soportes de Baldas</td><td class="text-right font-bold">${calculateHerrajes?.soportesBaldas || 0} uds</td></tr>
+          </tbody>
+        </table>
+      `;
+    }
+    
+    // Footer
+    html += `
         <div class="footer">
           Documento generado por LUIGGI HOME ERP | ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')} | Medidas en cm, grosor en mm
         </div>

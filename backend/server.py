@@ -4284,19 +4284,22 @@ def calculate_furniture_despiece(
     
     # Calcular dimensiones de puerta si tiene puertas
     if has_doors and num_doors > 0:
-        # Tolerancia para puertas: 2-3mm por lado
-        door_tolerance = 0.3  # cm (3mm)
+        # TOLERANCIAS CORRECTAS:
+        # - Alto: 2mm menos que el alto del mueble (0.2 cm)
+        # - Ancho: 3mm menos que el ancho correspondiente (0.3 cm)
+        door_height_tolerance = 0.2  # 2mm en cm
+        door_width_tolerance = 0.3   # 3mm en cm
         
-        # Alto de puerta: altura del mueble menos tolerancias
-        door_height = h - (door_tolerance * 2)
+        # Alto de puerta: altura del mueble - 2mm
+        door_height = h - door_height_tolerance
         
         # Ancho de puerta según número de puertas
         if num_doors == 2:
-            # Cada puerta = mitad del ancho - tolerancia central - tolerancias laterales
-            door_width = (w / 2) - door_tolerance - (door_tolerance / 2)
+            # Cada puerta = mitad del ancho - 3mm
+            door_width = (w / 2) - door_width_tolerance
         else:
-            # Puerta única = ancho total - tolerancias laterales
-            door_width = w - (door_tolerance * 2)
+            # Puerta única = ancho total - 3mm
+            door_width = w - door_width_tolerance
         
         # Grosor típico de puerta: 19mm (1.9cm)
         door_thickness_cm = 1.9
