@@ -655,28 +655,50 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         </div>
 
         {/* View Tabs */}
-        <div className="bg-indigo-50 px-8 py-3 flex gap-2 border-b border-indigo-100 shrink-0">
+        <div className="bg-indigo-50 px-8 py-3 flex gap-2 border-b border-indigo-100 shrink-0 flex-wrap">
           <button
             onClick={() => setActiveView('montaje')}
-            className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+            className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
               activeView === 'montaje' 
                 ? 'bg-indigo-950 text-white shadow-lg' 
                 : 'bg-white text-indigo-400 hover:bg-indigo-100 border border-indigo-100'
             }`}
           >
-            <Package size={16} />
-            Orden de Montaje
+            <Package size={14} />
+            Orden Montaje
           </button>
           <button
             onClick={() => setActiveView('corte')}
-            className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+            className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
               activeView === 'corte' 
                 ? 'bg-orange-600 text-white shadow-lg' 
                 : 'bg-white text-indigo-400 hover:bg-indigo-100 border border-indigo-100'
             }`}
           >
-            <Scissors size={16} />
-            Lista de Corte
+            <Scissors size={14} />
+            Lista Corte
+          </button>
+          <button
+            onClick={() => setActiveView('bandas')}
+            className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeView === 'bandas' 
+                ? 'bg-emerald-600 text-white shadow-lg' 
+                : 'bg-white text-indigo-400 hover:bg-indigo-100 border border-indigo-100'
+            }`}
+          >
+            <Grid3X3 size={14} />
+            Bandas y Traseras
+          </button>
+          <button
+            onClick={() => setActiveView('herrajes')}
+            className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeView === 'herrajes' 
+                ? 'bg-amber-600 text-white shadow-lg' 
+                : 'bg-white text-indigo-400 hover:bg-indigo-100 border border-indigo-100'
+            }`}
+          >
+            <Wrench size={14} />
+            Casco, Puerta y Herraje
           </button>
         </div>
 
