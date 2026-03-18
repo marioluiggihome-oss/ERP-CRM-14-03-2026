@@ -282,35 +282,58 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         <meta charset="UTF-8">
         <title>Despiece - ${editableExpedient || 'PRESUPUESTO'}</title>
         <style>
-          @page { size: A4; margin: 15mm; }
+          @page { 
+            size: A4 portrait; 
+            margin: 10mm 8mm; 
+          }
+          @media print {
+            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: Arial, sans-serif; font-size: 10px; color: #333; }
-          .header { background: #1e1b4b; color: white; padding: 15px; margin-bottom: 15px; }
-          .header h1 { font-size: 18px; margin-bottom: 5px; }
-          .header p { font-size: 10px; opacity: 0.8; }
-          .info-bar { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: #f3f4f6; border-radius: 5px; }
-          .info-item { text-align: center; }
-          .info-label { font-size: 8px; color: #666; text-transform: uppercase; }
-          .info-value { font-size: 12px; font-weight: bold; }
-          .summary { display: flex; gap: 10px; margin-bottom: 15px; }
-          .summary-box { flex: 1; padding: 10px; background: #eef2ff; border-radius: 5px; text-align: center; }
-          .summary-number { font-size: 20px; font-weight: bold; color: #4f46e5; }
-          .summary-label { font-size: 8px; color: #666; text-transform: uppercase; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-          th { background: #1e1b4b; color: white; padding: 8px 5px; font-size: 9px; text-align: left; }
-          td { padding: 6px 5px; border-bottom: 1px solid #e5e7eb; font-size: 9px; }
+          body { font-family: Arial, Helvetica, sans-serif; font-size: 9px; color: #333; line-height: 1.3; }
+          .header { background: #1e1b4b; color: white; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+          .header h1 { font-size: 14px; margin: 0; }
+          .header-right { text-align: right; font-size: 8px; opacity: 0.8; }
+          .info-bar { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 8px; background: #f3f4f6; border: 1px solid #e5e7eb; font-size: 8px; }
+          .info-item { text-align: center; flex: 1; }
+          .info-label { font-size: 7px; color: #666; text-transform: uppercase; font-weight: bold; }
+          .info-value { font-size: 10px; font-weight: bold; margin-top: 2px; }
+          .summary { display: flex; gap: 6px; margin-bottom: 10px; }
+          .summary-box { flex: 1; padding: 6px 8px; background: #eef2ff; border: 1px solid #c7d2fe; text-align: center; }
+          .summary-number { font-size: 16px; font-weight: bold; color: #4f46e5; }
+          .summary-label { font-size: 7px; color: #666; text-transform: uppercase; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8px; }
+          th { background: #1e1b4b; color: white; padding: 5px 4px; font-size: 7px; text-align: left; font-weight: bold; }
+          td { padding: 4px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
           tr:nth-child(even) { background: #f9fafb; }
-          .furniture-header { background: #fef3c7; font-weight: bold; }
-          .component-row td { padding-left: 20px; }
-          .section-title { background: #1e1b4b; color: white; padding: 10px; margin: 15px 0 10px 0; font-weight: bold; }
+          .furniture-header { background: #fef3c7 !important; font-weight: bold; }
+          .furniture-header td { font-size: 9px; padding: 6px 4px; border-bottom: 2px solid #f59e0b; }
+          .component-row td:first-child { padding-left: 12px; }
+          .section-title { background: #1e1b4b; color: white; padding: 6px 10px; margin: 10px 0 6px 0; font-weight: bold; font-size: 10px; page-break-after: avoid; }
           .page-break { page-break-before: always; }
-          .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 8px; color: #666; }
+          .avoid-break { page-break-inside: avoid; }
+          .footer { margin-top: 15px; padding-top: 8px; border-top: 1px solid #ccc; font-size: 7px; color: #666; text-align: center; }
+          .two-col { display: flex; gap: 10px; }
+          .two-col > div { flex: 1; }
+          .mini-table { font-size: 8px; }
+          .mini-table th { padding: 4px; font-size: 7px; }
+          .mini-table td { padding: 3px 4px; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          .font-bold { font-weight: bold; }
+          .bg-amber { background: #fef3c7; }
+          .bg-emerald { background: #d1fae5; }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>ORDEN DE DESPIECE</h1>
-          <p>LUIGGI HOME - Sistema de Gestión</p>
+          <div>
+            <h1>ORDEN DE DESPIECE</h1>
+          </div>
+          <div class="header-right">
+            LUIGGI HOME ERP<br/>
+            ${fechaHoy}
+          </div>
         </div>
         
         <div class="info-bar">
@@ -327,11 +350,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <div class="info-value">${editableProjectRef || '-'}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">Fecha</div>
-            <div class="info-value">${fechaHoy}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Material Base</div>
+            <div class="info-label">Material Casco</div>
             <div class="info-value">${carcassMaterialName || '-'}</div>
           </div>
         </div>
@@ -346,26 +365,27 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <div class="summary-label">Piezas</div>
           </div>
           <div class="summary-box">
-            <div class="summary-number">${despieceData?.summary?.totalArea || 0} m²</div>
-            <div class="summary-label">Área Total</div>
+            <div class="summary-number">${despieceData?.summary?.totalArea || 0}</div>
+            <div class="summary-label">Área (m²)</div>
           </div>
           <div class="summary-box">
-            <div class="summary-number">${calculateBandasYTraseras?.totalCanto || 0} ml</div>
-            <div class="summary-label">Canto Total</div>
+            <div class="summary-number">${calculateBandasYTraseras?.totalCanto || 0}</div>
+            <div class="summary-label">Canto (ml)</div>
           </div>
         </div>
 
-        <div class="section-title">LISTA DE PIEZAS POR MUEBLE</div>
+        <div class="section-title">LISTA DE PIEZAS</div>
         <table>
           <thead>
             <tr>
-              <th>Mueble / Componente</th>
-              <th>Material</th>
-              <th>Largo (cm)</th>
-              <th>Ancho (cm)</th>
-              <th>Grosor</th>
-              <th>Cant.</th>
-              <th>Canto</th>
+              <th style="width:25%">Pieza</th>
+              <th style="width:15%">Material</th>
+              <th style="width:12%" class="text-center">Largo</th>
+              <th style="width:12%" class="text-center">Ancho</th>
+              <th style="width:8%" class="text-center">Gr.</th>
+              <th style="width:8%" class="text-center">Ud.</th>
+              <th style="width:10%" class="text-center">Canto</th>
+              <th style="width:10%">Notas</th>
             </tr>
           </thead>
           <tbody>
@@ -373,22 +393,24 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     
     despieceData?.items?.forEach(item => {
       html += `
-        <tr class="furniture-header">
-          <td colspan="7">${item.productCode} - ${item.productName} (${item.originalWidth}×${item.originalHeight}×${item.originalDepth} cm) × ${item.itemQuantity || 1}</td>
+        <tr class="furniture-header avoid-break">
+          <td colspan="8"><strong>${item.productCode}</strong> - ${item.productName} (${item.originalWidth}×${item.originalHeight}×${item.originalDepth} cm) × ${item.itemQuantity || 1}</td>
         </tr>
       `;
       
       item.components?.forEach(comp => {
-        const { totalMl } = calculateCantoForComponent(comp, (comp.quantity || 1) * (item.itemQuantity || 1));
+        const qty = (comp.quantity || 1) * (item.itemQuantity || 1);
+        const { totalMl } = calculateCantoForComponent(comp, qty);
         html += `
-          <tr class="component-row">
-            <td>${comp.name}</td>
-            <td>${comp.material || '-'}</td>
-            <td>${comp.length || 0}</td>
-            <td>${comp.width || 0}</td>
-            <td>${comp.thickness || 18}mm</td>
-            <td>${(comp.quantity || 1) * (item.itemQuantity || 1)}</td>
-            <td>${totalMl.toFixed(2)} ml</td>
+          <tr class="component-row avoid-break">
+            <td>${comp.name || '-'}</td>
+            <td>${comp.material || carcassMaterialName || '-'}</td>
+            <td class="text-center">${comp.length || 0}</td>
+            <td class="text-center">${comp.width || 0}</td>
+            <td class="text-center">${comp.thickness || 18}</td>
+            <td class="text-center font-bold">${qty}</td>
+            <td class="text-center">${totalMl.toFixed(1)}</td>
+            <td>${comp.notes || ''}</td>
           </tr>
         `;
       });
@@ -398,37 +420,28 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           </tbody>
         </table>
         
-        <div class="section-title">RESUMEN DE MATERIALES</div>
-        <table>
-          <tr>
-            <th>Concepto</th>
-            <th>Cantidad</th>
-          </tr>
-          <tr>
-            <td>Tablero Casco (${carcassMaterialName || 'Melamina'})</td>
-            <td>${calculateBandasYTraseras?.cascoTotalArea || 0} m²</td>
-          </tr>
-          <tr>
-            <td>Tablero Trasera</td>
-            <td>${calculateBandasYTraseras?.traseraTotalArea || 0} m²</td>
-          </tr>
-          <tr>
-            <td>Canto Total</td>
-            <td>${calculateBandasYTraseras?.totalCanto || 0} ml</td>
-          </tr>
-        </table>
-
-        <div class="section-title">HERRAJES ESTIMADOS</div>
-        <table>
-          <tr><th>Herraje</th><th>Cantidad</th></tr>
-          <tr><td>Bisagras</td><td>${calculateHerrajes?.bisagras || 0} uds</td></tr>
-          <tr><td>Pares Correderas</td><td>${calculateHerrajes?.correderas || 0} pares</td></tr>
-          <tr><td>Tiradores</td><td>${calculateHerrajes?.tiradores || 0} uds</td></tr>
-          <tr><td>Soportes Baldas</td><td>${calculateHerrajes?.soportesBaldas || 0} uds</td></tr>
-        </table>
+        <div class="two-col">
+          <div>
+            <div class="section-title">RESUMEN MATERIALES</div>
+            <table class="mini-table">
+              <tr class="bg-amber"><td>Tablero Casco</td><td class="text-right font-bold">${calculateBandasYTraseras?.cascoTotalArea || 0} m²</td></tr>
+              <tr class="bg-amber"><td>Tablero Trasera</td><td class="text-right font-bold">${calculateBandasYTraseras?.traseraTotalArea || 0} m²</td></tr>
+              <tr class="bg-emerald"><td>Canto Total</td><td class="text-right font-bold">${calculateBandasYTraseras?.totalCanto || 0} ml</td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="section-title">HERRAJES ESTIMADOS</div>
+            <table class="mini-table">
+              <tr><td>Bisagras</td><td class="text-right font-bold">${calculateHerrajes?.bisagras || 0} uds</td></tr>
+              <tr><td>Correderas (pares)</td><td class="text-right font-bold">${calculateHerrajes?.correderas || 0}</td></tr>
+              <tr><td>Tiradores</td><td class="text-right font-bold">${calculateHerrajes?.tiradores || 0} uds</td></tr>
+              <tr><td>Soportes Baldas</td><td class="text-right font-bold">${calculateHerrajes?.soportesBaldas || 0} uds</td></tr>
+            </table>
+          </div>
+        </div>
 
         <div class="footer">
-          Generado por LUIGGI HOME ERP - ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')}
+          Documento generado por LUIGGI HOME ERP | ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')} | Medidas en cm, grosor en mm
         </div>
       </body>
       </html>
