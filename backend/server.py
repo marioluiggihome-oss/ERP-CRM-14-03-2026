@@ -50,6 +50,7 @@ from routes import (
     despiece_budgeter_router,
     libraries_router
 )
+from routes.fabrica import router as fabrica_router
 
 # Modelos compartidos
 from models.schemas import (
@@ -112,6 +113,7 @@ api_router.include_router(ia_lab_router)
 api_router.include_router(auth_advanced_router)
 api_router.include_router(despiece_budgeter_router)
 api_router.include_router(libraries_router)
+api_router.include_router(fabrica_router)
 # Nota: auth, products, clients, projects, crm están duplicados en server.py
 # Se integrarán gradualmente para evitar conflictos
 
@@ -4248,6 +4250,64 @@ def calculate_furniture_despiece(
             carcass_material,
             shelf_length, shelf_width, g, shelf_count,
             "Regulable con soportes"
+        )
+    
+    # =============================================
+    # PUERTAS - Calcular dimensiones de puertas
+    # =============================================
+    # Detectar si el mueble tiene puertas según su nombre/categoría
+    product_name_upper = item.productName.upper()
+    product_code_upper = item.productCode.upper()
+    
+    # Detectar cantidad de puertas
+    has_doors = False
+    num_doors = 0
+    
+    # 2P = 2 puertas, 1P = 1 puerta, D/I = 1 puerta (derecha/izquierda)
+    if "2P" in product_name_upper or "2P" in product_code_upper:
+        has_doors = True
+        num_doors = 2
+    elif "1P" in product_name_upper or "1P" in product_code_upper:
+        has_doors = True
+        num_doors = 1
+    elif "/I" in product_name_upper or "/D" in product_name_upper or "D/I" in product_name_upper:
+        has_doors = True
+        num_doors = 1
+    elif "PUERTA" in product_name_upper or "PTA" in product_code_upper:
+        has_doors = True
+        num_doors = 1
+    # Muebles que normalmente tienen puertas pero no lo especifican
+    elif any(x in product_name_upper for x in ["BAJO ", "ALTO ", "COLUMNA", "SEMICOLUMNA", "RINCON"]):
+        # Asumir 1 puerta para anchos <= 45cm, 2 puertas para mayores
+        has_doors = True
+        num_doors = 2 if w > 45 else 1
+    
+    # Calcular dimensiones de puerta si tiene puertas
+    if has_doors and num_doors > 0:
+        # Tolerancia para puertas: 2-3mm por lado
+        door_tolerance = 0.3  # cm (3mm)
+        
+        # Alto de puerta: altura del mueble menos tolerancias
+        door_height = h - (door_tolerance * 2)
+        
+        # Ancho de puerta según número de puertas
+        if num_doors == 2:
+            # Cada puerta = mitad del ancho - tolerancia central - tolerancias laterales
+            door_width = (w / 2) - door_tolerance - (door_tolerance / 2)
+        else:
+            # Puerta única = ancho total - tolerancias laterales
+            door_width = w - (door_tolerance * 2)
+        
+        # Grosor típico de puerta: 19mm (1.9cm)
+        door_thickness_cm = 1.9
+        
+        # Agregar puerta(s) al despiece
+        add_component(
+            f"Puerta {'(' + str(num_doors) + ' uds)' if num_doors > 1 else ''}",
+            "PUERTA",
+            "PUERTA COLOR",  # Material especial para puertas (se reemplaza con acabado)
+            round(door_height, 1), round(door_width, 1), door_thickness_cm, num_doors,
+            f"Puerta acabado a elegir. {num_doors} puerta{'s' if num_doors > 1 else ''}"
         )
     
     # Calculate totals

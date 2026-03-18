@@ -1178,3 +1178,159 @@ export const montajesAPI = {
   }
 };
 
+// ============================================
+// FABRICA (Portal de Fábrica) API
+// ============================================
+
+export const fabricaAPI = {
+  // Órdenes de fabricación
+  getOrders: async (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.priority) params.append('priority', filters.priority);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.skip) params.append('skip', filters.skip);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/fabrica/orders?${params.toString()}`
+      : `${API_URL}/api/fabrica/orders`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener órdenes');
+    }
+    return response.json();
+  },
+
+  getOrder: async (orderId) => {
+    const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener orden');
+    }
+    return response.json();
+  },
+
+  createOrder: async (order, userId = '', userName = '') => {
+    const params = new URLSearchParams();
+    if (userId) params.append('userId', userId);
+    if (userName) params.append('userName', userName);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/fabrica/orders?${params.toString()}`
+      : `${API_URL}/api/fabrica/orders`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al crear orden');
+    }
+    return response.json();
+  },
+
+  updateOrder: async (orderId, update) => {
+    const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al actualizar orden');
+    }
+    return response.json();
+  },
+
+  deleteOrder: async (orderId) => {
+    const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al eliminar orden');
+    }
+    return response.json();
+  },
+
+  updateOrderStatus: async (orderId, status, notes = '') => {
+    const params = new URLSearchParams({ status });
+    if (notes) params.append('notes', notes);
+    
+    const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/status?${params.toString()}`, {
+      method: 'PATCH'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al actualizar estado');
+    }
+    return response.json();
+  },
+
+  setDeliveryDate: async (orderId, estimatedDate, notes = '') => {
+    const params = new URLSearchParams({ estimated_date: estimatedDate });
+    if (notes) params.append('notes', notes);
+    
+    const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/delivery-date?${params.toString()}`, {
+      method: 'PATCH'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al establecer fecha de entrega');
+    }
+    return response.json();
+  },
+
+  // Importación
+  importPDF: async (pdfBase64, fileName) => {
+    const response = await fetch(`${API_URL}/api/fabrica/import-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdfBase64, fileName })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al importar PDF');
+    }
+    return response.json();
+  },
+
+  importFromBudget: async (budgetId, userId = '', userName = '') => {
+    const params = new URLSearchParams();
+    if (userId) params.append('userId', userId);
+    if (userName) params.append('userName', userName);
+    
+    const response = await fetch(`${API_URL}/api/fabrica/import-from-budget/${budgetId}?${params.toString()}`, {
+      method: 'POST'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al importar desde presupuesto');
+    }
+    return response.json();
+  },
+
+  // Dashboard y estadísticas
+  getDashboardStats: async () => {
+    const response = await fetch(`${API_URL}/api/fabrica/dashboard/stats`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener estadísticas');
+    }
+    return response.json();
+  },
+
+  // Despiece de orden
+  getOrderDespiece: async (orderId) => {
+    const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/despiece`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener despiece');
+    }
+    return response.json();
+  }
+};
+

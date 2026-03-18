@@ -41,6 +41,7 @@ class UserModelInternal(BaseModel):
     isRepresentative: bool = False
     isPrescriptor: bool = False
     isTienda: bool = False
+    isFabrica: bool = False  # Rol de fábrica - acceso a órdenes de fabricación
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
@@ -55,6 +56,9 @@ class UserModelInternal(BaseModel):
     canAccessCRM: bool = False
     canUseDigitalizador: bool = False
     canAccessArmarios: bool = False
+    canAccessFabrica: bool = False  # Acceso al portal de fábrica
+    canManageOrders: bool = False  # Gestión de órdenes de fabricación
+    canSetDeliveryDates: bool = False  # Puede establecer plazos de entrega
     canAuthorizePermissions: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
@@ -74,6 +78,7 @@ class UserResponse(BaseModel):
     isRepresentative: bool = False
     isPrescriptor: bool = False
     isTienda: bool = False
+    isFabrica: bool = False  # Rol de fábrica
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
@@ -89,6 +94,9 @@ class UserResponse(BaseModel):
     canAccessCRM: bool = False
     canUseDigitalizador: bool = False
     canAccessArmarios: bool = False
+    canAccessFabrica: bool = False  # Acceso al portal de fábrica
+    canManageOrders: bool = False  # Gestión de órdenes de fabricación
+    canSetDeliveryDates: bool = False  # Puede establecer plazos de entrega
     canAuthorizePermissions: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
@@ -107,6 +115,7 @@ class UserCreate(BaseModel):
     isRepresentative: bool = False
     isPrescriptor: bool = False
     isTienda: bool = False
+    isFabrica: bool = False  # Rol de fábrica
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
@@ -122,6 +131,9 @@ class UserCreate(BaseModel):
     canAccessCRM: bool = False
     canUseDigitalizador: bool = False
     canAccessArmarios: bool = False
+    canAccessFabrica: bool = False  # Acceso al portal de fábrica
+    canManageOrders: bool = False  # Gestión de órdenes de fabricación
+    canSetDeliveryDates: bool = False  # Puede establecer plazos de entrega
     canAuthorizePermissions: bool = False
     useCustomBranding: bool = False
     canChangeLogo: bool = False
@@ -140,6 +152,7 @@ class UserUpdate(BaseModel):
     isRepresentative: Optional[bool] = None
     isPrescriptor: Optional[bool] = None
     isTienda: Optional[bool] = None
+    isFabrica: Optional[bool] = None  # Rol de fábrica
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
     allowedLibraries: Optional[List[str]] = None  # Tarifas/Bibliotecas activas
@@ -148,6 +161,9 @@ class UserUpdate(BaseModel):
     discountMontada: Optional[float] = None
     discountDespiece: Optional[float] = None
     canSeeCost: Optional[bool] = None
+    canAccessFabrica: Optional[bool] = None  # Acceso al portal de fábrica
+    canManageOrders: Optional[bool] = None  # Gestión de órdenes de fabricación
+    canSetDeliveryDates: Optional[bool] = None  # Puede establecer plazos de entrega
     canSeeRetail: Optional[bool] = None
     canUseAIAnalysis: Optional[bool] = None
     canManageArticles: Optional[bool] = None

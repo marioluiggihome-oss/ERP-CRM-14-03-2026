@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory } from 'lucide-react';
 import "./App.css";
 import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
@@ -17,6 +17,7 @@ import AdminWorkView from './components/AdminWorkView';
 import CommercialWorkView from './components/CommercialWorkView';
 import PrescriptorAgenda from './components/PrescriptorAgenda';
 import Armarios from './components/Armarios';
+import PortalFabrica from './components/PortalFabrica';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI } from './services/api';
 import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './services/authService';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
@@ -648,6 +649,18 @@ const App = () => {
                 </button>
               )}
               
+              {/* Portal de Fábrica - Solo usuarios con permiso canAccessFabrica o isFabrica */}
+              {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica || state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+                <button 
+                  onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                  data-testid="fabrica-nav-btn"
+                >
+                  <Factory size={22}/>
+                  <span className="text-[7px] font-black uppercase tracking-widest">Fábrica</span>
+                </button>
+              )}
+              
               {/* Armarios ahora está en la barra del presupuesto, no aquí */}
               
               {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
@@ -723,6 +736,11 @@ const App = () => {
             )}
             {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
               <AgendaMontajes currentUser={state.currentUser} />
+            )}
+            
+            {/* Portal de Fábrica */}
+            {state.currentTab === 'fabrica' && (state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica || state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+              <PortalFabrica currentUser={state.currentUser} />
             )}
             
             {/* CRM - Single Component with internal navigation */}

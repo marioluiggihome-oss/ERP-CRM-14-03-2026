@@ -1,0 +1,790 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Factory, Package, Clock, CheckCircle, Truck, AlertTriangle, 
+  Plus, Search, Filter, Calendar, FileText, Upload, Download,
+  ChevronDown, ChevronRight, Edit3, Trash2, Eye, Printer,
+  BarChart3, TrendingUp, Box, Scissors, RefreshCw, X
+} from 'lucide-react';
+import { fabricaAPI } from '../services/api';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Colores de estado
+const STATUS_CONFIG = {
+  draft: { label: 'Borrador', color: 'bg-gray-100 text-gray-700', icon: FileText },
+  confirmed: { label: 'Confirmada', color: 'bg-blue-100 text-blue-700', icon: CheckCircle },
+  in_production: { label: 'En Producción', color: 'bg-amber-100 text-amber-700', icon: Factory },
+  ready: { label: 'Lista', color: 'bg-emerald-100 text-emerald-700', icon: Package },
+  delivered: { label: 'Entregada', color: 'bg-green-100 text-green-700', icon: Truck },
+  cancelled: { label: 'Cancelada', color: 'bg-red-100 text-red-700', icon: X }
+};
+
+const PRIORITY_CONFIG = {
+  low: { label: 'Baja', color: 'bg-slate-100 text-slate-600' },
+  normal: { label: 'Normal', color: 'bg-blue-50 text-blue-600' },
+  high: { label: 'Alta', color: 'bg-orange-100 text-orange-700' },
+  urgent: { label: 'Urgente', color: 'bg-red-100 text-red-700' }
+};
+
+const PortalFabrica = ({ currentUser }) => {
+  const [orders, setOrders] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [activeView, setActiveView] = useState('list'); // 'list', 'kanban', 'detail', 'new'
+  const [filters, setFilters] = useState({ status: '', priority: '', search: '' });
+  const [showFilters, setShowFilters] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState({});
+  
+  // Modals
+  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showDeliveryDateModal, setShowDeliveryDateModal] = useState(null);
+
+  // Cargar datos
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [ordersRes, statsRes] = await Promise.all([
+        fabricaAPI.getOrders(filters),
+        fabricaAPI.getDashboardStats()
+      ]);
+      setOrders(ordersRes.orders || []);
+      setStats(statsRes);
+    } catch (error) {
+      console.error('Error loading factory data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Cambiar estado de orden
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await fabricaAPI.updateOrderStatus(orderId, newStatus);
+      loadData();
+    } catch (error) {
+      alert('Error al cambiar estado: ' + error.message);
+    }
+  };
+
+  // Establecer fecha de entrega
+  const handleSetDeliveryDate = async (orderId, date, notes) => {
+    try {
+      await fabricaAPI.setDeliveryDate(orderId, date, notes);
+      setShowDeliveryDateModal(null);
+      loadData();
+    } catch (error) {
+      alert('Error al establecer fecha: ' + error.message);
+    }
+  };
+
+  // Eliminar orden
+  const handleDeleteOrder = async (orderId) => {
+    if (!window.confirm('¿Eliminar esta orden de fabricación?')) return;
+    try {
+      await fabricaAPI.deleteOrder(orderId);
+      loadData();
+    } catch (error) {
+      alert('Error al eliminar: ' + error.message);
+    }
+  };
+
+  // Toggle expandir orden
+  const toggleExpand = (orderId) => {
+    setExpandedOrders(prev => ({ ...prev, [orderId]: !prev[orderId] }));
+  };
+
+  // Renderizar tarjeta de estadísticas
+  const StatCard = ({ title, value, icon: Icon, color = 'indigo', subtitle }) => (
+    <div className={`bg-white rounded-2xl p-5 border border-${color}-100 shadow-sm`}>
+      <div className="flex items-center justify-between mb-2">
+        <p className={`text-xs font-bold uppercase tracking-widest text-${color}-400`}>{title}</p>
+        <div className={`p-2 bg-${color}-100 rounded-xl`}>
+          <Icon size={18} className={`text-${color}-600`} />
+        </div>
+      </div>
+      <p className={`text-3xl font-black text-${color}-900`}>{value}</p>
+      {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+    </div>
+  );
+
+  // Vista de lista de órdenes
+  const OrderListView = () => (
+    <div className="space-y-3">
+      {orders.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-indigo-200">
+          <Factory size={48} className="mx-auto text-indigo-200 mb-4" />
+          <p className="text-indigo-400 font-bold">No hay órdenes de fabricación</p>
+          <p className="text-indigo-300 text-sm mt-1">Crea una nueva orden o importa desde un presupuesto</p>
+          <button
+            onClick={() => setShowNewOrderModal(true)}
+            className="mt-4 bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
+          >
+            Crear Primera Orden
+          </button>
+        </div>
+      ) : (
+        orders.map(order => {
+          const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.draft;
+          const priorityConfig = PRIORITY_CONFIG[order.priority] || PRIORITY_CONFIG.normal;
+          const StatusIcon = statusConfig.icon;
+          const isExpanded = expandedOrders[order.id];
+
+          return (
+            <div key={order.id} className="bg-white rounded-2xl border border-indigo-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              {/* Header */}
+              <div 
+                className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-indigo-50/50"
+                onClick={() => toggleExpand(order.id)}
+              >
+                <div className="flex items-center gap-4">
+                  <button className="p-1">
+                    {isExpanded ? <ChevronDown size={20} className="text-indigo-400" /> : <ChevronRight size={20} className="text-indigo-400" />}
+                  </button>
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-black text-indigo-900">{order.orderNumber}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusConfig.color}`}>
+                        <StatusIcon size={12} className="inline mr-1" />
+                        {statusConfig.label}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${priorityConfig.color}`}>
+                        {priorityConfig.label}
+                      </span>
+                    </div>
+                    <p className="text-sm text-indigo-600 mt-0.5">{order.customerName || 'Sin cliente'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 text-sm">
+                  <div className="text-center">
+                    <p className="text-xs text-indigo-400 font-bold uppercase">Muebles</p>
+                    <p className="font-black text-indigo-900">{order.items?.length || 0}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-indigo-400 font-bold uppercase">Piezas</p>
+                    <p className="font-black text-orange-600">{order.totalPieces || 0}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-indigo-400 font-bold uppercase">Entrega</p>
+                    <p className={`font-bold ${order.estimatedDeliveryDate ? 'text-emerald-600' : 'text-gray-400'}`}>
+                      {order.estimatedDeliveryDate 
+                        ? new Date(order.estimatedDeliveryDate).toLocaleDateString('es-ES') 
+                        : 'Sin fecha'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Content */}
+              {isExpanded && (
+                <div className="px-6 pb-4 border-t border-indigo-50">
+                  {/* Items */}
+                  {order.items && order.items.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">Muebles en la orden</p>
+                      <div className="bg-indigo-50 rounded-xl overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-indigo-100">
+                            <tr className="text-xs text-indigo-700 uppercase">
+                              <th className="px-4 py-2 text-left">Código</th>
+                              <th className="px-4 py-2 text-left">Descripción</th>
+                              <th className="px-4 py-2 text-center">Dimensiones</th>
+                              <th className="px-4 py-2 text-center">Cant.</th>
+                              <th className="px-4 py-2 text-center">Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-indigo-100">
+                            {order.items.map((item, idx) => (
+                              <tr key={item.id || idx} className="bg-white">
+                                <td className="px-4 py-2 font-bold text-indigo-900">{item.productCode}</td>
+                                <td className="px-4 py-2 text-indigo-600">{item.productName}</td>
+                                <td className="px-4 py-2 text-center text-xs">{item.width}×{item.height}×{item.depth} cm</td>
+                                <td className="px-4 py-2 text-center font-bold text-orange-600">{item.quantity}</td>
+                                <td className="px-4 py-2 text-center">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATUS_CONFIG[item.status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                                    {STATUS_CONFIG[item.status]?.label || item.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {/* Cambiar Estado */}
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                      className="px-3 py-1.5 border border-indigo-200 rounded-lg text-sm font-bold text-indigo-700 bg-white"
+                      data-testid={`order-status-select-${order.id}`}
+                    >
+                      <option value="draft">Borrador</option>
+                      <option value="confirmed">Confirmada</option>
+                      <option value="in_production">En Producción</option>
+                      <option value="ready">Lista</option>
+                      <option value="delivered">Entregada</option>
+                      <option value="cancelled">Cancelada</option>
+                    </select>
+
+                    <button
+                      onClick={() => setShowDeliveryDateModal(order)}
+                      className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-bold hover:bg-emerald-200 flex items-center gap-1"
+                      data-testid={`set-delivery-date-${order.id}`}
+                    >
+                      <Calendar size={14} />
+                      Fecha Entrega
+                    </button>
+
+                    <button
+                      onClick={() => window.open(`${API_URL}/api/fabrica/orders/${order.id}/despiece`, '_blank')}
+                      className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold hover:bg-orange-200 flex items-center gap-1"
+                      data-testid={`view-despiece-${order.id}`}
+                    >
+                      <Scissors size={14} />
+                      Ver Despiece
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteOrder(order.id)}
+                      className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-bold hover:bg-red-200 flex items-center gap-1"
+                      data-testid={`delete-order-${order.id}`}
+                    >
+                      <Trash2 size={14} />
+                      Eliminar
+                    </button>
+                  </div>
+
+                  {/* Notes */}
+                  {(order.internalNotes || order.productionNotes) && (
+                    <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <p className="text-xs font-bold text-amber-700 uppercase mb-1">Notas</p>
+                      <p className="text-sm text-amber-800">{order.internalNotes || order.productionNotes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+
+  // Modal para nueva orden
+  const NewOrderModal = () => {
+    const [formData, setFormData] = useState({
+      customerName: '',
+      customerCode: '',
+      contactPhone: '',
+      deliveryAddress: '',
+      priority: 'normal',
+      items: [],
+      internalNotes: ''
+    });
+    const [newItem, setNewItem] = useState({
+      productCode: '',
+      productName: '',
+      quantity: 1,
+      width: 60,
+      height: 70,
+      depth: 58
+    });
+
+    const handleAddItem = () => {
+      if (!newItem.productCode) return;
+      setFormData(prev => ({
+        ...prev,
+        items: [...prev.items, { ...newItem, id: `temp-${Date.now()}` }]
+      }));
+      setNewItem({ productCode: '', productName: '', quantity: 1, width: 60, height: 70, depth: 58 });
+    };
+
+    const handleRemoveItem = (index) => {
+      setFormData(prev => ({
+        ...prev,
+        items: prev.items.filter((_, i) => i !== index)
+      }));
+    };
+
+    const handleSubmit = async () => {
+      if (formData.items.length === 0) {
+        alert('Añade al menos un mueble a la orden');
+        return;
+      }
+      try {
+        await fabricaAPI.createOrder(formData, currentUser?.id, currentUser?.clientName);
+        setShowNewOrderModal(false);
+        loadData();
+      } catch (error) {
+        alert('Error al crear orden: ' + error.message);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-indigo-950 text-white px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <Factory size={24} />
+              <h2 className="font-black text-lg">Nueva Orden de Fabricación</h2>
+            </div>
+            <button onClick={() => setShowNewOrderModal(false)} className="p-2 hover:bg-white/10 rounded-xl">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-auto p-6 space-y-6">
+            {/* Datos del cliente */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-indigo-400 uppercase">Cliente *</label>
+                <input
+                  type="text"
+                  value={formData.customerName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                  className="w-full mt-1 px-4 py-2 border border-indigo-200 rounded-xl focus:border-indigo-500 outline-none"
+                  placeholder="Nombre del cliente"
+                  data-testid="new-order-customer-name"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-indigo-400 uppercase">Código Cliente</label>
+                <input
+                  type="text"
+                  value={formData.customerCode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customerCode: e.target.value }))}
+                  className="w-full mt-1 px-4 py-2 border border-indigo-200 rounded-xl focus:border-indigo-500 outline-none"
+                  placeholder="CLI-001"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-indigo-400 uppercase">Teléfono</label>
+                <input
+                  type="text"
+                  value={formData.contactPhone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, contactPhone: e.target.value }))}
+                  className="w-full mt-1 px-4 py-2 border border-indigo-200 rounded-xl focus:border-indigo-500 outline-none"
+                  placeholder="600 123 456"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-indigo-400 uppercase">Prioridad</label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
+                  className="w-full mt-1 px-4 py-2 border border-indigo-200 rounded-xl focus:border-indigo-500 outline-none"
+                  data-testid="new-order-priority"
+                >
+                  <option value="low">Baja</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">Alta</option>
+                  <option value="urgent">Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-indigo-400 uppercase">Dirección de Entrega</label>
+              <input
+                type="text"
+                value={formData.deliveryAddress}
+                onChange={(e) => setFormData(prev => ({ ...prev, deliveryAddress: e.target.value }))}
+                className="w-full mt-1 px-4 py-2 border border-indigo-200 rounded-xl focus:border-indigo-500 outline-none"
+                placeholder="Calle, número, ciudad..."
+              />
+            </div>
+
+            {/* Añadir muebles */}
+            <div>
+              <p className="text-xs font-bold text-indigo-400 uppercase mb-2">Muebles a Fabricar</p>
+              <div className="bg-indigo-50 rounded-xl p-4">
+                <div className="grid grid-cols-6 gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newItem.productCode}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, productCode: e.target.value }))}
+                    className="col-span-1 px-3 py-2 border border-indigo-200 rounded-lg text-sm"
+                    placeholder="Código"
+                  />
+                  <input
+                    type="text"
+                    value={newItem.productName}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, productName: e.target.value }))}
+                    className="col-span-2 px-3 py-2 border border-indigo-200 rounded-lg text-sm"
+                    placeholder="Descripción"
+                  />
+                  <input
+                    type="number"
+                    value={newItem.width}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, width: parseFloat(e.target.value) || 0 }))}
+                    className="px-3 py-2 border border-indigo-200 rounded-lg text-sm text-center"
+                    placeholder="Ancho"
+                  />
+                  <input
+                    type="number"
+                    value={newItem.height}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, height: parseFloat(e.target.value) || 0 }))}
+                    className="px-3 py-2 border border-indigo-200 rounded-lg text-sm text-center"
+                    placeholder="Alto"
+                  />
+                  <input
+                    type="number"
+                    value={newItem.quantity}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                    className="px-3 py-2 border border-indigo-200 rounded-lg text-sm text-center"
+                    placeholder="Cant."
+                  />
+                </div>
+                <button
+                  onClick={handleAddItem}
+                  className="w-full py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700"
+                  data-testid="add-item-btn"
+                >
+                  + Añadir Mueble
+                </button>
+              </div>
+
+              {/* Lista de muebles añadidos */}
+              {formData.items.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {formData.items.map((item, idx) => (
+                    <div key={item.id || idx} className="flex items-center justify-between bg-white border border-indigo-100 rounded-lg px-4 py-2">
+                      <div className="flex items-center gap-4">
+                        <span className="font-bold text-indigo-900">{item.productCode}</span>
+                        <span className="text-indigo-600">{item.productName}</span>
+                        <span className="text-xs text-gray-500">{item.width}×{item.height}×{item.depth} cm</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-orange-600">×{item.quantity}</span>
+                        <button onClick={() => handleRemoveItem(idx)} className="text-red-500 hover:text-red-700">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Notas */}
+            <div>
+              <label className="text-xs font-bold text-indigo-400 uppercase">Notas Internas</label>
+              <textarea
+                value={formData.internalNotes}
+                onChange={(e) => setFormData(prev => ({ ...prev, internalNotes: e.target.value }))}
+                className="w-full mt-1 px-4 py-2 border border-indigo-200 rounded-xl focus:border-indigo-500 outline-none h-20"
+                placeholder="Notas para producción..."
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-indigo-100 px-6 py-4 flex justify-end gap-3">
+            <button
+              onClick={() => setShowNewOrderModal(false)}
+              className="px-6 py-2 border border-indigo-200 rounded-xl font-bold text-indigo-600 hover:bg-indigo-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700"
+              data-testid="submit-new-order"
+            >
+              Crear Orden
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Modal para fecha de entrega
+  const DeliveryDateModal = () => {
+    const [date, setDate] = useState('');
+    const [notes, setNotes] = useState('');
+
+    if (!showDeliveryDateModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-md p-6">
+          <h3 className="font-black text-lg text-indigo-900 mb-4">Establecer Fecha de Entrega</h3>
+          <p className="text-sm text-indigo-600 mb-4">Orden: {showDeliveryDateModal.orderNumber}</p>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-indigo-400 uppercase">Fecha Estimada</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full mt-1 px-4 py-2 border border-indigo-200 rounded-xl"
+                data-testid="delivery-date-input"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-indigo-400 uppercase">Notas</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full mt-1 px-4 py-2 border border-indigo-200 rounded-xl h-20"
+                placeholder="Notas sobre la entrega..."
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={() => setShowDeliveryDateModal(null)}
+              className="px-4 py-2 border border-indigo-200 rounded-xl font-bold text-indigo-600"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => handleSetDeliveryDate(showDeliveryDateModal.id, date, notes)}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold"
+              data-testid="save-delivery-date"
+            >
+              Guardar Fecha
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Modal para importar PDF
+  const ImportModal = () => {
+    const [file, setFile] = useState(null);
+    const [importing, setImporting] = useState(false);
+
+    const handleFileChange = (e) => {
+      const selectedFile = e.target.files[0];
+      if (selectedFile && selectedFile.type === 'application/pdf') {
+        setFile(selectedFile);
+      } else {
+        alert('Por favor selecciona un archivo PDF');
+      }
+    };
+
+    const handleImport = async () => {
+      if (!file) return;
+      setImporting(true);
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64 = e.target.result.split(',')[1];
+          const result = await fabricaAPI.importPDF(base64, file.name);
+          alert(result.message);
+          setShowImportModal(false);
+          loadData();
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        alert('Error al importar: ' + error.message);
+      } finally {
+        setImporting(false);
+      }
+    };
+
+    if (!showImportModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl w-full max-w-lg p-6">
+          <h3 className="font-black text-lg text-indigo-900 mb-4 flex items-center gap-2">
+            <Upload size={24} className="text-indigo-600" />
+            Importar Presupuesto PDF
+          </h3>
+          
+          <div className="border-2 border-dashed border-indigo-200 rounded-xl p-8 text-center">
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileChange}
+              className="hidden"
+              id="pdf-upload"
+            />
+            <label htmlFor="pdf-upload" className="cursor-pointer">
+              <Upload size={48} className="mx-auto text-indigo-300 mb-3" />
+              <p className="text-indigo-600 font-bold">Arrastra un PDF o haz clic para seleccionar</p>
+              <p className="text-sm text-indigo-400 mt-1">Formatos aceptados: PDF</p>
+            </label>
+            {file && (
+              <p className="mt-4 text-emerald-600 font-bold">{file.name}</p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={() => setShowImportModal(false)}
+              className="px-4 py-2 border border-indigo-200 rounded-xl font-bold text-indigo-600"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={!file || importing}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50"
+            >
+              {importing ? 'Importando...' : 'Importar PDF'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-indigo-600 rounded-2xl">
+              <Factory size={28} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-indigo-950">Portal de Fábrica</h1>
+              <p className="text-indigo-400 text-sm">Gestión de órdenes de fabricación</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="px-4 py-2 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"
+              data-testid="import-pdf-btn"
+            >
+              <Upload size={18} />
+              Importar PDF
+            </button>
+            <button
+              onClick={() => setShowNewOrderModal(true)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 flex items-center gap-2"
+              data-testid="new-order-btn"
+            >
+              <Plus size={18} />
+              Nueva Orden
+            </button>
+            <button
+              onClick={loadData}
+              className="p-2 bg-white border border-indigo-200 rounded-xl text-indigo-600 hover:bg-indigo-50"
+              data-testid="refresh-btn"
+            >
+              <RefreshCw size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Dashboard */}
+      {stats && (
+        <div className="grid grid-cols-5 gap-4 mb-6">
+          <StatCard 
+            title="Activas" 
+            value={stats.totalActive || 0} 
+            icon={Package} 
+            color="indigo"
+            subtitle="Órdenes en proceso"
+          />
+          <StatCard 
+            title="En Producción" 
+            value={stats.byStatus?.in_production || 0} 
+            icon={Factory} 
+            color="amber"
+          />
+          <StatCard 
+            title="Listas" 
+            value={stats.byStatus?.ready || 0} 
+            icon={CheckCircle} 
+            color="emerald"
+          />
+          <StatCard 
+            title="Entrega Esta Semana" 
+            value={stats.pendingThisWeek || 0} 
+            icon={Truck} 
+            color="blue"
+          />
+          <StatCard 
+            title="Piezas Producción" 
+            value={stats.piecesInProduction || 0} 
+            icon={Box} 
+            color="orange"
+          />
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white rounded-2xl p-4 mb-6 flex items-center justify-between shadow-sm border border-indigo-100">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" />
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              placeholder="Buscar orden, cliente..."
+              className="pl-10 pr-4 py-2 border border-indigo-200 rounded-xl w-64 text-sm focus:border-indigo-500 outline-none"
+              data-testid="search-input"
+            />
+          </div>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+            className="px-4 py-2 border border-indigo-200 rounded-xl text-sm font-bold text-indigo-700"
+            data-testid="filter-status"
+          >
+            <option value="">Todos los estados</option>
+            <option value="draft">Borrador</option>
+            <option value="confirmed">Confirmada</option>
+            <option value="in_production">En Producción</option>
+            <option value="ready">Lista</option>
+            <option value="delivered">Entregada</option>
+          </select>
+          <select
+            value={filters.priority}
+            onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+            className="px-4 py-2 border border-indigo-200 rounded-xl text-sm font-bold text-indigo-700"
+            data-testid="filter-priority"
+          >
+            <option value="">Todas las prioridades</option>
+            <option value="low">Baja</option>
+            <option value="normal">Normal</option>
+            <option value="high">Alta</option>
+            <option value="urgent">Urgente</option>
+          </select>
+        </div>
+        <p className="text-sm text-indigo-400 font-bold">
+          {orders.length} órdenes encontradas
+        </p>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin">
+            <RefreshCw size={32} className="text-indigo-600" />
+          </div>
+        </div>
+      ) : (
+        <OrderListView />
+      )}
+
+      {/* Modals */}
+      {showNewOrderModal && <NewOrderModal />}
+      {showDeliveryDateModal && <DeliveryDateModal />}
+      {showImportModal && <ImportModal />}
+    </div>
+  );
+};
+
+export default PortalFabrica;
