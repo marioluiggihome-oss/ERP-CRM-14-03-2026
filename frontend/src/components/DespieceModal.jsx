@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench } from 'lucide-react';
+import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench, Maximize2, Minimize2 } from 'lucide-react';
 import { despieceAPI } from '../services/api';
 
 const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, customerName, projectReference, expedientNumber }) => {
@@ -11,6 +11,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   const [editingComponent, setEditingComponent] = useState(null);
   const [editedComponents, setEditedComponents] = useState({});
   const [copiedCascoId, setCopiedCascoId] = useState(null);
+  const [isMaximized, setIsMaximized] = useState(false);
   const printRef = useRef(null);
   
   // Editable header fields
