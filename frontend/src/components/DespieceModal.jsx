@@ -582,10 +582,14 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 print:p-0 print:bg-white">
+      <div className={`bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 print:rounded-none print:shadow-none print:max-h-none ${
+        isMaximized 
+          ? 'w-full h-full max-w-none max-h-none rounded-none' 
+          : 'w-full max-w-6xl max-h-[90vh]'
+      }`}>
         {/* Header */}
-        <div className="bg-indigo-950 text-white px-8 py-5 flex justify-between items-center shrink-0">
+        <div className="bg-indigo-950 text-white px-8 py-5 flex justify-between items-center shrink-0 print:hidden">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-orange-600 rounded-xl">
               <Scissors size={24} />
@@ -595,12 +599,21 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
               <p className="text-indigo-300 text-xs font-medium mt-0.5">Orden de Montaje y Lista de Corte</p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-          >
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+              title={isMaximized ? "Restaurar" : "Maximizar"}
+            >
+              {isMaximized ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+            </button>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         {/* Project Info Bar - Cliente, Referencia, Fecha, Expediente */}
