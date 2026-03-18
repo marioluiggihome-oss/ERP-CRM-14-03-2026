@@ -8,71 +8,73 @@
 ## ✅ COMPLETADO EN ESTA SESIÓN (18 Marzo 2026)
 
 ### 1. Sistema de Ayuda con Manual PDF por Rol
-- **Nuevo componente**: `UserManualModal.jsx`
-- Botón "AYUDA" visible en el sidebar para todos los usuarios
-- Manual filtrado por rol del usuario (Admin ve todas las secciones)
-- Secciones: Introducción, Presupuestos, CRM, Portal de Fábrica, Despiece, Administración, Glosario
-- Descarga PDF personalizada por rol
-- Búsqueda dentro del manual
+- **Componente**: `UserManualModal.jsx`
+- Botón "AYUDA" en sidebar, manual filtrado por rol, descarga PDF
 
-### 2. Optimizador de Tableros (estilo OpenCutList)
-- **Nuevo componente**: `BoardOptimizer.jsx`
-- Algoritmo de bin-packing 2D personalizado (FFDH - First Fit Decreasing Height)
-- Integrado en el modal de Despiece (botón "Optimizar Tableros")
-- Tamaños de tablero estándar: 2440x1220, 2440x1830, 2750x1830, 3050x1525 mm
-- Kerf configurable: 0mm, 3mm, 4mm, 5mm
-- Visualización gráfica con colores distintivos por pieza
-- Estadísticas: tableros necesarios, eficiencia %, m² usados/desperdicio
-- Exportación PDF con diagramas y lista de piezas
+### 2. Optimizador de Tableros con Vista Interactiva
+- **Componente**: `BoardOptimizer.jsx`
+- Algoritmo bin-packing 2D (FFDH)
+- **NUEVO**: Drag & drop para mover piezas manualmente
+- **NUEVO**: Exportación CSV para Seccionadora
+- **NUEVO**: Exportación CSV CNC con posiciones X,Y
+- Visualización de múltiples tableros con navegación
+- Doble clic para rotar piezas
 
-### 3. Despiece de Puertas (NUEVO - 18 Marzo 2026)
-- **Sección "🚪 DESPIECE DE PUERTAS"** en pestaña CASCO, PUERTA Y HERRAJE
-- Tabla con: Mueble, Descripción, Alto (cm), Ancho (cm), Puertas/Mueble, Cant. Muebles, Total Puertas
-- Tolerancias aplicadas: -2mm alto, -3mm ancho
-- Total de puertas a fabricar calculado automáticamente
+### 3. Despiece de Puertas
+- Sección "🚪 DESPIECE DE PUERTAS" en pestaña CASCO, PUERTA Y HERRAJE
+- Tolerancias: -2mm alto, -3mm ancho
 
-### 4. Sistema Multi-Fábrica (NUEVO - 18 Marzo 2026)
-- Modelo `Factory` añadido a schemas.py
-- CRUD completo en `/api/fabrica/factories`
-- Fábricas por defecto: SALAMANCA (SAL) y ZAMORA (ZAM)
-- Campo `factoryId` en modelo de usuario para asignar usuarios a fábricas
+### 4. Sistema Multi-Fábrica
+- Fábricas: SALAMANCA (SAL) y ZAMORA (ZAM)
+- CRUD completo: `/api/fabrica/factories`
+- **NUEVO**: Selector de fábrica en formulario de usuario
 
-### 5. Actualizaciones al Manual de Usuario
-- `/app/docs/MANUAL_USUARIO.md` actualizado con nueva sección de Optimizador
-- Contenido del modal de ayuda actualizado
+### 5. Dashboard Gráfico de Producción
+- **Componente**: `ProductionDashboard.jsx`
+- Métricas en tiempo real: Órdenes Activas, En Producción, Listas, Entregadas, Retrasadas
+- Gráfica donut "Órdenes por Estado"
+- Gráfica barras "Órdenes por Fábrica" (SAL, ZAM, Sin asignar)
+- Gráfica tendencia "Últimos 7 días"
+- Barra de progreso global de fabricación
+- Filtros: por fábrica, por período
 
-### 4. Funcionalidades Previas
-- Permiso "Acceso Portal Fábrica" en Capacidades Técnicas
-- Portal de Fábrica con barra de progreso (Rojo/Azul/Verde)
-- Importación PDF con IA (Gemini Vision)
-- Tolerancias de puertas corregidas (-2mm alto, -3mm ancho)
+### 6. Historial de Cambios y Trazabilidad
+- **Componente**: `OrderHistory.jsx`
+- Timeline agrupado por fecha
+- Tipos de evento: Orden Creada, Cambio Estado, Mueble Fabricado
+- Estadísticas: Total eventos, Cambios estado, Muebles fabricados
+- Filtros: búsqueda, tipo de cambio, orden específica
+- Entradas expandibles con detalles
+
+### 7. Filtrado de Órdenes por Fábrica
+- Usuarios con `factoryId` solo ven sus órdenes
+- Gerente, Director Comercial, Responsable Delegación ven todas
+- Badge de fábrica (SAL/ZAM) en lista de órdenes
+
+### 8. Portal de Fábrica con Pestañas
+- **Órdenes**: Lista de órdenes con filtros
+- **Dashboard**: Métricas y gráficas de producción
+- **Historial**: Timeline de cambios
 
 ---
 
 ## 📋 PENDIENTE
 
-### P0 - Crítico
-- [x] ~~Optimización de tableros (bin-packing 2D estilo OpenCutList)~~ COMPLETADO
-- [x] ~~Sistema de Ayuda/Manual por rol~~ COMPLETADO
-
 ### P1 - Alta
-- [x] ~~Permisos específicos Portal Fábrica~~ COMPLETADO
-- [x] ~~Importar desde pedidos existentes~~ COMPLETADO
-- [x] ~~Barra de progreso fabricación~~ COMPLETADO
-- [x] ~~Despiece de puertas con tolerancias~~ COMPLETADO (18/03/2026)
-- [ ] Verificar issue precio "COST" (17 vs 16) - posible caché del navegador
+- [x] ~~Despiece de puertas con tolerancias~~ COMPLETADO
+- [x] ~~Dashboard gráfico de producción~~ COMPLETADO
+- [x] ~~Historial y trazabilidad~~ COMPLETADO
+- [x] ~~Filtrar órdenes por fábrica~~ COMPLETADO
+- [ ] Verificar issue precio "COST" (17 vs 16)
 
 ### P2 - Media
 - [ ] Casco por defecto por sección/biblioteca
 - [ ] Restaurar logo empresa
-- [ ] Reporte exportable "Agenda de Montajes"
-- [ ] Funcionalidad de impresión específica para usuarios de fábrica
+- [ ] Notificaciones email cambios de estado
 
 ### P3 - Baja
-- [ ] Refactorización BudgetTable.jsx (~3071 líneas)
-- [ ] Refactorización SettingsModal.jsx (~4727 líneas)
-- [ ] Refactorización server.py (~6530 líneas)
-- [ ] Glitch visual sidebar colapsado (recurrente)
+- [ ] Refactorización monolitos (server.py, SettingsModal.jsx)
+- [ ] Glitch visual sidebar colapsado
 
 ---
 
