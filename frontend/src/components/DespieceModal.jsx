@@ -20,10 +20,10 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   // Función para copiar dimensiones del casco al portapapeles
   const handleCopyCascoDimensions = (furniture) => {
     const ancho = furniture.originalWidth;
-    const alto = furniture.originalHeight * 10;
-    const fondo = furniture.originalDepth * 10;
+    const alto = furniture.originalHeight;
+    const fondo = furniture.originalDepth;
     
-    const text = `${furniture.productCode} - Casco: ${ancho} x ${alto} x ${fondo} mm`;
+    const text = `${furniture.productCode} - Casco: ${ancho} x ${alto} x ${fondo} cm`;
     
     navigator.clipboard.writeText(text).then(() => {
       setCopiedCascoId(furniture.productId);
