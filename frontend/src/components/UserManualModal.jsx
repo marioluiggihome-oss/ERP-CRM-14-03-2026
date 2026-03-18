@@ -167,6 +167,15 @@ CÁLCULOS AUTOMÁTICOS:
 • Área total en m²
 • Herrajes estimados (bisagras, tiradores, soportes)
 
+OPTIMIZADOR DE TABLEROS (Nuevo):
+Minimiza el desperdicio de material calculando la mejor disposición de piezas.
+
+• Acceder: Botón "Optimizar Tableros" (verde) en el modal de despiece
+• Tamaños estándar: 2440x1220mm, 2440x1830mm, 2750x1830mm
+• Kerf (ancho corte): 0mm, 3mm, 4mm, 5mm según sierra
+• Muestra: tableros necesarios, eficiencia %, m² usados/desperdicio
+• Exporta PDF con todos los tableros y lista de piezas
+
 EXPORTAR INFORMES:
 • PDF A4: Para imprimir
 • CSV: Para hojas de cálculo

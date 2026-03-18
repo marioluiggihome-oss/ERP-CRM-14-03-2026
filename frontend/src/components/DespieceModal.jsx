@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench, Maximize2, Minimize2 } from 'lucide-react';
+import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench, Maximize2, Minimize2, LayoutGrid } from 'lucide-react';
 import { despieceAPI } from '../services/api';
+import BoardOptimizer from './BoardOptimizer';
 
 const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, customerName, projectReference, expedientNumber }) => {
   const [despieceData, setDespieceData] = useState(null);
@@ -12,6 +13,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   const [editedComponents, setEditedComponents] = useState({});
   const [copiedCascoId, setCopiedCascoId] = useState(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [showBoardOptimizer, setShowBoardOptimizer] = useState(false);
   const printRef = useRef(null);
   
   // Editable header fields
@@ -1413,6 +1415,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             {despieceData && (
               <>
                 <button
+                  onClick={() => setShowBoardOptimizer(true)}
+                  className="bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-800 transition-colors shadow-lg"
+                  title="Optimizar cortes de tableros"
+                  data-testid="open-board-optimizer"
+                >
+                  <LayoutGrid size={14} />
+                  Optimizar Tableros
+                </button>
+                <button
                   onClick={handleExportPDF}
                   className="bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg"
                   title="Exportar PDF A4"
@@ -1453,6 +1464,22 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             </button>
           </div>
         </div>
+
+        {/* Board Optimizer Modal */}
+        <BoardOptimizer
+          isOpen={showBoardOptimizer}
+          onClose={() => setShowBoardOptimizer(false)}
+          despiecePieces={despieceData?.items?.flatMap(item => 
+            item.components?.filter(c => c.material && c.length && c.width).map(c => ({
+              name: `${item.productCode} - ${c.name}`,
+              width: Math.round(c.length * 10), // cm to mm (length = largo)
+              height: Math.round(c.width * 10), // cm to mm (width = ancho)
+              quantity: c.quantity || 1,
+              material: c.material
+            }))
+          ) || []}
+          material={carcassMaterialName || 'Melamina'}
+        />
       </div>
     </div>
   );

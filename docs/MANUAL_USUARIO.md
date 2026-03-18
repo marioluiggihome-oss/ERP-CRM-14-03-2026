@@ -321,6 +321,50 @@ Usuarios de fábrica pueden imprimir:
 - **CSV**: Para hojas de cálculo
 - **XML**: Para sistemas externos
 
+### 6.5 Optimizador de Tableros
+
+**Nueva funcionalidad estilo OpenCutList**
+
+El optimizador de tableros minimiza el desperdicio de material calculando la mejor disposición de piezas en los tableros.
+
+**Acceder al Optimizador:**
+1. Abrir el modal de DESPIECE
+2. Hacer clic en el botón **"Optimizar Tableros"** (color verde)
+3. Se abre el panel de optimización
+
+**Configuración del Tablero:**
+| Opción | Descripción |
+|--------|-------------|
+| **Tamaño estándar** | 2440x1220mm (8x4 pies), 2440x1830mm, 2750x1830mm, 3050x1525mm |
+| **Personalizado** | Definir dimensiones específicas |
+| **Kerf (ancho de corte)** | 0mm (sin corte), 3mm (sierra fina), 4mm (estándar), 5mm (gruesa) |
+
+**Panel de Piezas:**
+- Las piezas se cargan automáticamente desde el despiece
+- Puedes añadir/eliminar piezas manualmente
+- Cada pieza muestra: nombre, dimensiones (ancho x alto), cantidad
+- Colores distintivos para cada pieza
+
+**Resultado de Optimización:**
+| Métrica | Descripción |
+|---------|-------------|
+| **Tableros** | Cantidad de tableros necesarios |
+| **Eficiencia** | Porcentaje de material aprovechado |
+| **m² Usados** | Área total ocupada por piezas |
+| **m² Desperdicio** | Área restante sin utilizar |
+| **Estado** | ✓ Todo colocado / ⚠️ Piezas sin colocar |
+
+**Visualización:**
+- Los tableros se muestran con las piezas colocadas en posición óptima
+- Cada pieza tiene un color distintivo para fácil identificación
+- Se muestran las dimensiones de cada pieza sobre el diagrama
+- Grid de referencia cada 100mm
+
+**Exportar PDF:**
+- Genera documento con diagrama de todos los tableros
+- Incluye lista de piezas por tablero
+- Resumen final con estadísticas de eficiencia
+
 ---
 
 ## 7. ADMINISTRACIÓN
