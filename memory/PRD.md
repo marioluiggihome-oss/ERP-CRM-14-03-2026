@@ -25,7 +25,19 @@
 - Estadísticas: tableros necesarios, eficiencia %, m² usados/desperdicio
 - Exportación PDF con diagramas y lista de piezas
 
-### 3. Actualizaciones al Manual de Usuario
+### 3. Despiece de Puertas (NUEVO - 18 Marzo 2026)
+- **Sección "🚪 DESPIECE DE PUERTAS"** en pestaña CASCO, PUERTA Y HERRAJE
+- Tabla con: Mueble, Descripción, Alto (cm), Ancho (cm), Puertas/Mueble, Cant. Muebles, Total Puertas
+- Tolerancias aplicadas: -2mm alto, -3mm ancho
+- Total de puertas a fabricar calculado automáticamente
+
+### 4. Sistema Multi-Fábrica (NUEVO - 18 Marzo 2026)
+- Modelo `Factory` añadido a schemas.py
+- CRUD completo en `/api/fabrica/factories`
+- Fábricas por defecto: SALAMANCA (SAL) y ZAMORA (ZAM)
+- Campo `factoryId` en modelo de usuario para asignar usuarios a fábricas
+
+### 5. Actualizaciones al Manual de Usuario
 - `/app/docs/MANUAL_USUARIO.md` actualizado con nueva sección de Optimizador
 - Contenido del modal de ayuda actualizado
 
@@ -47,6 +59,7 @@
 - [x] ~~Permisos específicos Portal Fábrica~~ COMPLETADO
 - [x] ~~Importar desde pedidos existentes~~ COMPLETADO
 - [x] ~~Barra de progreso fabricación~~ COMPLETADO
+- [x] ~~Despiece de puertas con tolerancias~~ COMPLETADO (18/03/2026)
 - [ ] Verificar issue precio "COST" (17 vs 16) - posible caché del navegador
 
 ### P2 - Media
