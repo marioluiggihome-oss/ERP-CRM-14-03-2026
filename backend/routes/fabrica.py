@@ -759,3 +759,207 @@ async def get_order_despiece(order_id: str):
     except Exception as e:
         logger.error(f"Get order despiece error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================
+# GESTIÓN DE FÁBRICAS
+# ============================================
+
+class FactoryCreate(BaseModel):
+    """Crear nueva fábrica"""
+    name: str
+    code: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+
+
+class FactoryUpdate(BaseModel):
+    """Actualizar fábrica"""
+    name: Optional[str] = None
+    code: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    isActive: Optional[bool] = None
+
+
+@router.get("/factories")
+async def get_factories():
+    """Obtener lista de todas las fábricas"""
+    try:
+        factories = await db.factories.find({}).to_list(100)
+        for f in factories:
+            f['_id'] = str(f.get('_id', ''))
+            if '_id' in f and f['_id'] == '':
+                del f['_id']
+        return factories
+    except Exception as e:
+        logger.error(f"Get factories error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/factories/{factory_id}")
+async def get_factory(factory_id: str):
+    """Obtener una fábrica por ID"""
+    try:
+        factory = await db.factories.find_one({"id": factory_id})
+        if not factory:
+            raise HTTPException(status_code=404, detail="Fábrica no encontrada")
+        
+        factory['_id'] = str(factory.get('_id', ''))
+        if '_id' in factory and factory['_id'] == '':
+            del factory['_id']
+        return factory
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get factory error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/factories")
+async def create_factory(factory: FactoryCreate):
+    """Crear nueva fábrica"""
+    try:
+        # Verificar si ya existe una fábrica con el mismo código
+        existing = await db.factories.find_one({"code": factory.code.upper()})
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Ya existe una fábrica con código {factory.code}")
+        
+        factory_doc = {
+            "id": f"fab-{uuid.uuid4().hex[:8]}",
+            "name": factory.name,
+            "code": factory.code.upper(),
+            "address": factory.address,
+            "phone": factory.phone,
+            "email": factory.email,
+            "isActive": True,
+            "createdAt": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.factories.insert_one(factory_doc)
+        
+        # Remover _id de MongoDB para la respuesta
+        factory_doc.pop('_id', None)
+        
+        logger.info(f"Factory created: {factory.name} ({factory.code})")
+        return factory_doc
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create factory error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/factories/{factory_id}")
+async def update_factory(factory_id: str, update: FactoryUpdate):
+    """Actualizar fábrica"""
+    try:
+        update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+        
+        # Si se actualiza el código, verificar que no exista
+        if "code" in update_data:
+            update_data["code"] = update_data["code"].upper()
+            existing = await db.factories.find_one({
+                "code": update_data["code"],
+                "id": {"$ne": factory_id}
+            })
+            if existing:
+                raise HTTPException(status_code=400, detail=f"Ya existe una fábrica con código {update_data['code']}")
+        
+        result = await db.factories.update_one(
+            {"id": factory_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Fábrica no encontrada")
+        
+        updated = await db.factories.find_one({"id": factory_id})
+        updated.pop('_id', None)
+        
+        return updated
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update factory error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/factories/{factory_id}")
+async def delete_factory(factory_id: str):
+    """Eliminar fábrica (soft delete)"""
+    try:
+        # Verificar que no hay usuarios asignados a esta fábrica
+        users_count = await db.users.count_documents({"factoryId": factory_id})
+        if users_count > 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"No se puede eliminar: hay {users_count} usuario(s) asignado(s) a esta fábrica"
+            )
+        
+        result = await db.factories.update_one(
+            {"id": factory_id},
+            {"$set": {"isActive": False}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Fábrica no encontrada")
+        
+        return {"message": "Fábrica desactivada correctamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete factory error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# SEED: Crear fábricas por defecto
+# ============================================
+
+async def seed_default_factories():
+    """Crear fábricas SALAMANCA y ZAMORA si no existen"""
+    default_factories = [
+        {
+            "id": "fab-salamanca",
+            "name": "FÁBRICA SALAMANCA",
+            "code": "SAL",
+            "address": "Polígono Industrial Salamanca",
+            "phone": "",
+            "email": "",
+            "isActive": True,
+            "createdAt": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "id": "fab-zamora",
+            "name": "FÁBRICA ZAMORA",
+            "code": "ZAM",
+            "address": "Polígono Industrial Zamora",
+            "phone": "",
+            "email": "",
+            "isActive": True,
+            "createdAt": datetime.now(timezone.utc).isoformat()
+        }
+    ]
+    
+    for factory in default_factories:
+        existing = await db.factories.find_one({"code": factory["code"]})
+        if not existing:
+            await db.factories.insert_one(factory)
+            logger.info(f"Created default factory: {factory['name']}")
+
+
+# Ejecutar seed al importar el módulo
+try:
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        asyncio.create_task(seed_default_factories())
+    else:
+        loop.run_until_complete(seed_default_factories())
+except RuntimeError:
+    pass  # Ya hay un event loop corriendo

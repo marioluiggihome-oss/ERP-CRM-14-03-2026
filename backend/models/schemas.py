@@ -23,6 +23,43 @@ class StatusCheckCreate(BaseModel):
 
 
 # ============================================
+# FACTORY MODELS (Fábricas)
+# ============================================
+
+class FactoryModel(BaseModel):
+    """Modelo para representar una fábrica"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: f"fab-{uuid.uuid4().hex[:8]}")
+    name: str  # Nombre de la fábrica (ej: "SALAMANCA", "ZAMORA")
+    code: str  # Código corto (ej: "SAL", "ZAM")
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    isActive: bool = True
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class FactoryCreate(BaseModel):
+    name: str
+    code: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+
+
+class FactoryResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    code: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    isActive: bool = True
+    createdAt: datetime
+
+
+# ============================================
 # USER MODELS
 # ============================================
 
@@ -42,6 +79,7 @@ class UserModelInternal(BaseModel):
     isPrescriptor: bool = False
     isTienda: bool = False
     isFabrica: bool = False  # Rol de fábrica - acceso a órdenes de fabricación
+    factoryId: Optional[str] = None  # ID de la fábrica asignada (si es usuario de fábrica)
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedCatalogIds: List[str] = []
@@ -79,6 +117,8 @@ class UserResponse(BaseModel):
     isPrescriptor: bool = False
     isTienda: bool = False
     isFabrica: bool = False  # Rol de fábrica
+    factoryId: Optional[str] = None  # ID de la fábrica asignada
+    factoryName: Optional[str] = None  # Nombre de la fábrica (para mostrar en UI)
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
@@ -116,6 +156,7 @@ class UserCreate(BaseModel):
     isPrescriptor: bool = False
     isTienda: bool = False
     isFabrica: bool = False  # Rol de fábrica
+    factoryId: Optional[str] = None  # ID de la fábrica asignada
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
@@ -153,6 +194,7 @@ class UserUpdate(BaseModel):
     isPrescriptor: Optional[bool] = None
     isTienda: Optional[bool] = None
     isFabrica: Optional[bool] = None  # Rol de fábrica
+    factoryId: Optional[str] = None  # ID de la fábrica asignada
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
     allowedLibraries: Optional[List[str]] = None  # Tarifas/Bibliotecas activas

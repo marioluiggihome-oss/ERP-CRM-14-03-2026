@@ -1353,10 +1353,79 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                     </div>
                   </div>
 
+                  {/* ===================== SECCIÓN PUERTAS ===================== */}
+                  {(() => {
+                    // Extraer puertas de los componentes
+                    const puertas = despieceData.items.flatMap(furniture => {
+                      const puertaComps = furniture.components?.filter(c => 
+                        c.name?.toLowerCase().includes('puerta') || 
+                        c.type?.toUpperCase() === 'PUERTA'
+                      ) || [];
+                      return puertaComps.map(p => ({
+                        muebleCode: furniture.productCode,
+                        muebleName: furniture.productName,
+                        doorHeight: p.length,
+                        doorWidth: p.width,
+                        doorQty: p.quantity || 1,
+                        itemQty: furniture.itemQuantity || 1,
+                        material: p.material
+                      }));
+                    });
+
+                    const totalPuertas = puertas.reduce((sum, p) => sum + (p.doorQty * p.itemQty), 0);
+
+                    if (puertas.length === 0) return null;
+
+                    return (
+                      <div className="bg-white border-2 border-orange-200 rounded-xl overflow-hidden">
+                        <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 flex justify-between items-center">
+                          <h3 className="font-black uppercase tracking-widest text-sm">🚪 Despiece de Puertas</h3>
+                          <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">{totalPuertas} puertas total</span>
+                        </div>
+                        <table className="w-full">
+                          <thead className="bg-orange-50">
+                            <tr className="text-xs font-black text-orange-700 uppercase tracking-widest">
+                              <th className="px-4 py-3 text-left">Mueble</th>
+                              <th className="px-4 py-3 text-left">Descripción</th>
+                              <th className="px-4 py-3 text-center">Alto (cm)</th>
+                              <th className="px-4 py-3 text-center">Ancho (cm)</th>
+                              <th className="px-4 py-3 text-center">Puertas/Mueble</th>
+                              <th className="px-4 py-3 text-center">Cant. Muebles</th>
+                              <th className="px-4 py-3 text-center">Total Puertas</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-orange-100">
+                            {puertas.map((p, idx) => (
+                              <tr key={idx} className="hover:bg-orange-50/50">
+                                <td className="px-4 py-3 font-bold text-orange-900">{p.muebleCode}</td>
+                                <td className="px-4 py-3 text-sm text-orange-600">{p.muebleName}</td>
+                                <td className="px-4 py-3 text-center font-mono text-lg font-bold text-orange-800">{p.doorHeight}</td>
+                                <td className="px-4 py-3 text-center font-mono text-lg font-bold text-orange-800">{p.doorWidth}</td>
+                                <td className="px-4 py-3 text-center font-bold">{p.doorQty}</td>
+                                <td className="px-4 py-3 text-center font-bold text-indigo-600">{p.itemQty}</td>
+                                <td className="px-4 py-3 text-center font-black text-orange-600 text-lg">{p.doorQty * p.itemQty}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className="bg-gradient-to-r from-orange-100 to-amber-100">
+                            <tr className="font-black text-orange-900">
+                              <td colSpan="6" className="px-4 py-3 text-right uppercase">Total Puertas a Fabricar:</td>
+                              <td className="px-4 py-3 text-center text-2xl">{totalPuertas}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                        <div className="bg-orange-50 px-6 py-3 text-xs text-orange-600">
+                          <strong>Nota:</strong> Las dimensiones de puerta incluyen tolerancias aplicadas (-2mm alto, -3mm ancho).
+                          El acabado de puerta se indica en el presupuesto.
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Detalle por mueble */}
                   <div className="bg-white border border-indigo-100 rounded-xl overflow-hidden">
                     <div className="bg-indigo-950 text-white px-6 py-3">
-                      <h3 className="font-black uppercase tracking-widest text-sm">Detalle por Mueble</h3>
+                      <h3 className="font-black uppercase tracking-widest text-sm">Detalle Herrajes por Mueble</h3>
                     </div>
                     <table className="w-full">
                       <thead className="bg-indigo-50">
