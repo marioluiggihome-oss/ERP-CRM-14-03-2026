@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench } from 'lucide-react';
 import { despieceAPI } from '../services/api';
 
 const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, customerName, projectReference, expedientNumber }) => {
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeView, setActiveView] = useState('montaje'); // 'montaje' or 'corte'
+  const [activeView, setActiveView] = useState('montaje'); // 'montaje', 'corte', 'bandas', 'herrajes'
   const [expandedItems, setExpandedItems] = useState({});
   const [editingComponent, setEditingComponent] = useState(null);
   const [editedComponents, setEditedComponents] = useState({});
-  const [copiedCascoId, setCopiedCascoId] = useState(null); // Para feedback visual de copiado
+  const [copiedCascoId, setCopiedCascoId] = useState(null);
+  const printRef = useRef(null);
   
   // Editable header fields
   const [editableCustomerName, setEditableCustomerName] = useState(customerName || '');
