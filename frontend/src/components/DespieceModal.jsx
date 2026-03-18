@@ -915,8 +915,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                         <th className="px-4 py-4 text-left">Mueble</th>
                         <th className="px-4 py-4 text-left">Pieza</th>
                         <th className="px-4 py-4 text-center">Material</th>
-                        <th className="px-4 py-4 text-center">Largo (mm)</th>
-                        <th className="px-4 py-4 text-center">Ancho (mm)</th>
+                        <th className="px-4 py-4 text-center">Largo (cm)</th>
+                        <th className="px-4 py-4 text-center">Ancho (cm)</th>
                         <th className="px-4 py-4 text-center">Cantidad</th>
                         <th className="px-4 py-4 text-center">Cantos</th>
                       </tr>
