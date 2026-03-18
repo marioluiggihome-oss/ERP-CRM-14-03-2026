@@ -970,6 +970,163 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                   </table>
                 </div>
               )}
+
+              {/* Vista Bandas y Traseras */}
+              {activeView === 'bandas' && calculateBandasYTraseras && (
+                <div className="space-y-6">
+                  {/* Resumen General */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl p-6 text-white">
+                      <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2">Canto Total</p>
+                      <p className="text-4xl font-black">{calculateBandasYTraseras.totalCanto} <span className="text-lg">ml</span></p>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-6 text-white">
+                      <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-2">Tablero Casco</p>
+                      <p className="text-4xl font-black">{calculateBandasYTraseras.cascoTotalArea} <span className="text-lg">m²</span></p>
+                    </div>
+                    <div className="bg-gradient-to-br from-amber-500 to-amber-700 rounded-2xl p-6 text-white">
+                      <p className="text-amber-100 text-xs font-bold uppercase tracking-widest mb-2">Tablero Trasera</p>
+                      <p className="text-4xl font-black">{calculateBandasYTraseras.traseraTotalArea} <span className="text-lg">m²</span></p>
+                    </div>
+                  </div>
+
+                  {/* Detalle por mueble */}
+                  <div className="bg-white border border-indigo-100 rounded-xl overflow-hidden">
+                    <div className="bg-emerald-600 text-white px-6 py-3">
+                      <h3 className="font-black uppercase tracking-widest text-sm">Detalle de Canto por Pieza</h3>
+                    </div>
+                    <table className="w-full">
+                      <thead className="bg-emerald-50">
+                        <tr className="text-xs font-black text-emerald-700 uppercase tracking-widest">
+                          <th className="px-4 py-3 text-left">Mueble</th>
+                          <th className="px-4 py-3 text-left">Pieza</th>
+                          <th className="px-4 py-3 text-center">Largo (cm)</th>
+                          <th className="px-4 py-3 text-center">Ancho (cm)</th>
+                          <th className="px-4 py-3 text-center">Cant.</th>
+                          <th className="px-4 py-3 text-center">Canto (ml)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-emerald-50">
+                        {despieceData.items.flatMap(furniture => 
+                          furniture.components.map(comp => {
+                            const qty = (comp.quantity || 1) * (furniture.itemQuantity || 1);
+                            const { totalMl } = calculateCantoForComponent(comp, qty);
+                            return (
+                              <tr key={`${furniture.productId}-${comp.id}`} className="hover:bg-emerald-50/50">
+                                <td className="px-4 py-2 font-bold text-indigo-900">{furniture.productCode}</td>
+                                <td className="px-4 py-2 text-sm">{comp.name}</td>
+                                <td className="px-4 py-2 text-center">{comp.length}</td>
+                                <td className="px-4 py-2 text-center">{comp.width}</td>
+                                <td className="px-4 py-2 text-center font-bold text-orange-600">{qty}</td>
+                                <td className="px-4 py-2 text-center font-bold text-emerald-700">{totalMl.toFixed(2)}</td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                      <tfoot className="bg-emerald-100">
+                        <tr className="font-black text-emerald-800">
+                          <td colSpan="5" className="px-4 py-3 text-right uppercase">Total Canto:</td>
+                          <td className="px-4 py-3 text-center text-xl">{calculateBandasYTraseras.totalCanto} ml</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  {/* Traseras por grosor */}
+                  <div className="bg-white border border-indigo-100 rounded-xl overflow-hidden">
+                    <div className="bg-amber-600 text-white px-6 py-3">
+                      <h3 className="font-black uppercase tracking-widest text-sm">Resumen Traseras por Grosor</h3>
+                    </div>
+                    <div className="p-4 grid grid-cols-3 gap-4">
+                      {Object.entries(calculateBandasYTraseras.traserasByThickness).map(([thickness, data]) => (
+                        <div key={thickness} className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                          <p className="text-amber-600 text-xs font-bold uppercase">{thickness}</p>
+                          <p className="text-2xl font-black text-amber-800">{data.area.toFixed(3)} m²</p>
+                          <p className="text-xs text-amber-500">{data.pieces} piezas</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Vista Casco, Puerta y Herraje */}
+              {activeView === 'herrajes' && calculateHerrajes && (
+                <div className="space-y-6">
+                  {/* Resumen Herrajes */}
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white">
+                      <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2">Bisagras</p>
+                      <p className="text-4xl font-black">{calculateHerrajes.bisagras}</p>
+                      <p className="text-indigo-200 text-xs mt-1">unidades</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl p-6 text-white">
+                      <p className="text-purple-100 text-xs font-bold uppercase tracking-widest mb-2">Correderas</p>
+                      <p className="text-4xl font-black">{calculateHerrajes.correderas}</p>
+                      <p className="text-purple-200 text-xs mt-1">pares</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-pink-500 to-pink-700 rounded-2xl p-6 text-white">
+                      <p className="text-pink-100 text-xs font-bold uppercase tracking-widest mb-2">Tiradores</p>
+                      <p className="text-4xl font-black">{calculateHerrajes.tiradores}</p>
+                      <p className="text-pink-200 text-xs mt-1">unidades</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-2xl p-6 text-white">
+                      <p className="text-teal-100 text-xs font-bold uppercase tracking-widest mb-2">Soportes Baldas</p>
+                      <p className="text-4xl font-black">{calculateHerrajes.soportesBaldas}</p>
+                      <p className="text-teal-200 text-xs mt-1">unidades</p>
+                    </div>
+                  </div>
+
+                  {/* Detalle por mueble */}
+                  <div className="bg-white border border-indigo-100 rounded-xl overflow-hidden">
+                    <div className="bg-indigo-950 text-white px-6 py-3">
+                      <h3 className="font-black uppercase tracking-widest text-sm">Detalle por Mueble</h3>
+                    </div>
+                    <table className="w-full">
+                      <thead className="bg-indigo-50">
+                        <tr className="text-xs font-black text-indigo-700 uppercase tracking-widest">
+                          <th className="px-4 py-3 text-left">Mueble</th>
+                          <th className="px-4 py-3 text-left">Descripción</th>
+                          <th className="px-4 py-3 text-center">Dimensiones</th>
+                          <th className="px-4 py-3 text-center">Cant.</th>
+                          <th className="px-4 py-3 text-center">Bisagras</th>
+                          <th className="px-4 py-3 text-center">Tiradores</th>
+                          <th className="px-4 py-3 text-center">Baldas</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-indigo-50">
+                        {despieceData.items.map(furniture => {
+                          const numPuertas = (furniture.productName || '').toUpperCase().includes('2P') ? 2 : 1;
+                          const height = furniture.originalHeight || 70;
+                          const bisagrasPerPuerta = height > 100 ? 3 : 2;
+                          const numBaldas = furniture.components?.filter(c => c.name?.toLowerCase().includes('balda')).reduce((acc, c) => acc + (c.quantity || 1), 0) || 0;
+                          
+                          return (
+                            <tr key={furniture.productId} className="hover:bg-indigo-50/50">
+                              <td className="px-4 py-3 font-bold text-indigo-900">{furniture.productCode}</td>
+                              <td className="px-4 py-3 text-sm text-indigo-600">{furniture.productName}</td>
+                              <td className="px-4 py-3 text-center text-xs">{furniture.originalWidth}×{furniture.originalHeight}×{furniture.originalDepth} cm</td>
+                              <td className="px-4 py-3 text-center font-bold text-orange-600">{furniture.itemQuantity}</td>
+                              <td className="px-4 py-3 text-center font-bold">{numPuertas * bisagrasPerPuerta * furniture.itemQuantity}</td>
+                              <td className="px-4 py-3 text-center font-bold">{numPuertas * furniture.itemQuantity}</td>
+                              <td className="px-4 py-3 text-center font-bold">{numBaldas * furniture.itemQuantity} <span className="text-xs text-indigo-400">({numBaldas * 4 * furniture.itemQuantity} soportes)</span></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Nota informativa */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-amber-800 text-sm">
+                      <strong>Nota:</strong> Los herrajes se calculan de forma estimada. Las bisagras se calculan según la altura del mueble (2 para ≤100cm, 3 para &gt;100cm). 
+                      Las correderas se calculan para muebles con cajones/gavetas. Verificar según especificaciones del fabricante.
+                    </p>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
