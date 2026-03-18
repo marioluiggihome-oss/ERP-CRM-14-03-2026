@@ -4149,18 +4149,21 @@ def calculate_furniture_despiece(
     is_bajo = "BAJO" in item.category.upper() or "BAJO" in item.productName.upper()
     is_columna = "COLUMNA" in item.category.upper() or "COLUMNA" in item.productName.upper()
     
-    def add_component(name: str, short: str, material: str, length: float, width: float, thickness: float = grosor, qty: int = 1, notes: str = ""):
+    def add_component(name: str, short: str, material: str, length_cm: float, width_cm: float, thickness_cm: float = None, qty: int = 1, notes: str = ""):
         nonlocal component_id
         component_id += 1
-        area = (length * width * qty) / 1_000_000  # Convert mm² to m²
+        if thickness_cm is None:
+            thickness_cm = g
+        # Área en m² (cm² / 10000)
+        area = (length_cm * width_cm * qty) / 10_000
         components.append(ComponentPiece(
             id=f"CMP-{item.productId[:8]}-{component_id:03d}",
             name=name,
             nameShort=short,
             material=material,
-            length=round(length, 1),
-            width=round(width, 1),
-            thickness=round(thickness, 1),
+            length=round(length_cm, 1),  # cm
+            width=round(width_cm, 1),    # cm
+            thickness=round(thickness_cm * 10, 1),  # Mostrar grosor en mm
             quantity=qty,
             area=round(area, 4),
             notes=notes
