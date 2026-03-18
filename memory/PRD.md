@@ -7,60 +7,59 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN (18 Marzo 2026)
 
-### 1. Permiso "Acceso Portal Fábrica" en Capacidades Técnicas
-- Añadido checkbox en la sección de Capacidades Técnicas del formulario de usuario
-- Campo `canAccessFabrica` en el modelo de usuario
-- Badge "FÁBRICA" (verde) visible en la lista de usuarios
+### 1. Sistema de Ayuda con Manual PDF por Rol
+- **Nuevo componente**: `UserManualModal.jsx`
+- Botón "AYUDA" visible en el sidebar para todos los usuarios
+- Manual filtrado por rol del usuario (Admin ve todas las secciones)
+- Secciones: Introducción, Presupuestos, CRM, Portal de Fábrica, Despiece, Administración, Glosario
+- Descarga PDF personalizada por rol
+- Búsqueda dentro del manual
 
-### 2. Portal de Fábrica Mejorado
-- **Resumen por Categoría**: Altos, Bajos, Columnas, Especiales (con colores distintivos)
-- **Barra de Progreso de Fabricación**:
-  - ROJO: Sin empezar (0%)
-  - AZUL: En proceso (parcialmente completado)
-  - VERDE: Completado (100%)
-- **Botones de Estado de Fabricación** por mueble:
-  - 🔲 Pendiente (rojo)
-  - ▶️ En proceso (azul)
-  - ✓ Completado (verde)
-- **Importar desde Pedidos Existentes**: Modal con lista de presupuestos guardados
+### 2. Optimizador de Tableros (estilo OpenCutList)
+- **Nuevo componente**: `BoardOptimizer.jsx`
+- Algoritmo de bin-packing 2D personalizado (FFDH - First Fit Decreasing Height)
+- Integrado en el modal de Despiece (botón "Optimizar Tableros")
+- Tamaños de tablero estándar: 2440x1220, 2440x1830, 2750x1830, 3050x1525 mm
+- Kerf configurable: 0mm, 3mm, 4mm, 5mm
+- Visualización gráfica con colores distintivos por pieza
+- Estadísticas: tableros necesarios, eficiencia %, m² usados/desperdicio
+- Exportación PDF con diagramas y lista de piezas
 
-### 3. Clasificación Automática de Muebles
-- A* → Altos
-- B* → Bajos
-- CH*, CO* → Columnas
-- Otros → Especiales
+### 3. Actualizaciones al Manual de Usuario
+- `/app/docs/MANUAL_USUARIO.md` actualizado con nueva sección de Optimizador
+- Contenido del modal de ayuda actualizado
 
-### 4. Tolerancias de Puertas Corregidas
-- Alto: -2mm (0.2cm)
-- Ancho: -3mm (0.3cm) por puerta
-
-### 5. Importación PDF con IA (Gemini Vision)
-- Analiza PDFs y detecta muebles automáticamente
-- Extrae: código, nombre, dimensiones, cantidad
-- Muestra resumen por categoría de items detectados
+### 4. Funcionalidades Previas
+- Permiso "Acceso Portal Fábrica" en Capacidades Técnicas
+- Portal de Fábrica con barra de progreso (Rojo/Azul/Verde)
+- Importación PDF con IA (Gemini Vision)
+- Tolerancias de puertas corregidas (-2mm alto, -3mm ancho)
 
 ---
 
 ## 📋 PENDIENTE
 
 ### P0 - Crítico
-- [ ] Optimización de tableros (bin-packing 2D estilo OpenCutList)
+- [x] ~~Optimización de tableros (bin-packing 2D estilo OpenCutList)~~ COMPLETADO
+- [x] ~~Sistema de Ayuda/Manual por rol~~ COMPLETADO
 
 ### P1 - Alta
 - [x] ~~Permisos específicos Portal Fábrica~~ COMPLETADO
 - [x] ~~Importar desde pedidos existentes~~ COMPLETADO
 - [x] ~~Barra de progreso fabricación~~ COMPLETADO
+- [ ] Verificar issue precio "COST" (17 vs 16) - posible caché del navegador
 
 ### P2 - Media
 - [ ] Casco por defecto por sección/biblioteca
 - [ ] Restaurar logo empresa
 - [ ] Reporte exportable "Agenda de Montajes"
+- [ ] Funcionalidad de impresión específica para usuarios de fábrica
 
 ### P3 - Baja
 - [ ] Refactorización BudgetTable.jsx (~3071 líneas)
 - [ ] Refactorización SettingsModal.jsx (~4727 líneas)
 - [ ] Refactorización server.py (~6530 líneas)
-- [ ] Glitch visual sidebar colapsado
+- [ ] Glitch visual sidebar colapsado (recurrente)
 
 ---
 
@@ -79,13 +78,15 @@
 └── services/
 
 /app/frontend/src/
-├── App.js
+├── App.js                    # Botón de Ayuda en sidebar
 ├── components/
-│   ├── PortalFabrica.jsx   # Portal completo con progreso y categorías
-│   ├── SettingsModal.jsx   # Incluye checkbox "Acceso Portal Fábrica"
-│   ├── DespieceModal.jsx
+│   ├── UserManualModal.jsx   # NUEVO: Manual de ayuda por rol
+│   ├── BoardOptimizer.jsx    # NUEVO: Optimización de tableros
+│   ├── PortalFabrica.jsx     # Portal completo con progreso y categorías
+│   ├── SettingsModal.jsx     # Incluye checkbox "Acceso Portal Fábrica"
+│   ├── DespieceModal.jsx     # Integración con BoardOptimizer
 │   └── ...
-└── services/api.js         # fabricaAPI, projectsAPI
+└── services/api.js           # fabricaAPI, projectsAPI
 ```
 
 ---
@@ -128,6 +129,8 @@
 - ALTOS (azul cielo)
 - BAJOS (ámbar)
 - COLUMNAS (violeta)
+- SEMICOLUMNAS
+- SOBREMÓDULOS
 - ESPECIALES (rosa)
 
 ### Progreso de Fabricación
@@ -145,12 +148,13 @@
 - `google-genai`: Gemini Vision para PDFs
 - `xlsxwriter`: Excel exports
 - `pymongo/motor`: MongoDB async
-- `jspdf` + `html2canvas`: PDF export
+- `jspdf` + `html2canvas`: PDF export (frontend)
 
 ---
 
 ## PRÓXIMOS PASOS RECOMENDADOS
-1. **Optimización de tableros** - Bin-packing 2D
-2. **Notificaciones** - Email cuando cambie estado de orden
-3. **Dashboard gráfico** - Gráficas de producción
-4. **Historial de cambios** - Trazabilidad de estados
+1. ~~**Optimización de tableros**~~ ✅ COMPLETADO
+2. **Funcionalidad de impresión** - Para usuarios de fábrica
+3. **Notificaciones** - Email cuando cambie estado de orden
+4. **Dashboard gráfico** - Gráficas de producción
+5. **Historial de cambios** - Trazabilidad de estados
