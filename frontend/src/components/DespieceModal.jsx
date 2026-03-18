@@ -150,6 +150,296 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     window.print();
   };
 
+  // Calcular canto necesario para cada pieza
+  const calculateCantoForComponent = (comp, quantity = 1) => {
+    const length = comp.length || 0;
+    const width = comp.width || 0;
+    const notes = (comp.notes || '').toLowerCase();
+    
+    // Cantos por defecto según tipo de pieza
+    let cantos = { l1: 0, l2: 0, w1: 0, w2: 0 };
+    
+    if (notes.includes('1l')) {
+      // 1 canto largo
+      cantos.l1 = length;
+    } else if (notes.includes('2l')) {
+      // 2 cantos largos
+      cantos.l1 = length;
+      cantos.l2 = length;
+    } else if (notes.includes('4l') || notes.includes('todos')) {
+      // 4 cantos (todos los lados)
+      cantos.l1 = length;
+      cantos.l2 = length;
+      cantos.w1 = width;
+      cantos.w2 = width;
+    }
+    
+    // Calcular metros lineales totales
+    const totalMl = ((cantos.l1 + cantos.l2 + cantos.w1 + cantos.w2) * quantity) / 100;
+    return { cantos, totalMl };
+  };
+
+  // Calcular resumen de bandas y traseras
+  const calculateBandasYTraseras = useMemo(() => {
+    if (!despieceData?.items) return null;
+    
+    let totalCanto = 0;
+    let traseraTotalArea = 0;
+    let cascoTotalArea = 0;
+    const cantoByMaterial = {};
+    const traserasByThickness = {};
+    
+    despieceData.items.forEach(item => {
+      const itemQty = item.itemQuantity || 1;
+      
+      item.components?.forEach(comp => {
+        const compQty = (comp.quantity || 1) * itemQty;
+        const area = ((comp.length || 0) * (comp.width || 0) * compQty) / 10000; // m²
+        const material = comp.material || carcassMaterialName || 'MELAMINA';
+        const thickness = comp.thickness || 18;
+        
+        // Calcular canto
+        const { totalMl } = calculateCantoForComponent(comp, compQty);
+        totalCanto += totalMl;
+        
+        if (!cantoByMaterial[material]) cantoByMaterial[material] = 0;
+        cantoByMaterial[material] += totalMl;
+        
+        // Separar traseras del resto
+        if (comp.name?.toLowerCase().includes('trasera')) {
+          traseraTotalArea += area;
+          const key = `${thickness}mm`;
+          if (!traserasByThickness[key]) traserasByThickness[key] = { area: 0, pieces: 0 };
+          traserasByThickness[key].area += area;
+          traserasByThickness[key].pieces += compQty;
+        } else {
+          cascoTotalArea += area;
+        }
+      });
+    });
+    
+    return {
+      totalCanto: totalCanto.toFixed(2),
+      cantoByMaterial,
+      traseraTotalArea: traseraTotalArea.toFixed(3),
+      cascoTotalArea: cascoTotalArea.toFixed(3),
+      traserasByThickness
+    };
+  }, [despieceData, carcassMaterialName]);
+
+  // Calcular herrajes necesarios
+  const calculateHerrajes = useMemo(() => {
+    if (!despieceData?.items) return null;
+    
+    let totalBisagras = 0;
+    let totalCorrederas = 0;
+    let totalTiradores = 0;
+    let totalSoportesBaldas = 0;
+    
+    despieceData.items.forEach(item => {
+      const itemQty = item.itemQuantity || 1;
+      const height = item.originalHeight || 70;
+      const width = item.originalWidth || 60;
+      const category = (item.productName || '').toUpperCase();
+      
+      // Bisagras: 2-3 por puerta según altura
+      const numPuertas = category.includes('2P') ? 2 : 1;
+      const bisagrasPerPuerta = height > 100 ? 3 : 2;
+      totalBisagras += (numPuertas * bisagrasPerPuerta * itemQty);
+      
+      // Correderas para cajones
+      if (category.includes('CAJON') || category.includes('GAVETA')) {
+        const numCajones = category.includes('5') ? 5 : category.includes('3') ? 3 : category.includes('2') ? 2 : 1;
+        totalCorrederas += (numCajones * 2 * itemQty); // Par por cajón
+      }
+      
+      // Tiradores: 1 por puerta/cajón
+      totalTiradores += (numPuertas * itemQty);
+      
+      // Soportes baldas: 4 por balda
+      const numBaldas = item.components?.filter(c => c.name?.toLowerCase().includes('balda')).reduce((acc, c) => acc + (c.quantity || 1), 0) || 0;
+      totalSoportesBaldas += (numBaldas * 4 * itemQty);
+    });
+    
+    return {
+      bisagras: totalBisagras,
+      correderas: totalCorrederas,
+      tiradores: totalTiradores,
+      soportesBaldas: totalSoportesBaldas
+    };
+  }, [despieceData]);
+
+  // Exportar PDF
+  const handleExportPDF = () => {
+    const printWindow = window.open('', '_blank');
+    const fechaHoy = new Date().toLocaleDateString('es-ES');
+    
+    let html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Despiece - ${editableExpedient || 'PRESUPUESTO'}</title>
+        <style>
+          @page { size: A4; margin: 15mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: Arial, sans-serif; font-size: 10px; color: #333; }
+          .header { background: #1e1b4b; color: white; padding: 15px; margin-bottom: 15px; }
+          .header h1 { font-size: 18px; margin-bottom: 5px; }
+          .header p { font-size: 10px; opacity: 0.8; }
+          .info-bar { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: #f3f4f6; border-radius: 5px; }
+          .info-item { text-align: center; }
+          .info-label { font-size: 8px; color: #666; text-transform: uppercase; }
+          .info-value { font-size: 12px; font-weight: bold; }
+          .summary { display: flex; gap: 10px; margin-bottom: 15px; }
+          .summary-box { flex: 1; padding: 10px; background: #eef2ff; border-radius: 5px; text-align: center; }
+          .summary-number { font-size: 20px; font-weight: bold; color: #4f46e5; }
+          .summary-label { font-size: 8px; color: #666; text-transform: uppercase; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          th { background: #1e1b4b; color: white; padding: 8px 5px; font-size: 9px; text-align: left; }
+          td { padding: 6px 5px; border-bottom: 1px solid #e5e7eb; font-size: 9px; }
+          tr:nth-child(even) { background: #f9fafb; }
+          .furniture-header { background: #fef3c7; font-weight: bold; }
+          .component-row td { padding-left: 20px; }
+          .section-title { background: #1e1b4b; color: white; padding: 10px; margin: 15px 0 10px 0; font-weight: bold; }
+          .page-break { page-break-before: always; }
+          .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 8px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>ORDEN DE DESPIECE</h1>
+          <p>LUIGGI HOME - Sistema de Gestión</p>
+        </div>
+        
+        <div class="info-bar">
+          <div class="info-item">
+            <div class="info-label">Cliente</div>
+            <div class="info-value">${editableCustomerName || '-'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Expediente</div>
+            <div class="info-value">${editableExpedient || '-'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Referencia</div>
+            <div class="info-value">${editableProjectRef || '-'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Fecha</div>
+            <div class="info-value">${fechaHoy}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Material Base</div>
+            <div class="info-value">${carcassMaterialName || '-'}</div>
+          </div>
+        </div>
+        
+        <div class="summary">
+          <div class="summary-box">
+            <div class="summary-number">${despieceData?.summary?.totalFurniture || 0}</div>
+            <div class="summary-label">Muebles</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-number">${despieceData?.summary?.totalPieces || 0}</div>
+            <div class="summary-label">Piezas</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-number">${despieceData?.summary?.totalArea || 0} m²</div>
+            <div class="summary-label">Área Total</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-number">${calculateBandasYTraseras?.totalCanto || 0} ml</div>
+            <div class="summary-label">Canto Total</div>
+          </div>
+        </div>
+
+        <div class="section-title">LISTA DE PIEZAS POR MUEBLE</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Mueble / Componente</th>
+              <th>Material</th>
+              <th>Largo (cm)</th>
+              <th>Ancho (cm)</th>
+              <th>Grosor</th>
+              <th>Cant.</th>
+              <th>Canto</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    despieceData?.items?.forEach(item => {
+      html += `
+        <tr class="furniture-header">
+          <td colspan="7">${item.productCode} - ${item.productName} (${item.originalWidth}×${item.originalHeight}×${item.originalDepth} cm) × ${item.itemQuantity || 1}</td>
+        </tr>
+      `;
+      
+      item.components?.forEach(comp => {
+        const { totalMl } = calculateCantoForComponent(comp, (comp.quantity || 1) * (item.itemQuantity || 1));
+        html += `
+          <tr class="component-row">
+            <td>${comp.name}</td>
+            <td>${comp.material || '-'}</td>
+            <td>${comp.length || 0}</td>
+            <td>${comp.width || 0}</td>
+            <td>${comp.thickness || 18}mm</td>
+            <td>${(comp.quantity || 1) * (item.itemQuantity || 1)}</td>
+            <td>${totalMl.toFixed(2)} ml</td>
+          </tr>
+        `;
+      });
+    });
+    
+    html += `
+          </tbody>
+        </table>
+        
+        <div class="section-title">RESUMEN DE MATERIALES</div>
+        <table>
+          <tr>
+            <th>Concepto</th>
+            <th>Cantidad</th>
+          </tr>
+          <tr>
+            <td>Tablero Casco (${carcassMaterialName || 'Melamina'})</td>
+            <td>${calculateBandasYTraseras?.cascoTotalArea || 0} m²</td>
+          </tr>
+          <tr>
+            <td>Tablero Trasera</td>
+            <td>${calculateBandasYTraseras?.traseraTotalArea || 0} m²</td>
+          </tr>
+          <tr>
+            <td>Canto Total</td>
+            <td>${calculateBandasYTraseras?.totalCanto || 0} ml</td>
+          </tr>
+        </table>
+
+        <div class="section-title">HERRAJES ESTIMADOS</div>
+        <table>
+          <tr><th>Herraje</th><th>Cantidad</th></tr>
+          <tr><td>Bisagras</td><td>${calculateHerrajes?.bisagras || 0} uds</td></tr>
+          <tr><td>Pares Correderas</td><td>${calculateHerrajes?.correderas || 0} pares</td></tr>
+          <tr><td>Tiradores</td><td>${calculateHerrajes?.tiradores || 0} uds</td></tr>
+          <tr><td>Soportes Baldas</td><td>${calculateHerrajes?.soportesBaldas || 0} uds</td></tr>
+        </table>
+
+        <div class="footer">
+          Generado por LUIGGI HOME ERP - ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')}
+        </div>
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
+
   // Exportar archivo CSV para seccionadora
   const handleExportCSV = () => {
     if (!despieceData || !despieceData.items) {
