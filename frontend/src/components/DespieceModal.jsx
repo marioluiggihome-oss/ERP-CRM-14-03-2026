@@ -492,19 +492,19 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                             <div className="text-center px-3 py-1.5 bg-white rounded-lg border border-emerald-200 shadow-sm">
                               <p className="text-[9px] text-emerald-500 uppercase font-bold">Ancho</p>
                               <p className="font-black text-emerald-800 text-lg">{furniture.originalWidth}</p>
-                              <p className="text-[9px] text-emerald-400">mm</p>
+                              <p className="text-[9px] text-emerald-400">cm</p>
                             </div>
                             <div className="text-emerald-300 font-bold">×</div>
                             <div className="text-center px-3 py-1.5 bg-white rounded-lg border border-emerald-200 shadow-sm">
                               <p className="text-[9px] text-emerald-500 uppercase font-bold">Alto</p>
-                              <p className="font-black text-emerald-800 text-lg">{furniture.originalHeight * 10}</p>
-                              <p className="text-[9px] text-emerald-400">mm</p>
+                              <p className="font-black text-emerald-800 text-lg">{furniture.originalHeight}</p>
+                              <p className="text-[9px] text-emerald-400">cm</p>
                             </div>
                             <div className="text-emerald-300 font-bold">×</div>
                             <div className="text-center px-3 py-1.5 bg-white rounded-lg border border-emerald-200 shadow-sm">
                               <p className="text-[9px] text-emerald-500 uppercase font-bold">Fondo</p>
-                              <p className="font-black text-emerald-800 text-lg">{furniture.originalDepth * 10}</p>
-                              <p className="text-[9px] text-emerald-400">mm</p>
+                              <p className="font-black text-emerald-800 text-lg">{furniture.originalDepth}</p>
+                              <p className="text-[9px] text-emerald-400">cm</p>
                             </div>
                             {/* Botón Copiar Dimensiones */}
                             <button
