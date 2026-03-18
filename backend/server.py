@@ -2679,10 +2679,16 @@ async def confirm_order(
                 message.add_attachment(attached_file)
         
         # Send email
-        sg = SendGridAPIClient(sendgrid_key)
-        response = sg.send(message)
+        try:
+            sg = SendGridAPIClient(sendgrid_key)
+            response = sg.send(message)
+            email_sent = True
+            logger.info(f"Email sent successfully to {email}")
+        except Exception as email_error:
+            logger.warning(f"Email sending failed: {email_error}. Order will be saved without sending email.")
+            email_sent = False
         
-        # Log the order confirmation
+        # Log the order confirmation (save it regardless of email status)
         order_record = {
             "id": f"order-{uuid.uuid4().hex[:8]}",
             "budgetNumber": budgetNumber,
@@ -2694,21 +2700,35 @@ async def confirm_order(
             "itemsCount": len(items_list),
             "attachmentsCount": sum(1 for a in attachments if a and a.filename),
             "confirmedAt": datetime.now(timezone.utc).isoformat(),
-            "status": "confirmed"
+            "status": "confirmed",
+            "emailSent": email_sent
         }
         await db.orders.insert_one(order_record)
         
-        logger.info(f"Order confirmed: {budgetNumber} sent to {email}")
+        logger.info(f"Order confirmed: {budgetNumber}" + (" sent to " + email if email_sent else " (email not sent)"))
         
-        return {
-            "success": True,
-            "message": f"Pedido confirmado y enviado a {email}",
-            "orderId": order_record["id"]
-        }
+        if email_sent:
+            return {
+                "success": True,
+                "message": f"Pedido confirmado y enviado a {email}",
+                "orderId": order_record["id"]
+            }
+        else:
+            return {
+                "success": True,
+                "message": f"Pedido confirmado. El email no se pudo enviar (configure SendGrid API Key en Panel Maestro > Configuración).",
+                "orderId": order_record["id"],
+                "warning": "Email no enviado"
+            }
         
     except Exception as e:
         logger.error(f"Order confirmation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        if "401" in error_msg or "Unauthorized" in error_msg:
+            error_msg = "Error de autenticación con el servicio de email. Configure el API Key de SendGrid en Panel Maestro > Configuración."
+        elif "SENDGRID" in error_msg.upper():
+            error_msg = "Servicio de email no configurado. Configure SendGrid en Panel Maestro > Configuración."
+        raise HTTPException(status_code=500, detail=error_msg)
 
 # ============================================
 # BACKUP SYSTEM

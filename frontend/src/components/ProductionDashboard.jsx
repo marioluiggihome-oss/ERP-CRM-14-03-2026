@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
   draft: { label: 'Borrador', color: '#9ca3af', bgColor: '#f3f4f6' },
   confirmed: { label: 'Confirmada', color: '#3b82f6', bgColor: '#dbeafe' },
   in_production: { label: 'En Producción', color: '#f59e0b', bgColor: '#fef3c7' },
-  ready: { label: 'Lista', color: '#10b981', bgColor: '#d1fae5' },
+  ready: { label: 'Fabricada', color: '#10b981', bgColor: '#d1fae5' },
   delivered: { label: 'Entregada', color: '#059669', bgColor: '#a7f3d0' },
   cancelled: { label: 'Cancelada', color: '#ef4444', bgColor: '#fee2e2' }
 };

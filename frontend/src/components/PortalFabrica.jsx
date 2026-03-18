@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
   draft: { label: 'Borrador', color: 'bg-gray-100 text-gray-700', icon: FileText },
   confirmed: { label: 'Confirmada', color: 'bg-blue-100 text-blue-700', icon: CheckCircle },
   in_production: { label: 'En Producción', color: 'bg-amber-100 text-amber-700', icon: Factory },
-  ready: { label: 'Lista', color: 'bg-emerald-100 text-emerald-700', icon: Package },
+  ready: { label: 'Fabricada', color: 'bg-emerald-100 text-emerald-700', icon: Package },
   delivered: { label: 'Entregada', color: 'bg-green-100 text-green-700', icon: Truck },
   cancelled: { label: 'Cancelada', color: 'bg-red-100 text-red-700', icon: X }
 };
@@ -155,6 +155,9 @@ const PortalFabrica = ({ currentUser }) => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showImportFromProjectsModal, setShowImportFromProjectsModal] = useState(false);
   const [showDeliveryDateModal, setShowDeliveryDateModal] = useState(null);
+  const [showDespieceModal, setShowDespieceModal] = useState(null);
+  const [despieceData, setDespieceData] = useState(null);
+  const [loadingDespiece, setLoadingDespiece] = useState(false);
 
   // Cargar fábricas
   useEffect(() => {
@@ -256,6 +259,28 @@ const PortalFabrica = ({ currentUser }) => {
       loadData();
     } catch (error) {
       alert('Error al eliminar: ' + error.message);
+    }
+  };
+
+  // Ver despiece de una orden
+  const handleViewDespiece = async (orderId) => {
+    setLoadingDespiece(true);
+    setShowDespieceModal(orderId);
+    try {
+      const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/despiece`);
+      if (response.ok) {
+        const data = await response.json();
+        setDespieceData(data);
+      } else {
+        const error = await response.json();
+        alert('Error: ' + (error.detail || 'No se pudo cargar el despiece'));
+        setShowDespieceModal(null);
+      }
+    } catch (error) {
+      alert('Error al cargar despiece: ' + error.message);
+      setShowDespieceModal(null);
+    } finally {
+      setLoadingDespiece(false);
     }
   };
 
@@ -465,7 +490,7 @@ const PortalFabrica = ({ currentUser }) => {
                       <option value="draft">Borrador</option>
                       <option value="confirmed">Confirmada</option>
                       <option value="in_production">En Producción</option>
-                      <option value="ready">Lista</option>
+                      <option value="ready">Fabricada</option>
                       <option value="delivered">Entregada</option>
                       <option value="cancelled">Cancelada</option>
                     </select>
@@ -480,7 +505,7 @@ const PortalFabrica = ({ currentUser }) => {
                     </button>
 
                     <button
-                      onClick={() => window.open(`${API_URL}/api/fabrica/orders/${order.id}/despiece`, '_blank')}
+                      onClick={() => handleViewDespiece(order.id)}
                       className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold hover:bg-orange-200 flex items-center gap-1"
                       data-testid={`view-despiece-${order.id}`}
                     >
@@ -864,7 +889,7 @@ const PortalFabrica = ({ currentUser }) => {
             ) : projects.length === 0 ? (
               <div className="text-center py-12">
                 <FolderOpen size={48} className="mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500 font-bold">No hay presupuestos con muebles</p>
+                <p className="text-gray-500 font-bold">No hay pedidos con muebles</p>
                 <p className="text-gray-400 text-sm">Crea un presupuesto primero desde la sección Presupuestos</p>
               </div>
             ) : (
@@ -1287,7 +1312,7 @@ const PortalFabrica = ({ currentUser }) => {
                 color="amber"
               />
               <StatCard 
-                title="Listas" 
+                title="Fabricadas" 
                 value={stats.byStatus?.ready || 0} 
                 icon={CheckCircle} 
                 color="emerald"
@@ -1331,7 +1356,7 @@ const PortalFabrica = ({ currentUser }) => {
                 <option value="draft">Borrador</option>
                 <option value="confirmed">Confirmada</option>
                 <option value="in_production">En Producción</option>
-                <option value="ready">Lista</option>
+                <option value="ready">Fabricada</option>
                 <option value="delivered">Entregada</option>
               </select>
               <select
@@ -1377,6 +1402,103 @@ const PortalFabrica = ({ currentUser }) => {
       {showDeliveryDateModal && <DeliveryDateModal />}
       {showImportModal && <ImportModal />}
       {showImportFromProjectsModal && <ImportFromProjectsModal />}
+      
+      {/* Modal de Despiece */}
+      {showDespieceModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-wider">
+                  Despiece de Orden
+                </h2>
+                <p className="text-orange-100 text-sm">
+                  {despieceData?.orderNumber} - {despieceData?.customerName}
+                </p>
+              </div>
+              <button 
+                onClick={() => { setShowDespieceModal(null); setDespieceData(null); }}
+                className="p-2 hover:bg-white/20 rounded-xl transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-6">
+              {loadingDespiece ? (
+                <div className="flex items-center justify-center py-20">
+                  <RefreshCw size={32} className="text-orange-600 animate-spin" />
+                </div>
+              ) : despieceData ? (
+                <div className="space-y-6">
+                  {despieceData.items?.map((item, itemIdx) => (
+                    <div key={itemIdx} className="border border-orange-200 rounded-xl overflow-hidden">
+                      {/* Item header */}
+                      <div className="bg-orange-50 px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl font-black text-orange-800">{item.productCode}</span>
+                          <span className="text-orange-600">{item.productName}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="px-3 py-1 bg-orange-200 text-orange-800 rounded-full text-sm font-bold">
+                            x{item.quantity}
+                          </span>
+                          <span className="text-sm text-orange-600">{item.dimensions}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Components table */}
+                      <table className="w-full">
+                        <thead className="bg-orange-100/50">
+                          <tr className="text-xs font-bold text-orange-700 uppercase">
+                            <th className="px-4 py-2 text-left">Pieza</th>
+                            <th className="px-4 py-2 text-left">Material</th>
+                            <th className="px-4 py-2 text-center">Largo</th>
+                            <th className="px-4 py-2 text-center">Ancho</th>
+                            <th className="px-4 py-2 text-center">Espesor</th>
+                            <th className="px-4 py-2 text-center">Cant.</th>
+                            <th className="px-4 py-2 text-left">Notas</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-orange-100">
+                          {item.components?.map((comp, compIdx) => (
+                            <tr key={compIdx} className="hover:bg-orange-50/50">
+                              <td className="px-4 py-2 font-medium text-gray-800">{comp.name}</td>
+                              <td className="px-4 py-2 text-sm text-gray-600">{comp.material}</td>
+                              <td className="px-4 py-2 text-center font-mono">{comp.length}</td>
+                              <td className="px-4 py-2 text-center font-mono">{comp.width}</td>
+                              <td className="px-4 py-2 text-center font-mono">{comp.thickness}</td>
+                              <td className="px-4 py-2 text-center font-bold text-orange-700">{comp.quantity}</td>
+                              <td className="px-4 py-2 text-xs text-gray-500">{comp.notes}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Scissors size={48} className="mx-auto text-orange-200 mb-4" />
+                  <p className="text-orange-400">No hay datos de despiece</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="bg-orange-50 px-6 py-3 flex justify-end gap-3 border-t border-orange-200">
+              <button
+                onClick={() => { setShowDespieceModal(null); setDespieceData(null); }}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
