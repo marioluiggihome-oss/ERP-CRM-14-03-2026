@@ -3,9 +3,10 @@ import {
   Factory, Package, Clock, CheckCircle, Truck, AlertTriangle, 
   Plus, Search, Filter, Calendar, FileText, Upload, Download,
   ChevronDown, ChevronRight, Edit3, Trash2, Eye, Printer,
-  BarChart3, TrendingUp, Box, Scissors, RefreshCw, X
+  BarChart3, TrendingUp, Box, Scissors, RefreshCw, X,
+  FolderOpen, Check, Play, Pause, Square
 } from 'lucide-react';
-import { fabricaAPI } from '../services/api';
+import { fabricaAPI, projectsAPI } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -26,19 +27,112 @@ const PRIORITY_CONFIG = {
   urgent: { label: 'Urgente', color: 'bg-red-100 text-red-700' }
 };
 
+// Clasificar muebles por categoría
+const classifyFurniture = (productCode, productName) => {
+  const code = (productCode || '').toUpperCase();
+  const name = (productName || '').toUpperCase();
+  
+  if (code.startsWith('A') || name.includes('ALTO')) return 'altos';
+  if (code.startsWith('B') || name.includes('BAJO')) return 'bajos';
+  if (code.startsWith('CH') || code.startsWith('CO') || name.includes('COLUMNA') || name.includes('SEMICOLUMNA')) return 'columnas';
+  return 'especiales';
+};
+
+// Componente de barra de progreso de fabricación
+const FabricationProgressBar = ({ items = [] }) => {
+  const total = items.length;
+  if (total === 0) return null;
+  
+  const completed = items.filter(i => i.fabricationStatus === 'completed').length;
+  const inProgress = items.filter(i => i.fabricationStatus === 'in_progress').length;
+  const pending = total - completed - inProgress;
+  
+  const completedPercent = (completed / total) * 100;
+  const inProgressPercent = (inProgress / total) * 100;
+  
+  // Determinar color principal
+  let statusColor = 'bg-red-500'; // Sin empezar
+  let statusText = 'Sin empezar';
+  if (completedPercent === 100) {
+    statusColor = 'bg-emerald-500';
+    statusText = 'Completado';
+  } else if (completedPercent > 0 || inProgressPercent > 0) {
+    statusColor = 'bg-blue-500';
+    statusText = 'En proceso';
+  }
+  
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className={`font-bold ${completedPercent === 100 ? 'text-emerald-600' : completedPercent > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+          {statusText}
+        </span>
+        <span className="text-gray-500">
+          {completed}/{total} muebles
+        </span>
+      </div>
+      <div className="h-3 bg-red-200 rounded-full overflow-hidden flex">
+        {/* Parte completada (verde) */}
+        <div 
+          className="h-full bg-emerald-500 transition-all duration-500"
+          style={{ width: `${completedPercent}%` }}
+        />
+        {/* Parte en proceso (azul) */}
+        <div 
+          className="h-full bg-blue-500 transition-all duration-500"
+          style={{ width: `${inProgressPercent}%` }}
+        />
+        {/* El resto queda rojo (del fondo) */}
+      </div>
+      <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+        <span>{pending} pendientes</span>
+        <span>{inProgress} en proceso</span>
+        <span>{completed} completados</span>
+      </div>
+    </div>
+  );
+};
+
+// Resumen por categoría de muebles
+const CategorySummary = ({ items = [] }) => {
+  const summary = { altos: 0, bajos: 0, columnas: 0, especiales: 0 };
+  
+  items.forEach(item => {
+    const category = classifyFurniture(item.productCode, item.productName);
+    summary[category] += item.quantity || 1;
+  });
+  
+  const categories = [
+    { key: 'altos', label: 'Altos', color: 'bg-sky-100 text-sky-700 border-sky-300', icon: '⬆️' },
+    { key: 'bajos', label: 'Bajos', color: 'bg-amber-100 text-amber-700 border-amber-300', icon: '⬇️' },
+    { key: 'columnas', label: 'Columnas', color: 'bg-violet-100 text-violet-700 border-violet-300', icon: '📏' },
+    { key: 'especiales', label: 'Especiales', color: 'bg-rose-100 text-rose-700 border-rose-300', icon: '⭐' }
+  ];
+  
+  return (
+    <div className="grid grid-cols-4 gap-2 my-3">
+      {categories.map(cat => (
+        <div key={cat.key} className={`${cat.color} border rounded-lg p-2 text-center`}>
+          <div className="text-lg font-black">{summary[cat.key]}</div>
+          <div className="text-[10px] font-bold uppercase">{cat.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const PortalFabrica = ({ currentUser }) => {
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [activeView, setActiveView] = useState('list'); // 'list', 'kanban', 'detail', 'new'
   const [filters, setFilters] = useState({ status: '', priority: '', search: '' });
-  const [showFilters, setShowFilters] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState({});
   
   // Modals
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportFromProjectsModal, setShowImportFromProjectsModal] = useState(false);
   const [showDeliveryDateModal, setShowDeliveryDateModal] = useState(null);
 
   // Cargar datos
@@ -69,6 +163,27 @@ const PortalFabrica = ({ currentUser }) => {
       loadData();
     } catch (error) {
       alert('Error al cambiar estado: ' + error.message);
+    }
+  };
+
+  // Marcar item como fabricado
+  const handleMarkItemFabricated = async (orderId, itemId, newStatus) => {
+    try {
+      // Actualizar la orden con el nuevo estado del item
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+      
+      const updatedItems = order.items.map(item => {
+        if (item.id === itemId) {
+          return { ...item, fabricationStatus: newStatus };
+        }
+        return item;
+      });
+      
+      await fabricaAPI.updateOrder(orderId, { items: updatedItems });
+      loadData();
+    } catch (error) {
+      alert('Error al actualizar estado: ' + error.message);
     }
   };
 
@@ -121,12 +236,20 @@ const PortalFabrica = ({ currentUser }) => {
           <Factory size={48} className="mx-auto text-indigo-200 mb-4" />
           <p className="text-indigo-400 font-bold">No hay órdenes de fabricación</p>
           <p className="text-indigo-300 text-sm mt-1">Crea una nueva orden o importa desde un presupuesto</p>
-          <button
-            onClick={() => setShowNewOrderModal(true)}
-            className="mt-4 bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
-          >
-            Crear Primera Orden
-          </button>
+          <div className="flex gap-3 justify-center mt-4">
+            <button
+              onClick={() => setShowNewOrderModal(true)}
+              className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
+            >
+              Crear Orden
+            </button>
+            <button
+              onClick={() => setShowImportFromProjectsModal(true)}
+              className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-colors"
+            >
+              Importar de Pedido
+            </button>
+          </div>
         </div>
       ) : (
         orders.map(order => {
@@ -160,22 +283,24 @@ const PortalFabrica = ({ currentUser }) => {
                     <p className="text-sm text-indigo-600 mt-0.5">{order.customerName || 'Sin cliente'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-6 text-sm">
-                  <div className="text-center">
-                    <p className="text-xs text-indigo-400 font-bold uppercase">Muebles</p>
-                    <p className="font-black text-indigo-900">{order.items?.length || 0}</p>
+                <div className="flex items-center gap-6">
+                  {/* Mini barra de progreso */}
+                  <div className="w-32">
+                    <FabricationProgressBar items={order.items || []} />
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs text-indigo-400 font-bold uppercase">Piezas</p>
-                    <p className="font-black text-orange-600">{order.totalPieces || 0}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-indigo-400 font-bold uppercase">Entrega</p>
-                    <p className={`font-bold ${order.estimatedDeliveryDate ? 'text-emerald-600' : 'text-gray-400'}`}>
-                      {order.estimatedDeliveryDate 
-                        ? new Date(order.estimatedDeliveryDate).toLocaleDateString('es-ES') 
-                        : 'Sin fecha'}
-                    </p>
+                  <div className="flex items-center gap-6 text-sm">
+                    <div className="text-center">
+                      <p className="text-xs text-indigo-400 font-bold uppercase">Muebles</p>
+                      <p className="font-black text-indigo-900">{order.items?.length || 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-indigo-400 font-bold uppercase">Entrega</p>
+                      <p className={`font-bold ${order.estimatedDeliveryDate ? 'text-emerald-600' : 'text-gray-400'}`}>
+                        {order.estimatedDeliveryDate 
+                          ? new Date(order.estimatedDeliveryDate).toLocaleDateString('es-ES') 
+                          : 'Sin fecha'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -183,10 +308,15 @@ const PortalFabrica = ({ currentUser }) => {
               {/* Expanded Content */}
               {isExpanded && (
                 <div className="px-6 pb-4 border-t border-indigo-50">
-                  {/* Items */}
+                  {/* Resumen por categoría */}
+                  <CategorySummary items={order.items || []} />
+                  
+                  {/* Items con estado de fabricación */}
                   {order.items && order.items.length > 0 && (
                     <div className="mt-4">
-                      <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">Muebles en la orden</p>
+                      <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">
+                        Muebles en la orden - Haz clic para marcar como fabricado
+                      </p>
                       <div className="bg-indigo-50 rounded-xl overflow-hidden">
                         <table className="w-full text-sm">
                           <thead className="bg-indigo-100">
@@ -194,24 +324,72 @@ const PortalFabrica = ({ currentUser }) => {
                               <th className="px-4 py-2 text-left">Código</th>
                               <th className="px-4 py-2 text-left">Descripción</th>
                               <th className="px-4 py-2 text-center">Dimensiones</th>
+                              <th className="px-4 py-2 text-center">Tipo</th>
                               <th className="px-4 py-2 text-center">Cant.</th>
-                              <th className="px-4 py-2 text-center">Estado</th>
+                              <th className="px-4 py-2 text-center">Estado Fabricación</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-indigo-100">
-                            {order.items.map((item, idx) => (
-                              <tr key={item.id || idx} className="bg-white">
-                                <td className="px-4 py-2 font-bold text-indigo-900">{item.productCode}</td>
-                                <td className="px-4 py-2 text-indigo-600">{item.productName}</td>
-                                <td className="px-4 py-2 text-center text-xs">{item.width}×{item.height}×{item.depth} cm</td>
-                                <td className="px-4 py-2 text-center font-bold text-orange-600">{item.quantity}</td>
-                                <td className="px-4 py-2 text-center">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATUS_CONFIG[item.status]?.color || 'bg-gray-100 text-gray-600'}`}>
-                                    {STATUS_CONFIG[item.status]?.label || item.status}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
+                            {order.items.map((item, idx) => {
+                              const category = classifyFurniture(item.productCode, item.productName);
+                              const fabStatus = item.fabricationStatus || 'pending';
+                              
+                              const categoryColors = {
+                                altos: 'bg-sky-100 text-sky-700',
+                                bajos: 'bg-amber-100 text-amber-700',
+                                columnas: 'bg-violet-100 text-violet-700',
+                                especiales: 'bg-rose-100 text-rose-700'
+                              };
+                              
+                              const fabStatusConfig = {
+                                pending: { label: 'Pendiente', color: 'bg-red-500', icon: Square },
+                                in_progress: { label: 'En proceso', color: 'bg-blue-500', icon: Play },
+                                completed: { label: 'Completado', color: 'bg-emerald-500', icon: Check }
+                              };
+                              
+                              const statusConf = fabStatusConfig[fabStatus] || fabStatusConfig.pending;
+                              const StatusFabIcon = statusConf.icon;
+                              
+                              return (
+                                <tr key={item.id || idx} className="bg-white">
+                                  <td className="px-4 py-2 font-bold text-indigo-900">{item.productCode}</td>
+                                  <td className="px-4 py-2 text-indigo-600">{item.productName}</td>
+                                  <td className="px-4 py-2 text-center text-xs">{item.width}×{item.height}×{item.depth} cm</td>
+                                  <td className="px-4 py-2 text-center">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${categoryColors[category]}`}>
+                                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2 text-center font-bold text-orange-600">{item.quantity}</td>
+                                  <td className="px-4 py-2">
+                                    <div className="flex items-center justify-center gap-1">
+                                      {/* Botones para cambiar estado de fabricación */}
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleMarkItemFabricated(order.id, item.id, 'pending'); }}
+                                        className={`p-1.5 rounded-lg transition-all ${fabStatus === 'pending' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-500 hover:bg-red-200'}`}
+                                        title="Pendiente"
+                                      >
+                                        <Square size={14} />
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleMarkItemFabricated(order.id, item.id, 'in_progress'); }}
+                                        className={`p-1.5 rounded-lg transition-all ${fabStatus === 'in_progress' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-500 hover:bg-blue-200'}`}
+                                        title="En proceso"
+                                      >
+                                        <Play size={14} />
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleMarkItemFabricated(order.id, item.id, 'completed'); }}
+                                        className={`p-1.5 rounded-lg transition-all ${fabStatus === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-500 hover:bg-emerald-200'}`}
+                                        title="Completado"
+                                      >
+                                        <Check size={14} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -303,7 +481,7 @@ const PortalFabrica = ({ currentUser }) => {
       if (!newItem.productCode) return;
       setFormData(prev => ({
         ...prev,
-        items: [...prev.items, { ...newItem, id: `temp-${Date.now()}` }]
+        items: [...prev.items, { ...newItem, id: `temp-${Date.now()}`, fabricationStatus: 'pending' }]
       }));
       setNewItem({ productCode: '', productName: '', quantity: 1, width: 60, height: 70, depth: 58 });
     };
@@ -453,25 +631,28 @@ const PortalFabrica = ({ currentUser }) => {
                 </button>
               </div>
 
-              {/* Lista de muebles añadidos */}
+              {/* Lista de muebles añadidos con resumen */}
               {formData.items.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {formData.items.map((item, idx) => (
-                    <div key={item.id || idx} className="flex items-center justify-between bg-white border border-indigo-100 rounded-lg px-4 py-2">
-                      <div className="flex items-center gap-4">
-                        <span className="font-bold text-indigo-900">{item.productCode}</span>
-                        <span className="text-indigo-600">{item.productName}</span>
-                        <span className="text-xs text-gray-500">{item.width}×{item.height}×{item.depth} cm</span>
+                <>
+                  <CategorySummary items={formData.items} />
+                  <div className="mt-2 space-y-2">
+                    {formData.items.map((item, idx) => (
+                      <div key={item.id || idx} className="flex items-center justify-between bg-white border border-indigo-100 rounded-lg px-4 py-2">
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold text-indigo-900">{item.productCode}</span>
+                          <span className="text-indigo-600">{item.productName}</span>
+                          <span className="text-xs text-gray-500">{item.width}×{item.height}×{item.depth} cm</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-orange-600">×{item.quantity}</span>
+                          <button onClick={() => handleRemoveItem(idx)} className="text-red-500 hover:text-red-700">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-orange-600">×{item.quantity}</span>
-                        <button onClick={() => handleRemoveItem(idx)} className="text-red-500 hover:text-red-700">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
@@ -562,6 +743,133 @@ const PortalFabrica = ({ currentUser }) => {
     );
   };
 
+  // Modal para importar desde proyectos/pedidos existentes
+  const ImportFromProjectsModal = () => {
+    const [projects, setProjects] = useState([]);
+    const [loadingProjects, setLoadingProjects] = useState(true);
+    const [selectedProject, setSelectedProject] = useState(null);
+    const [importing, setImporting] = useState(false);
+
+    useEffect(() => {
+      const loadProjects = async () => {
+        try {
+          const result = await projectsAPI.list();
+          // Filtrar solo proyectos con items montada
+          const projectsWithItems = (result.projects || []).filter(p => 
+            p.itemsMontada && p.itemsMontada.length > 0
+          );
+          setProjects(projectsWithItems);
+        } catch (error) {
+          console.error('Error loading projects:', error);
+        } finally {
+          setLoadingProjects(false);
+        }
+      };
+      if (showImportFromProjectsModal) {
+        loadProjects();
+      }
+    }, [showImportFromProjectsModal]);
+
+    const handleImportProject = async (project) => {
+      setImporting(true);
+      try {
+        await fabricaAPI.importFromBudget(project.id, currentUser?.id, currentUser?.clientName);
+        alert(`Orden creada desde presupuesto: ${project.budgetNumber || project.id}`);
+        setShowImportFromProjectsModal(false);
+        loadData();
+      } catch (error) {
+        alert('Error al importar: ' + error.message);
+      } finally {
+        setImporting(false);
+      }
+    };
+
+    if (!showImportFromProjectsModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-emerald-700 text-white px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <FolderOpen size={24} />
+              <h2 className="font-black text-lg">Importar desde Pedidos Existentes</h2>
+            </div>
+            <button onClick={() => setShowImportFromProjectsModal(false)} className="p-2 hover:bg-white/10 rounded-xl">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-auto p-6">
+            {loadingProjects ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw size={32} className="animate-spin text-emerald-600" />
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="text-center py-12">
+                <FolderOpen size={48} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500 font-bold">No hay presupuestos con muebles</p>
+                <p className="text-gray-400 text-sm">Crea un presupuesto primero desde la sección Presupuestos</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500 mb-4">
+                  Selecciona un presupuesto para crear una orden de fabricación con sus muebles:
+                </p>
+                {projects.map(project => (
+                  <div 
+                    key={project.id}
+                    className={`border rounded-xl p-4 cursor-pointer transition-all ${
+                      selectedProject?.id === project.id 
+                        ? 'border-emerald-500 bg-emerald-50' 
+                        : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50'
+                    }`}
+                    onClick={() => setSelectedProject(project)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-lg text-gray-900">
+                            {project.budgetNumber || `P-${project.id.slice(-6)}`}
+                          </span>
+                          <span className="text-sm text-emerald-600 font-bold">
+                            {project.itemsMontada?.length || 0} muebles
+                          </span>
+                        </div>
+                        <p className="text-gray-600">{project.customerName || 'Sin cliente'}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Creado: {new Date(project.createdAt).toLocaleDateString('es-ES')}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <CategorySummary items={project.itemsMontada || []} />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleImportProject(project); }}
+                          disabled={importing}
+                          className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {importing ? 'Importando...' : 'Importar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-gray-100 px-6 py-4 flex justify-end">
+            <button
+              onClick={() => setShowImportFromProjectsModal(false)}
+              className="px-6 py-2 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Modal para importar PDF
   const ImportModal = () => {
     const [file, setFile] = useState(null);
@@ -603,7 +911,7 @@ const PortalFabrica = ({ currentUser }) => {
       setCreatingOrder(true);
       try {
         const orderData = {
-          customerName: analysisResult.rawText?.includes('Cliente:') ? '' : 'Cliente PDF',
+          customerName: 'Cliente PDF',
           customerCode: '',
           priority: 'normal',
           items: analysisResult.detectedItems.map(item => ({
@@ -612,7 +920,8 @@ const PortalFabrica = ({ currentUser }) => {
             quantity: item.quantity || 1,
             width: item.width || 60,
             height: item.height || 70,
-            depth: item.depth || 58
+            depth: item.depth || 58,
+            fabricationStatus: 'pending'
           })),
           internalNotes: `Importado desde PDF: ${file?.name}`
         };
@@ -634,7 +943,7 @@ const PortalFabrica = ({ currentUser }) => {
 
     return (
       <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <div className="bg-indigo-950 text-white px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <Upload size={24} />
@@ -701,6 +1010,9 @@ const PortalFabrica = ({ currentUser }) => {
 
                 {analysisResult.detectedItems && analysisResult.detectedItems.length > 0 && (
                   <>
+                    {/* Resumen por categoría */}
+                    <CategorySummary items={analysisResult.detectedItems} />
+                    
                     <div className="bg-indigo-50 rounded-xl overflow-hidden">
                       <div className="bg-indigo-100 px-4 py-2">
                         <p className="font-black text-indigo-800 text-sm uppercase">
@@ -713,6 +1025,7 @@ const PortalFabrica = ({ currentUser }) => {
                             <tr className="text-xs text-indigo-700 uppercase">
                               <th className="px-4 py-2 text-left">Código</th>
                               <th className="px-4 py-2 text-left">Descripción</th>
+                              <th className="px-4 py-2 text-center">Tipo</th>
                               <th className="px-4 py-2 text-center">Ancho</th>
                               <th className="px-4 py-2 text-center">Alto</th>
                               <th className="px-4 py-2 text-center">Fondo</th>
@@ -720,16 +1033,30 @@ const PortalFabrica = ({ currentUser }) => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-indigo-100">
-                            {analysisResult.detectedItems.map((item, idx) => (
-                              <tr key={idx} className="bg-white hover:bg-indigo-50">
-                                <td className="px-4 py-2 font-bold text-indigo-900">{item.productCode}</td>
-                                <td className="px-4 py-2 text-indigo-600">{item.productName}</td>
-                                <td className="px-4 py-2 text-center">{item.width} cm</td>
-                                <td className="px-4 py-2 text-center">{item.height} cm</td>
-                                <td className="px-4 py-2 text-center">{item.depth} cm</td>
-                                <td className="px-4 py-2 text-center font-bold text-orange-600">{item.quantity}</td>
-                              </tr>
-                            ))}
+                            {analysisResult.detectedItems.map((item, idx) => {
+                              const category = classifyFurniture(item.productCode, item.productName);
+                              const categoryColors = {
+                                altos: 'bg-sky-100 text-sky-700',
+                                bajos: 'bg-amber-100 text-amber-700',
+                                columnas: 'bg-violet-100 text-violet-700',
+                                especiales: 'bg-rose-100 text-rose-700'
+                              };
+                              return (
+                                <tr key={idx} className="bg-white hover:bg-indigo-50">
+                                  <td className="px-4 py-2 font-bold text-indigo-900">{item.productCode}</td>
+                                  <td className="px-4 py-2 text-indigo-600">{item.productName}</td>
+                                  <td className="px-4 py-2 text-center">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${categoryColors[category]}`}>
+                                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2 text-center">{item.width} cm</td>
+                                  <td className="px-4 py-2 text-center">{item.height} cm</td>
+                                  <td className="px-4 py-2 text-center">{item.depth} cm</td>
+                                  <td className="px-4 py-2 text-center font-bold text-orange-600">{item.quantity}</td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -796,6 +1123,14 @@ const PortalFabrica = ({ currentUser }) => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowImportFromProjectsModal(true)}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2"
+              data-testid="import-from-projects-btn"
+            >
+              <FolderOpen size={18} />
+              Importar Pedido
+            </button>
             <button
               onClick={() => setShowImportModal(true)}
               className="px-4 py-2 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"
@@ -920,6 +1255,7 @@ const PortalFabrica = ({ currentUser }) => {
       {showNewOrderModal && <NewOrderModal />}
       {showDeliveryDateModal && <DeliveryDateModal />}
       {showImportModal && <ImportModal />}
+      {showImportFromProjectsModal && <ImportFromProjectsModal />}
     </div>
   );
 };

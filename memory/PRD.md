@@ -7,46 +7,49 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN (18 Marzo 2026)
 
-### 1. Cálculo de Puertas en Despiece (P0 - COMPLETADO)
-- **Tolerancias corregidas**: Alto -2mm, Ancho -3mm por puerta
-- Detecta 2P, 1P, D/I automáticamente
-- Ejemplo: Mueble 90×60cm 2P → Puerta 89.8×29.7cm ✓
+### 1. Permiso "Acceso Portal Fábrica" en Capacidades Técnicas
+- Añadido checkbox en la sección de Capacidades Técnicas del formulario de usuario
+- Campo `canAccessFabrica` en el modelo de usuario
+- Badge "FÁBRICA" (verde) visible en la lista de usuarios
 
-### 2. Portal de Fábrica (NUEVO MÓDULO - COMPLETADO)
-- Dashboard con estadísticas en español
-- CRUD completo de órdenes de fabricación (OF-YYYY-NNNN)
-- Gestión de estados: borrador → confirmada → en_producción → lista → entregada
-- **Importación de PDF con IA** (Gemini Vision) - IMPLEMENTADO
-- Permisos específicos: `isFabrica`, `canAccessFabrica`
+### 2. Portal de Fábrica Mejorado
+- **Resumen por Categoría**: Altos, Bajos, Columnas, Especiales (con colores distintivos)
+- **Barra de Progreso de Fabricación**:
+  - ROJO: Sin empezar (0%)
+  - AZUL: En proceso (parcialmente completado)
+  - VERDE: Completado (100%)
+- **Botones de Estado de Fabricación** por mueble:
+  - 🔲 Pendiente (rojo)
+  - ▶️ En proceso (azul)
+  - ✓ Completado (verde)
+- **Importar desde Pedidos Existentes**: Modal con lista de presupuestos guardados
 
-### 3. Importación PDF con IA (P0 - COMPLETADO)
-- Usa Gemini Vision (google-genai) con Emergent LLM Key
-- Analiza PDFs de presupuesto y detecta muebles automáticamente
-- Extrae: código, nombre, dimensiones (ancho, alto, fondo), cantidad
-- Permite crear orden de fabricación desde items detectados
+### 3. Clasificación Automática de Muebles
+- A* → Altos
+- B* → Bajos
+- CH*, CO* → Columnas
+- Otros → Especiales
 
-### 4. PDF Exporta por Pestaña (P1 - COMPLETADO)
-- **Orden Montaje**: Lista completa de piezas por mueble
-- **Lista Corte**: Agrupado por material para seccionadora
-- **Bandas y Traseras**: Canto total, áreas casco/trasera, detalle
-- **Casco, Puerta y Herraje**: Dimensiones casco, puertas, herrajes
+### 4. Tolerancias de Puertas Corregidas
+- Alto: -2mm (0.2cm)
+- Ancho: -3mm (0.3cm) por puerta
 
-### 5. Permisos de Fábrica Corregidos
-- MARIO no ve el módulo FÁBRICA (correcto)
-- Solo visible para usuarios con `canAccessFabrica: true` o `isFabrica: true`
+### 5. Importación PDF con IA (Gemini Vision)
+- Analiza PDFs y detecta muebles automáticamente
+- Extrae: código, nombre, dimensiones, cantidad
+- Muestra resumen por categoría de items detectados
 
 ---
 
 ## 📋 PENDIENTE
 
 ### P0 - Crítico
-- [x] ~~Importación PDF con IA~~ COMPLETADO
 - [ ] Optimización de tableros (bin-packing 2D estilo OpenCutList)
 
 ### P1 - Alta
-- [x] ~~Permisos específicos Despiece~~ (Ya existe: `canViewTechnicalDespiece`)
-- [x] ~~PDF exporta contenido de cada pestaña~~ COMPLETADO
-- [ ] Completar lógica de tabs con datos reales (actualmente funcionan)
+- [x] ~~Permisos específicos Portal Fábrica~~ COMPLETADO
+- [x] ~~Importar desde pedidos existentes~~ COMPLETADO
+- [x] ~~Barra de progreso fabricación~~ COMPLETADO
 
 ### P2 - Media
 - [ ] Casco por defecto por sección/biblioteca
@@ -67,24 +70,22 @@
 /app/backend/
 ├── server.py               # Principal (~6530 líneas)
 ├── routes/
-│   ├── fabrica.py          # Portal de Fábrica + Importación PDF con IA
+│   ├── fabrica.py          # Portal de Fábrica + IA
 │   ├── ia_lab.py
 │   ├── auth.py
 │   ├── libraries.py
 │   └── despiece_budgeter.py
-├── models/schemas.py       # Incluye isFabrica, canAccessFabrica
+├── models/schemas.py       # isFabrica, canAccessFabrica, canManageOrders...
 └── services/
-    ├── jwt_service.py
-    └── audit_service.py
 
 /app/frontend/src/
-├── App.js                  # Integra PortalFabrica
+├── App.js
 ├── components/
-│   ├── PortalFabrica.jsx   # Portal completo + Importación PDF
-│   ├── DespieceModal.jsx   # Modal con puertas y PDF por pestaña
-│   ├── BudgetTable.jsx
+│   ├── PortalFabrica.jsx   # Portal completo con progreso y categorías
+│   ├── SettingsModal.jsx   # Incluye checkbox "Acceso Portal Fábrica"
+│   ├── DespieceModal.jsx
 │   └── ...
-└── services/api.js         # fabricaAPI
+└── services/api.js         # fabricaAPI, projectsAPI
 ```
 
 ---
@@ -92,56 +93,64 @@
 ## CREDENCIALES
 - **Usuario:** MARIO
 - **Contraseña:** MARIO
-
-## BASE DE DATOS
-- **DB:** luiggi_home
-- **Colecciones nuevas:**
-  - `manufacturing_orders` - Órdenes de fabricación
-  - `counters` - Contadores para OF-YYYY-NNNN
-
----
-
-## APIs IMPLEMENTADAS
-
-### Portal de Fábrica
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/api/fabrica/orders` | Listar órdenes |
-| POST | `/api/fabrica/orders` | Crear orden |
-| GET | `/api/fabrica/orders/{id}` | Obtener orden |
-| PUT | `/api/fabrica/orders/{id}` | Actualizar orden |
-| DELETE | `/api/fabrica/orders/{id}` | Eliminar orden |
-| PATCH | `/api/fabrica/orders/{id}/status` | Cambiar estado |
-| PATCH | `/api/fabrica/orders/{id}/delivery-date` | Establecer fecha |
-| GET | `/api/fabrica/dashboard/stats` | Estadísticas |
-| **POST** | `/api/fabrica/import-pdf` | **Importar PDF con IA (Gemini Vision)** |
-| POST | `/api/fabrica/import-from-budget/{id}` | Importar desde presupuesto |
-
----
-
-## 3RD PARTY INTEGRATIONS
-- `google-genai`: Gemini Vision para análisis de PDFs
-- `xlsxwriter`: Excel exports
-- `pymongo/motor`: MongoDB async
-- `jspdf` + `html2canvas`: PDF export (cliente)
-- `sendgrid/resend`: Email
-
----
-
-## PRÓXIMOS PASOS RECOMENDADOS
-1. **Optimización de tableros** - Algoritmo bin-packing 2D
-2. **Vista exclusiva fábrica** - Cuando usuario tiene rol `isFabrica`
-3. **Notificaciones** - Estado de órdenes por email/push
-4. **Refactorización** - Dividir archivos monolíticos
+- **Permiso Fábrica:** Activado
 
 ---
 
 ## PERMISOS DE USUARIO
 
 ### Para acceder al Portal de Fábrica:
-- `canAccessFabrica: true` - Permiso específico
-- `isFabrica: true` - Rol de fábrica
+- `canAccessFabrica: true` - Permiso en Capacidades Técnicas
+- `isFabrica: true` - Rol de fábrica dedicado
 
 ### Para acceder al Despiece:
-- `canViewTechnicalDespiece: true` - Ve botón DESPIECE
+- `canViewTechnicalDespiece: true`
 - Módulo `despiece` en `allowedModules`
+
+---
+
+## FUNCIONALIDADES DEL PORTAL DE FÁBRICA
+
+### Dashboard
+- Órdenes activas
+- En producción
+- Listas para entrega
+- Entregas esta semana
+- Piezas en producción
+
+### Órdenes de Fabricación
+- Número automático: OF-YYYY-NNNN
+- Estados: Borrador → Confirmada → En Producción → Lista → Entregada
+- Prioridades: Baja, Normal, Alta, Urgente
+- Fecha de entrega estimada
+
+### Resumen por Categoría
+- ALTOS (azul cielo)
+- BAJOS (ámbar)
+- COLUMNAS (violeta)
+- ESPECIALES (rosa)
+
+### Progreso de Fabricación
+- Barra visual ROJO → AZUL → VERDE
+- Contador X/Y muebles completados
+- Estado individual por mueble (botones para marcar)
+
+### Importación
+1. **Importar Pedido**: Desde presupuestos existentes en BD
+2. **Importar PDF**: Con IA (Gemini Vision) para detectar muebles
+
+---
+
+## 3RD PARTY INTEGRATIONS
+- `google-genai`: Gemini Vision para PDFs
+- `xlsxwriter`: Excel exports
+- `pymongo/motor`: MongoDB async
+- `jspdf` + `html2canvas`: PDF export
+
+---
+
+## PRÓXIMOS PASOS RECOMENDADOS
+1. **Optimización de tableros** - Bin-packing 2D
+2. **Notificaciones** - Email cuando cambie estado de orden
+3. **Dashboard gráfico** - Gráficas de producción
+4. **Historial de cambios** - Trazabilidad de estados
