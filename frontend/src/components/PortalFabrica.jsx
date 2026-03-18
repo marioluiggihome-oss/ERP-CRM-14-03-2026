@@ -566,33 +566,67 @@ const PortalFabrica = ({ currentUser }) => {
   const ImportModal = () => {
     const [file, setFile] = useState(null);
     const [importing, setImporting] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState(null);
+    const [creatingOrder, setCreatingOrder] = useState(false);
 
     const handleFileChange = (e) => {
       const selectedFile = e.target.files[0];
       if (selectedFile && selectedFile.type === 'application/pdf') {
         setFile(selectedFile);
+        setAnalysisResult(null);
       } else {
         alert('Por favor selecciona un archivo PDF');
       }
     };
 
-    const handleImport = async () => {
+    const handleAnalyze = async () => {
       if (!file) return;
       setImporting(true);
+      setAnalysisResult(null);
       try {
         const reader = new FileReader();
         reader.onload = async (e) => {
           const base64 = e.target.result.split(',')[1];
           const result = await fabricaAPI.importPDF(base64, file.name);
-          alert(result.message);
-          setShowImportModal(false);
-          loadData();
+          setAnalysisResult(result);
         };
         reader.readAsDataURL(file);
       } catch (error) {
-        alert('Error al importar: ' + error.message);
+        alert('Error al analizar: ' + error.message);
       } finally {
         setImporting(false);
+      }
+    };
+
+    const handleCreateOrder = async () => {
+      if (!analysisResult?.detectedItems?.length) return;
+      setCreatingOrder(true);
+      try {
+        const orderData = {
+          customerName: analysisResult.rawText?.includes('Cliente:') ? '' : 'Cliente PDF',
+          customerCode: '',
+          priority: 'normal',
+          items: analysisResult.detectedItems.map(item => ({
+            productCode: item.productCode,
+            productName: item.productName,
+            quantity: item.quantity || 1,
+            width: item.width || 60,
+            height: item.height || 70,
+            depth: item.depth || 58
+          })),
+          internalNotes: `Importado desde PDF: ${file?.name}`
+        };
+        
+        await fabricaAPI.createOrder(orderData, currentUser?.id, currentUser?.clientName);
+        alert('Orden de fabricación creada correctamente');
+        setShowImportModal(false);
+        setAnalysisResult(null);
+        setFile(null);
+        loadData();
+      } catch (error) {
+        alert('Error al crear orden: ' + error.message);
+      } finally {
+        setCreatingOrder(false);
       }
     };
 
@@ -600,43 +634,146 @@ const PortalFabrica = ({ currentUser }) => {
 
     return (
       <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl w-full max-w-lg p-6">
-          <h3 className="font-black text-lg text-indigo-900 mb-4 flex items-center gap-2">
-            <Upload size={24} className="text-indigo-600" />
-            Importar Presupuesto PDF
-          </h3>
-          
-          <div className="border-2 border-dashed border-indigo-200 rounded-xl p-8 text-center">
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileChange}
-              className="hidden"
-              id="pdf-upload"
-            />
-            <label htmlFor="pdf-upload" className="cursor-pointer">
-              <Upload size={48} className="mx-auto text-indigo-300 mb-3" />
-              <p className="text-indigo-600 font-bold">Arrastra un PDF o haz clic para seleccionar</p>
-              <p className="text-sm text-indigo-400 mt-1">Formatos aceptados: PDF</p>
-            </label>
-            {file && (
-              <p className="mt-4 text-emerald-600 font-bold">{file.name}</p>
+        <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-indigo-950 text-white px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <Upload size={24} />
+              <h2 className="font-black text-lg">Importar Presupuesto PDF con IA</h2>
+            </div>
+            <button onClick={() => { setShowImportModal(false); setAnalysisResult(null); setFile(null); }} className="p-2 hover:bg-white/10 rounded-xl">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-auto p-6">
+            {/* Selección de archivo */}
+            <div className="border-2 border-dashed border-indigo-200 rounded-xl p-6 text-center mb-6">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileChange}
+                className="hidden"
+                id="pdf-upload"
+              />
+              <label htmlFor="pdf-upload" className="cursor-pointer">
+                <Upload size={40} className="mx-auto text-indigo-300 mb-2" />
+                <p className="text-indigo-600 font-bold">Arrastra un PDF o haz clic para seleccionar</p>
+                <p className="text-sm text-indigo-400 mt-1">La IA analizará el documento y detectará los muebles</p>
+              </label>
+              {file && (
+                <p className="mt-3 text-emerald-600 font-bold flex items-center justify-center gap-2">
+                  <FileText size={18} />
+                  {file.name}
+                </p>
+              )}
+            </div>
+
+            {/* Botón analizar */}
+            {file && !analysisResult && (
+              <button
+                onClick={handleAnalyze}
+                disabled={importing}
+                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2 mb-6"
+                data-testid="analyze-pdf-btn"
+              >
+                {importing ? (
+                  <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    Analizando con IA...
+                  </>
+                ) : (
+                  <>
+                    <Scissors size={18} />
+                    Analizar PDF con IA
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Resultados del análisis */}
+            {analysisResult && (
+              <div className="space-y-4">
+                <div className={`p-4 rounded-xl ${analysisResult.success ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                  <p className={`font-bold ${analysisResult.success ? 'text-emerald-700' : 'text-red-700'}`}>
+                    {analysisResult.message}
+                  </p>
+                </div>
+
+                {analysisResult.detectedItems && analysisResult.detectedItems.length > 0 && (
+                  <>
+                    <div className="bg-indigo-50 rounded-xl overflow-hidden">
+                      <div className="bg-indigo-100 px-4 py-2">
+                        <p className="font-black text-indigo-800 text-sm uppercase">
+                          Muebles Detectados ({analysisResult.detectedItems.length})
+                        </p>
+                      </div>
+                      <div className="max-h-60 overflow-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-indigo-100 sticky top-0">
+                            <tr className="text-xs text-indigo-700 uppercase">
+                              <th className="px-4 py-2 text-left">Código</th>
+                              <th className="px-4 py-2 text-left">Descripción</th>
+                              <th className="px-4 py-2 text-center">Ancho</th>
+                              <th className="px-4 py-2 text-center">Alto</th>
+                              <th className="px-4 py-2 text-center">Fondo</th>
+                              <th className="px-4 py-2 text-center">Cant.</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-indigo-100">
+                            {analysisResult.detectedItems.map((item, idx) => (
+                              <tr key={idx} className="bg-white hover:bg-indigo-50">
+                                <td className="px-4 py-2 font-bold text-indigo-900">{item.productCode}</td>
+                                <td className="px-4 py-2 text-indigo-600">{item.productName}</td>
+                                <td className="px-4 py-2 text-center">{item.width} cm</td>
+                                <td className="px-4 py-2 text-center">{item.height} cm</td>
+                                <td className="px-4 py-2 text-center">{item.depth} cm</td>
+                                <td className="px-4 py-2 text-center font-bold text-orange-600">{item.quantity}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Botón crear orden */}
+                    <button
+                      onClick={handleCreateOrder}
+                      disabled={creatingOrder}
+                      className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                      data-testid="create-order-from-pdf-btn"
+                    >
+                      {creatingOrder ? (
+                        <>
+                          <RefreshCw size={18} className="animate-spin" />
+                          Creando orden...
+                        </>
+                      ) : (
+                        <>
+                          <Factory size={18} />
+                          Crear Orden de Fabricación
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+
+                {/* Notas del análisis */}
+                {analysisResult.rawText && (
+                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-xs font-bold text-amber-700 uppercase mb-1">Notas del análisis</p>
+                    <p className="text-sm text-amber-800">{analysisResult.rawText}</p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          <div className="border-t border-indigo-100 px-6 py-4 flex justify-end">
             <button
-              onClick={() => setShowImportModal(false)}
-              className="px-4 py-2 border border-indigo-200 rounded-xl font-bold text-indigo-600"
+              onClick={() => { setShowImportModal(false); setAnalysisResult(null); setFile(null); }}
+              className="px-6 py-2 border border-indigo-200 rounded-xl font-bold text-indigo-600 hover:bg-indigo-50"
             >
-              Cancelar
-            </button>
-            <button
-              onClick={handleImport}
-              disabled={!file || importing}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50"
-            >
-              {importing ? 'Importando...' : 'Importar PDF'}
+              Cerrar
             </button>
           </div>
         </div>

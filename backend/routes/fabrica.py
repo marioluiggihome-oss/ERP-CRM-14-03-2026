@@ -10,6 +10,8 @@ import uuid
 import logging
 import base64
 import os
+import json
+import asyncio
 
 # MongoDB
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -17,9 +19,20 @@ mongo_url = os.environ.get('MONGO_URL')
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 
+# Gemini Vision para análisis de PDF
+try:
+    from google import genai
+    from google.genai import types
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/fabrica", tags=["Portal Fábrica"])
+
+# Emergent LLM Key para Gemini
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-4A3Ed5d56521e792e1')
 
 
 # ============================================
@@ -385,14 +398,122 @@ async def set_delivery_date(order_id: str, estimated_date: str, notes: str = "")
 
 
 # ============================================
-# IMPORTACIÓN DE PDF
+# IMPORTACIÓN DE PDF CON IA
 # ============================================
+
+async def analyze_pdf_with_gemini(pdf_bytes: bytes, filename: str) -> Dict:
+    """
+    Analizar PDF de presupuesto con Gemini Vision para detectar muebles.
+    """
+    if not GEMINI_AVAILABLE:
+        return {
+            "success": False,
+            "message": "Gemini Vision no disponible. Instale google-genai.",
+            "items": []
+        }
+    
+    try:
+        # Inicializar cliente Gemini con Emergent Key
+        gemini_client = genai.Client(api_key=EMERGENT_LLM_KEY)
+        
+        # Prompt para extraer muebles de cocina del presupuesto
+        prompt = """Analiza este documento PDF de presupuesto de cocina y extrae todos los muebles.
+
+Para cada mueble encontrado, extrae:
+1. Código del mueble (ej: B60, A100, CH60)
+2. Descripción/nombre del mueble
+3. Ancho en centímetros
+4. Alto en centímetros
+5. Fondo/profundidad en centímetros
+6. Cantidad
+7. Precio si está disponible
+
+IMPORTANTE:
+- Las medidas deben estar en centímetros (cm)
+- Si el código incluye el ancho (ej: B60 = bajo de 60cm), usa esa medida
+- Códigos comunes: B=Bajo, A=Alto, CH=Columna/Alto, RE=Rinconera, FR=Fregadero
+
+Devuelve un JSON con esta estructura exacta:
+{
+    "muebles": [
+        {
+            "codigo": "B60",
+            "nombre": "BAJO 60 2P",
+            "ancho": 60,
+            "alto": 70,
+            "fondo": 58,
+            "cantidad": 1,
+            "precio": 0
+        }
+    ],
+    "cliente": "nombre del cliente si aparece",
+    "total_muebles": 5,
+    "notas": "observaciones adicionales"
+}
+
+Si no puedes identificar una medida específica, usa valores estándar:
+- Bajos: alto=70, fondo=58
+- Altos: alto=90, fondo=33
+- Columnas: alto según nombre (H180=180cm), fondo=58"""
+
+        # Ejecutar análisis con Gemini
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: gemini_client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=[
+                    types.Part.from_bytes(
+                        data=pdf_bytes,
+                        mime_type="application/pdf",
+                    ),
+                    prompt
+                ]
+            )
+        )
+        
+        # Parsear respuesta JSON
+        response_text = response.text
+        
+        # Limpiar respuesta si tiene markdown
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0]
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0]
+        
+        result = json.loads(response_text.strip())
+        
+        return {
+            "success": True,
+            "message": f"Se detectaron {len(result.get('muebles', []))} muebles",
+            "items": result.get("muebles", []),
+            "cliente": result.get("cliente", ""),
+            "total": result.get("total_muebles", 0),
+            "notas": result.get("notas", "")
+        }
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing Gemini response: {e}")
+        return {
+            "success": False,
+            "message": f"Error al parsear respuesta de IA: {str(e)}",
+            "items": [],
+            "rawText": response_text if 'response_text' in dir() else ""
+        }
+    except Exception as e:
+        logger.error(f"Gemini analysis error: {e}")
+        return {
+            "success": False,
+            "message": f"Error en análisis con IA: {str(e)}",
+            "items": []
+        }
+
 
 @router.post("/import-pdf", response_model=PDFImportResult)
 async def import_budget_pdf(request: PDFImportRequest):
     """
-    Importar PDF de presupuesto y detectar muebles automáticamente.
-    Utiliza OCR/AI para extraer la información del presupuesto.
+    Importar PDF de presupuesto y detectar muebles automáticamente con IA.
+    Utiliza Gemini Vision para extraer la información del presupuesto.
     """
     try:
         # Decodificar PDF
@@ -401,13 +522,36 @@ async def import_budget_pdf(request: PDFImportRequest):
         except Exception:
             raise HTTPException(status_code=400, detail="PDF base64 inválido")
         
-        # Por ahora, retornamos una respuesta de placeholder
-        # En la implementación completa, usaríamos Gemini Vision para analizar el PDF
+        # Analizar PDF con Gemini Vision
+        analysis = await analyze_pdf_with_gemini(pdf_bytes, request.fileName)
+        
+        if not analysis["success"]:
+            return PDFImportResult(
+                success=False,
+                message=analysis["message"],
+                detectedItems=[],
+                rawText=analysis.get("rawText", ""),
+                orderId=None
+            )
+        
+        # Convertir items detectados al formato esperado
+        detected_items = []
+        for item in analysis.get("items", []):
+            detected_items.append({
+                "productCode": item.get("codigo", ""),
+                "productName": item.get("nombre", ""),
+                "width": item.get("ancho", 60),
+                "height": item.get("alto", 70),
+                "depth": item.get("fondo", 58),
+                "quantity": item.get("cantidad", 1),
+                "price": item.get("precio", 0)
+            })
+        
         return PDFImportResult(
             success=True,
-            message="PDF recibido. La importación automática con IA estará disponible próximamente.",
-            detectedItems=[],
-            rawText="",
+            message=f"PDF analizado correctamente. Se detectaron {len(detected_items)} muebles.",
+            detectedItems=detected_items,
+            rawText=analysis.get("notas", ""),
             orderId=None
         )
         
