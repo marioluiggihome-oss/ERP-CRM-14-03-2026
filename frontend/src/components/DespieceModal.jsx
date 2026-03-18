@@ -1136,38 +1136,45 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           <p className="text-xs text-indigo-400 font-medium">
             Generado: {despieceData?.generatedAt ? new Date(despieceData.generatedAt).toLocaleString('es-ES') : '-'}
           </p>
-          <div className="flex gap-3">
-            {/* Botones de exportación para seccionadora */}
+          <div className="flex gap-2 flex-wrap">
             {despieceData && (
               <>
                 <button
+                  onClick={handleExportPDF}
+                  className="bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg"
+                  title="Exportar PDF A4"
+                >
+                  <FileDown size={14} />
+                  PDF A4
+                </button>
+                <button
                   onClick={handleExportCSV}
-                  className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg"
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg"
                   title="Exportar CSV para seccionadora"
                 >
-                  <Download size={16} />
-                  CSV Seccionadora
+                  <Download size={14} />
+                  CSV
                 </button>
                 <button
                   onClick={handleExportXML}
-                  className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg"
                   title="Exportar XML (CutRite/Ardis)"
                 >
-                  <Download size={16} />
-                  XML CutRite
+                  <Download size={14} />
+                  XML
                 </button>
               </>
             )}
             <button
               onClick={handlePrint}
-              className="bg-white border border-indigo-200 text-indigo-700 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-50 transition-colors"
+              className="bg-white border border-indigo-200 text-indigo-700 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-50 transition-colors"
             >
-              <Printer size={16} />
+              <Printer size={14} />
               Imprimir
             </button>
             <button
               onClick={onClose}
-              className="bg-indigo-950 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-800 transition-colors"
+              className="bg-indigo-950 text-white px-5 py-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-800 transition-colors"
             >
               Cerrar
             </button>
