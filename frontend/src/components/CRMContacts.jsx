@@ -489,9 +489,9 @@ const CRMContacts = ({ currentUser }) => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <h3 className="text-xl font-black text-slate-900 uppercase">
                 {editingContact ? 'Editar Contacto' : 'Nuevo Contacto'}
               </h3>
@@ -500,7 +500,8 @@ const CRMContacts = ({ currentUser }) => {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre *</label>
@@ -766,9 +767,10 @@ const CRMContacts = ({ currentUser }) => {
                   </div>
                 </div>
               )}
+              </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 p-6 border-t border-slate-200">
               <button
                 onClick={() => setShowModal(false)}
                 className="px-6 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl font-bold uppercase text-xs hover:bg-slate-50"

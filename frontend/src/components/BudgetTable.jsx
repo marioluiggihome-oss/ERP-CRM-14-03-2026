@@ -1069,6 +1069,18 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         setOrderSent(false);
         setOrderAttachments([]);
         setOrderNotes('');
+        
+        // LIMPIAR PRESUPUESTO después de confirmar pedido
+        setState(prev => ({
+          ...prev,
+          budgetItems: [],
+          despieceItems: [],
+          budgetNumber: '',
+          customerName: '',
+          customerAddress: '',
+          projectReference: '',
+          // Mantener configuraciones de colores y acabados
+        }));
       }, 2000);
       
     } catch (error) {

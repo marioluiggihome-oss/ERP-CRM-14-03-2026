@@ -2,10 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { 
   Package, Search, Calendar, Euro, Mail, CheckCircle, 
   AlertTriangle, Eye, FileText, ChevronDown, ChevronUp,
-  User, MapPin, Clock, Filter, RefreshCw, X
+  User, MapPin, Clock, Filter, RefreshCw, X, Printer,
+  Factory, Truck, PackageCheck, Timer, Circle
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Estados de fabricación con colores
+const FABRICATION_STATES = {
+  'confirmed': { label: 'Confirmado', color: 'bg-blue-100 text-blue-700', icon: CheckCircle },
+  'pending': { label: 'Pendiente', color: 'bg-amber-100 text-amber-700', icon: Timer },
+  'in_production': { label: 'En Producción', color: 'bg-purple-100 text-purple-700', icon: Factory },
+  'ready': { label: 'Listo para Envío', color: 'bg-green-100 text-green-700', icon: PackageCheck },
+  'shipped': { label: 'Enviado', color: 'bg-teal-100 text-teal-700', icon: Truck },
+  'delivered': { label: 'Entregado', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle }
+};
 
 const MisPedidos = ({ currentUser }) => {
   const [orders, setOrders] = useState([]);
@@ -77,6 +88,147 @@ const MisPedidos = ({ currentUser }) => {
       style: 'currency',
       currency: 'EUR'
     }).format(amount || 0);
+  };
+
+  // Función para imprimir pedido
+  const handlePrintOrder = (order) => {
+    const printWindow = window.open('', '_blank');
+    const stateInfo = FABRICATION_STATES[order.fabricationStatus || 'confirmed'];
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Pedido #${order.budgetNumber}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #333; }
+          .header { display: flex; justify-content: space-between; align-items: start; border-bottom: 3px solid #f97316; padding-bottom: 20px; margin-bottom: 20px; }
+          .logo { font-size: 28px; font-weight: 900; color: #f97316; }
+          .order-number { font-size: 24px; font-weight: 700; color: #334155; }
+          .status-badge { display: inline-block; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #dbeafe; color: #1d4ed8; margin-top: 8px; }
+          .section { margin-bottom: 20px; }
+          .section-title { font-size: 14px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+          .info-item label { display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+          .info-item span { font-size: 14px; font-weight: 600; color: #1e293b; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th { background: #f8fafc; padding: 12px 10px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+          td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+          .text-right { text-align: right; }
+          .total-row { background: #fff7ed; font-weight: 700; }
+          .total-row td { border-top: 2px solid #f97316; padding: 15px 10px; font-size: 16px; }
+          .specs { background: #f8fafc; padding: 15px; border-radius: 8px; }
+          .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+          .specs-item { font-size: 12px; }
+          .specs-item label { color: #64748b; }
+          .specs-item span { font-weight: 600; color: #334155; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="logo">LUIGGI HOME</div>
+            <div style="font-size: 12px; color: #64748b;">Cocinas y Mobiliario</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="order-number">PEDIDO #${order.budgetNumber}</div>
+            <div class="status-badge">${stateInfo.label}</div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 8px;">
+              Fecha: ${formatDate(order.confirmedAt)}
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datos del Cliente</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Nombre</label>
+              <span>${order.customerName || '-'}</span>
+            </div>
+            <div class="info-item">
+              <label>Email</label>
+              <span>${order.email || '-'}</span>
+            </div>
+            <div class="info-item">
+              <label>Dirección</label>
+              <span>${order.customerAddress || '-'}</span>
+            </div>
+            <div class="info-item">
+              <label>Referencia</label>
+              <span>${order.projectReference || '-'}</span>
+            </div>
+          </div>
+        </div>
+
+        ${order.specifications ? `
+        <div class="section">
+          <div class="section-title">Especificaciones</div>
+          <div class="specs">
+            <div class="specs-grid">
+              ${order.specifications.globalFinish ? `<div class="specs-item"><label>Acabado: </label><span>${order.specifications.globalFinish}</span></div>` : ''}
+              ${order.specifications.carcassColor ? `<div class="specs-item"><label>Armazón: </label><span>${order.specifications.carcassColor}</span></div>` : ''}
+              ${order.specifications.doorColorLow ? `<div class="specs-item"><label>Puertas Bajos: </label><span>${order.specifications.doorColorLow}</span></div>` : ''}
+              ${order.specifications.doorColorHigh ? `<div class="specs-item"><label>Puertas Altos: </label><span>${order.specifications.doorColorHigh}</span></div>` : ''}
+              ${order.specifications.doorColorColumns ? `<div class="specs-item"><label>Puertas Columnas: </label><span>${order.specifications.doorColorColumns}</span></div>` : ''}
+              ${order.specifications.sideColor ? `<div class="specs-item"><label>Costados: </label><span>${order.specifications.sideColor}</span></div>` : ''}
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="section">
+          <div class="section-title">Artículos del Pedido</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th class="text-right">Cant.</th>
+                <th class="text-right">Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(order.items || []).map(item => `
+                <tr>
+                  <td style="font-weight: 600; color: #f97316;">${item.code || '-'}</td>
+                  <td>${item.name || '-'}</td>
+                  <td class="text-right">${item.quantity || 1}</td>
+                  <td class="text-right">${formatCurrency(item.price)}</td>
+                </tr>
+              `).join('')}
+              <tr class="total-row">
+                <td colspan="3" class="text-right">TOTAL</td>
+                <td class="text-right" style="color: #f97316;">${formatCurrency(order.totalAmount)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        ${order.notes ? `
+        <div class="section">
+          <div class="section-title">Notas</div>
+          <div style="background: #fffbeb; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+            ${order.notes}
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="footer">
+          LUIGGI HOME · Documento generado el ${new Date().toLocaleString('es-ES')}
+        </div>
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
   };
 
   if (loading) {
@@ -176,14 +328,17 @@ const MisPedidos = ({ currentUser }) => {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    {/* Status Icon */}
-                    <div className={`p-3 rounded-xl ${order.emailSent ? 'bg-green-100' : 'bg-amber-100'}`}>
-                      {order.emailSent ? (
-                        <CheckCircle size={24} className="text-green-600" />
-                      ) : (
-                        <AlertTriangle size={24} className="text-amber-600" />
-                      )}
-                    </div>
+                    {/* Status Icon - Based on fabrication status */}
+                    {(() => {
+                      const fabStatus = order.fabricationStatus || 'confirmed';
+                      const stateInfo = FABRICATION_STATES[fabStatus] || FABRICATION_STATES['confirmed'];
+                      const StateIcon = stateInfo.icon;
+                      return (
+                        <div className={`p-3 rounded-xl ${stateInfo.color.split(' ')[0]}`}>
+                          <StateIcon size={24} className={stateInfo.color.split(' ')[1]} />
+                        </div>
+                      );
+                    })()}
                     
                     {/* Order Info */}
                     <div>
@@ -192,6 +347,16 @@ const MisPedidos = ({ currentUser }) => {
                         {order.projectReference && (
                           <span className="text-sm text-slate-500">• {order.projectReference}</span>
                         )}
+                        {/* Estado de Fabricación Badge */}
+                        {(() => {
+                          const fabStatus = order.fabricationStatus || 'confirmed';
+                          const stateInfo = FABRICATION_STATES[fabStatus] || FABRICATION_STATES['confirmed'];
+                          return (
+                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${stateInfo.color}`}>
+                              {stateInfo.label}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
                         <span className="flex items-center gap-1">
@@ -206,11 +371,22 @@ const MisPedidos = ({ currentUser }) => {
                     </div>
                   </div>
 
-                  {/* Amount & Expand */}
+                  {/* Amount, Print & Expand */}
                   <div className="flex items-center gap-4">
+                    {/* Print Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePrintOrder(order);
+                      }}
+                      className="p-2 bg-slate-100 hover:bg-orange-100 rounded-xl transition-colors"
+                      title="Imprimir Pedido"
+                    >
+                      <Printer size={18} className="text-slate-600 hover:text-orange-600" />
+                    </button>
                     <div className="text-right">
                       <p className="text-2xl font-black text-orange-600">{formatCurrency(order.totalAmount)}</p>
-                      <p className="text-xs text-slate-400">{order.itemsCount} artículos</p>
+                      <p className="text-xs text-slate-400">{order.itemsCount || order.items?.length || 0} artículos</p>
                     </div>
                     <div className="text-slate-400">
                       {expandedOrder === order.id ? <ChevronUp size={24} /> : <ChevronDown size={24} />}

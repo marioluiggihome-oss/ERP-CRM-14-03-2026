@@ -2783,6 +2783,7 @@ async def confirm_order(
 async def get_user_orders(userId: Optional[str] = None, limit: int = 100):
     """
     Obtiene los pedidos confirmados. Si se pasa userId, filtra por usuario.
+    Sincroniza el estado de fabricación con fabrica_orders.
     """
     try:
         query = {}
@@ -2790,6 +2791,30 @@ async def get_user_orders(userId: Optional[str] = None, limit: int = 100):
             query["userId"] = userId
         
         orders = await db.orders.find(query, {"_id": 0}).sort("confirmedAt", -1).limit(limit).to_list(limit)
+        
+        # Sincronizar estado de fabricación con fabrica_orders
+        for order in orders:
+            # Buscar si existe una orden de fábrica para este presupuesto
+            fab_order = await db.fabrica_orders.find_one(
+                {"budgetNumber": order.get("budgetNumber")}, 
+                {"_id": 0, "status": 1, "progress": 1}
+            )
+            if fab_order:
+                # Mapear estado de fábrica a estado del pedido
+                fab_status_map = {
+                    "draft": "pending",
+                    "confirmed": "confirmed",
+                    "in_progress": "in_production",
+                    "completed": "ready",
+                    "shipped": "shipped",
+                    "delivered": "delivered"
+                }
+                order["fabricationStatus"] = fab_status_map.get(fab_order.get("status"), "confirmed")
+                order["fabricationProgress"] = fab_order.get("progress", 0)
+            else:
+                order["fabricationStatus"] = "confirmed"
+                order["fabricationProgress"] = 0
+        
         return orders
     except Exception as e:
         logger.error(f"Error fetching orders: {e}")

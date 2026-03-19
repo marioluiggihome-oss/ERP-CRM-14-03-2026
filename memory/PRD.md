@@ -7,29 +7,25 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN (19 Marzo 2026)
 
-### 1. Nueva Sección "MIS PEDIDOS"
-- ✅ **Vista completa de pedidos confirmados** accesible desde menú lateral
-- ✅ Lista con búsqueda, filtros por estado de email
-- ✅ Detalle expandible con cliente, especificaciones, artículos y notas
-- ✅ Endpoint `/api/orders` para listar pedidos
-- ✅ Almacena userId, projectReference, especificaciones completas
+### 1. Sección "MIS PEDIDOS" Mejorada
+- ✅ **Estado de fabricación** visible con badge (Confirmado, En Producción, Listo, Enviado, Entregado)
+- ✅ **Sincronización con fabrica_orders** - Estado se actualiza cuando fábrica cambia el estado
+- ✅ **Botón Imprimir** en cada pedido con formato profesional
+- ✅ Limpiar presupuesto automáticamente al confirmar pedido
 
-### 2. Selector de Fábrica en "Rol y Jerarquía"
-- ✅ **Movido el selector de fábrica** de la sección "Usuario SOLO Fábrica" a "Rol y Jerarquía"
-- ✅ Visible para todos los usuarios cuando hay fábricas configuradas
-- ✅ Dropdown con fábricas activas (SAL, ZAM)
+### 2. Fábricas Configuradas
+- ✅ Solo **SALAMANCA (SAL)** y **ZAMORA (ZAM)**
+- ✅ TEST_FACTORY eliminada
 
-### 3. Fortalecimiento Base de Datos
-- ✅ **Índices MongoDB** para todas las colecciones principales
-- ✅ Índices únicos, compuestos, y para consultas frecuentes
+### 3. Formulario Contacto CRM
+- ✅ **Modal scrolleable** para formularios largos
+- ✅ Mejor separación de header, contenido y footer
 
-### 4. Sistema de Email con Fallback a Resend
-- ✅ **Resend como alternativa a SendGrid** - No requiere verificar dominio
-- ✅ Usa remitente por defecto `onboarding@resend.dev`
-
-### 5. Colgadores en Modal de Despiece
-- ✅ Mostrados en vista "CASCO, PUERTA Y HERRAJE"
-- ✅ Incluidos en exportación PDF
+### 4. Otras mejoras anteriores
+- ✅ Selector de fábrica en "Rol y Jerarquía"
+- ✅ BD fortalecida con índices MongoDB
+- ✅ Email fallback a Resend
+- ✅ Colgadores en despiece
 
 ---
 
