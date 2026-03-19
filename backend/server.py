@@ -2685,7 +2685,11 @@ async def confirm_order(
             email_sent = True
             logger.info(f"Email sent successfully to {email}")
         except Exception as email_error:
-            logger.warning(f"Email sending failed: {email_error}. Order will be saved without sending email.")
+            error_str = str(email_error)
+            if "401" in error_str or "Unauthorized" in error_str:
+                logger.warning(f"SendGrid auth error (401): API key válido pero remitente/dominio no verificado. Pedido guardado sin email.")
+            else:
+                logger.warning(f"Email sending failed: {email_error}. Order will be saved without sending email.")
             email_sent = False
         
         # Log the order confirmation (save it regardless of email status)
@@ -2725,7 +2729,7 @@ async def confirm_order(
         logger.error(f"Order confirmation error: {e}")
         error_msg = str(e)
         if "401" in error_msg or "Unauthorized" in error_msg:
-            error_msg = "Error de autenticación con el servicio de email. Configure el API Key de SendGrid en Panel Maestro > Configuración."
+            error_msg = "Error de autenticación con SendGrid. Verifique que: 1) El API Key sea válido, 2) El remitente esté verificado en SendGrid (Sender Authentication), 3) El dominio esté verificado. Visite https://app.sendgrid.com/settings/sender_auth"
         elif "SENDGRID" in error_msg.upper():
             error_msg = "Servicio de email no configurado. Configure SendGrid en Panel Maestro > Configuración."
         raise HTTPException(status_code=500, detail=error_msg)
@@ -4334,6 +4338,18 @@ def calculate_furniture_despiece(
             "PUERTA COLOR",  # Material especial para puertas (se reemplaza con acabado)
             round(door_height, 1), round(door_width, 1), door_thickness_cm, num_doors,
             f"Puerta acabado a elegir. {num_doors} puerta{'s' if num_doors > 1 else ''}"
+        )
+    
+    # =============================================
+    # COLGADORES - Solo para muebles ALTOS (1 juego = 2 colgadores)
+    # =============================================
+    if is_alto:
+        add_component(
+            "Juego de colgadores",
+            "COLG",
+            "HERRAJE",
+            0, 0, 0, 1,  # No tiene dimensiones de tablero
+            "1 juego = 2 colgadores para mueble alto de pared"
         )
     
     # Calculate totals

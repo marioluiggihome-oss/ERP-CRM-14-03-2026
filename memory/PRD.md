@@ -1,11 +1,23 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado: EN DESARROLLO ACTIVO
-## Última Actualización: 18 Marzo 2026
+## Última Actualización: 19 Marzo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (18 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (19 Marzo 2026)
+
+### Verificaciones P0/P1
+- ✅ **Menú "Archivo"** correctamente ubicado debajo de "Presupuesto" 
+- ✅ **Cálculo de colgadores** implementado y funcionando para muebles ALTOS
+- ✅ **SendGrid 401 Unauthorized** - Causa raíz identificada: remitente/dominio no verificado
+  - El API key es válido, pero el remitente debe verificarse en SendGrid Sender Authentication
+  - URL: https://app.sendgrid.com/settings/sender_auth
+  - Mensajes de error mejorados para orientar al usuario
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (18 Marzo 2026)
 
 ### 1. Sistema de Ayuda con Manual PDF por Rol
 - **Componente**: `UserManualModal.jsx`

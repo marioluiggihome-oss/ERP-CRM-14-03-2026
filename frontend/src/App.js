@@ -634,6 +634,17 @@ const App = () => {
                       <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
                     </button>
                     
+                    {/* Archivo - NO visible para Tienda/Punto de Venta - JUSTO DEBAJO DE PRESUPUESTO */}
+                    {!state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <FolderOpen size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
+                      </button>
+                    )}
+                    
                     {/* Solo usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
                     {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
                       <button 
@@ -642,17 +653,6 @@ const App = () => {
                       >
                         <Sparkles size={22}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
-                      </button>
-                    )}
-                    
-                    {/* Archivo - NO visible para Tienda/Punto de Venta */}
-                    {!state.currentUser?.isTienda && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                      >
-                        <FolderOpen size={22}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
                       </button>
                     )}
                     
