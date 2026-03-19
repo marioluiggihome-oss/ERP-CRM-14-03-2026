@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, CheckCircle, Building2, FileSpreadsheet, Download, HardDrive, Database, Clock, AlertTriangle, Wrench, Power, ShieldAlert, Timer, Maximize2, Minimize2, Target, Award, TrendingUp, BarChart3, FolderOpen, FileText, ChevronDown, ChevronUp, UserCheck, Layers } from 'lucide-react';
+import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, CheckCircle, Building2, FileSpreadsheet, Download, HardDrive, Database, Clock, AlertTriangle, Wrench, Power, ShieldAlert, Timer, Maximize2, Minimize2, Target, Award, TrendingUp, BarChart3, FolderOpen, FileText, ChevronDown, ChevronUp, UserCheck, Layers, Factory } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, librariesAPI } from '../services/api';
 import CatalogImporter from './CatalogImporter';
@@ -2125,6 +2125,32 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               <p className="text-[10px] text-slate-400 mt-1">El usuario heredará el descuento del cliente vinculado</p>
                             </div>
                           )}
+
+                          {/* SELECTOR DE FÁBRICA - Para usuarios con acceso a fábrica */}
+                          {factories.length > 0 && (
+                            <div className="mt-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+                              <label className="text-xs font-black text-emerald-700 mb-2 block flex items-center gap-2">
+                                <Factory size={14} className="text-emerald-600" />
+                                🏭 Fábrica Asignada
+                              </label>
+                              <select
+                                value={userForm.factoryId || ''}
+                                onChange={(e) => setUserForm({...userForm, factoryId: e.target.value})}
+                                className="w-full px-3 py-2 border-2 border-emerald-300 rounded-xl text-sm font-bold text-emerald-800 focus:border-emerald-500 outline-none bg-white"
+                                data-testid="factory-selector"
+                              >
+                                <option value="">-- Sin fábrica asignada --</option>
+                                {factories.map(factory => (
+                                  <option key={factory.id} value={factory.id}>
+                                    {factory.name} ({factory.code})
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-[10px] text-emerald-500 mt-1">
+                                Si tiene rol de fábrica, solo verá las órdenes de esta fábrica
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -2361,31 +2387,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <span className="text-[10px] text-emerald-600">Solo verá el módulo de Fábrica, sin acceso a presupuestos, clientes ni otros módulos</span>
                           </div>
                         </label>
-                        
-                        {/* Selector de fábrica asignada */}
-                        {(userForm.isFabrica || userForm.canAccessFabrica) && factories.length > 0 && (
-                          <div className="mt-3 bg-white rounded-lg p-3 border border-emerald-200">
-                            <label className="text-xs font-bold text-emerald-700 mb-2 block">
-                              🏭 Fábrica Asignada
-                            </label>
-                            <select
-                              value={userForm.factoryId || ''}
-                              onChange={(e) => setUserForm({...userForm, factoryId: e.target.value})}
-                              className="w-full px-3 py-2 border-2 border-emerald-300 rounded-xl text-sm font-bold text-emerald-800 focus:border-emerald-500 outline-none"
-                              data-testid="factory-selector"
-                            >
-                              <option value="">-- Sin asignar --</option>
-                              {factories.map(factory => (
-                                <option key={factory.id} value={factory.id}>
-                                  {factory.name} ({factory.code})
-                                </option>
-                              ))}
-                            </select>
-                            <p className="text-[10px] text-emerald-500 mt-1">
-                              El usuario solo verá las órdenes de esta fábrica
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </div>
 
