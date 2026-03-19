@@ -2493,6 +2493,8 @@ async def confirm_order(
     carcassColor: str = Form(""),
     globalFinish: str = Form(""),
     distributorName: str = Form(""),
+    userId: str = Form(""),
+    projectReference: str = Form(""),
     attachment_0: Optional[UploadFile] = File(None),
     attachment_1: Optional[UploadFile] = File(None),
     attachment_2: Optional[UploadFile] = File(None),
@@ -2721,16 +2723,29 @@ async def confirm_order(
         order_record = {
             "id": f"order-{uuid.uuid4().hex[:8]}",
             "budgetNumber": budgetNumber,
+            "projectReference": projectReference,
             "customerName": customerName,
             "customerAddress": customerAddress,
             "totalAmount": float(totalAmount),
             "email": email,
             "notes": notes,
+            "items": items_list,  # Guardar los items completos
             "itemsCount": len(items_list),
             "attachmentsCount": sum(1 for a in attachments if a and a.filename),
             "confirmedAt": datetime.now(timezone.utc).isoformat(),
             "status": "confirmed",
-            "emailSent": email_sent
+            "emailSent": email_sent,
+            "emailProvider": email_provider if email_sent else None,
+            "userId": userId,
+            "distributorName": distributorName,
+            "specifications": {
+                "doorColorLow": doorColorLow,
+                "doorColorHigh": doorColorHigh,
+                "doorColorColumns": doorColorColumns,
+                "sideColor": sideColor,
+                "carcassColor": carcassColor,
+                "globalFinish": globalFinish
+            }
         }
         await db.orders.insert_one(order_record)
         
@@ -2759,6 +2774,42 @@ async def confirm_order(
         elif "SENDGRID" in error_msg.upper():
             error_msg = "Servicio de email no configurado. Configure SendGrid en Panel Maestro > Configuración."
         raise HTTPException(status_code=500, detail=error_msg)
+
+# ============================================
+# MIS PEDIDOS - Listar pedidos del usuario
+# ============================================
+
+@api_router.get("/orders")
+async def get_user_orders(userId: Optional[str] = None, limit: int = 100):
+    """
+    Obtiene los pedidos confirmados. Si se pasa userId, filtra por usuario.
+    """
+    try:
+        query = {}
+        if userId:
+            query["userId"] = userId
+        
+        orders = await db.orders.find(query, {"_id": 0}).sort("confirmedAt", -1).limit(limit).to_list(limit)
+        return orders
+    except Exception as e:
+        logger.error(f"Error fetching orders: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/orders/{order_id}")
+async def get_order_detail(order_id: str):
+    """
+    Obtiene el detalle de un pedido específico
+    """
+    try:
+        order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+        if not order:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        return order
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching order {order_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================
 # BACKUP SYSTEM

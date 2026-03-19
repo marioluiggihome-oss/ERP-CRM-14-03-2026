@@ -194,7 +194,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
   // Load factories when needed (for user form)
   useEffect(() => {
-    if (isOpen && (activeTab === 'network' || activeTab === 'clients')) {
+    if (isOpen && (activeTab === 'network' || activeTab === 'clients' || activeTab === 'users')) {
       loadFactories();
     }
   }, [isOpen, activeTab]);

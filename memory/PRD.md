@@ -7,32 +7,29 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN (19 Marzo 2026)
 
-### 1. Fortalecimiento Base de Datos
-- ✅ **Índices MongoDB** creados para todas las colecciones principales:
-  - `users`: username (único), email, factoryId
-  - `fabrica_orders`: id, budgetNumber, status, factoryId, createdAt, índice compuesto status+factoryId
-  - `budgets`: id, createdAt, userId
-  - `clients`: id, name, email
-  - `catalogs`: id, libraryId
-  - `factories`: id, code (único)
-  - `order_history`: orderId, timestamp, índice compuesto para timeline
-- ✅ Los índices mejoran rendimiento y garantizan integridad de datos
+### 1. Nueva Sección "MIS PEDIDOS"
+- ✅ **Vista completa de pedidos confirmados** accesible desde menú lateral
+- ✅ Lista con búsqueda, filtros por estado de email
+- ✅ Detalle expandible con cliente, especificaciones, artículos y notas
+- ✅ Endpoint `/api/orders` para listar pedidos
+- ✅ Almacena userId, projectReference, especificaciones completas
 
-### 2. Sistema de Email con Fallback a Resend
-- ✅ **Resend como alternativa a SendGrid** - Implementado fallback automático
-- ✅ Usa remitente por defecto `onboarding@resend.dev` - No requiere verificar dominio
-- ✅ Emails de confirmación de pedidos funcionan sin configuración adicional
-- ✅ Si SendGrid falla (401), automáticamente intenta con Resend
+### 2. Selector de Fábrica en "Rol y Jerarquía"
+- ✅ **Movido el selector de fábrica** de la sección "Usuario SOLO Fábrica" a "Rol y Jerarquía"
+- ✅ Visible para todos los usuarios cuando hay fábricas configuradas
+- ✅ Dropdown con fábricas activas (SAL, ZAM)
 
-### 3. Colgadores en Modal de Despiece
-- ✅ **Colgadores mostrados en vista "CASCO, PUERTA Y HERRAJE"**
-- ✅ Tarjeta visual naranja/ámbar con cantidad de juegos
-- ✅ Nota: "1 juego = 2 unidades por mueble ALTO"
+### 3. Fortalecimiento Base de Datos
+- ✅ **Índices MongoDB** para todas las colecciones principales
+- ✅ Índices únicos, compuestos, y para consultas frecuentes
+
+### 4. Sistema de Email con Fallback a Resend
+- ✅ **Resend como alternativa a SendGrid** - No requiere verificar dominio
+- ✅ Usa remitente por defecto `onboarding@resend.dev`
+
+### 5. Colgadores en Modal de Despiece
+- ✅ Mostrados en vista "CASCO, PUERTA Y HERRAJE"
 - ✅ Incluidos en exportación PDF
-
-### Verificaciones Anteriores
-- ✅ **Menú "Archivo"** correctamente ubicado debajo de "Presupuesto" 
-- ✅ **Gráfica de queso (Donut)** en Dashboard de Fábrica funcionando
 
 ---
 

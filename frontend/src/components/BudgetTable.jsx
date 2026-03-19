@@ -1024,6 +1024,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
       formData.append('email', orderEmail);
       formData.append('notes', orderNotes);
       
+      // Datos de usuario y proyecto
+      formData.append('userId', state.currentUser?.id || '');
+      formData.append('projectReference', state.projectReference || '');
+      
       // Especificaciones de acabados
       formData.append('doorColorLow', state.doorColorLow || '');
       formData.append('doorColorHigh', state.doorColorHigh || '');

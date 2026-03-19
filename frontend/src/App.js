@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag } from 'lucide-react';
 import "./App.css";
 import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
@@ -19,6 +19,7 @@ import PrescriptorAgenda from './components/PrescriptorAgenda';
 import Armarios from './components/Armarios';
 import PortalFabrica from './components/PortalFabrica';
 import UserManualModal from './components/UserManualModal';
+import MisPedidos from './components/MisPedidos';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI } from './services/api';
 import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './services/authService';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
@@ -645,6 +646,18 @@ const App = () => {
                       </button>
                     )}
                     
+                    {/* Mis Pedidos - Visible para todos los usuarios NO tienda */}
+                    {!state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))} 
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="mis-pedidos-nav-btn"
+                      >
+                        <ShoppingBag size={22}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Pedidos</span>
+                      </button>
+                    )}
+                    
                     {/* Solo usuarios con canUseAIAnalysis pueden ver IA Lab (NO para Tienda) */}
                     {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
                       <button 
@@ -783,6 +796,11 @@ const App = () => {
             {/* Portal de Fábrica - SOLO usuarios con permiso explícito */}
             {state.currentTab === 'fabrica' && (state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica) && (
               <PortalFabrica currentUser={state.currentUser} />
+            )}
+            
+            {/* Mis Pedidos */}
+            {state.currentTab === 'misPedidos' && (
+              <MisPedidos currentUser={state.currentUser} />
             )}
             
             {/* CRM - Single Component with internal navigation */}
