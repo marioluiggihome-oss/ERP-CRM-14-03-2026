@@ -230,7 +230,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     };
   }, [despieceData, carcassMaterialName]);
 
-  // Calcular herrajes necesarios
+  // Calcular herrajes necesarios (incluye colgadores del backend)
   const calculateHerrajes = useMemo(() => {
     if (!despieceData?.items) return null;
     
@@ -238,6 +238,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     let totalCorrederas = 0;
     let totalTiradores = 0;
     let totalSoportesBaldas = 0;
+    let totalColgadores = 0;  // NUEVO: Colgadores para ALTOS
     
     despieceData.items.forEach(item => {
       const itemQty = item.itemQuantity || 1;
@@ -262,13 +263,22 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       // Soportes baldas: 4 por balda
       const numBaldas = item.components?.filter(c => c.name?.toLowerCase().includes('balda')).reduce((acc, c) => acc + (c.quantity || 1), 0) || 0;
       totalSoportesBaldas += (numBaldas * 4 * itemQty);
+      
+      // COLGADORES: Buscar en componentes del API (ya calculados en backend)
+      const colgadorComp = item.components?.find(c => 
+        c.name?.toLowerCase().includes('colgador') || c.nameShort === 'COLG'
+      );
+      if (colgadorComp) {
+        totalColgadores += ((colgadorComp.quantity || 1) * itemQty);
+      }
     });
     
     return {
       bisagras: totalBisagras,
       correderas: totalCorrederas,
       tiradores: totalTiradores,
-      soportesBaldas: totalSoportesBaldas
+      soportesBaldas: totalSoportesBaldas,
+      colgadores: totalColgadores  // NUEVO
     };
   }, [despieceData]);
 
@@ -681,6 +691,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <tr><td>Correderas (pares)</td><td class="text-right font-bold">${calculateHerrajes?.correderas || 0}</td></tr>
             <tr><td>Tiradores</td><td class="text-right font-bold">${calculateHerrajes?.tiradores || 0} uds</td></tr>
             <tr><td>Soportes de Baldas</td><td class="text-right font-bold">${calculateHerrajes?.soportesBaldas || 0} uds</td></tr>
+            ${calculateHerrajes?.colgadores > 0 ? `<tr style="background:#fef3c7;"><td><strong>🪝 Colgadores (juegos)</strong></td><td class="text-right font-bold">${calculateHerrajes.colgadores} (= ${calculateHerrajes.colgadores * 2} uds)</td></tr>` : ''}
           </tbody>
         </table>
       `;
@@ -1330,7 +1341,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
               {activeView === 'herrajes' && calculateHerrajes && (
                 <div className="space-y-6">
                   {/* Resumen Herrajes */}
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-5 gap-4">
                     <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white">
                       <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2">Bisagras</p>
                       <p className="text-4xl font-black">{calculateHerrajes.bisagras}</p>
@@ -1351,6 +1362,14 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       <p className="text-4xl font-black">{calculateHerrajes.soportesBaldas}</p>
                       <p className="text-teal-200 text-xs mt-1">unidades</p>
                     </div>
+                    {/* NUEVO: Colgadores para muebles ALTOS */}
+                    {calculateHerrajes.colgadores > 0 && (
+                      <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white">
+                        <p className="text-amber-100 text-xs font-bold uppercase tracking-widest mb-2">Colgadores</p>
+                        <p className="text-4xl font-black">{calculateHerrajes.colgadores}</p>
+                        <p className="text-amber-200 text-xs mt-1">juegos (2 uds/juego)</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* ===================== SECCIÓN PUERTAS ===================== */}
@@ -1466,7 +1485,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                     <p className="text-amber-800 text-sm">
                       <strong>Nota:</strong> Los herrajes se calculan de forma estimada. Las bisagras se calculan según la altura del mueble (2 para ≤100cm, 3 para &gt;100cm). 
-                      Las correderas se calculan para muebles con cajones/gavetas. Verificar según especificaciones del fabricante.
+                      Las correderas se calculan para muebles con cajones/gavetas. Los <strong>colgadores</strong> se añaden automáticamente para muebles <strong>ALTOS</strong> (1 juego = 2 unidades por mueble).
+                      Verificar según especificaciones del fabricante.
                     </p>
                   </div>
                 </div>

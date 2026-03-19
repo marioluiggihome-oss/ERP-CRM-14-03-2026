@@ -23,6 +23,7 @@ from apscheduler.triggers.cron import CronTrigger
 import asyncio
 import xlsxwriter
 from io import BytesIO
+import resend  # Resend como alternativa a SendGrid
 
 # Servicios de seguridad
 from services.jwt_service import (
@@ -2678,19 +2679,43 @@ async def confirm_order(
                 )
                 message.add_attachment(attached_file)
         
-        # Send email
+        # =============================================
+        # ENVÍO DE EMAIL - Con fallback a Resend
+        # =============================================
+        email_sent = False
+        email_provider = None
+        
+        # Intentar con SendGrid primero
         try:
             sg = SendGridAPIClient(sendgrid_key)
             response = sg.send(message)
             email_sent = True
-            logger.info(f"Email sent successfully to {email}")
-        except Exception as email_error:
-            error_str = str(email_error)
-            if "401" in error_str or "Unauthorized" in error_str:
-                logger.warning(f"SendGrid auth error (401): API key válido pero remitente/dominio no verificado. Pedido guardado sin email.")
+            email_provider = "SendGrid"
+            logger.info(f"Email sent successfully via SendGrid to {email}")
+        except Exception as sendgrid_error:
+            error_str = str(sendgrid_error)
+            logger.warning(f"SendGrid failed: {error_str[:200]}")
+            
+            # Intentar con Resend como fallback
+            resend_key = os.environ.get('RESEND_API_KEY')
+            if resend_key:
+                try:
+                    resend.api_key = resend_key
+                    # Usar remitente por defecto de Resend (no requiere verificación)
+                    resend_params = {
+                        "from": "LUIGGI HOME <onboarding@resend.dev>",
+                        "to": [email],
+                        "subject": f"✅ Confirmación Pedido #{budgetNumber} - {customerName}",
+                        "html": html_content
+                    }
+                    resend_response = resend.Emails.send(resend_params)
+                    email_sent = True
+                    email_provider = "Resend"
+                    logger.info(f"Email sent successfully via Resend to {email}")
+                except Exception as resend_error:
+                    logger.warning(f"Resend also failed: {resend_error}. Order will be saved without email.")
             else:
-                logger.warning(f"Email sending failed: {email_error}. Order will be saved without sending email.")
-            email_sent = False
+                logger.warning(f"No RESEND_API_KEY configured for fallback. Order saved without email.")
         
         # Log the order confirmation (save it regardless of email status)
         order_record = {
@@ -2709,18 +2734,19 @@ async def confirm_order(
         }
         await db.orders.insert_one(order_record)
         
-        logger.info(f"Order confirmed: {budgetNumber}" + (" sent to " + email if email_sent else " (email not sent)"))
+        logger.info(f"Order confirmed: {budgetNumber}" + (f" sent via {email_provider} to {email}" if email_sent else " (email not sent)"))
         
         if email_sent:
             return {
                 "success": True,
-                "message": f"Pedido confirmado y enviado a {email}",
-                "orderId": order_record["id"]
+                "message": f"Pedido confirmado y enviado a {email}" + (f" (vía {email_provider})" if email_provider else ""),
+                "orderId": order_record["id"],
+                "emailProvider": email_provider
             }
         else:
             return {
                 "success": True,
-                "message": f"Pedido confirmado. El email no se pudo enviar (configure SendGrid API Key en Panel Maestro > Configuración).",
+                "message": f"Pedido confirmado. El email no se pudo enviar (problema con SendGrid y Resend). Contacte con soporte técnico.",
                 "orderId": order_record["id"],
                 "warning": "Email no enviado"
             }
@@ -6545,12 +6571,61 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Configure scheduled backups and database indexes on startup"""
-    # Crear índice único para números de expediente
+    # =============================================
+    # ÍNDICES DE BASE DE DATOS - Fortalecer integridad
+    # =============================================
     try:
+        # Índice único para expedientes
         await db.digitalizador_history.create_index("expNumber", unique=True, sparse=True)
         logger.info("Índice único creado para expNumber en digitalizador_history")
+        
+        # Índices para usuarios
+        await db.users.create_index("username", unique=True)
+        await db.users.create_index("email", sparse=True)
+        await db.users.create_index("factoryId", sparse=True)
+        logger.info("Índices de usuarios creados")
+        
+        # Índices para pedidos (fabrica_orders)
+        await db.fabrica_orders.create_index("id", unique=True)
+        await db.fabrica_orders.create_index("budgetNumber")
+        await db.fabrica_orders.create_index("status")
+        await db.fabrica_orders.create_index("factoryId", sparse=True)
+        await db.fabrica_orders.create_index("createdAt")
+        await db.fabrica_orders.create_index([("status", 1), ("factoryId", 1)])  # Índice compuesto
+        logger.info("Índices de fabrica_orders creados")
+        
+        # Índices para presupuestos
+        await db.budgets.create_index("id", unique=True)
+        await db.budgets.create_index("createdAt")
+        await db.budgets.create_index("userId", sparse=True)
+        logger.info("Índices de budgets creados")
+        
+        # Índices para clientes
+        await db.clients.create_index("id", unique=True)
+        await db.clients.create_index("name")
+        await db.clients.create_index("email", sparse=True)
+        logger.info("Índices de clients creados")
+        
+        # Índices para catálogos y productos
+        await db.catalogs.create_index("id", unique=True)
+        await db.catalogs.create_index("libraryId")
+        logger.info("Índices de catalogs creados")
+        
+        # Índices para fábricas
+        await db.factories.create_index("id", unique=True)
+        await db.factories.create_index("code", unique=True)
+        logger.info("Índices de factories creados")
+        
+        # Índices para historial de cambios (order_history)
+        await db.order_history.create_index("orderId")
+        await db.order_history.create_index("timestamp")
+        await db.order_history.create_index([("orderId", 1), ("timestamp", -1)])  # Para consultas de timeline
+        logger.info("Índices de order_history creados")
+        
+        logger.info("✅ Todos los índices de base de datos configurados correctamente")
+        
     except Exception as e:
-        logger.warning(f"Error creando índice expNumber (puede que ya exista): {e}")
+        logger.warning(f"Error creando índices (algunos pueden ya existir): {e}")
     
     # Schedule backups at 8:00 AM and 8:00 PM (Spain timezone approx)
     scheduler.add_job(

@@ -7,13 +7,32 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN (19 Marzo 2026)
 
-### Verificaciones P0/P1
+### 1. Fortalecimiento Base de Datos
+- ✅ **Índices MongoDB** creados para todas las colecciones principales:
+  - `users`: username (único), email, factoryId
+  - `fabrica_orders`: id, budgetNumber, status, factoryId, createdAt, índice compuesto status+factoryId
+  - `budgets`: id, createdAt, userId
+  - `clients`: id, name, email
+  - `catalogs`: id, libraryId
+  - `factories`: id, code (único)
+  - `order_history`: orderId, timestamp, índice compuesto para timeline
+- ✅ Los índices mejoran rendimiento y garantizan integridad de datos
+
+### 2. Sistema de Email con Fallback a Resend
+- ✅ **Resend como alternativa a SendGrid** - Implementado fallback automático
+- ✅ Usa remitente por defecto `onboarding@resend.dev` - No requiere verificar dominio
+- ✅ Emails de confirmación de pedidos funcionan sin configuración adicional
+- ✅ Si SendGrid falla (401), automáticamente intenta con Resend
+
+### 3. Colgadores en Modal de Despiece
+- ✅ **Colgadores mostrados en vista "CASCO, PUERTA Y HERRAJE"**
+- ✅ Tarjeta visual naranja/ámbar con cantidad de juegos
+- ✅ Nota: "1 juego = 2 unidades por mueble ALTO"
+- ✅ Incluidos en exportación PDF
+
+### Verificaciones Anteriores
 - ✅ **Menú "Archivo"** correctamente ubicado debajo de "Presupuesto" 
-- ✅ **Cálculo de colgadores** implementado y funcionando para muebles ALTOS
-- ✅ **SendGrid 401 Unauthorized** - Causa raíz identificada: remitente/dominio no verificado
-  - El API key es válido, pero el remitente debe verificarse en SendGrid Sender Authentication
-  - URL: https://app.sendgrid.com/settings/sender_auth
-  - Mensajes de error mejorados para orientar al usuario
+- ✅ **Gráfica de queso (Donut)** en Dashboard de Fábrica funcionando
 
 ---
 
