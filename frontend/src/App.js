@@ -722,15 +722,17 @@ const App = () => {
             </div>
 
             <div className="mt-auto flex flex-col gap-6 w-full px-2">
-              {/* Botón de Ayuda - Disponible para todos los usuarios */}
-              <button 
-                  onClick={() => setShowUserManual(true)} 
-                  className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all"
-                  data-testid="help-button"
-              >
-                  <HelpCircle size={22}/>
-                  <span className="text-[7px] font-black uppercase tracking-widest">Ayuda</span>
-              </button>
+              {/* Botón de Ayuda - Visible para todos excepto Tiendas y Montadores */}
+              {!state.currentUser?.isTienda && !state.currentUser?.isMontador && (
+                <button 
+                    onClick={() => setShowUserManual(true)} 
+                    className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all"
+                    data-testid="help-button"
+                >
+                    <HelpCircle size={22}/>
+                    <span className="text-[7px] font-black uppercase tracking-widest">Ayuda</span>
+                </button>
+              )}
               
               {/* Solo mostrar Panel Maestro si es Admin o Comercial (NO para Tienda ni usuario solo Fábrica) */}
               {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && (

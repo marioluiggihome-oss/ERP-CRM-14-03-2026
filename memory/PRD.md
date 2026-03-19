@@ -7,25 +7,24 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN (19 Marzo 2026)
 
-### 1. Sección "MIS PEDIDOS" Mejorada
-- ✅ **Estado de fabricación** visible con badge (Confirmado, En Producción, Listo, Enviado, Entregado)
-- ✅ **Sincronización con fabrica_orders** - Estado se actualiza cuando fábrica cambia el estado
-- ✅ **Botón Imprimir** en cada pedido con formato profesional
-- ✅ Limpiar presupuesto automáticamente al confirmar pedido
+### 1. Códigos de Fábricas Corregidos
+- ✅ **SALAMANCA = 37**
+- ✅ **ZAMORA = 49**
 
-### 2. Fábricas Configuradas
-- ✅ Solo **SALAMANCA (SAL)** y **ZAMORA (ZAM)**
-- ✅ TEST_FACTORY eliminada
+### 2. Sección "MIS PEDIDOS" Completa
+- ✅ **Estado de fabricación** visible con badge (Confirmado → En Producción → Listo → Enviado)
+- ✅ **Sincronización automática** con fabrica_orders
+- ✅ **Botón Imprimir** con formato profesional
+- ✅ **Limpieza automática del presupuesto** al confirmar pedido (CORREGIDO)
 
-### 3. Formulario Contacto CRM
-- ✅ **Modal scrolleable** para formularios largos
-- ✅ Mejor separación de header, contenido y footer
+### 3. Botón Ayuda
+- ✅ Visible para todos excepto Tiendas y Montadores
 
-### 4. Otras mejoras anteriores
+### 4. Otras mejoras
 - ✅ Selector de fábrica en "Rol y Jerarquía"
 - ✅ BD fortalecida con índices MongoDB
 - ✅ Email fallback a Resend
-- ✅ Colgadores en despiece
+- ✅ Modal CRM scrolleable
 
 ---
 

@@ -1073,8 +1073,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         // LIMPIAR PRESUPUESTO después de confirmar pedido
         setState(prev => ({
           ...prev,
-          budgetItems: [],
-          despieceItems: [],
+          budgetItemsMontada: [],
+          budgetItemsDespiece: [],
           budgetNumber: '',
           customerName: '',
           customerAddress: '',
