@@ -3,7 +3,7 @@ import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown,
 import { despieceAPI } from '../services/api';
 import BoardOptimizer from './BoardOptimizer';
 
-const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, customerName, projectReference, expedientNumber }) => {
+const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor }) => {
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -627,7 +627,17 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         `;
       });
       
-      // Puertas
+      // Función para detectar tipo de mueble
+      const detectTipoMueble = (code, name) => {
+        const c = (code || '').toUpperCase();
+        const n = (name || '').toUpperCase();
+        if (c.startsWith('C') || c.includes('COL') || n.includes('COLUMNA') || n.includes('SEMICOLUMNA')) return 'COLUMNAS';
+        if (c.startsWith('A') || n.includes('ALTO') || n.includes('SOBREM')) return 'ALTOS';
+        if (c.startsWith('B') || c.startsWith('P') || n.includes('BAJO')) return 'BAJOS';
+        return 'BAJOS';
+      };
+      
+      // Puertas agrupadas por tipo
       const puertas = [];
       despieceData?.items?.forEach(item => {
         const puertaComp = item.components?.find(c => c.name?.toLowerCase().includes('puerta'));
@@ -638,46 +648,95 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             itemQuantity: item.itemQuantity || 1,
             doorHeight: puertaComp.length,
             doorWidth: puertaComp.width,
-            doorQty: puertaComp.quantity || 1
+            doorQty: puertaComp.quantity || 1,
+            tipoMueble: detectTipoMueble(item.productCode, item.productName)
           });
         }
       });
       
+      // Colores por tipo
+      const coloresPorTipo = {
+        ALTOS: doorColorHigh || 'Sin especificar',
+        BAJOS: doorColorLow || 'Sin especificar',
+        COLUMNAS: doorColorColumns || 'Sin especificar'
+      };
+      
       if (puertas.length > 0) {
+        // Resumen de colores
+        const totalAltos = puertas.filter(p => p.tipoMueble === 'ALTOS').reduce((sum, p) => sum + (p.doorQty * p.itemQuantity), 0);
+        const totalBajos = puertas.filter(p => p.tipoMueble === 'BAJOS').reduce((sum, p) => sum + (p.doorQty * p.itemQuantity), 0);
+        const totalColumnas = puertas.filter(p => p.tipoMueble === 'COLUMNAS').reduce((sum, p) => sum + (p.doorQty * p.itemQuantity), 0);
+        const totalPuertas = totalAltos + totalBajos + totalColumnas;
+        
         html += `
-          <div class="section-title">PUERTAS</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Mueble</th>
-                <th class="text-center">Alto Puerta (cm)</th>
-                <th class="text-center">Ancho Puerta (cm)</th>
-                <th class="text-center">Puertas/Mueble</th>
-                <th class="text-center">Total Puertas</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div class="section-title">🎨 RESUMEN DE PUERTAS POR COLOR</div>
+          <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <div style="flex:1; background:#dbeafe; border:2px solid #3b82f6; padding:10px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:#1e40af; font-weight:bold;">P. ALTOS</div>
+              <div style="font-size:20px; font-weight:bold; color:#1e40af;">${totalAltos}</div>
+              <div style="font-size:9px; color:#3b82f6; margin-top:4px;">Color: ${coloresPorTipo.ALTOS}</div>
+            </div>
+            <div style="flex:1; background:#ffedd5; border:2px solid #f97316; padding:10px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:#c2410c; font-weight:bold;">P. BAJOS</div>
+              <div style="font-size:20px; font-weight:bold; color:#c2410c;">${totalBajos}</div>
+              <div style="font-size:9px; color:#f97316; margin-top:4px;">Color: ${coloresPorTipo.BAJOS}</div>
+            </div>
+            <div style="flex:1; background:#ede9fe; border:2px solid #8b5cf6; padding:10px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:#6d28d9; font-weight:bold;">P. COLUMNAS</div>
+              <div style="font-size:20px; font-weight:bold; color:#6d28d9;">${totalColumnas}</div>
+              <div style="font-size:9px; color:#8b5cf6; margin-top:4px;">Color: ${coloresPorTipo.COLUMNAS}</div>
+            </div>
+          </div>
         `;
         
-        let totalPuertas = 0;
-        puertas.forEach(p => {
-          const total = p.doorQty * p.itemQuantity;
-          totalPuertas += total;
+        // Tablas por tipo
+        ['ALTOS', 'BAJOS', 'COLUMNAS'].forEach(tipo => {
+          const puertasTipo = puertas.filter(p => p.tipoMueble === tipo);
+          if (puertasTipo.length === 0) return;
+          
+          const subtotal = puertasTipo.reduce((sum, p) => sum + (p.doorQty * p.itemQuantity), 0);
+          const bgColor = tipo === 'ALTOS' ? '#dbeafe' : tipo === 'BAJOS' ? '#ffedd5' : '#ede9fe';
+          const borderColor = tipo === 'ALTOS' ? '#3b82f6' : tipo === 'BAJOS' ? '#f97316' : '#8b5cf6';
+          
           html += `
-            <tr class="avoid-break">
-              <td class="font-bold">${p.productCode}</td>
-              <td class="text-center">${p.doorHeight}</td>
-              <td class="text-center">${p.doorWidth}</td>
-              <td class="text-center">${p.doorQty}</td>
-              <td class="text-center font-bold">${total}</td>
-            </tr>
+            <div class="section-title" style="background:${borderColor};">🚪 PUERTAS ${tipo} - Color: ${coloresPorTipo[tipo]}</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Mueble</th>
+                  <th class="text-center">Alto Puerta (cm)</th>
+                  <th class="text-center">Ancho Puerta (cm)</th>
+                  <th class="text-center">Puertas/Mueble</th>
+                  <th class="text-center">Total Puertas</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          
+          puertasTipo.forEach(p => {
+            const total = p.doorQty * p.itemQuantity;
+            html += `
+              <tr class="avoid-break">
+                <td class="font-bold">${p.productCode}</td>
+                <td class="text-center">${p.doorHeight}</td>
+                <td class="text-center">${p.doorWidth}</td>
+                <td class="text-center">${p.doorQty}</td>
+                <td class="text-center font-bold">${total}</td>
+              </tr>
+            `;
+          });
+          
+          html += `
+              <tr style="background:${bgColor};"><td colspan="4" class="text-right font-bold">SUBTOTAL ${tipo}:</td><td class="text-center font-bold">${subtotal}</td></tr>
+              </tbody>
+            </table>
           `;
         });
         
         html += `
-            <tr class="bg-amber"><td colspan="4" class="text-right font-bold">TOTAL PUERTAS:</td><td class="text-center font-bold">${totalPuertas}</td></tr>
-            </tbody>
-          </table>
+          <div style="background:#fef3c7; padding:8px; border-radius:6px; font-size:9px; color:#92400e; margin-top:10px;">
+            <strong>TOTAL GENERAL:</strong> ${totalPuertas} puertas${sideColor ? ` | <strong>Costados:</strong> ${sideColor}` : ''}
+          </div>
         `;
       }
       
@@ -1159,20 +1218,14 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm text-indigo-600">{comp.material}</td>
                                   <td className="px-4 py-3 text-center">
-                                    <input
-                                      type="number"
-                                      value={getComponentValue(furniture.productId, comp, 'length')}
-                                      onChange={(e) => handleEditComponent(furniture.productId, comp.id, 'length', parseFloat(e.target.value))}
-                                      className="w-20 bg-white border border-indigo-200 rounded px-2 py-1 text-center text-sm font-bold focus:border-orange-500 focus:outline-none"
-                                    />
+                                    <span className="w-20 bg-slate-100 border border-indigo-200 rounded px-2 py-1 text-center text-sm font-bold inline-block">
+                                      {getComponentValue(furniture.productId, comp, 'length')}
+                                    </span>
                                   </td>
                                   <td className="px-4 py-3 text-center">
-                                    <input
-                                      type="number"
-                                      value={getComponentValue(furniture.productId, comp, 'width')}
-                                      onChange={(e) => handleEditComponent(furniture.productId, comp.id, 'width', parseFloat(e.target.value))}
-                                      className="w-20 bg-white border border-indigo-200 rounded px-2 py-1 text-center text-sm font-bold focus:border-orange-500 focus:outline-none"
-                                    />
+                                    <span className="w-20 bg-slate-100 border border-indigo-200 rounded px-2 py-1 text-center text-sm font-bold inline-block">
+                                      {getComponentValue(furniture.productId, comp, 'width')}
+                                    </span>
                                   </td>
                                   <td className="px-4 py-3 text-center font-black text-orange-600">{comp.quantity}</td>
                                   <td className="px-4 py-3 text-right text-xs text-indigo-400 italic">{comp.notes}</td>
@@ -1372,14 +1425,38 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                     )}
                   </div>
 
-                  {/* ===================== SECCIÓN PUERTAS ===================== */}
+                  {/* ===================== SECCIÓN PUERTAS POR COLOR ===================== */}
                   {(() => {
-                    // Extraer puertas de los componentes
+                    // Función para detectar el tipo de mueble (ALTO, BAJO, COLUMNA)
+                    const detectTipoMueble = (code, name) => {
+                      const c = (code || '').toUpperCase();
+                      const n = (name || '').toUpperCase();
+                      
+                      // Detectar COLUMNAS primero (más específico)
+                      if (c.startsWith('C') || c.includes('COL') || n.includes('COLUMNA') || n.includes('SEMICOLUMNA')) {
+                        return 'COLUMNAS';
+                      }
+                      // Detectar ALTOS
+                      if (c.startsWith('A') || n.includes('ALTO') || n.includes('SOBREM')) {
+                        return 'ALTOS';
+                      }
+                      // Detectar BAJOS (por defecto si empieza por B o contiene BAJO)
+                      if (c.startsWith('B') || c.startsWith('P') || n.includes('BAJO')) {
+                        return 'BAJOS';
+                      }
+                      // Por defecto, BAJOS
+                      return 'BAJOS';
+                    };
+
+                    // Extraer puertas de los componentes y clasificarlas
                     const puertas = despieceData.items.flatMap(furniture => {
                       const puertaComps = furniture.components?.filter(c => 
                         c.name?.toLowerCase().includes('puerta') || 
                         c.type?.toUpperCase() === 'PUERTA'
                       ) || [];
+                      
+                      const tipoMueble = detectTipoMueble(furniture.productCode, furniture.productName);
+                      
                       return puertaComps.map(p => ({
                         muebleCode: furniture.productCode,
                         muebleName: furniture.productName,
@@ -1387,55 +1464,128 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                         doorWidth: p.width,
                         doorQty: p.quantity || 1,
                         itemQty: furniture.itemQuantity || 1,
-                        material: p.material
+                        material: p.material,
+                        tipoMueble: tipoMueble
                       }));
                     });
+
+                    // Agrupar puertas por tipo
+                    const puertasPorTipo = {
+                      ALTOS: puertas.filter(p => p.tipoMueble === 'ALTOS'),
+                      BAJOS: puertas.filter(p => p.tipoMueble === 'BAJOS'),
+                      COLUMNAS: puertas.filter(p => p.tipoMueble === 'COLUMNAS')
+                    };
+
+                    // Colores asignados a cada tipo
+                    const coloresPorTipo = {
+                      ALTOS: doorColorHigh || 'Sin especificar',
+                      BAJOS: doorColorLow || 'Sin especificar',
+                      COLUMNAS: doorColorColumns || 'Sin especificar'
+                    };
+
+                    // Configuración de estilos por tipo
+                    const estilosPorTipo = {
+                      ALTOS: { bg: 'from-blue-500 to-indigo-600', bgLight: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+                      BAJOS: { bg: 'from-orange-500 to-amber-600', bgLight: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+                      COLUMNAS: { bg: 'from-purple-500 to-violet-600', bgLight: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' }
+                    };
 
                     const totalPuertas = puertas.reduce((sum, p) => sum + (p.doorQty * p.itemQty), 0);
 
                     if (puertas.length === 0) return null;
 
                     return (
-                      <div className="bg-white border-2 border-orange-200 rounded-xl overflow-hidden">
-                        <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 flex justify-between items-center">
-                          <h3 className="font-black uppercase tracking-widest text-sm">🚪 Despiece de Puertas</h3>
-                          <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">{totalPuertas} puertas total</span>
+                      <div className="space-y-4">
+                        {/* Resumen de Colores */}
+                        <div className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden">
+                          <div className="bg-gradient-to-r from-gray-700 to-gray-900 text-white px-6 py-3 flex justify-between items-center">
+                            <h3 className="font-black uppercase tracking-widest text-sm">🎨 Resumen de Puertas por Color</h3>
+                            <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">{totalPuertas} puertas total</span>
+                          </div>
+                          
+                          {/* Tarjetas de resumen por tipo */}
+                          <div className="grid grid-cols-3 gap-4 p-4">
+                            {Object.entries(puertasPorTipo).map(([tipo, puertasTipo]) => {
+                              const totalTipo = puertasTipo.reduce((sum, p) => sum + (p.doorQty * p.itemQty), 0);
+                              const estilo = estilosPorTipo[tipo];
+                              const color = coloresPorTipo[tipo];
+                              
+                              return (
+                                <div key={tipo} className={`bg-gradient-to-br ${estilo.bg} rounded-xl p-4 text-white shadow-lg`}>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-bold uppercase tracking-widest opacity-80">P. {tipo}</span>
+                                    <span className="text-2xl font-black">{totalTipo}</span>
+                                  </div>
+                                  <div className="bg-white/20 rounded-lg px-3 py-2 mt-2">
+                                    <p className="text-xs font-bold uppercase tracking-wider opacity-90">Color:</p>
+                                    <p className="text-sm font-black truncate" title={color}>{color}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <table className="w-full">
-                          <thead className="bg-orange-50">
-                            <tr className="text-xs font-black text-orange-700 uppercase tracking-widest">
-                              <th className="px-4 py-3 text-left">Mueble</th>
-                              <th className="px-4 py-3 text-left">Descripción</th>
-                              <th className="px-4 py-3 text-center">Alto (cm)</th>
-                              <th className="px-4 py-3 text-center">Ancho (cm)</th>
-                              <th className="px-4 py-3 text-center">Puertas/Mueble</th>
-                              <th className="px-4 py-3 text-center">Cant. Muebles</th>
-                              <th className="px-4 py-3 text-center">Total Puertas</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-orange-100">
-                            {puertas.map((p, idx) => (
-                              <tr key={idx} className="hover:bg-orange-50/50">
-                                <td className="px-4 py-3 font-bold text-orange-900">{p.muebleCode}</td>
-                                <td className="px-4 py-3 text-sm text-orange-600">{p.muebleName}</td>
-                                <td className="px-4 py-3 text-center font-mono text-lg font-bold text-orange-800">{p.doorHeight}</td>
-                                <td className="px-4 py-3 text-center font-mono text-lg font-bold text-orange-800">{p.doorWidth}</td>
-                                <td className="px-4 py-3 text-center font-bold">{p.doorQty}</td>
-                                <td className="px-4 py-3 text-center font-bold text-indigo-600">{p.itemQty}</td>
-                                <td className="px-4 py-3 text-center font-black text-orange-600 text-lg">{p.doorQty * p.itemQty}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot className="bg-gradient-to-r from-orange-100 to-amber-100">
-                            <tr className="font-black text-orange-900">
-                              <td colSpan="6" className="px-4 py-3 text-right uppercase">Total Puertas a Fabricar:</td>
-                              <td className="px-4 py-3 text-center text-2xl">{totalPuertas}</td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                        <div className="bg-orange-50 px-6 py-3 text-xs text-orange-600">
+
+                        {/* Tablas detalladas por tipo */}
+                        {Object.entries(puertasPorTipo).map(([tipo, puertasTipo]) => {
+                          if (puertasTipo.length === 0) return null;
+                          
+                          const totalTipo = puertasTipo.reduce((sum, p) => sum + (p.doorQty * p.itemQty), 0);
+                          const estilo = estilosPorTipo[tipo];
+                          const color = coloresPorTipo[tipo];
+                          
+                          return (
+                            <div key={tipo} className={`bg-white border-2 ${estilo.border} rounded-xl overflow-hidden`}>
+                              <div className={`bg-gradient-to-r ${estilo.bg} text-white px-6 py-3 flex justify-between items-center`}>
+                                <div className="flex items-center gap-3">
+                                  <h3 className="font-black uppercase tracking-widest text-sm">🚪 Puertas {tipo}</h3>
+                                  <span className="bg-white/30 px-3 py-1 rounded-full text-xs font-bold">
+                                    Color: {color}
+                                  </span>
+                                </div>
+                                <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">{totalTipo} puertas</span>
+                              </div>
+                              <table className="w-full">
+                                <thead className={estilo.bgLight}>
+                                  <tr className={`text-xs font-black ${estilo.text} uppercase tracking-widest`}>
+                                    <th className="px-4 py-3 text-left">Mueble</th>
+                                    <th className="px-4 py-3 text-left">Descripción</th>
+                                    <th className="px-4 py-3 text-center">Alto (cm)</th>
+                                    <th className="px-4 py-3 text-center">Ancho (cm)</th>
+                                    <th className="px-4 py-3 text-center">Puertas/Mueble</th>
+                                    <th className="px-4 py-3 text-center">Cant. Muebles</th>
+                                    <th className="px-4 py-3 text-center">Total Puertas</th>
+                                  </tr>
+                                </thead>
+                                <tbody className={`divide-y ${estilo.border.replace('border-', 'divide-')}`}>
+                                  {puertasTipo.map((p, idx) => (
+                                    <tr key={idx} className={`hover:${estilo.bgLight}`}>
+                                      <td className={`px-4 py-3 font-bold ${estilo.text.replace('text-', 'text-').replace('-700', '-900')}`}>{p.muebleCode}</td>
+                                      <td className={`px-4 py-3 text-sm ${estilo.text.replace('-700', '-600')}`}>{p.muebleName}</td>
+                                      <td className={`px-4 py-3 text-center font-mono text-lg font-bold ${estilo.text.replace('-700', '-800')}`}>{p.doorHeight}</td>
+                                      <td className={`px-4 py-3 text-center font-mono text-lg font-bold ${estilo.text.replace('-700', '-800')}`}>{p.doorWidth}</td>
+                                      <td className="px-4 py-3 text-center font-bold">{p.doorQty}</td>
+                                      <td className="px-4 py-3 text-center font-bold text-indigo-600">{p.itemQty}</td>
+                                      <td className={`px-4 py-3 text-center font-black ${estilo.text.replace('-700', '-600')} text-lg`}>{p.doorQty * p.itemQty}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                <tfoot className={`${estilo.bgLight}`}>
+                                  <tr className={`font-black ${estilo.text.replace('-700', '-900')}`}>
+                                    <td colSpan="6" className="px-4 py-3 text-right uppercase">Subtotal Puertas {tipo}:</td>
+                                    <td className="px-4 py-3 text-center text-xl">{totalTipo}</td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          );
+                        })}
+
+                        {/* Nota informativa */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl px-6 py-3 text-xs text-amber-700">
                           <strong>Nota:</strong> Las dimensiones de puerta incluyen tolerancias aplicadas (-2mm alto, -3mm ancho).
-                          El acabado de puerta se indica en el presupuesto.
+                          Los colores mostrados corresponden a la configuración del presupuesto (P.Bajos, P.Altos, P.Colum).
+                          {sideColor && <span className="ml-2 font-bold">Costados: {sideColor}</span>}
                         </div>
                       </div>
                     );

@@ -1,11 +1,24 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado: EN DESARROLLO ACTIVO
-## Última Actualización: 19 Marzo 2026
+## Última Actualización: 20 Marzo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (19 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (20 Marzo 2026)
+
+### 1. Nueva Sección "Puertas por Color" en Modal Despiece
+- ✅ **Resumen de Puertas por Color**: Nueva sección en pestaña "CASCO, PUERTA Y HERRAJE"
+- ✅ **Tarjetas visuales**: P.ALTOS (azul), P.BAJOS (naranja), P.COLUMNAS (púrpura)
+- ✅ **Agrupación automática**: Puertas clasificadas según tipo de mueble (A=ALTOS, B=BAJOS, C=COLUMNAS)
+- ✅ **Colores desde configuración**: Usa los valores de P.Bajos, P.Altos, P.Colum y Costados del presupuesto
+- ✅ **Tablas detalladas por tipo**: Cada tipo de puerta tiene su propia tabla con dimensiones
+- ✅ **Exportación PDF**: El PDF de herrajes ahora incluye puertas agrupadas por color
+- ✅ **Props pasadas correctamente**: doorColorLow, doorColorHigh, doorColorColumns, sideColor
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (19 Marzo 2026)
 
 ### 1. Códigos de Fábricas Corregidos
 - ✅ **SALAMANCA = 37**

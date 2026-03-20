@@ -2816,6 +2816,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         customerName={state.customerName || ''}
         projectReference={state.internalReference || ''}
         expedientNumber={state.budgetNumber || ''}
+        doorColorLow={state.doorColorLow || ''}
+        doorColorHigh={state.doorColorHigh || ''}
+        doorColorColumns={state.doorColorColumns || ''}
+        sideColor={state.sideColor || ''}
       />
 
       {/* Modal para añadir tablero al presupuesto - Componente extraído */}
