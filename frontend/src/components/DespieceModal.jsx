@@ -704,10 +704,11 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
               <thead>
                 <tr>
                   <th>Mueble</th>
-                  <th class="text-center">Alto Puerta (cm)</th>
-                  <th class="text-center">Ancho Puerta (cm)</th>
+                  <th class="text-center">Alto (cm)</th>
+                  <th class="text-center">Ancho (cm)</th>
+                  <th class="text-center">Veta</th>
                   <th class="text-center">Puertas/Mueble</th>
-                  <th class="text-center">Total Puertas</th>
+                  <th class="text-center">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -720,6 +721,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                 <td class="font-bold">${p.productCode}</td>
                 <td class="text-center">${p.doorHeight}</td>
                 <td class="text-center">${p.doorWidth}</td>
+                <td class="text-center" style="background:#d1fae5; color:#065f46; font-weight:bold;">↕ V</td>
                 <td class="text-center">${p.doorQty}</td>
                 <td class="text-center font-bold">${total}</td>
               </tr>
@@ -727,14 +729,17 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           });
           
           html += `
-              <tr style="background:${bgColor};"><td colspan="4" class="text-right font-bold">SUBTOTAL ${tipo}:</td><td class="text-center font-bold">${subtotal}</td></tr>
+              <tr style="background:${bgColor};"><td colspan="5" class="text-right font-bold">SUBTOTAL ${tipo}:</td><td class="text-center font-bold">${subtotal}</td></tr>
               </tbody>
             </table>
           `;
         });
         
         html += `
-          <div style="background:#fef3c7; padding:8px; border-radius:6px; font-size:9px; color:#92400e; margin-top:10px;">
+          <div style="background:#d1fae5; padding:8px; border-radius:6px; font-size:9px; color:#065f46; margin-top:10px;">
+            <strong>📐 VETA:</strong> Todas las puertas con veta VERTICAL (↕) - La veta sigue la dirección del ALTO
+          </div>
+          <div style="background:#fef3c7; padding:8px; border-radius:6px; font-size:9px; color:#92400e; margin-top:5px;">
             <strong>TOTAL GENERAL:</strong> ${totalPuertas} puertas${sideColor ? ` | <strong>Costados:</strong> ${sideColor}` : ''}
           </div>
         `;
@@ -797,11 +802,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         const largo = compValue('length') || 0;
         const ancho = compValue('width') || 0;
         const cantidad = (compValue('quantity') || 1) * itemQty;
-        // Textura: 0 = sin veta, 1 = con veta (verticales suelen tener veta)
+        // Textura: 0 = sin veta, 1 = con veta vertical
+        // PUERTAS: siempre veta vertical (1)
+        // LATERALES/COSTADOS/VERTICALES: veta vertical (1)
+        // RESTO: sin veta (0)
+        const esPuerta = nombrePieza.toLowerCase().includes('puerta');
         const esVertical = nombrePieza.toLowerCase().includes('lateral') || 
                           nombrePieza.toLowerCase().includes('costado') ||
                           nombrePieza.toLowerCase().includes('vertical');
-        const textura = esVertical ? 1 : 0;
+        const textura = (esPuerta || esVertical) ? 1 : 0;
         // Código de la pieza
         const codigo = `${item.productCode || ''}-${comp.id || nombrePieza.substring(0,3).toUpperCase()}`;
         // Referencia del mueble
@@ -874,9 +883,12 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         const compValue = (field) => getComponentValue(piece.productId, piece, field);
         const desc = `${piece.productCode} - ${piece.name}`;
         const qty = (compValue('quantity') || 1) * piece.itemQuantity;
+        // Veta: PUERTAS siempre vertical, LATERALES/COSTADOS/VERTICALES también
+        const esPuerta = piece.name?.toLowerCase().includes('puerta');
         const esVertical = piece.name?.toLowerCase().includes('lateral') || 
                           piece.name?.toLowerCase().includes('costado') ||
                           piece.name?.toLowerCase().includes('vertical');
+        const tieneVeta = esPuerta || esVertical;
         
         xmlContent += `      <Part id="${partId++}">\n`;
         xmlContent += `        <Description>${desc}</Description>\n`;
@@ -887,7 +899,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         xmlContent += `        <Width>${compValue('width') || 0}</Width>\n`;
         xmlContent += `        <Thickness>${compValue('thickness') || 18}</Thickness>\n`;
         xmlContent += `        <Quantity>${qty}</Quantity>\n`;
-        xmlContent += `        <Grain>${esVertical ? '1' : '0'}</Grain>\n`;
+        xmlContent += `        <Grain>${tieneVeta ? '1' : '0'}</Grain>\n`;
+        xmlContent += `        <GrainDirection>vertical</GrainDirection>\n`;
         xmlContent += `        <EdgeBanding l1="0" l2="0" w1="0" w2="0"/>\n`;
         xmlContent += `      </Part>\n`;
       });
@@ -1526,6 +1539,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                           </div>
                         </div>
 
+                        {/* Leyenda de veta */}
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 flex items-center gap-4">
+                          <span className="text-emerald-700 font-black text-xs uppercase tracking-widest">📐 Orientación de Veta:</span>
+                          <span className="bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                            ↕ VERTICAL (por defecto)
+                          </span>
+                          <span className="text-emerald-600 text-xs">La veta sigue la dirección del ALTO de la puerta</span>
+                        </div>
+
                         {/* Tablas detalladas por tipo */}
                         {Object.entries(puertasPorTipo).map(([tipo, puertasTipo]) => {
                           if (puertasTipo.length === 0) return null;
@@ -1552,6 +1574,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                     <th className="px-4 py-3 text-left">Descripción</th>
                                     <th className="px-4 py-3 text-center">Alto (cm)</th>
                                     <th className="px-4 py-3 text-center">Ancho (cm)</th>
+                                    <th className="px-4 py-3 text-center">Veta</th>
                                     <th className="px-4 py-3 text-center">Puertas/Mueble</th>
                                     <th className="px-4 py-3 text-center">Cant. Muebles</th>
                                     <th className="px-4 py-3 text-center">Total Puertas</th>
@@ -1564,6 +1587,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                       <td className={`px-4 py-3 text-sm ${estilo.text.replace('-700', '-600')}`}>{p.muebleName}</td>
                                       <td className={`px-4 py-3 text-center font-mono text-lg font-bold ${estilo.text.replace('-700', '-800')}`}>{p.doorHeight}</td>
                                       <td className={`px-4 py-3 text-center font-mono text-lg font-bold ${estilo.text.replace('-700', '-800')}`}>{p.doorWidth}</td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">↕ V</span>
+                                      </td>
                                       <td className="px-4 py-3 text-center font-bold">{p.doorQty}</td>
                                       <td className="px-4 py-3 text-center font-bold text-indigo-600">{p.itemQty}</td>
                                       <td className={`px-4 py-3 text-center font-black ${estilo.text.replace('-700', '-600')} text-lg`}>{p.doorQty * p.itemQty}</td>
@@ -1572,7 +1598,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                 </tbody>
                                 <tfoot className={`${estilo.bgLight}`}>
                                   <tr className={`font-black ${estilo.text.replace('-700', '-900')}`}>
-                                    <td colSpan="6" className="px-4 py-3 text-right uppercase">Subtotal Puertas {tipo}:</td>
+                                    <td colSpan="7" className="px-4 py-3 text-right uppercase">Subtotal Puertas {tipo}:</td>
                                     <td className="px-4 py-3 text-center text-xl">{totalTipo}</td>
                                   </tr>
                                 </tfoot>

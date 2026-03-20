@@ -16,6 +16,13 @@
 - ✅ **Exportación PDF**: El PDF de herrajes ahora incluye puertas agrupadas por color
 - ✅ **Props pasadas correctamente**: doorColorLow, doorColorHigh, doorColorColumns, sideColor
 
+### 2. Campo de Veta para Puertas (Seccionadora)
+- ✅ **Veta VERTICAL por defecto**: Todas las puertas tienen veta vertical (la veta sigue el ALTO)
+- ✅ **Leyenda visual**: Banner informativo "📐 ORIENTACIÓN DE VETA: ↕ VERTICAL (por defecto)"
+- ✅ **Columna en tabla**: Nueva columna "VETA" con badge verde "↕ V"
+- ✅ **CSV actualizado**: Campo Textura=1 para puertas (veta vertical)
+- ✅ **XML actualizado**: Elementos `<Grain>1</Grain>` y `<GrainDirection>vertical</GrainDirection>`
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (19 Marzo 2026)
