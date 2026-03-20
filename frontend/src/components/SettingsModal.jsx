@@ -2106,6 +2106,32 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             </label>
                           )}
 
+                          {/* USUARIO SOLO FÁBRICA - Selector de fábrica asignada */}
+                          {factories.length > 0 && (
+                            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+                              <label className="text-xs font-black text-emerald-700 mb-2 block flex items-center gap-2">
+                                <Factory size={14} className="text-emerald-600" />
+                                🏭 Usuario Solo Fábrica
+                              </label>
+                              <select
+                                value={userForm.factoryId || ''}
+                                onChange={(e) => setUserForm({...userForm, factoryId: e.target.value})}
+                                className="w-full px-3 py-2 border-2 border-emerald-300 rounded-xl text-sm font-bold text-emerald-800 focus:border-emerald-500 outline-none bg-white"
+                                data-testid="factory-selector"
+                              >
+                                <option value="">-- Sin fábrica asignada --</option>
+                                {factories.map(factory => (
+                                  <option key={factory.id} value={factory.id}>
+                                    {factory.name} ({factory.code})
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-[10px] text-emerald-500 mt-1">
+                                Si tiene rol de fábrica, solo verá las órdenes de esta fábrica
+                              </p>
+                            </div>
+                          )}
+
                           {/* Vincular Tienda a Comercial/Responsable/Director - Para roles Tienda */}
                           {userForm.isTienda && representatives.length > 0 && (
                             <div>
@@ -2155,32 +2181,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 ))}
                               </select>
                               <p className="text-[10px] text-slate-400 mt-1">El usuario heredará el descuento del cliente vinculado</p>
-                            </div>
-                          )}
-
-                          {/* SELECTOR DE FÁBRICA - Para usuarios con acceso a fábrica */}
-                          {factories.length > 0 && (
-                            <div className="mt-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
-                              <label className="text-xs font-black text-emerald-700 mb-2 block flex items-center gap-2">
-                                <Factory size={14} className="text-emerald-600" />
-                                🏭 Fábrica Asignada
-                              </label>
-                              <select
-                                value={userForm.factoryId || ''}
-                                onChange={(e) => setUserForm({...userForm, factoryId: e.target.value})}
-                                className="w-full px-3 py-2 border-2 border-emerald-300 rounded-xl text-sm font-bold text-emerald-800 focus:border-emerald-500 outline-none bg-white"
-                                data-testid="factory-selector"
-                              >
-                                <option value="">-- Sin fábrica asignada --</option>
-                                {factories.map(factory => (
-                                  <option key={factory.id} value={factory.id}>
-                                    {factory.name} ({factory.code})
-                                  </option>
-                                ))}
-                              </select>
-                              <p className="text-[10px] text-emerald-500 mt-1">
-                                Si tiene rol de fábrica, solo verá las órdenes de esta fábrica
-                              </p>
                             </div>
                           )}
                         </div>
