@@ -572,8 +572,8 @@ const App = () => {
         />
       ) : (
         <>
-          <aside className="w-20 bg-slate-950 flex flex-col items-center py-10 gap-10 shrink-0 border-r border-white/5 z-50 shadow-2xl">
-            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg border-b-4 border-slate-800 overflow-hidden transition-all hover:scale-105">
+          <aside className="w-20 bg-slate-950 flex flex-col items-center py-10 gap-10 shrink-0 border-r border-white/5 z-50 shadow-2xl overflow-hidden">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg border-b-4 border-slate-800 overflow-hidden transition-transform duration-200 hover:scale-105">
               {state.logo ? (
                 <img src={state.logo} alt="Logo" className="w-full h-full object-contain p-1.5" />
               ) : (
@@ -581,7 +581,7 @@ const App = () => {
               )}
             </div>
             
-            <div className="flex flex-col gap-6 flex-1 w-full px-2">
+            <div className="flex flex-col gap-6 flex-1 w-full px-2 overflow-hidden">
               {/* 
                 IMPORTANTE: Usuarios con isFabrica o que SOLO tienen canAccessFabrica
                 no deben ver otros módulos - solo ven el botón de FÁBRICA
@@ -599,7 +599,7 @@ const App = () => {
                   return (
                     <button 
                       onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
-                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       data-testid="fabrica-nav-btn"
                     >
                       <Factory size={22}/>
@@ -615,7 +615,7 @@ const App = () => {
                     {state.currentUser?.canAccessCRM && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'crm-dashboard'}))} 
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${
                           state.currentTab?.startsWith('crm-') 
                             ? 'bg-indigo-600 text-white shadow-xl scale-110' 
                             : 'text-slate-500 hover:text-white hover:bg-white/10'
@@ -629,7 +629,7 @@ const App = () => {
 
                     <button 
                       onClick={() => setState(p => ({...p, currentTab: 'budget'}))} 
-                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                     >
                       <FileText size={22}/>
                       <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
@@ -639,7 +639,7 @@ const App = () => {
                     {!state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <FolderOpen size={22}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
@@ -650,7 +650,7 @@ const App = () => {
                     {!state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))} 
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="mis-pedidos-nav-btn"
                       >
                         <ShoppingBag size={22}/>
@@ -662,7 +662,7 @@ const App = () => {
                     {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'visualizer'}))} 
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.currentTab === 'visualizer' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <Sparkles size={22}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">IA Lab</span>
@@ -673,7 +673,7 @@ const App = () => {
                     {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'digitalizador'}))} 
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.currentTab === 'digitalizador' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="digitalizador-nav-btn"
                       >
                         <ScanLine size={22}/>
@@ -685,7 +685,7 @@ const App = () => {
                     {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="montajes-nav-btn"
                       >
                         <Wrench size={22}/>
@@ -697,7 +697,7 @@ const App = () => {
                     {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica) && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="fabrica-nav-btn"
                       >
                         <Factory size={22}/>
@@ -709,7 +709,7 @@ const App = () => {
                     {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setShowCommercialWorkView(true)} 
-                        className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all text-purple-400 hover:text-white hover:bg-purple-500/30"
+                        className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 text-purple-400 hover:text-white hover:bg-purple-500/30"
                         data-testid="commercial-panel-nav-btn"
                       >
                         <Users size={22}/>
@@ -726,7 +726,7 @@ const App = () => {
               {!state.currentUser?.isTienda && !state.currentUser?.isMontador && (
                 <button 
                     onClick={() => setShowUserManual(true)} 
-                    className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all"
+                    className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-indigo-500 hover:bg-indigo-50/30 transition-colors duration-200"
                     data-testid="help-button"
                 >
                     <HelpCircle size={22}/>
@@ -738,7 +738,7 @@ const App = () => {
               {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && (
                 <button 
                     onClick={() => setState(p => ({...p, showSettings: true}))} 
-                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-colors duration-200 ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                 >
                     <Settings size={22}/>
                     <span className="text-[7px] font-black uppercase tracking-widest">Master</span>
@@ -761,7 +761,7 @@ const App = () => {
                     await authLogout();
                     setState(p => ({...p, currentUser: null, budgetItemsMontada: [], budgetItemsDespiece: []}));
                   }}
-                  className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-red-500 transition-all"
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl text-slate-500 hover:text-red-500 transition-colors duration-200"
               >
                   <LogOut size={22}/>
                   <span className="text-[7px] font-black uppercase tracking-widest">Salir</span>

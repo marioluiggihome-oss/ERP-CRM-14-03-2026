@@ -627,13 +627,35 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         `;
       });
       
-      // Función para detectar tipo de mueble
+      // Función para detectar tipo de mueble - Soporta nomenclaturas ZC y MV
       const detectTipoMueble = (code, name) => {
         const c = (code || '').toUpperCase();
         const n = (name || '').toUpperCase();
-        if (c.startsWith('C') || c.includes('COL') || n.includes('COLUMNA') || n.includes('SEMICOLUMNA')) return 'COLUMNAS';
-        if (c.startsWith('A') || n.includes('ALTO') || n.includes('SOBREM')) return 'ALTOS';
-        if (c.startsWith('B') || c.startsWith('P') || n.includes('BAJO')) return 'BAJOS';
+        
+        // COLUMNAS (más específico primero)
+        const columnaPrefixes = ['CD', 'CE', 'CF', 'CH', 'CHPC', 'CHGC', 'CHC', 'CHM', 'CHMG', 'CHMC', 'CHMCG', 'BOC'];
+        if (columnaPrefixes.some(prefix => c.startsWith(prefix))) return 'COLUMNAS';
+        const mediaColumnaPrefixes = ['MGHM', 'MCHM', 'MPG', 'MVG', 'MPH', 'MPM'];
+        if (mediaColumnaPrefixes.some(prefix => c.startsWith(prefix))) return 'COLUMNAS';
+        if (/^M\d/.test(c) || /^MV\d/.test(c)) return 'COLUMNAS';
+        if (n.includes('COLUMNA') || n.includes('SEMICOLUMNA') || n.includes('MEDIACOLUMNA')) return 'COLUMNAS';
+        
+        // ALTOS
+        const altoPrefixes = ['ASCE', 'ASC', 'ARI', 'ARU', 'ARC', 'AD', 'AV', 'AE', 'AMF', 'AM', 'ACA', 'ACC', 'ASF', 'ATP', 'AT', 'AA', 'ACPJ', 'ACP', 'AC', 'AR'];
+        if (altoPrefixes.some(prefix => c.startsWith(prefix))) return 'ALTOS';
+        if (/^A\d/.test(c) || /^9A/.test(c)) return 'ALTOS';
+        const altilloSobrePrefixes = ['LD', 'LV', 'SVC', 'SV', 'SC', 'BOA', 'BOS'];
+        if (altilloSobrePrefixes.some(prefix => c.startsWith(prefix))) return 'ALTOS';
+        if (/^L\d/.test(c) || /^S\d/.test(c)) return 'ALTOS';
+        if (n.includes('ALTO') || n.includes('ALTILLO') || n.includes('SOBREENCIMERA') || n.includes('SOBREM')) return 'ALTOS';
+        
+        // BAJOS
+        const bajoPrefixes = ['BRI', 'BRU', 'BR', 'BHZ', 'BHG', 'BHC', 'BH', 'BTP', 'BT', 'BPC', 'BCGF', 'BCG', 'BGF', 'BGC', 'BC', 'BF'];
+        if (bajoPrefixes.some(prefix => c.startsWith(prefix))) return 'BAJOS';
+        if (/^B\d/.test(c) || /^9B/.test(c)) return 'BAJOS';
+        if (n.includes('BAJO') || n.includes('FREGADERO')) return 'BAJOS';
+        if (c.startsWith('P') || c.startsWith('PV')) return 'BAJOS';
+        
         return 'BAJOS';
       };
       
@@ -1441,22 +1463,79 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                   {/* ===================== SECCIÓN PUERTAS POR COLOR ===================== */}
                   {(() => {
                     // Función para detectar el tipo de mueble (ALTO, BAJO, COLUMNA)
+                    // Soporta nomenclaturas de AMBAS bibliotecas: ZC y MV
                     const detectTipoMueble = (code, name) => {
                       const c = (code || '').toUpperCase();
                       const n = (name || '').toUpperCase();
                       
-                      // Detectar COLUMNAS primero (más específico)
-                      if (c.startsWith('C') || c.includes('COL') || n.includes('COLUMNA') || n.includes('SEMICOLUMNA')) {
+                      // ========== COLUMNAS (detectar primero - más específico) ==========
+                      // MV: CD, CE, CF, CH, CHPC, CHGC, CHC, CHM, CHMG, CHMC, CHMCG, BOC
+                      // ZC: C (código simple)
+                      const columnaPrefixes = ['CD', 'CE', 'CF', 'CH', 'CHPC', 'CHGC', 'CHC', 'CHM', 'CHMG', 'CHMC', 'CHMCG', 'BOC'];
+                      if (columnaPrefixes.some(prefix => c.startsWith(prefix))) {
                         return 'COLUMNAS';
                       }
-                      // Detectar ALTOS
-                      if (c.startsWith('A') || n.includes('ALTO') || n.includes('SOBREM')) {
+                      // MV: MEDIA COLUMNA - M, MV, MPG, MVG, MPH, MPM, MGHM, MCHM
+                      const mediaColumnaPrefixes = ['MGHM', 'MCHM', 'MPG', 'MVG', 'MPH', 'MPM'];
+                      if (mediaColumnaPrefixes.some(prefix => c.startsWith(prefix))) {
+                        return 'COLUMNAS';
+                      }
+                      // Código simple M seguido de número (MEDIA COLUMNA MV)
+                      if (/^M\d/.test(c) || /^MV\d/.test(c)) {
+                        return 'COLUMNAS';
+                      }
+                      // Por nombre
+                      if (n.includes('COLUMNA') || n.includes('SEMICOLUMNA') || n.includes('MEDIACOLUMNA')) {
+                        return 'COLUMNAS';
+                      }
+                      
+                      // ========== ALTOS ==========
+                      // MV: A, ASCE, ASC, AR, ARI, ARU, ARC, AD, AV, AE, AM, AMF, ACA, ACC, ASF, AT, ATP, AA, AC, ACP, ACPJ
+                      // MV: L (ALTILLO), LV, S (SOBREENCIMERA), SV, SC, SVC, BOA, BOS
+                      // ZC: A (código simple), 9A...
+                      const altoPrefixes = ['ASCE', 'ASC', 'ARI', 'ARU', 'ARC', 'AD', 'AV', 'AE', 'AMF', 'AM', 'ACA', 'ACC', 'ASF', 'ATP', 'AT', 'AA', 'ACPJ', 'ACP', 'AC', 'AR'];
+                      if (altoPrefixes.some(prefix => c.startsWith(prefix))) {
                         return 'ALTOS';
                       }
-                      // Detectar BAJOS (por defecto si empieza por B o contiene BAJO)
-                      if (c.startsWith('B') || c.startsWith('P') || n.includes('BAJO')) {
+                      // Código simple A seguido de número
+                      if (/^A\d/.test(c) || /^9A/.test(c)) {
+                        return 'ALTOS';
+                      }
+                      // ALTILLOS y SOBREENCIMERAS (van como ALTOS)
+                      const altilloSobrePrefixes = ['LD', 'LV', 'SVC', 'SV', 'SC', 'BOA', 'BOS'];
+                      if (altilloSobrePrefixes.some(prefix => c.startsWith(prefix))) {
+                        return 'ALTOS';
+                      }
+                      // Código simple L o S seguido de número
+                      if (/^L\d/.test(c) || /^S\d/.test(c)) {
+                        return 'ALTOS';
+                      }
+                      // Por nombre
+                      if (n.includes('ALTO') || n.includes('ALTILLO') || n.includes('SOBREENCIMERA') || n.includes('SOBREM')) {
+                        return 'ALTOS';
+                      }
+                      
+                      // ========== BAJOS ==========
+                      // MV: B, BF, BRI, BRU, BR, BH, BHC, BHZ, BHG, BT, BTP, BPC, BC, BCG, BGC, BCGF, BGF
+                      // ZC: B (código simple), 9B...
+                      const bajoPrefixes = ['BRI', 'BRU', 'BR', 'BHZ', 'BHG', 'BHC', 'BH', 'BTP', 'BT', 'BPC', 'BCGF', 'BCG', 'BGF', 'BGC', 'BC', 'BF'];
+                      if (bajoPrefixes.some(prefix => c.startsWith(prefix))) {
                         return 'BAJOS';
                       }
+                      // Código simple B seguido de número
+                      if (/^B\d/.test(c) || /^9B/.test(c)) {
+                        return 'BAJOS';
+                      }
+                      // Por nombre
+                      if (n.includes('BAJO') || n.includes('FREGADERO') || n.includes('HORNO') && !n.includes('COLUMNA')) {
+                        return 'BAJOS';
+                      }
+                      
+                      // ========== PUERTAS SUELTAS (van como BAJOS por defecto) ==========
+                      if (c.startsWith('P') || c.startsWith('PV') || c.startsWith('PVI') || c.startsWith('PVR')) {
+                        return 'BAJOS';
+                      }
+                      
                       // Por defecto, BAJOS
                       return 'BAJOS';
                     };

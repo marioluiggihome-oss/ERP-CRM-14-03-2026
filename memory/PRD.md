@@ -23,6 +23,18 @@
 - ✅ **CSV actualizado**: Campo Textura=1 para puertas (veta vertical)
 - ✅ **XML actualizado**: Elementos `<Grain>1</Grain>` y `<GrainDirection>vertical</GrainDirection>`
 
+### 3. Nomenclaturas MV Integradas
+- ✅ **Detección completa de tipos de mueble** para biblioteca MV:
+  - **ALTOS**: A, ASCE, ASC, AR, ARI, ARU, ARC, AD, AV, AE, AM, AMF, ACA, ACC, ASF, AT, ATP, AA, AC, ACP, ACPJ, L, LV, S, SV, SC, SVC, BOA, BOS
+  - **BAJOS**: B, BF, BRI, BRU, BR, BH, BHC, BHZ, BHG, BT, BTP, BPC, BC, BCG, BGC, BCGF, BGF
+  - **COLUMNAS**: CD, CE, CF, CH, CHPC, CHGC, CHC, CHM, CHMG, CHMC, CHMCG, BOC, M, MV, MPG, MVG, MPH, MPM, MGHM, MCHM
+- ✅ **Compatible con ZC**: Mantiene soporte para códigos 9A, 9B, etc.
+
+### 4. Fix Glitch Visual Sidebar (P3)
+- ✅ **Transiciones optimizadas**: Cambiado de `transition-all` a `transition-colors duration-200`
+- ✅ **Overflow controlado**: Añadido `overflow-hidden` al sidebar y sus contenedores
+- ✅ **Animaciones estables**: Transiciones suaves sin "saltos" visuales
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (19 Marzo 2026)
