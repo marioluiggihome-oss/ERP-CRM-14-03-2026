@@ -35,6 +35,14 @@
 - ✅ **Overflow controlado**: Añadido `overflow-hidden` al sidebar y sus contenedores
 - ✅ **Animaciones estables**: Transiciones suaves sin "saltos" visuales
 
+### 5. Fix Precio COST (P2) - Muestra 17 en vez de 16
+- ✅ **Bug identificado**: El código usaba siempre `zonePoints.Z1` para calcular puntos, ignorando que MV usa `zonePoints.T1`
+- ✅ **Corrección en BudgetTable.jsx**:
+  - Líneas 729-735: Detección de biblioteca para usar T1 (MV) o Z1 (ZC)
+  - Líneas 574-580: Ordenación de productos por puntos usando la zona correcta
+  - Líneas 2302, 2558, 2759: Display de puntos en catálogo usando biblioteca del producto
+- ✅ **Validado**: El producto COST ahora muestra 16 puntos correctamente
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (19 Marzo 2026)

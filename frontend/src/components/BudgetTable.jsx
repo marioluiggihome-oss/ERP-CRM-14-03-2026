@@ -572,8 +572,11 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
             valB = Number(b.depth) || 0;
             break;
           case 'points':
-            valA = Number(a.zonePoints?.Z1 || a.points) || 0;
-            valB = Number(b.zonePoints?.Z1 || b.points) || 0;
+            // Para MV usar T1, para ZC usar Z1
+            const aIsMV = a.library === 'MV';
+            const bIsMV = b.library === 'MV';
+            valA = Number(aIsMV ? (a.zonePoints?.T1 || a.points) : (a.zonePoints?.Z1 || a.points)) || 0;
+            valB = Number(bIsMV ? (b.zonePoints?.T1 || b.points) : (b.zonePoints?.Z1 || b.points)) || 0;
             break;
           default:
             valA = a.code || '';
@@ -727,7 +730,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
          
          let productBasePoints = 100;
          if (typeof product.points === 'number') productBasePoints = product.points;
-         else if (typeof product.points === 'object' && product.points !== null) productBasePoints = product.points.Z1 || 100;
+         else if (typeof product.points === 'object' && product.points !== null) {
+           // Para MV usar T1, para ZC usar Z1
+           productBasePoints = isMV 
+             ? (product.points.T1 || product.points.Z1 || 100) 
+             : (product.points.Z1 || 100);
+         }
          
          // Para MV, usar tariffPrices; para ZC, usar zonePoints
          if (isMV && product.tariffPrices) {
@@ -2291,7 +2299,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
                           <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
-                            {p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0}
+                            {(p.library === 'MV' ? (p.zonePoints?.T1 || (typeof p.points === 'number' ? p.points : p.points?.T1) || 0) : (p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0))}
                           </td>
                           <td className="p-2 pr-3 text-right w-[40px]"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
                         </tr>
@@ -2547,7 +2555,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
                           <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
-                            {p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0}
+                            {(p.library === 'MV' ? (p.zonePoints?.T1 || (typeof p.points === 'number' ? p.points : p.points?.T1) || 0) : (p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0))}
                           </td>
                           <td className="p-2 pr-3 text-right w-[40px]"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
                         </tr>
@@ -2748,7 +2756,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-[13px] font-black text-indigo-900">{cleanCode(p.code)}</span>
-                                <span className="text-[14px] font-black text-orange-600">{p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0} pts</span>
+                                <span className="text-[14px] font-black text-orange-600">{(p.library === 'MV' ? (p.zonePoints?.T1 || (typeof p.points === 'number' ? p.points : p.points?.T1) || 0) : (p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0))} pts</span>
                               </div>
                               <div className="flex items-center gap-1.5 flex-wrap mt-1">
                                 <span className="text-[11px] font-bold text-indigo-600 uppercase">{p.name}</span>
