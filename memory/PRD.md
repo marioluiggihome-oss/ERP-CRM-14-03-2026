@@ -21,15 +21,13 @@
 - ✅ **onClick actualizado**: Guarda en localStorage al cambiar biblioteca
 - ✅ **Verificado**: Test confirma `localStorage.telemetryLibrary = MV` persistido
 
-### 0.2. Refactorización: Módulo Montajes Extraído
-- ✅ **Nuevo archivo**: `/app/backend/routes/montajes.py` (260 líneas)
-- ✅ **Endpoints movidos**: 
-  - GET/POST/PUT/DELETE `/montadores`
-  - GET/POST/PUT/DELETE `/montajes`
-  - GET `/montadores/{id}/montajes`
-- ✅ **server.py reducido**: De 7006 a 6767 líneas (-239 líneas, -3.4%)
-- ✅ **Router registrado**: `api_router.include_router(montajes_router)`
-- ✅ **Verificado**: API `/api/montadores` responde correctamente
+### 0.2. Refactorización: Múltiples Módulos Extraídos
+- ✅ **`/app/backend/routes/montajes.py`** (264 líneas): CRUD Montadores y Montajes
+- ✅ **`/app/backend/routes/backup.py`** (349 líneas): Sistema de backups, scheduler, email
+- ✅ **`/app/backend/routes/armarios.py`** (533 líneas): Proyectos de Armarios con IA (configure, layout, render)
+- ✅ **server.py reducido**: De 7006 a 5957 líneas (**-1049 líneas, -15%**)
+- ✅ **Total routers modulares**: 14 archivos
+- ✅ **Verificado**: Todos los endpoints funcionan correctamente
 
 ### 1. Números de Fabricación para Órdenes (P0)
 - ✅ **Campo manufacturingNumber añadido**: Número secuencial global para identificación interna en fábrica
