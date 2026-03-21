@@ -26,8 +26,9 @@
 - ✅ **`/app/backend/routes/backup.py`** (349 líneas): Sistema de backups, scheduler, email
 - ✅ **`/app/backend/routes/armarios.py`** (533 líneas): Proyectos de Armarios con IA (configure, layout, render)
 - ✅ **`/app/backend/routes/digitalizador.py`** (667 líneas): Reconocimiento óptico, expedientes, historial, export CSV
-- ✅ **server.py reducido**: De 7006 a 5300 líneas (**-1706 líneas, -24%**)
-- ✅ **Total routers modulares**: 15 archivos
+- ✅ **`/app/backend/routes/crm_module.py`** (797 líneas): Contactos, Oportunidades, Actividades, Calendario, Dashboard
+- ✅ **server.py reducido**: De 7006 a 4192 líneas (**-2814 líneas, -40%**)
+- ✅ **Total routers modulares**: 16 archivos
 - ✅ **Verificado**: Todos los endpoints funcionan correctamente
 
 ### 0.3. UI: Eliminado Botón "Registrarse con Email"
