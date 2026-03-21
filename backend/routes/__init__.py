@@ -10,6 +10,7 @@ from .projects import router as projects_router
 from .crm import router as crm_router
 from .despiece_budgeter import router as despiece_budgeter_router
 from .libraries import router as libraries_router
+from .montajes import router as montajes_router
 
 __all__ = [
     'ia_lab_router',
@@ -20,5 +21,6 @@ __all__ = [
     'projects_router',
     'crm_router',
     'despiece_budgeter_router',
-    'libraries_router'
+    'libraries_router',
+    'montajes_router'
 ]

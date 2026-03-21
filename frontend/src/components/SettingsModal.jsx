@@ -99,7 +99,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [telemetryProgress, setTelemetryProgress] = useState({ current: 0, total: 0 });
   const [existingCodes, setExistingCodes] = useState(new Set());
   const [telemetryResult, setTelemetryResult] = useState(null);
-  const [telemetryLibrary, setTelemetryLibrary] = useState('ZC'); // Biblioteca seleccionada para telemetría IA (ZC o MV)
+  const [telemetryLibrary, setTelemetryLibrary] = useState(() => {
+    // Recuperar biblioteca guardada en localStorage o usar ZC por defecto
+    const saved = localStorage.getItem('telemetryLibrary');
+    return saved === 'MV' ? 'MV' : 'ZC';
+  });
 
   // Client states
   const [clients, setClients] = useState([]);
@@ -4470,7 +4474,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       {['ZC', 'MV'].map(lib => (
                         <button 
                           key={lib} 
-                          onClick={() => setTelemetryLibrary && setTelemetryLibrary(lib)} 
+                          onClick={() => {
+                            setTelemetryLibrary(lib);
+                            localStorage.setItem('telemetryLibrary', lib);
+                          }} 
                           disabled={isProcessingTelemetry}
                           className={`flex-1 py-2 px-3 rounded-lg transition-all font-black text-xs uppercase ${
                             (telemetryLibrary || 'ZC') === lib 

@@ -15,6 +15,22 @@
 - ✅ **Frontend**: `/app/frontend/src/components/SettingsModal.jsx` líneas 102, 4469-4491
 - ✅ **Verificado**: Screenshot confirma UI correcta sin errores de consola
 
+### 0.1. Mejora: Persistencia de Biblioteca en localStorage
+- ✅ **Funcionalidad**: El selector MV/ZC ahora recuerda la última selección
+- ✅ **Implementación**: useState con inicializador lazy que lee de localStorage
+- ✅ **onClick actualizado**: Guarda en localStorage al cambiar biblioteca
+- ✅ **Verificado**: Test confirma `localStorage.telemetryLibrary = MV` persistido
+
+### 0.2. Refactorización: Módulo Montajes Extraído
+- ✅ **Nuevo archivo**: `/app/backend/routes/montajes.py` (260 líneas)
+- ✅ **Endpoints movidos**: 
+  - GET/POST/PUT/DELETE `/montadores`
+  - GET/POST/PUT/DELETE `/montajes`
+  - GET `/montadores/{id}/montajes`
+- ✅ **server.py reducido**: De 7006 a 6767 líneas (-239 líneas, -3.4%)
+- ✅ **Router registrado**: `api_router.include_router(montajes_router)`
+- ✅ **Verificado**: API `/api/montadores` responde correctamente
+
 ### 1. Números de Fabricación para Órdenes (P0)
 - ✅ **Campo manufacturingNumber añadido**: Número secuencial global para identificación interna en fábrica
 - ✅ **Formato**: Número entero simple (1, 2, 3...) complementario al orderNumber (OF-2026-0001)
