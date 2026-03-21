@@ -64,6 +64,18 @@
   - Modelo ActivityModel con campos: date, time, duration, subject, notes, outcome
   - Endpoints GET/POST/PUT/DELETE en /api/crm/activities
 
+### 7. Consolidación de Piezas en Despiece
+- ✅ **Piezas iguales unificadas**: Cuando hay muebles idénticos (x2, x3...), las piezas con mismas características se consolidan
+- ✅ **En lugar de líneas duplicadas**: Se muestra CANTIDAD multiplicada (ej: Lateral izquierdo x2)
+- ✅ **Afecta a**: Vista PDF, exportación CSV para seccionadora, vista en pantalla
+- ✅ **Criterio de consolidación**: mismo nombre, dimensiones (largo, ancho) y grosor
+
+### 8. Grosor de Trasera Configurable en Armazones
+- ✅ **Nuevo campo en gestión de armazones**: "Grosor Trasera (mm)" junto a Incremento y Grosor Casco
+- ✅ **3 columnas en tarjetas**: INCREMENTO | GROSOR CASCO | GROSOR TRASERA
+- ✅ **Se usa en el cálculo de despiece**: La trasera usa el grosor configurado del armazón seleccionado
+- ✅ **Backend actualizado**: DespieceRequest y calculate_furniture_despiece aceptan backThickness
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (19 Marzo 2026)

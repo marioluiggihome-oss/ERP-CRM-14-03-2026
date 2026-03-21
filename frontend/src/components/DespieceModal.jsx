@@ -3,7 +3,7 @@ import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown,
 import { despieceAPI } from '../services/api';
 import BoardOptimizer from './BoardOptimizer';
 
-const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor }) => {
+const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor }) => {
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -102,8 +102,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       const result = await despieceAPI.calculate(
         apiItems,
         carcassMaterialName,
-        "Tablero 8mm",  // Trasera siempre 8mm
-        18
+        `Tablero ${carcassBackThickness || 8}mm`,  // Trasera con grosor configurable desde armazón
+        18,
+        carcassBackThickness || 8  // Pasar el grosor de trasera
       );
       
       setDespieceData(result);
@@ -484,8 +485,33 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         });
       });
       
+      // CONSOLIDAR PIEZAS IGUALES (mismo nombre, dimensiones, grosor)
+      const consolidatePieces = (pieces) => {
+        const consolidated = {};
+        pieces.forEach(piece => {
+          // Clave única basada en características de la pieza
+          const key = `${piece.name || '-'}_${piece.length || 0}_${piece.width || 0}_${piece.thickness || 18}`;
+          const qty = (piece.quantity || 1) * (piece.itemQuantity || 1);
+          
+          if (!consolidated[key]) {
+            consolidated[key] = {
+              ...piece,
+              consolidatedQty: qty,
+              productCodes: [piece.productCode]
+            };
+          } else {
+            consolidated[key].consolidatedQty += qty;
+            if (!consolidated[key].productCodes.includes(piece.productCode)) {
+              consolidated[key].productCodes.push(piece.productCode);
+            }
+          }
+        });
+        return Object.values(consolidated);
+      };
+      
       Object.entries(byMaterial).forEach(([material, pieces]) => {
-        const totalPieces = pieces.reduce((acc, p) => acc + ((p.quantity || 1) * (p.itemQuantity || 1)), 0);
+        const consolidatedPieces = consolidatePieces(pieces);
+        const totalPieces = consolidatedPieces.reduce((acc, p) => acc + p.consolidatedQty, 0);
         html += `
           <div class="section-title bg-orange">${material} (${totalPieces} piezas)</div>
           <table>
@@ -503,16 +529,18 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <tbody>
         `;
         
-        pieces.forEach(piece => {
-          const qty = (piece.quantity || 1) * (piece.itemQuantity || 1);
+        consolidatedPieces.forEach(piece => {
+          const muebleInfo = piece.productCodes.length > 1 
+            ? `${piece.productCodes.slice(0, 2).join(', ')}${piece.productCodes.length > 2 ? '...' : ''}`
+            : piece.productCode;
           html += `
             <tr class="avoid-break">
-              <td class="font-bold">${piece.productCode}</td>
+              <td class="font-bold">${muebleInfo}</td>
               <td>${piece.name || '-'}</td>
               <td class="text-center">${piece.length || 0}</td>
               <td class="text-center">${piece.width || 0}</td>
               <td class="text-center">${piece.thickness || 18}</td>
-              <td class="text-center font-bold">${qty}</td>
+              <td class="text-center font-bold">${piece.consolidatedQty}</td>
               <td>${piece.notes || ''}</td>
             </tr>
           `;
@@ -809,37 +837,48 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     // CSV LIMPIO para seccionadora - SOLO datos de piezas
     // Sin cabeceras de cliente/expediente, sin resumen al final
     
-    // Encabezados de la tabla de piezas
-    let csvContent = "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código;Mueble\n";
-    
+    // Primero consolidar todas las piezas
+    const allPieces = [];
     despieceData.items.forEach(item => {
       const itemQty = item.itemQuantity || 1;
       item.components?.forEach(comp => {
         const compValue = (field) => getComponentValue(item.productId, comp, field);
         const espesor = compValue('thickness') || 18;
-        // Código material basado en espesor y tipo
         const materialBase = carcassMaterialName?.toUpperCase().replace(/\s+/g, '') || 'MELAMINA';
         const material = `40-${materialBase}${espesor < 10 ? '0' : ''}${espesor}`;
         const nombrePieza = comp.name || 'Pieza';
         const largo = compValue('length') || 0;
         const ancho = compValue('width') || 0;
         const cantidad = (compValue('quantity') || 1) * itemQty;
-        // Textura: 0 = sin veta, 1 = con veta vertical
-        // PUERTAS: siempre veta vertical (1)
-        // LATERALES/COSTADOS/VERTICALES: veta vertical (1)
-        // RESTO: sin veta (0)
         const esPuerta = nombrePieza.toLowerCase().includes('puerta');
         const esVertical = nombrePieza.toLowerCase().includes('lateral') || 
                           nombrePieza.toLowerCase().includes('costado') ||
                           nombrePieza.toLowerCase().includes('vertical');
         const textura = (esPuerta || esVertical) ? 1 : 0;
-        // Código de la pieza
         const codigo = `${item.productCode || ''}-${comp.id || nombrePieza.substring(0,3).toUpperCase()}`;
-        // Referencia del mueble
         const mueble = `${item.productCode} - ${item.productName || ''}`;
         
-        csvContent += `${material};${espesor.toFixed(1).replace('.', ',')};${nombrePieza};${largo};${ancho};${cantidad};${textura};${codigo};${mueble}\n`;
+        allPieces.push({ material, espesor, nombrePieza, largo, ancho, cantidad, textura, codigo, mueble });
       });
+    });
+    
+    // Consolidar piezas iguales (mismo nombre, dimensiones, grosor)
+    const consolidatedCSV = {};
+    allPieces.forEach(p => {
+      const key = `${p.material}_${p.nombrePieza}_${p.largo}_${p.ancho}_${p.espesor}_${p.textura}`;
+      if (!consolidatedCSV[key]) {
+        consolidatedCSV[key] = { ...p, cantidad: p.cantidad };
+      } else {
+        consolidatedCSV[key].cantidad += p.cantidad;
+      }
+    });
+    
+    // Encabezados de la tabla de piezas
+    let csvContent = "Material;Grosor;Nombre pieza;Largo pieza;Ancho pieza;Cantidad;Textura;Código;Mueble\n";
+    
+    // Generar filas consolidadas
+    Object.values(consolidatedCSV).forEach(p => {
+      csvContent += `${p.material};${p.espesor.toFixed(1).replace('.', ',')};${p.nombrePieza};${p.largo};${p.ancho};${p.cantidad};${p.textura};${p.codigo};${p.mueble}\n`;
     });
     
     // Descargar archivo - nombre incluye expediente y cliente para identificación

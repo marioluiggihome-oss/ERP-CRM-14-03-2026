@@ -701,6 +701,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     return state.carcassMaterials.find(m => m.id === state.selectedCarcassMaterialId)?.name || 'No seleccionado';
   }, [state.carcassMaterials, state.selectedCarcassMaterialId]);
 
+  // Obtener grosor de trasera del armazón seleccionado
+  const carcassBackThickness = useMemo(() => {
+    const selectedMaterial = state.carcassMaterials.find(m => m.id === state.selectedCarcassMaterialId);
+    return selectedMaterial?.backThickness || 8; // Default 8mm
+  }, [state.carcassMaterials, state.selectedCarcassMaterialId]);
+
   const calculateLineDetails = useCallback((item, product) => {
      // Para montada, usar el valor de punto de la biblioteca activa
      // Para despiece, usar pointValueDespiece (común)
@@ -2821,6 +2827,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         items={items}
         catalogs={catalogs}
         carcassMaterialName={carcassMaterialName}
+        carcassBackThickness={carcassBackThickness}
         customerName={state.customerName || ''}
         projectReference={state.internalReference || ''}
         expedientNumber={state.budgetNumber || ''}

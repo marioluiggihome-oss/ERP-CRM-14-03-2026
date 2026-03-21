@@ -798,7 +798,7 @@ export const crmCalendarAPI = {
 // ============================================
 
 export const despieceAPI = {
-  calculate: async (items, carcassMaterial = "Melamina Blanca", backPanelMaterial = "Tablero 3mm", grosor = 18) => {
+  calculate: async (items, carcassMaterial = "Melamina Blanca", backPanelMaterial = "Tablero 8mm", grosor = 18, backThickness = 8) => {
     const response = await fetch(`${API_URL}/api/despiece/calculate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -806,7 +806,8 @@ export const despieceAPI = {
         items,
         carcassMaterial,
         backPanelMaterial,
-        grosor
+        grosor,
+        backThickness
       })
     });
     if (!response.ok) {

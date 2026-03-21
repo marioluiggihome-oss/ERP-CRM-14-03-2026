@@ -4248,7 +4248,8 @@ def calculate_furniture_despiece(
     item: DespieceItemInput,
     carcass_material: str,
     back_material: str,
-    grosor: float
+    grosor: float,
+    back_thickness: float = 8  # Grosor de trasera en mm
 ) -> FurnitureDespiece:
     """
     Calculate the despiece (bill of materials) for a single furniture piece.
@@ -4354,15 +4355,15 @@ def calculate_furniture_despiece(
             ""
         )
     
-    # TRASERA (Back panel) - siempre más fina (8mm o 6mm)
-    # Grosor en cm: 0.8cm o 0.6cm
-    back_thickness_cm = 0.8 if g >= 1.8 else 0.6
+    # TRASERA (Back panel) - grosor configurable desde armazón
+    # Convertir mm a cm (ej: 8mm = 0.8cm)
+    back_thickness_cm = back_thickness / 10
     back_height = h - 0.6  # Encajada en ranuras (0.3cm arriba y abajo)
     add_component(
         "Trasera modulo", "TRAS",
         back_material,
         ancho_interior, back_height, back_thickness_cm, 1,
-        f"Tablero {int(back_thickness_cm * 10)}mm"
+        f"Tablero {int(back_thickness)}mm"
     )
     
     # BALDAS / ESTANTES (Shelves) - estimate based on height
@@ -4488,7 +4489,8 @@ async def calculate_despiece(request: DespieceRequest):
                 item,
                 request.carcassMaterial,
                 request.backPanelMaterial,
-                request.grosor
+                request.grosor,
+                request.backThickness
             )
             despiece_items.append(furniture_despiece)
         

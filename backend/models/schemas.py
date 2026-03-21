@@ -720,6 +720,7 @@ class DespieceRequest(BaseModel):
     carcassMaterial: str = "Melamina Blanca"
     backPanelMaterial: str = "Tablero 8mm"
     grosor: float = 18
+    backThickness: float = 8  # Grosor de trasera en mm
 
 
 class ComponentPiece(BaseModel):

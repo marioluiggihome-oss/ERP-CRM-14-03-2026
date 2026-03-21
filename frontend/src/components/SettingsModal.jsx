@@ -49,6 +49,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     name: '',
     fixedIncrement: 0,
     thickness: 16,
+    backThickness: 8,  // Grosor de trasera por defecto
     library: 'ZC'
   });
   const [userForm, setUserForm] = useState({
@@ -957,7 +958,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     setEditingMaterialId(null);
     // Al crear, usar el filtro activo como tarifa por defecto
     const defaultLibrary = materialLibraryFilter !== 'TODAS' ? materialLibraryFilter : 'ZC';
-    setMaterialForm({ name: '', fixedIncrement: 0, thickness: 16, library: defaultLibrary });
+    setMaterialForm({ name: '', fixedIncrement: 0, thickness: 16, backThickness: 8, library: defaultLibrary });
   };
 
   const handleEditMaterial = (material) => {
@@ -967,6 +968,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       name: material.name,
       fixedIncrement: material.fixedIncrement || 0,
       thickness: material.thickness || 16,
+      backThickness: material.backThickness || 8,
       library: material.library || 'ZC'  // Mantener la tarifa actual (no editable)
     });
   };
@@ -3974,14 +3976,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           </button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         <div className="bg-amber-50 rounded-lg p-3 text-center">
                           <p className="text-[9px] font-black text-amber-400 uppercase">Incremento</p>
                           <p className="text-xl font-black text-orange-600">+{material.fixedIncrement}€</p>
                         </div>
                         <div className="bg-slate-50 rounded-lg p-3 text-center">
-                          <p className="text-[9px] font-black text-slate-400 uppercase">Grosor</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase">Grosor Casco</p>
                           <p className="text-xl font-black text-indigo-600">{material.thickness}mm</p>
+                        </div>
+                        <div className="bg-purple-50 rounded-lg p-3 text-center">
+                          <p className="text-[9px] font-black text-purple-400 uppercase">Grosor Trasera</p>
+                          <p className="text-xl font-black text-purple-600">{material.backThickness || 8}mm</p>
                         </div>
                       </div>
                       {!isDefault && (
@@ -4067,7 +4073,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         className="w-full bg-white border border-amber-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Incremento Fijo (€)</label>
                         <input
@@ -4078,12 +4084,21 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Grosor (mm)</label>
+                        <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Grosor Casco (mm)</label>
                         <input
                           type="number"
                           value={materialForm.thickness}
                           onChange={(e) => setMaterialForm({...materialForm, thickness: parseInt(e.target.value) || 16})}
                           className="w-full bg-white border border-amber-200 rounded-xl p-3 text-lg font-black text-center text-indigo-600 outline-none focus:border-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Grosor Trasera (mm)</label>
+                        <input
+                          type="number"
+                          value={materialForm.backThickness}
+                          onChange={(e) => setMaterialForm({...materialForm, backThickness: parseInt(e.target.value) || 8})}
+                          className="w-full bg-white border border-amber-200 rounded-xl p-3 text-lg font-black text-center text-purple-600 outline-none focus:border-orange-500"
                         />
                       </div>
                     </div>
