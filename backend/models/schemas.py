@@ -95,6 +95,7 @@ class UserModelInternal(BaseModel):
     canUseDigitalizador: bool = False
     canAccessArmarios: bool = False
     canAccessFabrica: bool = False  # Acceso al portal de fábrica
+    canAccessMontajes: bool = False  # Acceso a la agenda de montajes
     canManageOrders: bool = False  # Gestión de órdenes de fabricación
     canSetDeliveryDates: bool = False  # Puede establecer plazos de entrega
     canAuthorizePermissions: bool = False
@@ -157,6 +158,8 @@ class UserCreate(BaseModel):
     isTienda: bool = False
     isFabrica: bool = False  # Rol de fábrica
     factoryId: Optional[str] = None  # ID de la fábrica asignada
+    isMontador: bool = False  # Rol de montador
+    montadorId: Optional[str] = None  # ID del montador asignado
     linkedRepresentativeId: Optional[str] = None
     allowedModules: List[str] = ["montada"]
     allowedLibraries: List[str] = ["ZC"]  # Tarifas/Bibliotecas activas
@@ -195,6 +198,8 @@ class UserUpdate(BaseModel):
     isTienda: Optional[bool] = None
     isFabrica: Optional[bool] = None  # Rol de fábrica
     factoryId: Optional[str] = None  # ID de la fábrica asignada
+    isMontador: Optional[bool] = None  # Rol de montador
+    montadorId: Optional[str] = None  # ID del montador asignado
     linkedRepresentativeId: Optional[str] = None
     allowedModules: Optional[List[str]] = None
     allowedLibraries: Optional[List[str]] = None  # Tarifas/Bibliotecas activas

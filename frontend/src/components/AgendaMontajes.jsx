@@ -43,7 +43,7 @@ const AgendaMontajes = ({ currentUser }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [activeTab, setActiveTab] = useState('montadores'); // montadores | montajes | calendario
+  const [activeTab, setActiveTab] = useState(null); // Se establecerá en useEffect según el rol
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   // Modal states
@@ -87,7 +87,16 @@ const AgendaMontajes = ({ currentUser }) => {
   useEffect(() => {
     loadMontadores();
     loadMontajes();
-  }, [statusFilter]);
+    
+    // Establecer pestaña por defecto según el rol
+    if (activeTab === null) {
+      if (currentUser?.isMontador && !currentUser?.isAdmin) {
+        setActiveTab('montajes'); // Montadores ven sus montajes
+      } else {
+        setActiveTab('montadores'); // Admins ven gestión de montadores
+      }
+    }
+  }, [statusFilter, currentUser]);
 
   const loadMontadores = async () => {
     setIsLoading(true);
@@ -119,8 +128,18 @@ const AgendaMontajes = ({ currentUser }) => {
            m.phone?.includes(query);
   });
 
-  // Filter montajes
+  // Filter montajes - Si es montador, solo ve los suyos
   const filteredMontajes = montajes.filter(m => {
+    // Si el usuario es montador, solo mostrar sus montajes
+    if (currentUser?.isMontador && !currentUser?.isAdmin) {
+      // Filtrar por el ID del usuario o por su nombre
+      const isMyMontaje = m.montadorId === currentUser?.id || 
+                          m.montadorId === currentUser?.montadorId ||
+                          m.montadorName?.toLowerCase() === currentUser?.clientName?.toLowerCase() ||
+                          m.montadorName?.toLowerCase() === currentUser?.name?.toLowerCase();
+      if (!isMyMontaje) return false;
+    }
+    
     const query = searchQuery.toLowerCase();
     return m.clientName?.toLowerCase().includes(query) ||
            m.montadorName?.toLowerCase().includes(query) ||
@@ -310,17 +329,20 @@ const AgendaMontajes = ({ currentUser }) => {
           
           {/* Tabs */}
           <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm">
-            <button
-              onClick={() => setActiveTab('montadores')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                activeTab === 'montadores' 
-                  ? 'bg-orange-500 text-white shadow-md' 
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Users size={16} className="inline mr-2" />
-              Montadores ({montadores.length})
-            </button>
+            {/* Solo mostrar pestaña Montadores a admins */}
+            {(!currentUser?.isMontador || currentUser?.isAdmin) && (
+              <button
+                onClick={() => setActiveTab('montadores')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                  activeTab === 'montadores' 
+                    ? 'bg-orange-500 text-white shadow-md' 
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Users size={16} className="inline mr-2" />
+                Montadores ({montadores.length})
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('montajes')}
               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
@@ -330,7 +352,7 @@ const AgendaMontajes = ({ currentUser }) => {
               }`}
             >
               <Wrench size={16} className="inline mr-2" />
-              Montajes ({montajes.length})
+              {currentUser?.isMontador && !currentUser?.isAdmin ? 'Mis Montajes' : 'Montajes'} ({filteredMontajes.length})
             </button>
             <button
               onClick={() => setActiveTab('calendario')}
@@ -341,7 +363,7 @@ const AgendaMontajes = ({ currentUser }) => {
               }`}
             >
               <Calendar size={16} className="inline mr-2" />
-              Calendario
+              Mi Calendario
             </button>
           </div>
         </div>
@@ -372,23 +394,26 @@ const AgendaMontajes = ({ currentUser }) => {
               }
             </select>
             
-            <button
-              onClick={() => {
-                if (activeTab === 'montadores') {
-                  resetMontadorForm();
-                  setEditingMontador(null);
-                  setShowMontadorModal(true);
-                } else {
-                  resetMontajeForm();
-                  setEditingMontaje(null);
-                  setShowMontajeModal(true);
-                }
-              }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all"
-            >
-              <Plus size={18} />
-              {activeTab === 'montadores' ? 'Nuevo Montador' : 'Nuevo Montaje'}
-            </button>
+            {/* Solo admins pueden crear montajes/montadores */}
+            {(!currentUser?.isMontador || currentUser?.isAdmin) && (
+              <button
+                onClick={() => {
+                  if (activeTab === 'montadores') {
+                    resetMontadorForm();
+                    setEditingMontador(null);
+                    setShowMontadorModal(true);
+                  } else {
+                    resetMontajeForm();
+                    setEditingMontaje(null);
+                    setShowMontajeModal(true);
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all"
+              >
+                <Plus size={18} />
+                {activeTab === 'montadores' ? 'Nuevo Montador' : 'Nuevo Montaje'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -557,8 +582,16 @@ const AgendaMontajes = ({ currentUser }) => {
             {filteredMontajes.length === 0 && (
               <div className="py-20 text-center text-slate-500">
                 <Calendar size={48} className="mx-auto mb-4 opacity-30" />
-                <p className="font-medium">No hay montajes programados</p>
-                <p className="text-sm">Programa tu primer montaje</p>
+                <p className="font-medium">
+                  {currentUser?.isMontador && !currentUser?.isAdmin 
+                    ? 'No tienes montajes asignados' 
+                    : 'No hay montajes programados'}
+                </p>
+                <p className="text-sm">
+                  {currentUser?.isMontador && !currentUser?.isAdmin 
+                    ? 'Los administradores asignarán montajes a tu agenda' 
+                    : 'Programa tu primer montaje'}
+                </p>
               </div>
             )}
           </div>
