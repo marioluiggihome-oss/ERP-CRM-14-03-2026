@@ -25,9 +25,14 @@
 - ✅ **`/app/backend/routes/montajes.py`** (264 líneas): CRUD Montadores y Montajes
 - ✅ **`/app/backend/routes/backup.py`** (349 líneas): Sistema de backups, scheduler, email
 - ✅ **`/app/backend/routes/armarios.py`** (533 líneas): Proyectos de Armarios con IA (configure, layout, render)
-- ✅ **server.py reducido**: De 7006 a 5957 líneas (**-1049 líneas, -15%**)
-- ✅ **Total routers modulares**: 14 archivos
+- ✅ **`/app/backend/routes/digitalizador.py`** (667 líneas): Reconocimiento óptico, expedientes, historial, export CSV
+- ✅ **server.py reducido**: De 7006 a 5300 líneas (**-1706 líneas, -24%**)
+- ✅ **Total routers modulares**: 15 archivos
 - ✅ **Verificado**: Todos los endpoints funcionan correctamente
+
+### 0.3. UI: Eliminado Botón "Registrarse con Email"
+- ✅ **Login simplificado**: Eliminado el botón "REGISTRARSE CON EMAIL" y la sección "¿Nuevo distribuidor?"
+- ✅ **Frontend**: `/app/frontend/src/components/Login.jsx`
 
 ### 1. Números de Fabricación para Órdenes (P0)
 - ✅ **Campo manufacturingNumber añadido**: Número secuencial global para identificación interna en fábrica

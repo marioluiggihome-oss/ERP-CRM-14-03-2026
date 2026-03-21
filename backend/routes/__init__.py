@@ -13,6 +13,7 @@ from .libraries import router as libraries_router
 from .montajes import router as montajes_router
 from .backup import router as backup_router
 from .armarios import router as armarios_router
+from .digitalizador import router as digitalizador_router
 
 __all__ = [
     'ia_lab_router',
@@ -26,5 +27,6 @@ __all__ = [
     'libraries_router',
     'montajes_router',
     'backup_router',
-    'armarios_router'
+    'armarios_router',
+    'digitalizador_router'
 ]

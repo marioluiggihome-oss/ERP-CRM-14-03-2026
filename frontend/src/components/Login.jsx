@@ -269,31 +269,6 @@ const Login = ({ onLogin, customLogo }) => {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-100"></div>
                 </div>
-                <div className="relative flex justify-center">
-                  <span className="px-4 bg-white text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                    ¿Nuevo distribuidor?
-                  </span>
-                </div>
-              </div>
-
-              {/* Register Buttons */}
-              <div className="space-y-3">
-                <button 
-                  type="button"
-                  onClick={() => { setMode('registerEmail'); setError(null); }}
-                  className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold uppercase tracking-wider py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm border-2 border-emerald-100"
-                  data-testid="goto-register-email"
-                >
-                  <Mail size={18} /> Registrarse con Email
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => { setMode('register'); setError(null); }}
-                  className="w-full bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold uppercase tracking-wider py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs border-2 border-orange-100"
-                  data-testid="goto-register"
-                >
-                  <Building2 size={16} /> Solicitar Alta como Distribuidor
-                </button>
               </div>
             </form>
           ) : mode === 'registerEmail' ? (
