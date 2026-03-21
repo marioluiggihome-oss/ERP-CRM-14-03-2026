@@ -262,6 +262,41 @@ const PortalFabrica = ({ currentUser }) => {
     }
   };
 
+  // Cambiar fábrica de una orden existente
+  const handleFactoryChange = async (orderId, factoryValue) => {
+    try {
+      let updateData = {};
+      
+      if (factoryValue === 'external') {
+        const factoryName = prompt('Nombre de la fábrica externa:');
+        if (!factoryName) return;
+        updateData = {
+          factoryType: 'external',
+          factoryId: null,
+          factoryName: factoryName
+        };
+      } else if (factoryValue) {
+        const factory = factories.find(f => f.id === factoryValue);
+        updateData = {
+          factoryType: 'internal',
+          factoryId: factoryValue,
+          factoryName: factory?.name || ''
+        };
+      } else {
+        updateData = {
+          factoryType: 'internal',
+          factoryId: null,
+          factoryName: ''
+        };
+      }
+      
+      await fabricaAPI.updateOrder(orderId, updateData);
+      loadData();
+    } catch (error) {
+      alert('Error al cambiar fábrica: ' + error.message);
+    }
+  };
+
   // Ver despiece de una orden
   const handleViewDespiece = async (orderId) => {
     setLoadingDespiece(true);
@@ -510,6 +545,20 @@ const PortalFabrica = ({ currentUser }) => {
                       <option value="ready">Fabricada</option>
                       <option value="delivered">Entregada</option>
                       <option value="cancelled">Cancelada</option>
+                    </select>
+
+                    {/* Cambiar Fábrica */}
+                    <select
+                      value={order.factoryType === 'external' ? 'external' : (order.factoryId || '')}
+                      onChange={(e) => handleFactoryChange(order.id, e.target.value)}
+                      className="px-3 py-1.5 border border-orange-200 rounded-lg text-sm font-bold text-orange-700 bg-orange-50"
+                      data-testid={`order-factory-select-${order.id}`}
+                    >
+                      <option value="">🏠 Mi Fábrica</option>
+                      {factories.map(f => (
+                        <option key={f.id} value={f.id}>🏭 {f.name} ({f.code})</option>
+                      ))}
+                      <option value="external">📦 Externa/Subcontratada</option>
                     </select>
 
                     <button
