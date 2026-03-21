@@ -1,11 +1,47 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado: EN DESARROLLO ACTIVO
-## Última Actualización: 20 Marzo 2026
+## Última Actualización: 21 Marzo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (20 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (21 Marzo 2026)
+
+### 1. Números de Fabricación para Órdenes (P0)
+- ✅ **Campo manufacturingNumber añadido**: Número secuencial global para identificación interna en fábrica
+- ✅ **Formato**: Número entero simple (1, 2, 3...) complementario al orderNumber (OF-2026-0001)
+- ✅ **Generación automática**: Usa MongoDB counter con upsert para garantizar secuencia
+- ✅ **Visualización en Portal**: Badge "Nº FAB: X" junto al orderNumber en la tarjeta de cada orden
+- ✅ **Backend**: `/app/backend/routes/fabrica.py` líneas 166-172
+
+### 2. Sección Editable de Puertas para Proveedores (P0)
+- ✅ **Nueva pestaña "PUERTAS PROVEEDOR"** en el modal de Despiece
+- ✅ **Tabla editable completa** con columnas:
+  - Mueble (código y descripción)
+  - Tipo (ALTOS, BAJOS, COLUMNAS)
+  - Color (editable)
+  - Alto cm (editable)
+  - Ancho cm (editable)
+  - Veta (selector Vertical/Horizontal)
+  - Observaciones (campo de texto)
+- ✅ **Resumen visual**: Tarjetas con totales por tipo (P. ALTOS, P. BAJOS, P. COLUMNAS)
+- ✅ **Exportación CSV**: Genera archivo con dimensiones agrupadas para enviar al proveedor
+- ✅ **Exportación PDF**: Documento profesional con tabla de puertas y totales
+- ✅ **Frontend**: `/app/frontend/src/components/DespieceModal.jsx`
+
+### 3. Manual de Ayuda Dinámico según Permisos (P1)
+- ✅ **Filtrado inteligente de secciones**: El manual solo muestra contenido de módulos accesibles
+- ✅ **Permisos verificados**:
+  - `canAccessFabrica` → Sección "Portal de Fábrica"
+  - `canAccessMontajes` → Sección "Agenda de Montajes"
+  - `canAccessCRM` → Sección "Módulo CRM"
+  - `isAdmin` → Sección "Administración"
+- ✅ **Nueva sección añadida**: "Agenda de Montajes" con documentación del módulo
+- ✅ **Frontend**: `/app/frontend/src/components/UserManualModal.jsx` función `getSectionsForUser()`
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (20 Marzo 2026)
 
 ### 1. Nueva Sección "Puertas por Color" en Modal Despiece
 - ✅ **Resumen de Puertas por Color**: Nueva sección en pestaña "CASCO, PUERTA Y HERRAJE"
