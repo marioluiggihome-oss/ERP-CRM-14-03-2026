@@ -4688,20 +4688,19 @@ def calculate_furniture_despiece(
             "1 juego = 2 colgadores para mueble alto de pared"
         )
     
-    # BISAGRAS - Según número de puertas y altura
+    # BISAGRAS - Según número de puertas y altura del MUEBLE
     if has_doors and num_doors > 0:
-        # 2 bisagras por puerta para puertas < 60cm
-        # 3 bisagras por puerta para puertas >= 60cm y < 120cm
-        # 4 bisagras por puerta para puertas >= 120cm
-        door_height = h - 0.2  # altura aproximada de puerta
-        bisagras_por_puerta = 2 if door_height < 60 else 3 if door_height < 120 else 4
+        # Regla: 
+        # - Muebles de hasta 90cm de alto (altos normales): 2 bisagras por puerta
+        # - Muebles de más de 90cm de alto (semicolumnas, columnas, despenseros): 3 bisagras por puerta
+        bisagras_por_puerta = 2 if h <= 90 else 3
         total_bisagras = bisagras_por_puerta * num_doors
         add_component(
             f"Bisagras",
             "BISAG",
             "HERRAJE",
             0, 0, 0, total_bisagras,
-            f"{bisagras_por_puerta} bisagras por puerta"
+            f"{bisagras_por_puerta} bisagras por puerta (mueble {h}cm alto)"
         )
         
         # TIRADORES - 1 por puerta
