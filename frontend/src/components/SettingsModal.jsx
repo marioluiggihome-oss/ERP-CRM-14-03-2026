@@ -99,6 +99,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [telemetryProgress, setTelemetryProgress] = useState({ current: 0, total: 0 });
   const [existingCodes, setExistingCodes] = useState(new Set());
   const [telemetryResult, setTelemetryResult] = useState(null);
+  const [telemetryLibrary, setTelemetryLibrary] = useState('ZC'); // Biblioteca seleccionada para telemetría IA (ZC o MV)
 
   // Client states
   const [clients, setClients] = useState([]);
@@ -4459,6 +4460,36 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <span className="font-black text-sm uppercase">{mod}</span>
                     </button>
                   ))}
+                </div>
+
+                {/* Selector de Librería MV/ZC */}
+                <div className="flex gap-2 mb-4">
+                  <div className="flex-1 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Librería de Catálogo</p>
+                    <div className="flex gap-2">
+                      {['ZC', 'MV'].map(lib => (
+                        <button 
+                          key={lib} 
+                          onClick={() => setTelemetryLibrary && setTelemetryLibrary(lib)} 
+                          disabled={isProcessingTelemetry}
+                          className={`flex-1 py-2 px-3 rounded-lg transition-all font-black text-xs uppercase ${
+                            (telemetryLibrary || 'ZC') === lib 
+                              ? lib === 'ZC' 
+                                ? 'bg-blue-600 text-white shadow-md' 
+                                : 'bg-purple-600 text-white shadow-md'
+                              : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-400'
+                          }`}
+                        >
+                          {lib === 'ZC' ? '📘 ZC (Z1)' : '📙 MV (T1)'}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-slate-400 mt-1">
+                      {(telemetryLibrary || 'ZC') === 'ZC' 
+                        ? 'Librería ZC usa puntos Z1 (tarifa estándar)' 
+                        : 'Librería MV usa puntos T1 (tarifa especial)'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 rounded-xl p-4 flex-1 flex flex-col border border-slate-200">

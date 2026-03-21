@@ -19,7 +19,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://luiggi-puertas.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://manufacturing-portal-3.preview.emergentagent.com')
 
 class TestClientsAPI:
     """Test Client CRUD operations"""

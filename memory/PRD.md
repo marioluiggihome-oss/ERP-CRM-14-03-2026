@@ -7,6 +7,14 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN (21 Marzo 2026)
 
+### 0. Fix Selector MV/ZC en Telemetría IA (P0)
+- ✅ **Bug corregido**: El agente anterior añadió el selector de biblioteca MV/ZC pero olvidó declarar el estado `telemetryLibrary`
+- ✅ **Error original**: `ReferenceError: telemetryLibrary is not defined` bloqueaba toda la aplicación
+- ✅ **Solución**: Añadido `const [telemetryLibrary, setTelemetryLibrary] = useState('ZC')` en línea 102
+- ✅ **UI funcional**: Selector con opciones "📘 ZC (Z1)" y "📙 MV (T1)" antes de cargar fichas
+- ✅ **Frontend**: `/app/frontend/src/components/SettingsModal.jsx` líneas 102, 4469-4491
+- ✅ **Verificado**: Screenshot confirma UI correcta sin errores de consola
+
 ### 1. Números de Fabricación para Órdenes (P0)
 - ✅ **Campo manufacturingNumber añadido**: Número secuencial global para identificación interna en fábrica
 - ✅ **Formato**: Número entero simple (1, 2, 3...) complementario al orderNumber (OF-2026-0001)

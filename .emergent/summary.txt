@@ -1,140 +1,116 @@
-<analysis>**original_problem_statement:**
-The user is building a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core relies on a multi-library system ('ZC' and 'MV') with detailed pricing, complex bill of materials (despiece) calculations, and order management.
+<analysis>**original_problem_statement**: The user is building a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core relies on a multi-library system ('ZC' and 'MV') with detailed pricing, complex bill of materials (despiece) calculations, and order management. Recently requested features include manufacturing numbers, a dedicated editable doors module for suppliers, dynamic help manuals, and personal agendas for assemblers (montadores).
 
-**PRODUCT REQUIREMENTS (Newest Requests):**
-1. **Manufacturing Numbers:** Manufacturing orders (órdenes de fabricación) must have a dedicated manufacturing number.
-2. **Supplier Doors Module:** In the cutting list (Sistema de Despiece), create a new section that aggregates all doors for an order, allowing the user to modify dimensions and export this specific list to send to suppliers.
-3. **Dynamic Help Manual:** The Help Manual should only display content corresponding to the specific modules/functions the current user has permissions to access.
-
-**User's preferred language**: INSTRUCT next agent to respond in **es (Spanish)**.
+**User's preferred language**: **es (Spanish)**. (INSTRUCT NEXT AGENT: You MUST respond and communicate with the user entirely in Spanish).
 
 **what currently exists?** 
-The application is a full-stack React/FastAPI/MongoDB ERP. In the current session, the system underwent massive improvements. The cutting list (Despiece) logic was completely overhauled: identical furniture pieces are now consolidated into single rows with multiplied quantities, door colors and grain directions (veta) are explicitly mapped, back-panel thicknesses are now dynamic per carcass material, and the backend engine correctly parses complex 'MV' and 'ZC' nomenclatures (including sinks, ovens, and corners). The CRM was expanded with an Activities tracking module (calls, meetings, visits). The UI was polished: the sidebar is now scrollable (fixing hidden modules), user settings were logically reorganized, and library pricing bugs (MV using Z1 instead of T1 points) were fixed.
+A full-stack React/FastAPI/MongoDB ERP. Features robust cutting list (despiece) generation with multi-library (MV/ZC) logic, CRM, role-based access control, a factory production portal with routing for internal/external factories, a dynamic help manual, an editable supplier doors module with PDF/CSV export, and a personalized task agenda for assemblers. 
 
 **Last working item**:
-- **Last item agent was working:** The agent was just starting to investigate how to add Manufacturing numbers to orders, create the new Editable/Exportable Doors section for suppliers, and make the Help Manual dynamic based on permissions as requested in the very last user message. The agent ran a grep command for  but context ended before any code was written.
-- **Status:** IN PROGRESS
-- **Agent Testing Done:** N
-- **Which testing method agent to use?** Frontend/Backend testing agent or manual screenshot/curl depending on the size of the implementation (The editable doors module will require screenshot/frontend testing, the manufacturing numbers will require backend validation).
-- **User Testing Done:** N
+- **Last item agent was working**: Adding a library selector (MV/ZC) to the IA Telemetry (Reconocimiento Óptico) upload section in . The user requested this to prevent mixing MV and ZC items during AI PDF parsing. The agent performed the  successfully, but the context ended immediately after.
+- **Status**: TESTING PENDING
+- **Agent Testing Done**: N
+- **Which testing method agent to use?** Frontend testing by screenshot tool (to verify the UI shows the dropdown) and .
+- **User Testing Done**: N
 
-**All Pending/In progress Issue list**:
-Issue 1: **Manufacturing Orders lack explicit Manufacturing Numbers (P0)**
-- **Attempted fixes:** None yet. Agent just searched  collection logic.
-- **Next debug checklist:** Check  where  are created. Add a sequential or formatted manufacturing number field and display it in the Factory Portal/Pedidos view.
-- **Why fix this issue and what will be achieved with the fix?** Required for factory tracking and organization.
-- **Status:** NOT STARTED
-- **Is recurring issue?** N
-- **Should Test frontend/backend/both after fix?** Both
-
-Issue 2: **Help Manual is static (P1)**
-- **Attempted fixes:** None.
-- **Next debug checklist:** Check the Help component/modal. Implement conditional rendering for manual sections based on  permissions (e.g., , , , etc.).
-- **Why fix this issue and what will be achieved with the fix?** Prevents users from seeing documentation for modules they cannot access, avoiding confusion.
-- **Status:** NOT STARTED
+**All Pending/In progress Issue list**: 
+Issue 1: **Verify MV/ZC Library Selector in AI Telemetry (P0)**
+- **Attempted fixes**: The agent executed a  in  (around lines 4440-4520) to add the selector. It succeeded, but no validation was done.
+- **Next debug checklist**: Check . Run . Take a screenshot of the Telemetría tab in the Settings/Master panel to ensure the MV/ZC dropdown renders correctly before the file upload area.
+- **Why fix this issue and what will be achieved with the fix?** Ensures AI parsing accurately categorizes parsed products into the correct library to avoid pricing/manufacturing errors.
+- **Status**: TESTING PENDING
 - **Is recurring issue?** N
 - **Should Test frontend/backend/both after fix?** Frontend
 
 **In progress Task List**:
-Task 1: **Editable & Exportable Doors Section for Suppliers in Despiece (P0)**
-- **Where to resume:** Open . The agent previously added a Resumen de Puertas por Color, but the user explicitly wants a section where *door dimensions can be modified* and then *exported* specifically to send to door suppliers.
-- **What will be achieved with this?** Allows the user to adjust door tolerances/sizes manually and generate a supplier-ready order sheet.
-- **Status:** NOT STARTED
-- **Should Test frontend/backend/both after fix?** Frontend
-- **Blocked on something:** No.
+*None active besides the issue mentioned above.*
 
 **Upcoming and Future Tasks**:
-- **Upcoming Tasks:**
+- **Upcoming Tasks**:
   - (P1) Populate User Manual: Write comprehensive content for the user manual ().
-- **Future Tasks:**
-  - (P2) Option to change grain direction (veta) to horizontal in specific cases (currently defaults strictly to vertical).
-  - (P3) Refactor Monoliths: Decompose  and .
+- **Future Tasks**:
+  - (P3) Refactor Monoliths: Decompose  (>7000 lines) and  (>4800 lines).
+  - (P3) Integrations: Integration with external billing systems.
+  - (P3) Dashboard: Production metrics dashboard.
+  - (P3) Notifications: Push notifications for order status changes.
 
 **Completed work in this session**:
-- Consolidate identical furniture pieces in Despiece (quantity multiplier instead of duplicate rows) (DONE)
-- Add Grosor Trasera (Back panel thickness) to Carcass configuration and backend calculation (DONE)
-- Backend Despiece overhaul: Support for all MV and ZC nomenclatures, sinks, ovens, corners, and dynamic hangers/shelves (DONE)
-- CRM Activities Module: New tab for tracking calls/visits/meetings with mobile-responsive UI (DONE)
-- Sidebar UI Fix: Added  and adjusted sizes so hidden modules like Fábrica are visible (DONE)
-- Fix COST product price: Corrected logic in  to use  for MV library instead of  (DONE)
-- Door grouping by Color and Grain (Veta) in Despiece UI, PDF, CSV, and XML (DONE)
-- Settings UI: Moved Usuario Solo Fábrica under Tienda/Punto de Venta (DONE)
-- Settings UI: Moved global Agenda de Montajes config into Capacidades Técnicas (DONE)
-- MV Library Nomenclatures parsed and mapped (DONE)
+- Implemented  (sequential) and auto-creation of manufacturing orders upon budget confirmation (DONE).
+- Added editable PUERTAS PROVEEDOR (Supplier Doors) tab in Despiece with Unidades, Color, Veta, dimensions, and CSV/PDF export (DONE).
+- Dynamic Help Manual based on user permissions (, , etc.) (DONE).
+- Added Factory Routing (Internal, External, Subcontracted) to Factory Portal for new and existing orders (DONE).
+- Fixed Hinge Calculation rule in backend: <=90cm height = 2 hinges, >90cm = 3 hinges (DONE).
+- Added Con Veta global checkbox to BudgetTable UI (DONE).
+- Updated Agenda de Montajes so Assemblers (Montadores) only see their assigned tasks, defaulting to Mis Montajes view (DONE).
+- Added  and  to User Schema (DONE).
 
 **Earlier issues found/mentioned but not fixed**:
-- None. The agent actively cleared the previous backlog (Sidebar glitch and COST price issue are resolved).
+- None. All user-reported calculation bugs (door counts, hinge rules) were successfully resolved.
 
 **Known issue recurrence from previous fork**:
-- **Issue recurrence in previous fork:** None (Visual sidebar glitch was permanently fixed in this session).
-- **Recurrence count:** 0
-- **Status:** RESOLVED
+- **Issue recurrence in previous fork**: None.
+- **Recurrence count**: 0
+- **Status**: RESOLVED
 
 **Code Architecture**:
 
 
 **Key Technical Concepts**:
-- **Despiece Consolidation:** In , logic was added to group items with identical , , , and , summing their quantities before rendering lines or exporting CSVs.
-- **Library Tariff Points:** MV library uses . ZC library uses .  now correctly checks  to display the right pricing.
-- **Despiece Engine:**  in  uses string matching on component names (e.g., FREGADERO, HORNO, ASCE) to dynamically construct the bill of materials.
+- **Role-Based Views**: UI heavily depends on user booleans (, , ).  explicitly filters by .
+- **Despiece Engine**: Analyzes product nomenclatures to generate precise cutting lists. Hinge rules are strictly tied to  (>90cm = 3).
+- **Manufacturing Sync**: Confirming a budget () now automatically spawns a  document with a sequential .
 
 **key DB schema**:
-- **fabrica_orders**: Requires updates to handle a strict manufacturing number.
-- **activities**: New collection (via CRM models) tracking visits/calls with , Sat Mar 21 19:50:36 UTC 2026, , , .
-- **carcassMaterials**: Now includes .
+- : Added , , .
+- : Added , , .
+- : Linked to users via .
 
 **changes in tech stack**:
-- None.
+- None. 
 
 **All files of reference**:
--  (Target for Editable doors for suppliers)
--  (Target for Manufacturing number)
--  & App Help Component (Target for Dynamic Help Manual)
+-  (Modified at end of session for MV/ZC selector)
+- 
+- 
+- 
 
 **Areas that need refactoring**:
--  (>6800 lines) and  (>4700 lines) are massive monoliths. 
+-  (>7000 lines) 
+-  (>4800 lines) 
 
 **key api endpoints**:
-- : Receives  and  to return panel arrays.
-- : New endpoints for managing CRM tracking.
+- : Confirms order AND creates manufacturing order.
+- : Manages factory routing.
 
 **Critical Info for New Agent**:
-- The user's request for an area to calculate doors, export them, and modify dimensions for suppliers is **different** from the feature built earlier in the session. The earlier feature grouped doors by color for the internal cutting list. The *new* request requires an interactive/editable table specifically for generating supplier orders.
-- Be careful with  and ; due to their size, rely on  precisely.
-- Do not mix up the libraries. MV logic and ZC logic are heavily separated by user request.
+- **LANGUAGE:** Always speak Spanish with the user.
+- **MONOLITHS:** Be extremely careful when using  on  or . Always do a  or  to ensure you are replacing the exact correct lines.
+- **LIBRARY SEPARATION:** ZC and MV libraries use different calculation bases. Keep their parsing logic strictly separated. 
 
 **documents and test reports created in this job**:
 -  (Updated)
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**:
-1. **User:** Requests door grouping by color in Despiece. (DONE)
-2. **User:** Reminds about MV/ZC separation and requests adding grain direction (veta) vertical by default. (DONE)
-3. **User:** Provides MV nomenclatures and asks to fix sidebar visual glitch. (DONE)
-4. **User:** Reports COST product shows 17 points instead of 16. (DONE)
-5. **User:** Asks to move Usuario Solo Fábrica underneath Tienda/Punto de venta in settings. (DONE)
-6. **User:** Asks to move Agenda de Montajes config to Technical Capacities section. (DONE)
-7. **User:** Requests a CRM Activities module (calls, meetings, visits) with mobile responsiveness. (DONE)
-8. **User:** Reports User MARIO cannot see the Factory module. (DONE - fixed sidebar scroll)
-9. **User:** Requests consolidation of identical furniture pieces (qty x2) instead of duplicate lines, adding back thickness to carcass settings, and reviewing despiece backend logic for all models. (DONE)
-10. **User:** Requests: 1) Manufacturing numbers for factory orders, 2) Editable doors section in Despiece for suppliers, 3) Dynamic help manual based on permissions. (PENDING - **Highest Priority for next agent**)
+1. User: la función de montador, no es para que tenga una agenda de montajes propia, enlazada con algunos clientes ¿? (Resolved - Filtered AgendaMontajes to show only personal tasks for montadores)
+2. User: al subir telemetría ia, hay q diferenciar entre MV Y ZC librerías [Image attached] (Pending Testing - Agent added the selector to SettingsModal.jsx but session ended before visual testing).
 
 **Project Health Check:**
-- **Broken:** None.
-- **Mocked:** Placeholder text still exists in User Manual ().
+- Broken: None
+- Mocked: Placeholder text still exists in User Manual ().
 
 **3rd Party Integrations**
-- **Resend/Sendgrid** — configured for emails.
-- **Gemini Vision (Emergent LLM Key)** — used in the  for image analysis.
+- **Resend/Sendgrid (Emails)** — requires User API Key.
+- **Gemini Vision (Emergent LLM Key)** — used in the  / AI Telemetry for image/PDF analysis. Uses Emergent LLM Key.
 
 **Testing status**
-- **Testing agent used after significant changes:** NO
-- **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** []
-- **Known regressions:** None.
+- Testing agent used after significant changes: YES ( used for manufacturing orders/doors)
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: None
+- Known regressions: None
 
 **Credentials to test flow:**
-- **User:** 
-- **Password:** 
+- User: 
+- Password: 
 
 **What agent forgot to execute**:
-- The agent was interrupted immediately after the user's last message, leaving the three items in message 503 (manufacturing numbers, editable doors for suppliers, dynamic help manual) unexecuted.</analysis>
+The agent successfully injected the code for the MV/ZC library selector in  but ran out of context before verifying it via Linting or taking a screenshot to ensure the UI didn't break.</analysis>
