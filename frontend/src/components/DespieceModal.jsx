@@ -195,19 +195,19 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         
         console.log(`[Puertas Proveedor] ${furniture.productCode}: doorQty=${doorQty} x itemQty=${itemQty} = ${totalDoors} puertas`);
         
-        for (let i = 0; i < totalDoors; i++) {
-          doors.push({
-            id: `door-${doorIndex++}`,
-            muebleCode: furniture.productCode,
-            muebleName: furniture.productName,
-            tipoMueble: tipoMueble,
-            color: color,
-            alto: parseFloat(p.length) || 0,
-            ancho: parseFloat(p.width) || 0,
-            veta: 'V', // Vertical por defecto
-            observaciones: ''
-          });
-        }
+        // Crear una entrada por cada tipo de puerta con sus unidades
+        doors.push({
+          id: `door-${doorIndex++}`,
+          muebleCode: furniture.productCode,
+          muebleName: furniture.productName,
+          tipoMueble: tipoMueble,
+          color: color,
+          alto: parseFloat(p.length) || 0,
+          ancho: parseFloat(p.width) || 0,
+          veta: 'V', // Vertical por defecto
+          unidades: totalDoors, // Cantidad de puertas
+          observaciones: ''
+        });
       });
     });
     
@@ -228,30 +228,22 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       return;
     }
     
-    // Agrupar puertas por dimensiones y color
-    const grouped = {};
-    supplierDoors.forEach(d => {
-      const key = `${d.alto}_${d.ancho}_${d.color}_${d.veta}`;
-      if (!grouped[key]) {
-        grouped[key] = { ...d, cantidad: 1 };
-      } else {
-        grouped[key].cantidad++;
-      }
-    });
+    // Calcular total de unidades
+    const totalUnidades = supplierDoors.reduce((sum, d) => sum + (parseInt(d.unidades) || 1), 0);
     
     // Generar CSV
     let csv = "PEDIDO PUERTAS - PROVEEDOR\n";
     csv += `Cliente: ${editableCustomerName || '-'}\n`;
     csv += `Expediente: ${editableExpedient || '-'}\n`;
     csv += `Fecha: ${new Date().toLocaleDateString('es-ES')}\n\n`;
-    csv += "Color;Alto (cm);Ancho (cm);Veta;Cantidad;Tipo Mueble;Observaciones\n";
+    csv += "Mueble;Color;Alto (cm);Ancho (cm);Veta;Unidades;Tipo;Observaciones\n";
     
-    Object.values(grouped).forEach(d => {
-      csv += `${d.color};${d.alto};${d.ancho};${d.veta === 'V' ? 'Vertical' : 'Horizontal'};${d.cantidad};${d.tipoMueble};${d.observaciones || ''}\n`;
+    supplierDoors.forEach(d => {
+      csv += `${d.muebleCode};${d.color};${d.alto};${d.ancho};${d.veta === 'V' ? 'Vertical' : 'Horizontal'};${d.unidades || 1};${d.tipoMueble};${d.observaciones || ''}\n`;
     });
     
     // Totales
-    csv += `\nTOTAL PUERTAS: ${supplierDoors.length}\n`;
+    csv += `\nTOTAL PUERTAS: ${totalUnidades}\n`;
     
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -275,16 +267,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     const printWindow = window.open('', '_blank');
     const fechaHoy = new Date().toLocaleDateString('es-ES');
     
-    // Agrupar puertas
-    const grouped = {};
-    supplierDoors.forEach(d => {
-      const key = `${d.alto}_${d.ancho}_${d.color}_${d.veta}`;
-      if (!grouped[key]) {
-        grouped[key] = { ...d, cantidad: 1 };
-      } else {
-        grouped[key].cantidad++;
-      }
-    });
+    // Calcular total de unidades
+    const totalUnidades = supplierDoors.reduce((sum, d) => sum + (parseInt(d.unidades) || 1), 0);
     
     let html = `
       <!DOCTYPE html>
@@ -346,11 +330,12 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         <table>
           <thead>
             <tr>
+              <th>Mueble</th>
               <th>Color/Acabado</th>
               <th class="text-center">Alto (cm)</th>
               <th class="text-center">Ancho (cm)</th>
               <th class="text-center">Veta</th>
-              <th class="text-center">Cantidad</th>
+              <th class="text-center">Unidades</th>
               <th>Tipo</th>
               <th>Observaciones</th>
             </tr>
@@ -358,14 +343,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           <tbody>
     `;
     
-    Object.values(grouped).forEach(d => {
+    supplierDoors.forEach(d => {
       html += `
         <tr>
+          <td><strong>${d.muebleCode}</strong></td>
           <td><span class="color-badge">${d.color}</span></td>
           <td class="text-center font-bold">${d.alto}</td>
           <td class="text-center font-bold">${d.ancho}</td>
           <td class="text-center"><span class="veta-badge">${d.veta === 'V' ? '↕ Vertical' : '↔ Horizontal'}</span></td>
-          <td class="text-center font-bold" style="font-size:14px;">${d.cantidad}</td>
+          <td class="text-center font-bold" style="font-size:14px;">${d.unidades || 1}</td>
           <td>${d.tipoMueble}</td>
           <td style="font-size:9px;">${d.observaciones || '-'}</td>
         </tr>
@@ -374,8 +360,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     
     html += `
             <tr class="total-row">
-              <td colspan="4" class="text-right">TOTAL PUERTAS:</td>
-              <td class="text-center" style="font-size:16px;">${supplierDoors.length}</td>
+              <td colspan="5" class="text-right">TOTAL PUERTAS:</td>
+              <td class="text-center" style="font-size:16px;">${totalUnidades}</td>
               <td colspan="2"></td>
             </tr>
           </tbody>
@@ -2079,7 +2065,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       </div>
                       <div className="text-right">
                         <p className="text-blue-200 text-xs font-bold uppercase">Total Puertas</p>
-                        <p className="text-4xl font-black">{supplierDoors.length}</p>
+                        <p className="text-4xl font-black">{supplierDoors.reduce((sum, d) => sum + (parseInt(d.unidades) || 1), 0)}</p>
                       </div>
                     </div>
                   </div>
@@ -2087,7 +2073,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                   {/* Resumen por tipo */}
                   <div className="grid grid-cols-3 gap-4">
                     {['ALTOS', 'BAJOS', 'COLUMNAS'].map(tipo => {
-                      const count = supplierDoors.filter(d => d.tipoMueble === tipo).length;
+                      const count = supplierDoors.filter(d => d.tipoMueble === tipo).reduce((sum, d) => sum + (parseInt(d.unidades) || 1), 0);
                       const color = tipo === 'ALTOS' ? doorColorHigh : tipo === 'BAJOS' ? doorColorLow : doorColorColumns;
                       const bgColor = tipo === 'ALTOS' ? 'from-blue-500 to-indigo-600' : tipo === 'BAJOS' ? 'from-orange-500 to-amber-600' : 'from-purple-500 to-violet-600';
                       
@@ -2136,6 +2122,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                             <th className="px-4 py-3 text-center">Alto (cm)</th>
                             <th className="px-4 py-3 text-center">Ancho (cm)</th>
                             <th className="px-4 py-3 text-center">Veta</th>
+                            <th className="px-4 py-3 text-center bg-orange-100 text-orange-700">Uds</th>
                             <th className="px-4 py-3 text-left">Observaciones</th>
                           </tr>
                         </thead>
@@ -2193,6 +2180,16 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                   <option value="V">↕ Vertical</option>
                                   <option value="H">↔ Horizontal</option>
                                 </select>
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={door.unidades || 1}
+                                  onChange={(e) => updateSupplierDoor(door.id, 'unidades', parseInt(e.target.value) || 1)}
+                                  className="w-16 px-2 py-1 text-sm text-center font-bold border border-orange-300 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none bg-orange-50"
+                                  data-testid={`door-unidades-${idx}`}
+                                />
                               </td>
                               <td className="px-4 py-2">
                                 <input
