@@ -3,7 +3,7 @@ import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown,
 import { despieceAPI } from '../services/api';
 import BoardOptimizer from './BoardOptimizer';
 
-const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor }) => {
+const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor, doorHasVeta = true }) => {
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -204,7 +204,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           color: color,
           alto: parseFloat(p.length) || 0,
           ancho: parseFloat(p.width) || 0,
-          veta: 'V', // Vertical por defecto
+          veta: doorHasVeta ? 'V' : 'N', // Usar config del presupuesto: V=Vertical, N=Sin veta
           unidades: totalDoors, // Cantidad de puertas
           observaciones: ''
         });

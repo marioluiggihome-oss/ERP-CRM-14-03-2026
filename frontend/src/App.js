@@ -51,6 +51,7 @@ const App = () => {
       carcassMaterials: INITIAL_CARCASS_MATERIALS,
       selectedCarcassMaterialId: INITIAL_CARCASS_MATERIALS[0].id,
       doorColorLow: '', doorColorHigh: '', doorColorColumns: '', sideColor: '',
+      doorHasVeta: true, // Por defecto las puertas llevan veta (dirección de fibra)
       // Opciones GOLA (perfiles)
       golaAlto: false, golaAltoColor: '',
       golaBajo: false, golaBajoColor: '',
