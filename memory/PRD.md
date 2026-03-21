@@ -43,6 +43,27 @@
   - Líneas 2302, 2558, 2759: Display de puntos en catálogo usando biblioteca del producto
 - ✅ **Validado**: El producto COST ahora muestra 16 puntos correctamente
 
+### 6. Módulo de Actividades CRM (NUEVO)
+- ✅ **Nuevo componente CRMActivities.jsx** con registro de:
+  - Llamadas, Visitas, Reuniones, Videollamadas, Emails, Notas
+  - Fecha, hora y duración configurable
+  - Vinculación con contactos del CRM
+  - Campo de asunto, notas y resultado/seguimiento
+- ✅ **UI completa con**:
+  - Estadísticas rápidas (HOY, SEMANA, TOTAL)
+  - Búsqueda y filtros por tipo/fecha
+  - Lista agrupada por fecha
+  - Vista expandible con detalles
+  - Edición y eliminación de actividades
+- ✅ **100% Responsive para móvil**:
+  - Grid de estadísticas adaptable
+  - Tabs scrollables horizontalmente
+  - Modal tipo "bottom sheet" para formulario
+  - Botón flotante (FAB) para nueva actividad
+- ✅ **Backend actualizado**:
+  - Modelo ActivityModel con campos: date, time, duration, subject, notes, outcome
+  - Endpoints GET/POST/PUT/DELETE en /api/crm/activities
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (19 Marzo 2026)

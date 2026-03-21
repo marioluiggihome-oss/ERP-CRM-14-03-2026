@@ -224,19 +224,27 @@ class ActivityModel(BaseModel):
     """CRM Activity model"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: f"act-{uuid.uuid4().hex[:8]}")
-    type: str
-    title: str
+    type: str  # call, visit, meeting, video, email, note
+    title: str = ""
+    subject: str = ""  # Asunto principal
     description: str = ""
+    notes: str = ""  # Notas detalladas
+    outcome: str = ""  # Resultado/seguimiento
     contactId: Optional[str] = None
     contactName: str = ""
     opportunityId: Optional[str] = None
     opportunityTitle: str = ""
-    dueDate: Optional[str] = None
+    date: Optional[str] = None  # Fecha de la actividad (YYYY-MM-DD)
+    time: Optional[str] = None  # Hora (HH:MM)
+    duration: int = 15  # Duración en minutos
+    dueDate: Optional[str] = None  # Mantener para retrocompatibilidad
     dueTime: Optional[str] = None
     completed: bool = False
     completedAt: Optional[datetime] = None
     priority: str = "medium"
     assignedTo: str = ""
+    userId: str = ""  # Usuario que registró la actividad
+    userName: str = ""  # Nombre del usuario
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     createdBy: str = ""
 
@@ -244,29 +252,45 @@ class ActivityModel(BaseModel):
 class ActivityCreate(BaseModel):
     """Activity creation model"""
     type: str
-    title: str
+    title: str = ""
+    subject: str = ""
     description: str = ""
+    notes: str = ""
+    outcome: str = ""
     contactId: Optional[str] = None
     contactName: str = ""
     opportunityId: Optional[str] = None
     opportunityTitle: str = ""
+    date: Optional[str] = None
+    time: Optional[str] = None
+    duration: int = 15
     dueDate: Optional[str] = None
     dueTime: Optional[str] = None
     priority: str = "medium"
     assignedTo: str = ""
+    userId: str = ""
+    userName: str = ""
 
 
 class ActivityUpdate(BaseModel):
     """Activity update model"""
     type: Optional[str] = None
     title: Optional[str] = None
+    subject: Optional[str] = None
     description: Optional[str] = None
+    notes: Optional[str] = None
+    outcome: Optional[str] = None
     contactId: Optional[str] = None
     contactName: Optional[str] = None
     opportunityId: Optional[str] = None
     opportunityTitle: Optional[str] = None
+    date: Optional[str] = None
+    time: Optional[str] = None
+    duration: Optional[int] = None
     dueDate: Optional[str] = None
     dueTime: Optional[str] = None
     completed: Optional[bool] = None
     priority: Optional[str] = None
     assignedTo: Optional[str] = None
+    userId: Optional[str] = None
+    userName: Optional[str] = None

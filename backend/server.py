@@ -3794,7 +3794,7 @@ async def get_inactive_clients(days_without_offer: int = 30, days_without_purcha
 # ============================================
 
 @api_router.get("/crm/activities")
-async def get_activities(type: Optional[str] = None, contactId: Optional[str] = None, opportunityId: Optional[str] = None, completed: Optional[bool] = None):
+async def get_activities(type: Optional[str] = None, contactId: Optional[str] = None, opportunityId: Optional[str] = None, completed: Optional[bool] = None, userId: Optional[str] = None):
     """Get all activities with optional filters"""
     try:
         query = {}
@@ -3806,8 +3806,10 @@ async def get_activities(type: Optional[str] = None, contactId: Optional[str] = 
             query["opportunityId"] = opportunityId
         if completed is not None:
             query["completed"] = completed
+        if userId:
+            query["userId"] = userId
         
-        activities = await db.activities.find(query, {"_id": 0}).sort("dueDate", 1).to_list(1000)
+        activities = await db.activities.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
         return activities
     except Exception as e:
         logger.error(f"Get activities error: {e}")
