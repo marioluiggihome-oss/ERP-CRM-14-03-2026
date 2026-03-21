@@ -189,18 +189,21 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       ) || [];
       
       puertaComps.forEach(p => {
-        const itemQty = furniture.itemQuantity || 1;
-        const doorQty = p.quantity || 1;
+        const itemQty = parseInt(furniture.itemQuantity) || 1;
+        const doorQty = parseInt(p.quantity) || 1;
+        const totalDoors = doorQty * itemQty;
         
-        for (let i = 0; i < doorQty * itemQty; i++) {
+        console.log(`[Puertas Proveedor] ${furniture.productCode}: doorQty=${doorQty} x itemQty=${itemQty} = ${totalDoors} puertas`);
+        
+        for (let i = 0; i < totalDoors; i++) {
           doors.push({
             id: `door-${doorIndex++}`,
             muebleCode: furniture.productCode,
             muebleName: furniture.productName,
             tipoMueble: tipoMueble,
             color: color,
-            alto: p.length || 0,
-            ancho: p.width || 0,
+            alto: parseFloat(p.length) || 0,
+            ancho: parseFloat(p.width) || 0,
             veta: 'V', // Vertical por defecto
             observaciones: ''
           });
