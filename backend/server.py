@@ -2749,20 +2749,133 @@ async def confirm_order(
         }
         await db.orders.insert_one(order_record)
         
+        # =============================================
+        # CREAR ORDEN DE FABRICACIÓN AUTOMÁTICAMENTE
+        # =============================================
+        manufacturing_order_id = None
+        manufacturing_number = None
+        try:
+            # Generar número de orden de fabricación
+            current_year = datetime.now().year
+            counter_id = f"manufacturing_order_{current_year}"
+            
+            counter_result = await db.counters.find_one_and_update(
+                {"_id": counter_id},
+                {"$inc": {"seq": 1}},
+                upsert=True,
+                return_document=True
+            )
+            seq_number = counter_result["seq"]
+            mfg_order_number = f"OF-{current_year}-{seq_number:04d}"
+            
+            # Generar número de fabricación secuencial global
+            mfg_counter = await db.counters.find_one_and_update(
+                {"_id": "manufacturing_number_global"},
+                {"$inc": {"seq": 1}},
+                upsert=True,
+                return_document=True
+            )
+            manufacturing_number = mfg_counter["seq"]
+            
+            # Preparar items para la orden de fabricación
+            mfg_items = []
+            total_pieces = 0
+            total_area = 0.0
+            
+            for item in items_list:
+                item_id = f"moi-{uuid.uuid4().hex[:8]}"
+                width = float(item.get("width", item.get("customWidth", 60)))
+                height = float(item.get("height", item.get("customHeight", 70)))
+                depth = float(item.get("depth", item.get("customDepth", 58)))
+                qty = int(item.get("quantity", 1))
+                
+                mfg_items.append({
+                    "id": item_id,
+                    "productCode": item.get("code", item.get("productCode", "")),
+                    "productName": item.get("name", item.get("productName", "")),
+                    "quantity": qty,
+                    "width": width,
+                    "height": height,
+                    "depth": depth,
+                    "material": carcassColor or "",
+                    "doorFinish": doorColorLow or doorColorHigh or "",
+                    "notes": "",
+                    "status": "pending",
+                    "fabricationStatus": "pending"
+                })
+                total_pieces += qty
+                total_area += (width * height * qty) / 10000  # m²
+            
+            # Crear documento de orden de fabricación
+            mfg_order_doc = {
+                "id": f"mfg-{uuid.uuid4().hex[:8]}",
+                "orderNumber": mfg_order_number,
+                "manufacturingNumber": manufacturing_number,
+                "sourceType": "order_confirmation",
+                "sourceBudgetId": None,
+                "sourceOrderId": order_record["id"],
+                "customerName": customerName,
+                "customerCode": "",
+                "contactPhone": "",
+                "deliveryAddress": customerAddress,
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+                "updatedAt": datetime.now(timezone.utc).isoformat(),
+                "requestedDeliveryDate": None,
+                "estimatedDeliveryDate": None,
+                "actualDeliveryDate": None,
+                "status": "confirmed",  # Directamente confirmada (viene de pedido)
+                "priority": "normal",
+                "items": mfg_items,
+                "totalPieces": total_pieces,
+                "totalArea": round(total_area, 3),
+                "assignedToUserId": None,
+                "assignedToName": None,
+                "internalNotes": f"Creada automáticamente desde pedido #{budgetNumber}",
+                "productionNotes": notes or "",
+                "deliveryNotes": "",
+                "createdByUserId": userId,
+                "createdByName": distributorName or ""
+            }
+            
+            await db.manufacturing_orders.insert_one(mfg_order_doc)
+            manufacturing_order_id = mfg_order_doc["id"]
+            
+            # Actualizar el pedido con referencia a la orden de fabricación
+            await db.orders.update_one(
+                {"id": order_record["id"]},
+                {"$set": {
+                    "manufacturingOrderId": manufacturing_order_id,
+                    "manufacturingOrderNumber": mfg_order_number,
+                    "manufacturingNumber": manufacturing_number
+                }}
+            )
+            
+            logger.info(f"Manufacturing order {mfg_order_number} (Nº FAB: {manufacturing_number}) created for order {budgetNumber}")
+            
+        except Exception as mfg_error:
+            logger.error(f"Error creating manufacturing order: {mfg_error}")
+            # No fallar el pedido si la orden de fabricación no se puede crear
+        
         logger.info(f"Order confirmed: {budgetNumber}" + (f" sent via {email_provider} to {email}" if email_sent else " (email not sent)"))
+        
+        # Construir respuesta con información de la orden de fabricación
+        base_response = {
+            "success": True,
+            "orderId": order_record["id"],
+            "manufacturingOrderId": manufacturing_order_id,
+            "manufacturingNumber": manufacturing_number
+        }
         
         if email_sent:
             return {
-                "success": True,
-                "message": f"Pedido confirmado y enviado a {email}" + (f" (vía {email_provider})" if email_provider else ""),
-                "orderId": order_record["id"],
+                **base_response,
+                "message": f"Pedido confirmado y enviado a {email}" + (f" (vía {email_provider})" if email_provider else "") + (f". Orden de fabricación Nº FAB: {manufacturing_number} creada." if manufacturing_number else ""),
                 "emailProvider": email_provider
             }
         else:
             return {
-                "success": True,
-                "message": f"Pedido confirmado. El email no se pudo enviar (problema con SendGrid y Resend). Contacte con soporte técnico.",
-                "orderId": order_record["id"],
+                **base_response,
+                "message": f"Pedido confirmado." + (f" Orden de fabricación Nº FAB: {manufacturing_number} creada." if manufacturing_number else "") + " El email no se pudo enviar (problema con SendGrid y Resend). Contacte con soporte técnico.",
                 "warning": "Email no enviado"
             }
         
