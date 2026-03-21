@@ -366,6 +366,18 @@ const PortalFabrica = ({ currentUser }) => {
                           {assignedFactory.code}
                         </span>
                       )}
+                      {order.factoryType === 'external' && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 flex items-center gap-1" title="Fábrica Externa">
+                          <Truck size={10} />
+                          EXT: {order.factoryName || 'Subcontratada'}
+                        </span>
+                      )}
+                      {!assignedFactory && order.factoryType !== 'external' && !order.factoryId && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 flex items-center gap-1" title="Fábrica Propia">
+                          <Factory size={10} />
+                          Propia
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-indigo-600 mt-0.5">{order.customerName || 'Sin cliente'}</p>
                   </div>
@@ -553,7 +565,10 @@ const PortalFabrica = ({ currentUser }) => {
       deliveryAddress: '',
       priority: 'normal',
       items: [],
-      internalNotes: ''
+      internalNotes: '',
+      factoryType: 'internal',
+      factoryId: '',
+      factoryName: ''
     });
     const [newItem, setNewItem] = useState({
       productCode: '',
@@ -578,6 +593,22 @@ const PortalFabrica = ({ currentUser }) => {
         ...prev,
         items: prev.items.filter((_, i) => i !== index)
       }));
+    };
+
+    const handleFactoryChange = (factoryId) => {
+      if (factoryId === 'external') {
+        setFormData(prev => ({ ...prev, factoryType: 'external', factoryId: '', factoryName: '' }));
+      } else if (factoryId) {
+        const factory = factories.find(f => f.id === factoryId);
+        setFormData(prev => ({ 
+          ...prev, 
+          factoryType: 'internal', 
+          factoryId: factoryId, 
+          factoryName: factory?.name || '' 
+        }));
+      } else {
+        setFormData(prev => ({ ...prev, factoryType: 'internal', factoryId: '', factoryName: '' }));
+      }
     };
 
     const handleSubmit = async () => {
@@ -655,6 +686,49 @@ const PortalFabrica = ({ currentUser }) => {
                   <option value="urgent">Urgente</option>
                 </select>
               </div>
+            </div>
+
+            {/* Selector de Fábrica */}
+            <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-4 border border-indigo-200">
+              <label className="text-xs font-bold text-indigo-600 uppercase flex items-center gap-2 mb-2">
+                <Building2 size={14} />
+                Fábrica de Producción
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <select
+                    value={formData.factoryType === 'external' ? 'external' : formData.factoryId}
+                    onChange={(e) => handleFactoryChange(e.target.value)}
+                    className="w-full px-4 py-2 border border-indigo-300 rounded-xl focus:border-indigo-500 outline-none bg-white"
+                    data-testid="new-order-factory-select"
+                  >
+                    <option value="">Mi Fábrica (Interna)</option>
+                    {factories.map(f => (
+                      <option key={f.id} value={f.id}>{f.name} ({f.code})</option>
+                    ))}
+                    <option value="external">🏭 Fábrica Externa / Subcontratada</option>
+                  </select>
+                </div>
+                {formData.factoryType === 'external' && (
+                  <div>
+                    <input
+                      type="text"
+                      value={formData.factoryName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, factoryName: e.target.value }))}
+                      className="w-full px-4 py-2 border border-indigo-300 rounded-xl focus:border-indigo-500 outline-none"
+                      placeholder="Nombre de la fábrica externa"
+                      data-testid="new-order-factory-external-name"
+                    />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-indigo-500 mt-2">
+                {formData.factoryType === 'external' 
+                  ? '📦 Esta orden será producida por una fábrica subcontratada'
+                  : formData.factoryId 
+                    ? `✓ Producción asignada a ${factories.find(f => f.id === formData.factoryId)?.name || 'fábrica seleccionada'}`
+                    : '🏠 Producción en tu propia fábrica'}
+              </p>
             </div>
 
             <div>

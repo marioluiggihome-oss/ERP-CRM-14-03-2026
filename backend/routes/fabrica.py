@@ -61,10 +61,16 @@ class ManufacturingOrder(BaseModel):
     """Orden de fabricación completa"""
     id: str = Field(default_factory=lambda: f"mfg-{uuid.uuid4().hex[:8]}")
     orderNumber: str = ""  # OF-2026-001
+    manufacturingNumber: Optional[int] = None  # Número secuencial de fabricación
     # Información del origen
-    sourceType: str = "manual"  # manual, pdf_import, budget_import
+    sourceType: str = "manual"  # manual, pdf_import, budget_import, order_confirmation
     sourceBudgetId: Optional[str] = None
+    sourceOrderId: Optional[str] = None
     sourceFileName: Optional[str] = None
+    # Asignación de Fábrica
+    factoryType: str = "internal"  # internal (propia) o external (subcontratada)
+    factoryId: Optional[str] = None  # ID de la fábrica asignada
+    factoryName: Optional[str] = None  # Nombre de la fábrica
     # Cliente
     customerName: str = ""
     customerCode: str = ""
@@ -106,6 +112,10 @@ class ManufacturingOrderCreate(BaseModel):
     items: List[Dict] = []
     internalNotes: str = ""
     productionNotes: str = ""
+    # Asignación de fábrica
+    factoryType: str = "internal"  # internal o external
+    factoryId: Optional[str] = None
+    factoryName: Optional[str] = None
 
 
 class ManufacturingOrderUpdate(BaseModel):
@@ -124,6 +134,10 @@ class ManufacturingOrderUpdate(BaseModel):
     internalNotes: Optional[str] = None
     productionNotes: Optional[str] = None
     deliveryNotes: Optional[str] = None
+    # Asignación de fábrica
+    factoryType: Optional[str] = None
+    factoryId: Optional[str] = None
+    factoryName: Optional[str] = None
 
 
 class PDFImportRequest(BaseModel):
@@ -215,7 +229,11 @@ async def create_manufacturing_order(order: ManufacturingOrderCreate, userId: st
             "productionNotes": order.productionNotes,
             "deliveryNotes": "",
             "createdByUserId": userId,
-            "createdByName": userName
+            "createdByName": userName,
+            # Asignación de fábrica
+            "factoryType": order.factoryType or "internal",
+            "factoryId": order.factoryId,
+            "factoryName": order.factoryName
         }
         
         await db.manufacturing_orders.insert_one(order_doc)
