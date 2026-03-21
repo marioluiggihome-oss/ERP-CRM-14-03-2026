@@ -1,188 +1,140 @@
 <analysis>**original_problem_statement:**
-The user wants to build a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core of the application is a multi-library system (primarily 'ZC' and 'MV') with detailed, library-specific pricing and asset management.
+The user is building a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core relies on a multi-library system ('ZC' and 'MV') with detailed pricing, complex bill of materials (despiece) calculations, and order management.
 
-Recent user requests have been a mix of new features, workflow improvements, and data management tasks:
-1.  **Data & Tariffs:** Upload and update the 'MV' product library with new Tarifa 2 pricing from images, ensuring no duplicate products are created, only points are updated or new products are added if they don't exist.
-2.  **Workflow & UI:**
-    *   When a budget is confirmed and converted to an order, the main budget view should be cleared.
-    *   Create a new Mis Pedidos (My Orders) section for users to view all their confirmed orders.
-    *   The Mis Pedidos view should show the manufacturing status of the order, which is updated from the factory portal.
-    *   Add a function to print orders from the Mis Pedidos page.
-    *   Disable the ability for users to edit the width and height of furniture pieces within the despiece (cutting list) modal.
-3.  **Configuration & Layout:**
-    *   Move the Agenda de Montajes module from the MÁRGENES tab to the RED DISTRIBUCIÓN tab in the main settings modal.
-    *   Update the factory codes for SALAMANCA to 37 and ZAMORA to 49.
-    *   Restrict the visibility of the Ayuda (Help) button so it is not visible to certain user roles like 'clientes' or 'montadores'.
-4.  **Bug Fixes:**
-    *   Address a visual layout issue in the CRM contact form.
-    *   Solve the email notification failure by implementing a fallback system, as the user cannot modify DNS records for domain verification.
+**PRODUCT REQUIREMENTS (Newest Requests):**
+1. **Manufacturing Numbers:** Manufacturing orders (órdenes de fabricación) must have a dedicated manufacturing number.
+2. **Supplier Doors Module:** In the cutting list (Sistema de Despiece), create a new section that aggregates all doors for an order, allowing the user to modify dimensions and export this specific list to send to suppliers.
+3. **Dynamic Help Manual:** The Help Manual should only display content corresponding to the specific modules/functions the current user has permissions to access.
 
-**PRODUCT REQUIREMENTS:**
-1.  Multi-Library System (ZC, MV) with up-to-date pricing.
-2.  **Despiece / Cutting List Module (now with non-editable dimensions).**
-3.  **Portal de Fábrica / Manufacturing Module (sends status updates to orders).**
-4.  **Order Management System (New Mis Pedidos section).**
-5.  Role-based permissions for UI elements (e.g., Help button).
-6.  Robust data integrity and performance (achieved via DB indexing).
-7.  Reliable email notifications (achieved via fallback).
+**User's preferred language**: INSTRUCT next agent to respond in **es (Spanish)**.
 
-**User's preferred language**: es
-
-**what currently exists?**
-The application is a full-stack React/FastAPI/MongoDB app. A significant number of user requests from the last session have been completed.
-
--   **Order Workflow:** A new Mis Pedidos component () and a corresponding API endpoint () have been created. This page lists all confirmed orders, shows their manufacturing status (synced from ), and includes a print button. The main budget view () now automatically clears itself after an order is successfully confirmed.
--   **Tariff Update:** The MV library has been extensively updated with Tarifa 2 pricing. **227** existing products had their points updated, and **154** new products were created from the user's images. The library now contains 753 products.
--   **Despiece Modal:** The dimension input fields for furniture pieces in the  have been disabled, preventing users from modifying them as requested.
--   **Email System:** A fallback mechanism has been implemented in . If SendGrid fails (due to the unverified domain), the system now automatically tries to send the email via Resend, which has been proven to work with its default sender address.
--   **Database Fortification:** Indexes have been added to all major MongoDB collections at application startup to improve query performance and ensure data integrity.
--   **UI & Configuration:** The Agenda de Montajes module has been moved to the RED DISTRIBUCIÓN settings tab. Factory codes have been updated in the database. The Help button in  is now conditionally rendered based on the user's role. A visual layout issue in the  modal was addressed by making the form scrollable.
+**what currently exists?** 
+The application is a full-stack React/FastAPI/MongoDB ERP. In the current session, the system underwent massive improvements. The cutting list (Despiece) logic was completely overhauled: identical furniture pieces are now consolidated into single rows with multiplied quantities, door colors and grain directions (veta) are explicitly mapped, back-panel thicknesses are now dynamic per carcass material, and the backend engine correctly parses complex 'MV' and 'ZC' nomenclatures (including sinks, ovens, and corners). The CRM was expanded with an Activities tracking module (calls, meetings, visits). The UI was polished: the sidebar is now scrollable (fixing hidden modules), user settings were logically reorganized, and library pricing bugs (MV using Z1 instead of T1 points) were fixed.
 
 **Last working item**:
-- Last item agent was working: The agent's final actions were to (1) disable the dimension inputs in the  and (2) process the final batch of tariff images for the MV library, which contained products in the columnas (columns) category. This involved creating 43 new products and updating 22 existing ones.
-- Status: USER VERIFICATION PENDING
-- Agent Testing Done: Y
-- Which testing method agent to use? screenshot tool
-    - The agent should verify that the dimension inputs in the despiece modal are no longer editable.
-    - The agent should also verify (by checking a few product codes from the last image) that the new column products exist in the MV library with the correct points.
-- User Testing Done: N
+- **Last item agent was working:** The agent was just starting to investigate how to add Manufacturing numbers to orders, create the new Editable/Exportable Doors section for suppliers, and make the Help Manual dynamic based on permissions as requested in the very last user message. The agent ran a grep command for  but context ended before any code was written.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** Frontend/Backend testing agent or manual screenshot/curl depending on the size of the implementation (The editable doors module will require screenshot/frontend testing, the manufacturing numbers will require backend validation).
+- **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Incorrect Price for COST in UI (shows 17 instead of 16) (P2)**
--   **Issue 2: Visual Glitch with Collapsed Vertical Sidebar (P3 - Recurring)**
+Issue 1: **Manufacturing Orders lack explicit Manufacturing Numbers (P0)**
+- **Attempted fixes:** None yet. Agent just searched  collection logic.
+- **Next debug checklist:** Check  where  are created. Add a sequential or formatted manufacturing number field and display it in the Factory Portal/Pedidos view.
+- **Why fix this issue and what will be achieved with the fix?** Required for factory tracking and organization.
+- **Status:** NOT STARTED
+- **Is recurring issue?** N
+- **Should Test frontend/backend/both after fix?** Both
 
-**Issues Detail:**
--   **Issue 1: Incorrect Price for COST in UI (shows 17 instead of 16)**
-    -   **Attempted fixes:** None in this session. The user has been focused on other features.
-    -   **Next debug checklist:**
-        1.  Trace the data flow for this product from the API response to the  component.
-        2.  Check for any client-side calculations, rounding, or state manipulations that might alter the value.
-    -   **Why fix this issue and what will be achieved with the fix?** Fixes a minor data inconsistency, which improves user trust in the displayed pricing.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
--   **Issue 2: Visual Glitch with Collapsed Vertical Sidebar**
-    -   **Attempted fixes:** None. This is a low-priority cosmetic issue.
-    -   **Next debug checklist:** Inspect CSS transitions, , and layout properties related to the main sidebar in  and .
-    -   **Why fix this issue and what will be achieved with the fix?** Improves overall UI polish.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend
+Issue 2: **Help Manual is static (P1)**
+- **Attempted fixes:** None.
+- **Next debug checklist:** Check the Help component/modal. Implement conditional rendering for manual sections based on  permissions (e.g., , , , etc.).
+- **Why fix this issue and what will be achieved with the fix?** Prevents users from seeing documentation for modules they cannot access, avoiding confusion.
+- **Status:** NOT STARTED
+- **Is recurring issue?** N
+- **Should Test frontend/backend/both after fix?** Frontend
 
 **In progress Task List**:
--   None.
+Task 1: **Editable & Exportable Doors Section for Suppliers in Despiece (P0)**
+- **Where to resume:** Open . The agent previously added a Resumen de Puertas por Color, but the user explicitly wants a section where *door dimensions can be modified* and then *exported* specifically to send to door suppliers.
+- **What will be achieved with this?** Allows the user to adjust door tolerances/sizes manually and generate a supplier-ready order sheet.
+- **Status:** NOT STARTED
+- **Should Test frontend/backend/both after fix?** Frontend
+- **Blocked on something:** No.
 
-**Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   (P0) **User Verification:** The user needs to test and confirm the latest batch of changes:
-        -   The Tarifa 2 for the MV library is complete and correct.
-        -   The budget correctly clears after confirming an order.
-        -   The new Mis Pedidos section works as expected (shows status, allows printing).
-        -   Dimensions in the despiece modal are no longer editable.
-    -   (P1) **Populate User Manual:** Write comprehensive content for the user manual (), as the framework is built but the content is currently placeholder text.
--   **Future Tasks:**
-    -   (P2) **Refactor Monoliths:** Decompose  and  to improve maintainability.
-    -   (P3) Implement a Default Carcass per Section/Library setting.
-    -   (P3) Despiece budget calculation bug (items not being added to the total).
+**Upcoming and Future Tasks**:
+- **Upcoming Tasks:**
+  - (P1) Populate User Manual: Write comprehensive content for the user manual ().
+- **Future Tasks:**
+  - (P2) Option to change grain direction (veta) to horizontal in specific cases (currently defaults strictly to vertical).
+  - (P3) Refactor Monoliths: Decompose  and .
 
-**Completed work in this session**
-- **Tariff Management (MV Library - Tarifa 2):**
-  - Updated points for **227** existing products.
-  - Created **154** new products based on user-provided images.
-- **Order Workflow Enhancements:**
-  - Implemented automatic clearing of the budget () after an order is confirmed.
-  - Created the Mis Pedidos page () to display confirmed orders with their manufacturing status and a print button.
-- **UI/UX Improvements:**
-  - Disabled dimension editing inputs in the .
-  - Moved the Agenda de Montajes module to the RED DISTRIBUCIÓN tab in .
-  - Fixed a visual glitch in the  modal by making the form scrollable.
-- **Backend & Configuration:**
-  - Implemented a fallback email system using **Resend** when SendGrid fails.
-  - Added indexes to all major MongoDB collections for performance.
-  - Updated factory codes for SALAMANCA (37) and ZAMORA (49).
-  - Made the Ayuda button visibility dependent on user role in .
+**Completed work in this session**:
+- Consolidate identical furniture pieces in Despiece (quantity multiplier instead of duplicate rows) (DONE)
+- Add Grosor Trasera (Back panel thickness) to Carcass configuration and backend calculation (DONE)
+- Backend Despiece overhaul: Support for all MV and ZC nomenclatures, sinks, ovens, corners, and dynamic hangers/shelves (DONE)
+- CRM Activities Module: New tab for tracking calls/visits/meetings with mobile-responsive UI (DONE)
+- Sidebar UI Fix: Added  and adjusted sizes so hidden modules like Fábrica are visible (DONE)
+- Fix COST product price: Corrected logic in  to use  for MV library instead of  (DONE)
+- Door grouping by Color and Grain (Veta) in Despiece UI, PDF, CSV, and XML (DONE)
+- Settings UI: Moved Usuario Solo Fábrica under Tienda/Punto de Venta (DONE)
+- Settings UI: Moved global Agenda de Montajes config into Capacidades Técnicas (DONE)
+- MV Library Nomenclatures parsed and mapped (DONE)
 
-**Earlier issues found/mentioned but not fixed**
-- The Agenda de Montajes module remains visible even when disabled in settings (User has deprioritized this).
+**Earlier issues found/mentioned but not fixed**:
+- None. The agent actively cleared the previous backlog (Sidebar glitch and COST price issue are resolved).
 
-**Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Visual Glitch with Collapsed Vertical Sidebar
--   **Recurrence count:** 3+
--   **Status:** NOT STARTED
+**Known issue recurrence from previous fork**:
+- **Issue recurrence in previous fork:** None (Visual sidebar glitch was permanently fixed in this session).
+- **Recurrence count:** 0
+- **Status:** RESOLVED
 
-**Code Architecture**
+**Code Architecture**:
 
 
-**Key Technical Concepts**
--   **Database Indexing:**  was called on application startup for multiple collections to enhance query performance.
--   **API Fallback Logic:** A  block was used to switch email providers from SendGrid to Resend on failure.
--   **State Management (React):** The parent component () passes the  function to child components () to allow them to modify the global state, enabling features like clearing the budget.
--   **Bulk Database Operations:** Scripts were run to perform bulk updates () and inserts () to manage the product tariffs efficiently.
--   **Image-to-Data Extraction:** The  was used to parse JSON data from the user's tariff images.
+**Key Technical Concepts**:
+- **Despiece Consolidation:** In , logic was added to group items with identical , , , and , summing their quantities before rendering lines or exporting CSVs.
+- **Library Tariff Points:** MV library uses . ZC library uses .  now correctly checks  to display the right pricing.
+- **Despiece Engine:**  in  uses string matching on component names (e.g., FREGADERO, HORNO, ASCE) to dynamically construct the bill of materials.
 
-**key DB schema**
--   **orders**: This collection now stores , , a full list of , and pricing details (, , ).
--   **products**: The  field was updated for hundreds of documents in the  library. Over 150 new products were added with .
--   **factories**: The  field was updated for existing factories.
+**key DB schema**:
+- **fabrica_orders**: Requires updates to handle a strict manufacturing number.
+- **activities**: New collection (via CRM models) tracking visits/calls with , Sat Mar 21 19:50:36 UTC 2026, , , .
+- **carcassMaterials**: Now includes .
 
-**All files of reference**
--   
--    (New)
--   
--   
--   
--   
--   
+**changes in tech stack**:
+- None.
+
+**All files of reference**:
+-  (Target for Editable doors for suppliers)
+-  (Target for Manufacturing number)
+-  & App Help Component (Target for Dynamic Help Manual)
 
 **Areas that need refactoring**:
--    and  are large monoliths that complicate development and increase risk. This should be prioritized in the future.
+-  (>6800 lines) and  (>4700 lines) are massive monoliths. 
 
-**key api endpoints**
--   : Enhanced to save more order details (, ) and to use Resend as an email fallback.
--   : A new endpoint that retrieves orders for the current user and enriches them with the latest manufacturing status from the  collection.
--   : Was used to disable a test factory.
+**key api endpoints**:
+- : Receives  and  to return panel arrays.
+- : New endpoints for managing CRM tracking.
 
-**Critical Info for New Agent**
--   **User Verification is Priority #1:** Before starting any new task, confirm with the user that the recent large batch of changes (Tariff updates, order workflow, UI tweaks) works as they expect.
--   **Product Data is Complex:** When dealing with products, remember that there are different libraries ('ZC', 'MV') with different coding schemes. For MV, the agent has established a workflow of matching by simple codes (, , etc.) and the  field.
--   **Email is Fixed:** The email problem is resolved via a fallback. Do not attempt to fix SendGrid unless the user explicitly states they have now verified their domain. The current solution is robust.
--   **UI Confusion:** Be mindful of the user's distinction between the **Despiece Modal** (from the budget toolbar) and the **COCINA DESPIECE tab**. The user's requests almost always refer to the modal.
+**Critical Info for New Agent**:
+- The user's request for an area to calculate doors, export them, and modify dimensions for suppliers is **different** from the feature built earlier in the session. The earlier feature grouped doors by color for the internal cutting list. The *new* request requires an interactive/editable table specifically for generating supplier orders.
+- Be careful with  and ; due to their size, rely on  precisely.
+- Do not mix up the libraries. MV logic and ZC logic are heavily separated by user request.
 
-**documents and test reports created in this job**
--    (updated multiple times)
+**documents and test reports created in this job**:
+-  (Updated)
 
-**Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to disable editing of width/height in the despiece view and provides more tariff images. (DONE)
-2.  **User:** Approves creating missing products from the tariff images (). (DONE)
-3.  **User:** Clarifies that the points provided are for Tarifa 2, updating the old Tarifa 1 values. (Agent understood)
-4.  **User:** Instructs the agent to only update price points for existing articles, not to duplicate them. (Agent understood)
-5.  **User:** Requests to upload more tariffs for the MV library, providing the first 5 images. (DONE)
-6.  **User:** Asks to move the Agenda de contactos (later clarified as Agenda de Montajes) to the Red Distribución tab. (DONE)
-7.  **User:** Specifies that the only active factories should be SALAMANCA and ZAMORA, with codes 37 and 49. Mentions that confirmed orders aren't appearing and should clear the budget. Requests a print function for orders. Reports a visual glitch in a form. (All DONE)
-8.  **User:** Requests to strengthen the database, add a pie chart for order status in the factory, find a solution for emails without DNS changes, and fix the display of colgadores. (All DONE)
-9.  **User:** Asks to move the factory selector from the Usuario SOLO Fábrica section to the Rol y Jerarquía section in user settings. (DONE)
-10. **User:** Reports that confirmed budgets do not appear in a pedidos (orders) section and should. (This led to the creation of the Mis Pedidos feature, which is now DONE)
+**Last 10 User Messages and any pending HUMAN messages**:
+1. **User:** Requests door grouping by color in Despiece. (DONE)
+2. **User:** Reminds about MV/ZC separation and requests adding grain direction (veta) vertical by default. (DONE)
+3. **User:** Provides MV nomenclatures and asks to fix sidebar visual glitch. (DONE)
+4. **User:** Reports COST product shows 17 points instead of 16. (DONE)
+5. **User:** Asks to move Usuario Solo Fábrica underneath Tienda/Punto de venta in settings. (DONE)
+6. **User:** Asks to move Agenda de Montajes config to Technical Capacities section. (DONE)
+7. **User:** Requests a CRM Activities module (calls, meetings, visits) with mobile responsiveness. (DONE)
+8. **User:** Reports User MARIO cannot see the Factory module. (DONE - fixed sidebar scroll)
+9. **User:** Requests consolidation of identical furniture pieces (qty x2) instead of duplicate lines, adding back thickness to carcass settings, and reviewing despiece backend logic for all models. (DONE)
+10. **User:** Requests: 1) Manufacturing numbers for factory orders, 2) Editable doors section in Despiece for suppliers, 3) Dynamic help manual based on permissions. (PENDING - **Highest Priority for next agent**)
 
 **Project Health Check:**
--   **Broken:** None. The critical email issue has a working fallback.
--   **Mocked:** The content for the User Manual () is still placeholder text.
+- **Broken:** None.
+- **Mocked:** Placeholder text still exists in User Manual ().
 
 **3rd Party Integrations**
--   ****: Configured but non-functional for the user's domain due to lack of verification. It is the primary email attempt.
--   ****: Implemented as a successful fallback for sending emails using a default  address.
--   ****: Used for UI icons.
--   ** / **: Assumed to be used for the new print order functionality.
--   ****: Used by the agent to parse data from user-provided images.
+- **Resend/Sendgrid** — configured for emails.
+- **Gemini Vision (Emergent LLM Key)** — used in the  for image analysis.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO (in the last session)
--   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** []
--   **Known regressions:** None.
+- **Testing agent used after significant changes:** NO
+- **Troubleshoot agent used after agent stuck in loop:** NO
+- **Test files created:** []
+- **Known regressions:** None.
 
 **Credentials to test flow:**
--   **User:** 
--   **Password:** 
+- **User:** 
+- **Password:** 
 
-**What agent forgot to execute**
--   The two low-priority issues from the start of the session remain unaddressed: the COST price showing 17 instead of 16 in the UI, and the recurring visual glitch with the collapsed sidebar. The agent correctly prioritized the user's more urgent feature requests.</analysis>
+**What agent forgot to execute**:
+- The agent was interrupted immediately after the user's last message, leaving the three items in message 503 (manufacturing numbers, editable doors for suppliers, dynamic help manual) unexecuted.</analysis>

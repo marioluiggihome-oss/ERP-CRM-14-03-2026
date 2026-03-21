@@ -149,7 +149,7 @@ class PDFImportResult(BaseModel):
 async def create_manufacturing_order(order: ManufacturingOrderCreate, userId: str = "", userName: str = ""):
     """Crear nueva orden de fabricación"""
     try:
-        # Generar número de orden
+        # Generar número de orden (formato: OF-2026-0001)
         current_year = datetime.now().year
         counter_id = f"manufacturing_order_{current_year}"
         
@@ -161,6 +161,15 @@ async def create_manufacturing_order(order: ManufacturingOrderCreate, userId: st
         )
         seq_number = result["seq"]
         order_number = f"OF-{current_year}-{seq_number:04d}"
+        
+        # Generar número de fabricación secuencial global (más corto, para uso interno)
+        mfg_counter = await db.counters.find_one_and_update(
+            {"_id": "manufacturing_number_global"},
+            {"$inc": {"seq": 1}},
+            upsert=True,
+            return_document=True
+        )
+        manufacturing_number = mfg_counter["seq"]
         
         # Calcular totales
         total_pieces = 0
@@ -184,6 +193,7 @@ async def create_manufacturing_order(order: ManufacturingOrderCreate, userId: st
         order_doc = {
             "id": f"mfg-{uuid.uuid4().hex[:8]}",
             "orderNumber": order_number,
+            "manufacturingNumber": manufacturing_number,  # Número de fabricación secuencial
             "sourceType": "manual",
             "customerName": order.customerName,
             "customerCode": order.customerCode,

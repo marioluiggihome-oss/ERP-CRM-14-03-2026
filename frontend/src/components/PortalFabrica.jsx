@@ -348,6 +348,11 @@ const PortalFabrica = ({ currentUser }) => {
                   <div>
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-black text-indigo-900">{order.orderNumber}</span>
+                      {order.manufacturingNumber && (
+                        <span className="px-2 py-0.5 rounded bg-indigo-950 text-white text-xs font-bold" title="Número de Fabricación">
+                          Nº FAB: {order.manufacturingNumber}
+                        </span>
+                      )}
                       <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusConfig.color}`}>
                         <StatusIcon size={12} className="inline mr-1" />
                         {statusConfig.label}

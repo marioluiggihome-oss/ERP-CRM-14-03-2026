@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench, Maximize2, Minimize2, LayoutGrid } from 'lucide-react';
+import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench, Maximize2, Minimize2, LayoutGrid, DoorOpen, Truck, Send } from 'lucide-react';
 import { despieceAPI } from '../services/api';
 import BoardOptimizer from './BoardOptimizer';
 
@@ -7,7 +7,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeView, setActiveView] = useState('montaje'); // 'montaje', 'corte', 'bandas', 'herrajes'
+  const [activeView, setActiveView] = useState('montaje'); // 'montaje', 'corte', 'bandas', 'herrajes', 'puertas_proveedor'
+  const [supplierDoors, setSupplierDoors] = useState([]); // Puertas editables para proveedor
   const [expandedItems, setExpandedItems] = useState({});
   const [editingComponent, setEditingComponent] = useState(null);
   const [editedComponents, setEditedComponents] = useState({});
@@ -116,6 +117,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       });
       setExpandedItems(expanded);
       
+      // Inicializar puertas para proveedor con datos calculados
+      initializeSupplierDoors(result.items);
+      
     } catch (err) {
       console.error('Despiece error:', err);
       setError(err.message);
@@ -129,6 +133,263 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       ...prev,
       [productId]: !prev[productId]
     }));
+  };
+
+  // Función para detectar tipo de mueble (ALTO, BAJO, COLUMNA) - Reutilizable
+  const detectTipoMueble = (code, name) => {
+    const c = (code || '').toUpperCase();
+    const n = (name || '').toUpperCase();
+    
+    // COLUMNAS (detectar primero - más específico)
+    const columnaPrefixes = ['CD', 'CE', 'CF', 'CH', 'CHPC', 'CHGC', 'CHC', 'CHM', 'CHMG', 'CHMC', 'CHMCG', 'BOC'];
+    if (columnaPrefixes.some(prefix => c.startsWith(prefix))) return 'COLUMNAS';
+    const mediaColumnaPrefixes = ['MGHM', 'MCHM', 'MPG', 'MVG', 'MPH', 'MPM'];
+    if (mediaColumnaPrefixes.some(prefix => c.startsWith(prefix))) return 'COLUMNAS';
+    if (/^M\d/.test(c) || /^MV\d/.test(c)) return 'COLUMNAS';
+    if (n.includes('COLUMNA') || n.includes('SEMICOLUMNA') || n.includes('MEDIACOLUMNA')) return 'COLUMNAS';
+    
+    // ALTOS
+    const altoPrefixes = ['ASCE', 'ASC', 'ARI', 'ARU', 'ARC', 'AD', 'AV', 'AE', 'AMF', 'AM', 'ACA', 'ACC', 'ASF', 'ATP', 'AT', 'AA', 'ACPJ', 'ACP', 'AC', 'AR'];
+    if (altoPrefixes.some(prefix => c.startsWith(prefix))) return 'ALTOS';
+    if (/^A\d/.test(c) || /^9A/.test(c)) return 'ALTOS';
+    const altilloSobrePrefixes = ['LD', 'LV', 'SVC', 'SV', 'SC', 'BOA', 'BOS'];
+    if (altilloSobrePrefixes.some(prefix => c.startsWith(prefix))) return 'ALTOS';
+    if (/^L\d/.test(c) || /^S\d/.test(c)) return 'ALTOS';
+    if (n.includes('ALTO') || n.includes('ALTILLO') || n.includes('SOBREENCIMERA') || n.includes('SOBREM')) return 'ALTOS';
+    
+    // BAJOS
+    const bajoPrefixes = ['BRI', 'BRU', 'BR', 'BHZ', 'BHG', 'BHC', 'BH', 'BTP', 'BT', 'BPC', 'BCGF', 'BCG', 'BGF', 'BGC', 'BC', 'BF'];
+    if (bajoPrefixes.some(prefix => c.startsWith(prefix))) return 'BAJOS';
+    if (/^B\d/.test(c) || /^9B/.test(c)) return 'BAJOS';
+    if (n.includes('BAJO') || n.includes('FREGADERO') || (n.includes('HORNO') && !n.includes('COLUMNA'))) return 'BAJOS';
+    
+    // Puertas sueltas = BAJOS por defecto
+    if (c.startsWith('P') || c.startsWith('PV') || c.startsWith('PVI') || c.startsWith('PVR')) return 'BAJOS';
+    
+    return 'BAJOS';
+  };
+
+  // Inicializar puertas editables para proveedor
+  const initializeSupplierDoors = (items) => {
+    const doors = [];
+    let doorIndex = 0;
+    
+    items?.forEach(furniture => {
+      const tipoMueble = detectTipoMueble(furniture.productCode, furniture.productName);
+      
+      // Determinar color según tipo
+      let color = '';
+      if (tipoMueble === 'ALTOS') color = doorColorHigh || 'Sin especificar';
+      else if (tipoMueble === 'BAJOS') color = doorColorLow || 'Sin especificar';
+      else color = doorColorColumns || 'Sin especificar';
+      
+      const puertaComps = furniture.components?.filter(c => 
+        c.name?.toLowerCase().includes('puerta') || 
+        c.type?.toUpperCase() === 'PUERTA'
+      ) || [];
+      
+      puertaComps.forEach(p => {
+        const itemQty = furniture.itemQuantity || 1;
+        const doorQty = p.quantity || 1;
+        
+        for (let i = 0; i < doorQty * itemQty; i++) {
+          doors.push({
+            id: `door-${doorIndex++}`,
+            muebleCode: furniture.productCode,
+            muebleName: furniture.productName,
+            tipoMueble: tipoMueble,
+            color: color,
+            alto: p.length || 0,
+            ancho: p.width || 0,
+            veta: 'V', // Vertical por defecto
+            observaciones: ''
+          });
+        }
+      });
+    });
+    
+    setSupplierDoors(doors);
+  };
+
+  // Actualizar puerta de proveedor
+  const updateSupplierDoor = (doorId, field, value) => {
+    setSupplierDoors(prev => prev.map(d => 
+      d.id === doorId ? { ...d, [field]: value } : d
+    ));
+  };
+
+  // Exportar CSV de puertas para proveedor
+  const handleExportSupplierDoorsCSV = () => {
+    if (!supplierDoors || supplierDoors.length === 0) {
+      alert('No hay puertas para exportar');
+      return;
+    }
+    
+    // Agrupar puertas por dimensiones y color
+    const grouped = {};
+    supplierDoors.forEach(d => {
+      const key = `${d.alto}_${d.ancho}_${d.color}_${d.veta}`;
+      if (!grouped[key]) {
+        grouped[key] = { ...d, cantidad: 1 };
+      } else {
+        grouped[key].cantidad++;
+      }
+    });
+    
+    // Generar CSV
+    let csv = "PEDIDO PUERTAS - PROVEEDOR\n";
+    csv += `Cliente: ${editableCustomerName || '-'}\n`;
+    csv += `Expediente: ${editableExpedient || '-'}\n`;
+    csv += `Fecha: ${new Date().toLocaleDateString('es-ES')}\n\n`;
+    csv += "Color;Alto (cm);Ancho (cm);Veta;Cantidad;Tipo Mueble;Observaciones\n";
+    
+    Object.values(grouped).forEach(d => {
+      csv += `${d.color};${d.alto};${d.ancho};${d.veta === 'V' ? 'Vertical' : 'Horizontal'};${d.cantidad};${d.tipoMueble};${d.observaciones || ''}\n`;
+    });
+    
+    // Totales
+    csv += `\nTOTAL PUERTAS: ${supplierDoors.length}\n`;
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const nombreArchivo = `PUERTAS_PROVEEDOR_${(editableExpedient || 'EXP').replace(/[^a-zA-Z0-9-]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('download', nombreArchivo);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Exportar PDF de puertas para proveedor
+  const handleExportSupplierDoorsPDF = () => {
+    if (!supplierDoors || supplierDoors.length === 0) {
+      alert('No hay puertas para exportar');
+      return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    const fechaHoy = new Date().toLocaleDateString('es-ES');
+    
+    // Agrupar puertas
+    const grouped = {};
+    supplierDoors.forEach(d => {
+      const key = `${d.alto}_${d.ancho}_${d.color}_${d.veta}`;
+      if (!grouped[key]) {
+        grouped[key] = { ...d, cantidad: 1 };
+      } else {
+        grouped[key].cantidad++;
+      }
+    });
+    
+    let html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>PEDIDO PUERTAS - PROVEEDOR</title>
+        <style>
+          @page { size: A4 portrait; margin: 15mm; }
+          @media print { body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #333; line-height: 1.4; }
+          .header { background: #1e40af; color: white; padding: 20px; margin-bottom: 15px; }
+          .header h1 { font-size: 18px; margin-bottom: 5px; }
+          .header-subtitle { font-size: 10px; opacity: 0.9; }
+          .info-box { background: #f3f4f6; border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; }
+          .info-item { text-align: center; }
+          .info-label { font-size: 9px; color: #666; text-transform: uppercase; font-weight: bold; }
+          .info-value { font-size: 14px; font-weight: bold; margin-top: 3px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          th { background: #1e40af; color: white; padding: 10px; font-size: 10px; text-align: left; font-weight: bold; text-transform: uppercase; }
+          td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+          tr:nth-child(even) { background: #f9fafb; }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .font-bold { font-weight: bold; }
+          .total-row { background: #dbeafe !important; }
+          .total-row td { font-weight: bold; font-size: 13px; border-top: 2px solid #1e40af; }
+          .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9px; color: #666; text-align: center; }
+          .veta-badge { background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; }
+          .color-badge { background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>📦 PEDIDO DE PUERTAS - PROVEEDOR</h1>
+          <div class="header-subtitle">LUIGGI HOME - Documento para envío a proveedor</div>
+        </div>
+        
+        <div class="info-box">
+          <div class="info-item">
+            <div class="info-label">Cliente</div>
+            <div class="info-value">${editableCustomerName || '-'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Expediente</div>
+            <div class="info-value">${editableExpedient || '-'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Referencia</div>
+            <div class="info-value">${editableProjectRef || '-'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Fecha Pedido</div>
+            <div class="info-value">${fechaHoy}</div>
+          </div>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Color/Acabado</th>
+              <th class="text-center">Alto (cm)</th>
+              <th class="text-center">Ancho (cm)</th>
+              <th class="text-center">Veta</th>
+              <th class="text-center">Cantidad</th>
+              <th>Tipo</th>
+              <th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    Object.values(grouped).forEach(d => {
+      html += `
+        <tr>
+          <td><span class="color-badge">${d.color}</span></td>
+          <td class="text-center font-bold">${d.alto}</td>
+          <td class="text-center font-bold">${d.ancho}</td>
+          <td class="text-center"><span class="veta-badge">${d.veta === 'V' ? '↕ Vertical' : '↔ Horizontal'}</span></td>
+          <td class="text-center font-bold" style="font-size:14px;">${d.cantidad}</td>
+          <td>${d.tipoMueble}</td>
+          <td style="font-size:9px;">${d.observaciones || '-'}</td>
+        </tr>
+      `;
+    });
+    
+    html += `
+            <tr class="total-row">
+              <td colspan="4" class="text-right">TOTAL PUERTAS:</td>
+              <td class="text-center" style="font-size:16px;">${supplierDoors.length}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div class="footer">
+          LUIGGI HOME ERP | Documento generado: ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')} | Este documento es un pedido para proveedor de puertas
+        </div>
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
   };
 
   const handleEditComponent = (productId, componentId, field, value) => {
@@ -1119,6 +1380,18 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <Wrench size={14} />
             Casco, Puerta y Herraje
           </button>
+          <button
+            onClick={() => setActiveView('puertas_proveedor')}
+            className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeView === 'puertas_proveedor' 
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'bg-white text-blue-500 hover:bg-blue-50 border border-blue-200'
+            }`}
+            data-testid="tab-puertas-proveedor"
+          >
+            <Truck size={14} />
+            Puertas Proveedor
+          </button>
         </div>
 
         {/* Content */}
@@ -1781,6 +2054,186 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       <strong>Nota:</strong> Los herrajes se calculan de forma estimada. Las bisagras se calculan según la altura del mueble (2 para ≤100cm, 3 para &gt;100cm). 
                       Las correderas se calculan para muebles con cajones/gavetas. Los <strong>colgadores</strong> se añaden automáticamente para muebles <strong>ALTOS</strong> (1 juego = 2 unidades por mueble).
                       Verificar según especificaciones del fabricante.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ===================== NUEVA VISTA: PUERTAS PROVEEDOR ===================== */}
+              {activeView === 'puertas_proveedor' && supplierDoors && (
+                <div className="space-y-6" data-testid="puertas-proveedor-section">
+                  {/* Header informativo */}
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="bg-white/20 rounded-full p-3">
+                          <Truck size={28} />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-black uppercase tracking-widest">Pedido Puertas para Proveedor</h2>
+                          <p className="text-blue-200 text-sm mt-1">Edite las dimensiones y exporte la lista para enviar al proveedor de puertas</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-blue-200 text-xs font-bold uppercase">Total Puertas</p>
+                        <p className="text-4xl font-black">{supplierDoors.length}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Resumen por tipo */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {['ALTOS', 'BAJOS', 'COLUMNAS'].map(tipo => {
+                      const count = supplierDoors.filter(d => d.tipoMueble === tipo).length;
+                      const color = tipo === 'ALTOS' ? doorColorHigh : tipo === 'BAJOS' ? doorColorLow : doorColorColumns;
+                      const bgColor = tipo === 'ALTOS' ? 'from-blue-500 to-indigo-600' : tipo === 'BAJOS' ? 'from-orange-500 to-amber-600' : 'from-purple-500 to-violet-600';
+                      
+                      return (
+                        <div key={tipo} className={`bg-gradient-to-br ${bgColor} rounded-xl p-4 text-white`}>
+                          <p className="text-xs font-bold uppercase tracking-widest opacity-80">P. {tipo}</p>
+                          <p className="text-3xl font-black">{count}</p>
+                          <p className="text-xs mt-1 opacity-90">Color: {color || 'Sin definir'}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Tabla editable de puertas */}
+                  <div className="bg-white border-2 border-blue-200 rounded-xl overflow-hidden">
+                    <div className="bg-blue-600 text-white px-6 py-3 flex justify-between items-center">
+                      <h3 className="font-black uppercase tracking-widest text-sm">Lista de Puertas - Editable</h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleExportSupplierDoorsCSV}
+                          className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-xs font-bold uppercase flex items-center gap-1"
+                          data-testid="export-puertas-csv"
+                        >
+                          <Download size={12} />
+                          CSV
+                        </button>
+                        <button
+                          onClick={handleExportSupplierDoorsPDF}
+                          className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-xs font-bold uppercase flex items-center gap-1"
+                          data-testid="export-puertas-pdf"
+                        >
+                          <FileDown size={12} />
+                          PDF
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="max-h-[400px] overflow-y-auto">
+                      <table className="w-full">
+                        <thead className="bg-blue-50 sticky top-0">
+                          <tr className="text-xs font-black text-blue-700 uppercase tracking-widest">
+                            <th className="px-4 py-3 text-left">#</th>
+                            <th className="px-4 py-3 text-left">Mueble</th>
+                            <th className="px-4 py-3 text-left">Tipo</th>
+                            <th className="px-4 py-3 text-left">Color</th>
+                            <th className="px-4 py-3 text-center">Alto (cm)</th>
+                            <th className="px-4 py-3 text-center">Ancho (cm)</th>
+                            <th className="px-4 py-3 text-center">Veta</th>
+                            <th className="px-4 py-3 text-left">Observaciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-blue-100">
+                          {supplierDoors.map((door, idx) => (
+                            <tr key={door.id} className="hover:bg-blue-50/50">
+                              <td className="px-4 py-2 text-xs text-gray-500 font-mono">{idx + 1}</td>
+                              <td className="px-4 py-2">
+                                <div className="font-bold text-indigo-900 text-sm">{door.muebleCode}</div>
+                                <div className="text-xs text-gray-500 truncate max-w-[150px]" title={door.muebleName}>{door.muebleName}</div>
+                              </td>
+                              <td className="px-4 py-2">
+                                <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                  door.tipoMueble === 'ALTOS' ? 'bg-blue-100 text-blue-700' :
+                                  door.tipoMueble === 'BAJOS' ? 'bg-orange-100 text-orange-700' :
+                                  'bg-purple-100 text-purple-700'
+                                }`}>
+                                  {door.tipoMueble}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="text"
+                                  value={door.color}
+                                  onChange={(e) => updateSupplierDoor(door.id, 'color', e.target.value)}
+                                  className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                  data-testid={`door-color-${idx}`}
+                                />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="number"
+                                  value={door.alto}
+                                  onChange={(e) => updateSupplierDoor(door.id, 'alto', parseFloat(e.target.value) || 0)}
+                                  className="w-20 px-2 py-1 text-sm text-center font-bold border border-gray-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                  data-testid={`door-alto-${idx}`}
+                                />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="number"
+                                  value={door.ancho}
+                                  onChange={(e) => updateSupplierDoor(door.id, 'ancho', parseFloat(e.target.value) || 0)}
+                                  className="w-20 px-2 py-1 text-sm text-center font-bold border border-gray-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                  data-testid={`door-ancho-${idx}`}
+                                />
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <select
+                                  value={door.veta}
+                                  onChange={(e) => updateSupplierDoor(door.id, 'veta', e.target.value)}
+                                  className="px-2 py-1 text-xs font-bold border border-gray-200 rounded focus:border-blue-500 outline-none bg-white"
+                                  data-testid={`door-veta-${idx}`}
+                                >
+                                  <option value="V">↕ Vertical</option>
+                                  <option value="H">↔ Horizontal</option>
+                                </select>
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="text"
+                                  value={door.observaciones}
+                                  onChange={(e) => updateSupplierDoor(door.id, 'observaciones', e.target.value)}
+                                  placeholder="Notas..."
+                                  className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                  data-testid={`door-obs-${idx}`}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Botones de exportación grandes */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={handleExportSupplierDoorsCSV}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-colors shadow-lg"
+                      data-testid="export-puertas-csv-main"
+                    >
+                      <Download size={20} />
+                      Exportar CSV para Proveedor
+                    </button>
+                    <button
+                      onClick={handleExportSupplierDoorsPDF}
+                      className="bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-colors shadow-lg"
+                      data-testid="export-puertas-pdf-main"
+                    >
+                      <FileDown size={20} />
+                      Exportar PDF para Proveedor
+                    </button>
+                  </div>
+
+                  {/* Nota informativa */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <p className="text-blue-800 text-sm">
+                      <strong>Uso:</strong> Esta sección permite modificar las dimensiones de las puertas antes de enviar el pedido al proveedor.
+                      Puede cambiar medidas, orientación de veta y añadir observaciones específicas para cada puerta.
+                      El archivo exportado (CSV o PDF) está listo para enviar al proveedor de puertas.
                     </p>
                   </div>
                 </div>

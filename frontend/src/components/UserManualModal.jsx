@@ -179,7 +179,40 @@ Minimiza el desperdicio de material calculando la mejor disposición de piezas.
 EXPORTAR INFORMES:
 • PDF A4: Para imprimir
 • CSV: Para hojas de cálculo
-• XML: Para sistemas externos`
+• XML: Para sistemas externos
+
+PUERTAS PARA PROVEEDOR (Nuevo):
+• Pestaña "Puertas Proveedor" en el modal de despiece
+• Permite editar dimensiones de cada puerta
+• Modificar veta (vertical/horizontal)
+• Añadir observaciones por puerta
+• Exportar CSV o PDF para enviar al proveedor de puertas`
+  },
+  montajes: {
+    title: "Agenda de Montajes",
+    icon: Truck,
+    roles: ['admin', 'montador'],
+    content: `AGENDA DE MONTAJES:
+
+Panel para gestionar instalaciones de cocinas en domicilios de clientes.
+
+FUNCIONES PRINCIPALES:
+• Ver calendario de montajes programados
+• Asignar montadores a cada trabajo
+• Registrar estado del montaje (pendiente, en curso, completado)
+• Adjuntar fotos del antes/después
+
+ESTADOS DE MONTAJE:
+• Programado: Fecha asignada, pendiente de ejecución
+• En Curso: Montadores trabajando en la instalación
+• Completado: Trabajo finalizado
+• Incidencia: Problemas durante el montaje
+
+INFORMACIÓN DEL MONTAJE:
+• Cliente y dirección de entrega
+• Presupuesto/Pedido asociado
+• Montadores asignados
+• Notas especiales de instalación`
   },
   administracion: {
     title: "Administración",
@@ -288,11 +321,50 @@ const getUserRole = (user) => {
   return 'tienda';
 };
 
-// Filtrar secciones según el rol
-const getSectionsForRole = (role) => {
+// Filtrar secciones según los PERMISOS ESPECÍFICOS del usuario
+// Esta función utiliza los permisos granulares como canAccessFabrica, canAccessMontajes, etc.
+const getSectionsForUser = (user) => {
   return Object.entries(MANUAL_SECTIONS).filter(([key, section]) => {
-    if (!section.roles) return true; // Secciones sin restricción de rol
-    return section.roles.includes(role);
+    // Secciones universales (sin restricción)
+    if (!section.roles && !section.permissions) return true;
+    
+    // Si el usuario es Admin, ve todo
+    if (user?.isAdmin) return true;
+    
+    // Verificar permisos específicos por sección
+    switch (key) {
+      case 'fabrica':
+        // Solo mostrar si tiene acceso al portal de fábrica
+        return user?.canAccessFabrica || user?.isFabrica;
+        
+      case 'montajes':
+        // Solo mostrar si tiene acceso a agenda de montajes
+        return user?.canAccessMontajes || user?.isMontador;
+        
+      case 'crm':
+        // Solo mostrar si tiene acceso al CRM
+        return user?.canAccessCRM || user?.isRepresentative || user?.isGerente || user?.isDirectorComercial;
+        
+      case 'administracion':
+        // Solo para administradores
+        return user?.isAdmin || user?.isGerente || user?.isDirectorComercial;
+        
+      case 'presupuestos':
+        // Para comerciales y tiendas (no usuarios solo fábrica)
+        return !user?.isFabrica || user?.isRepresentative || user?.isTienda || user?.isAdmin;
+        
+      case 'despiece':
+        // Para usuarios que pueden ver presupuestos o fábrica
+        return !user?.isFabrica || user?.canAccessFabrica || user?.isRepresentative || user?.isTienda || user?.isAdmin;
+        
+      default:
+        // Fallback al sistema de roles
+        if (section.roles) {
+          const userRole = getUserRole(user);
+          return section.roles.includes(userRole);
+        }
+        return true;
+    }
   });
 };
 
@@ -306,7 +378,8 @@ const UserManualModal = ({ isOpen, onClose, currentUser }) => {
   const userRole = getUserRole(currentUser);
   const roleConfig = USER_ROLES[userRole];
   const RoleIcon = roleConfig?.icon || User;
-  const sections = getSectionsForRole(userRole);
+  // Usar la nueva función que filtra por permisos específicos
+  const sections = getSectionsForUser(currentUser);
 
   const toggleSection = (key) => {
     setExpandedSections(prev => ({
