@@ -239,7 +239,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     csv += "Mueble;Color;Alto (cm);Ancho (cm);Veta;Unidades;Tipo;Observaciones\n";
     
     supplierDoors.forEach(d => {
-      csv += `${d.muebleCode};${d.color};${d.alto};${d.ancho};${d.veta === 'V' ? 'Vertical' : 'Horizontal'};${d.unidades || 1};${d.tipoMueble};${d.observaciones || ''}\n`;
+      const vetaText = d.veta === 'V' ? 'Vertical' : d.veta === 'H' ? 'Horizontal' : 'Sin veta';
+      csv += `${d.muebleCode};${d.color};${d.alto};${d.ancho};${vetaText};${d.unidades || 1};${d.tipoMueble};${d.observaciones || ''}\n`;
     });
     
     // Totales
@@ -344,13 +345,14 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     `;
     
     supplierDoors.forEach(d => {
+      const vetaText = d.veta === 'V' ? '↕ Vertical' : d.veta === 'H' ? '↔ Horizontal' : '— Sin veta';
       html += `
         <tr>
           <td><strong>${d.muebleCode}</strong></td>
           <td><span class="color-badge">${d.color}</span></td>
           <td class="text-center font-bold">${d.alto}</td>
           <td class="text-center font-bold">${d.ancho}</td>
-          <td class="text-center"><span class="veta-badge">${d.veta === 'V' ? '↕ Vertical' : '↔ Horizontal'}</span></td>
+          <td class="text-center"><span class="veta-badge">${vetaText}</span></td>
           <td class="text-center font-bold" style="font-size:14px;">${d.unidades || 1}</td>
           <td>${d.tipoMueble}</td>
           <td style="font-size:9px;">${d.observaciones || '-'}</td>
@@ -2179,6 +2181,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                 >
                                   <option value="V">↕ Vertical</option>
                                   <option value="H">↔ Horizontal</option>
+                                  <option value="N">— Sin veta</option>
                                 </select>
                               </td>
                               <td className="px-4 py-2">
