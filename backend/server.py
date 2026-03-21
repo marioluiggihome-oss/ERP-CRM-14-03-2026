@@ -4278,10 +4278,50 @@ def calculate_furniture_despiece(
     components = []
     component_id = 0
     
-    # Determine furniture type
-    is_alto = "ALTO" in item.category.upper() or "ALTO" in item.productName.upper()
-    is_bajo = "BAJO" in item.category.upper() or "BAJO" in item.productName.upper()
-    is_columna = "COLUMNA" in item.category.upper() or "COLUMNA" in item.productName.upper()
+    # Determine furniture type - Soportar nomenclaturas ZC y MV
+    code_upper = item.productCode.upper()
+    name_upper = item.productName.upper()
+    category_upper = item.category.upper()
+    
+    # ALTOS - ZC: A, 9A | MV: A, ASCE, ASC, AR, ARI, ARU, ARC, AD, AV, AE, AM, AMF, ACA, ACC, ASF, AT, ATP, AA, AC, ACP, ACPJ
+    #         MV también: L (ALTILLO), LV, S (SOBREENCIMERA), SV, SC, SVC, BOA, BOS
+    alto_prefixes = ['ASCE', 'ASC', 'ARI', 'ARU', 'ARC', 'AD', 'AV', 'AE', 'AMF', 'AM', 'ACA', 'ACC', 'ASF', 'ATP', 'AT', 'AA', 'ACPJ', 'ACP', 'AC', 'AR', 'LD', 'LV', 'SVC', 'SV', 'SC', 'BOA', 'BOS']
+    is_alto = (
+        "ALTO" in name_upper or "ALTO" in category_upper or
+        any(code_upper.startswith(p) for p in alto_prefixes) or
+        code_upper.startswith('9A') or
+        (code_upper.startswith('A') and len(code_upper) > 1 and code_upper[1].isdigit()) or
+        (code_upper.startswith('L') and len(code_upper) > 1 and code_upper[1].isdigit()) or
+        (code_upper.startswith('S') and len(code_upper) > 1 and code_upper[1].isdigit()) or
+        "ALTILLO" in name_upper or "SOBREENCIMERA" in name_upper
+    )
+    
+    # BAJOS - ZC: B, 9B | MV: B, BF, BRI, BRU, BR, BH, BHC, BHZ, BHG, BT, BTP, BPC, BC, BCG, BGC, BCGF, BGF
+    bajo_prefixes = ['BRI', 'BRU', 'BR', 'BHZ', 'BHG', 'BHC', 'BH', 'BTP', 'BT', 'BPC', 'BCGF', 'BCG', 'BGF', 'BGC', 'BC', 'BF']
+    is_bajo = (
+        "BAJO" in name_upper or "BAJO" in category_upper or
+        any(code_upper.startswith(p) for p in bajo_prefixes) or
+        code_upper.startswith('9B') or
+        (code_upper.startswith('B') and len(code_upper) > 1 and code_upper[1].isdigit()) or
+        "FREGADERO" in name_upper or "HORNO" in name_upper
+    )
+    
+    # COLUMNAS - ZC: C | MV: CD, CE, CF, CH, CHPC, CHGC, CHC, CHM, CHMG, CHMC, CHMCG, BOC
+    #            MV también: M (MEDIA COLUMNA), MV, MPG, MVG, MPH, MPM, MGHM, MCHM
+    columna_prefixes = ['CD', 'CE', 'CF', 'CHPC', 'CHGC', 'CHC', 'CHMCG', 'CHMG', 'CHMC', 'CHM', 'CH', 'BOC', 'MGHM', 'MCHM', 'MPG', 'MVG', 'MPH', 'MPM']
+    is_columna = (
+        "COLUMNA" in name_upper or "COLUMNA" in category_upper or
+        "SEMICOLUMNA" in name_upper or "MEDIACOLUMNA" in name_upper or
+        any(code_upper.startswith(p) for p in columna_prefixes) or
+        (code_upper.startswith('C') and len(code_upper) > 1 and code_upper[1].isdigit()) or
+        (code_upper.startswith('M') and len(code_upper) > 1 and code_upper[1].isdigit()) or
+        (code_upper.startswith('MV') and len(code_upper) > 2 and code_upper[2].isdigit())
+    )
+    
+    # Tipos especiales
+    is_fregadero = "FREGADERO" in name_upper or "FREG" in code_upper
+    is_horno = "HORNO" in name_upper or "BH" in code_upper[:2]
+    is_rincon = "RINCON" in name_upper or "RINCÓN" in name_upper or code_upper.startswith('BR') or code_upper.startswith('AR')
     
     def add_component(name: str, short: str, material: str, length_cm: float, width_cm: float, thickness_cm: float = None, qty: int = 1, notes: str = ""):
         nonlocal component_id
@@ -4308,19 +4348,21 @@ def calculate_furniture_despiece(
     # =============================================
     
     # LATERAL IZQUIERDO (Side panel - full height)
+    # Para muebles de rincón, el lateral tiene forma especial
+    lateral_fondo = d if not is_rincon else d - 5  # Rincón: lateral más corto
     add_component(
         "Lateral izquierdo", "LAT-I",
         carcass_material,
-        h, d, g, 1,  # ALTO COMPLETO x FONDO (en cm)
-        "1L canto"
+        h, lateral_fondo, g, 1,  # ALTO COMPLETO x FONDO (en cm)
+        "1L canto" + (" (rincón)" if is_rincon else "")
     )
     
     # LATERAL DERECHO (Side panel - full height)
     add_component(
         "Lateral derecho", "LAT-D",
         carcass_material,
-        h, d, g, 1,  # ALTO COMPLETO x FONDO (en cm)
-        "1L canto"
+        h, lateral_fondo, g, 1,  # ALTO COMPLETO x FONDO (en cm)
+        "1L canto" + (" (rincón)" if is_rincon else "")
     )
     
     # =============================================
@@ -4331,28 +4373,53 @@ def calculate_furniture_despiece(
     ancho_interior = w - (2 * g)
     
     # TAPA SUPERIOR (Top panel - between sides)
-    add_component(
-        "Tapa superior", "TAPA-S", 
-        carcass_material,
-        ancho_interior, d, g, 1,
-        "1L canto"
-    )
+    # Los fregaderos NO tienen tapa superior (hueco para la encimera)
+    if not is_fregadero:
+        add_component(
+            "Tapa superior", "TAPA-S", 
+            carcass_material,
+            ancho_interior, d, g, 1,
+            "1L canto"
+        )
+    else:
+        # Fregadero: travesaños frontales y traseros en lugar de tapa
+        add_component(
+            "Travesaño frontal", "TRAV-F",
+            carcass_material,
+            ancho_interior, 8, g, 1,  # 8cm de ancho
+            "Travesaño para fregadero"
+        )
+        add_component(
+            "Travesaño trasero", "TRAV-T",
+            carcass_material,
+            ancho_interior, 8, g, 1,
+            "Travesaño para fregadero"
+        )
     
-    # TAPA INFERIOR (Bottom panel) - not always present in ALTOS
-    if not is_alto:
+    # TAPA INFERIOR (Bottom panel) - varía según tipo de mueble
+    if is_alto:
+        # ALTOS usan un travesaño inferior estrecho (8cm de ancho)
+        add_component(
+            "Travesaño inferior", "TRAV-I",
+            carcass_material,
+            ancho_interior, 8, g, 1,
+            ""
+        )
+    elif is_horno:
+        # Hornos: travesaños laterales para soporte del horno
+        add_component(
+            "Travesaño inferior horno", "TRAV-H",
+            carcass_material,
+            ancho_interior, 10, g, 1,
+            "Soporte para horno empotrado"
+        )
+    else:
+        # Bajos y columnas: tapa inferior completa
         add_component(
             "Tapa inferior", "TAPA-I",
             carcass_material,
             ancho_interior, d, g, 1,
             "1L canto" if is_bajo else ""
-        )
-    else:
-        # ALTOS use a narrower bottom rail (8cm de ancho)
-        add_component(
-            "Travesaño inferior", "TRAV-I",
-            carcass_material,
-            ancho_interior, 8, g, 1,  # 8cm rail
-            ""
         )
     
     # TRASERA (Back panel) - grosor configurable desde armazón
@@ -4366,10 +4433,36 @@ def calculate_furniture_despiece(
         f"Tablero {int(back_thickness)}mm"
     )
     
-    # BALDAS / ESTANTES (Shelves) - estimate based on height
+    # BALDAS / ESTANTES (Shelves) - según tipo de mueble y altura
     # Los estantes son HORIZONTALES, descontar grosor de laterales
     shelf_count = 0
-    if h >= 70:  # Tall units get more shelves (70cm+)
+    
+    # Columnas: más estantes debido a su altura
+    if is_columna:
+        if h >= 200:  # Columna completa
+            shelf_count = 5
+        elif h >= 140:  # Media columna
+            shelf_count = 3
+        else:
+            shelf_count = 2
+    # Altos: normalmente 1-2 estantes
+    elif is_alto:
+        if h >= 90:
+            shelf_count = 2
+        elif h >= 60:
+            shelf_count = 1
+        else:
+            shelf_count = 0
+    # Bajos: normalmente 1 estante
+    elif is_bajo:
+        if is_fregadero or is_horno:
+            shelf_count = 0  # Fregaderos y hornos sin estantes
+        elif h >= 70:
+            shelf_count = 2
+        else:
+            shelf_count = 1
+    # Genérico: basado en altura
+    elif h >= 70:
         shelf_count = 2 if h < 120 else 3 if h < 180 else 4
     elif h >= 35:
         shelf_count = 1
@@ -4387,32 +4480,55 @@ def calculate_furniture_despiece(
     # =============================================
     # PUERTAS - Calcular dimensiones de puertas
     # =============================================
-    # Detectar si el mueble tiene puertas según su nombre/categoría
-    product_name_upper = item.productName.upper()
-    product_code_upper = item.productCode.upper()
+    # Detectar si el mueble tiene puertas según su nombre/categoría/código
     
     # Detectar cantidad de puertas
     has_doors = False
     num_doors = 0
     
-    # 2P = 2 puertas, 1P = 1 puerta, D/I = 1 puerta (derecha/izquierda)
-    if "2P" in product_name_upper or "2P" in product_code_upper:
+    # Patrones para detectar puertas:
+    # ZC: 1P, 2P, 3P, 4P (ej: 9A1P300, 9B2P600)
+    # MV: Similar pero también D/I (derecha/izquierda)
+    
+    # 4P = 4 puertas (columnas grandes)
+    if "4P" in name_upper or "4P" in code_upper:
+        has_doors = True
+        num_doors = 4
+    # 3P = 3 puertas
+    elif "3P" in name_upper or "3P" in code_upper:
+        has_doors = True
+        num_doors = 3
+    # 2P = 2 puertas
+    elif "2P" in name_upper or "2P" in code_upper:
         has_doors = True
         num_doors = 2
-    elif "1P" in product_name_upper or "1P" in product_code_upper:
+    # 1P = 1 puerta
+    elif "1P" in name_upper or "1P" in code_upper:
         has_doors = True
         num_doors = 1
-    elif "/I" in product_name_upper or "/D" in product_name_upper or "D/I" in product_name_upper:
+    # D/I = 1 puerta (derecha/izquierda)
+    elif "/I" in name_upper or "/D" in name_upper or "D/I" in name_upper:
         has_doors = True
         num_doors = 1
-    elif "PUERTA" in product_name_upper or "PTA" in product_code_upper:
+    elif "PUERTA" in name_upper or "PTA" in code_upper:
         has_doors = True
         num_doors = 1
+    # Muebles especiales SIN puertas
+    elif is_fregadero or "MICROONDAS" in name_upper or "ESTANTERIA" in name_upper or "HUECO" in name_upper:
+        has_doors = False
+        num_doors = 0
     # Muebles que normalmente tienen puertas pero no lo especifican
-    elif any(x in product_name_upper for x in ["BAJO ", "ALTO ", "COLUMNA", "SEMICOLUMNA", "RINCON"]):
-        # Asumir 1 puerta para anchos <= 45cm, 2 puertas para mayores
+    elif is_alto or is_bajo or is_columna:
         has_doors = True
-        num_doors = 2 if w > 45 else 1
+        # Estimar número de puertas según el ancho
+        if w <= 45:
+            num_doors = 1
+        elif w <= 90:
+            num_doors = 2
+        elif w <= 120:
+            num_doors = 3
+        else:
+            num_doors = 4
     
     # Calcular dimensiones de puerta si tiene puertas
     if has_doors and num_doors > 0:
@@ -4446,15 +4562,64 @@ def calculate_furniture_despiece(
         )
     
     # =============================================
-    # COLGADORES - Solo para muebles ALTOS (1 juego = 2 colgadores)
+    # HERRAJES - Según tipo de mueble
     # =============================================
+    
+    # COLGADORES - Solo para muebles ALTOS (1 juego = 2 colgadores)
     if is_alto:
         add_component(
             "Juego de colgadores",
             "COLG",
             "HERRAJE",
-            0, 0, 0, 1,  # No tiene dimensiones de tablero
+            0, 0, 0, 1,
             "1 juego = 2 colgadores para mueble alto de pared"
+        )
+    
+    # BISAGRAS - Según número de puertas y altura
+    if has_doors and num_doors > 0:
+        # 2 bisagras por puerta para puertas < 60cm
+        # 3 bisagras por puerta para puertas >= 60cm y < 120cm
+        # 4 bisagras por puerta para puertas >= 120cm
+        door_height = h - 0.2  # altura aproximada de puerta
+        bisagras_por_puerta = 2 if door_height < 60 else 3 if door_height < 120 else 4
+        total_bisagras = bisagras_por_puerta * num_doors
+        add_component(
+            f"Bisagras",
+            "BISAG",
+            "HERRAJE",
+            0, 0, 0, total_bisagras,
+            f"{bisagras_por_puerta} bisagras por puerta"
+        )
+        
+        # TIRADORES - 1 por puerta
+        add_component(
+            "Tiradores",
+            "TIRAD",
+            "HERRAJE",
+            0, 0, 0, num_doors,
+            "1 tirador por puerta"
+        )
+    
+    # SOPORTES DE BALDA - 4 por balda
+    if shelf_count > 0:
+        add_component(
+            "Soportes de balda",
+            "SOPORT",
+            "HERRAJE",
+            0, 0, 0, shelf_count * 4,
+            "4 soportes por balda"
+        )
+    
+    # PATAS/ZÓCALO - Solo para BAJOS y COLUMNAS
+    if is_bajo or is_columna:
+        # 4 patas para muebles estándar, 6 para anchos > 80cm
+        num_patas = 6 if w > 80 else 4
+        add_component(
+            "Patas regulables",
+            "PATAS",
+            "HERRAJE",
+            0, 0, 0, num_patas,
+            f"{num_patas} patas de 10-15cm regulables"
         )
     
     # Calculate totals
