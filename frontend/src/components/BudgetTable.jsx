@@ -1352,6 +1352,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                    value={state.currentLibrary || 'ZC'}
                    onChange={e => {
                      const newLib = e.target.value;
+                     
+                     // GUARDAR en localStorage para persistir entre sesiones
+                     try {
+                       localStorage.setItem('luiggi_active_library', newLib);
+                     } catch (err) {
+                       console.error("Error saving library:", err);
+                     }
+                     
                      // Llamar a la función de cambio de biblioteca del padre
                      if (setState) {
                        // Cargar productos de la nueva biblioteca
