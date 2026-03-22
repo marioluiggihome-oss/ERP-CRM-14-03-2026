@@ -301,8 +301,48 @@ export const productsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(products)
     });
-    if (!response.ok) throw new Error('Error al crear productos');
-    return response.json();
+    // Leer el body una sola vez para evitar "body stream already read"
+    const responseText = await response.text();
+    if (!response.ok) {
+      let errorMsg = 'Error al crear productos';
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMsg = errorData.detail || errorData.error || errorMsg;
+      } catch (e) {
+        errorMsg = responseText.substring(0, 200) || errorMsg;
+      }
+      throw new Error(errorMsg);
+    }
+    try {
+      return JSON.parse(responseText);
+    } catch (e) {
+      throw new Error('Respuesta inválida del servidor');
+    }
+  },
+
+  // Upsert de productos (crear o actualizar zonePoints por tarifa)
+  bulkUpsert: async (products, tariff = 'T1', library = 'MV') => {
+    const response = await fetch(`${API_URL}/api/products/bulk-upsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ products, tariff, library })
+    });
+    const responseText = await response.text();
+    if (!response.ok) {
+      let errorMsg = 'Error al actualizar productos';
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMsg = errorData.detail || errorData.error || errorMsg;
+      } catch (e) {
+        errorMsg = responseText.substring(0, 200) || errorMsg;
+      }
+      throw new Error(errorMsg);
+    }
+    try {
+      return JSON.parse(responseText);
+    } catch (e) {
+      throw new Error('Respuesta inválida del servidor');
+    }
   },
 
   update: async (id, product) => {

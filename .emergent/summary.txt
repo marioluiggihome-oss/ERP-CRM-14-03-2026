@@ -1,116 +1,123 @@
-<analysis>**original_problem_statement**: The user is building a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core relies on a multi-library system ('ZC' and 'MV') with detailed pricing, complex bill of materials (despiece) calculations, and order management. Recently requested features include manufacturing numbers, a dedicated editable doors module for suppliers, dynamic help manuals, and personal agendas for assemblers (montadores).
+<analysis>**original_problem_statement**: The user is building a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core relies on a multi-library system ('ZC' and 'MV') with detailed pricing, complex bill of materials (despiece) calculations, and order management. Recently requested features include robust AI Telemetry (Reconocimiento Óptico) to digitize technical catalogs (especially the complex 'MV' library with various T1-T21 tariffs) using Gemini Vision.
 
 **User's preferred language**: **es (Spanish)**. (INSTRUCT NEXT AGENT: You MUST respond and communicate with the user entirely in Spanish).
 
 **what currently exists?** 
-A full-stack React/FastAPI/MongoDB ERP. Features robust cutting list (despiece) generation with multi-library (MV/ZC) logic, CRM, role-based access control, a factory production portal with routing for internal/external factories, a dynamic help manual, an editable supplier doors module with PDF/CSV export, and a personalized task agenda for assemblers. 
+A full-stack React/FastAPI/MongoDB ERP. It features a newly refactored backend (monolith partially decomposed), a robust cutting list generator, CRM, factory production portal, and an AI Telemetry module ( + ) that uses Gemini Vision to extract product configurations and prices from uploaded catalog images. It supports multi-library logic (ZC vs MV) with persistent active library tracking.
 
 **Last working item**:
-- **Last item agent was working**: Adding a library selector (MV/ZC) to the IA Telemetry (Reconocimiento Óptico) upload section in . The user requested this to prevent mixing MV and ZC items during AI PDF parsing. The agent performed the  successfully, but the context ended immediately after.
-- **Status**: TESTING PENDING
+- **Last item agent was working**: Fixing a frontend  error in  during AI Telemetry file uploads, AND preventing product duplication in the backend. When uploading different tariffs (e.g., T1, T2, T3) for the MV library, the system must UPDATE existing products with the new tariff prices inside the  object (e.g., ) instead of creating duplicate products.
+- **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?** Frontend testing by screenshot tool (to verify the UI shows the dropdown) and .
+- **Which testing method agent to use?** Both backend and frontend testing. Use  to verify backend merging logic (simulate a product update with a new tariff), and screenshot tool to verify the frontend no longer throws the stream error during upload.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**: 
-Issue 1: **Verify MV/ZC Library Selector in AI Telemetry (P0)**
-- **Attempted fixes**: The agent executed a  in  (around lines 4440-4520) to add the selector. It succeeded, but no validation was done.
-- **Next debug checklist**: Check . Run . Take a screenshot of the Telemetría tab in the Settings/Master panel to ensure the MV/ZC dropdown renders correctly before the file upload area.
-- **Why fix this issue and what will be achieved with the fix?** Ensures AI parsing accurately categorizes parsed products into the correct library to avoid pricing/manufacturing errors.
-- **Status**: TESTING PENDING
-- **Is recurring issue?** N
-- **Should Test frontend/backend/both after fix?** Frontend
+  - Issue 1: **Frontend Error:  in Telemetry (P0)**
+     - **Attempted fixes**: The agent tried changing  to  and manually parsing, but the error persists because the response stream might be consumed twice in the  block or error handling logic.
+     - **Next debug checklist**: Check  around lines 4555-4590. Ensure  is read exactly once and safely parsed. 
+     - **Why fix this issue and what will be achieved with the fix?** Prevents UI crashes and unhandled promise rejections during large batch image uploads.
+     - **Status**: IN PROGRESS
+     - **Is recurring issue?** Y
+     - **Should Test frontend/backend/both after fix?** Frontend
+     - **Blocked on other issue**: None
+
+  - Issue 2: **AI Telemetry Duplicate Products across Tariffs (P0)**
+     - **Attempted fixes**: Not yet implemented. The agent just realized the need to use an UPSERT strategy targeting  rather than inserting new documents per image.
+     - **Next debug checklist**: Modify  in  (around line 470+). When matching a product by code, if it exists, update the specific tariff price in  based on what the user is uploading. Need to identify how the backend knows *which* tariff (T1, T2, etc.) the image belongs to so it maps correctly.
+     - **Why fix this issue and what will be achieved with the fix?** Prevents database bloat and ensures the 'MV' library functions correctly by having a single product record with a comprehensive  map.
+     - **Status**: NOT STARTED
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** Backend
 
 **In progress Task List**:
-*None active besides the issue mentioned above.*
+*None active besides the issues mentioned above.*
 
 **Upcoming and Future Tasks**:
-- **Upcoming Tasks**:
-  - (P1) Populate User Manual: Write comprehensive content for the user manual ().
-- **Future Tasks**:
-  - (P3) Refactor Monoliths: Decompose  (>7000 lines) and  (>4800 lines).
-  - (P3) Integrations: Integration with external billing systems.
-  - (P3) Dashboard: Production metrics dashboard.
-  - (P3) Notifications: Push notifications for order status changes.
+  - **Upcoming Tasks**:
+    - (P1) Refactor Frontend Monolith: Decompose  (>4800 lines) into smaller, manageable components.
+    - (P2) Populate User Manual: Write comprehensive content for the user manual ().
+  - **Future Tasks**:
+    - (P3) Continue Backend Refactoring: Extract Settings and Projects/Budgets logic from  to dedicated routers.
+    - (P3) Integrations: External billing systems integration.
+    - (P3) Dashboard: Production metrics dashboard.
 
 **Completed work in this session**:
-- Implemented  (sequential) and auto-creation of manufacturing orders upon budget confirmation (DONE).
-- Added editable PUERTAS PROVEEDOR (Supplier Doors) tab in Despiece with Unidades, Color, Veta, dimensions, and CSV/PDF export (DONE).
-- Dynamic Help Manual based on user permissions (, , etc.) (DONE).
-- Added Factory Routing (Internal, External, Subcontracted) to Factory Portal for new and existing orders (DONE).
-- Fixed Hinge Calculation rule in backend: <=90cm height = 2 hinges, >90cm = 3 hinges (DONE).
-- Added Con Veta global checkbox to BudgetTable UI (DONE).
-- Updated Agenda de Montajes so Assemblers (Montadores) only see their assigned tasks, defaulting to Mis Montajes view (DONE).
-- Added  and  to User Schema (DONE).
+- Massive Backend Refactoring: Extracted CRM, Montajes, Backup, Armarios, Digitalizador, and Orders from  to dedicated route files, reducing the monolith from ~7000 lines to ~3700 lines (DONE).
+- Persisted MV/ZC library active state across sessions using  in  and  (DONE).
+- Fixed AI Telemetry state missing  (ReferenceError) (DONE).
+- Removed Registrarse con Email button and logic from  (DONE).
+- Improved AI Telemetry for the MV library: Created a custom Gemini prompt for MV architecture, added multi-pass extraction (up to 3 passes of 50 products = 150 products per image) to bypass Gemini token limits, and added proper file validation/PDF rejection (DONE).
 
 **Earlier issues found/mentioned but not fixed**:
-- None. All user-reported calculation bugs (door counts, hinge rules) were successfully resolved.
+- None.
 
 **Known issue recurrence from previous fork**:
-- **Issue recurrence in previous fork**: None.
-- **Recurrence count**: 0
-- **Status**: RESOLVED
+  - **Issue recurrence in previous fork**: AI Telemetry frontend crashes during large batch processing.
+  - **Recurrence count**: 2
+  - **Status**: IN PROGRESS
 
 **Code Architecture**:
 
 
 **Key Technical Concepts**:
-- **Role-Based Views**: UI heavily depends on user booleans (, , ).  explicitly filters by .
-- **Despiece Engine**: Analyzes product nomenclatures to generate precise cutting lists. Hinge rules are strictly tied to  (>90cm = 3).
-- **Manufacturing Sync**: Confirming a budget () now automatically spawns a  document with a sequential .
+- **Multi-pass AI Extraction**: Because Gemini Vision has output token limits, processing a catalog page with 70+ products truncates the JSON. The backend now executes a loop (up to 3 passes) on the same image, instructing Gemini to skip previously extracted products, appending them to a master list.
+- **ZonePoints Mapping**: A product's price isn't a single scalar. For ZC it's . For MV it's .
 
 **key DB schema**:
-- : Added , , .
-- : Added , , .
-- : Linked to users via .
+  - : 
 
 **changes in tech stack**:
-- None. 
+  - None.
 
 **All files of reference**:
--  (Modified at end of session for MV/ZC selector)
-- 
-- 
-- 
+-  (Currently throwing the stream error during fetch)
+-  (AI Telemetry endpoint  needs the merge/upsert logic)
+-  (Library persistence)
+-  (Newly created refactored modules)
 
 **Areas that need refactoring**:
--  (>7000 lines) 
--  (>4800 lines) 
+-  (>4800 lines). Critical candidate for decomposition.
 
 **key api endpoints**:
-- : Confirms order AND creates manufacturing order.
-- : Manages factory routing.
+- : Processes catalog images via Gemini.
 
 **Critical Info for New Agent**:
 - **LANGUAGE:** Always speak Spanish with the user.
-- **MONOLITHS:** Be extremely careful when using  on  or . Always do a  or  to ensure you are replacing the exact correct lines.
-- **LIBRARY SEPARATION:** ZC and MV libraries use different calculation bases. Keep their parsing logic strictly separated. 
+- **AI TELEMETRY UPSERTS:** The user uploaded TARIFA 3 and then another tariff. You must ensure that if a product like  exists, its  gets updated with the new tariff price (e.g., ) rather than inserting a duplicate record. You will likely need the user to input *which* tariff number they are uploading in the UI, or instruct Gemini to extract the tariff number and map it automatically.
 
 **documents and test reports created in this job**:
--  (Updated)
-- 
+  -  (Updated with refactoring details)
 
 **Last 10 User Messages and any pending HUMAN messages**:
-1. User: la función de montador, no es para que tenga una agenda de montajes propia, enlazada con algunos clientes ¿? (Resolved - Filtered AgendaMontajes to show only personal tasks for montadores)
-2. User: al subir telemetría ia, hay q diferenciar entre MV Y ZC librerías [Image attached] (Pending Testing - Agent added the selector to SettingsModal.jsx but session ended before visual testing).
+1. User: cuando un usuario tenga las dos librerías activas, si sale de la sesión de usuario con la tarifa MV, que cuando entre esté en esa tarifa y no en la de ZC.
+2. Agent: Fixed persistence in .
+3. User: NO LO HACE, NO GUARDA
+4. Agent: Found issue in  overwriting state without saving. Fixed.
+5. User: HE SUBIDO ESTOS ARCHIVOS POR TELEMETRÍA MV Y FALLA DA ESTE ERROR Q TE PASO EN FOTO [image of body stream already read]
+6. Agent: Tried fixing frontend, saw backend JSON truncate, implemented multi-pass extraction.
+7. User: pero entonces si hay más de 30 productos, no los extrae ¿? por cada página ¿?
+8. Agent: Set it to 2 passes.
+9. User: HAZ TRES PASADAS, QUE NO CREO QUE PASE CADA PÁGINA DE 150 PRODUCTOS, POR FAVOR
+10. User (Pending): OJO AL IMPORTAR PRODUCTOS, NO DEBE DUPLICARLOS, DEBE TENER EN CUENTA LA TARIFA, PORQUE LOS PRODUCTOS SON LOS MISMOS, LO QUE CAMBIA ES EL PRECIO, LO HAS TENIDO EN CUENTA EN LIBRERÍA-TARIFA MV Y APARTE DA ESTE ERROR [Image of body stream error again]
 
 **Project Health Check:**
-- Broken: None
-- Mocked: Placeholder text still exists in User Manual ().
+- Broken: AI Telemetry frontend fetch logic ().
+- Mocked: Manual de usuario content.
 
-**3rd Party Integrations**
-- **Resend/Sendgrid (Emails)** — requires User API Key.
-- **Gemini Vision (Emergent LLM Key)** — used in the  / AI Telemetry for image/PDF analysis. Uses Emergent LLM Key.
+**3rd Party Integrations**:
+- **OpenAI / Gemini Vision** — uses Emergent LLM Key (used in ).
+- **Sendgrid (Emails)** — requires User API Key.
 
-**Testing status**
-- Testing agent used after significant changes: YES ( used for manufacturing orders/doors)
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None
-- Known regressions: None
+**Testing status**:
+  - Testing agent used after significant changes: NO (Refactoring was tested incrementally via curl and python).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None
+  - Known regressions:  in telemetry upload fetch.
 
 **Credentials to test flow:**
 - User: 
 - Password: 
 
 **What agent forgot to execute**:
-The agent successfully injected the code for the MV/ZC library selector in  but ran out of context before verifying it via Linting or taking a screenshot to ensure the UI didn't break.</analysis>
+The agent didn't resolve how the backend knows *which* specific tariff (T1, T2, etc.) an uploaded MV image represents before saving it to . Without this, mapping prices without duplication is impossible. The agent must add a tariff selector in the UI for the MV library or prompt Gemini to strictly extract the tariff number from the image headers.</analysis>

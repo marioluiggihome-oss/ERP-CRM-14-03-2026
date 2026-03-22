@@ -1778,6 +1778,95 @@ async def create_products_bulk(products: List[dict]):
         "products": created
     }
 
+@api_router.post("/products/bulk-upsert")
+async def bulk_upsert_products(data: dict):
+    """
+    Crear productos nuevos o actualizar zonePoints de productos existentes.
+    Para MV: actualiza la tarifa específica (T1, T2, ... T21) en zonePoints.
+    Para ZC: actualiza la zona específica (Z1-Z12) en zonePoints.
+    """
+    products = data.get("products", [])
+    tariff = data.get("tariff", "T1")  # T1-T21 para MV, Z1-Z12 para ZC
+    library = data.get("library", "MV")
+    
+    created = 0
+    updated = 0
+    errors = []
+    
+    for idx, product_data in enumerate(products):
+        try:
+            code = str(product_data.get("code", "")).upper().strip()
+            if not code:
+                errors.append(f"Producto {idx}: código vacío")
+                continue
+            
+            # Obtener el precio/puntos del producto
+            points = float(product_data.get("points", 0) or 0)
+            zone_points = product_data.get("zonePoints", {})
+            
+            # Si zonePoints tiene T1 o Z1, usar ese valor
+            if library == "MV":
+                points = float(zone_points.get("T1", points) or points)
+            else:
+                points = float(zone_points.get("Z1", points) or points)
+            
+            # Buscar si el producto ya existe (por código Y biblioteca)
+            existing = await db.products.find_one({
+                "code": code,
+                "library": library
+            })
+            
+            if existing:
+                # ACTUALIZAR: merge del zonePoints con la nueva tarifa
+                current_zones = existing.get("zonePoints", {}) or {}
+                current_zones[tariff] = points
+                
+                await db.products.update_one(
+                    {"code": code, "library": library},
+                    {"$set": {
+                        "zonePoints": current_zones,
+                        "points": current_zones.get("T1", current_zones.get("Z1", points))
+                    }}
+                )
+                updated += 1
+                logger.info(f"Actualizado {code} con {tariff}={points}")
+            else:
+                # CREAR: nuevo producto con zonePoints inicial
+                clean_data = {
+                    "id": f"prod-{uuid.uuid4().hex[:8]}",
+                    "code": code,
+                    "name": str(product_data.get("name", "")),
+                    "category": str(product_data.get("category", "")),
+                    "series": str(product_data.get("series", "")),
+                    "visualType": str(product_data.get("visualType", "")),
+                    "width": float(product_data.get("width", 0) or 0),
+                    "height": float(product_data.get("height", 0) or 0),
+                    "depth": float(product_data.get("depth", 0) or 0),
+                    "manufacturer": str(product_data.get("manufacturer", "MV" if library == "MV" else "Zona Cocinas")),
+                    "module": str(product_data.get("module", "montada")),
+                    "library": library,
+                    "points": points,
+                    "zonePoints": {tariff: points}
+                }
+                
+                await db.products.insert_one(clean_data)
+                created += 1
+                logger.info(f"Creado {code} con {tariff}={points}")
+                
+        except Exception as e:
+            logger.error(f"Error upserting product {idx}: {e}")
+            errors.append(f"Producto {idx} ({product_data.get('code', '?')}): {str(e)}")
+    
+    logger.info(f"Bulk upsert: {created} created, {updated} updated, {len(errors)} errors")
+    
+    return {
+        "created": created,
+        "updated": updated,
+        "errors": errors,
+        "tariff": tariff
+    }
+
+
 @api_router.put("/products/{product_id}", response_model=ProductModel)
 async def update_product(product_id: str, product: ProductCreate):
     """Actualizar un producto"""

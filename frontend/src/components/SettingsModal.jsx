@@ -104,6 +104,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     const saved = localStorage.getItem('telemetryLibrary');
     return saved === 'MV' ? 'MV' : 'ZC';
   });
+  const [telemetryTariff, setTelemetryTariff] = useState(() => {
+    // Para MV: T1-T21, Para ZC: Z1-Z12
+    const saved = localStorage.getItem('telemetryTariff');
+    return saved || 'T1';
+  });
 
   // Client states
   const [clients, setClients] = useState([]);
@@ -4477,6 +4482,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           onClick={() => {
                             setTelemetryLibrary(lib);
                             localStorage.setItem('telemetryLibrary', lib);
+                            // Reset tariff cuando cambia librería
+                            const defaultTariff = lib === 'MV' ? 'T1' : 'Z1';
+                            setTelemetryTariff(defaultTariff);
+                            localStorage.setItem('telemetryTariff', defaultTariff);
                           }} 
                           disabled={isProcessingTelemetry}
                           className={`flex-1 py-2 px-3 rounded-lg transition-all font-black text-xs uppercase ${
@@ -4487,14 +4496,37 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-400'
                           }`}
                         >
-                          {lib === 'ZC' ? '📘 ZC (Z1)' : '📙 MV (T1)'}
+                          {lib === 'ZC' ? '📘 ZC' : '📙 MV'}
                         </button>
                       ))}
                     </div>
+                  </div>
+                  
+                  {/* Selector de Tarifa (T1-T21 para MV, Z1-Z12 para ZC) */}
+                  <div className="flex-1 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">
+                      {(telemetryLibrary || 'ZC') === 'MV' ? 'Tarifa MV' : 'Zona ZC'}
+                    </p>
+                    <select
+                      value={telemetryTariff}
+                      onChange={(e) => {
+                        setTelemetryTariff(e.target.value);
+                        localStorage.setItem('telemetryTariff', e.target.value);
+                      }}
+                      disabled={isProcessingTelemetry}
+                      className="w-full py-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      {(telemetryLibrary || 'ZC') === 'MV' 
+                        ? [...Array(21)].map((_, i) => (
+                            <option key={`T${i+1}`} value={`T${i+1}`}>Tarifa T{i+1}</option>
+                          ))
+                        : [...Array(12)].map((_, i) => (
+                            <option key={`Z${i+1}`} value={`Z${i+1}`}>Zona Z{i+1}</option>
+                          ))
+                      }
+                    </select>
                     <p className="text-[9px] text-slate-400 mt-1">
-                      {(telemetryLibrary || 'ZC') === 'ZC' 
-                        ? 'Librería ZC usa puntos Z1 (tarifa estándar)' 
-                        : 'Librería MV usa puntos T1 (tarifa especial)'}
+                      Selecciona la tarifa de las imágenes a importar
                     </p>
                   </div>
                 </div>
@@ -4598,33 +4630,45 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               addLog({ type: 'info', msg: `📁 Categorías: ${[...allCategories].join(', ')}` });
                             }
                             addLog({ type: 'info', msg: `IA detectó ${allProducts.length} producto(s) total` });
+                            addLog({ type: 'info', msg: `📌 Guardando con tarifa: ${telemetryTariff}` });
                             
-                            const newP = [], dupP = [];
-                            for (let i = 0; i < allProducts.length; i++) {
-                              const p = allProducts[i];
-                              setTelemetryProgress({ current: i + 1, total: allProducts.length });
-                              await new Promise(r => setTimeout(r, 50));
-                              if (existingCodes.has(p.code)) { 
-                                dupP.push(p); 
-                                addLog({ type: 'dup', code: p.code, name: p.name, pts: p.points || 0 }); 
-                              } else { 
-                                newP.push(p); 
-                                addLog({ type: 'new', code: p.code, name: p.name, pts: p.points || 0 }); 
-                                setExistingCodes(prev => new Set([...prev, p.code])); 
-                              }
-                            }
-                            if (newP.length > 0) { 
-                                try {
-                                  const bulkResult = await productsAPI.bulkCreate(newP);
-                                  if (bulkResult.errors && bulkResult.errors.length > 0) {
-                                    addLog({ type: 'err', msg: `${bulkResult.errors.length} error(es)` });
-                                  }
-                                  addLog({ type: 'ok', msg: `${bulkResult.created || newP.length} guardado(s)` });
-                                } catch (bulkErr) {
-                                  addLog({ type: 'err', msg: `Error al crear: ${bulkErr.message}` });
+                            // Usar bulkUpsert para crear o actualizar productos por tarifa
+                            // Esto evita duplicados y actualiza zonePoints correctamente
+                            if (allProducts.length > 0) {
+                              try {
+                                const upsertResult = await productsAPI.bulkUpsert(
+                                  allProducts, 
+                                  telemetryTariff,
+                                  telemetryLibrary || 'ZC'
+                                );
+                                
+                                const created = upsertResult.created || 0;
+                                const updated = upsertResult.updated || 0;
+                                
+                                if (upsertResult.errors && upsertResult.errors.length > 0) {
+                                  addLog({ type: 'err', msg: `${upsertResult.errors.length} error(es)` });
                                 }
+                                
+                                if (created > 0) {
+                                  addLog({ type: 'ok', msg: `✅ ${created} producto(s) NUEVO(s) creado(s)` });
+                                }
+                                if (updated > 0) {
+                                  addLog({ type: 'info', msg: `🔄 ${updated} producto(s) ACTUALIZADO(s) con ${telemetryTariff}` });
+                                }
+                                
+                                // Actualizar códigos existentes
+                                allProducts.forEach(p => {
+                                  if (p.code) setExistingCodes(prev => new Set([...prev, p.code]));
+                                });
+                                
+                                setTelemetryResult({ ok: true, newC: created, dupC: updated });
+                              } catch (upsertErr) {
+                                addLog({ type: 'err', msg: `Error al guardar: ${upsertErr.message}` });
+                                setTelemetryResult({ ok: false, newC: 0, dupC: 0 });
+                              }
+                            } else {
+                              setTelemetryResult({ ok: true, newC: 0, dupC: 0 });
                             }
-                            setTelemetryResult({ ok: true, newC: newP.length, dupC: dupP.length });
                             setTelemetryFiles([]);
                           } catch (e) { addLog({ type: 'err', msg: e.message }); }
                           setIsProcessingTelemetry(false);
@@ -4636,7 +4680,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   {telemetryResult?.ok && (
                     <div className="mt-3 bg-green-50 border border-green-200 rounded-xl p-3">
                       <div className="flex items-center gap-2"><CheckCircle size={16} className="text-green-600" /><span className="font-black text-green-800 text-sm">Completado</span></div>
-                      <p className="text-xs text-green-700 mt-1">{telemetryResult.newC} nuevo(s) • {telemetryResult.dupC} duplicado(s)</p>
+                      <p className="text-xs text-green-700 mt-1">{telemetryResult.newC} nuevo(s) • {telemetryResult.dupC} actualizado(s)</p>
                       <button onClick={() => { setTelemetryResult(null); setTelemetryLog([]); }} className="mt-2 w-full bg-indigo-900 text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2"><RefreshCw size={14} /> Nueva</button>
                     </div>
                   )}
