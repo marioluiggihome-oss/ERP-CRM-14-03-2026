@@ -267,51 +267,123 @@ async def analyze_product_sheets(
             
             base64_image = base64.b64encode(content).decode('utf-8')
             
-            # Prompt diferente según la biblioteca (MV vs ZC)
+            # Para MV, hacer múltiples pasadas para extraer todos los productos
             if library == 'MV':
-                system_prompt = """Eres un experto en digitalización de tarifas de muebles MV (MUEBLES VALENCIA).
-Tu tarea es extraer TODOS los productos de la tabla de tarifas.
+                file_products = []
+                extracted_codes = set()
+                max_passes = 2  # Máximo 2 pasadas por imagen para evitar timeouts
+                
+                for pass_num in range(max_passes):
+                    # Construir lista de códigos ya extraídos para excluirlos
+                    exclude_list = ", ".join(list(extracted_codes)[:50]) if extracted_codes else "ninguno"
+                    
+                    system_prompt = f"""Eres un experto en digitalización de tarifas de muebles MV (MUEBLES VALENCIA).
+Tu tarea es extraer productos de la tabla de tarifas.
 
 ESTRUCTURA DE TARIFAS MV:
-- Las tablas tienen secciones: PUERTAS, VITRINA, VITRINA INGLESA, REJILLA, etc.
-- Primera columna: altura/identificador numérico (14, 28, 40, 56, 70, 90, 127, 147)
-- Columnas siguientes: códigos de producto (P25, P30, P35, P40, P45, P50, P60, PV30, etc.)
-- Los precios están en la intersección de fila y columna
+- Las tablas tienen secciones: ALTO, ALTO CAMPANA, ALTO RINCON, ALTO VITRINA, BAJO, SEMICOLUMNA, COLUMNA, PUERTAS, etc.
+- Cada producto tiene un código (A25D/I*, ASCE60D/I*, B30D/I*, etc.)
+- Las columnas numéricas (70, 90, 127, 147, etc.) son ALTURAS en cm
+- Los valores en las celdas son los PRECIOS
 
 CÓDIGOS DE PRODUCTO MV:
-- P = Puerta (P25, P30, P35, P40, P45, P50, P60)
-- PV = Puerta Vitrina (PV30, PV35, PV40, PV45, PV50, PV60)
-- PVI = Puerta Vitrina Inglesa
-- PR = Puerta Rejilla
+- A = Alto (A25D/I*, A30D/I*, etc.)
+- ASCE = Alto Campana Esquina
+- AR = Alto Rincon
+- AV = Alto Vitrina
+- AD = Alto Decorativo
+- AE = Alto Escurreplatos
+- AM = Alto Microondas
+- B = Bajo
+- SC = Semicolumna
+- C = Columna
+- P = Puerta
 
-FORMATO DE SALIDA (JSON estricto):
-{
+FORMATO DE SALIDA (JSON):
+{{
   "products": [
-    {
-      "code": "P30-70",
-      "name": "Puerta 30cm Alto 70",
-      "category": "PUERTAS",
+    {{
+      "code": "A30D/I*-70",
+      "name": "Alto 30 D/I 70cm",
+      "category": "ALTO",
       "width": 300,
       "height": 700,
-      "points": 11,
-      "zonePoints": {"T1": 11}
-    }
+      "points": 45,
+      "zonePoints": {{"T1": 45}}
+    }}
   ]
-}
+}}
 
-REGLAS IMPORTANTES:
-1. Genera el código combinando el código de columna + altura: "P30-70", "PV40-90", etc.
-2. El nombre describe el producto: "Puerta 30cm Alto 70", "Vitrina 40cm Alto 90"
-3. width = número del código (P30 = 300mm, P45 = 450mm)
-4. height = identificador de fila en mm (70 = 700mm, 90 = 900mm)
-5. points = precio de la celda
-6. zonePoints.T1 = mismo precio (tarifa 1)
+REGLAS:
+1. Código = código_producto + "-" + altura (ej: "A30D/I*-70", "ASCE60D/I*-90")
+2. points y zonePoints.T1 = precio de la celda
+3. width = número en el código (A30 = 300mm, A60 = 600mm)
+4. height = columna de altura en mm (70 = 700mm, 90 = 900mm)
 
-EXTRAE MÁXIMO 80 PRODUCTOS POR IMAGEN.
-Si hay más de 80, extrae los primeros 80.
+{"IMPORTANTE: NO incluyas estos códigos que ya fueron extraídos: " + exclude_list if extracted_codes else ""}
 
-Responde SOLO con JSON válido, sin explicaciones."""
+Extrae hasta 50 productos. Responde SOLO con JSON válido."""
+
+                    chat = LlmChat(
+                        api_key=api_key,
+                        session_id=f"product-analysis-mv-{uuid.uuid4()}",
+                        system_message=system_prompt
+                    ).with_model("gemini", "gemini-2.0-flash")
+                    
+                    user_prompt = f"""Analiza esta página de TARIFA MV.
+{"Extrae productos DIFERENTES a los ya extraídos." if extracted_codes else "Extrae todos los productos que veas."}
+Responde SOLO con JSON válido."""
+                    
+                    user_message = UserMessage(
+                        text=user_prompt,
+                        file_contents=[ImageContent(image_base64=base64_image)]
+                    )
+                    
+                    try:
+                        response = await chat.send_message(user_message)
+                        response_text = str(response).strip() if response else ""
+                        
+                        # Limpiar markdown
+                        if response_text.startswith("```"):
+                            response_text = response_text.split("```")[1]
+                            if response_text.startswith("json"):
+                                response_text = response_text[4:]
+                        response_text = response_text.strip()
+                        
+                        parsed = json.loads(response_text)
+                        new_products = parsed.get("products", [])
+                        
+                        # Filtrar productos nuevos (no duplicados)
+                        new_count = 0
+                        for prod in new_products:
+                            code = prod.get("code", "")
+                            if code and code not in extracted_codes:
+                                prod['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
+                                prod['manufacturer'] = 'MV'
+                                prod['module'] = module
+                                prod['library'] = library
+                                prod['importedAt'] = datetime.now(timezone.utc).isoformat()
+                                prod['originalFilename'] = file.filename
+                                file_products.append(prod)
+                                extracted_codes.add(code)
+                                new_count += 1
+                        
+                        logger.info(f"MV Pass {pass_num+1}: {new_count} nuevos productos (total: {len(file_products)})")
+                        
+                        # Si no encontró productos nuevos, terminar
+                        if new_count == 0:
+                            break
+                            
+                    except Exception as pass_error:
+                        logger.warning(f"MV Pass {pass_num+1} error: {pass_error}")
+                        break
+                
+                products.extend(file_products)
+                logger.info(f"MV Total from {file.filename}: {len(file_products)} productos")
+                continue  # Saltar el procesamiento de ZC para este archivo
+                
             else:
+                # Código original para ZC
                 system_prompt = """Eres un experto en digitalización de tarifas técnicas de muebles de cocina ZONA COCINAS.
 Tu tarea es extraer TODOS los productos visibles en la imagen de forma estructurada.
 
