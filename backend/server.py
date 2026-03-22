@@ -271,7 +271,7 @@ async def analyze_product_sheets(
             if library == 'MV':
                 file_products = []
                 extracted_codes = set()
-                max_passes = 2  # Máximo 2 pasadas por imagen para evitar timeouts
+                max_passes = 3  # 3 pasadas = hasta 150 productos por imagen
                 
                 for pass_num in range(max_passes):
                     # Construir lista de códigos ya extraídos para excluirlos
