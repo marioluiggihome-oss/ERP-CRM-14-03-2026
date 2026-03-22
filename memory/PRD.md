@@ -31,6 +31,30 @@
 - ✅ **Frontend**: `/app/frontend/src/components/SettingsModal.jsx` líneas 4469-4531
 - ✅ **Verificado**: Screenshots confirman UI funcional
 
+### 4. Dashboard de Métricas de Producción y Ventas (P1) - NUEVO
+- ✅ **Nueva pestaña "DASHBOARD"** en Panel Maestro (MASTER)
+- ✅ **Backend**: Nuevo módulo `/app/backend/routes/dashboard.py` con endpoint `/api/dashboard/metrics`
+- ✅ **Selector de período**: Semana / Mes / Trimestre / Año / Todo el histórico
+- ✅ **7 KPIs principales**:
+  - Órdenes de Fabricación
+  - Pedidos Confirmados
+  - Presupuestos
+  - Ventas € (valor total)
+  - Presupuestos Valor €
+  - Piezas en Producción
+  - Tasa de Conversión
+- ✅ **Gráficos interactivos (recharts)**:
+  - Tendencia Mensual (BarChart - Pedidos vs Presupuestos)
+  - Estado de Producción (PieChart - Borrador/Confirmado/En Producción/Listo/Entregado)
+- ✅ **Secciones adicionales**:
+  - Prioridad de Órdenes (Urgente/Alta/Normal/Baja)
+  - Clientes (Total/Activos/Potenciales)
+  - Catálogo de Productos (Total/ZC/MV)
+  - Últimos Pedidos Confirmados (tabla)
+  - Fabricación Pendiente (tabla)
+  - Presupuestos por Estado
+- ✅ **Verificado**: Testing agent pasó 14/14 tests backend + todos los elementos UI
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (21 Marzo 2026)
