@@ -255,7 +255,19 @@ const App = () => {
     // Al hacer login, limpiar los items del presupuesto para evitar 
     // que un usuario vea los datos de otro usuario
     const userLibraries = user.allowedLibraries || ['ZC'];
-    const defaultLibrary = userLibraries[0] || 'ZC';
+    
+    // Recuperar la última biblioteca usada del localStorage (si el usuario tiene acceso)
+    let savedLibrary = null;
+    try {
+      savedLibrary = localStorage.getItem('luiggi_active_library');
+    } catch (e) {
+      console.error("Error reading library from localStorage:", e);
+    }
+    
+    // Usar la biblioteca guardada si el usuario tiene acceso, sino usar la primera permitida
+    const defaultLibrary = (savedLibrary && userLibraries.includes(savedLibrary)) 
+      ? savedLibrary 
+      : (userLibraries[0] || 'ZC');
     
     setState(prev => ({ 
       ...prev, 
@@ -281,7 +293,7 @@ const App = () => {
     // Recargar productos de la biblioteca del usuario
     loadProductsByLibrary(defaultLibrary);
     
-    // Limpiar localStorage también
+    // Limpiar localStorage de presupuesto (pero NO la biblioteca activa)
     try {
       localStorage.removeItem('luiggi_budget_data');
     } catch (e) {
@@ -312,6 +324,13 @@ const App = () => {
 
   // Handler para cambio de biblioteca
   const handleLibraryChange = async (libraryCode) => {
+    // Guardar la biblioteca activa en localStorage para persistencia entre sesiones
+    try {
+      localStorage.setItem('luiggi_active_library', libraryCode);
+    } catch (e) {
+      console.error("Error saving library to localStorage:", e);
+    }
+    
     // Cargar productos de la nueva biblioteca
     loadProductsByLibrary(libraryCode);
     
