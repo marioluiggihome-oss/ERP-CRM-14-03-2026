@@ -4529,8 +4529,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           const addLog = (e) => setTelemetryLog(p => [...p, { ...e, time: new Date().toLocaleTimeString() }]);
                           addLog({ type: 'info', msg: `Iniciando ${telemetryFiles.length} archivo(s)...` });
                           try {
-                            // Procesar archivos en lotes de 2 para evitar timeouts
-                            const BATCH_SIZE = 2;
+                            // Procesar archivos de 1 en 1 para evitar timeouts con tablas grandes
+                            const BATCH_SIZE = 1;
                             let allProducts = [];
                             let allSkipped = [];
                             let allCategories = new Set();
@@ -4553,13 +4553,22 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   body: formData 
                                 });
                                 
+                                // Leer el body una sola vez
+                                const responseText = await res.text();
+                                
                                 if (!res.ok) {
-                                  const errorText = await res.text();
-                                  addLog({ type: 'err', msg: `Lote ${batchNum} error: ${res.status} - ${errorText.substring(0, 100)}` });
+                                  addLog({ type: 'err', msg: `Lote ${batchNum} error: ${res.status} - ${responseText.substring(0, 100)}` });
                                   continue;
                                 }
                                 
-                                const result = await res.json();
+                                // Parsear JSON del texto ya leído
+                                let result;
+                                try {
+                                  result = JSON.parse(responseText);
+                                } catch (parseErr) {
+                                  addLog({ type: 'err', msg: `Lote ${batchNum}: Error parseando respuesta` });
+                                  continue;
+                                }
                                 
                                 if (result.success && result.products) {
                                   allProducts = [...allProducts, ...result.products];

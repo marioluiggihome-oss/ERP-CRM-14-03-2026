@@ -267,11 +267,52 @@ async def analyze_product_sheets(
             
             base64_image = base64.b64encode(content).decode('utf-8')
             
-            # Create Gemini chat with vision
-            chat = LlmChat(
-                api_key=api_key,
-                session_id=f"product-analysis-{uuid.uuid4()}",
-                system_message="""Eres un experto en digitalización de tarifas técnicas de muebles de cocina ZONA COCINAS.
+            # Prompt diferente según la biblioteca (MV vs ZC)
+            if library == 'MV':
+                system_prompt = """Eres un experto en digitalización de tarifas de muebles MV (MUEBLES VALENCIA).
+Tu tarea es extraer TODOS los productos de la tabla de tarifas.
+
+ESTRUCTURA DE TARIFAS MV:
+- Las tablas tienen secciones: PUERTAS, VITRINA, VITRINA INGLESA, REJILLA, etc.
+- Primera columna: altura/identificador numérico (14, 28, 40, 56, 70, 90, 127, 147)
+- Columnas siguientes: códigos de producto (P25, P30, P35, P40, P45, P50, P60, PV30, etc.)
+- Los precios están en la intersección de fila y columna
+
+CÓDIGOS DE PRODUCTO MV:
+- P = Puerta (P25, P30, P35, P40, P45, P50, P60)
+- PV = Puerta Vitrina (PV30, PV35, PV40, PV45, PV50, PV60)
+- PVI = Puerta Vitrina Inglesa
+- PR = Puerta Rejilla
+
+FORMATO DE SALIDA (JSON estricto):
+{
+  "products": [
+    {
+      "code": "P30-70",
+      "name": "Puerta 30cm Alto 70",
+      "category": "PUERTAS",
+      "width": 300,
+      "height": 700,
+      "points": 11,
+      "zonePoints": {"T1": 11}
+    }
+  ]
+}
+
+REGLAS IMPORTANTES:
+1. Genera el código combinando el código de columna + altura: "P30-70", "PV40-90", etc.
+2. El nombre describe el producto: "Puerta 30cm Alto 70", "Vitrina 40cm Alto 90"
+3. width = número del código (P30 = 300mm, P45 = 450mm)
+4. height = identificador de fila en mm (70 = 700mm, 90 = 900mm)
+5. points = precio de la celda
+6. zonePoints.T1 = mismo precio (tarifa 1)
+
+EXTRAE MÁXIMO 30 PRODUCTOS POR IMAGEN para evitar respuestas muy largas.
+Si hay más de 30, extrae los primeros 30.
+
+Responde SOLO con JSON válido, sin explicaciones."""
+            else:
+                system_prompt = """Eres un experto en digitalización de tarifas técnicas de muebles de cocina ZONA COCINAS.
 Tu tarea es extraer TODOS los productos visibles en la imagen de forma estructurada.
 
 ═══════════════════════════════════════════════════════════════
@@ -372,11 +413,22 @@ REGLAS CRÍTICAS:
 ✅ Los códigos deben ser EXACTOS como aparecen
 ✅ Z1 es el PRIMER precio de cada fila (columna después del código)
 ✅ Responde SOLO con JSON válido, sin explicaciones"""
+            
+            # Create Gemini chat with vision
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"product-analysis-{uuid.uuid4()}",
+                system_message=system_prompt
             ).with_model("gemini", "gemini-2.0-flash")
             
-            # Create message with image
-            user_message = UserMessage(
-                text="""Analiza esta página de tarifa técnica de ZONA COCINAS.
+            # Create message with image - different prompt for MV vs ZC
+            if library == 'MV':
+                user_prompt = """Analiza esta página de TARIFA MV.
+Extrae los productos de la tabla siguiendo el formato JSON especificado.
+MÁXIMO 30 productos. Si hay más, extrae solo los primeros 30.
+Responde SOLO con JSON válido."""
+            else:
+                user_prompt = """Analiza esta página de tarifa técnica de ZONA COCINAS.
 
 INSTRUCCIONES:
 1. Lee el ENCABEZADO de la página para identificar: ALTOS, BAJOS, SEMICOLUMNAS, COLUMNAS, PUERTAS, ACCESORIOS, etc.
@@ -385,7 +437,11 @@ INSTRUCCIONES:
 4. Para cada producto, lee los 12 precios por zona (Z1 a Z12)
 5. Decodifica las dimensiones del código
 
-Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones.""",
+Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones."""
+            
+            # Create the user message with image
+            user_message = UserMessage(
+                text=user_prompt,
                 file_contents=[ImageContent(image_base64=base64_image)]
             )
             
