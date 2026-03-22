@@ -4882,32 +4882,43 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
                   </div>
                   
-                  {/* Selector de Tarifa (T1-T21 para MV, Z1-Z12 para ZC) */}
+                  {/* Selector de Tarifa - Solo para ZC (MV detecta automáticamente) */}
                   <div className="flex-1 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-3 border border-slate-200">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">
-                      {(telemetryLibrary || 'ZC') === 'MV' ? 'Tarifa MV' : 'Zona ZC'}
-                    </p>
-                    <select
-                      value={telemetryTariff}
-                      onChange={(e) => {
-                        setTelemetryTariff(e.target.value);
-                        localStorage.setItem('telemetryTariff', e.target.value);
-                      }}
-                      disabled={isProcessingTelemetry}
-                      className="w-full py-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      {(telemetryLibrary || 'ZC') === 'MV' 
-                        ? [...Array(21)].map((_, i) => (
-                            <option key={`T${i+1}`} value={`T${i+1}`}>Tarifa T{i+1}</option>
-                          ))
-                        : [...Array(12)].map((_, i) => (
+                    {(telemetryLibrary || 'ZC') === 'MV' ? (
+                      <>
+                        <p className="text-[10px] font-bold text-purple-600 uppercase mb-2">
+                          🤖 Detección Automática
+                        </p>
+                        <div className="w-full py-2 px-3 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-bold text-xs">
+                          La IA detectará la tarifa (T1-T21) desde el encabezado de cada imagen
+                        </div>
+                        <p className="text-[9px] text-purple-500 mt-1">
+                          No necesitas seleccionar manualmente
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">
+                          Zona ZC
+                        </p>
+                        <select
+                          value={telemetryTariff}
+                          onChange={(e) => {
+                            setTelemetryTariff(e.target.value);
+                            localStorage.setItem('telemetryTariff', e.target.value);
+                          }}
+                          disabled={isProcessingTelemetry}
+                          className="w-full py-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        >
+                          {[...Array(12)].map((_, i) => (
                             <option key={`Z${i+1}`} value={`Z${i+1}`}>Zona Z{i+1}</option>
-                          ))
-                      }
-                    </select>
-                    <p className="text-[9px] text-slate-400 mt-1">
-                      Selecciona la tarifa de las imágenes a importar
-                    </p>
+                          ))}
+                        </select>
+                        <p className="text-[9px] text-slate-400 mt-1">
+                          Selecciona la zona de las imágenes a importar
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -5010,30 +5021,66 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               addLog({ type: 'info', msg: `📁 Categorías: ${[...allCategories].join(', ')}` });
                             }
                             addLog({ type: 'info', msg: `IA detectó ${allProducts.length} producto(s) total` });
-                            addLog({ type: 'info', msg: `📌 Guardando con tarifa: ${telemetryTariff}` });
                             
-                            // Usar bulkUpsert para crear o actualizar productos por tarifa
-                            // Esto evita duplicados y actualiza zonePoints correctamente
+                            // Para MV: usar tarifa detectada por IA, Para ZC: usar selector manual
+                            // Agrupar productos por tarifa detectada (para MV)
                             if (allProducts.length > 0) {
                               try {
-                                const upsertResult = await productsAPI.bulkUpsert(
-                                  allProducts, 
-                                  telemetryTariff,
-                                  telemetryLibrary || 'ZC'
-                                );
+                                let totalCreated = 0;
+                                let totalUpdated = 0;
                                 
-                                const created = upsertResult.created || 0;
-                                const updated = upsertResult.updated || 0;
-                                
-                                if (upsertResult.errors && upsertResult.errors.length > 0) {
-                                  addLog({ type: 'err', msg: `${upsertResult.errors.length} error(es)` });
+                                if ((telemetryLibrary || 'ZC') === 'MV') {
+                                  // MV: Agrupar productos por tarifa detectada por IA
+                                  const productsByTariff = {};
+                                  allProducts.forEach(p => {
+                                    const tariff = p.detectedTariff || 'T1';
+                                    if (!productsByTariff[tariff]) productsByTariff[tariff] = [];
+                                    productsByTariff[tariff].push(p);
+                                  });
+                                  
+                                  const detectedTariffs = Object.keys(productsByTariff);
+                                  addLog({ type: 'info', msg: `🎯 IA detectó tarifa(s): ${detectedTariffs.join(', ')}` });
+                                  
+                                  // Procesar cada grupo de tarifa
+                                  for (const [tariff, products] of Object.entries(productsByTariff)) {
+                                    addLog({ type: 'info', msg: `📌 Guardando ${products.length} producto(s) con ${tariff}...` });
+                                    
+                                    const upsertResult = await productsAPI.bulkUpsert(
+                                      products, 
+                                      tariff,
+                                      'MV'
+                                    );
+                                    
+                                    totalCreated += upsertResult.created || 0;
+                                    totalUpdated += upsertResult.updated || 0;
+                                    
+                                    if (upsertResult.errors && upsertResult.errors.length > 0) {
+                                      addLog({ type: 'err', msg: `${tariff}: ${upsertResult.errors.length} error(es)` });
+                                    }
+                                  }
+                                } else {
+                                  // ZC: Usar tarifa seleccionada manualmente
+                                  addLog({ type: 'info', msg: `📌 Guardando con zona: ${telemetryTariff}` });
+                                  
+                                  const upsertResult = await productsAPI.bulkUpsert(
+                                    allProducts, 
+                                    telemetryTariff,
+                                    'ZC'
+                                  );
+                                  
+                                  totalCreated = upsertResult.created || 0;
+                                  totalUpdated = upsertResult.updated || 0;
+                                  
+                                  if (upsertResult.errors && upsertResult.errors.length > 0) {
+                                    addLog({ type: 'err', msg: `${upsertResult.errors.length} error(es)` });
+                                  }
                                 }
                                 
-                                if (created > 0) {
-                                  addLog({ type: 'ok', msg: `✅ ${created} producto(s) NUEVO(s) creado(s)` });
+                                if (totalCreated > 0) {
+                                  addLog({ type: 'ok', msg: `✅ ${totalCreated} producto(s) NUEVO(s) creado(s)` });
                                 }
-                                if (updated > 0) {
-                                  addLog({ type: 'info', msg: `🔄 ${updated} producto(s) ACTUALIZADO(s) con ${telemetryTariff}` });
+                                if (totalUpdated > 0) {
+                                  addLog({ type: 'info', msg: `🔄 ${totalUpdated} producto(s) ACTUALIZADO(s)` });
                                 }
                                 
                                 // Actualizar códigos existentes
@@ -5041,7 +5088,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   if (p.code) setExistingCodes(prev => new Set([...prev, p.code]));
                                 });
                                 
-                                setTelemetryResult({ ok: true, newC: created, dupC: updated });
+                                setTelemetryResult({ ok: true, newC: totalCreated, dupC: totalUpdated });
                               } catch (upsertErr) {
                                 addLog({ type: 'err', msg: `Error al guardar: ${upsertErr.message}` });
                                 setTelemetryResult({ ok: false, newC: 0, dupC: 0 });

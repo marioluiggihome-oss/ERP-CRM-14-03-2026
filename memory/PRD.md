@@ -68,6 +68,14 @@
   - canAccessFabrica se activa automáticamente
 - ✅ **Verificado**: Testing agent pasó 7/7 tests
 
+### 6. Detección Automática de Tarifa MV por IA (P1)
+- ✅ **Funcionalidad**: La IA (Gemini Vision) detecta automáticamente la tarifa (T1-T21) desde el encabezado de cada imagen MV
+- ✅ **Backend**: Modificado prompt en `/app/backend/server.py` para extraer "detectedTariff" del encabezado
+- ✅ **Frontend**: Para MV ya no muestra selector dropdown manual, sino mensaje "🤖 Detección Automática"
+- ✅ **ZC mantiene selector manual**: Para librería ZC sigue mostrando dropdown Z1-Z12
+- ✅ **Agrupación inteligente**: El frontend agrupa productos por tarifa detectada y hace upserts separados
+- ✅ **Logs mejorados**: Muestra en el log la tarifa detectada por la IA para cada imagen
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (21 Marzo 2026)

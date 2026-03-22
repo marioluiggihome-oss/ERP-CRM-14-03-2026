@@ -274,6 +274,7 @@ async def analyze_product_sheets(
                 file_products = []
                 extracted_codes = set()
                 max_passes = 3  # 3 pasadas = hasta 150 productos por imagen
+                detected_tariff = None  # Tarifa detectada automáticamente
                 
                 for pass_num in range(max_passes):
                     # Construir lista de códigos ya extraídos para excluirlos
@@ -282,7 +283,21 @@ async def analyze_product_sheets(
                     system_prompt = f"""Eres un experto en digitalización de tarifas de muebles MV (MUEBLES VALENCIA).
 Tu tarea es extraer productos de la tabla de tarifas.
 
+═══════════════════════════════════════════════════════════════
+PASO 0: DETECTAR NÚMERO DE TARIFA DESDE EL ENCABEZADO
+═══════════════════════════════════════════════════════════════
+IMPORTANTE: Lee el encabezado/título de la página para identificar el NÚMERO DE TARIFA.
+Busca textos como:
+- "TARIFA 1", "TARIFA 2", "TARIFA 3" ... "TARIFA 21"
+- "T1", "T2", "T3" ... "T21"
+- "PRECIO TARIFA 1", "PVP TARIFA 3", etc.
+
+El número de tarifa es CRÍTICO para mapear correctamente los precios.
+Si no encuentras un número de tarifa explícito, usa "T1" por defecto.
+
+═══════════════════════════════════════════════════════════════
 ESTRUCTURA DE TARIFAS MV:
+═══════════════════════════════════════════════════════════════
 - Las tablas tienen secciones: ALTO, ALTO CAMPANA, ALTO RINCON, ALTO VITRINA, BAJO, SEMICOLUMNA, COLUMNA, PUERTAS, etc.
 - Cada producto tiene un código (A25D/I*, ASCE60D/I*, B30D/I*, etc.)
 - Las columnas numéricas (70, 90, 127, 147, etc.) son ALTURAS en cm
@@ -303,6 +318,7 @@ CÓDIGOS DE PRODUCTO MV:
 
 FORMATO DE SALIDA (JSON):
 {{
+  "detectedTariff": "T3",
   "products": [
     {{
       "code": "A30D/I*-70",
@@ -310,17 +326,17 @@ FORMATO DE SALIDA (JSON):
       "category": "ALTO",
       "width": 300,
       "height": 700,
-      "points": 45,
-      "zonePoints": {{"T1": 45}}
+      "points": 45
     }}
   ]
 }}
 
 REGLAS:
 1. Código = código_producto + "-" + altura (ej: "A30D/I*-70", "ASCE60D/I*-90")
-2. points y zonePoints.T1 = precio de la celda
+2. points = precio de la celda
 3. width = número en el código (A30 = 300mm, A60 = 600mm)
 4. height = columna de altura en mm (70 = 700mm, 90 = 900mm)
+5. "detectedTariff" debe ser el número de tarifa detectado del encabezado (T1, T2, T3... T21)
 
 {"IMPORTANTE: NO incluyas estos códigos que ya fueron extraídos: " + exclude_list if extracted_codes else ""}
 
@@ -333,8 +349,9 @@ Extrae hasta 50 productos. Responde SOLO con JSON válido."""
                     ).with_model("gemini", "gemini-2.0-flash")
                     
                     user_prompt = f"""Analiza esta página de TARIFA MV.
-{"Extrae productos DIFERENTES a los ya extraídos." if extracted_codes else "Extrae todos los productos que veas."}
-Responde SOLO con JSON válido."""
+PRIMERO: Detecta el número de tarifa del encabezado (T1, T2, T3... T21).
+{"SEGUNDO: Extrae productos DIFERENTES a los ya extraídos." if extracted_codes else "SEGUNDO: Extrae todos los productos que veas."}
+Responde SOLO con JSON válido con "detectedTariff" y "products"."""
                     
                     user_message = UserMessage(
                         text=user_prompt,
@@ -355,6 +372,14 @@ Responde SOLO con JSON válido."""
                         parsed = json.loads(response_text)
                         new_products = parsed.get("products", [])
                         
+                        # Detectar tarifa del primer pase
+                        if pass_num == 0:
+                            detected_tariff = parsed.get("detectedTariff", "T1")
+                            # Validar formato de tarifa
+                            if not detected_tariff or not detected_tariff.startswith("T"):
+                                detected_tariff = "T1"
+                            logger.info(f"MV Tarifa detectada automáticamente: {detected_tariff}")
+                        
                         # Filtrar productos nuevos (no duplicados)
                         new_count = 0
                         for prod in new_products:
@@ -366,11 +391,14 @@ Responde SOLO con JSON válido."""
                                 prod['library'] = library
                                 prod['importedAt'] = datetime.now(timezone.utc).isoformat()
                                 prod['originalFilename'] = file.filename
+                                # Usar tarifa detectada para zonePoints
+                                prod['zonePoints'] = {detected_tariff: prod.get('points', 0)}
+                                prod['detectedTariff'] = detected_tariff
                                 file_products.append(prod)
                                 extracted_codes.add(code)
                                 new_count += 1
                         
-                        logger.info(f"MV Pass {pass_num+1}: {new_count} nuevos productos (total: {len(file_products)})")
+                        logger.info(f"MV Pass {pass_num+1}: {new_count} nuevos productos (total: {len(file_products)}, tarifa: {detected_tariff})")
                         
                         # Si no encontró productos nuevos, terminar
                         if new_count == 0:
@@ -381,7 +409,7 @@ Responde SOLO con JSON válido."""
                         break
                 
                 products.extend(file_products)
-                logger.info(f"MV Total from {file.filename}: {len(file_products)} productos")
+                logger.info(f"MV Total from {file.filename}: {len(file_products)} productos (tarifa detectada: {detected_tariff})")
                 continue  # Saltar el procesamiento de ZC para este archivo
                 
             else:
