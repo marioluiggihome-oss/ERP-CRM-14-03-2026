@@ -307,8 +307,8 @@ REGLAS IMPORTANTES:
 5. points = precio de la celda
 6. zonePoints.T1 = mismo precio (tarifa 1)
 
-EXTRAE MÁXIMO 30 PRODUCTOS POR IMAGEN para evitar respuestas muy largas.
-Si hay más de 30, extrae los primeros 30.
+EXTRAE MÁXIMO 80 PRODUCTOS POR IMAGEN.
+Si hay más de 80, extrae los primeros 80.
 
 Responde SOLO con JSON válido, sin explicaciones."""
             else:
