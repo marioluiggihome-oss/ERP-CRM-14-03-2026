@@ -21,14 +21,15 @@
 - ✅ **onClick actualizado**: Guarda en localStorage al cambiar biblioteca
 - ✅ **Verificado**: Test confirma `localStorage.telemetryLibrary = MV` persistido
 
-### 0.2. Refactorización: Múltiples Módulos Extraídos
+### 0.2. Refactorización Backend Completa
 - ✅ **`/app/backend/routes/montajes.py`** (264 líneas): CRUD Montadores y Montajes
 - ✅ **`/app/backend/routes/backup.py`** (349 líneas): Sistema de backups, scheduler, email
-- ✅ **`/app/backend/routes/armarios.py`** (533 líneas): Proyectos de Armarios con IA (configure, layout, render)
-- ✅ **`/app/backend/routes/digitalizador.py`** (667 líneas): Reconocimiento óptico, expedientes, historial, export CSV
-- ✅ **`/app/backend/routes/crm_module.py`** (797 líneas): Contactos, Oportunidades, Actividades, Calendario, Dashboard
-- ✅ **server.py reducido**: De 7006 a 4192 líneas (**-2814 líneas, -40%**)
-- ✅ **Total routers modulares**: 16 archivos
+- ✅ **`/app/backend/routes/armarios.py`** (533 líneas): Proyectos de Armarios con IA
+- ✅ **`/app/backend/routes/digitalizador.py`** (667 líneas): Reconocimiento óptico, expedientes
+- ✅ **`/app/backend/routes/crm_module.py`** (797 líneas): Contactos, Oportunidades, Actividades
+- ✅ **`/app/backend/routes/orders.py`** (440 líneas): Confirmación de pedidos, fabricación
+- ✅ **server.py reducido**: De 7006 a 3718 líneas (**-3288 líneas, -47%**)
+- ✅ **Total routers modulares**: 17 archivos
 - ✅ **Verificado**: Todos los endpoints funcionan correctamente
 
 ### 0.3. UI: Eliminado Botón "Registrarse con Email"
