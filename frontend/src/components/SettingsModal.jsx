@@ -4971,41 +4971,34 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               batchFiles.forEach(f => formData.append('files', f.file));
                               
                               try {
-                                // Usar AbortController con timeout de 120 segundos para imágenes grandes
-                                const controller = new AbortController();
-                                const timeoutId = setTimeout(() => controller.abort(), 120000);
-                                
-                                const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`, { 
-                                  method: 'POST', 
-                                  body: formData,
-                                  signal: controller.signal
+                                // Usar XMLHttpRequest para evitar problemas de stream con fetch
+                                const result = await new Promise((resolve, reject) => {
+                                  const xhr = new XMLHttpRequest();
+                                  xhr.open('POST', `${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`);
+                                  xhr.timeout = 180000; // 3 minutos timeout
+                                  
+                                  xhr.onload = function() {
+                                    if (xhr.status >= 200 && xhr.status < 300) {
+                                      try {
+                                        resolve(JSON.parse(xhr.responseText));
+                                      } catch (e) {
+                                        reject(new Error('Error parseando respuesta'));
+                                      }
+                                    } else {
+                                      reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText.substring(0, 100)}`));
+                                    }
+                                  };
+                                  
+                                  xhr.onerror = function() {
+                                    reject(new Error('Error de conexión'));
+                                  };
+                                  
+                                  xhr.ontimeout = function() {
+                                    reject(new Error('Timeout - imagen muy grande'));
+                                  };
+                                  
+                                  xhr.send(formData);
                                 });
-                                
-                                clearTimeout(timeoutId);
-                                
-                                // Usar arrayBuffer para lectura robusta
-                                let responseText;
-                                try {
-                                  const buffer = await res.arrayBuffer();
-                                  responseText = new TextDecoder().decode(buffer);
-                                } catch (readErr) {
-                                  addLog({ type: 'err', msg: `Lote ${batchNum}: Error leyendo respuesta - ${readErr.message}` });
-                                  continue;
-                                }
-                                
-                                if (!res.ok) {
-                                  addLog({ type: 'err', msg: `Lote ${batchNum} error: ${res.status} - ${responseText.substring(0, 100)}` });
-                                  continue;
-                                }
-                                
-                                // Parsear JSON del texto ya leído
-                                let result;
-                                try {
-                                  result = JSON.parse(responseText);
-                                } catch (parseErr) {
-                                  addLog({ type: 'err', msg: `Lote ${batchNum}: Error parseando respuesta` });
-                                  continue;
-                                }
                                 
                                 if (result.success && result.products) {
                                   allProducts = [...allProducts, ...result.products];
@@ -5013,14 +5006,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   if (result.detectedCategories) result.detectedCategories.forEach(c => allCategories.add(c));
                                   addLog({ type: 'info', msg: `Lote ${batchNum}: ${result.products.length} producto(s)` });
                                 } else {
-                                  addLog({ type: 'err', msg: `Lote ${batchNum}: ${result.error || 'Error desconocido'}` });
+                                  addLog({ type: 'err', msg: `Lote ${batchNum}: ${result.error || 'Sin productos'}` });
                                 }
                               } catch (batchError) {
-                                if (batchError.name === 'AbortError') {
-                                  addLog({ type: 'err', msg: `Lote ${batchNum}: Timeout (imagen muy grande)` });
-                                } else {
-                                  addLog({ type: 'err', msg: `Lote ${batchNum} falló: ${batchError.message}` });
-                                }
+                                addLog({ type: 'err', msg: `Lote ${batchNum}: ${batchError.message}` });
                               }
                               
                               // Pequeña pausa entre lotes
