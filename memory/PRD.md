@@ -31,8 +31,9 @@
 - ✅ **Frontend**: `/app/frontend/src/components/SettingsModal.jsx` líneas 4469-4531
 - ✅ **Verificado**: Screenshots confirman UI funcional
 
-### 4. Dashboard de Métricas de Producción y Ventas (P1) - NUEVO
-- ✅ **Nueva pestaña "DASHBOARD"** en Panel Maestro (MASTER)
+### 4. Dashboard Fábrica (antes Dashboard de Métricas) (P1)
+- ✅ **Renombrado**: "Dashboard" → "Dashboard Fábrica"
+- ✅ **Nueva pestaña "DASHBOARD FÁBRICA"** en Panel Maestro (MASTER)
 - ✅ **Backend**: Nuevo módulo `/app/backend/routes/dashboard.py` con endpoint `/api/dashboard/metrics`
 - ✅ **Selector de período**: Semana / Mes / Trimestre / Año / Todo el histórico
 - ✅ **7 KPIs principales**:
@@ -54,6 +55,18 @@
   - Fabricación Pendiente (tabla)
   - Presupuestos por Estado
 - ✅ **Verificado**: Testing agent pasó 14/14 tests backend + todos los elementos UI
+
+### 5. Renombrado de Pestañas y Nuevo Rol "Director de Fábrica" (P1)
+- ✅ **Renombrado**: "Panel Director" → "Panel Director Comercial"
+- ✅ **Renombrado**: "Dashboard" → "Dashboard Fábrica"
+- ✅ **Nuevo rol**: `isDirectorFabrica` en el modelo de usuario
+- ✅ **Backend**: Campo añadido en `/app/backend/models/schemas.py` (UserBase, UserCreate, UserUpdate)
+- ✅ **Frontend**: Checkbox con fondo cyan en formulario de usuario
+- ✅ **Permisos automáticos**: Director Fábrica tiene acceso a:
+  - Dashboard Fábrica (pestaña en Panel Maestro)
+  - Módulo FÁBRICA en sidebar
+  - canAccessFabrica se activa automáticamente
+- ✅ **Verificado**: Testing agent pasó 7/7 tests
 
 ---
 
