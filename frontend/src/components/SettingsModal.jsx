@@ -60,6 +60,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isAdmin: false,  // Director Comercial
     isGerente: false,  // Gerente - mismo acceso que Director
     isDirectorComercial: false,  // Director Comercial (ve todo el CRM)
+    isDirectorFabrica: false,  // Director de Fábrica (ve Dashboard Fábrica y gestiona producción)
     isResponsableDelegacion: false,  // Responsable Delegación
     isRepresentative: false,
     isPrescriptor: false,
@@ -1102,7 +1103,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
         {/* Tabs */}
         <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto shrink-0">
-          {/* Tab Panel Director - Solo Admin (antes era Panel Admin separado) */}
+          {/* Tab Panel Director Comercial - Solo Admin/Gerente/Director Comercial */}
           {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
               onClick={() => setActiveTab('director')}
@@ -1111,12 +1112,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               }`}
               data-testid="director-tab"
             >
-              Panel Director
+              Panel Director Comercial
             </button>
           )}
           
-          {/* Tab Dashboard Métricas - Solo Admin/Director/Gerente */}
-          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+          {/* Tab Dashboard Fábrica - Admin/Gerente/Director Comercial/Director Fábrica */}
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial || state.currentUser?.isDirectorFabrica) && (
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1124,7 +1125,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               }`}
               data-testid="dashboard-tab"
             >
-              Dashboard
+              Dashboard Fábrica
             </button>
           )}
           
@@ -1788,11 +1789,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                    <BarChart3 size={24} className="text-white" />
+                    <Factory size={24} className="text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-800 uppercase">Dashboard de Métricas</h2>
-                    <p className="text-sm text-slate-500">Producción y Ventas en tiempo real</p>
+                    <h2 className="text-xl font-black text-slate-800 uppercase">Dashboard Fábrica</h2>
+                    <p className="text-sm text-slate-500">Métricas de Producción y Ventas</p>
                   </div>
                 </div>
                 
@@ -2221,6 +2222,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 <p className="text-xs font-bold text-slate-900">
                                   {user.isGerente ? '👔 Gerente' :
                                    user.isAdmin ? '🛡️ Director Comercial' : 
+                                   user.isDirectorComercial ? '📊 Dir. Comercial' :
+                                   user.isDirectorFabrica ? '🏭 Dir. Fábrica' :
                                    user.isResponsableDelegacion ? '📍 Resp. Delegación' : 
                                    user.isRepresentative ? '💼 Comercial' : 
                                    user.isPrescriptor ? '🤝 Colaborador' : 
@@ -2367,12 +2370,31 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <input
                               type="checkbox"
                               checked={userForm.isDirectorComercial}
-                              onChange={(e) => setUserForm({...userForm, isDirectorComercial: e.target.checked, isGerente: false})}
+                              onChange={(e) => setUserForm({...userForm, isDirectorComercial: e.target.checked, isGerente: false, isDirectorFabrica: false})}
                               className="w-5 h-5 rounded border-2 border-orange-300"
                             />
                             <div>
                               <span className="text-sm font-black text-slate-900">Director Comercial</span>
                               <p className="text-xs text-slate-500">Ve todo el CRM y estadísticas</p>
+                            </div>
+                          </label>
+                          {/* DIRECTOR DE FÁBRICA - Nuevo */}
+                          <label className="flex items-center gap-3 cursor-pointer p-3 bg-cyan-100 rounded-xl border border-cyan-200">
+                            <input
+                              type="checkbox"
+                              checked={userForm.isDirectorFabrica}
+                              onChange={(e) => setUserForm({
+                                ...userForm, 
+                                isDirectorFabrica: e.target.checked, 
+                                isGerente: false, 
+                                isDirectorComercial: false,
+                                canAccessFabrica: e.target.checked // Acceso automático a Fábrica
+                              })}
+                              className="w-5 h-5 rounded border-2 border-cyan-300"
+                            />
+                            <div>
+                              <span className="text-sm font-black text-slate-900">Director de Fábrica</span>
+                              <p className="text-xs text-slate-500">Ve Dashboard Fábrica y gestiona producción</p>
                             </div>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">

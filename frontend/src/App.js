@@ -713,8 +713,8 @@ const App = () => {
                       </button>
                     )}
                     
-                    {/* Portal de Fábrica - usuarios con permiso */}
-                    {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica) && (
+                    {/* Portal de Fábrica - usuarios con permiso o Director de Fábrica */}
+                    {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica || state.currentUser?.isDirectorFabrica) && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -815,8 +815,8 @@ const App = () => {
               <AgendaMontajes currentUser={state.currentUser} />
             )}
             
-            {/* Portal de Fábrica - SOLO usuarios con permiso explícito */}
-            {state.currentTab === 'fabrica' && (state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica) && (
+            {/* Portal de Fábrica - SOLO usuarios con permiso explícito o Director de Fábrica */}
+            {state.currentTab === 'fabrica' && (state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica || state.currentUser?.isDirectorFabrica) && (
               <PortalFabrica currentUser={state.currentUser} />
             )}
             

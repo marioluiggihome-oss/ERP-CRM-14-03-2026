@@ -74,6 +74,7 @@ class UserModelInternal(BaseModel):
     isAdmin: bool = False
     isGerente: bool = False
     isDirectorComercial: bool = False
+    isDirectorFabrica: bool = False  # Director de Fábrica - ve Dashboard Fábrica y gestiona producción
     isResponsableDelegacion: bool = False
     isRepresentative: bool = False
     isPrescriptor: bool = False
@@ -113,6 +114,7 @@ class UserResponse(BaseModel):
     isAdmin: bool = False
     isGerente: bool = False
     isDirectorComercial: bool = False
+    isDirectorFabrica: bool = False  # Director de Fábrica - ve Dashboard Fábrica y gestiona producción
     isResponsableDelegacion: bool = False
     isRepresentative: bool = False
     isPrescriptor: bool = False
@@ -152,6 +154,7 @@ class UserCreate(BaseModel):
     isAdmin: bool = False
     isGerente: bool = False
     isDirectorComercial: bool = False
+    isDirectorFabrica: bool = False  # Director de Fábrica - ve Dashboard Fábrica y gestiona producción
     isResponsableDelegacion: bool = False
     isRepresentative: bool = False
     isPrescriptor: bool = False
@@ -192,6 +195,7 @@ class UserUpdate(BaseModel):
     isAdmin: Optional[bool] = None
     isGerente: Optional[bool] = None
     isDirectorComercial: Optional[bool] = None
+    isDirectorFabrica: Optional[bool] = None  # Director de Fábrica
     isResponsableDelegacion: Optional[bool] = None
     isRepresentative: Optional[bool] = None
     isPrescriptor: Optional[bool] = None
