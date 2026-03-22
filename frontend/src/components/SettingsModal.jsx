@@ -4535,6 +4535,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`, { method: 'POST', body: formData });
                             const result = await res.json();
                             if (result.success && result.products) {
+                              // Show skipped files warnings
+                              if (result.skippedFiles && result.skippedFiles.length > 0) {
+                                result.skippedFiles.forEach(sf => {
+                                  addLog({ type: 'err', msg: `⚠️ ${sf.filename}: ${sf.reason}` });
+                                });
+                              }
                               // Show detected categories
                               if (result.detectedCategories && result.detectedCategories.length > 0) {
                                 addLog({ type: 'info', msg: `📁 Categorías: ${result.detectedCategories.join(', ')}` });

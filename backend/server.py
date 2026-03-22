@@ -212,10 +212,55 @@ async def analyze_product_sheets(
         
         products = []
         detected_categories = set()
+        skipped_files = []
         
         for file in files:
             # Read file content
             content = await file.read()
+            
+            # Determine file type and handle accordingly
+            filename = file.filename.lower() if file.filename else ""
+            content_type = file.content_type or ""
+            
+            # Check if it's a PDF - Gemini doesn't support PDFs directly
+            if filename.endswith('.pdf') or 'pdf' in content_type.lower():
+                logger.warning(f"PDF file detected: {file.filename}. PDFs are not directly supported by Gemini Vision. Please convert to JPG/PNG first.")
+                skipped_files.append({"filename": file.filename, "reason": "PDFs no soportados. Convierte a JPG/PNG primero."})
+                continue  # Skip PDF files for now
+            
+            # Validate image format
+            valid_formats = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']
+            is_valid_image = any(filename.endswith(fmt) for fmt in valid_formats)
+            
+            if not is_valid_image:
+                # Try to detect from content type
+                valid_mime_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp']
+                if content_type.lower() not in valid_mime_types:
+                    logger.warning(f"Unsupported file format: {file.filename} ({content_type}). Skipping.")
+                    skipped_files.append({"filename": file.filename, "reason": f"Formato no soportado: {content_type}"})
+                    continue
+            
+            # Validate that we have actual image data
+            if len(content) < 100:
+                logger.warning(f"File {file.filename} is too small to be a valid image. Skipping.")
+                skipped_files.append({"filename": file.filename, "reason": "Archivo demasiado pequeño"})
+                continue
+            
+            # Check magic bytes for common image formats
+            magic_bytes = content[:8]
+            is_jpeg = magic_bytes[:2] == b'\xff\xd8'
+            is_png = magic_bytes[:8] == b'\x89PNG\r\n\x1a\n'
+            is_gif = magic_bytes[:6] in (b'GIF87a', b'GIF89a')
+            is_webp = magic_bytes[8:12] == b'WEBP' if len(content) > 12 else False
+            
+            if not (is_jpeg or is_png or is_gif or is_webp):
+                # Check if it's actually a PDF masquerading as an image
+                if magic_bytes[:4] == b'%PDF':
+                    logger.warning(f"File {file.filename} is actually a PDF. PDFs are not supported. Please convert to JPG/PNG.")
+                    skipped_files.append({"filename": file.filename, "reason": "Es un PDF. Convierte a JPG/PNG."})
+                    continue
+                logger.warning(f"File {file.filename} does not appear to be a valid image format. Attempting anyway...")
+            
             base64_image = base64.b64encode(content).decode('utf-8')
             
             # Create Gemini chat with vision
@@ -459,7 +504,8 @@ Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones.""",
             "success": True,
             "count": len(products),
             "products": products,
-            "detectedCategories": list(detected_categories)
+            "detectedCategories": list(detected_categories),
+            "skippedFiles": skipped_files
         }
         
     except Exception as e:
