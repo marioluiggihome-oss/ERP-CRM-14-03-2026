@@ -301,8 +301,21 @@ export const productsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(products)
     });
-    // Leer el body una sola vez para evitar "body stream already read"
-    const responseText = await response.text();
+    
+    // Clonar para lectura segura
+    const responseClone = response.clone();
+    
+    let responseText;
+    try {
+      responseText = await response.text();
+    } catch (readErr) {
+      try {
+        responseText = await responseClone.text();
+      } catch (cloneErr) {
+        throw new Error('Error de conexión con el servidor');
+      }
+    }
+    
     if (!response.ok) {
       let errorMsg = 'Error al crear productos';
       try {
@@ -327,7 +340,21 @@ export const productsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ products, tariff, library })
     });
-    const responseText = await response.text();
+    
+    // Clonar para lectura segura
+    const responseClone = response.clone();
+    
+    let responseText;
+    try {
+      responseText = await response.text();
+    } catch (readErr) {
+      try {
+        responseText = await responseClone.text();
+      } catch (cloneErr) {
+        throw new Error('Error de conexión con el servidor');
+      }
+    }
+    
     if (!response.ok) {
       let errorMsg = 'Error al actualizar productos';
       try {

@@ -4976,8 +4976,21 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   body: formData 
                                 });
                                 
-                                // Leer el body una sola vez
-                                const responseText = await res.text();
+                                // Clonar la respuesta para poder leerla de forma segura
+                                const resClone = res.clone();
+                                
+                                let responseText;
+                                try {
+                                  responseText = await res.text();
+                                } catch (readErr) {
+                                  // Si falla leer el body, intentar con el clon
+                                  try {
+                                    responseText = await resClone.text();
+                                  } catch (cloneErr) {
+                                    addLog({ type: 'err', msg: `Lote ${batchNum}: Error leyendo respuesta` });
+                                    continue;
+                                  }
+                                }
                                 
                                 if (!res.ok) {
                                   addLog({ type: 'err', msg: `Lote ${batchNum} error: ${res.status} - ${responseText.substring(0, 100)}` });
