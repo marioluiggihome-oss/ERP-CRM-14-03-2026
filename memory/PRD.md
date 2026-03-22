@@ -1,11 +1,39 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado: EN DESARROLLO ACTIVO
-## Última Actualización: 21 Marzo 2026
+## Última Actualización: 22 Marzo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (21 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (22 Marzo 2026)
+
+### 1. Fix Error "body stream already read" en Telemetría IA (P0)
+- ✅ **Bug corregido**: El frontend consumía el stream de respuesta dos veces al manejar errores
+- ✅ **Solución**: `productsAPI.bulkCreate` y `bulkUpsert` ahora usan `response.text()` + `JSON.parse()` en lugar de `response.json()`
+- ✅ **Frontend**: `/app/frontend/src/services/api.js` líneas 298-346
+- ✅ **Verificado**: Testing agent confirmó que no hay error de stream
+
+### 2. Sistema UPSERT para Evitar Duplicación de Productos (P0)
+- ✅ **Problema original**: Al importar tarifa T1, T2, T3 para MV, se creaban productos duplicados
+- ✅ **Solución**: Nuevo endpoint `POST /api/products/bulk-upsert` que:
+  - Si el producto existe (por código + biblioteca): actualiza `zonePoints` con la nueva tarifa
+  - Si no existe: crea el producto con `zonePoints` inicial
+- ✅ **Backend**: `/app/backend/server.py` líneas 1781-1867
+- ✅ **Frontend**: Telemetría IA ahora usa `productsAPI.bulkUpsert()` en lugar de `bulkCreate()`
+- ✅ **Verificado**: Producto con zonePoints: {T1: 100, T2: 150, T3: 200} funciona correctamente
+
+### 3. Selector de Tarifa en UI de Telemetría IA (P0)
+- ✅ **Nueva funcionalidad**: Dropdown para seleccionar tarifa antes de importar imágenes
+- ✅ **MV**: Dropdown con opciones T1-T21 (21 tarifas)
+- ✅ **ZC**: Dropdown con opciones Z1-Z12 (12 zonas)
+- ✅ **Persistencia**: Guardar selección en localStorage
+- ✅ **UI mejorada**: Labels dinámicos ("Tarifa MV" vs "Zona ZC")
+- ✅ **Frontend**: `/app/frontend/src/components/SettingsModal.jsx` líneas 4469-4531
+- ✅ **Verificado**: Screenshots confirman UI funcional
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (21 Marzo 2026)
 
 ### 0. Fix Selector MV/ZC en Telemetría IA (P0)
 - ✅ **Bug corregido**: El agente anterior añadió el selector de biblioteca MV/ZC pero olvidó declarar el estado `telemetryLibrary`
