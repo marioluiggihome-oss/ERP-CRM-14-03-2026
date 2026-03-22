@@ -198,6 +198,7 @@ async def get_status_checks():
 @api_router.post("/analyze-product-sheets")
 async def analyze_product_sheets(
     module: str = Form(...),
+    library: str = Form("ZC"),
     files: List[UploadFile] = File(...)
 ):
     """
@@ -209,6 +210,9 @@ async def analyze_product_sheets(
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             return {"error": "EMERGENT_LLM_KEY not configured"}
+        
+        # Log library being used
+        logger.info(f"Analyzing product sheets for library: {library}")
         
         products = []
         detected_categories = set()
@@ -445,6 +449,7 @@ Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones.""",
                     product_data['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
                     product_data['manufacturer'] = 'Zona Cocinas'
                     product_data['module'] = module
+                    product_data['library'] = library  # Usar la biblioteca seleccionada (MV o ZC)
                     product_data['importedAt'] = datetime.now(timezone.utc).isoformat()
                     product_data['originalFilename'] = file.filename
                     
@@ -479,6 +484,7 @@ Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones.""",
                                 prod['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
                                 prod['manufacturer'] = 'Zona Cocinas'
                                 prod['module'] = module
+                                prod['library'] = library  # Usar la biblioteca seleccionada (MV o ZC)
                                 prod['importedAt'] = datetime.now(timezone.utc).isoformat()
                                 prod['originalFilename'] = file.filename
                                 if not prod.get('category'):

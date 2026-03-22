@@ -4529,32 +4529,82 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           const addLog = (e) => setTelemetryLog(p => [...p, { ...e, time: new Date().toLocaleTimeString() }]);
                           addLog({ type: 'info', msg: `Iniciando ${telemetryFiles.length} archivo(s)...` });
                           try {
-                            const formData = new FormData();
-                            formData.append('module', telemetryModule);
-                            telemetryFiles.forEach(f => formData.append('files', f.file));
-                            const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`, { method: 'POST', body: formData });
-                            const result = await res.json();
-                            if (result.success && result.products) {
-                              // Show skipped files warnings
-                              if (result.skippedFiles && result.skippedFiles.length > 0) {
-                                result.skippedFiles.forEach(sf => {
-                                  addLog({ type: 'err', msg: `⚠️ ${sf.filename}: ${sf.reason}` });
+                            // Procesar archivos en lotes de 2 para evitar timeouts
+                            const BATCH_SIZE = 2;
+                            let allProducts = [];
+                            let allSkipped = [];
+                            let allCategories = new Set();
+                            
+                            for (let batch = 0; batch < telemetryFiles.length; batch += BATCH_SIZE) {
+                              const batchFiles = telemetryFiles.slice(batch, batch + BATCH_SIZE);
+                              const batchNum = Math.floor(batch / BATCH_SIZE) + 1;
+                              const totalBatches = Math.ceil(telemetryFiles.length / BATCH_SIZE);
+                              
+                              addLog({ type: 'info', msg: `📦 Lote ${batchNum}/${totalBatches} (${batchFiles.length} archivo${batchFiles.length > 1 ? 's' : ''})...` });
+                              
+                              const formData = new FormData();
+                              formData.append('module', telemetryModule);
+                              formData.append('library', telemetryLibrary); // Enviar biblioteca MV o ZC
+                              batchFiles.forEach(f => formData.append('files', f.file));
+                              
+                              try {
+                                const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`, { 
+                                  method: 'POST', 
+                                  body: formData 
                                 });
+                                
+                                if (!res.ok) {
+                                  const errorText = await res.text();
+                                  addLog({ type: 'err', msg: `Lote ${batchNum} error: ${res.status} - ${errorText.substring(0, 100)}` });
+                                  continue;
+                                }
+                                
+                                const result = await res.json();
+                                
+                                if (result.success && result.products) {
+                                  allProducts = [...allProducts, ...result.products];
+                                  if (result.skippedFiles) allSkipped = [...allSkipped, ...result.skippedFiles];
+                                  if (result.detectedCategories) result.detectedCategories.forEach(c => allCategories.add(c));
+                                  addLog({ type: 'info', msg: `Lote ${batchNum}: ${result.products.length} producto(s)` });
+                                } else {
+                                  addLog({ type: 'err', msg: `Lote ${batchNum}: ${result.error || 'Error desconocido'}` });
+                                }
+                              } catch (batchError) {
+                                addLog({ type: 'err', msg: `Lote ${batchNum} falló: ${batchError.message}` });
                               }
-                              // Show detected categories
-                              if (result.detectedCategories && result.detectedCategories.length > 0) {
-                                addLog({ type: 'info', msg: `📁 Categorías: ${result.detectedCategories.join(', ')}` });
+                              
+                              // Pequeña pausa entre lotes
+                              if (batch + BATCH_SIZE < telemetryFiles.length) {
+                                await new Promise(r => setTimeout(r, 500));
                               }
-                              addLog({ type: 'info', msg: `IA detectó ${result.products.length} producto(s)` });
-                              const newP = [], dupP = [];
-                              for (let i = 0; i < result.products.length; i++) {
-                                const p = result.products[i];
-                                setTelemetryProgress({ current: i + 1, total: result.products.length });
-                                await new Promise(r => setTimeout(r, 80));
-                                if (existingCodes.has(p.code)) { dupP.push(p); addLog({ type: 'dup', code: p.code, name: p.name, pts: p.points || 0 }); }
-                                else { newP.push(p); addLog({ type: 'new', code: p.code, name: p.name, pts: p.points || 0 }); setExistingCodes(prev => new Set([...prev, p.code])); }
+                            }
+                            
+                            // Mostrar resumen
+                            if (allSkipped.length > 0) {
+                              allSkipped.forEach(sf => {
+                                addLog({ type: 'err', msg: `⚠️ ${sf.filename}: ${sf.reason}` });
+                              });
+                            }
+                            if (allCategories.size > 0) {
+                              addLog({ type: 'info', msg: `📁 Categorías: ${[...allCategories].join(', ')}` });
+                            }
+                            addLog({ type: 'info', msg: `IA detectó ${allProducts.length} producto(s) total` });
+                            
+                            const newP = [], dupP = [];
+                            for (let i = 0; i < allProducts.length; i++) {
+                              const p = allProducts[i];
+                              setTelemetryProgress({ current: i + 1, total: allProducts.length });
+                              await new Promise(r => setTimeout(r, 50));
+                              if (existingCodes.has(p.code)) { 
+                                dupP.push(p); 
+                                addLog({ type: 'dup', code: p.code, name: p.name, pts: p.points || 0 }); 
+                              } else { 
+                                newP.push(p); 
+                                addLog({ type: 'new', code: p.code, name: p.name, pts: p.points || 0 }); 
+                                setExistingCodes(prev => new Set([...prev, p.code])); 
                               }
-                              if (newP.length > 0) { 
+                            }
+                            if (newP.length > 0) { 
                                 try {
                                   const bulkResult = await productsAPI.bulkCreate(newP);
                                   if (bulkResult.errors && bulkResult.errors.length > 0) {
@@ -4564,9 +4614,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 } catch (bulkErr) {
                                   addLog({ type: 'err', msg: `Error al crear: ${bulkErr.message}` });
                                 }
-                              }
-                              setTelemetryResult({ ok: true, newC: newP.length, dupC: dupP.length });
-                            } else { addLog({ type: 'err', msg: result.error || 'Error' }); }
+                            }
+                            setTelemetryResult({ ok: true, newC: newP.length, dupC: dupP.length });
                             setTelemetryFiles([]);
                           } catch (e) { addLog({ type: 'err', msg: e.message }); }
                           setIsProcessingTelemetry(false);
@@ -4588,7 +4637,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               <div className="w-[280px] bg-indigo-950 rounded-2xl flex flex-col overflow-hidden">
                 <div className="p-3 border-b border-indigo-800 flex items-center gap-2">
                   <Zap size={14} className="text-orange-500" />
-                  <span className="text-xs font-black text-white uppercase">Log: {telemetryModule}</span>
+                  <span className="text-xs font-black text-white uppercase">Log: {telemetryModule} ({telemetryLibrary})</span>
                 </div>
                 {isProcessingTelemetry && telemetryProgress.total > 0 && (
                   <div className="px-3 py-2 bg-indigo-900/50">
