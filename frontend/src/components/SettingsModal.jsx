@@ -4971,25 +4971,26 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               batchFiles.forEach(f => formData.append('files', f.file));
                               
                               try {
+                                // Usar AbortController con timeout de 120 segundos para imágenes grandes
+                                const controller = new AbortController();
+                                const timeoutId = setTimeout(() => controller.abort(), 120000);
+                                
                                 const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`, { 
                                   method: 'POST', 
-                                  body: formData 
+                                  body: formData,
+                                  signal: controller.signal
                                 });
                                 
-                                // Clonar la respuesta para poder leerla de forma segura
-                                const resClone = res.clone();
+                                clearTimeout(timeoutId);
                                 
+                                // Usar arrayBuffer para lectura robusta
                                 let responseText;
                                 try {
-                                  responseText = await res.text();
+                                  const buffer = await res.arrayBuffer();
+                                  responseText = new TextDecoder().decode(buffer);
                                 } catch (readErr) {
-                                  // Si falla leer el body, intentar con el clon
-                                  try {
-                                    responseText = await resClone.text();
-                                  } catch (cloneErr) {
-                                    addLog({ type: 'err', msg: `Lote ${batchNum}: Error leyendo respuesta` });
-                                    continue;
-                                  }
+                                  addLog({ type: 'err', msg: `Lote ${batchNum}: Error leyendo respuesta - ${readErr.message}` });
+                                  continue;
                                 }
                                 
                                 if (!res.ok) {
@@ -5015,7 +5016,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   addLog({ type: 'err', msg: `Lote ${batchNum}: ${result.error || 'Error desconocido'}` });
                                 }
                               } catch (batchError) {
-                                addLog({ type: 'err', msg: `Lote ${batchNum} falló: ${batchError.message}` });
+                                if (batchError.name === 'AbortError') {
+                                  addLog({ type: 'err', msg: `Lote ${batchNum}: Timeout (imagen muy grande)` });
+                                } else {
+                                  addLog({ type: 'err', msg: `Lote ${batchNum} falló: ${batchError.message}` });
+                                }
                               }
                               
                               // Pequeña pausa entre lotes

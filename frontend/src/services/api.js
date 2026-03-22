@@ -302,18 +302,13 @@ export const productsAPI = {
       body: JSON.stringify(products)
     });
     
-    // Clonar para lectura segura
-    const responseClone = response.clone();
-    
+    // Usar arrayBuffer para lectura robusta
     let responseText;
     try {
-      responseText = await response.text();
+      const buffer = await response.arrayBuffer();
+      responseText = new TextDecoder().decode(buffer);
     } catch (readErr) {
-      try {
-        responseText = await responseClone.text();
-      } catch (cloneErr) {
-        throw new Error('Error de conexión con el servidor');
-      }
+      throw new Error('Error de conexión con el servidor');
     }
     
     if (!response.ok) {
@@ -341,18 +336,13 @@ export const productsAPI = {
       body: JSON.stringify({ products, tariff, library })
     });
     
-    // Clonar para lectura segura
-    const responseClone = response.clone();
-    
+    // Usar arrayBuffer para lectura robusta
     let responseText;
     try {
-      responseText = await response.text();
+      const buffer = await response.arrayBuffer();
+      responseText = new TextDecoder().decode(buffer);
     } catch (readErr) {
-      try {
-        responseText = await responseClone.text();
-      } catch (cloneErr) {
-        throw new Error('Error de conexión con el servidor');
-      }
+      throw new Error('Error de conexión con el servidor');
     }
     
     if (!response.ok) {
