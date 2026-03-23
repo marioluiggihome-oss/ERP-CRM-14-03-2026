@@ -77,6 +77,25 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [showExitConfirm, setShowExitConfirm] = useState(false); // Diálogo de confirmación al salir
   const [sortColumn, setSortColumn] = useState(null); // Columna de ordenación: 'code', 'name', 'width', 'height', 'depth', 'points'
   const [sortDirection, setSortDirection] = useState('asc'); // 'asc' o 'desc'
+  
+  // Estado para tarifa/zona seleccionada (MV: T1-T21, ZC: Z1-Z12)
+  const [selectedTariff, setSelectedTariff] = useState(() => {
+    const saved = localStorage.getItem('luiggi_selected_tariff');
+    return saved || 'T1';
+  });
+  const [selectedZone, setSelectedZone] = useState(() => {
+    const saved = localStorage.getItem('luiggi_selected_zone');
+    return saved || 'Z1';
+  });
+  
+  // Guardar preferencia cuando cambie
+  useEffect(() => {
+    localStorage.setItem('luiggi_selected_tariff', selectedTariff);
+  }, [selectedTariff]);
+  useEffect(() => {
+    localStorage.setItem('luiggi_selected_zone', selectedZone);
+  }, [selectedZone]);
+  
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
   const isResizingCatalogWidth = useRef(false);
@@ -117,6 +136,21 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   useEffect(() => {
     localStorage.setItem('luiggi_catalog_position', catalogPosition);
   }, [catalogPosition]);
+
+  // Helper para obtener precio según tarifa/zona seleccionada
+  const getProductPrice = useCallback((product) => {
+    if (!product) return 0;
+    const isMV = product.library === 'MV';
+    const zp = product.zonePoints || {};
+    
+    if (isMV) {
+      // MV: usar tarifa seleccionada (T1-T21)
+      return zp[selectedTariff] ?? zp.T1 ?? (typeof product.points === 'number' ? product.points : product.points?.T1) ?? 0;
+    } else {
+      // ZC: usar zona seleccionada (Z1-Z12)
+      return zp[selectedZone] ?? zp.Z1 ?? (typeof product.points === 'number' ? product.points : product.points?.Z1) ?? 0;
+    }
+  }, [selectedTariff, selectedZone]);
 
   // Cargar productos de despiece cuando cambie el módulo a despiece
   useEffect(() => {
@@ -572,11 +606,9 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
             valB = Number(b.depth) || 0;
             break;
           case 'points':
-            // Para MV usar T1, para ZC usar Z1
-            const aIsMV = a.library === 'MV';
-            const bIsMV = b.library === 'MV';
-            valA = Number(aIsMV ? (a.zonePoints?.T1 || a.points) : (a.zonePoints?.Z1 || a.points)) || 0;
-            valB = Number(bIsMV ? (b.zonePoints?.T1 || b.points) : (b.zonePoints?.Z1 || b.points)) || 0;
+            // Usar la tarifa/zona seleccionada
+            valA = Number(getProductPrice(a)) || 0;
+            valB = Number(getProductPrice(b)) || 0;
             break;
           default:
             valA = a.code || '';
@@ -1392,6 +1424,47 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                      </option>
                    ))}
                  </select>
+              </section>
+              )}
+              
+              {/* SELECTOR DE TARIFA/ZONA - Para seleccionar qué columna de precios usar */}
+              {state.currentModule === 'montada' && (
+              <section className="space-y-1.5 pt-2 border-t border-cyan-100">
+                <h4 className="text-[9px] font-black text-cyan-600 uppercase tracking-widest">
+                  {state.currentLibrary === 'MV' ? '💰 TARIFA PUNTOS MV' : '💰 ZONA PUNTOS ZC'}
+                </h4>
+                {state.currentLibrary === 'MV' ? (
+                  <select 
+                    className="w-full bg-cyan-50 text-cyan-900 border-2 border-cyan-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-cyan-500 text-center" 
+                    value={selectedTariff}
+                    onChange={e => setSelectedTariff(e.target.value)}
+                    data-testid="tariff-selector"
+                  >
+                    {[...Array(21)].map((_, i) => (
+                      <option key={`T${i+1}`} value={`T${i+1}`}>
+                        Tarifa T{i+1}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select 
+                    className="w-full bg-cyan-50 text-cyan-900 border-2 border-cyan-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-cyan-500 text-center" 
+                    value={selectedZone}
+                    onChange={e => setSelectedZone(e.target.value)}
+                    data-testid="zone-selector"
+                  >
+                    {[...Array(12)].map((_, i) => (
+                      <option key={`Z${i+1}`} value={`Z${i+1}`}>
+                        Zona Z{i+1}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-[8px] text-slate-400 text-center">
+                  {state.currentLibrary === 'MV' 
+                    ? `Los precios se muestran según ${selectedTariff}` 
+                    : `Los precios se muestran según ${selectedZone}`}
+                </p>
               </section>
               )}
               
@@ -2326,7 +2399,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
                           <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
-                            {(p.library === 'MV' ? (p.zonePoints?.T1 || (typeof p.points === 'number' ? p.points : p.points?.T1) || 0) : (p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0))}
+                                                        {getProductPrice(p)}
                           </td>
                           <td className="p-2 pr-3 text-right w-[40px]"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
                         </tr>
@@ -2582,7 +2655,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
                           <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
                           <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
-                            {(p.library === 'MV' ? (p.zonePoints?.T1 || (typeof p.points === 'number' ? p.points : p.points?.T1) || 0) : (p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0))}
+                                                        {getProductPrice(p)}
                           </td>
                           <td className="p-2 pr-3 text-right w-[40px]"><Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/></td>
                         </tr>
@@ -2783,7 +2856,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-[13px] font-black text-indigo-900">{cleanCode(p.code)}</span>
-                                <span className="text-[14px] font-black text-orange-600">{(p.library === 'MV' ? (p.zonePoints?.T1 || (typeof p.points === 'number' ? p.points : p.points?.T1) || 0) : (p.zonePoints?.Z1 || (typeof p.points === 'number' ? p.points : p.points?.Z1) || 0))} pts</span>
+                                <span className="text-[14px] font-black text-orange-600">                            {getProductPrice(p)} pts</span>
                               </div>
                               <div className="flex items-center gap-1.5 flex-wrap mt-1">
                                 <span className="text-[11px] font-bold text-indigo-600 uppercase">{p.name}</span>
