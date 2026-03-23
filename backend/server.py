@@ -273,7 +273,7 @@ async def analyze_product_sheets(
             if library == 'MV':
                 file_products = []
                 extracted_codes = set()
-                max_passes = 3  # 3 pasadas = hasta 150 productos por imagen
+                max_passes = 2  # 2 pasadas = hasta 100 productos por imagen (más rápido)
                 detected_tariff = None  # Tarifa detectada automáticamente
                 
                 for pass_num in range(max_passes):
