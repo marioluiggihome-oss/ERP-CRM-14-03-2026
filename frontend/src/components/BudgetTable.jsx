@@ -655,7 +655,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     });
     
     return sorted;
-  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory, selectedApertura, filterWidth, filterHeight, filterDepth, sortColumn, sortDirection]);
+  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory, selectedApertura, filterWidth, filterHeight, filterDepth, sortColumn, sortDirection, selectedTariff, selectedZone, getProductPrice]);
 
   const budgetKey = state.currentModule === 'montada' ? 'budgetItemsMontada' : 'budgetItemsDespiece';
 

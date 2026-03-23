@@ -109,12 +109,22 @@ const specialColors = {
   'CAJONES': 'bg-yellow-100 text-yellow-700'
 };
 
-export const CatalogProductRowTable = ({ product, onAdd }) => {
+export const CatalogProductRowTable = ({ product, onAdd, selectedTariff = 'T1', selectedZone = 'Z1' }) => {
   const code = product.code?.toUpperCase() || '';
   const isGola = code.startsWith('G') && /^G\d/.test(code);
   const hardwareType = getHardwareType(code);
   const specialType = getSpecialType(code, product.name);
   const iconType = getIconType(code, product.category);
+  
+  // Obtener precio según tarifa/zona seleccionada
+  const getPrice = () => {
+    const zp = product.zonePoints || {};
+    if (product.library === 'MV') {
+      return zp[selectedTariff] ?? zp.T1 ?? (typeof product.points === 'number' ? product.points : product.points?.T1) ?? 0;
+    } else {
+      return zp[selectedZone] ?? zp.Z1 ?? (typeof product.points === 'number' ? product.points : product.points?.Z1) ?? 0;
+    }
+  };
   
   return (
     <tr className="hover:bg-orange-50 group cursor-pointer transition-colors" onClick={() => onAdd(product)}>
@@ -142,7 +152,7 @@ export const CatalogProductRowTable = ({ product, onAdd }) => {
       <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{product.height || '-'}</td>
       <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{product.depth || '-'}</td>
       <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
-        {product.zonePoints?.Z1 || (typeof product.points === 'number' ? product.points : product.points?.Z1) || 0}
+        {getPrice()}
       </td>
       <td className="p-2 pr-3 text-right w-[40px]">
         <Plus size={14} className="text-orange-600 inline opacity-0 group-hover:opacity-100 transition-opacity"/>
@@ -151,12 +161,22 @@ export const CatalogProductRowTable = ({ product, onAdd }) => {
   );
 };
 
-export const CatalogProductRowCard = ({ product, onAdd }) => {
+export const CatalogProductRowCard = ({ product, onAdd, selectedTariff = 'T1', selectedZone = 'Z1' }) => {
   const code = product.code?.toUpperCase() || '';
   const isGola = code.startsWith('G') && /^G\d/.test(code);
   const hardwareType = getHardwareType(code);
   const specialType = getSpecialType(code, product.name);
   const iconType = getIconType(code, product.category);
+  
+  // Obtener precio según tarifa/zona seleccionada
+  const getPrice = () => {
+    const zp = product.zonePoints || {};
+    if (product.library === 'MV') {
+      return zp[selectedTariff] ?? zp.T1 ?? (typeof product.points === 'number' ? product.points : product.points?.T1) ?? 0;
+    } else {
+      return zp[selectedZone] ?? zp.Z1 ?? (typeof product.points === 'number' ? product.points : product.points?.Z1) ?? 0;
+    }
+  };
   
   return (
     <div 
@@ -169,7 +189,7 @@ export const CatalogProductRowCard = ({ product, onAdd }) => {
           <div className="flex items-center justify-between gap-2">
             <span className="text-[13px] font-black text-indigo-900">{product.code}</span>
             <span className="text-[14px] font-black text-orange-600">
-              {product.zonePoints?.Z1 || (typeof product.points === 'number' ? product.points : product.points?.Z1) || 0} pts
+              {getPrice()} pts
             </span>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap mt-1">
