@@ -2885,6 +2885,31 @@ def calculate_furniture_despiece(
     h = float(item.height)  # Alto en cm  
     d = float(item.depth)   # Fondo en cm
     g = grosor / 10  # Grosor viene en mm, convertir a cm (18mm = 1.8cm)
+    back_g = back_thickness / 10  # Grosor trasera en cm (8mm = 0.8cm)
+    
+    # =============================================
+    # REGLAS DE CÁLCULO SEGÚN DOCUMENTO:
+    # =============================================
+    # 1. LATERALES (verticales): 
+    #    - Largo = Alto exterior completo
+    #    - Ancho = Fondo exterior - Grosor trasera
+    # 
+    # 2. HORIZONTALES (tapas, estantes):
+    #    - Largo = Ancho exterior - (2 × Grosor lateral)
+    #    - Ancho = Fondo exterior - Grosor trasera
+    #
+    # 3. TRASERA:
+    #    - Largo = Ancho exterior - (2 × Grosor lateral) [encaja entre laterales]
+    #    - Alto = Alto exterior - margen ranuras (0.6cm)
+    #
+    # 4. ESTANTES:
+    #    - Largo = Ancho interior - margen soportes
+    #    - Ancho = Fondo interior - margen frontal
+    # =============================================
+    
+    # Medidas calculadas
+    fondo_interior = d - back_g  # Fondo menos trasera para laterales y horizontales
+    ancho_interior = w - (2 * g)  # Ancho menos los dos laterales
     
     components = []
     component_id = 0
@@ -2955,16 +2980,18 @@ def calculate_furniture_despiece(
         ))
     
     # =============================================
-    # VERTICALES - Usan el ALTO COMPLETO
+    # VERTICALES - LATERALES (costados)
+    # Largo = ALTO COMPLETO del mueble
+    # Ancho = FONDO - GROSOR TRASERA
     # =============================================
     
     # LATERAL IZQUIERDO (Side panel - full height)
     # Para muebles de rincón, el lateral tiene forma especial
-    lateral_fondo = d if not is_rincon else d - 5  # Rincón: lateral más corto
+    lateral_fondo = fondo_interior if not is_rincon else fondo_interior - 5  # Rincón: lateral más corto
     add_component(
         "Lateral izquierdo", "LAT-I",
         carcass_material,
-        h, lateral_fondo, g, 1,  # ALTO COMPLETO x FONDO (en cm)
+        h, lateral_fondo, g, 1,  # ALTO COMPLETO x (FONDO - TRASERA)
         "1L canto" + (" (rincón)" if is_rincon else "")
     )
     
@@ -2972,16 +2999,15 @@ def calculate_furniture_despiece(
     add_component(
         "Lateral derecho", "LAT-D",
         carcass_material,
-        h, lateral_fondo, g, 1,  # ALTO COMPLETO x FONDO (en cm)
+        h, lateral_fondo, g, 1,  # ALTO COMPLETO x (FONDO - TRASERA)
         "1L canto" + (" (rincón)" if is_rincon else "")
     )
     
     # =============================================
-    # HORIZONTALES - Descontar grosor de los laterales
+    # HORIZONTALES - TAPAS (superior e inferior)
+    # Largo = ANCHO - (2 × GROSOR LATERAL) = ancho_interior
+    # Ancho = FONDO - GROSOR TRASERA = fondo_interior
     # =============================================
-    
-    # Ancho interior (entre laterales) en cm
-    ancho_interior = w - (2 * g)
     
     # TAPA SUPERIOR (Top panel - between sides)
     # Los fregaderos NO tienen tapa superior (hueco para la encimera)
@@ -2989,7 +3015,7 @@ def calculate_furniture_despiece(
         add_component(
             "Tapa superior", "TAPA-S", 
             carcass_material,
-            ancho_interior, d, g, 1,
+            ancho_interior, fondo_interior, g, 1,
             "1L canto"
         )
     else:
@@ -3029,23 +3055,28 @@ def calculate_furniture_despiece(
         add_component(
             "Tapa inferior", "TAPA-I",
             carcass_material,
-            ancho_interior, d, g, 1,
+            ancho_interior, fondo_interior, g, 1,
             "1L canto" if is_bajo else ""
         )
     
-    # TRASERA (Back panel) - grosor configurable desde armazón
-    # Convertir mm a cm (ej: 8mm = 0.8cm)
-    back_thickness_cm = back_thickness / 10
+    # =============================================
+    # TRASERA (Back panel)
+    # Largo = ANCHO INTERIOR (entre laterales)
+    # Alto = ALTO - margen ranuras (0.6cm total)
+    # =============================================
     back_height = h - 0.6  # Encajada en ranuras (0.3cm arriba y abajo)
     add_component(
         "Trasera modulo", "TRAS",
         back_material,
-        ancho_interior, back_height, back_thickness_cm, 1,
+        ancho_interior, back_height, back_g, 1,
         f"Tablero {int(back_thickness)}mm"
     )
     
-    # BALDAS / ESTANTES (Shelves) - según tipo de mueble y altura
-    # Los estantes son HORIZONTALES, descontar grosor de laterales
+    # =============================================
+    # BALDAS / ESTANTES (Shelves)
+    # Largo = ANCHO INTERIOR - margen soportes (0.5cm)
+    # Ancho = FONDO INTERIOR - margen frontal (2cm retranqueo)
+    # =============================================
     shelf_count = 0
     
     # Columnas: más estantes debido a su altura
@@ -3079,8 +3110,8 @@ def calculate_furniture_despiece(
         shelf_count = 1
     
     if shelf_count > 0:
-        shelf_length = ancho_interior  # Entre laterales
-        shelf_width = d - 2  # Ligeramente retranqueado del frontal (2cm)
+        shelf_length = ancho_interior - 0.5  # Entre laterales menos margen soportes
+        shelf_width = fondo_interior - 2  # Retranqueado 2cm del frontal
         add_component(
             "Balda interior", "BALDA",
             carcass_material,
@@ -3143,24 +3174,34 @@ def calculate_furniture_despiece(
     
     # Calcular dimensiones de puerta si tiene puertas
     if has_doors and num_doors > 0:
-        # TOLERANCIAS CORRECTAS:
-        # - Alto: 2mm menos que el alto del mueble (0.2 cm)
-        # - Ancho: 3mm menos que el ancho correspondiente (0.3 cm)
-        door_height_tolerance = 0.2  # 2mm en cm
-        door_width_tolerance = 0.3   # 3mm en cm
+        # =============================================
+        # PUERTAS - Según documento:
+        # Alto puerta = Alto mueble - 2mm (tolerancia arriba y abajo)
+        # Ancho puerta (1P) = Ancho mueble - 3mm (tolerancia)
+        # Ancho puerta (2P) = (Ancho mueble - 3mm entre puertas) / 2
+        # =============================================
+        door_height_tolerance = 0.2  # 2mm total en cm
+        door_gap_between = 0.3       # 3mm entre puertas en cm
+        door_edge_tolerance = 0.15   # 1.5mm de tolerancia lateral
         
-        # Alto de puerta: altura del mueble - 2mm
+        # Alto de puerta: altura del mueble - tolerancia
         door_height = h - door_height_tolerance
         
         # Ancho de puerta según número de puertas
-        if num_doors == 2:
-            # Cada puerta = mitad del ancho - 3mm
-            door_width = (w / 2) - door_width_tolerance
-        else:
-            # Puerta única = ancho total - 3mm
-            door_width = w - door_width_tolerance
+        if num_doors == 1:
+            # Puerta única = ancho total - 3mm (1.5mm cada lado)
+            door_width = w - (2 * door_edge_tolerance)
+        elif num_doors == 2:
+            # Dos puertas = (ancho - separación entre puertas) / 2
+            door_width = (w - door_gap_between) / 2
+        elif num_doors == 3:
+            # Tres puertas
+            door_width = (w - (2 * door_gap_between)) / 3
+        else:  # 4 o más puertas
+            door_width = (w - ((num_doors - 1) * door_gap_between)) / num_doors
         
         # Grosor típico de puerta: 19mm (1.9cm)
+        door_thickness_cm = 1.9
         door_thickness_cm = 1.9
         
         # Agregar puerta(s) al despiece
