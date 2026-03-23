@@ -129,7 +129,7 @@ async def process_job(job_id: str):
     all_products = []
     
     # Obtener API key
-    api_key = os.environ.get("EMERGENT_API_KEY", "")
+    api_key = os.environ.get("EMERGENT_LLM_KEY", "")
     if not api_key:
         job.status = JobStatus.FAILED
         add_job_log(job, "err", "API key no configurada")
