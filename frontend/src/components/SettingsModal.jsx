@@ -4950,162 +4950,106 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         onClick={async () => {
                           setIsProcessingTelemetry(true); setTelemetryResult(null); setTelemetryLog([]);
                           const addLog = (e) => setTelemetryLog(p => [...p, { ...e, time: new Date().toLocaleTimeString() }]);
-                          addLog({ type: 'info', msg: `Iniciando ${telemetryFiles.length} archivo(s)...` });
+                          addLog({ type: 'info', msg: `🚀 Iniciando procesamiento de ${telemetryFiles.length} archivo(s)...` });
+                          
                           try {
-                            // Procesar archivos de 1 en 1 para evitar timeouts con tablas grandes
-                            const BATCH_SIZE = 1;
-                            let allProducts = [];
-                            let allSkipped = [];
-                            let allCategories = new Set();
+                            // Usar el nuevo sistema de cola en segundo plano
+                            const formData = new FormData();
+                            formData.append('module', telemetryModule);
+                            formData.append('library', telemetryLibrary || 'ZC');
+                            telemetryFiles.forEach(f => formData.append('files', f.file));
                             
-                            for (let batch = 0; batch < telemetryFiles.length; batch += BATCH_SIZE) {
-                              const batchFiles = telemetryFiles.slice(batch, batch + BATCH_SIZE);
-                              const batchNum = Math.floor(batch / BATCH_SIZE) + 1;
-                              const totalBatches = Math.ceil(telemetryFiles.length / BATCH_SIZE);
-                              
-                              addLog({ type: 'info', msg: `📦 Lote ${batchNum}/${totalBatches} (${batchFiles.length} archivo${batchFiles.length > 1 ? 's' : ''})...` });
-                              
-                              const formData = new FormData();
-                              formData.append('module', telemetryModule);
-                              formData.append('library', telemetryLibrary); // Enviar biblioteca MV o ZC
-                              batchFiles.forEach(f => formData.append('files', f.file));
+                            // Iniciar el job
+                            addLog({ type: 'info', msg: '📤 Subiendo archivos al servidor...' });
+                            const startResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/telemetry/start-job`, {
+                              method: 'POST',
+                              body: formData
+                            });
+                            const startResult = await startResponse.json();
+                            
+                            if (!startResult.success) {
+                              addLog({ type: 'err', msg: `❌ Error: ${startResult.error}` });
+                              setIsProcessingTelemetry(false);
+                              return;
+                            }
+                            
+                            const jobId = startResult.job_id;
+                            addLog({ type: 'ok', msg: `✅ Job iniciado: ${jobId}` });
+                            addLog({ type: 'info', msg: '⏳ Procesando en segundo plano...' });
+                            
+                            // Polling para obtener el estado del job
+                            let completed = false;
+                            let lastLogCount = 0;
+                            
+                            while (!completed) {
+                              await new Promise(r => setTimeout(r, 2000)); // Esperar 2 segundos
                               
                               try {
-                                // Usar XMLHttpRequest para evitar problemas de stream con fetch
-                                const result = await new Promise((resolve, reject) => {
-                                  const xhr = new XMLHttpRequest();
-                                  xhr.open('POST', `${process.env.REACT_APP_BACKEND_URL}/api/analyze-product-sheets`);
-                                  xhr.timeout = 180000; // 3 minutos timeout
-                                  
-                                  xhr.onload = function() {
-                                    if (xhr.status >= 200 && xhr.status < 300) {
-                                      try {
-                                        resolve(JSON.parse(xhr.responseText));
-                                      } catch (e) {
-                                        reject(new Error('Error parseando respuesta'));
-                                      }
-                                    } else {
-                                      reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText.substring(0, 100)}`));
-                                    }
-                                  };
-                                  
-                                  xhr.onerror = function() {
-                                    reject(new Error('Error de conexión'));
-                                  };
-                                  
-                                  xhr.ontimeout = function() {
-                                    reject(new Error('Timeout - imagen muy grande'));
-                                  };
-                                  
-                                  xhr.send(formData);
-                                });
+                                const statusResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/telemetry/job-status/${jobId}`);
+                                const status = await statusResponse.json();
                                 
-                                if (result.success && result.products) {
-                                  allProducts = [...allProducts, ...result.products];
-                                  if (result.skippedFiles) allSkipped = [...allSkipped, ...result.skippedFiles];
-                                  if (result.detectedCategories) result.detectedCategories.forEach(c => allCategories.add(c));
-                                  addLog({ type: 'info', msg: `Lote ${batchNum}: ${result.products.length} producto(s)` });
-                                } else {
-                                  addLog({ type: 'err', msg: `Lote ${batchNum}: ${result.error || 'Sin productos'}` });
+                                if (!status.success) {
+                                  addLog({ type: 'err', msg: '❌ Error obteniendo estado' });
+                                  continue;
                                 }
-                              } catch (batchError) {
-                                addLog({ type: 'err', msg: `Lote ${batchNum}: ${batchError.message}` });
-                              }
-                              
-                              // Pequeña pausa entre lotes
-                              if (batch + BATCH_SIZE < telemetryFiles.length) {
-                                await new Promise(r => setTimeout(r, 500));
-                              }
-                            }
-                            
-                            // Mostrar resumen
-                            if (allSkipped.length > 0) {
-                              allSkipped.forEach(sf => {
-                                addLog({ type: 'err', msg: `⚠️ ${sf.filename}: ${sf.reason}` });
-                              });
-                            }
-                            if (allCategories.size > 0) {
-                              addLog({ type: 'info', msg: `📁 Categorías: ${[...allCategories].join(', ')}` });
-                            }
-                            addLog({ type: 'info', msg: `IA detectó ${allProducts.length} producto(s) total` });
-                            
-                            // Para MV: usar tarifa detectada por IA, Para ZC: usar selector manual
-                            // Agrupar productos por tarifa detectada (para MV)
-                            if (allProducts.length > 0) {
-                              try {
-                                let totalCreated = 0;
-                                let totalUpdated = 0;
                                 
-                                if ((telemetryLibrary || 'ZC') === 'MV') {
-                                  // MV: Agrupar productos por tarifa detectada por IA
-                                  const productsByTariff = {};
-                                  allProducts.forEach(p => {
-                                    const tariff = p.detectedTariff || 'T1';
-                                    if (!productsByTariff[tariff]) productsByTariff[tariff] = [];
-                                    productsByTariff[tariff].push(p);
+                                // Mostrar nuevos logs del servidor
+                                if (status.logs && status.logs.length > lastLogCount) {
+                                  const newLogs = status.logs.slice(lastLogCount);
+                                  newLogs.forEach(log => {
+                                    addLog({ type: log.type, msg: log.msg });
                                   });
-                                  
-                                  const detectedTariffs = Object.keys(productsByTariff);
-                                  addLog({ type: 'info', msg: `🎯 IA detectó tarifa(s): ${detectedTariffs.join(', ')}` });
-                                  
-                                  // Procesar cada grupo de tarifa
-                                  for (const [tariff, products] of Object.entries(productsByTariff)) {
-                                    addLog({ type: 'info', msg: `📌 Guardando ${products.length} producto(s) con ${tariff}...` });
-                                    
-                                    const upsertResult = await productsAPI.bulkUpsert(
-                                      products, 
-                                      tariff,
-                                      'MV'
-                                    );
-                                    
-                                    totalCreated += upsertResult.created || 0;
-                                    totalUpdated += upsertResult.updated || 0;
-                                    
-                                    if (upsertResult.errors && upsertResult.errors.length > 0) {
-                                      addLog({ type: 'err', msg: `${tariff}: ${upsertResult.errors.length} error(es)` });
-                                    }
-                                  }
-                                } else {
-                                  // ZC: Usar tarifa seleccionada manualmente
-                                  addLog({ type: 'info', msg: `📌 Guardando con zona: ${telemetryTariff}` });
-                                  
-                                  const upsertResult = await productsAPI.bulkUpsert(
-                                    allProducts, 
-                                    telemetryTariff,
-                                    'ZC'
-                                  );
-                                  
-                                  totalCreated = upsertResult.created || 0;
-                                  totalUpdated = upsertResult.updated || 0;
-                                  
-                                  if (upsertResult.errors && upsertResult.errors.length > 0) {
-                                    addLog({ type: 'err', msg: `${upsertResult.errors.length} error(es)` });
-                                  }
+                                  lastLogCount = status.logs.length;
                                 }
                                 
-                                if (totalCreated > 0) {
-                                  addLog({ type: 'ok', msg: `✅ ${totalCreated} producto(s) NUEVO(s) creado(s)` });
-                                }
-                                if (totalUpdated > 0) {
-                                  addLog({ type: 'info', msg: `🔄 ${totalUpdated} producto(s) ACTUALIZADO(s)` });
-                                }
-                                
-                                // Actualizar códigos existentes
-                                allProducts.forEach(p => {
-                                  if (p.code) setExistingCodes(prev => new Set([...prev, p.code]));
+                                // Actualizar progreso
+                                setTelemetryProgress({ 
+                                  current: status.processed_files, 
+                                  total: status.total_files 
                                 });
                                 
-                                setTelemetryResult({ ok: true, newC: totalCreated, dupC: totalUpdated });
-                              } catch (upsertErr) {
-                                addLog({ type: 'err', msg: `Error al guardar: ${upsertErr.message}` });
-                                setTelemetryResult({ ok: false, newC: 0, dupC: 0 });
+                                // Verificar si terminó
+                                if (status.status === 'completed' || status.status === 'failed') {
+                                  completed = true;
+                                  
+                                  if (status.status === 'completed') {
+                                    const detectedTariffs = status.detected_tariffs?.join(', ') || 'T1';
+                                    addLog({ type: 'ok', msg: `🎯 Tarifas detectadas: ${detectedTariffs}` });
+                                    addLog({ type: 'ok', msg: `✅ Completado: ${status.products_created} nuevos, ${status.products_updated} actualizados` });
+                                    
+                                    // Actualizar códigos existentes
+                                    setExistingCodes(prev => {
+                                      const newSet = new Set(prev);
+                                      // Los productos ya están guardados en el servidor
+                                      return newSet;
+                                    });
+                                    
+                                    setTelemetryResult({ 
+                                      ok: true, 
+                                      newC: status.products_created, 
+                                      dupC: status.products_updated 
+                                    });
+                                  } else {
+                                    addLog({ type: 'err', msg: `❌ Procesamiento fallido` });
+                                    if (status.errors && status.errors.length > 0) {
+                                      status.errors.forEach(err => addLog({ type: 'err', msg: err }));
+                                    }
+                                    setTelemetryResult({ ok: false, newC: 0, dupC: 0 });
+                                  }
+                                }
+                              } catch (pollError) {
+                                // Ignorar errores de polling, continuar intentando
+                                console.warn('Polling error:', pollError);
                               }
-                            } else {
-                              setTelemetryResult({ ok: true, newC: 0, dupC: 0 });
                             }
+                            
                             setTelemetryFiles([]);
-                          } catch (e) { addLog({ type: 'err', msg: e.message }); }
-                          setIsProcessingTelemetry(false);
+                          } catch (err) {
+                            addLog({ type: 'err', msg: `❌ Error: ${err.message}` });
+                            setTelemetryResult({ ok: false, newC: 0, dupC: 0 });
+                          } finally {
+                            setIsProcessingTelemetry(false);
+                          }
                         }}>
                         {isProcessingTelemetry ? <><Loader size={16} className="animate-spin" /> Procesando...</> : <><Zap size={16} /> Digitalizar</>}
                       </button>

@@ -197,6 +197,70 @@ async def get_status_checks():
     return status_checks
 
 
+# =============================================
+# SISTEMA DE COLA DE TELEMETRÍA IA
+# =============================================
+from services.telemetry_queue import create_telemetry_job, get_job_status
+
+@api_router.post("/telemetry/start-job")
+async def start_telemetry_job(
+    module: str = Form(...),
+    library: str = Form("MV"),
+    files: List[UploadFile] = File(...)
+):
+    """
+    Inicia un job de procesamiento de telemetría en segundo plano.
+    Devuelve inmediatamente un job_id para consultar el progreso.
+    """
+    try:
+        # Convertir archivos a base64
+        files_data = []
+        for file in files:
+            content = await file.read()
+            
+            # Validar que sea imagen
+            magic_bytes = content[:8]
+            is_jpeg = magic_bytes[:2] == b'\xff\xd8'
+            is_png = magic_bytes[:8] == b'\x89PNG\r\n\x1a\n'
+            is_gif = magic_bytes[:6] in (b'GIF87a', b'GIF89a')
+            
+            if not (is_jpeg or is_png or is_gif):
+                logger.warning(f"Skipping non-image file: {file.filename}")
+                continue
+            
+            base64_image = base64.b64encode(content).decode('utf-8')
+            files_data.append({
+                "filename": file.filename,
+                "base64": base64_image
+            })
+        
+        if not files_data:
+            return {"success": False, "error": "No se encontraron imágenes válidas"}
+        
+        # Crear job en la cola
+        job_id = await create_telemetry_job(library, module, files_data)
+        
+        return {
+            "success": True,
+            "job_id": job_id,
+            "message": f"Job iniciado con {len(files_data)} archivo(s)",
+            "total_files": len(files_data)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting telemetry job: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@api_router.get("/telemetry/job-status/{job_id}")
+async def get_telemetry_job_status(job_id: str):
+    """Obtiene el estado actual de un job de telemetría"""
+    status = await get_job_status(job_id)
+    if not status:
+        return {"success": False, "error": "Job no encontrado"}
+    return {"success": True, **status}
+
+
 @api_router.post("/analyze-product-sheets")
 async def analyze_product_sheets(
     module: str = Form(...),
