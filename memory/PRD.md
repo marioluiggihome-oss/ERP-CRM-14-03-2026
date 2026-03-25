@@ -46,6 +46,25 @@
 - ✅ **Configuración**: Logo almacenado como base64 en `db.settings.logo`
 - ✅ **Verificado**: Logo presente en configuración global y usado en generación de PDFs
 
+### 4. Refactorización Frontend P1 - SettingsModal.jsx
+- ✅ **Reducción**: De 5332 líneas a 4853 líneas (-480 líneas)
+- ✅ **Componentes extraídos a `/app/frontend/src/components/settings/`**:
+  - `TelemetryTab.jsx` (Telemetría IA - 290 líneas)
+  - `IdentityTab.jsx` (Color y Logo corporativo - 120 líneas)
+  - `SecurityTab.jsx` (Autenticación 2FA - 180 líneas)
+  - `SettingsContext.jsx` (Contexto compartido)
+  - `index.js` (Exportaciones)
+- ✅ **Verificado**: Hot reload compiló sin errores, UI funciona correctamente
+
+### 5. Manual de Usuario P2 - Completado
+- ✅ **Archivo**: `/app/docs/MANUAL_USUARIO.md`
+- ✅ **Versión**: Actualizado a 2.0
+- ✅ **Nuevas secciones añadidas**:
+  - Sección 5.7: Informe de Producción PDF
+  - Sección 8: Mis Pedidos (completa con envío de copias)
+  - Sección 9: Dashboard Fábrica (KPIs y gráficos)
+  - Sección 10: Telemetría IA (reconocimiento óptico)
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (22 Marzo 2026)
@@ -441,12 +460,20 @@
 - `xlsxwriter`: Excel exports
 - `pymongo/motor`: MongoDB async
 - `jspdf` + `html2canvas`: PDF export (frontend)
+- `reportlab`: PDF generation (backend)
+- `sendgrid`: Email service
 
 ---
 
-## PRÓXIMOS PASOS RECOMENDADOS
+## PRÓXIMOS PASOS RECOMENDADOS (P3 - Backlog)
 1. ~~**Optimización de tableros**~~ ✅ COMPLETADO
-2. **Funcionalidad de impresión** - Para usuarios de fábrica
-3. **Notificaciones** - Email cuando cambie estado de orden
-4. **Dashboard gráfico** - Gráficas de producción
-5. **Historial de cambios** - Trazabilidad de estados
+2. ~~**Informe de producción PDF**~~ ✅ COMPLETADO
+3. ~~**Envío copias con adjuntos**~~ ✅ COMPLETADO
+4. ~~**Manual de usuario**~~ ✅ COMPLETADO v2.0
+5. ~~**Refactorización frontend**~~ ✅ PARCIAL (-480 líneas)
+6. **Refactorización backend** - Extraer más lógica de server.py a routers
+7. **Notificaciones** - Email cuando cambie estado de orden
+8. **Integración facturación externa**
+9. **Alertas automáticas producción urgente**
+10. **Permisos granulares por fábrica** para rol Director Fábrica
+

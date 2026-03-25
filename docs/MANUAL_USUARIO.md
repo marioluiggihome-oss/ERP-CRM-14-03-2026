@@ -277,7 +277,29 @@ Cada mueble tiene 3 botones:
 1. **Importar Pedido**: Desde presupuestos guardados en el sistema
 2. **Importar PDF**: Analiza PDF con IA para detectar muebles
 
-### 5.7 Documentos para Fábrica
+### 5.7 Informe de Producción PDF
+
+**Nueva funcionalidad (Marzo 2026)**
+
+Genera un PDF completo del informe de producción que incluye:
+- Logo corporativo de la empresa
+- Información del pedido (número, cliente, fecha, prioridad)
+- Lista de muebles a fabricar con dimensiones
+- Despiece detallado de cada mueble:
+  - Laterales (izquierdo y derecho)
+  - Tapas (superior e inferior)
+  - Trasera
+  - Estantes
+- Resumen de materiales (total piezas y área m²)
+- Timestamp de generación
+
+**Cómo descargar:**
+1. Ir a Portal de Fábrica
+2. Hacer clic en una orden para expandirla
+3. Presionar botón azul **"Informe PDF"**
+4. El archivo se descarga automáticamente
+
+### 5.8 Documentos para Fábrica
 
 Usuarios de fábrica pueden imprimir:
 - Lista de corte por material
@@ -415,6 +437,124 @@ Los archivos se descargan en formato Excel (.xlsx)
 
 ---
 
+## 8. MIS PEDIDOS
+
+### 8.1 Historial de Pedidos Confirmados
+
+Accede a todos los pedidos confirmados en el sistema.
+
+**Información mostrada:**
+- Número de expediente
+- Cliente
+- Fecha de confirmación
+- Estado de fabricación
+- Importe total
+- Número de artículos
+
+### 8.2 Estados de Fabricación
+
+| Estado | Icono | Descripción |
+|--------|-------|-------------|
+| Confirmado | ✓ | Pedido confirmado, pendiente producción |
+| Pendiente | ⏱ | En cola de fabricación |
+| En Producción | 🏭 | Fabricándose actualmente |
+| Listo | 📦 | Preparado para envío |
+| Enviado | 🚚 | En tránsito |
+| Entregado | ✅ | Instalado en cliente |
+
+### 8.3 Enviar Copia del Pedido
+
+**Nueva funcionalidad (Marzo 2026)**
+
+Permite reenviar una copia del pedido confirmado incluyendo:
+- Resumen del pedido
+- Lista de artículos
+- Especificaciones de acabados
+- Archivos adjuntos del cliente (planos, fotos, etc.)
+
+**Cómo enviar:**
+1. Ir a **Mis Pedidos** en el menú lateral
+2. Localizar el pedido deseado
+3. Hacer clic en el icono de avión (📤) azul
+4. En el modal que aparece:
+   - Introducir email de destino
+   - Opcionalmente, añadir un mensaje
+   - Marcar/desmarcar "Incluir archivos adjuntos"
+5. Presionar **"Enviar Copia"**
+
+**Nota:** Los archivos adjuntos solo se envían si fueron incluidos al confirmar el pedido original.
+
+---
+
+## 9. DASHBOARD FÁBRICA
+
+### 9.1 Acceso
+
+El Dashboard Fábrica está disponible para:
+- Administradores
+- Directores de Fábrica
+- Usuarios con permiso específico
+
+Acceder desde: **Panel Maestro > Dashboard Fábrica**
+
+### 9.2 KPIs Principales
+
+| Indicador | Descripción |
+|-----------|-------------|
+| **Órdenes Fabricación** | Total de OF en el período |
+| **Pedidos Confirmados** | Nuevos pedidos confirmados |
+| **Presupuestos** | Presupuestos guardados |
+| **Ventas €** | Valor total de pedidos |
+| **Presupuestos €** | Valor total presupuestado |
+| **Piezas Producción** | Muebles en fabricación |
+| **Tasa Conversión** | % presupuestos convertidos |
+
+### 9.3 Gráficos
+
+- **Tendencia Mensual**: Comparativa pedidos vs presupuestos (barras)
+- **Estado de Producción**: Distribución por estado (circular)
+
+### 9.4 Selector de Período
+
+Filtrar datos por:
+- Semana
+- Mes
+- Trimestre
+- Año
+- Todo el histórico
+
+---
+
+## 10. TELEMETRÍA IA
+
+### 10.1 Reconocimiento Óptico de Catálogos
+
+Permite importar fichas de productos de catálogos en papel o PDF usando inteligencia artificial.
+
+**Librerías soportadas:**
+- **ZC**: Zonas Z1-Z12
+- **MV**: Tarifas T1-T21 (detección automática)
+
+### 10.2 Proceso de Importación
+
+1. Acceder a **Panel Maestro > Telemetría IA**
+2. Seleccionar módulo (Montada o Despiece)
+3. Seleccionar librería (ZC o MV)
+4. Cargar imágenes de fichas (JPG, PNG, PDF)
+5. Presionar **"Digitalizar"**
+6. Esperar a que la IA procese las imágenes
+7. Revisar el log de resultados
+
+### 10.3 Detección Automática de Tarifas (MV)
+
+Para la librería MV, la IA detecta automáticamente la tarifa (T1-T21) desde el encabezado de cada imagen. No es necesario seleccionar manualmente.
+
+### 10.4 Sistema de Cola en Segundo Plano
+
+La importación de catálogos grandes se procesa en segundo plano para evitar timeouts. El progreso se muestra en tiempo real en el panel de log.
+
+---
+
 ## GLOSARIO
 
 | Término | Definición |
@@ -438,5 +578,5 @@ Para asistencia técnica contactar con:
 
 ---
 
-*Versión del manual: 1.0*
+*Versión del manual: 2.0*
 *Última actualización: Marzo 2026*

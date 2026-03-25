@@ -1,0 +1,122 @@
+/**
+ * IdentityTab - Componente de Identidad de Marca
+ * Configuración de color y logo corporativo
+ */
+import React, { useState } from 'react';
+import { Camera } from 'lucide-react';
+import { settingsAPI } from '../../services/api';
+
+const IdentityTab = ({ state, setState }) => {
+  const [colorInput, setColorInput] = useState(state.brandColor || '#ea580c');
+
+  const handleColorChange = async () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(colorInput)) {
+      setState(prev => ({ ...prev, brandColor: colorInput }));
+      try {
+        await settingsAPI.update({ brandColor: colorInput });
+      } catch (err) {
+        console.error('Error saving brand color:', err);
+      }
+    }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const logoBase64 = reader.result;
+      setState(prev => ({ ...prev, logo: logoBase64 }));
+      try {
+        await settingsAPI.update({ logo: logoBase64 });
+      } catch (err) {
+        console.error('Error saving logo:', err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = async () => {
+    setState(prev => ({ ...prev, logo: null }));
+    try {
+      await settingsAPI.update({ logo: null });
+    } catch (err) {
+      console.error('Error removing logo:', err);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Color de Marca */}
+      <div className="bg-white border border-purple-100 rounded-2xl p-6 shadow-sm">
+        <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4">
+          Color de Marca
+        </h3>
+        <div className="flex gap-4 items-end">
+          <div className="flex-1">
+            <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">
+              Color Hexadecimal
+            </label>
+            <input
+              type="text"
+              value={colorInput}
+              onChange={(e) => setColorInput(e.target.value)}
+              placeholder="#ea580c"
+              className="w-full bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-lg font-black text-indigo-900 outline-none focus:border-orange-500"
+              data-testid="brand-color-input"
+            />
+          </div>
+          <div 
+            className="w-24 h-12 rounded-xl border-4 border-white shadow-lg"
+            style={{ backgroundColor: colorInput }}
+          />
+          <button
+            onClick={handleColorChange}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all"
+            data-testid="apply-brand-color-btn"
+          >
+            Aplicar
+          </button>
+        </div>
+      </div>
+
+      {/* Logo Corporativo */}
+      <div className="bg-white border border-purple-100 rounded-2xl p-6 shadow-sm">
+        <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4">
+          Logo Corporativo
+        </h3>
+        <div className="space-y-4">
+          {state.logo && (
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+              <img src={state.logo} alt="Logo" className="h-16 object-contain" />
+              <button
+                onClick={handleRemoveLogo}
+                className="px-4 py-2 bg-red-100 text-red-600 rounded-lg text-xs font-black uppercase hover:bg-red-200 transition-all"
+                data-testid="remove-logo-btn"
+              >
+                Eliminar
+              </button>
+            </div>
+          )}
+          <label className="block">
+            <div className="border-2 border-dashed border-indigo-200 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
+              <Camera size={32} className="mx-auto text-indigo-300 mb-2" />
+              <p className="text-sm font-black text-indigo-900 uppercase">Subir Logo</p>
+              <p className="text-xs text-indigo-400 mt-1">PNG, JPG, SVG</p>
+            </div>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleLogoUpload} 
+              className="hidden" 
+              data-testid="logo-upload-input"
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default IdentityTab;
