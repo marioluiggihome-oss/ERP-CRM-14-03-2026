@@ -9,7 +9,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://budget-catalog-ai.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://erp-home-kitchen.preview.emergentagent.com')
 
 class TestArmariosIAConfiguration:
     """Tests for IA-based wardrobe configuration"""

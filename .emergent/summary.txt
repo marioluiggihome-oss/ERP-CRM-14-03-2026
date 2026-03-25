@@ -1,123 +1,134 @@
-<analysis>**original_problem_statement**: The user is building a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core relies on a multi-library system ('ZC' and 'MV') with detailed pricing, complex bill of materials (despiece) calculations, and order management. Recently requested features include robust AI Telemetry (Reconocimiento Óptico) to digitize technical catalogs (especially the complex 'MV' library with various T1-T21 tariffs) using Gemini Vision.
+<analysis>Here is the handoff summary for the next agent:
+
+**original_problem_statement**: The user is building a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core relies on a multi-library system ('ZC' and 'MV') with detailed pricing, complex bill of materials (despiece) calculations, and order management. Recent priorities included fixing AI Telemetry (Reconocimiento Óptico) errors during large catalog uploads, creating production dashboards, managing custom roles, and strictly refining the mathematical formulas used to generate the manufacturing cutting lists (despieces).
 
 **User's preferred language**: **es (Spanish)**. (INSTRUCT NEXT AGENT: You MUST respond and communicate with the user entirely in Spanish).
 
 **what currently exists?** 
-A full-stack React/FastAPI/MongoDB ERP. It features a newly refactored backend (monolith partially decomposed), a robust cutting list generator, CRM, factory production portal, and an AI Telemetry module ( + ) that uses Gemini Vision to extract product configurations and prices from uploaded catalog images. It supports multi-library logic (ZC vs MV) with persistent active library tracking.
+A full-stack React/FastAPI/MongoDB ERP. It features a newly implemented background queue system for AI Telemetry that prevents gateway timeouts, automatic AI tariff detection (T1-T21) from catalog images, a Dashboard Fábrica for production metrics, and dynamic tariff/zone pricing in the budget tables. The system also contains recently updated and corrected mathematical formulas for generating cabinet cutting lists (despieces), along with a data normalization layer that ensures dimensions are always in centimeters.
 
 **Last working item**:
-- **Last item agent was working**: Fixing a frontend  error in  during AI Telemetry file uploads, AND preventing product duplication in the backend. When uploading different tariffs (e.g., T1, T2, T3) for the MV library, the system must UPDATE existing products with the new tariff prices inside the  object (e.g., ) instead of creating duplicate products.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?** Both backend and frontend testing. Use  to verify backend merging logic (simulate a product update with a new tariff), and screenshot tool to verify the frontend no longer throws the stream error during upload.
+- **Last item agent was working**: Correcting the mathematical formulas for despieces (cutting lists) based on a user-provided Word document, and fixing a bug where AI Telemetry occasionally imported dimensions in millimeters instead of centimeters (e.g., 900 instead of 90). The agent updated the math formulas in , added a normalization step in , and ran a script to fix 782 existing products in the database.
+- **Status**: USER VERIFICATION PENDING
+- **Agent Testing Done**: Y (Backend scripts verified dimension changes and math logic).
+- **Which testing method agent to use?** Frontend testing agent (to verify UI behavior on despieces) or manual backend curl for the  generation endpoint.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**: 
-  - Issue 1: **Frontend Error:  in Telemetry (P0)**
-     - **Attempted fixes**: The agent tried changing  to  and manually parsing, but the error persists because the response stream might be consumed twice in the  block or error handling logic.
-     - **Next debug checklist**: Check  around lines 4555-4590. Ensure  is read exactly once and safely parsed. 
-     - **Why fix this issue and what will be achieved with the fix?** Prevents UI crashes and unhandled promise rejections during large batch image uploads.
-     - **Status**: IN PROGRESS
-     - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?** Frontend
-     - **Blocked on other issue**: None
-
-  - Issue 2: **AI Telemetry Duplicate Products across Tariffs (P0)**
-     - **Attempted fixes**: Not yet implemented. The agent just realized the need to use an UPSERT strategy targeting  rather than inserting new documents per image.
-     - **Next debug checklist**: Modify  in  (around line 470+). When matching a product by code, if it exists, update the specific tariff price in  based on what the user is uploading. Need to identify how the backend knows *which* tariff (T1, T2, etc.) the image belongs to so it maps correctly.
-     - **Why fix this issue and what will be achieved with the fix?** Prevents database bloat and ensures the 'MV' library functions correctly by having a single product record with a comprehensive  map.
+  - Issue 1: **Missing features requested in the User's Word Document (P0)**
+     - **Attempted fixes**: The agent successfully extracted the text from the user's Word document and fixed the math formulas (Issue #1 from the doc). However, the agent *missed/forgot* to implement the remaining 3 requirements mentioned in the document before the session ended.
+     - **Next debug checklist**: 
+        1. **Informe de producción:** Integrate the production report into the factory report (informe de fábrica) for each order. (Check PDF generation logic in  or ).
+        2. **Archivos adjuntos:** Ensure that when copies of orders are sent, the client's attached files are included.
+        3. **Logotipo:** Add the brand's logo to the generated order PDFs.
+     - **Why fix this issue and what will be achieved with the fix?** Fulfills the explicit requirements provided by the user in their uploaded document, ensuring factory PDFs are professional and complete.
      - **Status**: NOT STARTED
      - **Is recurring issue?** N
-     - **Should Test frontend/backend/both after fix?** Backend
+     - **Should Test frontend/backend/both after fix?** Backend (PDF Generation & Emailing).
+     - **Blocked on other issue**: None.
 
 **In progress Task List**:
-*None active besides the issues mentioned above.*
+*None active besides the missed Word document issues mentioned above.*
 
-**Upcoming and Future Tasks**:
-  - **Upcoming Tasks**:
-    - (P1) Refactor Frontend Monolith: Decompose  (>4800 lines) into smaller, manageable components.
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - (P1) Refactor Frontend Monolith: Decompose  (>5300 lines) into smaller, manageable components.
     - (P2) Populate User Manual: Write comprehensive content for the user manual ().
-  - **Future Tasks**:
+    
+    Future Tasks:
     - (P3) Continue Backend Refactoring: Extract Settings and Projects/Budgets logic from  to dedicated routers.
     - (P3) Integrations: External billing systems integration.
-    - (P3) Dashboard: Production metrics dashboard.
+    - (P3) Alertas automáticas de producción urgente.
+    - (P3) Permisos granulares por fábrica para el rol Director Fábrica.
 
-**Completed work in this session**:
-- Massive Backend Refactoring: Extracted CRM, Montajes, Backup, Armarios, Digitalizador, and Orders from  to dedicated route files, reducing the monolith from ~7000 lines to ~3700 lines (DONE).
-- Persisted MV/ZC library active state across sessions using  in  and  (DONE).
-- Fixed AI Telemetry state missing  (ReferenceError) (DONE).
-- Removed Registrarse con Email button and logic from  (DONE).
-- Improved AI Telemetry for the MV library: Created a custom Gemini prompt for MV architecture, added multi-pass extraction (up to 3 passes of 50 products = 150 products per image) to bypass Gemini token limits, and added proper file validation/PDF rejection (DONE).
+**Completed work in this session**
+- **AI Telemetry Queue System ()**: Completely replaced  with a background  task and polling system to fix 502 Gateway Timeouts and body stream already read errors for large image processing (DONE).
+- **Auto-detection of Tariffs**: Instructed Gemini Vision to automatically extract the MV tariff (T1-T21) from catalog headers, removing the need for a manual dropdown (DONE).
+- **Dashboard Fábrica**: Created a new UI tab and backend endpoint () for KPIs, production status, and monthly sales trends (DONE).
+- **Role Management**: Created Director de Fábrica role and renamed tabs (Panel Director Comercial, Dashboard Fábrica) (DONE).
+- **Dynamic Pricing in **: Added UI dropdowns to select Tariffs/Zones and updated the React  hooks so prices actively change in the UI when the user switches tariffs (DONE).
+- **Despiece Math & Dimension Normalization**: Fixed formulas for Laterales, Tapas, Trasera, and Estantes to account for back-panel thickness. Wrote logic to convert AI-hallucinated millimeter dimensions into centimeters (DONE).
 
-**Earlier issues found/mentioned but not fixed**:
-- None.
+**Earlier issues found/mentioned but not fixed**
+   - Issue 1: **User Document Requirements (Logos, Attachments, Factory Reports)**
+   - *See details in All Pending/In progress Issue list (Issue 1) above.*
 
-**Known issue recurrence from previous fork**:
-  - **Issue recurrence in previous fork**: AI Telemetry frontend crashes during large batch processing.
-  - **Recurrence count**: 2
-  - **Status**: IN PROGRESS
+**Known issue recurrence from previous fork**
+  - **Issue recurrence in previous fork**: body stream already read / 502 Timeouts during AI Telemetry.
+  - **Recurrence count**: 3
+  - **Status**: RESOLVED (Fixed permanently by transitioning from synchronous HTTP requests to an asynchronous Job Queue with frontend polling).
 
-**Code Architecture**:
+**Code Architecture**
 
 
-**Key Technical Concepts**:
-- **Multi-pass AI Extraction**: Because Gemini Vision has output token limits, processing a catalog page with 70+ products truncates the JSON. The backend now executes a loop (up to 3 passes) on the same image, instructing Gemini to skip previously extracted products, appending them to a master list.
-- **ZonePoints Mapping**: A product's price isn't a single scalar. For ZC it's . For MV it's .
+**Key Technical Concepts**
+- **Telemetry Queue System**: Because 3 passes of Gemini Vision takes ~45-60 seconds per image, the standard 60s proxy timeout was killing requests. The backend now immediately returns a  via , and the frontend polls  every 2 seconds via .
+- **Dimension Normalization**: The AI sometimes extracts measurements in . A normalization function now checks if values > 150 and divides by 10 to force .
+- **Dynamic Tariffs**: Products store multiple prices in . The  uses a  callback hooked into React state to update UI prices dynamically.
 
-**key DB schema**:
+**key DB schema**
   - : 
+  - :  (Width/Height/Depth are strictly enforced as CM).
 
-**changes in tech stack**:
-  - None.
+**changes in tech stack**
+  - Added Recharts () for the Factory Dashboard.
 
-**All files of reference**:
--  (Currently throwing the stream error during fetch)
--  (AI Telemetry endpoint  needs the merge/upsert logic)
--  (Library persistence)
--  (Newly created refactored modules)
+**All files of reference**
+-  (New: Background processing for AI Telemetry)
+-  (Updated: Math formulas for despiece/cutting lists around line 2850+)
+-  (Updated: Pricing logic and tariff selectors)
+-  (Updated: Polling logic for telemetry, Dashboard UI)
+-  (New: KPI metrics)
+-  (Updated: Roles)
 
 **Areas that need refactoring**:
--  (>4800 lines). Critical candidate for decomposition.
+-  (>5300 lines). Urgent candidate for decomposition.
 
-**key api endpoints**:
-- : Processes catalog images via Gemini.
+**key api endpoints**
+- : Initiates background Gemini parsing.
+- : Polls telemetry status.
+- : Fetches Factory KPIs.
 
-**Critical Info for New Agent**:
-- **LANGUAGE:** Always speak Spanish with the user.
-- **AI TELEMETRY UPSERTS:** The user uploaded TARIFA 3 and then another tariff. You must ensure that if a product like  exists, its  gets updated with the new tariff price (e.g., ) rather than inserting a duplicate record. You will likely need the user to input *which* tariff number they are uploading in the UI, or instruct Gemini to extract the tariff number and map it automatically.
+**Critical Info for New Agent**
+- **LANGUAGE:** Always speak Spanish.
+- **DESPIECE MATH:** The math logic for generating the Bill of Materials (Despiece) was just heavily altered in  to correctly calculate interior dimensions (subtracting back-panel thickness). Do not revert this math.
+- **WORD DOCUMENT PENDING ITEMS:** You *must* review the user's request regarding PDF Generation: they want the production report integrated into the factory report, client attachments sent with orders, and logos added to PDFs.
 
-**documents and test reports created in this job**:
-  -  (Updated with refactoring details)
+**documents and test reports created in this job**
+  -  (Updated with Dashboard, Queue system, and Math fixes)
+  - 
+  - 
+  - 
 
-**Last 10 User Messages and any pending HUMAN messages**:
-1. User: cuando un usuario tenga las dos librerías activas, si sale de la sesión de usuario con la tarifa MV, que cuando entre esté en esa tarifa y no en la de ZC.
-2. Agent: Fixed persistence in .
-3. User: NO LO HACE, NO GUARDA
-4. Agent: Found issue in  overwriting state without saving. Fixed.
-5. User: HE SUBIDO ESTOS ARCHIVOS POR TELEMETRÍA MV Y FALLA DA ESTE ERROR Q TE PASO EN FOTO [image of body stream already read]
-6. Agent: Tried fixing frontend, saw backend JSON truncate, implemented multi-pass extraction.
-7. User: pero entonces si hay más de 30 productos, no los extrae ¿? por cada página ¿?
-8. Agent: Set it to 2 passes.
-9. User: HAZ TRES PASADAS, QUE NO CREO QUE PASE CADA PÁGINA DE 150 PRODUCTOS, POR FAVOR
-10. User (Pending): OJO AL IMPORTAR PRODUCTOS, NO DEBE DUPLICARLOS, DEBE TENER EN CUENTA LA TARIFA, PORQUE LOS PRODUCTOS SON LOS MISMOS, LO QUE CAMBIA ES EL PRECIO, LO HAS TENIDO EN CUENTA EN LIBRERÍA-TARIFA MV Y APARTE DA ESTE ERROR [Image of body stream error again]
+**Last 10 User Messages and any pending HUMAN messages** 
+1. User: error (Image showing body stream already read).
+2. Agent: Tried fixing with response.clone().
+3. User: han fallado varios lotes de importación (Images showing clone errors).
+4. Agent: Switched to arrayBuffer, then found out the issue was timeouts.
+5. User: da este error al importar telemetría ia (502 Bad Gateway timeout).
+6. Agent: Explained it was a proxy timeout, reduced AI passes from 3 to 2.
+7. User: si añada ese sistema [cola] y haz que sea más fluida la importación
+8. Agent: Implemented full Async Background Queue.
+9. User: ojo no estás calculando bien los despieces (Uploaded images and a Word Document).
+10. Agent: Fixed math formulas for pieces, added dimension normalization (mm -> cm), ran a database script to clean existing bad data. Waiting for user to verify the math fixes.
 
 **Project Health Check:**
-- Broken: AI Telemetry frontend fetch logic ().
-- Mocked: Manual de usuario content.
+- Broken: Missing PDF/Report logic from the user's Word doc.
+- Mocked: User manual content.
 
 **3rd Party Integrations**:
 - **OpenAI / Gemini Vision** — uses Emergent LLM Key (used in ).
 - **Sendgrid (Emails)** — requires User API Key.
 
 **Testing status**:
-  - Testing agent used after significant changes: NO (Refactoring was tested incrementally via curl and python).
+  - Testing agent used after significant changes: YES (Tested bulk-upserts, dashboard, and roles).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None
-  - Known regressions:  in telemetry upload fetch.
+  - Test files created: None explicitly created by main agent, but used .
+  - Known regressions: None currently.
 
 **Credentials to test flow:**
 - User: 
 - Password: 
 
 **What agent forgot to execute**:
-The agent didn't resolve how the backend knows *which* specific tariff (T1, T2, etc.) an uploaded MV image represents before saving it to . Without this, mapping prices without duplication is impossible. The agent must add a tariff selector in the UI for the MV library or prompt Gemini to strictly extract the tariff number from the image headers.</analysis>
+The agent focused on fixing the math formulas and database dimension anomalies mentioned in the user's Word Document, but completely forgot to execute the other three explicit requests in that document: 1) Integrating the production report into the factory report, 2) Sending client attachments with order copies, and 3) Adding the brand logo to the generated order PDFs. These are P0 tasks for the next agent.</analysis>

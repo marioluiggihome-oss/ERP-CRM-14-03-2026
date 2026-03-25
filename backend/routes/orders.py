@@ -209,6 +209,21 @@ async def confirm_order(
             else:
                 logger.warning("No RESEND_API_KEY configured for fallback. Order saved without email.")
         
+        # Guardar archivos adjuntos en base64 para poder reenviarlos después
+        saved_attachments = []
+        for attachment in attachments:
+            if attachment and attachment.filename:
+                try:
+                    await attachment.seek(0)  # Volver al inicio del archivo
+                    content = await attachment.read()
+                    saved_attachments.append({
+                        "filename": attachment.filename,
+                        "content_type": attachment.content_type or "application/octet-stream",
+                        "data": base64.b64encode(content).decode()
+                    })
+                except Exception as e:
+                    logger.warning(f"Could not save attachment {attachment.filename}: {e}")
+        
         # Save order record
         order_record = {
             "id": f"order-{uuid.uuid4().hex[:8]}",
@@ -222,6 +237,7 @@ async def confirm_order(
             "items": items_list,
             "itemsCount": len(items_list),
             "attachmentsCount": sum(1 for a in attachments if a and a.filename),
+            "attachments": saved_attachments,  # Guardar adjuntos para reenvío
             "confirmedAt": datetime.now(timezone.utc).isoformat(),
             "status": "confirmed",
             "emailSent": email_sent,
@@ -437,4 +453,196 @@ async def get_order_detail(order_id: str):
         raise
     except Exception as e:
         logger.error(f"Error fetching order {order_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================
+# ENVIAR COPIA DE PEDIDO CON ADJUNTOS
+# ============================================
+
+from pydantic import BaseModel
+
+class SendCopyRequest(BaseModel):
+    """Request para enviar copia de pedido"""
+    recipient_email: str
+    include_attachments: bool = True
+    additional_message: str = ""
+
+
+@router.post("/orders/{order_id}/send-copy")
+async def send_order_copy(order_id: str, request: SendCopyRequest):
+    """
+    Envía una copia del pedido a un email especificado.
+    Incluye los archivos adjuntos del cliente si están disponibles.
+    """
+    try:
+        # Obtener pedido
+        order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+        if not order:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        
+        sendgrid_key = os.environ.get('SENDGRID_API_KEY')
+        if not sendgrid_key:
+            raise HTTPException(status_code=500, detail="SendGrid API key not configured")
+        
+        # Construir contenido del email
+        budget_number = order.get('budgetNumber', 'N/A')
+        customer_name = order.get('customerName', 'Sin especificar')
+        customer_address = order.get('customerAddress', '')
+        total_amount = order.get('totalAmount', 0)
+        notes = order.get('notes', '')
+        items = order.get('items', [])
+        specs = order.get('specifications', {})
+        confirmed_at = order.get('confirmedAt', '')
+        
+        # Construir tabla de items
+        items_html = ""
+        for idx, item in enumerate(items, 1):
+            item_name = item.get("name", item.get("productName", "Producto"))
+            item_qty = item.get("quantity", 1)
+            item_price = item.get("price", item.get("totalPrice", 0))
+            items_html += f"""
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px; text-align: left;">{idx}</td>
+                <td style="padding: 12px; text-align: left;">{item_name}</td>
+                <td style="padding: 12px; text-align: center;">{item_qty}</td>
+                <td style="padding: 12px; text-align: right;">{item_price:.2f} €</td>
+            </tr>
+            """
+        
+        additional_msg = ""
+        if request.additional_message:
+            additional_msg = f'<div style="background: #e0f2fe; border-left: 4px solid #0ea5e9; padding: 15px; margin: 20px 0;"><strong>Mensaje adicional:</strong> {request.additional_message}</div>'
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0;">
+                <h1 style="margin: 0; font-size: 24px;">LUIGGI HOME</h1>
+                <p style="margin: 10px 0 0 0; opacity: 0.8; font-size: 14px;">Copia de Pedido Confirmado</p>
+            </div>
+            
+            <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
+                <h2 style="color: #1e293b; margin-top: 0;">Pedido #{budget_number}</h2>
+                
+                {additional_msg}
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="color: #475569; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Datos del Cliente</h3>
+                    <p><strong>Cliente:</strong> {customer_name}</p>
+                    <p><strong>Direccion:</strong> {customer_address or 'No especificada'}</p>
+                    <p><strong>Confirmado:</strong> {confirmed_at[:10] if confirmed_at else 'N/A'}</p>
+                </div>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="color: #475569; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Especificaciones</h3>
+                    <p><strong>Color Puerta Bajo:</strong> {specs.get('doorColorLow', 'N/A')}</p>
+                    <p><strong>Color Puerta Alto:</strong> {specs.get('doorColorHigh', 'N/A')}</p>
+                    <p><strong>Color Puerta Columnas:</strong> {specs.get('doorColorColumns', 'N/A')}</p>
+                    <p><strong>Color Costados:</strong> {specs.get('sideColor', 'N/A')}</p>
+                    <p><strong>Color Armazon:</strong> {specs.get('carcassColor', 'N/A')}</p>
+                    <p><strong>Acabado:</strong> {specs.get('globalFinish', 'N/A')}</p>
+                </div>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="color: #475569; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Articulos ({len(items)})</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f1f5f9;">
+                                <th style="padding: 12px; text-align: left;">#</th>
+                                <th style="padding: 12px; text-align: left;">Articulo</th>
+                                <th style="padding: 12px; text-align: center;">Cantidad</th>
+                                <th style="padding: 12px; text-align: right;">Precio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items_html}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="background: #065f46; color: white; padding: 20px; border-radius: 8px; text-align: right;">
+                    <h2 style="margin: 0;">TOTAL: {total_amount:,.2f} €</h2>
+                </div>
+                
+                {f'<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-top: 20px;"><strong>Notas:</strong> {notes}</div>' if notes else ''}
+            </div>
+            
+            <div style="background: #1e293b; color: white; padding: 20px; border-radius: 0 0 10px 10px; text-align: center; font-size: 12px;">
+                <p style="margin: 0;">LUIGGI HOME Master Design v2026</p>
+                <p style="margin: 5px 0 0 0; opacity: 0.7;">Sistema de Gestion de Presupuestos de Cocina</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Obtener email del remitente desde configuración
+        settings = await db.settings.find_one({"id": "global_settings"}, {"_id": 0})
+        sender_email = settings.get("senderEmail", "no-reply@luiggihome.com") if settings else "no-reply@luiggihome.com"
+        
+        # Crear mensaje
+        message = Mail(
+            from_email=sender_email,
+            to_emails=request.recipient_email,
+            subject=f"Copia Pedido #{budget_number} - {customer_name}",
+            html_content=html_content
+        )
+        
+        # Adjuntar archivos guardados si se solicita
+        attachments_sent = 0
+        if request.include_attachments:
+            saved_attachments = order.get('attachments', [])
+            for att_data in saved_attachments:
+                try:
+                    att = Attachment()
+                    att.file_content = FileContent(att_data.get('data', ''))
+                    att.file_name = FileName(att_data.get('filename', 'adjunto'))
+                    att.file_type = FileType(att_data.get('content_type', 'application/octet-stream'))
+                    att.disposition = Disposition("attachment")
+                    message.add_attachment(att)
+                    attachments_sent += 1
+                except Exception as e:
+                    logger.warning(f"Could not attach saved file: {e}")
+        
+        # Enviar email
+        try:
+            sg = SendGridAPIClient(sendgrid_key)
+            sg.send(message)
+            logger.info(f"Order copy sent to {request.recipient_email} with {attachments_sent} attachments")
+            
+            return {
+                "success": True,
+                "message": f"Copia enviada a {request.recipient_email}" + (f" con {attachments_sent} adjunto(s)" if attachments_sent > 0 else ""),
+                "attachmentsSent": attachments_sent
+            }
+        except Exception as e:
+            logger.error(f"Error sending order copy: {e}")
+            
+            # Intentar con Resend como fallback
+            resend_key = os.environ.get('RESEND_API_KEY')
+            if resend_key:
+                try:
+                    resend.api_key = resend_key
+                    resend.Emails.send({
+                        "from": "LUIGGI HOME <onboarding@resend.dev>",
+                        "to": [request.recipient_email],
+                        "subject": f"Copia Pedido #{budget_number} - {customer_name}",
+                        "html": html_content
+                    })
+                    return {
+                        "success": True,
+                        "message": f"Copia enviada a {request.recipient_email} via Resend (sin adjuntos)",
+                        "attachmentsSent": 0,
+                        "warning": "Adjuntos no disponibles con Resend"
+                    }
+                except Exception as resend_error:
+                    raise HTTPException(status_code=500, detail=f"Error enviando email: {str(resend_error)}")
+            
+            raise HTTPException(status_code=500, detail=f"Error enviando email: {str(e)}")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending order copy: {e}")
         raise HTTPException(status_code=500, detail=str(e))

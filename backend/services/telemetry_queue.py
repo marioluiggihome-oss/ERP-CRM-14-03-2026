@@ -274,6 +274,23 @@ Responde SOLO con JSON válido."""
             for prod in new_products:
                 code = prod.get("code", "")
                 if code and code not in extracted_codes:
+                    # Normalizar dimensiones (convertir de mm a cm si es necesario)
+                    width = float(prod.get("width", 0) or 0)
+                    height = float(prod.get("height", 0) or 0)
+                    depth = float(prod.get("depth", 0) or 0)
+                    
+                    # Si las dimensiones son mayores a 300, probablemente están en mm
+                    if width > 300:
+                        width = width / 10
+                    if height > 300:
+                        height = height / 10
+                    if depth > 300:
+                        depth = depth / 10
+                    
+                    prod['width'] = width
+                    prod['height'] = height
+                    prod['depth'] = depth
+                    
                     prod['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
                     prod['manufacturer'] = 'MV' if library == 'MV' else 'Zona Cocinas'
                     prod['module'] = module
@@ -326,6 +343,19 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
             )
             updated += 1
         else:
+            # Normalizar dimensiones
+            width = float(product.get("width", 0) or 0)
+            height = float(product.get("height", 0) or 0)
+            depth = float(product.get("depth", 0) or 0)
+            
+            # Si las dimensiones son mayores a 300, probablemente están en mm
+            if width > 300:
+                width = width / 10
+            if height > 300:
+                height = height / 10
+            if depth > 300:
+                depth = depth / 10
+            
             clean_data = {
                 "id": product.get("id", f"prod-{uuid.uuid4().hex[:8]}"),
                 "code": code,
@@ -333,9 +363,9 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
                 "category": str(product.get("category", "")),
                 "series": str(product.get("series", "")),
                 "visualType": str(product.get("visualType", "")),
-                "width": float(product.get("width", 0) or 0),
-                "height": float(product.get("height", 0) or 0),
-                "depth": float(product.get("depth", 0) or 0),
+                "width": width,
+                "height": height,
+                "depth": depth,
                 "manufacturer": str(product.get("manufacturer", "")),
                 "module": str(product.get("module", "montada")),
                 "library": library,

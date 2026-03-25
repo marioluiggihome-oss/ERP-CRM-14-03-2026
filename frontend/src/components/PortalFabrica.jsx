@@ -319,6 +319,36 @@ const PortalFabrica = ({ currentUser }) => {
     }
   };
 
+  // Descargar informe de producción PDF
+  const handleDownloadProductionReport = async (orderId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/fabrica/reports/production/${orderId}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Error descargando informe' }));
+        throw new Error(error.detail || 'Error al descargar informe');
+      }
+      
+      // Obtener el blob y descargarlo
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // Buscar el número de orden para el nombre del archivo
+      const order = orders.find(o => o.id === orderId);
+      const filename = `Informe_Produccion_${order?.orderNumber || orderId}.pdf`;
+      a.download = filename;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      alert('Error al descargar informe: ' + error.message);
+    }
+  };
+
   // Toggle expandir orden
   const toggleExpand = (orderId) => {
     setExpandedOrders(prev => ({ ...prev, [orderId]: !prev[orderId] }));
@@ -577,6 +607,16 @@ const PortalFabrica = ({ currentUser }) => {
                     >
                       <Scissors size={14} />
                       Ver Despiece
+                    </button>
+
+                    <button
+                      onClick={() => handleDownloadProductionReport(order.id)}
+                      className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-200 flex items-center gap-1"
+                      data-testid={`download-report-${order.id}`}
+                      title="Descargar Informe de Producción PDF con logo y despiece"
+                    >
+                      <FileText size={14} />
+                      Informe PDF
                     </button>
 
                     <button

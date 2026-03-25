@@ -10,7 +10,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://budget-catalog-ai.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://erp-home-kitchen.preview.emergentagent.com')
 
 class TestBulkUpsert:
     """Tests for bulk-upsert endpoint to prevent product duplication"""

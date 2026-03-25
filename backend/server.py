@@ -62,6 +62,7 @@ from routes import (
 )
 from routes.fabrica import router as fabrica_router
 from routes.dashboard import router as dashboard_router
+from routes.factory_reports import router as factory_reports_router
 from routes.backup import scheduler as backup_scheduler, start_backup_scheduler
 
 # Modelos compartidos
@@ -133,6 +134,7 @@ api_router.include_router(digitalizador_router)
 api_router.include_router(crm_module_router)
 api_router.include_router(orders_router)
 api_router.include_router(dashboard_router)
+api_router.include_router(factory_reports_router)
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 

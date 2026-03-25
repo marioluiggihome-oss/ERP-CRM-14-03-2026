@@ -3,7 +3,7 @@ import {
   Package, Search, Calendar, Euro, Mail, CheckCircle, 
   AlertTriangle, Eye, FileText, ChevronDown, ChevronUp,
   User, MapPin, Clock, Filter, RefreshCw, X, Printer,
-  Factory, Truck, PackageCheck, Timer, Circle
+  Factory, Truck, PackageCheck, Timer, Circle, Send, Paperclip
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +25,11 @@ const MisPedidos = ({ currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showSendCopyModal, setShowSendCopyModal] = useState(null);
+  const [sendCopyEmail, setSendCopyEmail] = useState('');
+  const [sendCopyMessage, setSendCopyMessage] = useState('');
+  const [sendCopyIncludeAttachments, setSendCopyIncludeAttachments] = useState(true);
+  const [sendingCopy, setSendingCopy] = useState(false);
 
   // Fetch orders
   useEffect(() => {
@@ -56,6 +61,43 @@ const MisPedidos = ({ currentUser }) => {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Enviar copia del pedido con adjuntos
+  const handleSendCopy = async () => {
+    if (!sendCopyEmail) {
+      alert('Por favor introduce un email de destino');
+      return;
+    }
+    
+    setSendingCopy(true);
+    try {
+      const response = await fetch(`${API_URL}/api/orders/${showSendCopyModal.id}/send-copy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient_email: sendCopyEmail,
+          include_attachments: sendCopyIncludeAttachments,
+          additional_message: sendCopyMessage
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al enviar copia');
+      }
+      
+      const result = await response.json();
+      alert(result.message || 'Copia enviada correctamente');
+      setShowSendCopyModal(null);
+      setSendCopyEmail('');
+      setSendCopyMessage('');
+      setSendCopyIncludeAttachments(true);
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setSendingCopy(false);
     }
   };
 
@@ -371,8 +413,21 @@ const MisPedidos = ({ currentUser }) => {
                     </div>
                   </div>
 
-                  {/* Amount, Print & Expand */}
+                  {/* Amount, Print, Send Copy & Expand */}
                   <div className="flex items-center gap-4">
+                    {/* Send Copy Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowSendCopyModal(order);
+                        setSendCopyEmail(order.email || '');
+                      }}
+                      className="p-2 bg-blue-100 hover:bg-blue-200 rounded-xl transition-colors"
+                      title="Enviar copia con adjuntos"
+                      data-testid={`send-copy-${order.id}`}
+                    >
+                      <Send size={18} className="text-blue-600" />
+                    </button>
                     {/* Print Button */}
                     <button
                       onClick={(e) => {
@@ -500,10 +555,124 @@ const MisPedidos = ({ currentUser }) => {
                       <p className="text-amber-800">{order.notes}</p>
                     </div>
                   )}
+
+                  {/* Adjuntos info */}
+                  {order.attachments && order.attachments.length > 0 && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+                      <h4 className="font-bold text-blue-700 mb-2 flex items-center gap-2">
+                        <Paperclip size={16} />
+                        Archivos Adjuntos ({order.attachments.length})
+                      </h4>
+                      <div className="space-y-1">
+                        {order.attachments.map((att, idx) => (
+                          <p key={idx} className="text-sm text-blue-600">
+                            {att.filename || `Adjunto ${idx + 1}`}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal Enviar Copia */}
+      {showSendCopyModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-4 rounded-t-2xl flex items-center justify-between text-white">
+              <div className="flex items-center gap-3">
+                <Send size={20} />
+                <h3 className="font-bold text-lg">Enviar Copia del Pedido</h3>
+              </div>
+              <button onClick={() => setShowSendCopyModal(null)} className="hover:bg-white/20 p-1 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                <strong>Pedido #{showSendCopyModal.budgetNumber}</strong> - {showSendCopyModal.customerName}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">
+                  Email de destino *
+                </label>
+                <input
+                  type="email"
+                  value={sendCopyEmail}
+                  onChange={(e) => setSendCopyEmail(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="correo@ejemplo.com"
+                  data-testid="send-copy-email-input"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">
+                  Mensaje adicional (opcional)
+                </label>
+                <textarea
+                  value={sendCopyMessage}
+                  onChange={(e) => setSendCopyMessage(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 h-20 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Escribe un mensaje para incluir en el email..."
+                  data-testid="send-copy-message-input"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="includeAttachments"
+                  checked={sendCopyIncludeAttachments}
+                  onChange={(e) => setSendCopyIncludeAttachments(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 rounded"
+                  data-testid="send-copy-include-attachments"
+                />
+                <label htmlFor="includeAttachments" className="text-sm text-slate-700 flex items-center gap-2">
+                  <Paperclip size={14} />
+                  Incluir archivos adjuntos del cliente
+                  {showSendCopyModal.attachments?.length > 0 && (
+                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                      {showSendCopyModal.attachments.length} archivo(s)
+                    </span>
+                  )}
+                </label>
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowSendCopyModal(null)}
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSendCopy}
+                  disabled={sendingCopy || !sendCopyEmail}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  data-testid="send-copy-submit-btn"
+                >
+                  {sendingCopy ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Enviar Copia
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

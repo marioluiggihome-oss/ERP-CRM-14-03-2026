@@ -1,0 +1,116 @@
+{
+  "summary": "Tested 3 new features for LUIGGI HOME ERP: 1) Production PDF Report endpoint with logo and despiece, 2) Send order copy with attachments endpoint, 3) UI components in Portal de Fábrica and Mis Pedidos. All 15 backend tests passed, all UI elements verified working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_new_features_iteration35.py",
+    "/app/test_reports/pytest/pytest_iteration35.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "factory_reports.py correctly generates PDF with logo from global settings, order info, furniture list, and detailed despiece",
+    "orders.py send-copy endpoint correctly retrieves saved attachments from order and sends via SendGrid/Resend",
+    "PortalFabrica.jsx has 'Informe PDF' button at line 614-620 with data-testid='download-report-{order.id}'",
+    "MisPedidos.jsx has 'Enviar Copia' modal with checkbox for 'Incluir archivos adjuntos del cliente' at line 629-646",
+    "api.js correctly exports fabricaAPI.downloadProductionReport and ordersAPI.sendCopy functions"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_features_iteration35.py"
+  ],
+  "success_rate": {
+    "backend": "100% - 15/15 tests passed",
+    "frontend": "100% - All UI elements verified"
+  },
+  "test_credentials": {
+    "username": "MARIO",
+    "password": "MARIO"
+  },
+  "seed_data_creation": "No seed data created - used existing orders (mfg-3d0545c9, order-eecb4b8f)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New features fully tested: 1) GET /api/fabrica/reports/production/{order_id} returns PDF with logo and despiece, 2) GET /api/fabrica/reports/production-from-budget/{budget_id} generates PDF from budget, 3) POST /api/orders/{order_id}/send-copy sends email with attachments. UI: Portal de Fábrica has 'Informe PDF' button, Mis Pedidos has 'Enviar Copia' modal with attachments checkbox.",
+  "features_tested": {
+    "1_production_report_endpoint": {
+      "status": "PASS",
+      "endpoint": "GET /api/fabrica/reports/production/{order_id}",
+      "details": "Returns valid PDF with logo, order info, furniture list, despiece, and material summary"
+    },
+    "2_production_report_from_budget": {
+      "status": "PASS",
+      "endpoint": "GET /api/fabrica/reports/production-from-budget/{budget_id}",
+      "details": "Generates PDF from budget data before manufacturing order is created"
+    },
+    "3_send_copy_endpoint": {
+      "status": "PASS",
+      "endpoint": "POST /api/orders/{order_id}/send-copy",
+      "details": "Sends order copy email with optional attachments via SendGrid/Resend"
+    },
+    "4_informe_pdf_button_ui": {
+      "status": "PASS",
+      "location": "Portal de Fábrica > Expanded Order Row",
+      "details": "Blue button with FileText icon, data-testid='download-report-{order.id}'"
+    },
+    "5_enviar_copia_modal_ui": {
+      "status": "PASS",
+      "location": "Mis Pedidos > Order Row > Send Icon",
+      "details": "Modal with email input, message textarea, and 'Incluir archivos adjuntos' checkbox"
+    },
+    "6_include_attachments_checkbox": {
+      "status": "PASS",
+      "location": "Enviar Copia Modal",
+      "details": "Checkbox checked by default, data-testid='send-copy-include-attachments'"
+    }
+  },
+  "api_tests": {
+    "production_report_valid_order": "GET /api/fabrica/reports/production/mfg-3d0545c9 - 200 OK, returns PDF",
+    "production_report_invalid_order": "GET /api/fabrica/reports/production/invalid-id - 404 Not Found",
+    "production_report_from_budget": "GET /api/fabrica/reports/production-from-budget/{budget_id} - 200 OK",
+    "send_copy_valid_order": "POST /api/orders/order-eecb4b8f/send-copy - 200 OK",
+    "send_copy_invalid_order": "POST /api/orders/invalid-id/send-copy - 404 Not Found",
+    "send_copy_validation": "POST with missing recipient_email - 422 Validation Error"
+  },
+  "ui_verified_elements": {
+    "portal_fabrica": {
+      "informe_pdf_button": {
+        "visible": true,
+        "data_testid": "download-report-{order.id}",
+        "icon": "FileText",
+        "color": "bg-blue-100 text-blue-700"
+      }
+    },
+    "mis_pedidos": {
+      "send_copy_button": {
+        "visible": true,
+        "data_testid": "send-copy-{order.id}",
+        "icon": "Send",
+        "color": "bg-blue-100 text-blue-600"
+      },
+      "send_copy_modal": {
+        "title": "Enviar Copia del Pedido",
+        "email_input": "data-testid='send-copy-email-input'",
+        "message_input": "data-testid='send-copy-message-input'",
+        "attachments_checkbox": "data-testid='send-copy-include-attachments'",
+        "submit_button": "data-testid='send-copy-submit-btn'"
+      }
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  },
+  "pdf_report_contents": {
+    "header": "Logo from global settings + 'INFORME DE PRODUCCIÓN' title",
+    "order_info": "Order number, manufacturing number, customer name, date, status, priority, delivery address",
+    "furniture_list": "Table with code, description, dimensions, type, quantity, status",
+    "despiece": "Detailed component breakdown per furniture (laterals, tops, back panel)",
+    "material_summary": "Total pieces and area by material type",
+    "footer": "Generation timestamp and system version"
+  }
+}

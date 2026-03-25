@@ -1389,6 +1389,101 @@ export const fabricaAPI = {
       throw new Error(error.detail || 'Error al obtener despiece');
     }
     return response.json();
+  },
+
+  // Descargar informe de producción PDF
+  downloadProductionReport: async (orderId) => {
+    const response = await fetch(`${API_URL}/api/fabrica/reports/production/${orderId}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Error descargando informe' }));
+      throw new Error(error.detail || 'Error al descargar informe de producción');
+    }
+    
+    // Obtener el blob y descargarlo
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Informe_Produccion_${orderId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    return { success: true };
+  },
+
+  // Descargar informe de producción desde presupuesto
+  downloadProductionReportFromBudget: async (budgetId) => {
+    const response = await fetch(`${API_URL}/api/fabrica/reports/production-from-budget/${budgetId}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Error descargando informe' }));
+      throw new Error(error.detail || 'Error al descargar informe de producción');
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Informe_Produccion_${budgetId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    return { success: true };
   }
 };
 
+
+// ============================================
+// ORDERS API (Pedidos confirmados)
+// ============================================
+
+export const ordersAPI = {
+  // Obtener pedidos del usuario
+  getOrders: async (userId = null, limit = 100) => {
+    const params = new URLSearchParams();
+    if (userId) params.append('userId', userId);
+    if (limit) params.append('limit', limit);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/orders?${params.toString()}`
+      : `${API_URL}/api/orders`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener pedidos');
+    }
+    return response.json();
+  },
+
+  // Obtener detalle de un pedido
+  getOrder: async (orderId) => {
+    const response = await fetch(`${API_URL}/api/orders/${orderId}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al obtener pedido');
+    }
+    return response.json();
+  },
+
+  // Enviar copia de pedido con adjuntos
+  sendCopy: async (orderId, recipientEmail, includeAttachments = true, additionalMessage = '') => {
+    const response = await fetch(`${API_URL}/api/orders/${orderId}/send-copy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient_email: recipientEmail,
+        include_attachments: includeAttachments,
+        additional_message: additionalMessage
+      })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al enviar copia');
+    }
+    return response.json();
+  }
+};
