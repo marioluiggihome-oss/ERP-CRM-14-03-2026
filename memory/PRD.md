@@ -1,11 +1,54 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado: EN DESARROLLO ACTIVO
-## Última Actualización: 22 Marzo 2026
+## Última Actualización: 25 Marzo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (22 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (25 Marzo 2026)
+
+### 1. Informe de Producción PDF con Logo y Despiece (P0 - Requisito Word)
+- ✅ **Nueva funcionalidad**: Generación de PDF completo para órdenes de fabricación
+- ✅ **Contenido del PDF**:
+  - Logo de la empresa (desde configuración global)
+  - Información del pedido (número, cliente, fecha, estado, prioridad)
+  - Lista de muebles a fabricar (código, descripción, dimensiones)
+  - Despiece detallado por mueble (laterales, tapas, trasera)
+  - Resumen de materiales (total piezas y área por material)
+  - Footer con timestamp y versión del sistema
+- ✅ **Backend**: Nuevo módulo `/app/backend/routes/factory_reports.py`
+- ✅ **Endpoints**:
+  - `GET /api/fabrica/reports/production/{order_id}` - PDF desde orden de fabricación
+  - `GET /api/fabrica/reports/production-from-budget/{budget_id}` - PDF desde presupuesto
+- ✅ **Frontend**: Botón "Informe PDF" en Portal de Fábrica (PortalFabrica.jsx línea 580+)
+- ✅ **Verificado**: Testing agent pasó 15/15 tests, PDF de 33KB generado correctamente
+
+### 2. Envío de Copias de Pedidos con Archivos Adjuntos (P0 - Requisito Word)
+- ✅ **Nueva funcionalidad**: Reenvío de pedidos confirmados incluyendo adjuntos del cliente
+- ✅ **Guardado de adjuntos**: Los archivos adjuntos se almacenan en base64 en el pedido
+- ✅ **Backend**: Endpoint `POST /api/orders/{order_id}/send-copy` en `/app/backend/routes/orders.py`
+- ✅ **Opciones de envío**:
+  - Email de destino personalizado
+  - Mensaje adicional opcional
+  - Checkbox para incluir/excluir adjuntos guardados
+- ✅ **Frontend**: Modal "Enviar Copia del Pedido" en Mis Pedidos (MisPedidos.jsx)
+- ✅ **UI elementos**:
+  - Botón de envío (icono avión de papel azul)
+  - Input de email con auto-completado
+  - Textarea para mensaje adicional
+  - Checkbox "Incluir archivos adjuntos del cliente"
+- ✅ **Verificado**: Testing agent confirmó funcionamiento completo
+
+### 3. Logo Integrado en PDFs de Pedidos (P0 - Requisito Word)
+- ✅ **Funcionalidad existente mejorada**: El logo ya se guardaba en settings, ahora se usa en:
+  - Informes de producción PDF (factory_reports.py)
+  - Presupuestos PDF existentes (pdfGenerator.js)
+- ✅ **Configuración**: Logo almacenado como base64 en `db.settings.logo`
+- ✅ **Verificado**: Logo presente en configuración global y usado en generación de PDFs
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (22 Marzo 2026)
 
 ### 1. Fix Error "body stream already read" en Telemetría IA (P0)
 - ✅ **Bug corregido**: El frontend consumía el stream de respuesta dos veces al manejar errores
