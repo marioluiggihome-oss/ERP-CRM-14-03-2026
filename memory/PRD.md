@@ -52,9 +52,11 @@
   - `TelemetryTab.jsx` (Telemetría IA - 290 líneas)
   - `IdentityTab.jsx` (Color y Logo corporativo - 120 líneas)
   - `SecurityTab.jsx` (Autenticación 2FA - 180 líneas)
+  - `DashboardTab.jsx` (Dashboard de fábrica - 350 líneas)
   - `SettingsContext.jsx` (Contexto compartido)
   - `index.js` (Exportaciones)
-- ✅ **Verificado**: Hot reload compiló sin errores, UI funciona correctamente
+- ✅ **Reducción total**: De 5332 líneas a 4538 líneas (-794 líneas, 15%)
+- ✅ **Verificado**: Frontend compila sin errores
 
 ### 5. Manual de Usuario P2 - Completado
 - ✅ **Archivo**: `/app/docs/MANUAL_USUARIO.md`
