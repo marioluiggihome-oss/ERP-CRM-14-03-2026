@@ -1427,66 +1427,77 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               </section>
               )}
               
-              {/* SELECTOR DE TARIFA/ZONA - Para seleccionar qué columna de precios usar */}
-              {state.currentModule === 'montada' && (
+              {/* SELECTOR DE TARIFA/ZONA - Solo para ZC (las zonas Z1-Z12) */}
+              {state.currentModule === 'montada' && state.currentLibrary === 'ZC' && (
               <section className="space-y-1.5 pt-2 border-t border-cyan-100">
                 <h4 className="text-[9px] font-black text-cyan-600 uppercase tracking-widest">
-                  {state.currentLibrary === 'MV' ? '💰 TARIFA PUNTOS MV' : '💰 ZONA PUNTOS ZC'}
+                  💰 ZONA PUNTOS ZC
                 </h4>
-                {state.currentLibrary === 'MV' ? (
-                  <select 
-                    className="w-full bg-cyan-50 text-cyan-900 border-2 border-cyan-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-cyan-500 text-center" 
-                    value={selectedTariff}
-                    onChange={e => setSelectedTariff(e.target.value)}
-                    data-testid="tariff-selector"
-                  >
-                    {[...Array(21)].map((_, i) => (
-                      <option key={`T${i+1}`} value={`T${i+1}`}>
-                        Tarifa T{i+1}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <select 
-                    className="w-full bg-cyan-50 text-cyan-900 border-2 border-cyan-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-cyan-500 text-center" 
-                    value={selectedZone}
-                    onChange={e => setSelectedZone(e.target.value)}
-                    data-testid="zone-selector"
-                  >
-                    {[...Array(12)].map((_, i) => (
-                      <option key={`Z${i+1}`} value={`Z${i+1}`}>
-                        Zona Z{i+1}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                <select 
+                  className="w-full bg-cyan-50 text-cyan-900 border-2 border-cyan-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-cyan-500 text-center" 
+                  value={selectedZone}
+                  onChange={e => setSelectedZone(e.target.value)}
+                  data-testid="zone-selector"
+                >
+                  {[...Array(12)].map((_, i) => (
+                    <option key={`Z${i+1}`} value={`Z${i+1}`}>
+                      Zona Z{i+1}
+                    </option>
+                  ))}
+                </select>
                 <p className="text-[8px] text-slate-400 text-center">
-                  {state.currentLibrary === 'MV' 
-                    ? `Los precios se muestran según ${selectedTariff}` 
-                    : `Los precios se muestran según ${selectedZone}`}
+                  Los precios se muestran según {selectedZone}
                 </p>
               </section>
               )}
               
-              {/* GRUPO DE PRECIOS - Solo en modo MONTADA */}
-              {state.currentModule === 'montada' && (
+              {/* TARIFA MV - Selector unificado para MV (T1-T21) */}
+              {state.currentModule === 'montada' && state.currentLibrary === 'MV' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
                  <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">
-                   {state.currentLibrary === 'MV' ? 'TARIFA DE PRECIOS' : 'GRUPO DE PRECIOS'}
+                   💰 TARIFA MV
+                 </h4>
+                 <select 
+                   className="w-full bg-orange-50 text-orange-900 border-2 border-orange-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-orange-500 text-center" 
+                   value={selectedTariff}
+                   onChange={e => {
+                     const newTariff = e.target.value;
+                     setSelectedTariff(newTariff);
+                     // Sincronizar con globalFinish para MV
+                     const tariffNum = parseInt(newTariff.replace('T', ''));
+                     setState(p => ({...p, globalFinish: `TARIFA ${tariffNum}`}));
+                   }}
+                   data-testid="tariff-selector-mv"
+                 >
+                   {[...Array(21)].map((_, i) => (
+                     <option key={`T${i+1}`} value={`T${i+1}`}>
+                       Tarifa T{i+1}
+                     </option>
+                   ))}
+                 </select>
+                 <p className="text-[8px] text-slate-400 text-center">
+                   Los precios se muestran según {selectedTariff}
+                 </p>
+              </section>
+              )}
+              
+              {/* GRUPO DE PRECIOS - Solo para ZC en modo MONTADA */}
+              {state.currentModule === 'montada' && state.currentLibrary === 'ZC' && (
+              <section className="space-y-1.5 pt-2 border-t border-orange-100">
+                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">
+                   GRUPO DE PRECIOS
                  </h4>
                  <select 
                    className="w-full bg-orange-50 text-orange-900 border-2 border-orange-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-orange-500 text-center" 
                    value={state.globalFinish} 
                    onChange={e => setState(p => ({...p, globalFinish: e.target.value}))}
                  >
-                   {(state.currentLibrary === 'MV' ? MV_TARIFFS : DOOR_FINISHES).map(f => (
+                   {DOOR_FINISHES.map(f => (
                      <option key={f.name} value={f.name}>
                        {f.name}
                      </option>
                    ))}
                  </select>
-                 {/* Botón solo visible para tarifa ZC */}
-                 {state.currentLibrary === 'ZC' && (
                  <button 
                    onClick={() => window.open('/relacion-de-modelos.pdf', '_blank')}
                    className="w-full mt-2 bg-purple-500 hover:bg-purple-600 text-white py-1.5 rounded-lg font-black uppercase text-[8px] tracking-wider flex items-center justify-center gap-1.5 transition-colors shadow-sm"
@@ -1494,7 +1505,6 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                  >
                    <FileText size={12}/> CATÁLOGO MODELOS
                  </button>
-                 )}
               </section>
               )}
 
