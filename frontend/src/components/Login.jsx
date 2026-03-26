@@ -65,22 +65,36 @@ const Login = ({ onLogin, customLogo }) => {
           setError(data.detail || 'Credenciales no válidas');
         }
       } else {
-        // Login tradicional - Usar fetch directo para evitar problemas de body stream
-        const response = await fetch(`${API_URL}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        // Login tradicional - Usar XMLHttpRequest para evitar interferencias
+        const loginPromise = new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `${API_URL}/api/auth/login`, true);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          
+          xhr.onload = function() {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(result);
+              } else {
+                reject(new Error(result.detail || 'CREDENCIALES NO VÁLIDAS'));
+              }
+            } catch (e) {
+              reject(new Error('Error en respuesta del servidor'));
+            }
+          };
+          
+          xhr.onerror = function() {
+            reject(new Error('Error de conexión'));
+          };
+          
+          xhr.send(JSON.stringify({
             username: username.trim(),
             password: password.trim()
-          })
+          }));
         });
         
-        const text = await response.text();
-        const result = JSON.parse(text);
-        
-        if (!response.ok) {
-          throw new Error(result.detail || 'CREDENCIALES NO VÁLIDAS');
-        }
+        const result = await loginPromise;
         
         // Guardar tokens si existen
         if (result.tokens) {
