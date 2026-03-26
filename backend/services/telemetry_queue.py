@@ -12,6 +12,7 @@ from enum import Enum
 import logging
 import os
 import json
+import re
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
@@ -184,14 +185,19 @@ async def process_job(job_id: str):
                     products_by_tariff[tariff] = []
                 products_by_tariff[tariff].append(p)
             
+            # Mostrar resumen de tarifas detectadas
+            tariffs_summary = ", ".join([f"{t}({len(prods)})" for t, prods in sorted(products_by_tariff.items())])
+            add_job_log(job, "info", f"📊 Tarifas: {tariffs_summary}")
+            
             for tariff, products in products_by_tariff.items():
                 created, updated = await save_products_batch(products, tariff, job.library)
                 job.products_created += created
                 job.products_updated += updated
-                add_job_log(job, "info", f"📌 {tariff}: {created} nuevo(s), {updated} actualizado(s)")
+                add_job_log(job, "ok", f"✅ {tariff}: {created} nuevo(s), {updated} fusionado(s)")
         
         job.status = JobStatus.COMPLETED
-        add_job_log(job, "ok", f"✅ Completado: {job.products_found} productos encontrados")
+        total_tarifas = list(set(job.detected_tariffs))
+        add_job_log(job, "ok", f"🎉 Completado: {job.products_found} productos, {len(total_tarifas)} tarifa(s)")
         
     except Exception as e:
         job.status = JobStatus.FAILED
@@ -216,29 +222,53 @@ async def analyze_single_image(base64_image: str, library: str, module: str, fil
     for pass_num in range(max_passes):
         exclude_list = ", ".join(list(extracted_codes)[:50]) if extracted_codes else "ninguno"
         
-        system_prompt = f"""Eres un experto en digitalización de tarifas de muebles MV (MUEBLES VALENCIA).
+        system_prompt = f"""Eres un experto en digitalización de tarifas de muebles de cocina MV (MUEBLES VALENCIA).
 
-PASO 0: DETECTAR NÚMERO DE TARIFA
-Lee el encabezado para identificar: "TARIFA 1", "TARIFA 2", etc. o "T1", "T2", etc.
-Si no encuentras tarifa, usa "T1".
+PASO 1: DETECTAR NÚMERO DE TARIFA
+Busca en el encabezado: "TARIFA 1", "TARIFA 2", "T1", "T2", etc. hasta T21.
+Si no encuentras, usa "T1".
 
-FORMATO DE SALIDA (JSON):
+PASO 2: ENTENDER LA ESTRUCTURA DE LA TABLA
+Las tablas de catálogo tienen esta estructura típica:
+- ALTOS (A): Tienen columnas para altura 70cm y 90cm (ej: "70" y "90" en el header)
+- BAJOS (B): Altura fija, solo una columna de precio
+- COLUMNAS (CD, CH): Altura 200cm fija
+
+Para ALTOS con columnas 70 y 90:
+- Crear DOS productos separados: uno con sufijo -70 y otro con -90
+- Ejemplo: Si ves "A30D/I" con precio 45€ en columna 70 y 52€ en columna 90:
+  - Producto 1: code="A30D/I-70", height=70, points=45
+  - Producto 2: code="A30D/I-90", height=90, points=52
+
+PASO 3: FORMATO DE SALIDA (JSON):
 {{
-  "detectedTariff": "T1",
+  "detectedTariff": "T4",
   "products": [
-    {{"code": "A30D/I*-70", "name": "Alto 30 D/I 70cm", "category": "ALTO", "width": 300, "height": 700, "points": 45}}
+    {{"code": "A30D/I-70", "name": "Alto 30 D/I", "category": "ALTO", "width": 30, "height": 70, "depth": 33, "points": 45}},
+    {{"code": "A30D/I-90", "name": "Alto 30 D/I", "category": "ALTO", "width": 30, "height": 90, "depth": 33, "points": 52}},
+    {{"code": "B60", "name": "Bajo 60", "category": "BAJO", "width": 60, "height": 70, "depth": 58, "points": 89}}
   ]
 }}
 
-REGLAS:
-1. Código = código_producto + "-" + altura (ej: "A30D/I*-70")
-2. points = precio de la celda
-3. Extrae hasta 50 productos
-4. "detectedTariff" = tarifa del encabezado
+REGLAS IMPORTANTES:
+1. Las dimensiones SIEMPRE en CENTÍMETROS (no milímetros):
+   - width: ancho del mueble en cm (25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100...)
+   - height: altura en cm (70, 90, 200...)
+   - depth: profundidad en cm (ALTOS=33, BAJOS=58, COLUMNAS=58)
 
-{"NO incluyas códigos ya extraídos: " + exclude_list if extracted_codes else ""}
+2. Para ALTOS: Si hay columnas 70 y 90, crea DOS productos separados con sufijo -70 y -90
 
-Responde SOLO con JSON válido."""
+3. El código incluye el sufijo de altura solo para ALTOS que tienen variantes
+
+4. points = el precio NUMÉRICO de la celda (sin símbolo €)
+
+5. Extrae hasta 60 productos por pasada
+
+6. category debe ser: ALTO, BAJO, COLUMNA, RINCON, SOBRE, CAMPANA, MODULO
+
+{"NO incluyas estos códigos ya extraídos: " + exclude_list if extracted_codes else "Primera pasada: extrae TODOS los productos visibles."}
+
+Responde SOLO con JSON válido, sin texto adicional."""
 
         chat = LlmChat(
             api_key=api_key,
@@ -247,7 +277,7 @@ Responde SOLO con JSON válido."""
         ).with_model("gemini", "gemini-2.0-flash")
         
         user_message = UserMessage(
-            text=f"Analiza esta página. {'Extrae productos DIFERENTES a los anteriores.' if extracted_codes else 'Extrae todos los productos.'}",
+            text=f"Analiza esta página del catálogo de muebles de cocina. {'IMPORTANTE: Extrae productos DIFERENTES a los anteriores.' if extracted_codes else 'Extrae TODOS los productos visibles, incluyendo variantes de altura si las hay.'}",
             file_contents=[ImageContent(image_base64=base64_image)]
         )
         
@@ -267,6 +297,14 @@ Responde SOLO con JSON válido."""
             
             if pass_num == 0:
                 detected_tariff = parsed.get("detectedTariff", "T1")
+                # Normalizar formato de tarifa (T1, T2, etc.)
+                if detected_tariff:
+                    detected_tariff = detected_tariff.upper().strip()
+                    # Extraer solo el número si viene como "TARIFA 4"
+                    import re
+                    match = re.search(r'(\d+)', detected_tariff)
+                    if match:
+                        detected_tariff = f"T{match.group(1)}"
                 if not detected_tariff or not detected_tariff.startswith("T"):
                     detected_tariff = "T1"
             
@@ -274,10 +312,14 @@ Responde SOLO con JSON válido."""
             for prod in new_products:
                 code = prod.get("code", "")
                 if code and code not in extracted_codes:
+                    # Normalizar código a mayúsculas
+                    code = code.upper().strip()
+                    
                     # Normalizar dimensiones (convertir de mm a cm si es necesario)
                     width = float(prod.get("width", 0) or 0)
                     height = float(prod.get("height", 0) or 0)
                     depth = float(prod.get("depth", 0) or 0)
+                    category = str(prod.get("category", "")).upper()
                     
                     # Si las dimensiones son mayores a 300, probablemente están en mm
                     if width > 300:
@@ -287,9 +329,32 @@ Responde SOLO con JSON válido."""
                     if depth > 300:
                         depth = depth / 10
                     
+                    # Asignar profundidades por defecto según categoría
+                    if depth == 0 or depth < 20:
+                        if category in ['ALTO', 'RINCON'] or code.startswith('A'):
+                            depth = 33.0
+                        elif category in ['BAJO', 'COLUMNA'] or code.startswith('B') or code.startswith('C'):
+                            depth = 58.0
+                        else:
+                            depth = 58.0  # Por defecto para otros
+                    
+                    # Detectar altura desde el sufijo del código si no está especificada
+                    if height == 0 or height < 30:
+                        height_match = re.search(r'-(\d+)$', code)
+                        if height_match:
+                            height = float(height_match.group(1))
+                        elif category == 'ALTO' or code.startswith('A'):
+                            height = 70.0  # Alto estándar
+                        elif category == 'COLUMNA' or code.startswith('C'):
+                            height = 200.0  # Columna estándar
+                        else:
+                            height = 70.0  # Por defecto
+                    
+                    prod['code'] = code
                     prod['width'] = width
                     prod['height'] = height
                     prod['depth'] = depth
+                    prod['category'] = category
                     
                     prod['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
                     prod['manufacturer'] = 'MV' if library == 'MV' else 'Zona Cocinas'
@@ -297,7 +362,7 @@ Responde SOLO con JSON válido."""
                     prod['library'] = library
                     prod['importedAt'] = datetime.now(timezone.utc).isoformat()
                     prod['originalFilename'] = filename
-                    prod['zonePoints'] = {detected_tariff: prod.get('points', 0)}
+                    prod['zonePoints'] = {detected_tariff: float(prod.get('points', 0) or 0)}
                     prod['detectedTariff'] = detected_tariff
                     products.append(prod)
                     extracted_codes.add(code)
@@ -314,7 +379,7 @@ Responde SOLO con JSON válido."""
 
 
 async def save_products_batch(products: List[Dict], tariff: str, library: str) -> tuple:
-    """Guarda productos usando upsert"""
+    """Guarda productos usando upsert inteligente - fusiona tarifas si el producto ya existe"""
     created = 0
     updated = 0
     
@@ -325,30 +390,57 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
         
         points = float(product.get("points", 0) or 0)
         
+        # Buscar producto existente
         existing = await db.products.find_one({
             "code": code,
             "library": library
         })
         
         if existing:
+            # FUSIONAR TARIFAS: Añadir la nueva tarifa al zonePoints existente
             current_zones = existing.get("zonePoints", {}) or {}
             current_zones[tariff] = points
             
+            # También actualizar dimensiones si las existentes están en 0 o son inválidas
+            update_fields = {
+                "zonePoints": current_zones,
+                "points": current_zones.get("T1", current_zones.get("Z1", points))
+            }
+            
+            # Actualizar dimensiones solo si las nuevas son mejores
+            new_width = float(product.get("width", 0) or 0)
+            new_height = float(product.get("height", 0) or 0)
+            new_depth = float(product.get("depth", 0) or 0)
+            
+            existing_width = existing.get("width", 0) or 0
+            existing_height = existing.get("height", 0) or 0
+            existing_depth = existing.get("depth", 0) or 0
+            
+            # Actualizar si la dimensión existente es 0 o la nueva es más razonable
+            if (existing_width == 0 or existing_width > 300) and new_width > 0 and new_width <= 300:
+                update_fields["width"] = new_width
+            if (existing_height == 0 or existing_height > 300) and new_height > 0 and new_height <= 300:
+                update_fields["height"] = new_height
+            if (existing_depth == 0 or existing_depth > 300) and new_depth > 0 and new_depth <= 300:
+                update_fields["depth"] = new_depth
+            
+            # Actualizar categoría si no existe
+            if not existing.get("category") and product.get("category"):
+                update_fields["category"] = str(product.get("category", "")).upper()
+            
             await db.products.update_one(
                 {"code": code, "library": library},
-                {"$set": {
-                    "zonePoints": current_zones,
-                    "points": current_zones.get("T1", current_zones.get("Z1", points))
-                }}
+                {"$set": update_fields}
             )
             updated += 1
         else:
-            # Normalizar dimensiones
+            # Crear nuevo producto
             width = float(product.get("width", 0) or 0)
             height = float(product.get("height", 0) or 0)
             depth = float(product.get("depth", 0) or 0)
+            category = str(product.get("category", "")).upper()
             
-            # Si las dimensiones son mayores a 300, probablemente están en mm
+            # Normalizar dimensiones mm -> cm
             if width > 300:
                 width = width / 10
             if height > 300:
@@ -356,11 +448,20 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
             if depth > 300:
                 depth = depth / 10
             
+            # Asignar profundidades por defecto según categoría
+            if depth == 0 or depth < 20:
+                if category in ['ALTO', 'RINCON'] or code.startswith('A'):
+                    depth = 33.0
+                elif category in ['BAJO', 'COLUMNA'] or code.startswith('B') or code.startswith('C'):
+                    depth = 58.0
+                else:
+                    depth = 58.0
+            
             clean_data = {
                 "id": product.get("id", f"prod-{uuid.uuid4().hex[:8]}"),
                 "code": code,
                 "name": str(product.get("name", "")),
-                "category": str(product.get("category", "")),
+                "category": category,
                 "series": str(product.get("series", "")),
                 "visualType": str(product.get("visualType", "")),
                 "width": width,
@@ -370,7 +471,8 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
                 "module": str(product.get("module", "montada")),
                 "library": library,
                 "points": points,
-                "zonePoints": {tariff: points}
+                "zonePoints": {tariff: points},
+                "importedAt": datetime.now(timezone.utc).isoformat()
             }
             await db.products.insert_one(clean_data)
             created += 1
