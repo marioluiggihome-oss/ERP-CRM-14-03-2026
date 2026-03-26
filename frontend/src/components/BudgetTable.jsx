@@ -111,6 +111,13 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     return useMillimeters ? Math.round(numValue * 10) : numValue;
   }, [useMillimeters]);
   
+  // Función para parsear valores de input (convierte de la unidad visual a CM para almacenamiento)
+  const parseMeasureInput = useCallback((inputValue) => {
+    const numValue = parseInt(inputValue) || 0;
+    // Si está en MM, dividimos por 10 para guardar en CM
+    return useMillimeters ? Math.round(numValue / 10) : numValue;
+  }, [useMillimeters]);
+  
   const measureUnit = useMillimeters ? 'mm' : 'cm';
   
   const isResizingSidebar = useRef(false);
@@ -1849,9 +1856,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                      <div className="w-8 text-center shrink-0">UD</div>
                      <div className="w-20 shrink-0">REF</div>
                      <div className="flex-1 min-w-[150px]">DESCRIPCIÓN</div>
-                     <div className="w-11 text-center shrink-0">AN</div>
-                     <div className="w-11 text-center shrink-0">AL</div>
-                     <div className="w-11 text-center shrink-0">FO</div>
+                     <div className="w-11 text-center shrink-0">AN<span className="text-orange-400 text-[5px]">({measureUnit})</span></div>
+                     <div className="w-11 text-center shrink-0">AL<span className="text-orange-400 text-[5px]">({measureUnit})</span></div>
+                     <div className="w-11 text-center shrink-0">FO<span className="text-orange-400 text-[5px]">({measureUnit})</span></div>
                      <div className="w-8 text-center shrink-0">AP</div>
                      <div className="w-20 shrink-0">OBS</div>
                      {/* Columna de precio solo si es valorado */}
@@ -2038,16 +2045,16 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          ) : (
                             <>
                                 <div className="w-14 shrink-0 text-center">
-                                    <input type="number" value={item.customWidth || ''} onChange={e => updateItem(item.id, 'customWidth', parseInt(e.target.value) || 0)} className={`w-12 bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
-                                    <span className="print-only font-bold text-[9px]">{item.customWidth || '-'}</span>
+                                    <input type="number" value={formatMeasure(item.customWidth) || ''} onChange={e => updateItem(item.id, 'customWidth', parseMeasureInput(e.target.value))} className={`w-12 bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customWidth) !== Number(product.width) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[9px]">{formatMeasure(item.customWidth)}</span>
                                 </div>
                                 <div className="w-14 shrink-0 text-center">
-                                    <input type="number" value={item.customHeight || ''} onChange={e => updateItem(item.id, 'customHeight', parseInt(e.target.value) || 0)} className={`w-12 bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
-                                    <span className="print-only font-bold text-[9px]">{item.customHeight || '-'}</span>
+                                    <input type="number" value={formatMeasure(item.customHeight) || ''} onChange={e => updateItem(item.id, 'customHeight', parseMeasureInput(e.target.value))} className={`w-12 bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product.height) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[9px]">{formatMeasure(item.customHeight)}</span>
                                 </div>
                                 <div className="w-14 shrink-0 text-center">
-                                    <input type="number" value={item.customDepth || ''} onChange={e => updateItem(item.id, 'customDepth', parseInt(e.target.value) || 0)} className={`w-12 bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product.depth) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
-                                    <span className="print-only font-bold text-[9px]">{item.customDepth || '-'}</span>
+                                    <input type="number" value={formatMeasure(item.customDepth) || ''} onChange={e => updateItem(item.id, 'customDepth', parseMeasureInput(e.target.value))} className={`w-12 bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product.depth) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
+                                    <span className="print-only font-bold text-[9px]">{formatMeasure(item.customDepth)}</span>
                                 </div>
                                 <div className="w-8 shrink-0 text-center">
                                     {noNeedsOpeningSelector ? (

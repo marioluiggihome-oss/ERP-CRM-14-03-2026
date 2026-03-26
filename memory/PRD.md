@@ -7,19 +7,29 @@
 
 ## ✅ COMPLETADO EN ESTA SESIÓN (26 Marzo 2026)
 
-### 1. Toggle Unidad de Medidas mm/cm en Presupuestador (P0)
-- ✅ **Bug corregido**: El toggle "UNIDAD MEDIDAS" no multiplicaba los valores por 10 al cambiar a milímetros
-- ✅ **Problema**: La función `formatMeasure()` existía pero no se aplicaba a todas las vistas del catálogo
-- ✅ **Solución**: Se aplicó `formatMeasure()` a todas las referencias de dimensiones:
-  - Vista horizontal/abajo (tabla de catálogo) - Ya funcionaba
-  - Vista top/arriba (tabla de catálogo) - Ya funcionaba
-  - Vista vertical/sidebar (tarjetas de productos) - **CORREGIDO** línea 2940
-  - Sección DESPIECE-TABLEROS (items en presupuesto) - **CORREGIDO** línea 2123
+### 1. Toggle Unidad de Medidas mm/cm COMPLETO (P0)
+- ✅ **Bug corregido**: El toggle "UNIDAD MEDIDAS" ahora funciona en TODAS las secciones
+- ✅ **Secciones corregidas**:
+  - Vista horizontal/abajo (tabla de catálogo) ✅
+  - Vista top/arriba (tabla de catálogo) ✅
+  - Vista vertical/sidebar (tarjetas de productos) ✅
+  - **TABLA DEL PRESUPUESTO** - Encabezados AN(mm/cm), AL(mm/cm), FO(mm/cm) ✅
+  - Inputs de dimensiones personalizadas (edición bidireccional) ✅
+- ✅ **Nueva función `parseMeasureInput()`**: Convierte valores ingresados de MM a CM para almacenamiento
 - ✅ **Frontend**: `/app/frontend/src/components/BudgetTable.jsx`
-- ✅ **Funcionamiento**:
-  - CM: Encabezados "AN (CM)", valores originales (30, 90, 33)
-  - MM: Encabezados "AN (MM)", valores x10 (300, 900, 330)
-- ✅ **Verificado**: Screenshots confirman conversión correcta en todas las vistas
+- ✅ **Verificado**: Screenshots confirman conversión correcta CM↔MM en todas las vistas
+
+### 2. Sistema de Expedientes por Provincia (P0)
+- ✅ **Nuevo formato**: `EXP-2026-{PROVINCIA}-{NNN}` (ej: `EXP-2026-LE-001` para León)
+- ✅ **Backend**: Endpoint `/api/expedient/next` acepta parámetro `client_code` (código de provincia)
+- ✅ **Cada provincia tiene su propia secuencia** independiente de números
+- ✅ **Frontend - RED DISTRIBUCIÓN** (`SettingsModal.jsx`):
+  - Nuevo campo **PROVINCIA**: Desplegable con todas las provincias de España
+  - Campo **USUARIO / EMAIL**: Ahora acepta emails y minúsculas
+  - Preview del formato: "Se usará para numerar expedientes: EXP-2026-XX-001"
+- ✅ **Frontend - Presupuestador** (`BudgetTable.jsx`):
+  - Botón AUTO usa la provincia del usuario logueado
+- ✅ **Verificado**: Screenshots y curl confirman generación correcta
 
 ---
 
