@@ -77,8 +77,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   const [showExitConfirm, setShowExitConfirm] = useState(false); // Diálogo de confirmación al salir
   const [sortColumn, setSortColumn] = useState(null); // Columna de ordenación: 'code', 'name', 'width', 'height', 'depth', 'points'
   const [sortDirection, setSortDirection] = useState('asc'); // 'asc' o 'desc'
+  const [useMillimeters, setUseMillimeters] = useState(() => {
+    const saved = localStorage.getItem('luiggi_use_millimeters');
+    return saved === 'true';
+  }); // Toggle para mm/cm
   
-  // Estado para tarifa/zona seleccionada (MV: T1-T21, ZC: Z1-Z12)
+  // Estado para tarifa/zona seleccionada (MV: T1-T15, ZC: Z1-Z12)
   const [selectedTariff, setSelectedTariff] = useState(() => {
     const saved = localStorage.getItem('luiggi_selected_tariff');
     return saved || 'T1';
@@ -95,6 +99,19 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   useEffect(() => {
     localStorage.setItem('luiggi_selected_zone', selectedZone);
   }, [selectedZone]);
+  useEffect(() => {
+    localStorage.setItem('luiggi_use_millimeters', useMillimeters.toString());
+  }, [useMillimeters]);
+  
+  // Función para formatear medidas según la unidad seleccionada
+  const formatMeasure = useCallback((value) => {
+    if (value === null || value === undefined || value === '') return '-';
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return '-';
+    return useMillimeters ? Math.round(numValue * 10) : numValue;
+  }, [useMillimeters]);
+  
+  const measureUnit = useMillimeters ? 'mm' : 'cm';
   
   const isResizingSidebar = useRef(false);
   const isResizingCatalog = useRef(false);
@@ -1485,6 +1502,39 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               </section>
               )}
               
+              {/* TOGGLE MM/CM - Selector de unidad de medida */}
+              <section className="space-y-1.5 pt-2 border-t border-slate-200">
+                <h4 className="text-[9px] font-black text-slate-600 uppercase tracking-widest">
+                  📐 UNIDAD MEDIDAS
+                </h4>
+                <button
+                  onClick={() => setUseMillimeters(!useMillimeters)}
+                  className={`w-full flex items-center justify-between p-2 rounded-xl border-2 transition-all ${
+                    useMillimeters 
+                      ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                      : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                  }`}
+                  data-testid="unit-toggle"
+                >
+                  <span className={`text-[10px] font-black ${!useMillimeters ? 'opacity-100' : 'opacity-40'}`}>
+                    CM
+                  </span>
+                  <div className={`w-10 h-5 rounded-full relative transition-all ${
+                    useMillimeters ? 'bg-blue-400' : 'bg-emerald-400'
+                  }`}>
+                    <div className={`absolute w-4 h-4 bg-white rounded-full top-0.5 shadow-md transition-all ${
+                      useMillimeters ? 'left-5' : 'left-0.5'
+                    }`} />
+                  </div>
+                  <span className={`text-[10px] font-black ${useMillimeters ? 'opacity-100' : 'opacity-40'}`}>
+                    MM
+                  </span>
+                </button>
+                <p className="text-[8px] text-slate-400 text-center">
+                  Medidas en {useMillimeters ? 'milímetros' : 'centímetros'}
+                </p>
+              </section>
+              
               {/* GRUPO DE PRECIOS - Solo para ZC en modo MONTADA */}
               {state.currentModule === 'montada' && state.currentLibrary === 'ZC' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
@@ -2254,13 +2304,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('width')}>
-                            ANCHO {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            AN ({measureUnit}) {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterWidth} 
                             onChange={e => setFilterWidth(e.target.value)}
-                            placeholder="cm"
+                            placeholder={measureUnit}
                             className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
@@ -2269,13 +2319,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('height')}>
-                            ALTO {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            AL ({measureUnit}) {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterHeight} 
                             onChange={e => setFilterHeight(e.target.value)}
-                            placeholder="cm"
+                            placeholder={measureUnit}
                             className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
@@ -2284,13 +2334,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('depth')}>
-                            FONDO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            FO ({measureUnit}) {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterDepth} 
                             onChange={e => setFilterDepth(e.target.value)}
-                            placeholder="cm"
+                            placeholder={measureUnit}
                             className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
@@ -2409,9 +2459,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                             </div>
                             {p.series && <div className="text-[8px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                           </td>
-                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.width ? p.width : '-'}</td>
-                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
-                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(p.width)}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(p.height)}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(p.depth)}</td>
                           <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
                                                         {getProductPrice(p)}
                           </td>
@@ -2515,13 +2565,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('width')}>
-                            ANCHO {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            AN ({measureUnit}) {sortColumn === 'width' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterWidth} 
                             onChange={e => setFilterWidth(e.target.value)}
-                            placeholder="cm"
+                            placeholder={measureUnit}
                             className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
@@ -2530,13 +2580,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('height')}>
-                            ALTO {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            AL ({measureUnit}) {sortColumn === 'height' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterHeight} 
                             onChange={e => setFilterHeight(e.target.value)}
-                            placeholder="cm"
+                            placeholder={measureUnit}
                             className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
@@ -2545,13 +2595,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       <th className="p-1 text-center w-[65px]">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="cursor-pointer hover:text-orange-300" onClick={() => handleSort('depth')}>
-                            FONDO {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                            FO ({measureUnit}) {sortColumn === 'depth' && (sortDirection === 'asc' ? '↑' : '↓')}
                           </span>
                           <input 
                             type="number" 
                             value={filterDepth} 
                             onChange={e => setFilterDepth(e.target.value)}
-                            placeholder="cm"
+                            placeholder={measureUnit}
                             className="w-14 bg-blue-600 border-2 border-blue-400 rounded-lg px-1 py-1 text-[10px] font-bold text-center text-white outline-none placeholder-blue-200 focus:bg-blue-500 focus:border-white transition-all"
                             onClick={e => e.stopPropagation()}
                           />
@@ -2665,9 +2715,9 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                             </div>
                             {p.series && <div className="text-[8px] text-orange-500 font-medium mt-0.5">{p.series}</div>}
                           </td>
-                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.width ? p.width : '-'}</td>
-                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.height || '-'}</td>
-                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{p.depth || '-'}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(p.width)}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(p.height)}</td>
+                          <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(p.depth)}</td>
                           <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
                                                         {getProductPrice(p)}
                           </td>
