@@ -23,6 +23,7 @@ import MisPedidos from './components/MisPedidos';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI } from './services/api';
 import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './services/authService';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
+import { initSecurityGuard } from './utils/securityGuard';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -114,6 +115,9 @@ const App = () => {
 
   // Load data from API on mount
   useEffect(() => {
+    // Inicializar protección de seguridad
+    initSecurityGuard();
+    
     const loadData = async () => {
       try {
         // Init admin if needed

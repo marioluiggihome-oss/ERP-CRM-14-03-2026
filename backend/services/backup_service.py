@@ -16,7 +16,7 @@ import shutil
 logger = logging.getLogger(__name__)
 
 BACKUP_DIR = Path("/app/backups")
-BACKUP_RETENTION_DAYS = 7  # Mantener backups de los últimos 7 días
+BACKUP_RETENTION_DAYS = 30  # Mantener backups de los últimos 30 días
 
 class BackupService:
     def __init__(self, mongo_url: str, db_name: str):

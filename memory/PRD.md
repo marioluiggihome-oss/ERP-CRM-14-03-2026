@@ -78,6 +78,27 @@
   - Almacenamiento en DB
 - ✅ **Logs mejorados** para debugging de adjuntos
 
+### 8. Sistema de Protección contra Copia (P0)
+- ✅ **Security Guard** en `/app/frontend/src/utils/securityGuard.js`
+- ✅ **Protecciones activas**:
+  - Clic derecho deshabilitado
+  - F12 / Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C bloqueados
+  - Ctrl+U (ver código fuente) bloqueado
+  - Ctrl+S (guardar página) bloqueado
+  - Ctrl+P (imprimir) bloqueado
+  - Selección de texto deshabilitada (excepto en inputs)
+  - Arrastrar imágenes deshabilitado
+  - Copiar/Cortar bloqueado (excepto en inputs)
+  - Consola se limpia cada 5 segundos
+  - Mensaje de advertencia en consola
+  - Marca de agua invisible (fingerprint)
+  - Protección contra iframes externos
+- ✅ **Meta tags de seguridad** en index.html
+- ✅ **Estilos CSS de protección** inline
+
+### 9. Retención de Backups Actualizada
+- ✅ Cambiado de 7 días a **30 días**
+
 ### Pendiente/En Progreso:
 - ⚠️ **Bug Frontend Login**: Error "body stream already read" al hacer login desde la UI
   - curl funciona correctamente

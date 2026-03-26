@@ -140,7 +140,7 @@ const BackupManagementTab = () => {
             <p className="font-bold text-blue-800">Backup Automático Programado</p>
             <p className="text-sm text-blue-600 mt-1">
               Se ejecuta automáticamente todos los días a las <strong>3:00 AM</strong>. 
-              Los backups se retienen durante <strong>7 días</strong>.
+              Los backups se retienen durante <strong>30 días</strong>.
             </p>
           </div>
         </div>
