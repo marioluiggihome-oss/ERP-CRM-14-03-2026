@@ -3431,20 +3431,27 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             <th className="p-3 text-left text-[9px] font-black uppercase whitespace-nowrap bg-amber-900">SERIE</th>
                             <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap bg-amber-900">FONDO</th>
                             {inventoryModule === 'montada' ? (
-                              <>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z1</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z2</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z3</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z4</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z5</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z6</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z7</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z8</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z9</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z10</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z11</th>
-                                <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z12</th>
-                              </>
+                              inventoryLibraryFilter === 'MV' ? (
+                                /* Tarifas MV: T1-T15 */
+                                <>
+                                  {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(n => (
+                                    <th key={`T${n}`} className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap bg-purple-900">T{n}</th>
+                                  ))}
+                                </>
+                              ) : inventoryLibraryFilter === 'ZC' ? (
+                                /* Zonas ZC: Z1-Z12 */
+                                <>
+                                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                                    <th key={`Z${n}`} className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">Z{n}</th>
+                                  ))}
+                                </>
+                              ) : (
+                                /* Sin filtro: mostrar columna genérica */
+                                <>
+                                  <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap">LIB</th>
+                                  <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap bg-orange-900">PUNTOS</th>
+                                </>
+                              )
                             ) : (
                               <th className="p-3 text-center text-[9px] font-black uppercase whitespace-nowrap bg-orange-900">PUNTOS BASE</th>
                             )}
@@ -3454,7 +3461,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <tbody className="divide-y divide-slate-100">
                           {filteredProducts.length === 0 ? (
                             <tr>
-                              <td colSpan={inventoryModule === 'montada' ? 18 : 8} className="p-8 text-center text-slate-400 italic">
+                              <td colSpan={inventoryModule === 'montada' ? (inventoryLibraryFilter === 'MV' ? 22 : inventoryLibraryFilter === 'ZC' ? 18 : 8) : 8} className="p-8 text-center text-slate-400 italic">
                                 No hay productos en este catálogo
                               </td>
                             </tr>
@@ -3478,20 +3485,37 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 <td className="p-3 text-[10px] font-bold text-amber-800 bg-amber-50 max-w-[150px] truncate" title={product.series || 'Sin serie'}>{product.series || '-'}</td>
                                 <td className="p-3 text-center text-xs font-bold text-amber-800 bg-amber-50">{product.depth || '-'}</td>
                                 {inventoryModule === 'montada' ? (
-                                  <>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z1 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z2 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z3 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z4 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z5 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z6 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z7 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z8 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z9 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z10 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z11 || product.points || 0}</td>
-                                    <td className="p-3 text-center text-xs font-bold text-slate-700">{product.zonePoints?.Z12 || product.points || 0}</td>
-                                  </>
+                                  inventoryLibraryFilter === 'MV' ? (
+                                    /* Tarifas MV: T1-T15 */
+                                    <>
+                                      {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(n => (
+                                        <td key={`T${n}`} className={`p-3 text-center text-xs font-bold ${product.zonePoints?.[`T${n}`] ? 'text-purple-700 bg-purple-50' : 'text-slate-300'}`}>
+                                          {product.zonePoints?.[`T${n}`] || '-'}
+                                        </td>
+                                      ))}
+                                    </>
+                                  ) : inventoryLibraryFilter === 'ZC' ? (
+                                    /* Zonas ZC: Z1-Z12 */
+                                    <>
+                                      {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                                        <td key={`Z${n}`} className="p-3 text-center text-xs font-bold text-slate-700">
+                                          {product.zonePoints?.[`Z${n}`] || product.points || 0}
+                                        </td>
+                                      ))}
+                                    </>
+                                  ) : (
+                                    /* Sin filtro: mostrar biblioteca y puntos */
+                                    <>
+                                      <td className="p-3 text-center text-xs font-black">
+                                        <span className={`px-2 py-1 rounded ${product.library === 'MV' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                          {product.library || '-'}
+                                        </span>
+                                      </td>
+                                      <td className="p-3 text-center text-lg font-black text-orange-600 bg-orange-50">
+                                        {product.zonePoints?.T1 || product.zonePoints?.Z1 || product.points || 0}
+                                      </td>
+                                    </>
+                                  )
                                 ) : (
                                   <td className="p-3 text-center text-lg font-black text-orange-600 bg-orange-50">{product.points || 0}</td>
                                 )}
