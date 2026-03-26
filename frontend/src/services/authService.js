@@ -163,26 +163,36 @@ export const authFetch = async (url, options = {}) => {
  * Login
  */
 export const login = async (username, password) => {
-  const response = await fetch(`${API_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Login failed');
+  try {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    const text = await response.text();
+    let data;
+    
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error('Error en respuesta del servidor');
+    }
+    
+    if (!response.ok) {
+      throw new Error(data.detail || 'Login failed');
+    }
+    
+    // Guardar tokens y usuario
+    if (data.tokens) {
+      setTokens(data.tokens.access_token, data.tokens.refresh_token);
+    }
+    setUser(data.user);
+    
+    return data;
+  } catch (error) {
+    throw error;
   }
-  
-  const data = await response.json();
-  
-  // Guardar tokens y usuario
-  if (data.tokens) {
-    setTokens(data.tokens.access_token, data.tokens.refresh_token);
-  }
-  setUser(data.user);
-  
-  return data;
 };
 
 /**

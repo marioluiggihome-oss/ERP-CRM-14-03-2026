@@ -70,6 +70,28 @@ async def confirm_order(
         except json.JSONDecodeError:
             items_list = []
         
+        # =============================================
+        # PRE-PROCESAR ARCHIVOS ADJUNTOS (leer una vez y reutilizar)
+        # =============================================
+        attachments = [attachment_0, attachment_1, attachment_2, attachment_3, attachment_4]
+        processed_attachments = []
+        for attachment in attachments:
+            if attachment and attachment.filename:
+                try:
+                    content = await attachment.read()
+                    if content:  # Solo si hay contenido
+                        processed_attachments.append({
+                            "filename": attachment.filename,
+                            "content_type": attachment.content_type or "application/octet-stream",
+                            "content": content,
+                            "encoded": base64.b64encode(content).decode()
+                        })
+                        logger.info(f"Attachment processed: {attachment.filename} ({len(content)} bytes)")
+                except Exception as e:
+                    logger.warning(f"Could not process attachment {attachment.filename}: {e}")
+        
+        logger.info(f"Total attachments processed: {len(processed_attachments)}")
+        
         # Build HTML email content
         items_html = ""
         for idx, item in enumerate(items_list, 1):
@@ -158,22 +180,18 @@ async def confirm_order(
             html_content=html_content
         )
         
-        # Process attachments
-        attachments = [attachment_0, attachment_1, attachment_2, attachment_3, attachment_4]
-        for attachment in attachments:
-            if attachment and attachment.filename:
-                try:
-                    content = await attachment.read()
-                    encoded = base64.b64encode(content).decode()
-                    
-                    att = Attachment()
-                    att.file_content = FileContent(encoded)
-                    att.file_name = FileName(attachment.filename)
-                    att.file_type = FileType(attachment.content_type or "application/octet-stream")
-                    att.disposition = Disposition("attachment")
-                    message.add_attachment(att)
-                except Exception as att_error:
-                    logger.warning(f"Could not attach file {attachment.filename}: {att_error}")
+        # Add pre-processed attachments to email
+        for patt in processed_attachments:
+            try:
+                att = Attachment()
+                att.file_content = FileContent(patt["encoded"])
+                att.file_name = FileName(patt["filename"])
+                att.file_type = FileType(patt["content_type"])
+                att.disposition = Disposition("attachment")
+                message.add_attachment(att)
+                logger.info(f"Attachment added to email: {patt['filename']}")
+            except Exception as att_error:
+                logger.warning(f"Could not attach file {patt['filename']}: {att_error}")
         
         # Try to send email
         email_sent = False
@@ -184,7 +202,7 @@ async def confirm_order(
             sg.send(message)
             email_sent = True
             email_provider = "SendGrid"
-            logger.info(f"Email sent successfully via SendGrid to {email}")
+            logger.info(f"Email sent successfully via SendGrid to {email} with {len(processed_attachments)} attachments")
         except Exception as sendgrid_error:
             error_str = str(sendgrid_error)
             logger.warning(f"SendGrid failed: {error_str[:200]}")
@@ -209,20 +227,15 @@ async def confirm_order(
             else:
                 logger.warning("No RESEND_API_KEY configured for fallback. Order saved without email.")
         
-        # Guardar archivos adjuntos en base64 para poder reenviarlos después
-        saved_attachments = []
-        for attachment in attachments:
-            if attachment and attachment.filename:
-                try:
-                    await attachment.seek(0)  # Volver al inicio del archivo
-                    content = await attachment.read()
-                    saved_attachments.append({
-                        "filename": attachment.filename,
-                        "content_type": attachment.content_type or "application/octet-stream",
-                        "data": base64.b64encode(content).decode()
-                    })
-                except Exception as e:
-                    logger.warning(f"Could not save attachment {attachment.filename}: {e}")
+        # Convertir processed_attachments para guardar en DB
+        saved_attachments = [
+            {
+                "filename": patt["filename"],
+                "content_type": patt["content_type"],
+                "data": patt["encoded"]
+            }
+            for patt in processed_attachments
+        ]
         
         # Save order record
         order_record = {
@@ -236,7 +249,7 @@ async def confirm_order(
             "notes": notes,
             "items": items_list,
             "itemsCount": len(items_list),
-            "attachmentsCount": sum(1 for a in attachments if a and a.filename),
+            "attachmentsCount": len(processed_attachments),
             "attachments": saved_attachments,  # Guardar adjuntos para reenvío
             "confirmedAt": datetime.now(timezone.utc).isoformat(),
             "status": "confirmed",
@@ -379,7 +392,7 @@ async def confirm_order(
         else:
             return {
                 **base_response,
-                "message": f"Pedido confirmado." + (f" Orden de fabricacion N FAB: {manufacturing_number} creada." if manufacturing_number else "") + " El email no se pudo enviar (problema con SendGrid y Resend).",
+                "message": "Pedido confirmado." + (f" Orden de fabricacion N FAB: {manufacturing_number} creada." if manufacturing_number else "") + " El email no se pudo enviar (problema con SendGrid y Resend).",
                 "warning": "Email no enviado"
             }
         

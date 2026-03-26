@@ -39,7 +39,7 @@ const Login = ({ onLogin, customLogo }) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: username.trim(),
+            username: username.trim(),
             password: password.trim(),
             totpCode: totpCode.trim()
           })
@@ -65,8 +65,29 @@ const Login = ({ onLogin, customLogo }) => {
           setError(data.detail || 'Credenciales no válidas');
         }
       } else {
-        // Login tradicional
-        const result = await login(username.trim(), password.trim());
+        // Login tradicional - Usar fetch directo para evitar problemas de body stream
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username.trim(),
+            password: password.trim()
+          })
+        });
+        
+        const text = await response.text();
+        const result = JSON.parse(text);
+        
+        if (!response.ok) {
+          throw new Error(result.detail || 'CREDENCIALES NO VÁLIDAS');
+        }
+        
+        // Guardar tokens si existen
+        if (result.tokens) {
+          localStorage.setItem('access_token', result.tokens.access_token);
+          localStorage.setItem('refresh_token', result.tokens.refresh_token);
+        }
+        
         if (result.success && result.user) {
           onLogin(result.user);
         } else if (result.requires2FA) {

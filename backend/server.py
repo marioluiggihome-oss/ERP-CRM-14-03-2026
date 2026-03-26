@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import hashlib
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
@@ -167,12 +168,28 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def verify_password(password: str, hashed: str) -> bool:
-    """Verify a password against its hash"""
-    try:
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-    except:
-        # If hash is invalid (plain text password from old data), compare directly
-        return password == hashed
+    """Verify a password against its hash (supports bcrypt, sha256, and plain text)"""
+    # Si está vacío, rechazar
+    if not password or not hashed:
+        return False
+    
+    # Intento 1: bcrypt hash (empieza con $2b$ o $2a$)
+    if hashed.startswith('$2b$') or hashed.startswith('$2a$'):
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        except:
+            pass
+    
+    # Intento 2: SHA256 hash (64 caracteres hexadecimales)
+    if len(hashed) == 64:
+        try:
+            sha256_hash = hashlib.sha256(password.encode()).hexdigest()
+            return sha256_hash == hashed
+        except:
+            pass
+    
+    # Intento 3: Plain text (para migración de datos antiguos)
+    return password == hashed
 
 
 # Add your routes to the router instead of directly to app
@@ -1424,10 +1441,21 @@ async def link_client_to_user(client_id: str, data: dict):
 @limiter.limit(get_limit("login"))
 async def login(request: Request, credentials: dict):
     """Iniciar sesión con verificación de password hasheado + JWT + Auditoría"""
-    username = credentials.get("username", "").upper().strip()
+    username = credentials.get("username", "").strip()
     password = credentials.get("password", "").strip()
     
+    # Buscar por username exacto o en mayúsculas (compatibilidad con cuentas antiguas)
     user = await db.users.find_one({"username": username}, {"_id": 0})
+    if not user:
+        # Intentar búsqueda en mayúsculas
+        user = await db.users.find_one({"username": username.upper()}, {"_id": 0})
+    if not user:
+        # Intentar búsqueda case-insensitive
+        user = await db.users.find_one(
+            {"username": {"$regex": f"^{username}$", "$options": "i"}}, 
+            {"_id": 0}
+        )
+    
     if not user:
         # Auditoría: login fallido
         audit.log_login_failed(username, request, "user_not_found")
@@ -1443,6 +1471,20 @@ async def login(request: Request, credentials: dict):
         # Auditoría: cuenta desactivada
         audit.log_login_failed(username, request, "account_disabled")
         raise HTTPException(status_code=401, detail="Cuenta desactivada")
+    
+    # Verificar fecha de caducidad del acceso
+    expiration_date = user.get("accessExpirationDate")
+    if expiration_date:
+        try:
+            exp_date = datetime.fromisoformat(expiration_date.replace('Z', '+00:00')) if isinstance(expiration_date, str) else expiration_date
+            if exp_date.date() < datetime.now().date():
+                audit.log_login_failed(username, request, "access_expired")
+                raise HTTPException(
+                    status_code=401, 
+                    detail=f"Tu acceso expiró el {exp_date.strftime('%d/%m/%Y')}. Contacta con el administrador para renovar."
+                )
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Error parsing expiration date for {username}: {e}")
     
     # Crear tokens JWT
     access_token = create_access_token(user)

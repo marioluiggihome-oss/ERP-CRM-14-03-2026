@@ -41,31 +41,48 @@
   - `GET /api/admin/backup/list` - Listar backups disponibles
   - `POST /api/admin/backup/restore/{name}` - Restaurar backup
 - ✅ **Frontend - Pestaña "BACKUPS DB"** en Panel Maestro:
+  - Solo visible para Admin Principal (`isPrimaryAdmin`)
   - Botón "Crear Backup Ahora"
   - Lista de backups con fecha, hora y tamaño
   - Botón "Restaurar" para cada backup
-  - Advertencia sobre sobrescritura de datos
 - ✅ **Verificado**: Backup de 45.9 MB creado exitosamente
 
 ### 4. Informe de Uso por Usuario (P0)
 - ✅ **Backend**: Sistema de tracking en `/app/backend/services/activity_tracker.py`
-- ✅ **Registro automático de actividades**:
-  - Logins
-  - Creación/actualización de presupuestos
-  - Pedidos creados/confirmados
-  - Uso de IA Telemetría
-  - Exportación de PDFs
-- ✅ **Endpoints API**:
-  - `GET /api/admin/usage/report` - Informe completo
-  - `GET /api/admin/usage/users` - Estadísticas por usuario
-  - `GET /api/admin/usage/daily` - Actividad diaria
-  - `GET /api/admin/usage/timeline` - Timeline de actividades
-- ✅ **Frontend - Pestaña "USO USUARIOS"** en Panel Maestro:
-  - Tarjetas resumen (Total acciones, Usuarios activos, Media, Período)
-  - Gráfico de actividad diaria
-  - Distribución por tipo de actividad (donut)
-  - Ranking de usuarios con detalle completo
-- ✅ **Verificado**: Muestra actividad de MARIO correctamente
+- ✅ **Registro automático de actividades**: logins, presupuestos, pedidos, PDFs, IA
+- ✅ **Frontend - Pestaña "USO USUARIOS"**: Solo visible para Admin Principal
+- ✅ **Verificado**: Muestra actividad correctamente
+
+### 5. Cambio de Credenciales del Usuario Principal (P0)
+- ✅ **Usuario anterior**: MARIO / MARIO
+- ✅ **Usuario nuevo**: `mario@luiggihome.es` / `Mario2025*`
+- ✅ **Campo `isPrimaryAdmin: true`** añadido para identificar al admin principal
+- ✅ **Backend verificado con curl**: Login exitoso
+
+### 6. Sistema de Caducidad de Acceso (P0)
+- ✅ **Campo `accessExpirationDate`** añadido al modelo de usuario
+- ✅ **Frontend - Formulario de Usuario**:
+  - Selector de fecha tipo calendario
+  - Indicador de estado (Activo/Expirado)
+  - Botón "Renovar +1 año"
+  - Texto informativo
+- ✅ **Backend - Validación en Login**:
+  - Verifica fecha de caducidad
+  - Bloquea acceso si expiró
+  - Mensaje de error descriptivo
+
+### 7. Mejoras en Adjuntos de Pedidos (P0)
+- ✅ **Refactorizado** proceso de adjuntos en `/app/backend/routes/orders.py`
+- ✅ **Archivos se leen una sola vez** al inicio y se reutilizan para:
+  - Envío por email (SendGrid)
+  - Almacenamiento en DB
+- ✅ **Logs mejorados** para debugging de adjuntos
+
+### Pendiente/En Progreso:
+- ⚠️ **Bug Frontend Login**: Error "body stream already read" al hacer login desde la UI
+  - curl funciona correctamente
+  - Puede ser causado por scripts externos de la plataforma
+  - Backend funcionando correctamente
 
 ---
 

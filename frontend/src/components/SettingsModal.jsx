@@ -116,6 +116,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     password: '',
     clientName: '',
     provinciaCode: '',  // Código de provincia (2 letras: AV, LE, SA, etc.)
+    accessExpirationDate: '',  // Fecha de caducidad del acceso
     isActive: true,
     isAdmin: false,  // Director Comercial
     isGerente: false,  // Gerente - mismo acceso que Director
@@ -756,6 +757,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       password: '',
       clientName: '',
       provinciaCode: '',  // Código de provincia
+      accessExpirationDate: '',  // Fecha de caducidad
       linkedClientId: '',
       isActive: true,
       isAdmin: false,
@@ -803,12 +805,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     
     setIsEditingUser(true);
     setEditingUserId(user.id);
-    // Asegurar que allowedLibraries y provinciaCode tengan valor por defecto
+    // Asegurar que allowedLibraries, provinciaCode y accessExpirationDate tengan valor por defecto
     setUserForm({ 
       ...user, 
       linkedClientId: user.linkedClientId || '',
       allowedLibraries: user.allowedLibraries || ['ZC'],
-      provinciaCode: user.provinciaCode || ''
+      provinciaCode: user.provinciaCode || '',
+      accessExpirationDate: user.accessExpirationDate || ''
     });
   };
 
@@ -1317,8 +1320,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </span>
           </button>
           
-          {/* Nueva pestaña: Informe de Uso */}
-          {state.currentUser?.isAdmin && (
+          {/* Nueva pestaña: Informe de Uso - Solo Admin Principal */}
+          {state.currentUser?.isPrimaryAdmin && (
             <button
               onClick={() => setActiveTab('usage-report')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -1331,8 +1334,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             </button>
           )}
           
-          {/* Nueva pestaña: Gestión de Backups */}
-          {state.currentUser?.isAdmin && (
+          {/* Nueva pestaña: Gestión de Backups - Solo Admin Principal */}
+          {state.currentUser?.isPrimaryAdmin && (
             <button
               onClick={() => setActiveTab('backup-management')}
               className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
@@ -2151,6 +2154,57 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
                         />
                       </div>
+                    </div>
+
+                    {/* Fecha de caducidad del acceso */}
+                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                      <h4 className="text-sm font-black text-amber-800 uppercase mb-3 flex items-center gap-2">
+                        <Clock size={16} className="text-amber-600" />
+                        Caducidad del Acceso
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-black text-amber-700 uppercase mb-2 block">Fecha de Vencimiento</label>
+                          <input
+                            type="date"
+                            value={userForm.accessExpirationDate || ''}
+                            onChange={(e) => setUserForm({...userForm, accessExpirationDate: e.target.value})}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full bg-white border border-amber-300 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          {userForm.accessExpirationDate && (
+                            <div className="flex flex-col gap-2 w-full">
+                              <span className={`text-xs font-black px-3 py-2 rounded-lg text-center ${
+                                new Date(userForm.accessExpirationDate) > new Date() 
+                                  ? 'bg-emerald-100 text-emerald-700' 
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                {new Date(userForm.accessExpirationDate) > new Date() 
+                                  ? `✓ Activo hasta ${new Date(userForm.accessExpirationDate).toLocaleDateString('es-ES')}`
+                                  : `✗ Expirado el ${new Date(userForm.accessExpirationDate).toLocaleDateString('es-ES')}`
+                                }
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newDate = new Date();
+                                  newDate.setFullYear(newDate.getFullYear() + 1);
+                                  setUserForm({...userForm, accessExpirationDate: newDate.toISOString().split('T')[0]});
+                                }}
+                                className="text-[10px] text-amber-600 hover:text-amber-800 font-bold underline"
+                              >
+                                Renovar +1 año
+                              </button>
+                            </div>
+                          )}
+                          {!userForm.accessExpirationDate && (
+                            <span className="text-xs text-slate-400 italic">Sin fecha de caducidad (acceso permanente)</span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-amber-600 mt-2">Si no se establece fecha, el acceso es permanente. Los usuarios con acceso expirado no podrán iniciar sesión.</p>
                     </div>
 
                     {/* Role & Hierarchy */}

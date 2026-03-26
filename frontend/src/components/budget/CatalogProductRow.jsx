@@ -109,7 +109,7 @@ const specialColors = {
   'CAJONES': 'bg-yellow-100 text-yellow-700'
 };
 
-export const CatalogProductRowTable = ({ product, onAdd, selectedTariff = 'T1', selectedZone = 'Z1' }) => {
+export const CatalogProductRowTable = ({ product, onAdd, selectedTariff = 'T1', selectedZone = 'Z1', formatMeasure = (v) => v }) => {
   const code = product.code?.toUpperCase() || '';
   const isGola = code.startsWith('G') && /^G\d/.test(code);
   const hardwareType = getHardwareType(code);
@@ -148,9 +148,9 @@ export const CatalogProductRowTable = ({ product, onAdd, selectedTariff = 'T1', 
         </div>
         {product.series && <div className="text-[8px] text-orange-500 font-medium mt-0.5">{product.series}</div>}
       </td>
-      <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{product.width || '-'}</td>
-      <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{product.height || '-'}</td>
-      <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{product.depth || '-'}</td>
+      <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(product.width) || '-'}</td>
+      <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(product.height) || '-'}</td>
+      <td className="p-2 text-center font-bold text-slate-600 text-[10px] w-[55px]">{formatMeasure(product.depth) || '-'}</td>
       <td className="p-2 text-center font-black text-orange-600 text-[11px] w-[60px]">
         {getPrice()}
       </td>
@@ -161,7 +161,7 @@ export const CatalogProductRowTable = ({ product, onAdd, selectedTariff = 'T1', 
   );
 };
 
-export const CatalogProductRowCard = ({ product, onAdd, selectedTariff = 'T1', selectedZone = 'Z1' }) => {
+export const CatalogProductRowCard = ({ product, onAdd, selectedTariff = 'T1', selectedZone = 'Z1', formatMeasure = (v) => v, measureUnit = 'cm' }) => {
   const code = product.code?.toUpperCase() || '';
   const isGola = code.startsWith('G') && /^G\d/.test(code);
   const hardwareType = getHardwareType(code);
@@ -207,7 +207,7 @@ export const CatalogProductRowCard = ({ product, onAdd, selectedTariff = 'T1', s
           </div>
           <div className="flex items-center gap-3 mt-1">
             <span className="text-[10px] font-bold text-slate-500">
-              AN: {product.width || '-'} | AL: {product.height || '-'} | FO: {product.depth || '-'}
+              AN: {formatMeasure(product.width) || '-'} | AL: {formatMeasure(product.height) || '-'} | FO: {formatMeasure(product.depth) || '-'} {measureUnit}
             </span>
           </div>
           {product.series && <div className="text-[9px] text-orange-500 font-medium mt-1">{product.series}</div>}
