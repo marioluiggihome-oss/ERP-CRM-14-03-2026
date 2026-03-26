@@ -1089,7 +1089,15 @@ async def get_clients(activo: Optional[bool] = None, search: Optional[str] = Non
 @api_router.get("/clients/segments")
 async def get_client_segments():
     """Obtener lista de segmentos de clientes disponibles"""
-    return {"segments": CLIENT_SEGMENTS}
+    return {
+        "segments": [
+            {"id": "particular", "name": "Particular"},
+            {"id": "profesional", "name": "Profesional"},
+            {"id": "constructor", "name": "Constructor/Promotor"},
+            {"id": "tienda", "name": "Tienda/Distribuidor"},
+            {"id": "mayorista", "name": "Mayorista"}
+        ]
+    }
 
 @api_router.get("/clients/{client_id}")
 async def get_client(client_id: str):

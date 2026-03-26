@@ -2174,7 +2174,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       >
                         <option value="">Todos los segmentos</option>
                         {clientSegments.map(seg => (
-                          <option key={seg} value={seg}>{seg}</option>
+                          <option key={seg.id || seg} value={seg.id || seg}>{seg.name || seg}</option>
                         ))}
                       </select>
                     </div>
@@ -2608,7 +2608,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       >
                         <option value="">Seleccionar segmento...</option>
                         {clientSegments.map(seg => (
-                          <option key={seg} value={seg}>{seg}</option>
+                          <option key={seg.id || seg} value={seg.id || seg}>{seg.name || seg}</option>
                         ))}
                       </select>
                     </div>
