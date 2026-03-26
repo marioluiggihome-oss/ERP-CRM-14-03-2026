@@ -5,7 +5,24 @@
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (26 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (26 Marzo 2026 - Sesión 2)
+
+### Verificación y Testing Completo
+- ✅ **Bug Login "body stream already read"**: RESUELTO - XMLHttpRequest implementado correctamente en `Login.jsx`
+- ✅ **Despieces Librería MV**: FUNCIONANDO - Todos los prefijos MV (A, ASCE, B, BF, C, CH, etc.) se detectan correctamente
+- ✅ **Testing Agent**: 23/23 tests backend pasados, 100% UI verificada
+- ✅ **Credenciales admin**: `mario@luiggihome.es` / `Mario2025*` (contraseña reseteada)
+
+### Funcionalidades Verificadas
+- ✅ Login autenticación (éxito y fallos)
+- ✅ Despieces MV y ZC calculados correctamente
+- ✅ PDF de informes de fábrica con logo
+- ✅ Toggle CM/MM funcionando en BudgetTable
+- ✅ Verificación de contraseñas (bcrypt + SHA256 + plain text fallback)
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (26 Marzo 2026 - Sesión 1)
 
 ### 1. Toggle Unidad de Medidas mm/cm COMPLETO (P0)
 - ✅ **Bug corregido**: El toggle "UNIDAD MEDIDAS" ahora funciona en TODAS las secciones
