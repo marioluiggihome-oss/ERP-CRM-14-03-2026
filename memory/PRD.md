@@ -23,10 +23,15 @@
 ### Refactorización Completada
 - ✅ **Frontend `SettingsModal.jsx`**: Reducido de 4749 a 4152 líneas (-597 líneas)
   - Extraído `DirectorTab.jsx` (596 líneas) - Panel Director Comercial con métricas, gráficos y trabajos
-- ✅ **Backend `server.py`**: Reducido de 4301 a 3733 líneas (-568 líneas total)
+- ✅ **Backend `server.py`**: Reducido de 4301 a 3480 líneas (-821 líneas total)
   - Extraído `routes/exports.py` (281 líneas) - Endpoints de exportación Excel
   - Extraído `routes/maintenance.py` (253 líneas) - Endpoints modo mantenimiento
   - Extraído `routes/telemetry.py` (118 líneas) - Endpoints telemetría IA
+  - Extraído `routes/users.py` (176 líneas) - Gestión de usuarios
+  - Extraído `routes/settings.py` (131 líneas) - Configuración global
+  - Extraído `routes/materials.py` (104 líneas) - Gestión de materiales
+  - Extraído `routes/expedient.py` (139 líneas) - Numeración de expedientes
+- ✅ **Bug corregido**: Dropdown de segmentos de cliente mostraba vacío (endpoint devolvía error 500)
 - ✅ **Testing de refactorización**: Todos los endpoints verificados funcionando correctamente
 
 ---

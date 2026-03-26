@@ -69,6 +69,10 @@ from routes.admin import router as admin_router
 from routes.exports import router as exports_router
 from routes.maintenance import router as maintenance_router
 from routes.telemetry import router as telemetry_router
+from routes.users import router as users_router
+from routes.settings import router as settings_router
+from routes.materials import router as materials_router
+from routes.expedient import router as expedient_router
 
 # Servicios de backup y tracking
 from services.backup_service import init_backup_service
@@ -148,6 +152,10 @@ api_router.include_router(admin_router)
 api_router.include_router(exports_router)
 api_router.include_router(maintenance_router)
 api_router.include_router(telemetry_router)
+api_router.include_router(users_router)
+api_router.include_router(settings_router)
+api_router.include_router(materials_router)
+api_router.include_router(expedient_router)
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 
@@ -957,110 +965,6 @@ async def update_distributor_request(
     updated = await db.distributor_requests.find_one({"id": request_id}, {"_id": 0})
     return updated
 
-
-@api_router.get("/users", response_model=List[UserResponse])
-async def get_users():
-    """Obtener todos los usuarios (sin passwords)"""
-    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
-    return users
-
-@api_router.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(user_id: str):
-    """Obtener un usuario por ID (sin password)"""
-    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return user
-
-@api_router.post("/users", response_model=UserResponse)
-@limiter.limit(get_limit("user_create"))
-async def create_user(request: Request, user: UserCreate):
-    """Crear un nuevo usuario con password hasheado"""
-    # Check if username exists
-    existing = await db.users.find_one({"username": user.username.upper()})
-    if existing:
-        raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
-    
-    user_data = user.model_dump()
-    user_data["id"] = f"user-{uuid.uuid4().hex[:8]}"
-    user_data["username"] = user_data["username"].upper()
-    user_data["password"] = hash_password(user_data["password"])
-    
-    await db.users.insert_one(user_data)
-    
-    # Auditoría
-    audit.log(
-        AuditAction.USER_CREATE,
-        resource_type="user",
-        resource_id=user_data["id"],
-        request=request,
-        details={"username": user_data["username"]}
-    )
-    
-    return user_to_response(user_data)
-
-@api_router.put("/users/{user_id}", response_model=UserResponse)
-@limiter.limit(get_limit("write"))
-async def update_user(request: Request, user_id: str, user: UserUpdate):
-    """Actualizar un usuario"""
-    existing = await db.users.find_one({"id": user_id}, {"_id": 0})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    
-    update_data = {k: v for k, v in user.model_dump().items() if v is not None}
-    if "username" in update_data:
-        update_data["username"] = update_data["username"].upper()
-    
-    # Hash password if provided
-    if "password" in update_data and update_data["password"]:
-        update_data["password"] = hash_password(update_data["password"])
-        # Auditoría para cambio de contraseña
-        audit.log(
-            AuditAction.PASSWORD_CHANGE,
-            resource_type="user",
-            resource_id=user_id,
-            request=request
-        )
-    
-    if update_data:
-        await db.users.update_one({"id": user_id}, {"$set": update_data})
-    
-    # Auditoría para actualización general
-    audit.log(
-        AuditAction.USER_UPDATE,
-        resource_type="user",
-        resource_id=user_id,
-        request=request,
-        details={"fields_updated": list(update_data.keys())}
-    )
-    
-    updated = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
-    return updated
-
-@api_router.delete("/users/{user_id}")
-@limiter.limit(get_limit("user_delete"))
-async def delete_user(request: Request, user_id: str):
-    """Eliminar un usuario"""
-    if user_id == "admin":
-        raise HTTPException(status_code=400, detail="No se puede eliminar el administrador principal")
-    
-    # Obtener info del usuario antes de eliminar para auditoría
-    user_to_delete = await db.users.find_one({"id": user_id}, {"_id": 0, "username": 1})
-    
-    result = await db.users.delete_one({"id": user_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    
-    # Auditoría
-    audit.log(
-        AuditAction.USER_DELETE,
-        resource_type="user",
-        resource_id=user_id,
-        request=request,
-        details={"deleted_username": user_to_delete.get("username") if user_to_delete else "unknown"}
-    )
-    
-    return {"message": "Usuario eliminado"}
 
 # ============================================
 # CLIENT ENDPOINTS - Clientes Activos
@@ -2229,171 +2133,6 @@ async def delete_products_bulk(product_ids: List[str]):
 # ============================================
 # MATERIAL ENDPOINTS
 # ============================================
-
-@api_router.get("/materials", response_model=List[MaterialModel])
-async def get_materials(library: str = None):
-    """Obtener todos los materiales, opcionalmente filtrados por biblioteca"""
-    query = {}
-    if library:
-        query["library"] = library.upper()
-    materials = await db.materials.find(query, {"_id": 0}).to_list(1000)
-    return materials
-
-@api_router.post("/materials", response_model=MaterialModel)
-async def create_material(material: MaterialCreate):
-    """Crear un nuevo material"""
-    material_obj = MaterialModel(**material.model_dump())
-    await db.materials.insert_one(material_obj.model_dump())
-    return material_obj
-
-@api_router.put("/materials/{material_id}", response_model=MaterialModel)
-async def update_material(material_id: str, material: MaterialCreate):
-    """Actualizar un material"""
-    existing = await db.materials.find_one({"id": material_id}, {"_id": 0})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Material no encontrado")
-    
-    await db.materials.update_one({"id": material_id}, {"$set": material.model_dump()})
-    updated = await db.materials.find_one({"id": material_id}, {"_id": 0})
-    return updated
-
-@api_router.delete("/materials/{material_id}")
-async def delete_material(material_id: str):
-    """Eliminar un material"""
-    # Check if it's the last one
-    count = await db.materials.count_documents({})
-    if count <= 1:
-        raise HTTPException(status_code=400, detail="Debe existir al menos un material")
-    
-    result = await db.materials.delete_one({"id": material_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Material no encontrado")
-    return {"message": "Material eliminado"}
-
-# ============================================
-# SETTINGS ENDPOINTS
-# ============================================
-
-@api_router.get("/expedient/next")
-async def get_next_expedient_number(client_code: str = None):
-    """
-    Obtener el siguiente número de expediente correlativo por cliente.
-    Formato: EXP-AAAA-CLIENTE-NNN (ej: EXP-2026-LEON01-001)
-    Si no hay código de cliente, usa formato legacy: EXP-AAAA-NNNNN
-    """
-    try:
-        year = datetime.now().year
-        
-        if client_code and client_code.strip():
-            # Nuevo formato: por cliente
-            client_code = client_code.strip().upper()
-            counter_key = f"expedient_{year}_{client_code}"
-            
-            # Obtener o crear el contador para este cliente
-            counter = await db.system_counters.find_one({"key": counter_key})
-            
-            if not counter:
-                counter = {
-                    "key": counter_key,
-                    "value": 0,
-                    "year": year,
-                    "clientCode": client_code
-                }
-                await db.system_counters.insert_one(counter)
-            
-            # Incrementar el contador atómicamente
-            result = await db.system_counters.find_one_and_update(
-                {"key": counter_key},
-                {"$inc": {"value": 1}},
-                return_document=True
-            )
-            
-            next_number = result["value"]
-            expedient = f"EXP-{year}-{client_code}-{next_number:03d}"
-            
-            return {
-                "success": True,
-                "expedient": expedient,
-                "number": next_number,
-                "year": year,
-                "clientCode": client_code
-            }
-        else:
-            # Formato legacy (sin código de cliente)
-            counter_key = f"expedient_{year}"
-            counter = await db.system_counters.find_one({"key": counter_key})
-            
-            if not counter:
-                counter = {
-                    "key": counter_key,
-                    "value": 0,
-                    "year": year
-                }
-                await db.system_counters.insert_one(counter)
-            
-            result = await db.system_counters.find_one_and_update(
-                {"key": counter_key},
-                {"$inc": {"value": 1}},
-                return_document=True
-            )
-            
-            next_number = result["value"]
-            expedient = f"EXP-{year}-{next_number:05d}"
-            
-            return {
-                "success": True,
-                "expedient": expedient,
-                "number": next_number,
-                "year": year
-            }
-    except Exception as e:
-        logger.error(f"Error getting next expedient: {e}")
-        raise HTTPException(status_code=500, detail=f"Error obteniendo número de expediente: {str(e)}")
-
-@api_router.get("/expedient/current")
-async def get_current_expedient_info():
-    """Obtener información del contador de expedientes actual"""
-    try:
-        year = datetime.now().year
-        counter = await db.system_counters.find_one({"key": f"expedient_{year}"})
-        
-        current = counter["value"] if counter else 0
-        
-        return {
-            "success": True,
-            "year": year,
-            "currentCount": current,
-            "nextExpedient": f"EXP-{year}-{current + 1:05d}"
-        }
-    except Exception as e:
-        logger.error(f"Error getting expedient info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/settings", response_model=SettingsModel)
-async def get_settings():
-    """Obtener configuración global"""
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
-    if not settings:
-        # Return defaults
-        return SettingsModel()
-    return settings
-
-@api_router.put("/settings", response_model=SettingsModel)
-async def update_settings(settings: SettingsUpdate):
-    """Actualizar configuración global"""
-    update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
-    
-    if update_data:
-        await db.settings.update_one(
-            {"id": "global-settings"}, 
-            {"$set": update_data},
-            upsert=True
-        )
-    
-    updated = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
-    if not updated:
-        return SettingsModel()
-    return updated
 
 # ============================================
 # PROJECT/BUDGET ENDPOINTS
