@@ -31,6 +31,42 @@
   - Botón AUTO usa la provincia del usuario logueado
 - ✅ **Verificado**: Screenshots y curl confirman generación correcta
 
+### 3. Sistema de Backup Automático Diario (P0)
+- ✅ **Backend**: Servicio de backup en `/app/backend/services/backup_service.py`
+- ✅ **Backup automático**: Ejecuta diariamente a las **3:00 AM**
+- ✅ **Retención**: 7 días (backups antiguos se eliminan automáticamente)
+- ✅ **Formato**: `luiggi_backup_YYYYMMDD_HHMMSS.tar.gz` comprimido
+- ✅ **Endpoints API**:
+  - `POST /api/admin/backup/create` - Crear backup manual
+  - `GET /api/admin/backup/list` - Listar backups disponibles
+  - `POST /api/admin/backup/restore/{name}` - Restaurar backup
+- ✅ **Frontend - Pestaña "BACKUPS DB"** en Panel Maestro:
+  - Botón "Crear Backup Ahora"
+  - Lista de backups con fecha, hora y tamaño
+  - Botón "Restaurar" para cada backup
+  - Advertencia sobre sobrescritura de datos
+- ✅ **Verificado**: Backup de 45.9 MB creado exitosamente
+
+### 4. Informe de Uso por Usuario (P0)
+- ✅ **Backend**: Sistema de tracking en `/app/backend/services/activity_tracker.py`
+- ✅ **Registro automático de actividades**:
+  - Logins
+  - Creación/actualización de presupuestos
+  - Pedidos creados/confirmados
+  - Uso de IA Telemetría
+  - Exportación de PDFs
+- ✅ **Endpoints API**:
+  - `GET /api/admin/usage/report` - Informe completo
+  - `GET /api/admin/usage/users` - Estadísticas por usuario
+  - `GET /api/admin/usage/daily` - Actividad diaria
+  - `GET /api/admin/usage/timeline` - Timeline de actividades
+- ✅ **Frontend - Pestaña "USO USUARIOS"** en Panel Maestro:
+  - Tarjetas resumen (Total acciones, Usuarios activos, Media, Período)
+  - Gráfico de actividad diaria
+  - Distribución por tipo de actividad (donut)
+  - Ranking de usuarios con detalle completo
+- ✅ **Verificado**: Muestra actividad de MARIO correctamente
+
 ---
 
 ## ✅ COMPLETADO EN SESIÓN ANTERIOR (25 Marzo 2026)

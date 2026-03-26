@@ -5,7 +5,7 @@ import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, libraries
 import CatalogImporter from './CatalogImporter';
 
 // Componentes refactorizados
-import { TelemetryTab, TelemetryAuditTab, IdentityTab, SecurityTab, DashboardTab } from './settings';
+import { TelemetryTab, TelemetryAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab } from './settings';
 
 // Lista de provincias de España con sus códigos
 const PROVINCIAS_ESPANA = [
@@ -1316,6 +1316,34 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               <Shield size={16} /> Seguridad 2FA
             </span>
           </button>
+          
+          {/* Nueva pestaña: Informe de Uso */}
+          {state.currentUser?.isAdmin && (
+            <button
+              onClick={() => setActiveTab('usage-report')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'usage-report' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <TrendingUp size={16} /> Uso Usuarios
+              </span>
+            </button>
+          )}
+          
+          {/* Nueva pestaña: Gestión de Backups */}
+          {state.currentUser?.isAdmin && (
+            <button
+              onClick={() => setActiveTab('backup-management')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'backup-management' ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Database size={16} /> Backups DB
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -4646,6 +4674,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           {/* SECURITY 2FA TAB */}
           {activeTab === 'security' && (
             <SecurityTab state={state} setState={setState} />
+          )}
+          
+          {/* Nueva pestaña: Informe de Uso */}
+          {activeTab === 'usage-report' && (
+            <UsageReportTab />
+          )}
+          
+          {/* Nueva pestaña: Gestión de Backups */}
+          {activeTab === 'backup-management' && (
+            <BackupManagementTab />
           )}
         </div>
       </div>

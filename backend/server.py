@@ -64,6 +64,11 @@ from routes.fabrica import router as fabrica_router
 from routes.dashboard import router as dashboard_router
 from routes.factory_reports import router as factory_reports_router
 from routes.backup import scheduler as backup_scheduler, start_backup_scheduler
+from routes.admin import router as admin_router
+
+# Servicios de backup y tracking
+from services.backup_service import init_backup_service
+from services.activity_tracker import init_activity_tracker, get_tracker, ActivityType
 
 # Modelos compartidos
 from models.schemas import (
@@ -135,6 +140,7 @@ api_router.include_router(crm_module_router)
 api_router.include_router(orders_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(factory_reports_router)
+api_router.include_router(admin_router)
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 
@@ -1444,6 +1450,16 @@ async def login(request: Request, credentials: dict):
     
     # Auditoría: login exitoso
     audit.log_login_success(user.get("id"), username, request)
+    
+    # Tracking de actividad
+    tracker = get_tracker()
+    if tracker:
+        await tracker.track(
+            user_id=user.get("id"),
+            username=username,
+            activity_type=ActivityType.LOGIN,
+            ip_address=request.client.host if request.client else None
+        )
     
     # Return user without password + tokens
     return {
@@ -2861,6 +2877,17 @@ async def create_project(project: ProjectCreate, user_id: str, client_code: Opti
     
     await db.projects.insert_one(project_data)
     
+    # Tracking de actividad
+    tracker = get_tracker()
+    if tracker:
+        user = await db.users.find_one({"id": user_id}, {"_id": 0, "username": 1})
+        await tracker.track(
+            user_id=user_id,
+            username=user.get("username") if user else "unknown",
+            activity_type=ActivityType.BUDGET_CREATE,
+            details={"projectId": project_data["id"], "budgetNumber": project_data.get("budgetNumber")}
+        )
+    
     logger.info(f"Proyecto creado: {project_data['id']} para cliente: {project_data.get('clientCode', 'SIN CLIENTE')}")
     return project_data
 
@@ -2876,6 +2903,17 @@ async def update_project(project_id: str, project: ProjectUpdate):
     
     if update_data:
         await db.projects.update_one({"id": project_id}, {"$set": update_data})
+    
+    # Tracking de actividad
+    tracker = get_tracker()
+    if tracker and existing.get("userId"):
+        user = await db.users.find_one({"id": existing["userId"]}, {"_id": 0, "username": 1})
+        await tracker.track(
+            user_id=existing["userId"],
+            username=user.get("username") if user else "unknown",
+            activity_type=ActivityType.BUDGET_UPDATE,
+            details={"projectId": project_id}
+        )
     
     updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
     return updated
@@ -4194,6 +4232,23 @@ async def startup_event():
         
     except Exception as e:
         logger.warning(f"Error creando índices (algunos pueden ya existir): {e}")
+    
+    # =============================================
+    # INICIALIZAR SERVICIOS DE BACKUP Y TRACKING
+    # =============================================
+    try:
+        # Inicializar servicio de backup con programador diario (3:00 AM)
+        backup_svc = init_backup_service(mongo_url, os.environ['DB_NAME'])
+        await backup_svc.start_scheduler(hour=3)
+        logger.info("✅ Servicio de backup diario iniciado (3:00 AM)")
+        
+        # Inicializar tracker de actividad
+        tracker = init_activity_tracker(db)
+        await tracker.setup_indexes()
+        logger.info("✅ Tracker de actividad de usuarios iniciado")
+        
+    except Exception as e:
+        logger.warning(f"Error inicializando servicios de backup/tracking: {e}")
     
     # Start backup scheduler from backup module
     start_backup_scheduler()
