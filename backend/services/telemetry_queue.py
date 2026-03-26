@@ -150,6 +150,16 @@ async def process_job(job_id: str):
                 continue
             
             try:
+                # Guardar imagen para auditoría ANTES de procesarla
+                audit_id = await save_image_for_audit(
+                    job_id=job_id,
+                    filename=filename,
+                    base64_image=base64_image,
+                    library=job.library,
+                    module=job.module
+                )
+                add_job_log(job, "info", f"💾 Imagen guardada para auditoría: {audit_id[:12]}...")
+                
                 # Procesar imagen con Gemini
                 products, detected_tariff = await analyze_single_image(
                     base64_image, 
@@ -158,6 +168,9 @@ async def process_job(job_id: str):
                     filename,
                     api_key
                 )
+                
+                # Actualizar registro de auditoría con resultados
+                await update_audit_record(audit_id, products, detected_tariff)
                 
                 if products:
                     all_products.extend(products)
@@ -229,16 +242,26 @@ Busca en el encabezado: "TARIFA 1", "TARIFA 2", "T1", "T2", etc. hasta T21.
 Si no encuentras, usa "T1".
 
 PASO 2: ENTENDER LA ESTRUCTURA DE LA TABLA
-Las tablas de catálogo tienen esta estructura típica:
-- ALTOS (A): Tienen columnas para altura 70cm y 90cm (ej: "70" y "90" en el header)
-- BAJOS (B): Altura fija, solo una columna de precio
-- COLUMNAS (CD, CH): Altura 200cm fija
+Las tablas de catálogo MV tienen estas estructuras:
 
-Para ALTOS con columnas 70 y 90:
-- Crear DOS productos separados: uno con sufijo -70 y otro con -90
-- Ejemplo: Si ves "A30D/I" con precio 45€ en columna 70 y 52€ en columna 90:
-  - Producto 1: code="A30D/I-70", height=70, points=45
-  - Producto 2: code="A30D/I-90", height=90, points=52
+**ALTOS (códigos que empiezan por A):**
+- Tienen DOS columnas de precios: "70" y "90" (alturas en cm)
+- Profundidad fija: 33 cm
+- DEBES crear DOS productos por cada fila:
+  - code="CODIGO-70", height=70, depth=33
+  - code="CODIGO-90", height=90, depth=33
+
+**COLUMNAS (códigos que empiezan por C, CD, CH, etc.):**
+- Tienen DOS columnas de precios: "200" y "220" (alturas en cm)
+- Profundidad fija: 58 cm
+- DEBES crear DOS productos por cada fila:
+  - code="CODIGO-200", height=200, depth=58
+  - code="CODIGO-220", height=220, depth=58
+
+**BAJOS (códigos que empiezan por B):**
+- Una sola columna de precio
+- Altura fija: 70 cm, Profundidad: 58 cm
+- NO llevan sufijo de altura
 
 PASO 3: FORMATO DE SALIDA (JSON):
 {{
@@ -246,19 +269,21 @@ PASO 3: FORMATO DE SALIDA (JSON):
   "products": [
     {{"code": "A30D/I-70", "name": "Alto 30 D/I", "category": "ALTO", "width": 30, "height": 70, "depth": 33, "points": 45}},
     {{"code": "A30D/I-90", "name": "Alto 30 D/I", "category": "ALTO", "width": 30, "height": 90, "depth": 33, "points": 52}},
+    {{"code": "CD60-200", "name": "Columna Despensero 60", "category": "COLUMNA", "width": 60, "height": 200, "depth": 58, "points": 320}},
+    {{"code": "CD60-220", "name": "Columna Despensero 60", "category": "COLUMNA", "width": 60, "height": 220, "depth": 58, "points": 355}},
     {{"code": "B60", "name": "Bajo 60", "category": "BAJO", "width": 60, "height": 70, "depth": 58, "points": 89}}
   ]
 }}
 
-REGLAS IMPORTANTES:
+REGLAS CRÍTICAS:
 1. Las dimensiones SIEMPRE en CENTÍMETROS (no milímetros):
    - width: ancho del mueble en cm (25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100...)
-   - height: altura en cm (70, 90, 200...)
-   - depth: profundidad en cm (ALTOS=33, BAJOS=58, COLUMNAS=58)
+   - height: ALTOS=70/90, COLUMNAS=200/220, BAJOS=70
+   - depth: ALTOS=33, BAJOS=58, COLUMNAS=58
 
-2. Para ALTOS: Si hay columnas 70 y 90, crea DOS productos separados con sufijo -70 y -90
+2. Para ALTOS: SIEMPRE crea DOS productos (-70 y -90) si hay dos columnas de precio
 
-3. El código incluye el sufijo de altura solo para ALTOS que tienen variantes
+3. Para COLUMNAS: SIEMPRE crea DOS productos (-200 y -220) si hay dos columnas de precio
 
 4. points = el precio NUMÉRICO de la celda (sin símbolo €)
 
@@ -266,7 +291,7 @@ REGLAS IMPORTANTES:
 
 6. category debe ser: ALTO, BAJO, COLUMNA, RINCON, SOBRE, CAMPANA, MODULO
 
-{"NO incluyas estos códigos ya extraídos: " + exclude_list if extracted_codes else "Primera pasada: extrae TODOS los productos visibles."}
+{"NO incluyas estos códigos ya extraídos: " + exclude_list if extracted_codes else "Primera pasada: extrae TODOS los productos visibles con TODAS sus variantes de altura."}
 
 Responde SOLO con JSON válido, sin texto adicional."""
 
@@ -321,11 +346,15 @@ Responde SOLO con JSON válido, sin texto adicional."""
                     depth = float(prod.get("depth", 0) or 0)
                     category = str(prod.get("category", "")).upper()
                     
-                    # Si las dimensiones son mayores a 300, probablemente están en mm
+                    # Si el ancho es mayor a 300, probablemente está en mm
                     if width > 300:
                         width = width / 10
-                    if height > 300:
+                    
+                    # Para altura: 200 y 220 son válidos para columnas, no convertir
+                    # Solo convertir si es claramente mm (ej: 700, 900, 2000, 2200)
+                    if height >= 700 and height not in [200, 220]:
                         height = height / 10
+                    
                     if depth > 300:
                         depth = depth / 10
                     
@@ -343,7 +372,7 @@ Responde SOLO con JSON válido, sin texto adicional."""
                         height_match = re.search(r'-(\d+)$', code)
                         if height_match:
                             height = float(height_match.group(1))
-                        elif category == 'ALTO' or code.startswith('A'):
+                        elif category == 'ALTO' or (code.startswith('A') and not code.startswith('AC')):
                             height = 70.0  # Alto estándar
                         elif category == 'COLUMNA' or code.startswith('C'):
                             height = 200.0  # Columna estándar
@@ -478,3 +507,104 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
             created += 1
     
     return created, updated
+
+
+
+async def save_image_for_audit(job_id: str, filename: str, base64_image: str, library: str, module: str) -> str:
+    """
+    Guarda la imagen en la colección 'telemetry_audit' para auditoría futura.
+    Retorna el ID del documento creado.
+    """
+    audit_id = f"audit-{uuid.uuid4().hex[:12]}"
+    
+    audit_record = {
+        "id": audit_id,
+        "job_id": job_id,
+        "filename": filename,
+        "library": library,
+        "module": module,
+        "image_base64": base64_image,
+        "status": "processing",
+        "detected_tariff": None,
+        "products_extracted": [],
+        "products_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None,
+        "notes": ""
+    }
+    
+    await db.telemetry_audit.insert_one(audit_record)
+    logger.info(f"Image saved for audit: {audit_id} - {filename}")
+    
+    return audit_id
+
+
+async def update_audit_record(audit_id: str, products: List[Dict], detected_tariff: str):
+    """
+    Actualiza el registro de auditoría con los productos extraídos.
+    """
+    # Extraer solo códigos y puntos para el registro (no duplicar toda la data)
+    products_summary = [
+        {
+            "code": p.get("code"),
+            "name": p.get("name"),
+            "points": p.get("points"),
+            "width": p.get("width"),
+            "height": p.get("height"),
+            "depth": p.get("depth"),
+            "category": p.get("category")
+        }
+        for p in products
+    ] if products else []
+    
+    await db.telemetry_audit.update_one(
+        {"id": audit_id},
+        {"$set": {
+            "status": "completed",
+            "detected_tariff": detected_tariff,
+            "products_extracted": products_summary,
+            "products_count": len(products_summary),
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    logger.info(f"Audit record updated: {audit_id} - {len(products_summary)} products")
+
+
+async def get_audit_images(library: str = None, limit: int = 50, skip: int = 0) -> List[Dict]:
+    """
+    Obtiene imágenes de auditoría para revisión.
+    No incluye el base64 completo por defecto para ahorrar memoria.
+    """
+    query = {}
+    if library:
+        query["library"] = library
+    
+    cursor = db.telemetry_audit.find(
+        query,
+        {
+            "image_base64": 0  # Excluir imagen para listados
+        }
+    ).sort("created_at", -1).skip(skip).limit(limit)
+    
+    return await cursor.to_list(length=limit)
+
+
+async def get_audit_image_detail(audit_id: str) -> Optional[Dict]:
+    """
+    Obtiene el detalle completo de una imagen de auditoría, incluyendo el base64.
+    """
+    record = await db.telemetry_audit.find_one({"id": audit_id})
+    if record:
+        record.pop("_id", None)
+    return record
+
+
+async def update_audit_notes(audit_id: str, notes: str) -> bool:
+    """
+    Permite añadir notas a un registro de auditoría para mejoras futuras.
+    """
+    result = await db.telemetry_audit.update_one(
+        {"id": audit_id},
+        {"$set": {"notes": notes, "reviewed_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return result.modified_count > 0

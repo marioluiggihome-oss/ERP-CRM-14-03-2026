@@ -5,7 +5,7 @@ import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, libraries
 import CatalogImporter from './CatalogImporter';
 
 // Componentes refactorizados
-import { TelemetryTab, IdentityTab, SecurityTab, DashboardTab } from './settings';
+import { TelemetryTab, TelemetryAuditTab, IdentityTab, SecurityTab, DashboardTab } from './settings';
 
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [activeTab, setActiveTab] = useState('users');
@@ -1225,6 +1225,17 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               }`}
             >
               Telemetría IA
+            </button>
+          )}
+          
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+            <button
+              onClick={() => setActiveTab('telemetry-audit')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'telemetry-audit' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+            >
+              Auditoría IA
             </button>
           )}
           
@@ -4519,6 +4530,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
           {activeTab === 'telemetry' && (
             <TelemetryTab state={state} setState={setState} />
+          )}
+
+          {activeTab === 'telemetry-audit' && (
+            <TelemetryAuditTab state={state} />
           )}
 
           {activeTab === 'identity' && (

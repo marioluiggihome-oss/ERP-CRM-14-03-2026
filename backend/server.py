@@ -202,7 +202,13 @@ async def get_status_checks():
 # =============================================
 # SISTEMA DE COLA DE TELEMETRÍA IA
 # =============================================
-from services.telemetry_queue import create_telemetry_job, get_job_status
+from services.telemetry_queue import (
+    create_telemetry_job, 
+    get_job_status,
+    get_audit_images,
+    get_audit_image_detail,
+    update_audit_notes
+)
 
 @api_router.post("/telemetry/start-job")
 async def start_telemetry_job(
@@ -261,6 +267,44 @@ async def get_telemetry_job_status(job_id: str):
     if not status:
         return {"success": False, "error": "Job no encontrado"}
     return {"success": True, **status}
+
+
+# =============================================
+# AUDITORÍA DE TELEMETRÍA - Imágenes guardadas
+# =============================================
+@api_router.get("/telemetry/audit")
+async def list_audit_images(library: str = None, limit: int = 50, skip: int = 0):
+    """Lista las imágenes guardadas para auditoría"""
+    try:
+        images = await get_audit_images(library=library, limit=limit, skip=skip)
+        return {"success": True, "images": images, "count": len(images)}
+    except Exception as e:
+        logger.error(f"Error listing audit images: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@api_router.get("/telemetry/audit/{audit_id}")
+async def get_audit_image(audit_id: str):
+    """Obtiene el detalle de una imagen de auditoría, incluyendo la imagen base64"""
+    try:
+        record = await get_audit_image_detail(audit_id)
+        if not record:
+            return {"success": False, "error": "Registro no encontrado"}
+        return {"success": True, "record": record}
+    except Exception as e:
+        logger.error(f"Error getting audit image: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@api_router.put("/telemetry/audit/{audit_id}/notes")
+async def update_audit_image_notes(audit_id: str, notes: str = Form(...)):
+    """Actualiza las notas de un registro de auditoría"""
+    try:
+        success = await update_audit_notes(audit_id, notes)
+        return {"success": success}
+    except Exception as e:
+        logger.error(f"Error updating audit notes: {e}")
+        return {"success": False, "error": str(e)}
 
 
 @api_router.post("/analyze-product-sheets")
