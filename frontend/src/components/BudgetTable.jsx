@@ -901,10 +901,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
           shouldOverwrite = true;
           existingProjectId = checkData.projectId;
         } else {
-          // Obtener siguiente número disponible (usando código de cliente si existe)
-          const clientCode = state.clientCode || '';
-          const expUrl = clientCode 
-            ? `${process.env.REACT_APP_BACKEND_URL}/api/expedient/next?client_code=${encodeURIComponent(clientCode)}`
+          // Obtener siguiente número disponible (usando código de provincia del usuario)
+          const provinciaCode = state.currentUser?.provinciaCode || '';
+          const expUrl = provinciaCode 
+            ? `${process.env.REACT_APP_BACKEND_URL}/api/expedient/next?client_code=${encodeURIComponent(provinciaCode)}`
             : `${process.env.REACT_APP_BACKEND_URL}/api/expedient/next`;
           const expResponse = await fetch(expUrl);
           const expData = await expResponse.json();
@@ -1336,10 +1336,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                         <button 
                           onClick={async () => {
                             try {
-                              // Usar código de cliente si está disponible
-                              const clientCode = state.clientCode || '';
-                              const url = clientCode 
-                                ? `${process.env.REACT_APP_BACKEND_URL}/api/expedient/next?client_code=${encodeURIComponent(clientCode)}`
+                              // Usar código de provincia del usuario logueado
+                              const provinciaCode = state.currentUser?.provinciaCode || '';
+                              const url = provinciaCode 
+                                ? `${process.env.REACT_APP_BACKEND_URL}/api/expedient/next?client_code=${encodeURIComponent(provinciaCode)}`
                                 : `${process.env.REACT_APP_BACKEND_URL}/api/expedient/next`;
                               const response = await fetch(url);
                               const data = await response.json();
@@ -1351,7 +1351,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                             }
                           }}
                           className="bg-orange-600 hover:bg-orange-700 text-white px-2 rounded-lg text-[8px] font-black transition-colors"
-                          title={state.clientCode ? `Generar expediente para cliente ${state.clientCode}` : "Generar número de expediente automático (ingresa código de cliente primero)"}
+                          title={state.currentUser?.provinciaCode ? `Generar expediente para ${state.currentUser.provinciaCode}` : "Generar número de expediente automático (configura provincia en tu perfil)"}
                         >
                           AUTO
                         </button>

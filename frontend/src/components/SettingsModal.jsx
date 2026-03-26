@@ -7,6 +7,62 @@ import CatalogImporter from './CatalogImporter';
 // Componentes refactorizados
 import { TelemetryTab, TelemetryAuditTab, IdentityTab, SecurityTab, DashboardTab } from './settings';
 
+// Lista de provincias de España con sus códigos
+const PROVINCIAS_ESPANA = [
+  { codigo: 'AL', nombre: 'Almería' },
+  { codigo: 'CA', nombre: 'Cádiz' },
+  { codigo: 'CO', nombre: 'Córdoba' },
+  { codigo: 'GR', nombre: 'Granada' },
+  { codigo: 'HU', nombre: 'Huelva' },
+  { codigo: 'JA', nombre: 'Jaén' },
+  { codigo: 'MA', nombre: 'Málaga' },
+  { codigo: 'SE', nombre: 'Sevilla' },
+  { codigo: 'HU', nombre: 'Huesca' },
+  { codigo: 'TE', nombre: 'Teruel' },
+  { codigo: 'ZA', nombre: 'Zaragoza' },
+  { codigo: 'OV', nombre: 'Asturias' },
+  { codigo: 'IB', nombre: 'Islas Baleares' },
+  { codigo: 'LP', nombre: 'Las Palmas' },
+  { codigo: 'TF', nombre: 'Santa Cruz de Tenerife' },
+  { codigo: 'SA', nombre: 'Cantabria' },
+  { codigo: 'AB', nombre: 'Albacete' },
+  { codigo: 'CR', nombre: 'Ciudad Real' },
+  { codigo: 'CU', nombre: 'Cuenca' },
+  { codigo: 'GU', nombre: 'Guadalajara' },
+  { codigo: 'TO', nombre: 'Toledo' },
+  { codigo: 'AV', nombre: 'Ávila' },
+  { codigo: 'BU', nombre: 'Burgos' },
+  { codigo: 'LE', nombre: 'León' },
+  { codigo: 'PA', nombre: 'Palencia' },
+  { codigo: 'SM', nombre: 'Salamanca' },
+  { codigo: 'SG', nombre: 'Segovia' },
+  { codigo: 'SO', nombre: 'Soria' },
+  { codigo: 'VA', nombre: 'Valladolid' },
+  { codigo: 'ZM', nombre: 'Zamora' },
+  { codigo: 'BA', nombre: 'Barcelona' },
+  { codigo: 'GI', nombre: 'Girona' },
+  { codigo: 'LL', nombre: 'Lleida' },
+  { codigo: 'TA', nombre: 'Tarragona' },
+  { codigo: 'BA', nombre: 'Badajoz' },
+  { codigo: 'CC', nombre: 'Cáceres' },
+  { codigo: 'CO', nombre: 'A Coruña' },
+  { codigo: 'LU', nombre: 'Lugo' },
+  { codigo: 'OR', nombre: 'Ourense' },
+  { codigo: 'PO', nombre: 'Pontevedra' },
+  { codigo: 'LO', nombre: 'La Rioja' },
+  { codigo: 'MD', nombre: 'Madrid' },
+  { codigo: 'MU', nombre: 'Murcia' },
+  { codigo: 'NA', nombre: 'Navarra' },
+  { codigo: 'AL', nombre: 'Álava' },
+  { codigo: 'BI', nombre: 'Bizkaia' },
+  { codigo: 'SS', nombre: 'Gipuzkoa' },
+  { codigo: 'AL', nombre: 'Alicante' },
+  { codigo: 'CS', nombre: 'Castellón' },
+  { codigo: 'VL', nombre: 'Valencia' },
+  { codigo: 'CE', nombre: 'Ceuta' },
+  { codigo: 'ML', nombre: 'Melilla' }
+].sort((a, b) => a.nombre.localeCompare(b.nombre));
+
 const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [activeTab, setActiveTab] = useState('users');
   const [colorInput, setColorInput] = useState(state.brandColor || '#ea580c');
@@ -59,6 +115,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     username: '',
     password: '',
     clientName: '',
+    provinciaCode: '',  // Código de provincia (2 letras: AV, LE, SA, etc.)
     isActive: true,
     isAdmin: false,  // Director Comercial
     isGerente: false,  // Gerente - mismo acceso que Director
@@ -698,6 +755,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       username: '',
       password: '',
       clientName: '',
+      provinciaCode: '',  // Código de provincia
       linkedClientId: '',
       isActive: true,
       isAdmin: false,
@@ -745,11 +803,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     
     setIsEditingUser(true);
     setEditingUserId(user.id);
-    // Asegurar que allowedLibraries tenga valor por defecto
+    // Asegurar que allowedLibraries y provinciaCode tengan valor por defecto
     setUserForm({ 
       ...user, 
       linkedClientId: user.linkedClientId || '',
-      allowedLibraries: user.allowedLibraries || ['ZC']
+      allowedLibraries: user.allowedLibraries || ['ZC'],
+      provinciaCode: user.provinciaCode || ''
     });
   };
 
@@ -2024,26 +2083,46 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Identificador Técnico *</label>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Usuario / Email *</label>
                         <input
                           type="text"
                           value={userForm.username}
-                          onChange={(e) => setUserForm({...userForm, username: e.target.value.toUpperCase()})}
-                          placeholder="USUARIO"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-black uppercase outline-none focus:border-orange-500"
+                          onChange={(e) => setUserForm({...userForm, username: e.target.value})}
+                          placeholder="usuario@email.com o usuario123"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
                         />
+                        <p className="text-[10px] text-slate-400 mt-1">Puede ser un email o texto libre (minúsculas permitidas)</p>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Clave Acceso</label>
-                      <input
-                        type="password"
-                        value={userForm.password || ''}
-                        onChange={(e) => setUserForm({...userForm, password: e.target.value})}
-                        placeholder={editingUserId ? "Dejar vacío para no cambiar" : "••••"}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
-                      />
+                    {/* Provincia */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Provincia *</label>
+                        <select
+                          value={userForm.provinciaCode || ''}
+                          onChange={(e) => setUserForm({...userForm, provinciaCode: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500 cursor-pointer"
+                        >
+                          <option value="">-- Seleccionar provincia --</option>
+                          {PROVINCIAS_ESPANA.map(prov => (
+                            <option key={prov.codigo + prov.nombre} value={prov.codigo}>
+                              {prov.nombre} ({prov.codigo})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-slate-400 mt-1">Se usará para numerar expedientes: EXP-2026-{userForm.provinciaCode || 'XX'}-001</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Clave Acceso</label>
+                        <input
+                          type="password"
+                          value={userForm.password || ''}
+                          onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                          placeholder={editingUserId ? "Dejar vacío para no cambiar" : "••••"}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                        />
+                      </div>
                     </div>
 
                     {/* Role & Hierarchy */}
