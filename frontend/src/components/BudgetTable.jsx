@@ -1473,7 +1473,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                    }}
                    data-testid="tariff-selector-mv"
                  >
-                   {[...Array(21)].map((_, i) => (
+                   {[...Array(15)].map((_, i) => (
                      <option key={`T${i+1}`} value={`T${i+1}`}>
                        Tarifa T{i+1}
                      </option>
