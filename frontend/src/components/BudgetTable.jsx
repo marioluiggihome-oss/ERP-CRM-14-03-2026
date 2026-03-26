@@ -810,25 +810,29 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
      const vigaCutValue = state.libraryVigaCutIncrements?.[currentLibrary] || state.vigaCutIncrement || 0;
      const vigaCost = item.hasVigaCut ? vigaCutValue : 0;
      
-     const pointsCost = usedPoints * pointValue;
-     const unitPrice = pointsCost + cutsCost + carcassCost + vigaCost;
+     // LÍNEAS MANUALES: El valor introducido es directamente en €, NO se multiplica por punto
+     // LÍNEAS DE LIBRERÍA: Se multiplica puntos × valor del punto
+     const pointsCost = item.isManual ? usedPoints : (usedPoints * pointValue);
+     const unitPrice = item.isManual 
+       ? pointsCost  // Manual: valor directo en €, sin extras ni incrementos
+       : (pointsCost + cutsCost + carcassCost + vigaCost);  // Librería: con extras
      
      // Usar descuento específico según el módulo actual
      // IMPORTANTE: Usar ?? en lugar de || para respetar 0 como valor válido
      const discountPct = state.currentModule === 'despiece' 
        ? (state.currentUser?.discountDespiece ?? state.currentUser?.commercialDiscount ?? 0)
        : (state.currentUser?.discountMontada ?? state.currentUser?.commercialDiscount ?? 0);
-     // Las líneas manuales NO se afectan por el cambio de modo PVP/COSTO
-     const discountFactor = (state.showDistributorPrice && !item.isManual) ? (1 - discountPct / 100) : 1;
+     // Las líneas manuales NUNCA tienen descuento ni se afectan por modo PVP/COSTO
+     const discountFactor = (item.isManual) ? 1 : (state.showDistributorPrice ? (1 - discountPct / 100) : 1);
      
      const finalPrice = (unitPrice * item.quantity) * discountFactor;
 
      const breakdown = `
 DESGLOSE DE PRECIO:
 -------------------
-• Puntos Base: ${usedPoints} pts
+${item.isManual ? `• Valor Manual: ${usedPoints.toFixed(2)} €` : `• Puntos Base: ${usedPoints} pts
 • Valor Punto: ${pointValue.toFixed(2)} €/pt
-  (Subtotal Mueble: ${pointsCost.toFixed(2)}€)
+  (Subtotal Mueble: ${pointsCost.toFixed(2)}€)`}
 
 ${!item.isManual ? `EXTRAS APLICADOS:
 • Armazón: +${carcassCost.toFixed(2)}€
