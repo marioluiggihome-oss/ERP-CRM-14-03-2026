@@ -259,9 +259,11 @@ Las tablas de catálogo MV tienen estas estructuras:
   - code="CODIGO-220", height=220, depth=58
 
 **BAJOS (códigos que empiezan por B):**
-- Una sola columna de precio
-- Altura fija: 70 cm, Profundidad: 58 cm
-- NO llevan sufijo de altura
+- Una sola columna de precio en el catálogo
+- Profundidad fija: 58 cm
+- IMPORTANTE: Aunque solo hay UNA columna de precio, DEBES crear DOS productos con el MISMO precio:
+  - code="CODIGO-H70", height=70, depth=58, points=PRECIO
+  - code="CODIGO-H80", height=80, depth=58, points=PRECIO (mismo precio que H70)
 
 PASO 3: FORMATO DE SALIDA (JSON):
 {{
@@ -271,23 +273,26 @@ PASO 3: FORMATO DE SALIDA (JSON):
     {{"code": "A30D/I-90", "name": "Alto 30 D/I", "category": "ALTO", "width": 30, "height": 90, "depth": 33, "points": 52}},
     {{"code": "CD60-200", "name": "Columna Despensero 60", "category": "COLUMNA", "width": 60, "height": 200, "depth": 58, "points": 320}},
     {{"code": "CD60-220", "name": "Columna Despensero 60", "category": "COLUMNA", "width": 60, "height": 220, "depth": 58, "points": 355}},
-    {{"code": "B60", "name": "Bajo 60", "category": "BAJO", "width": 60, "height": 70, "depth": 58, "points": 89}}
+    {{"code": "B60-H70", "name": "Bajo 60", "category": "BAJO", "width": 60, "height": 70, "depth": 58, "points": 89}},
+    {{"code": "B60-H80", "name": "Bajo 60", "category": "BAJO", "width": 60, "height": 80, "depth": 58, "points": 89}}
   ]
 }}
 
 REGLAS CRÍTICAS:
 1. Las dimensiones SIEMPRE en CENTÍMETROS (no milímetros):
    - width: ancho del mueble en cm (25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100...)
-   - height: ALTOS=70/90, COLUMNAS=200/220, BAJOS=70
+   - height: ALTOS=70/90, COLUMNAS=200/220, BAJOS=70/80
    - depth: ALTOS=33, BAJOS=58, COLUMNAS=58
 
-2. Para ALTOS: SIEMPRE crea DOS productos (-70 y -90) si hay dos columnas de precio
+2. Para ALTOS: SIEMPRE crea DOS productos (-70 y -90) con sus respectivos precios
 
-3. Para COLUMNAS: SIEMPRE crea DOS productos (-200 y -220) si hay dos columnas de precio
+3. Para COLUMNAS: SIEMPRE crea DOS productos (-200 y -220) con sus respectivos precios
 
-4. points = el precio NUMÉRICO de la celda (sin símbolo €)
+4. Para BAJOS: SIEMPRE crea DOS productos (-H70 y -H80) con el MISMO precio
 
-5. Extrae hasta 60 productos por pasada
+5. points = el precio NUMÉRICO de la celda (sin símbolo €)
+
+6. Extrae hasta 60 productos por pasada
 
 6. category debe ser: ALTO, BAJO, COLUMNA, RINCON, SOBRE, CAMPANA, MODULO
 
@@ -369,13 +374,16 @@ Responde SOLO con JSON válido, sin texto adicional."""
                     
                     # Detectar altura desde el sufijo del código si no está especificada
                     if height == 0 or height < 30:
-                        height_match = re.search(r'-(\d+)$', code)
+                        # Buscar sufijo numérico: -70, -90, -200, -220, -H70, -H80
+                        height_match = re.search(r'-H?(\d+)$', code, re.IGNORECASE)
                         if height_match:
                             height = float(height_match.group(1))
                         elif category == 'ALTO' or (code.startswith('A') and not code.startswith('AC')):
                             height = 70.0  # Alto estándar
                         elif category == 'COLUMNA' or code.startswith('C'):
                             height = 200.0  # Columna estándar
+                        elif category == 'BAJO' or code.startswith('B'):
+                            height = 70.0  # Bajo estándar
                         else:
                             height = 70.0  # Por defecto
                     
