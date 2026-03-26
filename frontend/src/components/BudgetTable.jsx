@@ -2120,7 +2120,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                          <div key={item.id} className="flex items-center justify-between px-2 py-1.5 bg-purple-50/50 hover:bg-purple-100 border-b border-purple-100 last:border-b-0 text-[9px]">
                            <div className="flex-1">
                              <span className="font-black text-purple-800">{item.code}</span>
-                             <span className="text-purple-500 ml-2">{item.width}×{item.height}mm</span>
+                             <span className="text-purple-500 ml-2">{formatMeasure(item.width)}×{formatMeasure(item.height)}{measureUnit}</span>
                              <span className="text-purple-400 ml-1">×{item.quantity}</span>
                            </div>
                            <div className="flex items-center gap-2">
@@ -2937,7 +2937,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                               </div>
                               <div className="flex items-center gap-3 mt-1">
                                 <span className="text-[10px] font-bold text-slate-500">
-                                  AN: {p.width || '-'} | AL: {p.height || '-'} | FO: {p.depth || '-'}
+                                  AN: {formatMeasure(p.width)} | AL: {formatMeasure(p.height)} | FO: {formatMeasure(p.depth)}
                                 </span>
                                 {/* Mostrar info de apertura para MV */}
                                 {p.apertura && (

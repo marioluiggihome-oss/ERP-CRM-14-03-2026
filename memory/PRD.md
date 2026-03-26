@@ -1,11 +1,29 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado: EN DESARROLLO ACTIVO
-## Última Actualización: 25 Marzo 2026
+## Última Actualización: 26 Marzo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (25 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (26 Marzo 2026)
+
+### 1. Toggle Unidad de Medidas mm/cm en Presupuestador (P0)
+- ✅ **Bug corregido**: El toggle "UNIDAD MEDIDAS" no multiplicaba los valores por 10 al cambiar a milímetros
+- ✅ **Problema**: La función `formatMeasure()` existía pero no se aplicaba a todas las vistas del catálogo
+- ✅ **Solución**: Se aplicó `formatMeasure()` a todas las referencias de dimensiones:
+  - Vista horizontal/abajo (tabla de catálogo) - Ya funcionaba
+  - Vista top/arriba (tabla de catálogo) - Ya funcionaba
+  - Vista vertical/sidebar (tarjetas de productos) - **CORREGIDO** línea 2940
+  - Sección DESPIECE-TABLEROS (items en presupuesto) - **CORREGIDO** línea 2123
+- ✅ **Frontend**: `/app/frontend/src/components/BudgetTable.jsx`
+- ✅ **Funcionamiento**:
+  - CM: Encabezados "AN (CM)", valores originales (30, 90, 33)
+  - MM: Encabezados "AN (MM)", valores x10 (300, 900, 330)
+- ✅ **Verificado**: Screenshots confirman conversión correcta en todas las vistas
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (25 Marzo 2026)
 
 ### 1. Informe de Producción PDF con Logo y Despiece (P0 - Requisito Word)
 - ✅ **Nueva funcionalidad**: Generación de PDF completo para órdenes de fabricación
