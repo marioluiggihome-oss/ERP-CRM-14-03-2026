@@ -2300,42 +2300,77 @@ async def delete_material(material_id: str):
 # ============================================
 
 @api_router.get("/expedient/next")
-async def get_next_expedient_number():
+async def get_next_expedient_number(client_code: str = None):
     """
-    Obtener el siguiente número de expediente correlativo.
-    Formato: EXP-AAAA-NNNNN (ej: EXP-2026-00001)
+    Obtener el siguiente número de expediente correlativo por cliente.
+    Formato: EXP-AAAA-CLIENTE-NNN (ej: EXP-2026-LEON01-001)
+    Si no hay código de cliente, usa formato legacy: EXP-AAAA-NNNNN
     """
     try:
         year = datetime.now().year
         
-        # Obtener o crear el contador de expedientes
-        counter = await db.system_counters.find_one({"key": f"expedient_{year}"})
-        
-        if not counter:
-            # Crear contador para el año actual empezando en 1
-            counter = {
-                "key": f"expedient_{year}",
-                "value": 0,
+        if client_code and client_code.strip():
+            # Nuevo formato: por cliente
+            client_code = client_code.strip().upper()
+            counter_key = f"expedient_{year}_{client_code}"
+            
+            # Obtener o crear el contador para este cliente
+            counter = await db.system_counters.find_one({"key": counter_key})
+            
+            if not counter:
+                counter = {
+                    "key": counter_key,
+                    "value": 0,
+                    "year": year,
+                    "clientCode": client_code
+                }
+                await db.system_counters.insert_one(counter)
+            
+            # Incrementar el contador atómicamente
+            result = await db.system_counters.find_one_and_update(
+                {"key": counter_key},
+                {"$inc": {"value": 1}},
+                return_document=True
+            )
+            
+            next_number = result["value"]
+            expedient = f"EXP-{year}-{client_code}-{next_number:03d}"
+            
+            return {
+                "success": True,
+                "expedient": expedient,
+                "number": next_number,
+                "year": year,
+                "clientCode": client_code
+            }
+        else:
+            # Formato legacy (sin código de cliente)
+            counter_key = f"expedient_{year}"
+            counter = await db.system_counters.find_one({"key": counter_key})
+            
+            if not counter:
+                counter = {
+                    "key": counter_key,
+                    "value": 0,
+                    "year": year
+                }
+                await db.system_counters.insert_one(counter)
+            
+            result = await db.system_counters.find_one_and_update(
+                {"key": counter_key},
+                {"$inc": {"value": 1}},
+                return_document=True
+            )
+            
+            next_number = result["value"]
+            expedient = f"EXP-{year}-{next_number:05d}"
+            
+            return {
+                "success": True,
+                "expedient": expedient,
+                "number": next_number,
                 "year": year
             }
-            await db.system_counters.insert_one(counter)
-        
-        # Incrementar el contador atómicamente
-        result = await db.system_counters.find_one_and_update(
-            {"key": f"expedient_{year}"},
-            {"$inc": {"value": 1}},
-            return_document=True
-        )
-        
-        next_number = result["value"]
-        expedient = f"EXP-{year}-{next_number:05d}"
-        
-        return {
-            "success": True,
-            "expedient": expedient,
-            "number": next_number,
-            "year": year
-        }
     except Exception as e:
         logger.error(f"Error getting next expedient: {e}")
         raise HTTPException(status_code=500, detail=f"Error obteniendo número de expediente: {str(e)}")
