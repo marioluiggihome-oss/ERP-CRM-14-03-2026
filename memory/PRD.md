@@ -23,6 +23,7 @@
 ### Refactorización Completada
 - ✅ **Frontend `SettingsModal.jsx`**: Reducido de 4749 a 4152 líneas (-597 líneas)
   - Extraído `DirectorTab.jsx` (596 líneas) - Panel Director Comercial con métricas, gráficos y trabajos
+  - **Nota**: Los tabs Users y Clients tienen muchas dependencias internas complejas, se requiere una refactorización más profunda para extraerlos sin romper funcionalidad
 - ✅ **Backend `server.py`**: Reducido de 4301 a 3480 líneas (-821 líneas total)
   - Extraído `routes/exports.py` (281 líneas) - Endpoints de exportación Excel
   - Extraído `routes/maintenance.py` (253 líneas) - Endpoints modo mantenimiento
