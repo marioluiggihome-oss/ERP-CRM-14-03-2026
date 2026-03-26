@@ -10,4 +10,5 @@ export { default as SecurityTab } from './SecurityTab';
 export { default as DashboardTab } from './DashboardTab';
 export { default as UsageReportTab } from './UsageReportTab';
 export { default as BackupManagementTab } from './BackupManagementTab';
+export { default as DirectorTab } from './DirectorTab';
 export { SettingsProvider, useSettingsContext, formatCurrency, CHART_COLORS, buttonStyles } from './SettingsContext';
