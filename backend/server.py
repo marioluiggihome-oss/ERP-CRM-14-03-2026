@@ -3498,6 +3498,8 @@ async def startup_event():
                 "canAccessTelemetry": True,
                 "canAccessBackups": True,
                 "canAccessMaintenance": True,
+                "canAccessArmarios": True,
+                "allowedModules": ["montada", "despiece", "armarios"],
                 "active": True,
                 "isActive": True,
                 "createdAt": datetime.now(timezone.utc),
