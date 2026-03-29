@@ -12,4 +12,7 @@ export { default as UsageReportTab } from './UsageReportTab';
 export { default as BackupManagementTab } from './BackupManagementTab';
 export { default as DirectorTab } from './DirectorTab';
 export { default as ShopClientsTab } from './ShopClientsTab';
+export { default as PricingTab } from './PricingTab';
+export { default as BackupsTab } from './BackupsTab';
+export { default as MaintenanceTab } from './MaintenanceTab';
 export { SettingsProvider, useSettingsContext, formatCurrency, CHART_COLORS, buttonStyles } from './SettingsContext';

@@ -26,16 +26,25 @@
 - ✅ **Permisos implementados**:
   - Tiendas (isTienda=true) solo ven sus propios clientes
   - Admins/Directores/Gerentes ven todos los clientes de todas las tiendas
-- ✅ **Frontend - Nueva pestaña "MIS CLIENTES"** en Panel Maestro:
-  - Header con estadísticas (Total, Activos, Potenciales)
-  - Formulario de creación/edición completo
-  - Búsqueda por nombre, empresa, email, teléfono
-  - Filtro por estado (Activo, Potencial, Inactivo)
-  - Exportar a CSV
-  - Visible para: usuarios con `isTienda=true` y administradores
+- ✅ **Frontend - Nueva pestaña "MIS CLIENTES"** en Panel Maestro
 - ✅ **Nueva API en frontend** - `shopClientsAPI` en `/app/frontend/src/services/api.js`
 - ✅ **Colección MongoDB**: `shop_clients`
-- ✅ **Testing**: Backend verificado con curl, UI verificada con screenshots
+
+### Verificación Tolerancias de Puertas ✅
+- ✅ **Tolerancias funcionando correctamente** en el cálculo de despieces:
+  - Alto: Resta el valor configurado (default 2mm)
+  - Ancho: Resta el valor configurado (default 3mm)
+- ✅ **Backend verificado**: `/api/despiece/calculate` acepta `doorToleranceHeight` y `doorToleranceWidth`
+- ✅ **UI inputs implementados**: En sección COLORES/PUERTAS del sidebar
+
+### Refactorización Frontend SettingsModal.jsx ✅
+- ✅ **Reducido de 4171 a 3638 líneas** (-533 líneas, -13%)
+- ✅ **Componentes extraídos**:
+  - `PricingTab.jsx` - Pestaña MÁRGENES (valores de punto, incrementos cortes especiales)
+  - `BackupsTab.jsx` - Pestaña BACKUPS (copias de seguridad, exportar Excel)
+  - `MaintenanceTab.jsx` - Pestaña MANTENIMIENTO (modo mantenimiento)
+  - `ShopClientsTab.jsx` - Pestaña MIS CLIENTES (clientes de tiendas)
+- ✅ **Todos los componentes validados**: Lint sin errores, UI funcionando
 
 ---
 
