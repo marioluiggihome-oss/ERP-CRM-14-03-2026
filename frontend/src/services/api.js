@@ -237,6 +237,139 @@ export const clientsAPI = {
 };
 
 // ============================================
+// SHOP CLIENTS (Clientes de Tiendas/Distribuidores)
+// ============================================
+
+export const shopClientsAPI = {
+  getAll: async (userId = null, search = null, status = null) => {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    if (search) params.append('search', search);
+    if (status) params.append('status', status);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/shop-clients?${params.toString()}`
+      : `${API_URL}/api/shop-clients`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener clientes de tienda');
+    return response.json();
+  },
+
+  getByOwner: async (ownerUserId, search = null) => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/shop-clients/by-owner/${ownerUserId}?${params.toString()}`
+      : `${API_URL}/api/shop-clients/by-owner/${ownerUserId}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener clientes de tienda');
+    return response.json();
+  },
+
+  getStats: async (userId = null) => {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/shop-clients/stats?${params.toString()}`
+      : `${API_URL}/api/shop-clients/stats`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Error al obtener estadísticas');
+    return response.json();
+  },
+
+  getById: async (id, userId = null) => {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/shop-clients/${id}?${params.toString()}`
+      : `${API_URL}/api/shop-clients/${id}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Cliente no encontrado');
+    return response.json();
+  },
+
+  create: async (client, userId = null) => {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/shop-clients?${params.toString()}`
+      : `${API_URL}/api/shop-clients`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(client)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al crear cliente');
+    }
+    return response.json();
+  },
+
+  update: async (id, client, userId = null) => {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/shop-clients/${id}?${params.toString()}`
+      : `${API_URL}/api/shop-clients/${id}`;
+    
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(client)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al actualizar cliente');
+    }
+    return response.json();
+  },
+
+  delete: async (id, userId = null) => {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/shop-clients/${id}?${params.toString()}`
+      : `${API_URL}/api/shop-clients/${id}`;
+    
+    const response = await fetch(url, { method: 'DELETE' });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al eliminar cliente');
+    }
+    return response.json();
+  },
+
+  import: async (clients, userId = null) => {
+    const params = new URLSearchParams();
+    if (userId) params.append('user_id', userId);
+    
+    const url = params.toString()
+      ? `${API_URL}/api/shop-clients/import?${params.toString()}`
+      : `${API_URL}/api/shop-clients/import`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clients })
+    });
+    if (!response.ok) throw new Error('Error al importar clientes');
+    return response.json();
+  }
+};
+
+// ============================================
 // PRODUCTS
 // ============================================
 

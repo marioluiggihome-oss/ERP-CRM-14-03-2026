@@ -73,6 +73,7 @@ from routes.users import router as users_router
 from routes.settings import router as settings_router
 from routes.materials import router as materials_router
 from routes.expedient import router as expedient_router
+from routes.shop_clients import router as shop_clients_router
 
 # Servicios de backup y tracking
 from services.backup_service import init_backup_service
@@ -156,6 +157,7 @@ api_router.include_router(users_router)
 api_router.include_router(settings_router)
 api_router.include_router(materials_router)
 api_router.include_router(expedient_router)
+api_router.include_router(shop_clients_router)
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 

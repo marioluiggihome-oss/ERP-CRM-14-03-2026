@@ -5,7 +5,7 @@ import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, libraries
 import CatalogImporter from './CatalogImporter';
 
 // Componentes refactorizados
-import { TelemetryTab, TelemetryAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab, DirectorTab } from './settings';
+import { TelemetryTab, TelemetryAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab, DirectorTab, ShopClientsTab } from './settings';
 
 // Lista de provincias de España con sus códigos
 const PROVINCIAS_ESPANA = [
@@ -1145,6 +1145,19 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               data-testid="clients-tab"
             >
               Clientes
+            </button>
+          )}
+          
+          {/* Tab Mis Clientes - Solo Tiendas y Admin */}
+          {(state.currentUser?.isTienda || state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+            <button
+              onClick={() => setActiveTab('shop-clients')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'shop-clients' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+              data-testid="shop-clients-tab"
+            >
+              Mis Clientes
             </button>
           )}
           
@@ -2797,6 +2810,11 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Tab Mis Clientes (Shop Clients) */}
+          {activeTab === 'shop-clients' && (
+            <ShopClientsTab currentUser={state.currentUser} />
           )}
 
           {activeTab === 'inventory' && (

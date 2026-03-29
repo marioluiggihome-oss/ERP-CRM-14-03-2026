@@ -1,11 +1,45 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado: EN DESARROLLO ACTIVO
-## Última Actualización: 26 Marzo 2026
+## Última Actualización: 29 Marzo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (26 Marzo 2026 - Sesión 2)
+## ✅ COMPLETADO EN ESTA SESIÓN (29 Marzo 2026)
+
+### Sistema de Clientes de Tiendas (Clientes-de-Tiendas)
+- ✅ **Nueva arquitectura jerárquica de clientes implementada**:
+  ```
+  LUIGGI HOME (Admins/Directores)
+     ├── Clientes-Distribuidor (tiendas con login - usuarios con isTienda)
+     │       └── Clientes-de-Tiendas (clientes finales de cada tienda)
+     └── Usuarios internos (comerciales, representantes, etc.)
+  ```
+- ✅ **Backend - Nuevo router `/api/shop-clients`** (`/app/backend/routes/shop_clients.py`):
+  - `GET /api/shop-clients` - Obtener clientes (filtrado por usuario)
+  - `GET /api/shop-clients/stats` - Estadísticas de clientes
+  - `GET /api/shop-clients/by-owner/{id}` - Clientes por tienda propietaria
+  - `POST /api/shop-clients` - Crear nuevo cliente
+  - `PUT /api/shop-clients/{id}` - Actualizar cliente
+  - `DELETE /api/shop-clients/{id}` - Eliminar cliente
+  - `POST /api/shop-clients/import` - Importar clientes CSV
+- ✅ **Permisos implementados**:
+  - Tiendas (isTienda=true) solo ven sus propios clientes
+  - Admins/Directores/Gerentes ven todos los clientes de todas las tiendas
+- ✅ **Frontend - Nueva pestaña "MIS CLIENTES"** en Panel Maestro:
+  - Header con estadísticas (Total, Activos, Potenciales)
+  - Formulario de creación/edición completo
+  - Búsqueda por nombre, empresa, email, teléfono
+  - Filtro por estado (Activo, Potencial, Inactivo)
+  - Exportar a CSV
+  - Visible para: usuarios con `isTienda=true` y administradores
+- ✅ **Nueva API en frontend** - `shopClientsAPI` en `/app/frontend/src/services/api.js`
+- ✅ **Colección MongoDB**: `shop_clients`
+- ✅ **Testing**: Backend verificado con curl, UI verificada con screenshots
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (26 Marzo 2026 - Sesión 2)
 
 ### Verificación y Testing Completo
 - ✅ **Bug Login "body stream already read"**: RESUELTO - XMLHttpRequest implementado correctamente en `Login.jsx`

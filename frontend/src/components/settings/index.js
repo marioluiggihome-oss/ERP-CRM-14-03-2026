@@ -11,4 +11,5 @@ export { default as DashboardTab } from './DashboardTab';
 export { default as UsageReportTab } from './UsageReportTab';
 export { default as BackupManagementTab } from './BackupManagementTab';
 export { default as DirectorTab } from './DirectorTab';
+export { default as ShopClientsTab } from './ShopClientsTab';
 export { SettingsProvider, useSettingsContext, formatCurrency, CHART_COLORS, buttonStyles } from './SettingsContext';
