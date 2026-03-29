@@ -1679,7 +1679,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                  <div className="flex items-center gap-2 mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded-lg">
                     <input 
                       type="checkbox" 
-                      checked={state.doorHasVeta !== false} 
+                      checked={state.doorHasVeta === true} 
                       onChange={e => setState(p => ({...p, doorHasVeta: e.target.checked}))} 
                       className="w-3.5 h-3.5 accent-amber-600"
                       id="doorHasVeta"
@@ -3002,7 +3002,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         doorColorHigh={state.doorColorHigh || ''}
         doorColorColumns={state.doorColorColumns || ''}
         sideColor={state.sideColor || ''}
-        doorHasVeta={state.doorHasVeta !== false}
+        doorHasVeta={state.doorHasVeta === true}
       />
 
       {/* Modal para añadir tablero al presupuesto - Componente extraído */}

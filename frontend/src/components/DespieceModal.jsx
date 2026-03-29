@@ -3,7 +3,7 @@ import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown,
 import { despieceAPI } from '../services/api';
 import BoardOptimizer from './BoardOptimizer';
 
-const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor, doorHasVeta = true }) => {
+const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor, doorHasVeta = false }) => {
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
