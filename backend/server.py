@@ -3463,6 +3463,54 @@ async def startup_event():
         logger.warning(f"Error creando índices (algunos pueden ya existir): {e}")
     
     # =============================================
+    # CREAR USUARIO MASTER SI NO EXISTE
+    # =============================================
+    try:
+        existing_mario = await db.users.find_one({"username": "MARIO"})
+        if not existing_mario:
+            hashed_password = bcrypt.hashpw("Mario2025*".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            master_user = {
+                "id": "user-master-mario",
+                "username": "MARIO",
+                "password": hashed_password,
+                "email": "mario@luiggihome.es",
+                "clientName": "ADMINISTRADOR MASTER",
+                "phone": "",
+                "province": "",
+                "isAdmin": True,
+                "isGerente": True,
+                "isDirectorComercial": True,
+                "isDirectorFabrica": True,
+                "isResponsableDelegacion": True,
+                "isComercial": False,
+                "isTienda": False,
+                "isPrescriptor": False,
+                "canManageArticles": True,
+                "canViewMetrics": True,
+                "canExportData": True,
+                "canManageUsers": True,
+                "canManageClients": True,
+                "canManageProducts": True,
+                "canManageSettings": True,
+                "canViewAllOrders": True,
+                "canEditAllOrders": True,
+                "canDeleteOrders": True,
+                "canAccessTelemetry": True,
+                "canAccessBackups": True,
+                "canAccessMaintenance": True,
+                "active": True,
+                "isActive": True,
+                "createdAt": datetime.now(timezone.utc),
+                "updatedAt": datetime.now(timezone.utc)
+            }
+            await db.users.insert_one(master_user)
+            logger.info("✅ Usuario MASTER (MARIO) creado automáticamente")
+        else:
+            logger.info("Usuario MARIO ya existe en la base de datos")
+    except Exception as e:
+        logger.warning(f"Error creando usuario master: {e}")
+    
+    # =============================================
     # INICIALIZAR SERVICIOS DE BACKUP Y TRACKING
     # =============================================
     try:
