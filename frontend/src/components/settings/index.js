@@ -15,4 +15,6 @@ export { default as ShopClientsTab } from './ShopClientsTab';
 export { default as PricingTab } from './PricingTab';
 export { default as BackupsTab } from './BackupsTab';
 export { default as MaintenanceTab } from './MaintenanceTab';
+export { default as InventoryTab } from './InventoryTab';
+export { default as ArmazonesTab } from './ArmazonesTab';
 export { SettingsProvider, useSettingsContext, formatCurrency, CHART_COLORS, buttonStyles } from './SettingsContext';

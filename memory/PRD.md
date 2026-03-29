@@ -38,12 +38,14 @@
 - ✅ **UI inputs implementados**: En sección COLORES/PUERTAS del sidebar
 
 ### Refactorización Frontend SettingsModal.jsx ✅
-- ✅ **Reducido de 4171 a 3638 líneas** (-533 líneas, -13%)
+- ✅ **Reducido de 4171 a 2949 líneas** (-1222 líneas, -29%)
 - ✅ **Componentes extraídos**:
   - `PricingTab.jsx` - Pestaña MÁRGENES (valores de punto, incrementos cortes especiales)
   - `BackupsTab.jsx` - Pestaña BACKUPS (copias de seguridad, exportar Excel)
   - `MaintenanceTab.jsx` - Pestaña MANTENIMIENTO (modo mantenimiento)
   - `ShopClientsTab.jsx` - Pestaña MIS CLIENTES (clientes de tiendas)
+  - `InventoryTab.jsx` - Pestaña INVENTARIO (catálogo de productos con filtros)
+  - `ArmazonesTab.jsx` - Pestaña ARMAZONES/CASCOS (materiales de estructura)
 - ✅ **Todos los componentes validados**: Lint sin errores, UI funcionando
 
 ---
