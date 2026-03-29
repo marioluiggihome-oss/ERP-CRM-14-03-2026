@@ -53,6 +53,9 @@ const App = () => {
       selectedCarcassMaterialId: INITIAL_CARCASS_MATERIALS[0].id,
       doorColorLow: '', doorColorHigh: '', doorColorColumns: '', sideColor: '',
       doorHasVeta: false, // Por defecto las puertas SIN veta
+      // Tolerancias de puertas (en mm)
+      doorToleranceHeight: 2, // Tolerancia alto puerta (mm)
+      doorToleranceWidth: 3,  // Tolerancia ancho puerta (mm)
       // Opciones GOLA (perfiles)
       golaAlto: false, golaAltoColor: '',
       golaBajo: false, golaBajoColor: '',

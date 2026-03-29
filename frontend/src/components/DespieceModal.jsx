@@ -3,7 +3,7 @@ import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown,
 import { despieceAPI } from '../services/api';
 import BoardOptimizer from './BoardOptimizer';
 
-const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor, doorHasVeta = false }) => {
+const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor, doorHasVeta = false, doorToleranceHeight = 2, doorToleranceWidth = 3 }) => {
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -105,7 +105,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         carcassMaterialName,
         `Tablero ${carcassBackThickness || 8}mm`,  // Trasera con grosor configurable desde armazón
         18,
-        carcassBackThickness || 8  // Pasar el grosor de trasera
+        carcassBackThickness || 8,  // Pasar el grosor de trasera
+        doorToleranceHeight,  // Tolerancia alto puerta (mm)
+        doorToleranceWidth    // Tolerancia ancho puerta (mm)
       );
       
       setDespieceData(result);

@@ -730,6 +730,8 @@ class DespieceRequest(BaseModel):
     backPanelMaterial: str = "Tablero 8mm"
     grosor: float = 18
     backThickness: float = 8  # Grosor de trasera en mm
+    doorToleranceHeight: float = 2  # Tolerancia alto puerta en mm
+    doorToleranceWidth: float = 3   # Tolerancia ancho puerta en mm
 
 
 class ComponentPiece(BaseModel):

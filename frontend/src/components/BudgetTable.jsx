@@ -1688,6 +1688,37 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                       PUERTA CON VETA (dirección de la fibra)
                     </label>
                  </div>
+                 
+                 {/* Tolerancias de puertas */}
+                 <div className="mt-2 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h5 className="text-[8px] font-black text-slate-600 uppercase mb-1.5">TOLERANCIAS PUERTA (mm)</h5>
+                    <div className="grid grid-cols-2 gap-2">
+                       <div>
+                          <label className="text-[7px] font-bold text-slate-500 uppercase">Alto</label>
+                          <input 
+                            type="number" 
+                            value={state.doorToleranceHeight ?? 2} 
+                            onChange={e => setState(p => ({...p, doorToleranceHeight: parseFloat(e.target.value) || 0}))} 
+                            className="w-full bg-white border border-slate-300 rounded p-1 text-[10px] font-bold text-center outline-none focus:border-orange-500"
+                            step="0.5"
+                            min="0"
+                            max="10"
+                          />
+                       </div>
+                       <div>
+                          <label className="text-[7px] font-bold text-slate-500 uppercase">Ancho</label>
+                          <input 
+                            type="number" 
+                            value={state.doorToleranceWidth ?? 3} 
+                            onChange={e => setState(p => ({...p, doorToleranceWidth: parseFloat(e.target.value) || 0}))} 
+                            className="w-full bg-white border border-slate-300 rounded p-1 text-[10px] font-bold text-center outline-none focus:border-orange-500"
+                            step="0.5"
+                            min="0"
+                            max="10"
+                          />
+                       </div>
+                    </div>
+                 </div>
               </section>
 
               {/* PERFILES GOLA - Compacto */}
@@ -3003,6 +3034,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         doorColorColumns={state.doorColorColumns || ''}
         sideColor={state.sideColor || ''}
         doorHasVeta={state.doorHasVeta === true}
+        doorToleranceHeight={state.doorToleranceHeight ?? 2}
+        doorToleranceWidth={state.doorToleranceWidth ?? 3}
       />
 
       {/* Modal para añadir tablero al presupuesto - Componente extraído */}

@@ -2677,7 +2677,9 @@ def calculate_furniture_despiece(
     carcass_material: str,
     back_material: str,
     grosor: float,
-    back_thickness: float = 8  # Grosor de trasera en mm
+    back_thickness: float = 8,  # Grosor de trasera en mm
+    door_tolerance_height: float = 2,  # Tolerancia alto puerta en mm
+    door_tolerance_width: float = 3    # Tolerancia ancho puerta en mm
 ) -> FurnitureDespiece:
     """
     Calculate the despiece (bill of materials) for a single furniture piece.
@@ -2993,21 +2995,22 @@ def calculate_furniture_despiece(
     if has_doors and num_doors > 0:
         # =============================================
         # PUERTAS - Según documento:
-        # Alto puerta = Alto mueble - 2mm (tolerancia arriba y abajo)
-        # Ancho puerta (1P) = Ancho mueble - 3mm (tolerancia)
-        # Ancho puerta (2P) = (Ancho mueble - 3mm entre puertas) / 2
+        # Alto puerta = Alto mueble - toleranciaAlto (configurable, por defecto 2mm)
+        # Ancho puerta (1P) = Ancho mueble - toleranciaAncho (configurable, por defecto 3mm)
+        # Ancho puerta (2P) = (Ancho mueble - toleranciaAncho entre puertas) / 2
         # =============================================
-        door_height_tolerance = 0.2  # 2mm total en cm
-        door_gap_between = 0.3       # 3mm entre puertas en cm
-        door_edge_tolerance = 0.15   # 1.5mm de tolerancia lateral
+        door_height_tolerance = door_tolerance_height / 10  # Convertir mm a cm
+        door_width_tolerance = door_tolerance_width / 10    # Convertir mm a cm
+        door_gap_between = door_width_tolerance             # Separación entre puertas = tolerancia ancho
+        door_edge_tolerance = door_width_tolerance / 2      # Tolerancia lateral = tolerancia/2
         
         # Alto de puerta: altura del mueble - tolerancia
         door_height = h - door_height_tolerance
         
         # Ancho de puerta según número de puertas
         if num_doors == 1:
-            # Puerta única = ancho total - 3mm (1.5mm cada lado)
-            door_width = w - (2 * door_edge_tolerance)
+            # Puerta única = ancho total - tolerancia
+            door_width = w - door_width_tolerance
         elif num_doors == 2:
             # Dos puertas = (ancho - separación entre puertas) / 2
             door_width = (w - door_gap_between) / 2
@@ -3123,7 +3126,9 @@ async def calculate_despiece(request: DespieceRequest):
                 request.carcassMaterial,
                 request.backPanelMaterial,
                 request.grosor,
-                request.backThickness
+                request.backThickness,
+                request.doorToleranceHeight,
+                request.doorToleranceWidth
             )
             despiece_items.append(furniture_despiece)
         
