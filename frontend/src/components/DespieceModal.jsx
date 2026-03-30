@@ -1925,11 +1925,27 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
 
                         {/* Leyenda de veta */}
                         <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 flex items-center gap-4">
-                          <span className="text-emerald-700 font-black text-xs uppercase tracking-widest">📐 Orientación de Veta:</span>
+                          <span className="text-emerald-700 font-black text-xs uppercase tracking-widest">Orientación de Veta:</span>
                           <span className="bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                            ↕ VERTICAL (por defecto)
+                            {doorHasVeta ? '↕ VERTICAL' : 'SIN VETA'}
                           </span>
-                          <span className="text-emerald-600 text-xs">La veta sigue la dirección del ALTO de la puerta</span>
+                          <span className="text-emerald-600 text-xs">{doorHasVeta ? 'La veta sigue la dirección del ALTO de la puerta' : 'Las puertas no llevan veta'}</span>
+                        </div>
+
+                        {/* Tolerancias de Puertas */}
+                        <div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-4">
+                          <h4 className="text-slate-700 font-black text-xs uppercase tracking-widest mb-3">Tolerancias Puerta (mm)</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white border border-slate-300 rounded-xl p-4 text-center">
+                              <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Alto</span>
+                              <span className="text-2xl font-black text-slate-800">{doorToleranceHeight}</span>
+                            </div>
+                            <div className="bg-white border border-slate-300 rounded-xl p-4 text-center">
+                              <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Ancho</span>
+                              <span className="text-2xl font-black text-slate-800">{doorToleranceWidth}</span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-2 text-center italic">Las tolerancias ya están descontadas en las medidas de las puertas</p>
                         </div>
 
                         {/* Tablas detalladas por tipo */}
