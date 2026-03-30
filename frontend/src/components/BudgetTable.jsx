@@ -1487,47 +1487,49 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               </section>
               )}
               
-              {/* TOGGLE MM/CM + Tolerancia Puertas */}
-              <section className="pt-1.5 border-t border-slate-200 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[7px] font-black text-slate-500 uppercase">MEDIDAS</span>
-                  <button
-                    onClick={() => setUseMillimeters(!useMillimeters)}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border transition-all text-[8px] font-bold ${
-                      useMillimeters 
-                        ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                        : 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                    }`}
-                    data-testid="unit-toggle"
-                  >
-                    <span className={!useMillimeters ? 'opacity-100' : 'opacity-40'}>CM</span>
-                    <span className="text-slate-300">/</span>
-                    <span className={useMillimeters ? 'opacity-100' : 'opacity-40'}>MM</span>
-                  </button>
-                </div>
-                {/* Tolerancia Puertas */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[7px] font-black text-slate-500 uppercase">TOL. PUERTA</span>
-                  <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-lg">
-                    <span className="text-[7px] text-slate-400">A:</span>
-                    <input 
-                      type="number" 
-                      value={state.doorToleranceHeight ?? 2} 
-                      onChange={e => setState(p => ({...p, doorToleranceHeight: parseFloat(e.target.value) || 0}))} 
-                      className="w-6 bg-white border border-slate-300 rounded px-0.5 py-0.5 text-[8px] font-bold text-center outline-none focus:border-orange-500"
-                      step="0.5" min="0" max="10"
-                      data-testid="door-tolerance-height"
-                    />
-                    <span className="text-[7px] text-slate-400">N:</span>
-                    <input 
-                      type="number" 
-                      value={state.doorToleranceWidth ?? 3} 
-                      onChange={e => setState(p => ({...p, doorToleranceWidth: parseFloat(e.target.value) || 0}))} 
-                      className="w-6 bg-white border border-slate-300 rounded px-0.5 py-0.5 text-[8px] font-bold text-center outline-none focus:border-orange-500"
-                      step="0.5" min="0" max="10"
-                      data-testid="door-tolerance-width"
-                    />
-                    <span className="text-[6px] text-slate-400">mm</span>
+              {/* MEDIDAS + Tolerancia Puertas - Todo en una línea */}
+              <section className="pt-1.5 border-t border-slate-200">
+                <div className="flex items-center justify-between gap-2">
+                  {/* CM/MM Toggle */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[7px] font-black text-slate-500 uppercase">CM/MM</span>
+                    <button
+                      onClick={() => setUseMillimeters(!useMillimeters)}
+                      className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border transition-all text-[7px] font-bold ${
+                        useMillimeters 
+                          ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                          : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                      }`}
+                      data-testid="unit-toggle"
+                    >
+                      <span className={!useMillimeters ? 'opacity-100' : 'opacity-40'}>CM</span>
+                      <span className="text-slate-300">/</span>
+                      <span className={useMillimeters ? 'opacity-100' : 'opacity-40'}>MM</span>
+                    </button>
+                  </div>
+                  {/* Tolerancia Puertas */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[7px] font-black text-slate-500 uppercase">TOL.</span>
+                    <div className="flex items-center gap-0.5 px-1 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
+                      <span className="text-[7px] text-emerald-600 font-semibold">A:</span>
+                      <input 
+                        type="number" 
+                        value={state.doorToleranceHeight ?? 2} 
+                        onChange={e => setState(p => ({...p, doorToleranceHeight: parseFloat(e.target.value) || 0}))} 
+                        className="w-5 bg-white border border-emerald-300 rounded px-0.5 py-0.5 text-[8px] font-bold text-center text-emerald-700 outline-none focus:border-orange-500"
+                        step="0.5" min="0" max="10"
+                        data-testid="door-tolerance-height"
+                      />
+                      <span className="text-[7px] text-emerald-600 font-semibold">N:</span>
+                      <input 
+                        type="number" 
+                        value={state.doorToleranceWidth ?? 3} 
+                        onChange={e => setState(p => ({...p, doorToleranceWidth: parseFloat(e.target.value) || 0}))} 
+                        className="w-5 bg-white border border-emerald-300 rounded px-0.5 py-0.5 text-[8px] font-bold text-center text-emerald-700 outline-none focus:border-orange-500"
+                        step="0.5" min="0" max="10"
+                        data-testid="door-tolerance-width"
+                      />
+                    </div>
                   </div>
                 </div>
               </section>
