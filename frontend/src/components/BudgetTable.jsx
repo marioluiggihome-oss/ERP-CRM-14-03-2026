@@ -1514,7 +1514,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               {/* TOGGLE MM/CM - Selector de unidad de medida */}
               <section className="space-y-1.5 pt-2 border-t border-slate-200">
                 <h4 className="text-[9px] font-black text-slate-600 uppercase tracking-widest">
-                  📐 UNIDAD MEDIDAS
+                  UNIDAD MEDIDAS
                 </h4>
                 <button
                   onClick={() => setUseMillimeters(!useMillimeters)}
@@ -1539,9 +1539,38 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     MM
                   </span>
                 </button>
-                <p className="text-[8px] text-slate-400 text-center">
-                  Medidas en {useMillimeters ? 'milímetros' : 'centímetros'}
-                </p>
+              </section>
+              
+              {/* TOLERANCIAS PUERTA - Compacto */}
+              <section className="pt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[8px] font-black text-slate-500 uppercase whitespace-nowrap">TOL. PUERTA</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[7px] text-slate-400">A:</span>
+                    <input 
+                      type="number" 
+                      value={state.doorToleranceHeight ?? 2} 
+                      onChange={e => setState(p => ({...p, doorToleranceHeight: parseFloat(e.target.value) || 0}))} 
+                      className="w-8 bg-slate-50 border border-slate-300 rounded px-1 py-0.5 text-[9px] font-bold text-center outline-none focus:border-orange-500"
+                      step="0.5"
+                      min="0"
+                      max="10"
+                      data-testid="door-tolerance-height"
+                    />
+                    <span className="text-[7px] text-slate-400">N:</span>
+                    <input 
+                      type="number" 
+                      value={state.doorToleranceWidth ?? 3} 
+                      onChange={e => setState(p => ({...p, doorToleranceWidth: parseFloat(e.target.value) || 0}))} 
+                      className="w-8 bg-slate-50 border border-slate-300 rounded px-1 py-0.5 text-[9px] font-bold text-center outline-none focus:border-orange-500"
+                      step="0.5"
+                      min="0"
+                      max="10"
+                      data-testid="door-tolerance-width"
+                    />
+                    <span className="text-[7px] text-slate-400">mm</span>
+                  </div>
+                </div>
               </section>
               
               {/* GRUPO DE PRECIOS - Solo para ZC en modo MONTADA */}
@@ -1687,37 +1716,6 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     <label htmlFor="doorHasVeta" className="text-[8px] font-bold text-amber-800 cursor-pointer select-none">
                       PUERTA CON VETA (dirección de la fibra)
                     </label>
-                 </div>
-                 
-                 {/* Tolerancias de puertas */}
-                 <div className="mt-2 p-2 bg-slate-50 border border-slate-200 rounded-lg">
-                    <h5 className="text-[8px] font-black text-slate-600 uppercase mb-1.5">TOLERANCIAS PUERTA (mm)</h5>
-                    <div className="grid grid-cols-2 gap-2">
-                       <div>
-                          <label className="text-[7px] font-bold text-slate-500 uppercase">Alto</label>
-                          <input 
-                            type="number" 
-                            value={state.doorToleranceHeight ?? 2} 
-                            onChange={e => setState(p => ({...p, doorToleranceHeight: parseFloat(e.target.value) || 0}))} 
-                            className="w-full bg-white border border-slate-300 rounded p-1 text-[10px] font-bold text-center outline-none focus:border-orange-500"
-                            step="0.5"
-                            min="0"
-                            max="10"
-                          />
-                       </div>
-                       <div>
-                          <label className="text-[7px] font-bold text-slate-500 uppercase">Ancho</label>
-                          <input 
-                            type="number" 
-                            value={state.doorToleranceWidth ?? 3} 
-                            onChange={e => setState(p => ({...p, doorToleranceWidth: parseFloat(e.target.value) || 0}))} 
-                            className="w-full bg-white border border-slate-300 rounded p-1 text-[10px] font-bold text-center outline-none focus:border-orange-500"
-                            step="0.5"
-                            min="0"
-                            max="10"
-                          />
-                       </div>
-                    </div>
                  </div>
               </section>
 
