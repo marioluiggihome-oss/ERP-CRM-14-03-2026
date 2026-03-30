@@ -1483,30 +1483,6 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               </section>
               )}
               
-              {/* SELECTOR DE TARIFA/ZONA - Solo para ZC (las zonas Z1-Z12) */}
-              {state.currentModule === 'montada' && state.currentLibrary === 'ZC' && (
-              <section className="space-y-1.5 pt-2 border-t border-cyan-100">
-                <h4 className="text-[9px] font-black text-cyan-600 uppercase tracking-widest">
-                  💰 ZONA PUNTOS ZC
-                </h4>
-                <select 
-                  className="w-full bg-cyan-50 text-cyan-900 border-2 border-cyan-200 rounded-xl p-2 text-[10px] font-black outline-none cursor-pointer focus:border-cyan-500 text-center" 
-                  value={selectedZone}
-                  onChange={e => setSelectedZone(e.target.value)}
-                  data-testid="zone-selector"
-                >
-                  {[...Array(12)].map((_, i) => (
-                    <option key={`Z${i+1}`} value={`Z${i+1}`}>
-                      Zona Z{i+1}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[8px] text-slate-400 text-center">
-                  Los precios se muestran según {selectedZone}
-                </p>
-              </section>
-              )}
-              
               {/* TARIFA MV - Selector unificado para MV (T1-T21) */}
               {state.currentModule === 'montada' && state.currentLibrary === 'MV' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
