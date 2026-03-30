@@ -1326,12 +1326,12 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
       <div className="flex flex-1 overflow-hidden">
         <aside 
           style={{ width: isConfigOpen ? sidebarWidth : 0, minWidth: isConfigOpen ? sidebarWidth : 0 }} 
-          className={`bg-white border-r border-indigo-50 flex flex-col no-print transition-all duration-300 relative shadow-inner ${!isConfigOpen ? 'opacity-0 pointer-events-none overflow-hidden' : 'opacity-100 overflow-visible'}`}
+          className={`bg-white border-r border-indigo-50 flex flex-col no-print transition-all duration-300 relative shadow-inner h-[calc(100vh-70px)] ${!isConfigOpen ? 'opacity-0 pointer-events-none overflow-hidden' : 'opacity-100'}`}
         >
            {isConfigOpen && <div onMouseDown={() => { isResizingSidebar.current = true; }} className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-600 z-50"></div>}
-           <div className={`p-4 space-y-3 overflow-y-auto scrollbar-thin flex-1 ${!isConfigOpen ? 'invisible' : 'visible'}`}>
+           <div className={`p-3 space-y-2 overflow-y-auto scrollbar-thin flex-1 ${!isConfigOpen ? 'invisible' : 'visible'}`}>
               <section className="space-y-2">
-                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic flex items-center gap-1">📂 DATOS EXPEDIENTE</h4>
+                 <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic flex items-center gap-1">DATOS EXPEDIENTE</h4>
                  <div className="space-y-1.5">
                     <div className="relative flex gap-1">
                       <div className="relative flex-1">
@@ -1511,64 +1511,46 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               </section>
               )}
               
-              {/* TOGGLE MM/CM - Selector de unidad de medida */}
-              <section className="space-y-1.5 pt-2 border-t border-slate-200">
-                <h4 className="text-[9px] font-black text-slate-600 uppercase tracking-widest">
-                  UNIDAD MEDIDAS
-                </h4>
-                <button
-                  onClick={() => setUseMillimeters(!useMillimeters)}
-                  className={`w-full flex items-center justify-between p-2 rounded-xl border-2 transition-all ${
-                    useMillimeters 
-                      ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                      : 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                  }`}
-                  data-testid="unit-toggle"
-                >
-                  <span className={`text-[10px] font-black ${!useMillimeters ? 'opacity-100' : 'opacity-40'}`}>
-                    CM
-                  </span>
-                  <div className={`w-10 h-5 rounded-full relative transition-all ${
-                    useMillimeters ? 'bg-blue-400' : 'bg-emerald-400'
-                  }`}>
-                    <div className={`absolute w-4 h-4 bg-white rounded-full top-0.5 shadow-md transition-all ${
-                      useMillimeters ? 'left-5' : 'left-0.5'
-                    }`} />
-                  </div>
-                  <span className={`text-[10px] font-black ${useMillimeters ? 'opacity-100' : 'opacity-40'}`}>
-                    MM
-                  </span>
-                </button>
-              </section>
-              
-              {/* TOLERANCIAS PUERTA - Compacto */}
-              <section className="pt-2 border-t border-slate-200">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[8px] font-black text-slate-500 uppercase whitespace-nowrap">TOL. PUERTA</span>
+              {/* TOGGLE MM/CM + TOLERANCIAS - Ultra compacto */}
+              <section className="pt-1.5 border-t border-slate-200 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[7px] font-black text-slate-500 uppercase">MEDIDAS</span>
+                  <button
+                    onClick={() => setUseMillimeters(!useMillimeters)}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border transition-all text-[8px] font-bold ${
+                      useMillimeters 
+                        ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                        : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                    }`}
+                    data-testid="unit-toggle"
+                  >
+                    <span className={!useMillimeters ? 'opacity-100' : 'opacity-40'}>CM</span>
+                    <span className="text-slate-300">/</span>
+                    <span className={useMillimeters ? 'opacity-100' : 'opacity-40'}>MM</span>
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[7px] font-black text-slate-500 uppercase">TOL. PUERTA</span>
                   <div className="flex items-center gap-1">
-                    <span className="text-[7px] text-slate-400">A:</span>
+                    <span className="text-[6px] text-slate-400">A:</span>
                     <input 
                       type="number" 
                       value={state.doorToleranceHeight ?? 2} 
                       onChange={e => setState(p => ({...p, doorToleranceHeight: parseFloat(e.target.value) || 0}))} 
-                      className="w-8 bg-slate-50 border border-slate-300 rounded px-1 py-0.5 text-[9px] font-bold text-center outline-none focus:border-orange-500"
-                      step="0.5"
-                      min="0"
-                      max="10"
+                      className="w-7 bg-slate-50 border border-slate-200 rounded px-0.5 py-0.5 text-[8px] font-bold text-center outline-none focus:border-orange-500"
+                      step="0.5" min="0" max="10"
                       data-testid="door-tolerance-height"
                     />
-                    <span className="text-[7px] text-slate-400">N:</span>
+                    <span className="text-[6px] text-slate-400">N:</span>
                     <input 
                       type="number" 
                       value={state.doorToleranceWidth ?? 3} 
                       onChange={e => setState(p => ({...p, doorToleranceWidth: parseFloat(e.target.value) || 0}))} 
-                      className="w-8 bg-slate-50 border border-slate-300 rounded px-1 py-0.5 text-[9px] font-bold text-center outline-none focus:border-orange-500"
-                      step="0.5"
-                      min="0"
-                      max="10"
+                      className="w-7 bg-slate-50 border border-slate-200 rounded px-0.5 py-0.5 text-[8px] font-bold text-center outline-none focus:border-orange-500"
+                      step="0.5" min="0" max="10"
                       data-testid="door-tolerance-width"
                     />
-                    <span className="text-[7px] text-slate-400">mm</span>
+                    <span className="text-[6px] text-slate-400">mm</span>
                   </div>
                 </div>
               </section>
@@ -1675,7 +1657,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               {/* ARMAZÓN - Solo en modo MONTADA - Filtrado por biblioteca */}
               {state.currentModule === 'montada' && (
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
-                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">🏗️ ARMAZÓN ({state.currentLibrary})</h4>
+                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">ARMAZÓN ({state.currentLibrary})</h4>
                  <select className="w-full bg-orange-50 text-orange-900 border-2 border-orange-200 rounded-xl p-2 text-[9px] font-black outline-none cursor-pointer focus:border-orange-500" value={state.selectedCarcassMaterialId} onChange={e => setState(p => ({...p, selectedCarcassMaterialId: e.target.value}))}>
                     {state.carcassMaterials
                       .filter(m => !m.library || m.library === state.currentLibrary)
@@ -1697,7 +1679,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               </section>
 
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
-                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">✏️ COLORES</h4>
+                 <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">COLORES</h4>
                  <div className="grid grid-cols-2 gap-1">
                     <input type="text" value={state.doorColorLow} onChange={e => setState(p => ({...p, doorColorLow: e.target.value}))} className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[8px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P.Bajos" />
                     <input type="text" value={state.doorColorHigh} onChange={e => setState(p => ({...p, doorColorHigh: e.target.value}))} className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[8px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="P.Altos" />
