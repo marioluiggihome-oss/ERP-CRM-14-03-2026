@@ -12,11 +12,11 @@ export const authAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error de autenticación');
+      throw new Error(data.detail || 'Error de autenticación');
     }
-    return response.json();
+    return data;
   },
 
   init: async () => {
@@ -66,11 +66,11 @@ export const usersAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(user)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al crear usuario');
+      throw new Error(data.detail || 'Error al crear usuario');
     }
-    return response.json();
+    return data;
   },
 
   update: async (id, user) => {
@@ -79,19 +79,22 @@ export const usersAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(user)
     });
-    if (!response.ok) throw new Error('Error al actualizar usuario');
-    return response.json();
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Error al actualizar usuario');
+    }
+    return data;
   },
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/users/${id}`, {
       method: 'DELETE'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar usuario');
+      throw new Error(data.detail || 'Error al eliminar usuario');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -124,11 +127,11 @@ export const clientsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(client)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al crear cliente');
+      throw new Error(data.detail || 'Error al crear cliente');
     }
-    return response.json();
+    return data;
   },
 
   update: async (id, client) => {
@@ -137,11 +140,11 @@ export const clientsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(client)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al actualizar cliente');
+      throw new Error(data.detail || 'Error al actualizar cliente');
     }
-    return response.json();
+    return data;
   },
 
   delete: async (id, force = false) => {
@@ -202,11 +205,11 @@ export const clientsAPI = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al convertir contacto');
+      throw new Error(data.detail || 'Error al convertir contacto');
     }
-    return response.json();
+    return data;
   },
 
   activate: async (id, codigo) => {
@@ -215,11 +218,11 @@ export const clientsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ codigo })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al activar cliente');
+      throw new Error(data.detail || 'Error al activar cliente');
     }
-    return response.json();
+    return data;
   },
 
   linkUser: async (id, userId) => {
@@ -228,11 +231,11 @@ export const clientsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al vincular usuario');
+      throw new Error(data.detail || 'Error al vincular usuario');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -308,11 +311,11 @@ export const shopClientsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(client)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al crear cliente');
+      throw new Error(data.detail || 'Error al crear cliente');
     }
-    return response.json();
+    return data;
   },
 
   update: async (id, client, userId = null) => {
@@ -328,11 +331,11 @@ export const shopClientsAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(client)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al actualizar cliente');
+      throw new Error(data.detail || 'Error al actualizar cliente');
     }
-    return response.json();
+    return data;
   },
 
   delete: async (id, userId = null) => {
@@ -344,11 +347,11 @@ export const shopClientsAPI = {
       : `${API_URL}/api/shop-clients/${id}`;
     
     const response = await fetch(url, { method: 'DELETE' });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar cliente');
+      throw new Error(data.detail || 'Error al eliminar cliente');
     }
-    return response.json();
+    return data;
   },
 
   import: async (clients, userId = null) => {
@@ -570,11 +573,11 @@ export const materialsAPI = {
     const response = await fetch(`${API_URL}/api/materials/${id}`, {
       method: 'DELETE'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar material');
+      throw new Error(data.detail || 'Error al eliminar material');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -1002,11 +1005,11 @@ export const despieceAPI = {
         doorToleranceWidth
       })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al calcular despiece');
+      throw new Error(data.detail || 'Error al calcular despiece');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -1021,11 +1024,11 @@ export const digitalizadorAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64, filename })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al analizar imagen');
+      throw new Error(data.detail || 'Error al analizar imagen');
     }
-    return response.json();
+    return data;
   },
 
   exportCSV: async (lines, materialCode = "40-ESTEITEX16", materialThickness = 16.0) => {
@@ -1034,11 +1037,11 @@ export const digitalizadorAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lines, materialCode, materialThickness })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al exportar CSV');
+      throw new Error(data.detail || 'Error al exportar CSV');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -1054,31 +1057,31 @@ export const armariosAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(project)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al crear proyecto');
+      throw new Error(data.detail || 'Error al crear proyecto');
     }
-    return response.json();
+    return data;
   },
 
   // Obtener lista de proyectos
   getAll: async (userId = "") => {
     const response = await fetch(`${API_URL}/api/armarios/projects?userId=${userId}`);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener proyectos');
+      throw new Error(data.detail || 'Error al obtener proyectos');
     }
-    return response.json();
+    return data;
   },
 
   // Obtener un proyecto específico
   get: async (projectId) => {
     const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener proyecto');
+      throw new Error(data.detail || 'Error al obtener proyecto');
     }
-    return response.json();
+    return data;
   },
 
   // Actualizar proyecto
@@ -1088,11 +1091,11 @@ export const armariosAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al actualizar proyecto');
+      throw new Error(data.detail || 'Error al actualizar proyecto');
     }
-    return response.json();
+    return data;
   },
 
   // Eliminar proyecto
@@ -1100,11 +1103,11 @@ export const armariosAPI = {
     const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`, {
       method: 'DELETE'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar proyecto');
+      throw new Error(data.detail || 'Error al eliminar proyecto');
     }
-    return response.json();
+    return data;
   },
 
   // IA: Configurar módulos automáticamente
@@ -1114,11 +1117,11 @@ export const armariosAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ instruction, current_config: currentConfig })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al configurar con IA');
+      throw new Error(data.detail || 'Error al configurar con IA');
     }
-    return response.json();
+    return data;
   },
 
   // IA: Generar render realista
@@ -1128,11 +1131,11 @@ export const armariosAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al generar render');
+      throw new Error(data.detail || 'Error al generar render');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -1217,11 +1220,11 @@ export const librariesAPI = {
     const response = await fetch(`${API_URL}/api/libraries/${code}`, {
       method: 'DELETE'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar biblioteca');
+      throw new Error(data.detail || 'Error al eliminar biblioteca');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -1235,20 +1238,20 @@ export const montadoresAPI = {
       ? `${API_URL}/api/montadores?status=${status}`
       : `${API_URL}/api/montadores`;
     const response = await fetch(url);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener montadores');
+      throw new Error(data.detail || 'Error al obtener montadores');
     }
-    return response.json();
+    return data;
   },
 
   getOne: async (id) => {
     const response = await fetch(`${API_URL}/api/montadores/${id}`);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener montador');
+      throw new Error(data.detail || 'Error al obtener montador');
     }
-    return response.json();
+    return data;
   },
 
   create: async (montador) => {
@@ -1257,11 +1260,11 @@ export const montadoresAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(montador)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al crear montador');
+      throw new Error(data.detail || 'Error al crear montador');
     }
-    return response.json();
+    return data;
   },
 
   update: async (id, montador) => {
@@ -1270,22 +1273,22 @@ export const montadoresAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(montador)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al actualizar montador');
+      throw new Error(data.detail || 'Error al actualizar montador');
     }
-    return response.json();
+    return data;
   },
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/montadores/${id}`, {
       method: 'DELETE'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar montador');
+      throw new Error(data.detail || 'Error al eliminar montador');
     }
-    return response.json();
+    return data;
   },
 
   getMontajes: async (montadorId, status = null) => {
@@ -1293,11 +1296,11 @@ export const montadoresAPI = {
       ? `${API_URL}/api/montadores/${montadorId}/montajes?status=${status}`
       : `${API_URL}/api/montadores/${montadorId}/montajes`;
     const response = await fetch(url);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener montajes');
+      throw new Error(data.detail || 'Error al obtener montajes');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -1317,20 +1320,20 @@ export const montajesAPI = {
       ? `${API_URL}/api/montajes?${params.toString()}`
       : `${API_URL}/api/montajes`;
     const response = await fetch(url);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener montajes');
+      throw new Error(data.detail || 'Error al obtener montajes');
     }
-    return response.json();
+    return data;
   },
 
   getOne: async (id) => {
     const response = await fetch(`${API_URL}/api/montajes/${id}`);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener montaje');
+      throw new Error(data.detail || 'Error al obtener montaje');
     }
-    return response.json();
+    return data;
   },
 
   create: async (montaje) => {
@@ -1339,11 +1342,11 @@ export const montajesAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(montaje)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al crear montaje');
+      throw new Error(data.detail || 'Error al crear montaje');
     }
-    return response.json();
+    return data;
   },
 
   update: async (id, montaje) => {
@@ -1352,22 +1355,22 @@ export const montajesAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(montaje)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al actualizar montaje');
+      throw new Error(data.detail || 'Error al actualizar montaje');
     }
-    return response.json();
+    return data;
   },
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/montajes/${id}`, {
       method: 'DELETE'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar montaje');
+      throw new Error(data.detail || 'Error al eliminar montaje');
     }
-    return response.json();
+    return data;
   }
 };
 
@@ -1389,20 +1392,20 @@ export const fabricaAPI = {
       ? `${API_URL}/api/fabrica/orders?${params.toString()}`
       : `${API_URL}/api/fabrica/orders`;
     const response = await fetch(url);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener órdenes');
+      throw new Error(data.detail || 'Error al obtener órdenes');
     }
-    return response.json();
+    return data;
   },
 
   getOrder: async (orderId) => {
     const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}`);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener orden');
+      throw new Error(data.detail || 'Error al obtener orden');
     }
-    return response.json();
+    return data;
   },
 
   createOrder: async (order, userId = '', userName = '') => {
@@ -1418,11 +1421,11 @@ export const fabricaAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al crear orden');
+      throw new Error(data.detail || 'Error al crear orden');
     }
-    return response.json();
+    return data;
   },
 
   updateOrder: async (orderId, update) => {
@@ -1431,22 +1434,22 @@ export const fabricaAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al actualizar orden');
+      throw new Error(data.detail || 'Error al actualizar orden');
     }
-    return response.json();
+    return data;
   },
 
   deleteOrder: async (orderId) => {
     const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}`, {
       method: 'DELETE'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al eliminar orden');
+      throw new Error(data.detail || 'Error al eliminar orden');
     }
-    return response.json();
+    return data;
   },
 
   updateOrderStatus: async (orderId, status, notes = '') => {
@@ -1456,11 +1459,11 @@ export const fabricaAPI = {
     const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/status?${params.toString()}`, {
       method: 'PATCH'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al actualizar estado');
+      throw new Error(data.detail || 'Error al actualizar estado');
     }
-    return response.json();
+    return data;
   },
 
   setDeliveryDate: async (orderId, estimatedDate, notes = '') => {
@@ -1470,11 +1473,11 @@ export const fabricaAPI = {
     const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/delivery-date?${params.toString()}`, {
       method: 'PATCH'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al establecer fecha de entrega');
+      throw new Error(data.detail || 'Error al establecer fecha de entrega');
     }
-    return response.json();
+    return data;
   },
 
   // Importación
@@ -1484,11 +1487,11 @@ export const fabricaAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pdfBase64, fileName })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al importar PDF');
+      throw new Error(data.detail || 'Error al importar PDF');
     }
-    return response.json();
+    return data;
   },
 
   importFromBudget: async (budgetId, userId = '', userName = '') => {
@@ -1499,31 +1502,31 @@ export const fabricaAPI = {
     const response = await fetch(`${API_URL}/api/fabrica/import-from-budget/${budgetId}?${params.toString()}`, {
       method: 'POST'
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al importar desde presupuesto');
+      throw new Error(data.detail || 'Error al importar desde presupuesto');
     }
-    return response.json();
+    return data;
   },
 
   // Dashboard y estadísticas
   getDashboardStats: async () => {
     const response = await fetch(`${API_URL}/api/fabrica/dashboard/stats`);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener estadísticas');
+      throw new Error(data.detail || 'Error al obtener estadísticas');
     }
-    return response.json();
+    return data;
   },
 
   // Despiece de orden
   getOrderDespiece: async (orderId) => {
     const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/despiece`);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener despiece');
+      throw new Error(data.detail || 'Error al obtener despiece');
     }
-    return response.json();
+    return data;
   },
 
   // Descargar informe de producción PDF
@@ -1587,21 +1590,21 @@ export const ordersAPI = {
       : `${API_URL}/api/orders`;
     
     const response = await fetch(url);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener pedidos');
+      throw new Error(data.detail || 'Error al obtener pedidos');
     }
-    return response.json();
+    return data;
   },
 
   // Obtener detalle de un pedido
   getOrder: async (orderId) => {
     const response = await fetch(`${API_URL}/api/orders/${orderId}`);
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al obtener pedido');
+      throw new Error(data.detail || 'Error al obtener pedido');
     }
-    return response.json();
+    return data;
   },
 
   // Enviar copia de pedido con adjuntos
@@ -1615,10 +1618,10 @@ export const ordersAPI = {
         additional_message: additionalMessage
       })
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Error al enviar copia');
+      throw new Error(data.detail || 'Error al enviar copia');
     }
-    return response.json();
+    return data;
   }
 };
