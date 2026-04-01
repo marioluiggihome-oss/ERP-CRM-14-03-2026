@@ -171,10 +171,12 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       // MV: usar tarifa seleccionada (T1-T21)
       return zp[selectedTariff] ?? zp.T1 ?? (typeof product.points === 'number' ? product.points : product.points?.T1) ?? 0;
     } else {
-      // ZC: usar zona seleccionada (Z1-Z12)
-      return zp[selectedZone] ?? zp.Z1 ?? (typeof product.points === 'number' ? product.points : product.points?.Z1) ?? 0;
+      // ZC: usar GRUPO DE PRECIOS (globalFinish -> mapea a Z1-Z12)
+      const finishObj = DOOR_FINISHES.find(f => f.name === state.globalFinish) || DOOR_FINISHES[0];
+      const zoneKey = finishObj.group; // Z1, Z2, etc.
+      return zp[zoneKey] ?? zp.Z1 ?? (typeof product.points === 'number' ? product.points : product.points?.Z1) ?? 0;
     }
-  }, [selectedTariff, selectedZone]);
+  }, [selectedTariff, state.globalFinish]);
 
   // Cargar productos de despiece cuando cambie el módulo a despiece
   useEffect(() => {
@@ -679,7 +681,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     });
     
     return sorted;
-  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory, selectedApertura, filterWidth, filterHeight, filterDepth, sortColumn, sortDirection, selectedTariff, selectedZone, getProductPrice]);
+  }, [allProducts, searchQuery, state.currentModule, catalogs, selectedPrograma, selectedSeries, selectedCategory, selectedApertura, filterWidth, filterHeight, filterDepth, sortColumn, sortDirection, selectedTariff, state.globalFinish, getProductPrice]);
 
   const budgetKey = state.currentModule === 'montada' ? 'budgetItemsMontada' : 'budgetItemsDespiece';
 
