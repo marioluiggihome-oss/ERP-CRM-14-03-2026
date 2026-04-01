@@ -1510,24 +1510,24 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     </button>
                   </div>
                   {/* Tolerancia Puertas */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <span className="text-[7px] font-black text-slate-500 uppercase">TOL.</span>
-                    <div className="flex items-center gap-0.5 px-1 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
-                      <span className="text-[7px] text-emerald-600 font-semibold">A:</span>
+                    <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50 border border-emerald-200 rounded-md">
+                      <span className="text-[8px] text-emerald-600 font-bold">A:</span>
                       <input 
                         type="number" 
                         value={state.doorToleranceHeight ?? 2} 
                         onChange={e => setState(p => ({...p, doorToleranceHeight: parseFloat(e.target.value) || 0}))} 
-                        className="w-5 bg-white border border-emerald-300 rounded px-0.5 py-0.5 text-[8px] font-bold text-center text-emerald-700 outline-none focus:border-orange-500"
+                        className="w-8 h-5 bg-white border border-emerald-300 rounded text-[10px] font-bold text-center text-emerald-700 outline-none focus:border-orange-500"
                         step="0.5" min="0" max="10"
                         data-testid="door-tolerance-height"
                       />
-                      <span className="text-[7px] text-emerald-600 font-semibold">N:</span>
+                      <span className="text-[8px] text-emerald-600 font-bold">N:</span>
                       <input 
                         type="number" 
                         value={state.doorToleranceWidth ?? 3} 
                         onChange={e => setState(p => ({...p, doorToleranceWidth: parseFloat(e.target.value) || 0}))} 
-                        className="w-5 bg-white border border-emerald-300 rounded px-0.5 py-0.5 text-[8px] font-bold text-center text-emerald-700 outline-none focus:border-orange-500"
+                        className="w-8 h-5 bg-white border border-emerald-300 rounded text-[10px] font-bold text-center text-emerald-700 outline-none focus:border-orange-500"
                         step="0.5" min="0" max="10"
                         data-testid="door-tolerance-width"
                       />
