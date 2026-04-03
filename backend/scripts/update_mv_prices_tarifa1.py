@@ -3,11 +3,14 @@
 Script para actualizar TODOS los precios de productos MV según TARIFA 1
 Basado en extracción manual de las 5 páginas de tarifa proporcionadas por el usuario
 """
+import os
 from pymongo import MongoClient
 from datetime import datetime, timezone
 
-client = MongoClient('mongodb://localhost:27017')
-db = client['luiggi_home']
+MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
+client = MongoClient(MONGO_URL)
+db = client[DB_NAME]
 
 # ============================================================================
 # PÁGINA 1: PUERTAS, VITRINA, REJILLA CONFESIONARIO

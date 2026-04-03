@@ -2,7 +2,8 @@
 Routes for Global Settings
 Extracted from server.py for better maintainability
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, List
 import logging
@@ -15,12 +16,23 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/settings", tags=["settings"])
+security = HTTPBearer()
 
 # Database connection
 MONGO_URL = os.environ.get("MONGO_URL")
 DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
+
+# Authentication dependency
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify JWT token and return current user"""
+    from routes.auth import verify_token
+    token = credentials.credentials
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    return payload
 
 
 # Pydantic models
@@ -86,7 +98,7 @@ class SettingsUpdate(BaseModel):
 
 
 @router.get("", response_model=SettingsModel)
-async def get_settings():
+async def get_settings(current_user: dict = Depends(get_current_user)):
     """Obtener configuración global"""
     settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
     if not settings:
@@ -96,7 +108,7 @@ async def get_settings():
 
 
 @router.put("", response_model=SettingsModel)
-async def update_settings(settings: SettingsUpdate):
+async def update_settings(settings: SettingsUpdate, current_user: dict = Depends(get_current_user)):
     """Actualizar configuración global"""
     update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
     
@@ -114,14 +126,14 @@ async def update_settings(settings: SettingsUpdate):
 
 
 @router.get("/logo")
-async def get_logo():
+async def get_logo(current_user: dict = Depends(get_current_user)):
     """Obtener solo el logo de la empresa"""
     settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1})
     return {"logo": settings.get("logo") if settings else None}
 
 
 @router.put("/logo")
-async def update_logo(logo: str):
+async def update_logo(logo: str, current_user: dict = Depends(get_current_user)):
     """Actualizar solo el logo de la empresa"""
     await db.settings.update_one(
         {"id": "global-settings"},

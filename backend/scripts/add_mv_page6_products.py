@@ -3,12 +3,15 @@
 Script para añadir/actualizar productos de TARIFA 1 Página 6
 LATERALES COLOR, REGLETA COLOR, COSTADOS, TECHO COLOR, ELEMENTOS LINEALES
 """
+import os
 from pymongo import MongoClient
 from datetime import datetime, timezone
 import uuid
 
-client = MongoClient('mongodb://localhost:27017')
-db = client['luiggi_home']
+MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
+client = MongoClient(MONGO_URL)
+db = client[DB_NAME]
 
 def create_product(code, name, series, price, width=None, height=None, depth=None, has_hand=False):
     """Create or update a product in MV library"""

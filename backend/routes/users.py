@@ -97,16 +97,26 @@ def user_to_response(user_data: dict) -> dict:
     response = {k: v for k, v in user_data.items() if k != "password"}
     return response
 
+# Authentication dependency
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify JWT token and return current user"""
+    from routes.auth import verify_token
+    token = credentials.credentials
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    return payload
+
 
 @router.get("", response_model=List[UserResponse])
-async def get_users():
+async def get_users(current_user: dict = Depends(get_current_user)):
     """Obtener todos los usuarios (sin passwords)"""
     users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
     return users
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: str):
+async def get_user(user_id: str, current_user: dict = Depends(get_current_user)):
     """Obtener un usuario por ID (sin password)"""
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     if not user:
@@ -115,7 +125,7 @@ async def get_user(user_id: str):
 
 
 @router.post("", response_model=UserResponse)
-async def create_user(user: UserCreate):
+async def create_user(user: UserCreate, current_user: dict = Depends(get_current_user)):
     """Crear un nuevo usuario con password hasheado"""
     # Check if username exists (case insensitive)
     existing = await db.users.find_one({"username": {"$regex": f"^{user.username}$", "$options": "i"}})
@@ -136,7 +146,7 @@ async def create_user(user: UserCreate):
 
 
 @router.put("/{user_id}", response_model=UserResponse)
-async def update_user(user_id: str, user: UserUpdate):
+async def update_user(user_id: str, user: UserUpdate, current_user: dict = Depends(get_current_user)):
     """Actualizar un usuario"""
     existing = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not existing:
@@ -159,7 +169,7 @@ async def update_user(user_id: str, user: UserUpdate):
 
 
 @router.delete("/{user_id}")
-async def delete_user(user_id: str):
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
     """Eliminar un usuario"""
     if user_id == "admin":
         raise HTTPException(status_code=400, detail="No se puede eliminar el administrador principal")

@@ -3,12 +3,15 @@
 AUDITORÍA Y CORRECCIÓN COMPLETA DE PRECIOS MV - TARIFA 1
 Basado en PDFs escaneados de alta calidad proporcionados por el usuario
 """
+import os
 from pymongo import MongoClient
 from datetime import datetime, timezone
 import uuid
 
-client = MongoClient('mongodb://localhost:27017')
-db = client['luiggi_home']
+MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
+client = MongoClient(MONGO_URL)
+db = client[DB_NAME]
 
 # ============================================================================
 # PÁGINA 1: PUERTAS, VITRINA, REJILLA CONFESIONARIO

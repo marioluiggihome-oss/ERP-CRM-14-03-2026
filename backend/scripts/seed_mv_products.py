@@ -16,7 +16,7 @@ def main():
         sys.exit(1)
         
     client = MongoClient(mongo_url)
-    db = client[os.environ.get('DB_NAME', 'kitchen_budget')]
+    db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 
     now = datetime.now(timezone.utc)
     products_to_insert = []

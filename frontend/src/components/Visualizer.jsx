@@ -1,8 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw, Layers } from 'lucide-react';
 import { getProductIcon } from './FurnitureIcons';
+import DOMPurify from 'dompurify';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Sanitize HTML to prevent XSS attacks
+const sanitizeHTML = (html) => DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
 
 const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [analyzing, setAnalyzing] = useState(false);
@@ -373,7 +377,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                         className={`w-10 h-10 flex items-center justify-center rounded-lg ${
                           furniture.producto_encontrado ? 'text-emerald-600 bg-emerald-100' : 'text-orange-600 bg-orange-100'
                         }`}
-                        dangerouslySetInnerHTML={{ __html: getProductIcon(furniture.codigo_catalogo || furniture.codigo_sugerido, furniture.subtipo) }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHTML(getProductIcon(furniture.codigo_catalogo || furniture.codigo_sugerido, furniture.subtipo)) }}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">

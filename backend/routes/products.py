@@ -3,7 +3,8 @@ Router para Productos del Catálogo
 """
 import logging
 from typing import List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import db
 from models.schemas import ProductModel, ProductCreate, ZonePoints
@@ -11,6 +12,17 @@ from models.schemas import ProductModel, ProductCreate, ZonePoints
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/products", tags=["Products"])
+security = HTTPBearer()
+
+# Authentication dependency
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify JWT token and return current user"""
+    from routes.auth import verify_token
+    token = credentials.credentials
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    return payload
 
 
 @router.get("", response_model=List[ProductModel])
@@ -19,7 +31,8 @@ async def get_products(
     category: str = None,
     search: str = None,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
 ):
     """Obtener productos con filtros opcionales"""
     query = {}
@@ -40,7 +53,7 @@ async def get_products(
 
 
 @router.get("/{product_id}", response_model=ProductModel)
-async def get_product(product_id: str):
+async def get_product(product_id: str, current_user: dict = Depends(get_current_user)):
     """Obtener un producto por ID"""
     product = await db.products.find_one({"id": product_id}, {"_id": 0})
     if not product:
@@ -49,7 +62,7 @@ async def get_product(product_id: str):
 
 
 @router.post("", response_model=ProductModel)
-async def create_product(product: ProductCreate):
+async def create_product(product: ProductCreate, current_user: dict = Depends(get_current_user)):
     """Crear un nuevo producto"""
     product_dict = product.model_dump()
     product_dict["id"] = f"prod-{__import__('uuid').uuid4().hex[:8]}"
@@ -59,7 +72,7 @@ async def create_product(product: ProductCreate):
 
 
 @router.put("/{product_id}", response_model=ProductModel)
-async def update_product(product_id: str, product: ProductCreate):
+async def update_product(product_id: str, product: ProductCreate, current_user: dict = Depends(get_current_user)):
     """Actualizar un producto existente"""
     existing = await db.products.find_one({"id": product_id})
     if not existing:
@@ -73,7 +86,7 @@ async def update_product(product_id: str, product: ProductCreate):
 
 
 @router.patch("/{product_id}/zone-points")
-async def update_zone_points(product_id: str, zone_points: ZonePoints):
+async def update_zone_points(product_id: str, zone_points: ZonePoints, current_user: dict = Depends(get_current_user)):
     """Actualizar puntos por zona de un producto"""
     existing = await db.products.find_one({"id": product_id})
     if not existing:
@@ -88,7 +101,7 @@ async def update_zone_points(product_id: str, zone_points: ZonePoints):
 
 
 @router.delete("/{product_id}")
-async def delete_product(product_id: str):
+async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
     """Eliminar un producto"""
     result = await db.products.delete_one({"id": product_id})
     if result.deleted_count == 0:
@@ -97,7 +110,7 @@ async def delete_product(product_id: str):
 
 
 @router.get("/stats/count")
-async def get_products_count():
+async def get_products_count(current_user: dict = Depends(get_current_user)):
     """Obtener conteo de productos por categoría"""
     pipeline = [
         {"$group": {"_id": "$category", "count": {"$sum": 1}}},
