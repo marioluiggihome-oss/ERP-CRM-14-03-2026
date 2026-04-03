@@ -1,0 +1,37 @@
+[
+  {
+    "_id": {
+      "$oid": "69b93cb87fd30418257741dc"
+    },
+    "key": "expedient_2026",
+    "value": 9,
+    "year": 2026
+  },
+  {
+    "_id": {
+      "$oid": "69c59467ee32429594c6ece5"
+    },
+    "key": "expedient_2026_LEON01",
+    "value": 2,
+    "year": 2026,
+    "clientCode": "LEON01"
+  },
+  {
+    "_id": {
+      "$oid": "69c59467ee32429594c6ece6"
+    },
+    "key": "expedient_2026_MAD02",
+    "value": 1,
+    "year": 2026,
+    "clientCode": "MAD02"
+  },
+  {
+    "_id": {
+      "$oid": "69c59484ee32429594c6ece7"
+    },
+    "key": "expedient_2026_TEST01",
+    "value": 1,
+    "year": 2026,
+    "clientCode": "TEST01"
+  }
+]

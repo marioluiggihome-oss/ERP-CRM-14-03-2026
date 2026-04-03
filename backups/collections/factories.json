@@ -1,0 +1,41 @@
+[
+  {
+    "_id": {
+      "$oid": "69bb3413e775260d2aeb0bd5"
+    },
+    "id": "fab-salamanca",
+    "name": "FÁBRICA SALAMANCA",
+    "code": "37",
+    "address": "Polígono Industrial Salamanca",
+    "phone": "",
+    "email": "",
+    "isActive": true,
+    "createdAt": "2026-03-18T23:24:03.059548+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69bb3413e775260d2aeb0bd6"
+    },
+    "id": "fab-zamora",
+    "name": "FÁBRICA ZAMORA",
+    "code": "49",
+    "address": "Polígono Industrial Zamora",
+    "phone": "",
+    "email": "",
+    "isActive": true,
+    "createdAt": "2026-03-18T23:24:03.059556+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69bb34d1f6cec36e9e485767"
+    },
+    "id": "fab-934e71a5",
+    "name": "TEST_FACTORY_TEMP",
+    "code": "TST",
+    "address": "Test Address 123",
+    "phone": "123456789",
+    "email": null,
+    "isActive": false,
+    "createdAt": "2026-03-18T23:27:13.082796+00:00"
+  }
+]

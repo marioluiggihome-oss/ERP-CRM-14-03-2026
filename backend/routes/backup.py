@@ -190,6 +190,52 @@ async def delete_backup(filename: str):
     os.remove(filepath)
     return {"success": True, "message": f"Backup {filename} deleted"}
 
+@router.get("/download-part/{filename}")
+async def download_backup_part(filename: str):
+    """Download a backup part file"""
+    filepath = os.path.join(BACKUP_DIR, "parts", filename)
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Backup part not found")
+    
+    return FileResponse(
+        path=filepath,
+        filename=filename,
+        media_type='application/octet-stream'
+    )
+
+@router.get("/download-collections/{filename}")
+async def download_collections_backup(filename: str):
+    """Download collections backup file"""
+    filepath = os.path.join(BACKUP_DIR, filename)
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Collections backup not found")
+    
+    return FileResponse(
+        path=filepath,
+        filename=filename,
+        media_type='application/zip'
+    )
+
+@router.get("/list-parts")
+async def list_backup_parts():
+    """List available backup parts"""
+    parts_dir = os.path.join(BACKUP_DIR, "parts")
+    if not os.path.exists(parts_dir):
+        return {"parts": []}
+    
+    parts = []
+    for f in sorted(os.listdir(parts_dir)):
+        filepath = os.path.join(parts_dir, f)
+        size_mb = os.path.getsize(filepath) / (1024 * 1024)
+        parts.append({
+            "filename": f,
+            "size_mb": round(size_mb, 2),
+            "download_url": f"/api/backup/download-part/{f}"
+        })
+    return {"parts": parts}
+
 @router.get("/export-db-only")
 async def export_database_only():
     """Export only the database (smaller file)"""

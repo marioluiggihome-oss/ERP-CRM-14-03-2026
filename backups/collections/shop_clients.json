@@ -1,0 +1,28 @@
+[
+  {
+    "_id": {
+      "$oid": "69c95d93d6c7626a02a7cd57"
+    },
+    "id": "shcli-4f102b8a",
+    "code": "",
+    "name": "Cliente Test Tienda",
+    "company": "Cocinas García",
+    "email": "test@test.com",
+    "phone": "600123456",
+    "address": "",
+    "city": "Salamanca",
+    "province": "Salamanca",
+    "postalCode": "",
+    "taxId": "",
+    "status": "potential",
+    "notes": "",
+    "ownerUserId": "admin",
+    "ownerName": "MARIO",
+    "createdAt": {
+      "$date": "2026-03-29T17:12:51.759Z"
+    },
+    "updatedAt": {
+      "$date": "2026-03-29T17:12:51.759Z"
+    }
+  }
+]

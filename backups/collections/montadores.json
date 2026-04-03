@@ -1,0 +1,21 @@
+[
+  {
+    "_id": {
+      "$oid": "69b8278a6b769514442ab33f"
+    },
+    "id": "MON-9277D331",
+    "name": "LUIS GUTIERREZ",
+    "phone": "699999999",
+    "email": "",
+    "company": "",
+    "specialty": "Cocinas Montadas",
+    "zone": "",
+    "address": "",
+    "notes": "",
+    "status": "active",
+    "rating": 5.0,
+    "tags": [],
+    "createdAt": "2026-03-16T15:53:46.320149+00:00",
+    "updatedAt": "2026-03-16T15:53:46.320149+00:00"
+  }
+]

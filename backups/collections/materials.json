@@ -1,0 +1,72 @@
+[
+  {
+    "_id": {
+      "$oid": "69b69d0fdb0e071ec974be40"
+    },
+    "id": "mat-blanco-zc",
+    "name": "Blanco Ártico Standard",
+    "fixedIncrement": 0,
+    "thickness": 16,
+    "library": "ZC"
+  },
+  {
+    "_id": {
+      "$oid": "69b69d0fdb0e071ec974be41"
+    },
+    "id": "mat-gris-zc",
+    "name": "Gris Antracita Pro",
+    "fixedIncrement": 18,
+    "thickness": 16,
+    "library": "ZC"
+  },
+  {
+    "_id": {
+      "$oid": "69b69d0fdb0e071ec974be42"
+    },
+    "id": "mat-roble-zc",
+    "name": "Roble Natural Veta",
+    "fixedIncrement": 25,
+    "thickness": 19,
+    "library": "ZC"
+  },
+  {
+    "_id": {
+      "$oid": "69b69d0fdb0e071ec974be43"
+    },
+    "id": "mat-nogal-zc",
+    "name": "Nogal Luiggi Exclusive",
+    "fixedIncrement": 40,
+    "thickness": 19,
+    "library": "ZC"
+  },
+  {
+    "_id": {
+      "$oid": "69b69d0fdb0e071ec974be44"
+    },
+    "id": "mat-blanco-mv",
+    "name": "Blanco SUPERPAN",
+    "fixedIncrement": 0.0,
+    "thickness": 19.0,
+    "library": "MV"
+  },
+  {
+    "_id": {
+      "$oid": "69b69d0fdb0e071ec974be45"
+    },
+    "id": "mat-gris-mv",
+    "name": "Gris MV",
+    "fixedIncrement": 15,
+    "thickness": 16,
+    "library": "MV"
+  },
+  {
+    "_id": {
+      "$oid": "69b69d0fdb0e071ec974be46"
+    },
+    "id": "mat-roble-mv",
+    "name": "Roble MV",
+    "fixedIncrement": 22,
+    "thickness": 19,
+    "library": "MV"
+  }
+]

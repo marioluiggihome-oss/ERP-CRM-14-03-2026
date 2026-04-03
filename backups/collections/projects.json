@@ -1,0 +1,52 @@
+[
+  {
+    "_id": {
+      "$oid": "69bd3a037364b606bc35f810"
+    },
+    "clientCode": "CONT-34E",
+    "budgetNumber": "EXP-2026-001",
+    "customerName": "TIENDA LEON",
+    "customerAddress": "",
+    "internalReference": "CESAR JESGÓN",
+    "itemsMontada": [
+      {
+        "id": "i0thd29o4",
+        "productId": "AI-MONTADA-5e5bb1fd",
+        "catalogId": "cat-m-base",
+        "quantity": 1,
+        "customReference": "A100*-90",
+        "customWidth": 95,
+        "customHeight": 90,
+        "customDepth": 33,
+        "openingDirection": "N/A",
+        "notes": "B",
+        "hasVigaCut": true
+      },
+      {
+        "id": "fuk5upw82",
+        "productId": "AI-MONTADA-a92f3e07",
+        "catalogId": "cat-m-base",
+        "quantity": 1,
+        "customReference": "A60D/1-90",
+        "customWidth": 60,
+        "customHeight": 90,
+        "customDepth": 33,
+        "openingDirection": "Izquierda",
+        "notes": "",
+        "hasVigaCut": false
+      }
+    ],
+    "itemsDespiece": [],
+    "doorColorLow": "HALIFAX 22 -VETA HORIZONTAL",
+    "doorColorHigh": "ZENIT BLANCO SM",
+    "doorColorColumns": "ZENIT VERDE SALVIA SM",
+    "sideColor": "ZENIT BLANCO SM",
+    "selectedCarcassMaterialId": "mat-gris-mv",
+    "totalPvp": 766.0,
+    "status": "activo",
+    "id": "proj-e0f43991",
+    "userId": "admin",
+    "createdAt": "2026-03-20T12:13:55.030648+00:00",
+    "updatedAt": "2026-03-26T16:37:23.608659+00:00"
+  }
+]

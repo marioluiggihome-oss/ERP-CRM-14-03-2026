@@ -1,0 +1,1068 @@
+[
+  {
+    "_id": {
+      "$oid": "69c59f0311c80d7961c9b128"
+    },
+    "userId": "admin",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:02:59.126Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c59fa611c80d7961c9b129"
+    },
+    "userId": "admin",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:05:42.412Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c59fd911c80d7961c9b12a"
+    },
+    "userId": "admin",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:06:33.598Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5a02111c80d7961c9b12b"
+    },
+    "userId": "admin",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:07:45.353Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5a03e11c80d7961c9b12c"
+    },
+    "userId": "admin",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:08:14.994Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5a05f11c80d7961c9b12d"
+    },
+    "userId": "admin",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:08:47.802Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5a0cc14fde8bb7c0a6eae"
+    },
+    "userId": "admin",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:10:36.299Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5a28c268fd7b276ed143a"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:18:04.097Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5a36b268fd7b276ed143b"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:21:47.390Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5a8eb83a4917449744185"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:45:15.316Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5a9a283a4917449744186"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:48:18.682Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5aa20e907fab13036695c"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:50:24.697Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5aa3ae907fab13036695d"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:50:50.593Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5aa59e907fab13036695e"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:51:21.630Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5aa7be907fab13036695f"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T21:51:55.191Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5ac67e907fab130366960"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:00:07.490Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5acb8e907fab130366961"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:01:28.201Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5accfe907fab130366962"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:01:51.159Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5ad5bf4d05e5c759e607c"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:04:11.115Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5ad61f4d05e5c759e607d"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:04:17.866Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5ad6ef4d05e5c759e607e"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:04:30.644Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5ad73f4d05e5c759e607f"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:04:35.436Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5ad79f4d05e5c759e6080"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:04:41.218Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5ad80f4d05e5c759e6081"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:04:48.440Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5aea9a2085aee3fee86a6"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:09:45.463Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5aeb5a2085aee3fee86a7"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:09:57.764Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5af90def20718126e52b4"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:13:36.185Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5afd3def20718126e52b5"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:14:43.565Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5afe4def20718126e52b6"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:15:00.083Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b052def20718126e52b7"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:16:50.991Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b06fdef20718126e52b8"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:17:19.684Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b0a4def20718126e52b9"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:18:12.702Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b0e8def20718126e52ba"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:19:20.955Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b224553849cc753a0ba9"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:24:36.036Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b392553849cc753a0baa"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:30:42.349Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b3d8553849cc753a0bab"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:31:52.630Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b42a553849cc753a0bac"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:33:14.724Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b46a553849cc753a0bad"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:34:18.186Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c5b48c553849cc753a0bae"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-26T22:34:52.158Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c82c6cd32c1993dc6d4fbc"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-28T19:30:52.107Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c82ca5d32c1993dc6d4fbd"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-28T19:31:49.436Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c82cb1d32c1993dc6d4fbe"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-28T19:32:01.502Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c94c67980f0dc20d1be292"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T15:59:35.731Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c94c7a980f0dc20d1be293"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T15:59:54.045Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c94c8e980f0dc20d1be294"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T16:00:14.633Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c94ed8f58521db6cb4c16b"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T16:10:00.017Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c94eebf58521db6cb4c16c"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T16:10:19.742Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c94f0bf58521db6cb4c16d"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T16:10:51.476Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c95d39d6c7626a02a7cd53"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:11:21.381Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c95d4cd6c7626a02a7cd54"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:11:40.643Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c95d63d6c7626a02a7cd55"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:12:03.367Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c95d7ed6c7626a02a7cd56"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:12:30.647Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c95f0ad6c7626a02a7cd58"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:19:06.410Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c96063d6c7626a02a7cd59"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:24:51.231Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c9607cd6c7626a02a7cd5a"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:25:16.922Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c96244d6c7626a02a7cd5b"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:32:52.909Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c96284d6c7626a02a7cd5c"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:33:56.804Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c962d1d6c7626a02a7cd5d"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:35:13.180Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c962ecd6c7626a02a7cd5e"
+    },
+    "userId": "admin",
+    "username": "mario@luiggihome.es",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:35:40.393Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c963a3d6c7626a02a7cd5f"
+    },
+    "userId": "user-efdd19b6",
+    "username": "MARIO@LUIGGIHOME.ES",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:38:43.668Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c963afd6c7626a02a7cd60"
+    },
+    "userId": "user-a2716ce2",
+    "username": "marioluiggihome@gmail.com",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T17:38:55.451Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c96927d6c7626a02a7cd61"
+    },
+    "userId": "user-a342c5d4",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T18:02:15.375Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c99baf6dd045514c14df57"
+    },
+    "userId": "user-a342c5d4",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T21:37:51.638Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c99c129a1a77305e76f387"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T21:39:30.577Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c99c519a1a77305e76f388"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T21:40:33.992Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c99cc19a1a77305e76f389"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T21:42:25.978Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c99d4070086d018a77a1b8"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T21:44:32.954Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c99d8370086d018a77a1b9"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T21:45:39.701Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c9a40b2d53891bf3e10b0a"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T22:13:31.311Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69c9a4472d53891bf3e10b0b"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T22:14:31.192Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69c9a4612d53891bf3e10b0c"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-29T22:14:57.032Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69ca1da7c96c81eef2273d29"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T06:52:23.058Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69ca1f36c96c81eef2273d2a"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T06:59:02.405Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69ca2a70c96c81eef2273d2b"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T07:46:56.240Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69ca2af9c96c81eef2273d2c"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T07:49:13.986Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69ca2c36c96c81eef2273d2d"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T07:54:30.981Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69ca2e59c96c81eef2273d2e"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T08:03:37.884Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69ca2eccc96c81eef2273d2f"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T08:05:32.863Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.0.22"
+  },
+  {
+    "_id": {
+      "$oid": "69ca2f1cc96c81eef2273d30"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T08:06:52.924Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69ca2f73c96c81eef2273d31"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-03-30T08:08:19.782Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.8.194"
+  },
+  {
+    "_id": {
+      "$oid": "69ccd4923c3d583e5bd183b9"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-04-01T08:17:22.987Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.1.66"
+  },
+  {
+    "_id": {
+      "$oid": "69cd36e4ec4b6fa8a848db77"
+    },
+    "userId": "user-master-mario",
+    "username": "MARIO",
+    "activityType": "login",
+    "timestamp": {
+      "$date": "2026-04-01T15:16:52.712Z"
+    },
+    "details": {},
+    "ipAddress": "10.227.1.66"
+  }
+]

@@ -1,0 +1,128 @@
+[
+  {
+    "_id": {
+      "$oid": "69bb39c5f6cec36e9e48576c"
+    },
+    "id": "opp-1096611e",
+    "title": "Presupuesto COCINA MONTADA - MARIO DE LAS HERAS DE VEGA",
+    "contactId": "cont-2d05c5cb",
+    "contactName": "MARIO DE LAS HERAS DE VEGA",
+    "value": 835.8299999999999,
+    "stage": "proposal",
+    "probability": 50,
+    "expectedCloseDate": null,
+    "description": "Presupuesto generado automáticamente\nAcabado: GRUPO 1\nMódulo: montada",
+    "projectId": null,
+    "assignedToId": null,
+    "lostReason": "",
+    "wonDate": null,
+    "lostDate": null,
+    "createdAt": "2026-03-18T23:48:21.994808+00:00",
+    "updatedAt": "2026-03-18T23:48:21.994812+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69bd3a087364b606bc35f812"
+    },
+    "id": "opp-3cb33435",
+    "title": "Presupuesto COCINA MONTADA - ",
+    "contactId": "cont-4240563a",
+    "contactName": "Cliente sin nombre",
+    "value": 4775.22,
+    "stage": "proposal",
+    "probability": 50,
+    "expectedCloseDate": null,
+    "description": "Presupuesto generado automáticamente\nAcabado: GRUPO 1\nMódulo: montada",
+    "projectId": null,
+    "assignedToId": null,
+    "lostReason": "",
+    "wonDate": null,
+    "lostDate": null,
+    "createdAt": "2026-03-20T12:14:00.677687+00:00",
+    "updatedAt": "2026-03-20T12:14:00.677691+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69bd7944f6dd30823f9b61eb"
+    },
+    "id": "opp-d43a69c4",
+    "title": "Presupuesto COCINA MONTADA - ",
+    "contactId": "cont-13b2e2b8",
+    "contactName": "Cliente sin nombre",
+    "value": 93.0,
+    "stage": "proposal",
+    "probability": 50,
+    "expectedCloseDate": null,
+    "description": "Presupuesto generado automáticamente\nAcabado: GRUPO 1\nMódulo: montada",
+    "projectId": null,
+    "assignedToId": null,
+    "lostReason": "",
+    "wonDate": null,
+    "lostDate": null,
+    "createdAt": "2026-03-20T16:43:48.553222+00:00",
+    "updatedAt": "2026-03-20T16:43:48.553226+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69c1028b62ecc41ddd5702fe"
+    },
+    "id": "opp-1720c478",
+    "title": "Presupuesto COCINA MONTADA - ",
+    "contactId": "cont-a7dc5be6",
+    "contactName": "Cliente sin nombre",
+    "value": 233.1,
+    "stage": "proposal",
+    "probability": 50,
+    "expectedCloseDate": null,
+    "description": "Presupuesto generado automáticamente\nAcabado: GRUPO 1\nMódulo: montada",
+    "projectId": null,
+    "assignedToId": null,
+    "lostReason": "",
+    "wonDate": null,
+    "lostDate": null,
+    "createdAt": "2026-03-23T09:06:19.812306+00:00",
+    "updatedAt": "2026-03-23T09:06:19.812310+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69c411563f48613560592013"
+    },
+    "id": "opp-cd8c387d",
+    "title": "Presupuesto COCINA MONTADA - MARIO DE LAS HERAS DE VEGA",
+    "contactId": "cont-f3836253",
+    "contactName": "MARIO DE LAS HERAS DE VEGA",
+    "value": 662.83,
+    "stage": "proposal",
+    "probability": 50,
+    "expectedCloseDate": null,
+    "description": "Presupuesto generado automáticamente\nAcabado: TARIFA 4\nMódulo: montada",
+    "projectId": null,
+    "assignedToId": null,
+    "lostReason": "",
+    "wonDate": null,
+    "lostDate": null,
+    "createdAt": "2026-03-25T16:46:14.081813+00:00",
+    "updatedAt": "2026-03-25T16:46:14.081818+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69c560c8ebd76c6218c3fd92"
+    },
+    "id": "opp-c02a619e",
+    "title": "Presupuesto COCINA MONTADA - TIENDA LEON",
+    "contactId": "cont-eb2523b2",
+    "contactName": "TIENDA LEON",
+    "value": 766.0,
+    "stage": "proposal",
+    "probability": 50,
+    "expectedCloseDate": null,
+    "description": "Presupuesto generado automáticamente\nAcabado: TARIFA 1\nMódulo: montada",
+    "projectId": null,
+    "assignedToId": null,
+    "lostReason": "",
+    "wonDate": null,
+    "lostDate": null,
+    "createdAt": "2026-03-26T16:37:28.381194+00:00",
+    "updatedAt": "2026-03-26T16:37:28.381198+00:00"
+  }
+]

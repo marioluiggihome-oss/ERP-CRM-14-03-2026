@@ -1,0 +1,25 @@
+[
+  {
+    "_id": {
+      "$oid": "69b827be6b769514442ab340"
+    },
+    "id": "MTJ-A29078D5",
+    "montadorId": "MON-9277D331",
+    "montadorName": "LUIS GUTIERREZ",
+    "clientName": "MANUEL CALZADA",
+    "clientPhone": "",
+    "clientAddress": "",
+    "projectDescription": "",
+    "expectedDeliveryDate": "2026-03-12",
+    "scheduledDate": "2026-03-19",
+    "scheduledTime": "",
+    "estimatedDuration": "2",
+    "status": "pendiente",
+    "budgetId": "",
+    "budgetRef": "EXP-2026-0001",
+    "notes": "",
+    "assignedBy": "",
+    "createdAt": "2026-03-16T15:54:38.625927+00:00",
+    "updatedAt": "2026-03-16T15:54:38.625927+00:00"
+  }
+]
