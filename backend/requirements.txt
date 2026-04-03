@@ -132,5 +132,4 @@ xlsxwriter==3.2.0
 resend==2.0.0
 slowapi==0.1.9
 reportlab==4.2.5
-cairosvg==2.7.1
-cairosvg==2.7.1
+
