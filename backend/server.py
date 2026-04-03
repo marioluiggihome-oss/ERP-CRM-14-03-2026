@@ -13,7 +13,7 @@ from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 import base64
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+import google.generativeai as genai
 import json
 import bcrypt
 import jwt  # Para decodificar tokens en endpoints de export
