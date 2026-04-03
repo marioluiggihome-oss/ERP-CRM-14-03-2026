@@ -1,349 +1,242 @@
 """
-Backup Router - Sistema de copias de seguridad
-Endpoints para gestionar backups automáticos y manuales
+Backup and Export System for LUIGGI HOME
+Exports all data and code in ZIP format
 """
-from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
-from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel, Field
-from datetime import datetime, timezone
-from typing import Dict
-import uuid
-import logging
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
 import os
+import zipfile
+import shutil
+from datetime import datetime
+from motor.motor_asyncio import AsyncIOMotorClient
 import json
-import base64
-import asyncio
-
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+from bson import ObjectId, json_util
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from services.rate_limiter import limiter, get_limit
-from services.audit_service import audit, AuditAction
+router = APIRouter(prefix="/backup", tags=["Backup"])
 
-logger = logging.getLogger(__name__)
-
-router = APIRouter(tags=["backup"])
-
-# Database connection
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
-client = AsyncIOMotorClient(MONGO_URL)
-db = client[DB_NAME]
-
-# Scheduler for automatic backups
+# Scheduler for automated backups
 scheduler = AsyncIOScheduler()
 
-
-# Backup History Model
-class BackupHistoryModel(BaseModel):
-    id: str = Field(default_factory=lambda: f"backup-{uuid.uuid4().hex[:8]}")
-    timestamp: str
-    type: str  # manual, scheduled
-    status: str  # success, failed
-    itemCount: int
-    sentTo: str
-
-
-async def create_backup_data():
-    """Creates a JSON backup of all database collections"""
-    backup = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "2.0",
-        "data": {}
-    }
-    
-    # Export all important collections
-    collections = [
-        "users", 
-        "products",           # Productos MONTADA (muebles)
-        "despiece_products",  # Productos DESPIECE (tableros)
-        "materials", 
-        "projects", 
-        "settings",
-        "clients",
-        "opportunities",
-        "activities",
-        "calendar_events",
-        "orders",
-        "armario_projects",
-        "status_checks"
-    ]
-    
-    for collection_name in collections:
-        try:
-            docs = await db[collection_name].find({}, {"_id": 0}).to_list(50000)
-            backup["data"][collection_name] = docs
-            logger.info(f"Backup: {collection_name} - {len(docs)} documentos")
-        except Exception as e:
-            logger.error(f"Error backing up {collection_name}: {e}")
-            backup["data"][collection_name] = []
-    
-    return backup
-
-
-def send_backup_email(backup_data: dict, backup_type: str = "automático"):
-    """Sends backup via SendGrid email with JSON attachment"""
-    try:
-        sendgrid_api_key = os.environ.get('SENDGRID_API_KEY')
-        backup_email = os.environ.get('BACKUP_EMAIL', 'marioluiggihome@gmail.com')
-        
-        if not sendgrid_api_key:
-            logger.error("SENDGRID_API_KEY not configured")
-            return False
-        
-        # Create JSON content
-        json_content = json.dumps(backup_data, indent=2, ensure_ascii=False, default=str)
-        encoded_content = base64.b64encode(json_content.encode('utf-8')).decode('utf-8')
-        
-        # Create filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"luiggi_home_backup_{timestamp}.json"
-        
-        # Count items
-        total_items = sum(len(backup_data.get("data", {}).get(col, [])) for col in backup_data.get("data", {}).keys())
-        
-        # Create email message
-        message = Mail(
-            from_email=backup_email,
-            to_emails=backup_email,
-            subject=f"LUIGGI HOME - Backup {backup_type} ({timestamp})",
-            html_content=f"""
-            <html>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0;">
-                    <h1 style="margin: 0; font-size: 24px;">LUIGGI HOME</h1>
-                    <p style="margin: 10px 0 0 0; opacity: 0.8; font-size: 14px;">Copia de Seguridad {backup_type.upper()}</p>
-                </div>
-                
-                <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
-                    <h2 style="color: #1e293b; margin-top: 0;">Backup completado</h2>
-                    
-                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                        <tr style="background: #e2e8f0;">
-                            <td style="padding: 10px; font-weight: bold;">Fecha</td>
-                            <td style="padding: 10px;">{datetime.now().strftime("%d/%m/%Y %H:%M:%S")}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px; font-weight: bold;">Total registros</td>
-                            <td style="padding: 10px;">{total_items}</td>
-                        </tr>
-                        <tr style="background: #e2e8f0;">
-                            <td style="padding: 10px; font-weight: bold;">Archivo</td>
-                            <td style="padding: 10px;">{filename}</td>
-                        </tr>
-                    </table>
-                    
-                    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-                        <strong>Importante:</strong> Guarda este archivo en tu Google Drive para mantener tus datos seguros.
-                    </div>
-                    
-                    <h3 style="color: #1e293b;">Detalle del backup:</h3>
-                    <ul style="list-style: none; padding: 0;">
-                        {"".join([f'<li style="padding: 5px 0;">- {col}: {len(backup_data.get("data", {}).get(col, []))} registros</li>' for col in backup_data.get("data", {}).keys()])}
-                    </ul>
-                </div>
-                
-                <div style="background: #1e293b; color: white; padding: 20px; border-radius: 0 0 10px 10px; text-align: center; font-size: 12px;">
-                    <p style="margin: 0;">LUIGGI HOME Master Design v2026</p>
-                    <p style="margin: 5px 0 0 0; opacity: 0.7;">Sistema de Gestion de Presupuestos de Cocina</p>
-                </div>
-            </body>
-            </html>
-            """
-        )
-        
-        # Create attachment
-        attachment = Attachment()
-        attachment.file_content = FileContent(encoded_content)
-        attachment.file_name = FileName(filename)
-        attachment.file_type = FileType('application/json')
-        attachment.disposition = Disposition('attachment')
-        message.attachment = attachment
-        
-        # Send email
-        sg = SendGridAPIClient(sendgrid_api_key)
-        response = sg.send(message)
-        
-        if response.status_code == 202:
-            logger.info(f"Backup email sent successfully to {backup_email}")
-            return True
-        else:
-            logger.error(f"Backup email failed with status {response.status_code}")
-            return False
-            
-    except Exception as e:
-        logger.error(f"Error sending backup email: {e}")
-        return False
-
-
-async def scheduled_backup_task():
-    """Async task for scheduled backups"""
-    logger.info("Starting scheduled backup...")
-    try:
-        backup_data = await create_backup_data()
-        # Run email sending in thread pool since SendGrid is sync
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, send_backup_email, backup_data, "automatico")
-        if result:
-            logger.info("Scheduled backup completed successfully")
-        else:
-            logger.error("Scheduled backup failed to send email")
-    except Exception as e:
-        logger.error(f"Scheduled backup error: {e}")
-
-
 def start_backup_scheduler():
-    """Start the backup scheduler with cron jobs"""
-    # Schedule backup at 8:00 and 20:00 every day
-    scheduler.add_job(
-        scheduled_backup_task,
-        CronTrigger(hour=8, minute=0),
-        id='backup_morning',
-        replace_existing=True
-    )
-    scheduler.add_job(
-        scheduled_backup_task,
-        CronTrigger(hour=20, minute=0),
-        id='backup_evening',
-        replace_existing=True
-    )
-    scheduler.start()
-    logger.info("Backup scheduler started - backups at 8:00 and 20:00")
+    """Start the backup scheduler if not already running"""
+    if not scheduler.running:
+        scheduler.start()
 
+MONGO_URL = os.environ.get('MONGO_URL')
+DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
+BACKUP_DIR = '/app/backups'
 
-# ============================================
-# BACKUP API ENDPOINTS
-# ============================================
+class JSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, ObjectId):
+            return str(o)
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return super().default(o)
 
-@router.post("/backup/manual")
-@limiter.limit(get_limit("backup"))
-async def trigger_manual_backup(request: Request, background_tasks: BackgroundTasks):
-    """Trigger a manual backup and send via email"""
+@router.get("/status")
+async def backup_status():
+    """Check backup system status and list existing backups"""
     try:
-        backup_data = await create_backup_data()
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        backups = []
+        for f in os.listdir(BACKUP_DIR):
+            if f.endswith('.zip'):
+                filepath = os.path.join(BACKUP_DIR, f)
+                size_mb = os.path.getsize(filepath) / (1024 * 1024)
+                backups.append({
+                    "filename": f,
+                    "size_mb": round(size_mb, 2),
+                    "created": datetime.fromtimestamp(os.path.getctime(filepath)).isoformat()
+                })
+        return {"status": "ready", "existing_backups": sorted(backups, key=lambda x: x['created'], reverse=True)}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@router.post("/create")
+async def create_full_backup():
+    """Create a complete backup of code and database"""
+    try:
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_name = f"luiggi_home_backup_{timestamp}"
+        temp_dir = f"/tmp/{backup_name}"
         
-        # Count items
-        total_items = sum(len(backup_data.get("data", {}).get(col, [])) for col in backup_data.get("data", {}).keys())
+        # Create temp directory structure
+        os.makedirs(f"{temp_dir}/database", exist_ok=True)
+        os.makedirs(f"{temp_dir}/code", exist_ok=True)
         
-        # Send email in background
-        background_tasks.add_task(send_backup_email, backup_data, "manual")
+        # 1. Export MongoDB collections
+        client = AsyncIOMotorClient(MONGO_URL)
+        db = client[DB_NAME]
         
-        # Save to backup history
-        history_entry = {
-            "id": f"backup-{uuid.uuid4().hex[:8]}",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "type": "manual",
-            "status": "success",
-            "itemCount": total_items,
-            "sentTo": os.environ.get('BACKUP_EMAIL', 'marioluiggihome@gmail.com')
+        collections = await db.list_collection_names()
+        db_stats = {}
+        
+        for collection_name in collections:
+            try:
+                collection = db[collection_name]
+                documents = await collection.find({}).to_list(length=None)
+                
+                # Convert to JSON-serializable format
+                json_docs = json.loads(json_util.dumps(documents))
+                
+                # Save to file
+                with open(f"{temp_dir}/database/{collection_name}.json", 'w', encoding='utf-8') as f:
+                    json.dump(json_docs, f, ensure_ascii=False, indent=2)
+                
+                db_stats[collection_name] = len(documents)
+            except Exception as e:
+                db_stats[collection_name] = f"Error: {str(e)}"
+        
+        client.close()
+        
+        # 2. Copy code (excluding node_modules, __pycache__, .git, backups)
+        def should_exclude(path):
+            excludes = ['node_modules', '__pycache__', '.git', 'backups', 'build', '.next', 'venv', '.emergent']
+            return any(exc in path for exc in excludes)
+        
+        # Copy backend
+        for item in os.listdir('/app/backend'):
+            src = f'/app/backend/{item}'
+            if not should_exclude(src):
+                dst = f'{temp_dir}/code/backend/{item}'
+                if os.path.isdir(src):
+                    shutil.copytree(src, dst, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+                else:
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    shutil.copy2(src, dst)
+        
+        # Copy frontend (excluding node_modules and build)
+        for item in os.listdir('/app/frontend'):
+            src = f'/app/frontend/{item}'
+            if not should_exclude(src) and item not in ['node_modules', 'build']:
+                dst = f'{temp_dir}/code/frontend/{item}'
+                if os.path.isdir(src):
+                    shutil.copytree(src, dst, ignore=shutil.ignore_patterns('node_modules', 'build', '.cache'))
+                else:
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    shutil.copy2(src, dst)
+        
+        # Copy memory/docs if exists
+        if os.path.exists('/app/memory'):
+            shutil.copytree('/app/memory', f'{temp_dir}/code/memory', ignore=shutil.ignore_patterns('__pycache__'))
+        
+        # 3. Create info file
+        info = {
+            "backup_date": datetime.now().isoformat(),
+            "database_name": DB_NAME,
+            "collections_exported": db_stats,
+            "total_collections": len(collections),
+            "app_name": "LUIGGI HOME ERP"
         }
-        await db.backup_history.insert_one(history_entry)
+        with open(f"{temp_dir}/backup_info.json", 'w', encoding='utf-8') as f:
+            json.dump(info, f, ensure_ascii=False, indent=2)
         
-        # Auditoria
-        audit.log(
-            AuditAction.BACKUP_CREATE,
-            resource_type="backup",
-            resource_id=history_entry["id"],
-            request=request,
-            details={"type": "manual", "item_count": total_items}
-        )
+        # 4. Create ZIP file
+        zip_path = f"{BACKUP_DIR}/{backup_name}.zip"
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arc_name = os.path.relpath(file_path, temp_dir)
+                    zipf.write(file_path, arc_name)
+        
+        # 5. Cleanup temp directory
+        shutil.rmtree(temp_dir)
+        
+        # Get final size
+        size_mb = os.path.getsize(zip_path) / (1024 * 1024)
         
         return {
-            "status": "success",
-            "message": f"Backup enviado a {history_entry['sentTo']}",
-            "itemCount": total_items,
-            "timestamp": history_entry['timestamp']
+            "success": True,
+            "filename": f"{backup_name}.zip",
+            "size_mb": round(size_mb, 2),
+            "collections_exported": db_stats,
+            "download_url": f"/api/backup/download/{backup_name}.zip"
         }
+        
     except Exception as e:
-        logger.error(f"Manual backup error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al crear backup: {str(e)}")
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
+@router.get("/download/{filename}")
+async def download_backup(filename: str):
+    """Download a backup file"""
+    filepath = os.path.join(BACKUP_DIR, filename)
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Backup file not found")
+    
+    if not filename.endswith('.zip'):
+        raise HTTPException(status_code=400, detail="Invalid file type")
+    
+    return FileResponse(
+        path=filepath,
+        filename=filename,
+        media_type='application/zip'
+    )
 
-@router.get("/backup/download")
-@limiter.limit(get_limit("export"))
-async def download_backup(request: Request):
-    """Download backup as JSON file (for manual save to Google Drive)"""
+@router.delete("/delete/{filename}")
+async def delete_backup(filename: str):
+    """Delete a backup file"""
+    filepath = os.path.join(BACKUP_DIR, filename)
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Backup file not found")
+    
+    os.remove(filepath)
+    return {"success": True, "message": f"Backup {filename} deleted"}
+
+@router.get("/export-db-only")
+async def export_database_only():
+    """Export only the database (smaller file)"""
     try:
-        backup_data = await create_backup_data()
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_name = f"luiggi_db_backup_{timestamp}"
+        temp_dir = f"/tmp/{backup_name}"
+        os.makedirs(temp_dir, exist_ok=True)
         
-        # Auditoria
-        audit.log(
-            AuditAction.BACKUP_CREATE,
-            resource_type="backup",
-            request=request,
-            details={"type": "download"}
-        )
+        client = AsyncIOMotorClient(MONGO_URL)
+        db = client[DB_NAME]
         
-        return backup_data
-    except Exception as e:
-        logger.error(f"Download backup error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al descargar backup: {str(e)}")
-
-
-@router.post("/backup/restore")
-@limiter.limit(get_limit("backup"))
-async def restore_backup(request: Request, backup_data: Dict):
-    """Restore data from a backup file"""
-    try:
-        if "data" not in backup_data:
-            raise HTTPException(status_code=400, detail="Formato de backup invalido")
+        collections = await db.list_collection_names()
+        db_stats = {}
         
-        restored_counts = {}
-        
-        # Colecciones permitidas para restaurar
-        allowed_collections = [
-            "users", "products", "despiece_products", "materials", 
-            "projects", "settings", "clients", "opportunities",
-            "activities", "calendar_events", "orders", "armario_projects"
-        ]
-        
-        for collection_name, documents in backup_data["data"].items():
-            if collection_name in allowed_collections:
-                # Clear existing data
-                await db[collection_name].delete_many({})
+        for collection_name in collections:
+            try:
+                collection = db[collection_name]
+                documents = await collection.find({}).to_list(length=None)
+                json_docs = json.loads(json_util.dumps(documents))
                 
-                # Insert backup data
-                if documents:
-                    await db[collection_name].insert_many(documents)
+                with open(f"{temp_dir}/{collection_name}.json", 'w', encoding='utf-8') as f:
+                    json.dump(json_docs, f, ensure_ascii=False, indent=2)
                 
-                restored_counts[collection_name] = len(documents)
-                logger.info(f"Restored {collection_name}: {len(documents)} documents")
+                db_stats[collection_name] = len(documents)
+            except Exception as e:
+                db_stats[collection_name] = f"Error: {str(e)}"
+        
+        client.close()
+        
+        # Create ZIP
+        zip_path = f"{BACKUP_DIR}/{backup_name}.zip"
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for file in os.listdir(temp_dir):
+                zipf.write(f"{temp_dir}/{file}", file)
+        
+        shutil.rmtree(temp_dir)
+        size_mb = os.path.getsize(zip_path) / (1024 * 1024)
         
         return {
-            "status": "success",
-            "message": "Backup restaurado correctamente",
-            "restored": restored_counts
+            "success": True,
+            "filename": f"{backup_name}.zip",
+            "size_mb": round(size_mb, 2),
+            "collections_exported": db_stats,
+            "download_url": f"/api/backup/download/{backup_name}.zip"
         }
+        
     except Exception as e:
-        logger.error(f"Restore backup error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al restaurar backup: {str(e)}")
-
-
-@router.get("/backup/history")
-async def get_backup_history():
-    """Get backup history"""
-    try:
-        history = await db.backup_history.find({}, {"_id": 0}).sort("timestamp", -1).to_list(50)
-        return history
-    except Exception as e:
-        logger.error(f"Get backup history error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al obtener historial: {str(e)}")
-
-
-@router.get("/backup/status")
-async def get_backup_status():
-    """Get backup scheduler status"""
-    jobs = scheduler.get_jobs()
-    return {
-        "scheduler_running": scheduler.running,
-        "next_backups": [
-            {
-                "job_id": job.id,
-                "next_run": job.next_run_time.isoformat() if job.next_run_time else None
-            }
-            for job in jobs
-        ],
-        "backup_email": os.environ.get('BACKUP_EMAIL', 'marioluiggihome@gmail.com')
-    }
+        return {"success": False, "error": str(e)}
