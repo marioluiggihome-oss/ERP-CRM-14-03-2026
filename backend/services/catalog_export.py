@@ -12,7 +12,7 @@ from reportlab.lib.units import mm, cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from PIL import Image
-import cairosvg
+# cairosvg removido
 
 
 def get_cabinet_svg(code: str, name: str, category: str) -> str:
