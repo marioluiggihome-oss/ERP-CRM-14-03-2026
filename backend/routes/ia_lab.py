@@ -10,7 +10,7 @@ import logging
 from typing import List, Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 
-import google.generativeai as genai
+import google.genai as genai
 
 from config import db
 import google.genai as genai
