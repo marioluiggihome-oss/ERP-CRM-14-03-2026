@@ -13,7 +13,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 import google.generativeai as genai
 
 from config import db
-
+import google.genai as genai
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ia-lab", tags=["IA Lab"])
