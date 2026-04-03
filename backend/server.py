@@ -25,7 +25,7 @@ import asyncio
 import xlsxwriter
 from io import BytesIO
 import resend  # Resend como alternativa a SendGrid
-
+from services.security_middleware import SecurityMiddleware
 # Servicios de seguridad
 from services.jwt_service import (
     create_access_token,
@@ -131,7 +131,7 @@ app = FastAPI()
 # Configurar Rate Limiter
 app.state.limiter = limiter
 app.add_exception_handler(429, rate_limit_exceeded_handler)
-
+app.add_middleware(SecurityMiddleware)
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
