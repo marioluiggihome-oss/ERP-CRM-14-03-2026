@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/fabrica", tags=["Portal Fábrica"])
 
 # Emergent LLM Key para Gemini
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-4A3Ed5d56521e792e1')
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
 
 # ============================================
