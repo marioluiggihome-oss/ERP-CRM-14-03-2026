@@ -15,7 +15,7 @@ import json
 import re
 
 from motor.motor_asyncio import AsyncIOMotorClient
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
