@@ -13,7 +13,7 @@ from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 import base64
-import google.generativeai as genai
+import google.genai as genai
 import json
 import bcrypt
 import jwt  # Para decodificar tokens en endpoints de export
