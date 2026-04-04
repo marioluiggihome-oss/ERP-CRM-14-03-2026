@@ -311,7 +311,7 @@ Responde SOLO con JSON válido, sin texto adicional."""
 
             # Crear modelo con instrucción de sistema
             model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash",
+                model_name=os.environ.get("GEMINI_MODEL", "gemini-1.5-flash"),
                 system_instruction=system_prompt
             )
 
