@@ -20,11 +20,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Crear aplicación FastAPI
+ENV = os.getenv("ENVIRONMENT", "development")
+
 app = FastAPI(
     title="LUIGGI HOME API",
     description="Backend API para el sistema ERP de cocinas LUIGGI HOME",
-    version="2.0.0"
+    version="2.0.0",
+    docs_url="/docs" if ENV != "production" else None,
+    redoc_url="/redoc" if ENV != "production" else None,
+    openapi_url="/openapi.json" if ENV != "production" else None,
 )
 
 # Router principal con prefijo /api
