@@ -126,7 +126,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Create the main app without a prefix
-app = FastAPI()
+ENV = os.getenv("ENVIRONMENT", "development")
+
+app = FastAPI(
+    docs_url="/docs" if ENV != "production" else None,
+    redoc_url="/redoc" if ENV != "production" else None,
+    openapi_url="/openapi.json" if ENV != "production" else None,
+)
 
 # Configurar Rate Limiter
 app.state.limiter = limiter
