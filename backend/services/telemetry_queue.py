@@ -15,7 +15,8 @@ import json
 import re
 
 from motor.motor_asyncio import AsyncIOMotorClient
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,8 @@ class JobStatus(str, Enum):
 @dataclass
 class TelemetryJob:
     job_id: str
-    library: str  # MV o ZC
-    module: str   # montada o despiece
+    library: str
+    module: str
     total_files: int
     processed_files: int = 0
     status: JobStatus = JobStatus.PENDING
@@ -48,11 +49,8 @@ class TelemetryJob:
     detected_tariffs: List[str] = field(default_factory=list)
     current_file: str = ""
 
-# Cola en memoria para jobs
 jobs_queue: Dict[str, TelemetryJob] = {}
-# Cola de archivos pendientes por job_id
 files_queue: Dict[str, List[Dict]] = {}
-# Flag para indicar si hay un worker procesando
 processing_lock = asyncio.Lock()
 
 
@@ -60,7 +58,7 @@ async def create_telemetry_job(library: str, module: str, files_data: List[Dict]
     """Crea un nuevo job de procesamiento y lo añade a la cola"""
     job_id = f"telemetry-{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc).isoformat()
-    
+
     job = TelemetryJob(
         job_id=job_id,
         library=library,
@@ -69,15 +67,11 @@ async def create_telemetry_job(library: str, module: str, files_data: List[Dict]
         created_at=now,
         updated_at=now
     )
-    
+
     jobs_queue[job_id] = job
     files_queue[job_id] = files_data
-    
-    # Iniciar procesamiento en background
     asyncio.create_task(process_job(job_id))
-    
     logger.info(f"Created telemetry job {job_id} with {len(files_data)} files for library {library}")
-    
     return job_id
 
 
@@ -86,7 +80,7 @@ async def get_job_status(job_id: str) -> Optional[Dict]:
     job = jobs_queue.get(job_id)
     if not job:
         return None
-    
+
     return {
         "job_id": job.job_id,
         "library": job.library,
@@ -98,7 +92,7 @@ async def get_job_status(job_id: str) -> Optional[Dict]:
         "products_created": job.products_created,
         "products_updated": job.products_updated,
         "errors": job.errors,
-        "logs": job.logs[-20:],  # Últimos 20 logs
+        "logs": job.logs[-20:],
         "detected_tariffs": list(set(job.detected_tariffs)),
         "current_file": job.current_file,
         "progress_percent": round((job.processed_files / max(job.total_files, 1)) * 100, 1),
@@ -122,35 +116,33 @@ async def process_job(job_id: str):
     job = jobs_queue.get(job_id)
     if not job:
         return
-    
+
     job.status = JobStatus.PROCESSING
     add_job_log(job, "info", f"Iniciando procesamiento de {job.total_files} archivo(s)...")
-    
+
     files_data = files_queue.get(job_id, [])
     all_products = []
-    
-    # Obtener API key
+
     api_key = os.environ.get("EMERGENT_LLM_KEY", "")
     if not api_key:
         job.status = JobStatus.FAILED
         add_job_log(job, "err", "API key no configurada")
         return
-    
+
     try:
         for idx, file_data in enumerate(files_data):
             filename = file_data.get("filename", f"archivo_{idx+1}")
             base64_image = file_data.get("base64", "")
-            
+
             job.current_file = filename
             job.processed_files = idx + 1
             add_job_log(job, "info", f"📄 Procesando {idx+1}/{job.total_files}: {filename}")
-            
+
             if not base64_image:
                 add_job_log(job, "err", f"⚠️ {filename}: Sin datos de imagen")
                 continue
-            
+
             try:
-                # Guardar imagen para auditoría ANTES de procesarla
                 audit_id = await save_image_for_audit(
                     job_id=job_id,
                     filename=filename,
@@ -159,19 +151,17 @@ async def process_job(job_id: str):
                     module=job.module
                 )
                 add_job_log(job, "info", f"💾 Imagen guardada para auditoría: {audit_id[:12]}...")
-                
-                # Procesar imagen con Gemini
+
                 products, detected_tariff = await analyze_single_image(
-                    base64_image, 
-                    job.library, 
-                    job.module, 
+                    base64_image,
+                    job.library,
+                    job.module,
                     filename,
                     api_key
                 )
-                
-                # Actualizar registro de auditoría con resultados
+
                 await update_audit_record(audit_id, products, detected_tariff)
-                
+
                 if products:
                     all_products.extend(products)
                     job.products_found += len(products)
@@ -180,157 +170,152 @@ async def process_job(job_id: str):
                     add_job_log(job, "ok", f"✅ {filename}: {len(products)} productos ({detected_tariff or 'T1'})")
                 else:
                     add_job_log(job, "warn", f"⚠️ {filename}: Sin productos detectados")
-                    
+
             except Exception as e:
                 error_msg = str(e)[:100]
                 job.errors.append(f"{filename}: {error_msg}")
                 add_job_log(job, "err", f"❌ {filename}: {error_msg}")
-        
-        # Guardar productos en la base de datos
+
         if all_products:
             add_job_log(job, "info", f"💾 Guardando {len(all_products)} productos...")
-            
-            # Agrupar por tarifa detectada
+
             products_by_tariff = {}
             for p in all_products:
                 tariff = p.get('detectedTariff', 'T1')
                 if tariff not in products_by_tariff:
                     products_by_tariff[tariff] = []
                 products_by_tariff[tariff].append(p)
-            
-            # Mostrar resumen de tarifas detectadas
+
             tariffs_summary = ", ".join([f"{t}({len(prods)})" for t, prods in sorted(products_by_tariff.items())])
             add_job_log(job, "info", f"📊 Tarifas: {tariffs_summary}")
-            
+
             for tariff, products in products_by_tariff.items():
                 created, updated = await save_products_batch(products, tariff, job.library)
                 job.products_created += created
                 job.products_updated += updated
                 add_job_log(job, "ok", f"✅ {tariff}: {created} nuevo(s), {updated} fusionado(s)")
-        
+
         job.status = JobStatus.COMPLETED
         total_tarifas = list(set(job.detected_tariffs))
         add_job_log(job, "ok", f"🎉 Completado: {job.products_found} productos, {len(total_tarifas)} tarifa(s)")
-        
+
     except Exception as e:
         job.status = JobStatus.FAILED
         job.errors.append(str(e))
         add_job_log(job, "err", f"❌ Error fatal: {str(e)[:100]}")
         logger.error(f"Job {job_id} failed: {e}")
-    
+
     finally:
         job.current_file = ""
-        # Limpiar archivos de la cola
         if job_id in files_queue:
             del files_queue[job_id]
 
 
+def get_mime_type_from_bytes(image_bytes: bytes) -> str:
+    """Detecta el tipo MIME por magic bytes."""
+    magic = image_bytes[:8]
+    if magic[:2] == b'\xff\xd8':
+        return "image/jpeg"
+    elif magic[:8] == b'\x89PNG\r\n\x1a\n':
+        return "image/png"
+    elif magic[:6] in (b'GIF87a', b'GIF89a'):
+        return "image/gif"
+    return "image/jpeg"
+
+
 async def analyze_single_image(base64_image: str, library: str, module: str, filename: str, api_key: str) -> tuple:
-    """Analiza una sola imagen y devuelve los productos y la tarifa detectada"""
+    """Analiza una sola imagen usando google-genai SDK."""
     products = []
     detected_tariff = None
     extracted_codes = set()
     max_passes = 2
 
-    # Configurar Gemini con la API key
-    genai.configure(api_key=api_key)
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+    gemini_client = genai.Client(api_key=api_key)
+
+    # Decodificar imagen
+    image_bytes = base64.b64decode(base64_image)
+    mime_type = get_mime_type_from_bytes(image_bytes)
 
     for pass_num in range(max_passes):
         exclude_list = ", ".join(list(extracted_codes)[:50]) if extracted_codes else "ninguno"
 
-        system_prompt = f"""Eres un experto en digitalización de tarifas de muebles de cocina MV (MUEBLES VALENCIA).
+        if library == 'ZC':
+            system_prompt = f"""Eres un experto en digitalización de tarifas de muebles de cocina ZONA COCINAS (ZC).
 
-PASO 1: DETECTAR NÚMERO DE TARIFA
-Busca en el encabezado: "TARIFA 1", "TARIFA 2", "T1", "T2", etc. hasta T21.
-Si no encuentras, usa "T1".
+PASO 1: DETECTAR ZONA DE PRECIO
+Busca en el encabezado: "ZONA 1", "Z1", "Z2"... hasta Z12.
+Si no encuentras, usa "Z1".
 
-PASO 2: ENTENDER LA ESTRUCTURA DE LA TABLA
-Las tablas de catálogo MV tienen estas estructuras:
+PASO 2: EXTRAER PRODUCTOS
+Las tablas ZC tienen columnas Z1-Z12 con precios por zona geográfica.
+Cada fila tiene: REF (código), DESCRIPCIÓN, y 12 precios (Z1 a Z12).
 
-**ALTOS (códigos que empiezan por A):**
-- Tienen DOS columnas de precios: "70" y "90" (alturas en cm)
-- Profundidad fija: 33 cm
-- DEBES crear DOS productos por cada fila:
-  - code="CODIGO-70", height=70, depth=33
-  - code="CODIGO-90", height=90, depth=33
+CÓDIGOS ZC:
+- Altos 35-60cm: {{altura}}A{{nP}}P{{ancho}} → Ej: 60A1P58600
+- Altos 70-90cm: {{altura/10}}A{{nP}}P{{ancho}} → Ej: 9A1P58600
+- Bajos: {{altura/10}}B{{nP}}P{{ancho}} → Ej: 7B1P58600
+- Columnas: {{altura/10}}C{{nP}}P{{ancho}}
+- Semicolumnas: {{altura/10}}SM{{nP}}P{{ancho}}
 
-**COLUMNAS (códigos que empiezan por C, CD, CH, etc.):**
-- Tienen DOS columnas de precios: "200" y "220" (alturas en cm)
-- Profundidad fija: 58 cm
-- DEBES crear DOS productos por cada fila:
-  - code="CODIGO-200", height=200, depth=58
-  - code="CODIGO-220", height=220, depth=58
-
-**BAJOS (códigos que empiezan por B):**
-- Una sola columna de precio en el catálogo
-- Profundidad fija: 58 cm
-- IMPORTANTE: Aunque solo hay UNA columna de precio, DEBES crear DOS productos con el MISMO precio:
-  - code="CODIGO-H70", height=70, depth=58, points=PRECIO
-  - code="CODIGO-H80", height=80, depth=58, points=PRECIO (mismo precio que H70)
-
-PASO 3: FORMATO DE SALIDA (JSON):
+FORMATO JSON:
 {{
-  "detectedTariff": "T4",
+  "detectedZone": "Z1",
   "products": [
-    {{"code": "A30D/I-70", "name": "Alto 30 D/I", "category": "ALTO", "width": 30, "height": 70, "depth": 33, "points": 45}},
-    {{"code": "A30D/I-90", "name": "Alto 30 D/I", "category": "ALTO", "width": 30, "height": 90, "depth": 33, "points": 52}},
-    {{"code": "CD60-200", "name": "Columna Despensero 60", "category": "COLUMNA", "width": 60, "height": 200, "depth": 58, "points": 320}},
-    {{"code": "CD60-220", "name": "Columna Despensero 60", "category": "COLUMNA", "width": 60, "height": 220, "depth": 58, "points": 355}},
-    {{"code": "B60-H70", "name": "Bajo 60", "category": "BAJO", "width": 60, "height": 70, "depth": 58, "points": 89}},
-    {{"code": "B60-H80", "name": "Bajo 60", "category": "BAJO", "width": 60, "height": 80, "depth": 58, "points": 89}}
+    {{
+      "code": "9A1P58600",
+      "name": "Alto 1 Puerta fondo 58cm 60cm",
+      "category": "ALTO",
+      "width": 60,
+      "height": 90,
+      "depth": 58,
+      "points": 95,
+      "zonePoints": {{"Z1":95,"Z2":98,"Z3":104,"Z4":99,"Z5":107,"Z6":119,"Z7":127,"Z8":128,"Z9":134,"Z10":149,"Z11":158,"Z12":188}}
+    }}
   ]
 }}
 
-REGLAS CRÍTICAS:
-1. Las dimensiones SIEMPRE en CENTÍMETROS
-2. Para ALTOS: SIEMPRE crea DOS productos (-70 y -90)
-3. Para COLUMNAS: SIEMPRE crea DOS productos (-200 y -220)
-4. Para BAJOS: SIEMPRE crea DOS productos (-H70 y -H80) con el MISMO precio
-5. points = el precio NUMÉRICO de la celda
-6. Extrae hasta 60 productos por pasada
-7. category debe ser: ALTO, BAJO, COLUMNA, RINCON, SOBRE, CAMPANA, MODULO
+{"NO incluyas estos códigos ya extraídos: " + exclude_list if extracted_codes else "Extrae TODOS los productos visibles."}
+Responde SOLO con JSON válido."""
+        else:
+            system_prompt = f"""Eres un experto en digitalización de tarifas MV (MUEBLES VALENCIA).
 
-{"NO incluyas estos códigos ya extraídos: " + exclude_list if extracted_codes else "Primera pasada: extrae TODOS los productos visibles con TODAS sus variantes de altura."}
+PASO 1: DETECTAR NÚMERO DE TARIFA
+Busca: "TARIFA 1", "T1", "T2"... hasta T21. Si no, usa "T1".
 
-Responde SOLO con JSON válido, sin texto adicional."""
+PASO 2: EXTRAER PRODUCTOS
+- ALTOS: 2 alturas (70 y 90) → crear 2 productos por fila
+- COLUMNAS: 2 alturas (200 y 220) → crear 2 productos por fila
+- BAJOS: 1 precio → crear 2 productos con mismo precio (H70 y H80)
+
+FORMATO JSON:
+{{
+  "detectedTariff": "T1",
+  "products": [
+    {{"code": "A30-70", "name": "Alto 30", "category": "ALTO", "width": 30, "height": 70, "depth": 33, "points": 45}},
+    {{"code": "A30-90", "name": "Alto 30", "category": "ALTO", "width": 30, "height": 90, "depth": 33, "points": 52}}
+  ]
+}}
+
+{"NO incluyas estos códigos: " + exclude_list if extracted_codes else "Extrae TODOS los productos visibles."}
+Responde SOLO con JSON válido."""
 
         try:
-            # Decodificar imagen
-            image_bytes = base64.b64decode(base64_image)
-
-            # Detectar mime type
-            magic = image_bytes[:8]
-            if magic[:2] == b'\xff\xd8':
-                mime_type = "image/jpeg"
-            elif magic[:8] == b'\x89PNG\r\n\x1a\n':
-                mime_type = "image/png"
-            elif magic[:6] in (b'GIF87a', b'GIF89a'):
-                mime_type = "image/gif"
-            else:
-                mime_type = "image/jpeg"  # fallback
-
-            # Crear modelo con instrucción de sistema
-            model = genai.GenerativeModel(
-                model_name=os.environ.get("GEMINI_MODEL", "gemini-1.5-flash"),
-                system_instruction=system_prompt
-            )
-
-            user_text = (
-                "IMPORTANTE: Extrae productos DIFERENTES a los anteriores."
-                if extracted_codes
-                else "Extrae TODOS los productos visibles, incluyendo variantes de altura si las hay."
-            )
-
-            # Llamada a Gemini (síncrona en thread)
-            image_part = {"mime_type": mime_type, "data": image_bytes}
             response = await asyncio.to_thread(
-                model.generate_content,
-                [user_text, image_part]
+                gemini_client.models.generate_content,
+                model=model_name,
+                contents=[
+                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                    "IMPORTANTE: Extrae productos DIFERENTES a los anteriores." if extracted_codes else "Extrae TODOS los productos visibles."
+                ],
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.1
+                )
             )
 
             response_text = response.text.strip() if response and response.text else ""
 
-            # Limpiar markdown si viene envuelto
             if "```" in response_text:
                 parts = response_text.split("```")
                 for part in parts:
@@ -341,20 +326,23 @@ Responde SOLO con JSON válido, sin texto adicional."""
                         response_text = part
                         break
 
-            response_text = response_text.strip()
-
-            parsed = json.loads(response_text)
+            parsed = json.loads(response_text.strip())
             new_products = parsed.get("products", [])
 
             if pass_num == 0:
-                detected_tariff = parsed.get("detectedTariff", "T1")
-                if detected_tariff:
-                    detected_tariff = detected_tariff.upper().strip()
-                    match = re.search(r'(\d+)', detected_tariff)
-                    if match:
-                        detected_tariff = f"T{match.group(1)}"
-                if not detected_tariff or not detected_tariff.startswith("T"):
-                    detected_tariff = "T1"
+                if library == 'ZC':
+                    detected_tariff = parsed.get("detectedZone", "Z1")
+                    if not detected_tariff or not detected_tariff.startswith("Z"):
+                        detected_tariff = "Z1"
+                else:
+                    detected_tariff = parsed.get("detectedTariff", "T1")
+                    if detected_tariff:
+                        detected_tariff = detected_tariff.upper().strip()
+                        match = re.search(r'(\d+)', detected_tariff)
+                        if match:
+                            detected_tariff = f"T{match.group(1)}"
+                    if not detected_tariff or not detected_tariff.startswith("T"):
+                        detected_tariff = "T1"
 
             new_count = 0
             for prod in new_products:
@@ -375,10 +363,8 @@ Responde SOLO con JSON válido, sin texto adicional."""
                         depth = depth / 10
 
                     if depth == 0 or depth < 20:
-                        if category in ['ALTO', 'RINCON'] or code.startswith('A'):
+                        if category in ['ALTO'] or code.startswith('A'):
                             depth = 33.0
-                        elif category in ['BAJO', 'COLUMNA'] or code.startswith('B') or code.startswith('C'):
-                            depth = 58.0
                         else:
                             depth = 58.0
 
@@ -386,12 +372,10 @@ Responde SOLO con JSON válido, sin texto adicional."""
                         height_match = re.search(r'-H?(\d+)$', code, re.IGNORECASE)
                         if height_match:
                             height = float(height_match.group(1))
-                        elif category == 'ALTO' or (code.startswith('A') and not code.startswith('AC')):
+                        elif category == 'ALTO':
                             height = 70.0
-                        elif category == 'COLUMNA' or code.startswith('C'):
+                        elif category == 'COLUMNA':
                             height = 200.0
-                        elif category == 'BAJO' or code.startswith('B'):
-                            height = 70.0
                         else:
                             height = 70.0
 
@@ -406,8 +390,15 @@ Responde SOLO con JSON válido, sin texto adicional."""
                     prod['library'] = library
                     prod['importedAt'] = datetime.now(timezone.utc).isoformat()
                     prod['originalFilename'] = filename
-                    prod['zonePoints'] = {detected_tariff: float(prod.get('points', 0) or 0)}
                     prod['detectedTariff'] = detected_tariff
+
+                    # Para ZC guardar todos los zonePoints si están disponibles
+                    if library == 'ZC' and prod.get('zonePoints'):
+                        prod['zonePoints'] = prod['zonePoints']
+                        prod['points'] = prod['zonePoints'].get('Z1', float(prod.get('points', 0) or 0))
+                    else:
+                        prod['zonePoints'] = {detected_tariff: float(prod.get('points', 0) or 0)}
+
                     products.append(prod)
                     extracted_codes.add(code)
                     new_count += 1
@@ -423,7 +414,7 @@ Responde SOLO con JSON válido, sin texto adicional."""
 
 
 async def save_products_batch(products: List[Dict], tariff: str, library: str) -> tuple:
-    """Guarda productos usando upsert inteligente - fusiona tarifas si el producto ya existe"""
+    """Guarda productos usando upsert inteligente."""
     created = 0
     updated = 0
 
@@ -433,38 +424,37 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
             continue
 
         points = float(product.get("points", 0) or 0)
-
         existing = await db.products.find_one({"code": code, "library": library})
 
         if existing:
             current_zones = existing.get("zonePoints", {}) or {}
-            current_zones[tariff] = points
+
+            # Para ZC, fusionar todos los zonePoints
+            if library == 'ZC' and product.get('zonePoints'):
+                for zone, value in product['zonePoints'].items():
+                    current_zones[zone] = value
+            else:
+                current_zones[tariff] = points
 
             update_fields = {
                 "zonePoints": current_zones,
-                "points": current_zones.get("T1", current_zones.get("Z1", points))
+                "points": current_zones.get("Z1", current_zones.get("T1", points))
             }
 
             new_width = float(product.get("width", 0) or 0)
             new_height = float(product.get("height", 0) or 0)
             new_depth = float(product.get("depth", 0) or 0)
-            existing_width = existing.get("width", 0) or 0
-            existing_height = existing.get("height", 0) or 0
-            existing_depth = existing.get("depth", 0) or 0
 
-            if (existing_width == 0 or existing_width > 300) and new_width > 0 and new_width <= 300:
+            if (existing.get("width", 0) == 0 or existing.get("width", 0) > 300) and 0 < new_width <= 300:
                 update_fields["width"] = new_width
-            if (existing_height == 0 or existing_height > 300) and new_height > 0 and new_height <= 300:
+            if (existing.get("height", 0) == 0 or existing.get("height", 0) > 300) and 0 < new_height <= 300:
                 update_fields["height"] = new_height
-            if (existing_depth == 0 or existing_depth > 300) and new_depth > 0 and new_depth <= 300:
+            if (existing.get("depth", 0) == 0 or existing.get("depth", 0) > 300) and 0 < new_depth <= 300:
                 update_fields["depth"] = new_depth
             if not existing.get("category") and product.get("category"):
                 update_fields["category"] = str(product.get("category", "")).upper()
 
-            await db.products.update_one(
-                {"code": code, "library": library},
-                {"$set": update_fields}
-            )
+            await db.products.update_one({"code": code, "library": library}, {"$set": update_fields})
             updated += 1
         else:
             width = float(product.get("width", 0) or 0)
@@ -478,14 +468,14 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
                 height = height / 10
             if depth > 300:
                 depth = depth / 10
-
             if depth == 0 or depth < 20:
-                if category in ['ALTO', 'RINCON'] or code.startswith('A'):
-                    depth = 33.0
-                elif category in ['BAJO', 'COLUMNA'] or code.startswith('B') or code.startswith('C'):
-                    depth = 58.0
-                else:
-                    depth = 58.0
+                depth = 33.0 if category == 'ALTO' else 58.0
+
+            # Determinar zonePoints
+            if library == 'ZC' and product.get('zonePoints'):
+                zone_points = product['zonePoints']
+            else:
+                zone_points = {tariff: points}
 
             clean_data = {
                 "id": product.get("id", f"prod-{uuid.uuid4().hex[:8]}"),
@@ -501,7 +491,7 @@ async def save_products_batch(products: List[Dict], tariff: str, library: str) -
                 "module": str(product.get("module", "montada")),
                 "library": library,
                 "points": points,
-                "zonePoints": {tariff: points},
+                "zonePoints": zone_points,
                 "importedAt": datetime.now(timezone.utc).isoformat()
             }
             await db.products.insert_one(clean_data)
@@ -531,8 +521,6 @@ async def save_image_for_audit(job_id: str, filename: str, base64_image: str, li
     }
 
     await db.telemetry_audit.insert_one(audit_record)
-    logger.info(f"Image saved for audit: {audit_id} - {filename}")
-
     return audit_id
 
 
@@ -561,25 +549,23 @@ async def update_audit_record(audit_id: str, products: List[Dict], detected_tari
             "processed_at": datetime.now(timezone.utc).isoformat()
         }}
     )
-    logger.info(f"Audit record updated: {audit_id} - {len(products_summary)} products")
 
 
 async def get_audit_images(library: str = None, limit: int = 50, skip: int = 0) -> List[Dict]:
-    """Obtiene imágenes de auditoría para revisión (sin base64 para ahorrar memoria)."""
+    """Obtiene imágenes de auditoría para revisión."""
     query = {}
     if library:
         query["library"] = library
 
     cursor = db.telemetry_audit.find(
-        query,
-        {"image_base64": 0}
+        query, {"image_base64": 0}
     ).sort("created_at", -1).skip(skip).limit(limit)
 
     return await cursor.to_list(length=limit)
 
 
 async def get_audit_image_detail(audit_id: str) -> Optional[Dict]:
-    """Obtiene el detalle completo de una imagen de auditoría, incluyendo el base64."""
+    """Obtiene el detalle completo de una imagen de auditoría."""
     record = await db.telemetry_audit.find_one({"id": audit_id})
     if record:
         record.pop("_id", None)
