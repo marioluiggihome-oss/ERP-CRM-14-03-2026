@@ -3415,7 +3415,7 @@ async def startup_event():
         logger.info("Índice único creado para expNumber en digitalizador_history")
         
         # Índices para usuarios
-        await db.users.create_index("username", unique=True)
+        await db.users.create_index("username", unique=False)
         await db.users.create_index("email", sparse=True)
         await db.users.create_index("factoryId", sparse=True)
         logger.info("Índices de usuarios creados")
