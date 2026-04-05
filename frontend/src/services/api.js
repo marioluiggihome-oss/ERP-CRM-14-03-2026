@@ -686,8 +686,8 @@ export const backupAPI = {
   },
 
   triggerManual: async () => {
-    const response = await fetch(`${API_URL}/api/backup/manual`, {
-      method: 'POST'
+   const response = await fetch(`${API_URL}/api/admin/test-gdrive-backup`, {
+      method: 'GET'
     });
     if (!response.ok) throw new Error('Error al crear backup');
     return response.json();
