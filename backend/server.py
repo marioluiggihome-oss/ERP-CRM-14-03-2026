@@ -3395,8 +3395,8 @@ async def fix_product_data():
 
 @api_router.get("/admin/test-gdrive-backup")
 async def test_gdrive_backup():
-    from services.gdrive_backup_service import run_gdrive_backup
-    result = await run_gdrive_backup(db)
+    from services.backup_email_service import run_email_backup
+    result = await run_email_backup(db)
     return result
 # Include the router in the main app (AFTER all endpoints are defined)
 app.include_router(api_router)
