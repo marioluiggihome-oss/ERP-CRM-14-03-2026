@@ -27,7 +27,7 @@ async def run_email_backup(db) -> dict:
         results["errors"].append("RESEND_API_KEY no configurado")
         return results
 
-    admin_email = os.environ.get("ADMIN_EMAIL", "mario@luiggihome.es")
+    admin_email = os.environ.get("ADMIN_EMAIL", "marioluiggihome@gmail.com")
     attachments = []
     summary_lines = []
 
