@@ -63,7 +63,7 @@ async def run_email_backup(db) -> dict:
     # Enviar email con todos los adjuntos
     try:
         resend.Emails.send({
-            "from": "ERP Backup <backup@luiggihome.es>",
+            "from": "ERP Backup <onboarding@resend.dev>",
             "to": [admin_email],
             "subject": f"🗄️ Backup ERP Luiggi Home - {timestamp}",
             "html": f"""
