@@ -3393,7 +3393,11 @@ async def fix_product_data():
         logger.error(f"Error fixing product data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
+@api_router.post("/admin/test-gdrive-backup")
+async def test_gdrive_backup():
+    from services.gdrive_backup_service import run_gdrive_backup
+    result = await run_gdrive_backup(db)
+    return result
 # Include the router in the main app (AFTER all endpoints are defined)
 app.include_router(api_router)
 
