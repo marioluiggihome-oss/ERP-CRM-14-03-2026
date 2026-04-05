@@ -3543,7 +3543,23 @@ async def startup_event():
     
     # Start backup scheduler from backup module
     start_backup_scheduler()
+# Backup diario por email (3:00 AM)
+    from services.backup_email_service import run_email_backup
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.triggers.cron import CronTrigger
 
+    async def scheduled_email_backup():
+        await run_email_backup(db)
+
+    gdrive_scheduler = AsyncIOScheduler()
+    gdrive_scheduler.add_job(
+        scheduled_email_backup,
+        CronTrigger(hour=3, minute=0),
+        id="email_backup",
+        replace_existing=True
+    )
+    gdrive_scheduler.start()
+    logger.info("✅ Backup diario por email iniciado (3:00 AM)")
 @app.on_event("shutdown")
 async def shutdown_db_client():
     backup_scheduler.shutdown()
