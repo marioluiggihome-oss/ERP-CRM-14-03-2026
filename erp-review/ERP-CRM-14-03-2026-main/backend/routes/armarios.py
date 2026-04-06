@@ -250,7 +250,7 @@ Considera:
 - Pantalonero para pantalones"""
         )
         
-        chat.with_model("gemini", "gemini-3-flash-preview")
+        chat.with_model("gemini", os.environ.get("GEMINI_MODEL", "gemini-1.5-flash"))
         
         # Construir prompt
         prompt = f"""El usuario quiere configurar un armario con estas instrucciones:
@@ -329,7 +329,7 @@ Reglas de diseno:
 - "joyero" va en zona media
 
 Debes responder UNICAMENTE con un JSON valido sin explicaciones."""
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", os.environ.get("GEMINI_MODEL", "gemini-1.5-flash"))
         
         prompt = f"""El usuario quiere configurar un armario con {request.modules} modulos.
 Dimensiones: {request.width}mm ancho x {request.height}mm alto x {request.depth}mm fondo.

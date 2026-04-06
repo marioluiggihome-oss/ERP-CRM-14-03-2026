@@ -377,7 +377,7 @@ IMPORTANTE:
             api_key=llm_key,
             session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
             system_message="Eres un asistente experto en extraer informacion de imagenes de presupuestos de cocinas."
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", os.environ.get("GEMINI_MODEL", "gemini-1.5-flash"))
         
         # Create image content
         image_content = ImageContent(

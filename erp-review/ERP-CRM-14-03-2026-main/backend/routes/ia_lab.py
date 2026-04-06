@@ -120,13 +120,11 @@ def get_mime_type(content: bytes) -> str:
 
 async def call_gemini(api_key: str, prompt: str, image_bytes: bytes, system_instruction: str) -> str:
     """Llama a la API de Gemini con una imagen usando google-genai SDK."""
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
     mime_type = get_mime_type(image_bytes)
 
-    client = genai.Client(
-        api_key=api_key,
-        http_options={"api_version": "v1beta"}
-    )
+    # Usar versión v1 de la API para compatibilidad con gemini-1.5-flash
+    client = genai.Client(api_key=api_key)
 
     response = await asyncio.to_thread(
         client.models.generate_content,

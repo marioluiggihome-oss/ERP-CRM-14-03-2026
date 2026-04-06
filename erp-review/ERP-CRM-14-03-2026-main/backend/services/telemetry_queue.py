@@ -230,11 +230,9 @@ async def analyze_single_image(base64_image: str, library: str, module: str, fil
     extracted_codes = set()
     max_passes = 2
 
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-    gemini_client = genai.Client(
-        api_key=api_key,
-        http_options={"api_version": "v1beta"}
-    )
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
+    # Usar versión estándar de la API para compatibilidad
+    gemini_client = genai.Client(api_key=api_key)
 
     # Decodificar imagen
     image_bytes = base64.b64decode(base64_image)

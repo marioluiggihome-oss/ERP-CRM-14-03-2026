@@ -484,12 +484,13 @@ Si no puedes identificar una medida específica, usa valores estándar:
 - Altos: alto=90, fondo=33
 - Columnas: alto según nombre (H180=180cm), fondo=58"""
 
-        # Ejecutar análisis con Gemini
+        # Ejecutar análisis con Gemini - usar modelo de variable de entorno
+        model_name = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
             lambda: gemini_client.models.generate_content(
-                model="gemini-2.0-flash",
+                model=model_name,
                 contents=[
                     types.Part.from_bytes(
                         data=pdf_bytes,
