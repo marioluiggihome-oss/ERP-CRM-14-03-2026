@@ -1,0 +1,82 @@
+{
+  "summary": "Tested bulk-upsert endpoint and Telemetría IA UI features for LUIGGI HOME. All features working correctly: 1) Backend bulk-upsert creates new products or updates zonePoints for existing ones, 2) Frontend shows library selector (ZC/MV) and tariff dropdown (T1-T21 for MV, Z1-Z12 for ZC), 3) api.js bulkUpsert handles responses correctly without 'body stream already read' error.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_bulk_upsert.py",
+    "/app/test_reports/pytest/pytest_bulk_upsert.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend bulk-upsert endpoint (server.py lines 1781-1867) correctly implements UPSERT logic: creates new products or merges zonePoints for existing ones",
+    "Backend converts product codes to uppercase (line 1798) for consistent matching",
+    "api.js bulkUpsert (lines 323-346) uses response.text() + JSON.parse() to avoid 'body stream already read' error",
+    "SettingsModal.jsx Telemetría IA section (lines 4469-4700) correctly shows library selector and dynamic tariff dropdown"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bulk_upsert.py"
+  ],
+  "success_rate": {
+    "backend": "100% - 8/8 tests passed for bulk-upsert endpoint",
+    "frontend": "100% - All UI elements verified working"
+  },
+  "test_credentials": {
+    "username": "MARIO",
+    "password": "MARIO"
+  },
+  "seed_data_creation": "Test products created and cleaned up during pytest execution (21 test products deleted)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bulk-upsert endpoint tested and working. When importing products with different tariffs (T1, T2, T3 for MV), the zonePoints are correctly merged. The Telemetría IA UI in MASTER > Telemetría IA tab shows library selector (ZC/MV) and tariff dropdown.",
+  "features_tested": {
+    "1_bulk_upsert_endpoint": {
+      "status": "PASS",
+      "details": "POST /api/products/bulk-upsert creates new products or updates zonePoints for existing ones. Tested with MV library (T1-T21) and ZC library (Z1-Z12). zonePoints correctly merge when importing different tariffs."
+    },
+    "2_telemetry_ia_library_selector": {
+      "status": "PASS",
+      "details": "SettingsModal shows 'LIBRERÍA DE CATÁLOGO' section with ZC (blue) and MV (purple) buttons. Clicking switches the active library."
+    },
+    "3_telemetry_ia_tariff_dropdown": {
+      "status": "PASS",
+      "details": "When MV selected: dropdown shows 'Tarifa MV' with T1-T21 options (21 total). When ZC selected: dropdown shows 'Zona ZC' with Z1-Z12 options (12 total)."
+    },
+    "4_api_js_body_stream_fix": {
+      "status": "PASS",
+      "details": "bulkUpsert method in api.js uses response.text() + JSON.parse() instead of response.json() to avoid 'body stream already read' error."
+    }
+  },
+  "api_tests": {
+    "bulk_upsert_create": "POST /api/products/bulk-upsert - 200 OK, creates new products with specified tariff",
+    "bulk_upsert_update": "POST /api/products/bulk-upsert - 200 OK, updates existing products with new tariff",
+    "bulk_upsert_merge_zonepoints": "Verified zonePoints merge correctly: {T1: 100, T2: 120, T3: 140}",
+    "bulk_upsert_no_duplicates": "Verified no duplicate products created when importing same codes",
+    "bulk_upsert_zc_library": "POST /api/products/bulk-upsert with library=ZC - 200 OK"
+  },
+  "ui_verified_elements": {
+    "telemetry_ia_section": {
+      "location": "MASTER > Telemetría IA tab",
+      "library_selector": {
+        "zc_button": "📘 ZC (blue when selected)",
+        "mv_button": "📙 MV (purple when selected)"
+      },
+      "tariff_dropdown": {
+        "mv_options": "T1-T21 (21 options)",
+        "zc_options": "Z1-Z12 (12 options)"
+      },
+      "file_upload": "CARGAR FICHAS area for JPG, PNG, PDF",
+      "digitalizar_button": "Orange button to process files"
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  }
+}

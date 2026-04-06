@@ -1,0 +1,575 @@
+
+🚀 Iniciando importación del catálogo
+   📁 Directorio: /app/pdf_pages_95_234
+   📄 Páginas: 1 a 140 (140 páginas)
+   📦 Batch size: 3
+
+📦 Procesando batch 1/47
+
+📄 Procesando página 95: /app/pdf_pages_95_234/page-001.jpg
+   ✅ Extraídos 11 productos - Sobremódulos altos 110cm de alto y 58cm de fondo. Incluye mu...
+
+📄 Procesando página 96: /app/pdf_pages_95_234/page-002.jpg
+   ✅ Extraídos 20 productos - Listado de precios por zonas para sobremódulos rincón lineal...
+
+📄 Procesando página 97: /app/pdf_pages_95_234/page-003.jpg
+   ✅ Extraídos 16 productos - Sobremódulos Decorativos de 110cm de alto, con fondos de 33c...
+   📊 Productos en BD: 3588
+
+📦 Procesando batch 2/47
+
+📄 Procesando página 98: /app/pdf_pages_95_234/page-004.jpg
+   ✅ Extraídos 18 productos - Sobremódulos de 127cm de alto y 33cm de fondo...
+
+📄 Procesando página 99: /app/pdf_pages_95_234/page-005.jpg
+   ✅ Extraídos 19 productos - Sobremódulos de cocina, diferentes modelos y tamaños con pre...
+
+📄 Procesando página 100: /app/pdf_pages_95_234/page-006.jpg
+   ✅ Extraídos 8 productos - Página de catálogo de LUIGGI HOME con información de precios...
+   📊 Productos en BD: 3608
+
+📦 Procesando batch 3/47
+
+📄 Procesando página 101: /app/pdf_pages_95_234/page-007.jpg
+   ✅ Extraídos 18 productos - Página de catálogo con precios por zonas de varios modelos d...
+
+📄 Procesando página 102: /app/pdf_pages_95_234/page-008.jpg
+   ✅ Extraídos 9 productos - Listado de precios por zonas de sobremódulos termo con 2 pue...
+
+📄 Procesando página 103: /app/pdf_pages_95_234/page-009.jpg
+   ✅ Extraídos 18 productos - Listado de sobremódulos de cocina de 127cm de alto y 58cm de...
+      Error importing None: 'NoneType' object has no attribute 'strip'
+   📊 Productos en BD: 3640
+
+📦 Procesando batch 4/47
+
+📄 Procesando página 104: /app/pdf_pages_95_234/page-010.jpg
+   ✅ Extraídos 19 productos - Listado de sobremódulos de cocina, alto 127cm y fondo 58cm, ...
+
+📄 Procesando página 105: /app/pdf_pages_95_234/page-011.jpg
+   ✅ Extraídos 8 productos - Página de catálogo con diferentes modelos de sobremódulos de...
+
+📄 Procesando página 106: /app/pdf_pages_95_234/page-012.jpg
+   ✅ Extraídos 14 productos - Listado de precios por zonas para diferentes modelos de sobr...
+   📊 Productos en BD: 3677
+
+📦 Procesando batch 5/47
+
+📄 Procesando página 107: /app/pdf_pages_95_234/page-013.jpg
+   ✅ Extraídos 13 productos - Listado de sobremódulos termo de 1 y 2 puertas y persiana de...
+
+📄 Procesando página 108: /app/pdf_pages_95_234/page-014.jpg
+   ✅ Extraídos 16 productos - Sobremódulos de 127cm de alto decorativos con fondo de 33cm ...
+
+📄 Procesando página 109: /app/pdf_pages_95_234/page-015.jpg
+   ✅ Extraídos 18 productos - Sobremódulos de 147cm de alto y 33cm de fondo. Incluye de 1 ...
+   📊 Productos en BD: 3702
+
+📦 Procesando batch 6/47
+
+📄 Procesando página 110: /app/pdf_pages_95_234/page-016.jpg
+   ✅ Extraídos 18 productos - Listado de sobremódulos de 1 y 2 vitrinas con precios por zo...
+
+📄 Procesando página 111: /app/pdf_pages_95_234/page-017.jpg
+   ✅ Extraídos 3 productos - Página de catálogo con sobremódulos micro de 1 y 2 puertas y...
+
+📄 Procesando página 112: /app/pdf_pages_95_234/page-018.jpg
+   ✅ Extraídos 16 productos - Página de catálogo con precios por zonas de sobremódulos de ...
+   📊 Productos en BD: 3727
+
+📦 Procesando batch 7/47
+
+📄 Procesando página 113: /app/pdf_pages_95_234/page-019.jpg
+   ✅ Extraídos 17 productos - Precios de sobremódulos (altos) con fondo 33cm...
+
+📄 Procesando página 114: /app/pdf_pages_95_234/page-020.jpg
+   ✅ Extraídos 22 productos - Listado de precios por zonas para diferentes modelos de sobr...
+
+📄 Procesando página 115: /app/pdf_pages_95_234/page-021.jpg
+   ✅ Extraídos 15 productos - Página de catálogo de sobremódulos de cocina, con precios po...
+   📊 Productos en BD: 3763
+
+📦 Procesando batch 8/47
+
+📄 Procesando página 116: /app/pdf_pages_95_234/page-022.jpg
+   ✅ Extraídos 11 productos - Listado de precios para sobremódulos de horno con vitrina y ...
+
+📄 Procesando página 117: /app/pdf_pages_95_234/page-023.jpg
+   ✅ Extraídos 20 productos - Página de catálogo de sobremódulos de cocina LUIGGI HOME, co...
+
+📄 Procesando página 118: /app/pdf_pages_95_234/page-024.jpg
+   ✅ Extraídos 3 productos - Sobremódulos persiana aluminio fondo 580mm...
+   📊 Productos en BD: 3787
+
+📦 Procesando batch 9/47
+
+📄 Procesando página 119: /app/pdf_pages_95_234/page-025.jpg
+   ✅ Extraídos 16 productos - Sobremódulos decorativos de 147cm de alto con fondo de 33cm ...
+
+📄 Procesando página 120: /app/pdf_pages_95_234/page-026.jpg
+   ✅ Extraídos 0 productos - Diagramas de medidas disponibles para cajones Legrabox y Axi...
+
+📄 Procesando página 121: /app/pdf_pages_95_234/page-027.jpg
+   ✅ Extraídos 25 productos - Página de catálogo de muebles de cocina LUIGGI HOME con mueb...
+   📊 Productos en BD: 3802
+
+📦 Procesando batch 10/47
+
+📄 Procesando página 122: /app/pdf_pages_95_234/page-028.jpg
+   ✅ Extraídos 0 productos - Imagen de portada de la sección de muebles BAJOS del catálog...
+
+📄 Procesando página 123: /app/pdf_pages_95_234/page-029.jpg
+   ✅ Extraídos 28 productos - Listado de muebles bajos de cocina de 1 y 2 puertas con cajó...
+
+📄 Procesando página 124: /app/pdf_pages_95_234/page-030.jpg
+   ✅ Extraídos 33 productos - Lista de muebles bajos de cocina con cajones y precios por z...
+   📊 Productos en BD: 3852
+
+📦 Procesando batch 11/47
+
+📄 Procesando página 125: /app/pdf_pages_95_234/page-031.jpg
+   ✅ Extraídos 33 productos - Productos de la sección de bajos, de 5 cajones LUX, y bajos ...
+
+📄 Procesando página 126: /app/pdf_pages_95_234/page-032.jpg
+   ✅ Extraídos 33 productos - Lista de bajos de cocina con diferentes configuraciones de c...
+
+📄 Procesando página 127: /app/pdf_pages_95_234/page-033.jpg
+   ✅ Extraídos 33 productos - Lista de muebles bajos de cocina con precios por zonas....
+   📊 Productos en BD: 3951
+
+📦 Procesando batch 12/47
+
+📄 Procesando página 128: /app/pdf_pages_95_234/page-034.jpg
+   ✅ Extraídos 14 productos - Precios de muebles bajos de cocina de diferentes tipos y med...
+
+📄 Procesando página 129: /app/pdf_pages_95_234/page-035.jpg
+   ✅ Extraídos 19 productos - Listado de muebles bajos de rincón lineal (1 y 2 puertas), t...
+
+📄 Procesando página 130: /app/pdf_pages_95_234/page-036.jpg
+   ✅ Extraídos 27 productos - Lista de muebles bajos de fregadero, de 2 puertas, 2 cacerol...
+   📊 Productos en BD: 4000
+
+📦 Procesando batch 13/47
+
+📄 Procesando página 131: /app/pdf_pages_95_234/page-037.jpg
+   ✅ Extraídos 20 productos - Lista de muebles bajos de fregadero, con diferentes configur...
+
+📄 Procesando página 132: /app/pdf_pages_95_234/page-038.jpg
+   ✅ Extraídos 21 productos - Listado de muebles bajos de cocina de 1 y 2 puertas, y bajos...
+
+📄 Procesando página 133: /app/pdf_pages_95_234/page-039.jpg
+   ✅ Extraídos 24 productos - Programa Estandar - Bajos - Bajos 70cm Fondo Estándar. Conti...
+   📊 Productos en BD: 4056
+
+📦 Procesando batch 14/47
+
+📄 Procesando página 134: /app/pdf_pages_95_234/page-040.jpg
+   ✅ Extraídos 20 productos - Lista de bajos de placa de 2 caceroleros y 1 puerta extraibl...
+
+📄 Procesando página 135: /app/pdf_pages_95_234/page-041.jpg
+   ✅ Extraídos 12 productos - Productos bajos de cocina: Bajos para horno, bajos caceroler...
+
+📄 Procesando página 136: /app/pdf_pages_95_234/page-042.jpg
+   ✅ Extraídos 26 productos - Lista de precios por zonas de muebles bajos de cocina de dif...
+   📊 Productos en BD: 4114
+
+📦 Procesando batch 15/47
+
+📄 Procesando página 137: /app/pdf_pages_95_234/page-043.jpg
+   ✅ Extraídos 21 productos - Listado de muebles bajos de cocina con precios por zona...
+
+📄 Procesando página 138: /app/pdf_pages_95_234/page-044.jpg
+   ✅ Extraídos 22 productos - Precios de bajos de cocina con 4 cajones de 175mm de altura,...
+
+📄 Procesando página 139: /app/pdf_pages_95_234/page-045.jpg
+   ✅ Extraídos 22 productos - Productos de la página: Bajos de 5 cajones de 200mm con fond...
+   📊 Productos en BD: 4179
+
+📦 Procesando batch 16/47
+
+📄 Procesando página 140: /app/pdf_pages_95_234/page-046.jpg
+   ✅ Extraídos 22 productos - Página de catálogo con bajos caceroleros de 280mm + 3 cajone...
+
+📄 Procesando página 141: /app/pdf_pages_95_234/page-047.jpg
+   ✅ Extraídos 22 productos - Lista de precios para muebles bajos de 2 caceroleros con caj...
+
+📄 Procesando página 142: /app/pdf_pages_95_234/page-048.jpg
+   ✅ Extraídos 22 productos - Precios de muebles bajos caceroleros de 350mm de ancho con 2...
+   📊 Productos en BD: 4245
+
+📦 Procesando batch 17/47
+
+📄 Procesando página 143: /app/pdf_pages_95_234/page-049.jpg
+   ✅ Extraídos 24 productos - Precios de muebles bajos y puertas de integración para elect...
+
+📄 Procesando página 144: /app/pdf_pages_95_234/page-050.jpg
+   ✅ Extraídos 5 productos - Muebles bajos de cocina de 70cm de alto y 33cm de fondo...
+
+📄 Procesando página 145: /app/pdf_pages_95_234/page-051.jpg
+   ✅ Extraídos 16 productos - Listado de bajos decorativos de 70cm de alto con fondos de 5...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 18/47
+
+📄 Procesando página 146: /app/pdf_pages_95_234/page-052.jpg
+   ✅ Extraídos 25 productos - Lista de muebles bajos de cocina de 80cm de fondo estándar, ...
+
+📄 Procesando página 147: /app/pdf_pages_95_234/page-053.jpg
+   ✅ Extraídos 21 productos - Listado de muebles bajos de cocina con una o dos puertas y u...
+
+📄 Procesando página 148: /app/pdf_pages_95_234/page-054.jpg
+   ✅ Extraídos 29 productos - Listado de muebles bajos de cocina con precios por zonas....
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 19/47
+
+📄 Procesando página 149: /app/pdf_pages_95_234/page-055.jpg
+   ✅ Extraídos 22 productos - Listado de muebles bajos de cocina con 5 cajones, en dos ser...
+
+📄 Procesando página 150: /app/pdf_pages_95_234/page-056.jpg
+   ✅ Extraídos 22 productos - Programa estandar - bajos 80cm fondo estándar. Bajos de 1 ca...
+
+📄 Procesando página 151: /app/pdf_pages_95_234/page-057.jpg
+   ✅ Extraídos 22 productos - Precios de muebles bajos de cocina de 2 caceroleros de 320mm...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 20/47
+
+📄 Procesando página 152: /app/pdf_pages_95_234/page-058.jpg
+   ✅ Extraídos 22 productos - Muebles bajos caceroleros de 400mm con 2 cajones de 200mm de...
+
+📄 Procesando página 153: /app/pdf_pages_95_234/page-059.jpg
+   ✅ Extraídos 26 productos - Listado de precios de muebles bajos de cocina de 2 caceroler...
+
+📄 Procesando página 154: /app/pdf_pages_95_234/page-060.jpg
+   ✅ Extraídos 18 productos - Productos de la sección BAJOS del catálogo. Incluye bajos de...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 21/47
+
+📄 Procesando página 155: /app/pdf_pages_95_234/page-061.jpg
+   ✅ Extraídos 18 productos - Lista de precios para muebles bajos de cocina: rinconeros li...
+
+📄 Procesando página 156: /app/pdf_pages_95_234/page-062.jpg
+   ✅ Extraídos 20 productos - Bajos fregadero de 1 o 2 caceroleros de 400mm de ancho. Seri...
+
+📄 Procesando página 157: /app/pdf_pages_95_234/page-063.jpg
+   ✅ Extraídos 20 productos - Precios por zonas de bajos de fregadero, con puerta extraibl...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 22/47
+
+📄 Procesando página 158: /app/pdf_pages_95_234/page-064.jpg
+   ✅ Extraídos 21 productos - Listado de muebles bajos de cocina: bajos de placa con 1 o 2...
+
+📄 Procesando página 159: /app/pdf_pages_95_234/page-065.jpg
+   ✅ Extraídos 24 productos - Precios de bajos de cocina estándar, 80cm de fondo. Incluye ...
+
+📄 Procesando página 160: /app/pdf_pages_95_234/page-066.jpg
+   ✅ Extraídos 20 productos - Precios por zonas de bajos de placa, con 1 o 2 caceroleros e...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 23/47
+
+📄 Procesando página 161: /app/pdf_pages_95_234/page-067.jpg
+   ✅ Extraídos 6 productos - Productos de la sección de bajos con cajón y caceroleros par...
+
+📄 Procesando página 162: /app/pdf_pages_95_234/page-068.jpg
+   ✅ Extraídos 26 productos - Muebles bajos de cocina, fondo 33cm...
+
+📄 Procesando página 163: /app/pdf_pages_95_234/page-069.jpg
+   ✅ Extraídos 28 productos - Listado de muebles bajos de cocina, de 1 y 2 puertas, con ca...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 24/47
+
+📄 Procesando página 164: /app/pdf_pages_95_234/page-070.jpg
+   ✅ Extraídos 22 productos - Precios de muebles bajos de cocina de 4 cajones de 200mm de ...
+
+📄 Procesando página 165: /app/pdf_pages_95_234/page-071.jpg
+   ✅ Extraídos 22 productos - Listado de precios para muebles bajos de 5 cajones de 160mm ...
+
+📄 Procesando página 166: /app/pdf_pages_95_234/page-072.jpg
+   ✅ Extraídos 22 productos - Productos de la serie BAJOS: Bajos de 80cm de alto y 33cm de...
+   📊 Productos en BD: 4290
+
+📦 Procesando batch 25/47
+
+📄 Procesando página 167: /app/pdf_pages_95_234/page-073.jpg
+   ✅ Extraídos 22 productos - Listado de precios por zonas para muebles bajos de cocina co...
+
+📄 Procesando página 168: /app/pdf_pages_95_234/page-074.jpg
+   ✅ Extraídos 22 productos - Listado de precios por zonas de bajos de cocina de 1 cacerol...
+
+📄 Procesando página 169: /app/pdf_pages_95_234/page-075.jpg
+   ✅ Extraídos 24 productos - Bajos de 2 caceroleros de 400mm de ancho con fondo de 330mm ...
+   📊 Productos en BD: 4292
+
+📦 Procesando batch 26/47
+
+📄 Procesando página 170: /app/pdf_pages_95_234/page-076.jpg
+   ✅ Extraídos 2 productos - Productos bajos de 80cm de alto y 33cm de fondo...
+
+📄 Procesando página 171: /app/pdf_pages_95_234/page-077.jpg
+   ✅ Extraídos 18 productos - Precios de bajos decorativos de 80cm de alto con fondo 580mm...
+
+📄 Procesando página 172: /app/pdf_pages_95_234/page-078.jpg
+   ✅ Extraídos 1 productos - Bajo terminal abierto con 1 estante. Tabla de precios por zo...
+   📊 Productos en BD: 4293
+
+📦 Procesando batch 27/47
+
+📄 Procesando página 173: /app/pdf_pages_95_234/page-079.jpg
+   ✅ Extraídos 0 productos - Esta página muestra diferentes sistemas de apertura para sem...
+
+📄 Procesando página 174: /app/pdf_pages_95_234/page-080.jpg
+   ✅ Extraídos 21 productos - Precios de Semicolumnas de 130cm de alto y 58cm de fondo. In...
+
+📄 Procesando página 175: /app/pdf_pages_95_234/page-081.jpg
+   ✅ Extraídos 21 productos - Tabla de precios para Semicolumnas de 130cm de alto y 58cm d...
+   📊 Productos en BD: 4293
+
+📦 Procesando batch 28/47
+
+📄 Procesando página 176: /app/pdf_pages_95_234/page-082.jpg
+   ✅ Extraídos 0 productos - Página de catálogo de muebles de cocina LUIGGI HOME que mues...
+
+📄 Procesando página 177: /app/pdf_pages_95_234/page-083.jpg
+   ✅ Extraídos 5 productos - Lista de precios de varias Semicolumnas con diferentes confi...
+
+📄 Procesando página 178: /app/pdf_pages_95_234/page-084.jpg
+   ✅ Extraídos 8 productos - Precios de sem колонны columna de cocina LUIGGI HOME...
+   📊 Productos en BD: 4297
+
+📦 Procesando batch 29/47
+
+📄 Procesando página 179: /app/pdf_pages_95_234/page-085.jpg
+   ✅ Extraídos 8 productos - Precios de Semicolumnas caceroleros de diferentes medidas (2...
+
+📄 Procesando página 180: /app/pdf_pages_95_234/page-086.jpg
+   ✅ Extraídos 6 productos - Listado de precios por zonas para diferentes modelos de semi...
+
+📄 Procesando página 181: /app/pdf_pages_95_234/page-087.jpg
+   ✅ Extraídos 4 productos - Página de catálogo con precios de Semicolumnas de cocina est...
+   📊 Productos en BD: 4311
+
+📦 Procesando batch 30/47
+
+📄 Procesando página 182: /app/pdf_pages_95_234/page-088.jpg
+   ✅ Extraídos 2 productos - Semicolumnas con un cacerolero, un cajón y hueco para horno ...
+
+📄 Procesando página 183: /app/pdf_pages_95_234/page-089.jpg
+   ✅ Extraídos 21 productos - Listado de precios de Semicolumnas de 140cm de alto y 58cm d...
+
+📄 Procesando página 184: /app/pdf_pages_95_234/page-090.jpg
+   ✅ Extraídos 11 productos - Página de catálogo de muebles de cocina LUIGGI HOME con prec...
+   📊 Productos en BD: 4318
+
+📦 Procesando batch 31/47
+
+📄 Procesando página 185: /app/pdf_pages_95_234/page-091.jpg
+   ✅ Extraídos 8 productos - Listado de precios por zonas para diferentes modelos de semi...
+
+📄 Procesando página 186: /app/pdf_pages_95_234/page-092.jpg
+   ✅ Extraídos 8 productos - Lista de precios por zonas de semicollumnas...
+
+📄 Procesando página 187: /app/pdf_pages_95_234/page-093.jpg
+   ✅ Extraídos 8 productos - Listado de precios de diferentes modelos de semicolumnas de ...
+   📊 Productos en BD: 4332
+
+📦 Procesando batch 32/47
+
+📄 Procesando página 188: /app/pdf_pages_95_234/page-094.jpg
+   ✅ Extraídos 5 productos - Precios de Semicolumnas LUIGGI HOME...
+
+📄 Procesando página 189: /app/pdf_pages_95_234/page-095.jpg
+   ✅ Extraídos 3 productos - Semicolumnas de 1 cacerlero con medidas, referencias y preci...
+
+📄 Procesando página 190: /app/pdf_pages_95_234/page-096.jpg
+   ✅ Extraídos 21 productos - Listado de precios por zonas para semicoulumnas de 160cm de ...
+   📊 Productos en BD: 4340
+
+📦 Procesando batch 33/47
+
+📄 Procesando página 191: /app/pdf_pages_95_234/page-097.jpg
+   ✅ Extraídos 11 productos - Página de catálogo con semicolumnas de cocina, incluye preci...
+
+📄 Procesando página 192: /app/pdf_pages_95_234/page-098.jpg
+   ✅ Extraídos 8 productos - Precios de sem колонн con diferentes configuraciones de cajo...
+
+📄 Procesando página 193: /app/pdf_pages_95_234/page-099.jpg
+   ✅ Extraídos 8 productos - Listado de precios para diferentes Semicolumnas...
+   📊 Productos en BD: 4350
+
+📦 Procesando batch 34/47
+
+📄 Procesando página 194: /app/pdf_pages_95_234/page-100.jpg
+   ✅ Extraídos 7 productos - Página de catálogo con semi-columnas de cocina con diferente...
+
+📄 Procesando página 195: /app/pdf_pages_95_234/page-101.jpg
+   ✅ Extraídos 3 productos - Página de catálogo con semicolumnas de cocina LUIGGI HOME. A...
+
+📄 Procesando página 196: /app/pdf_pages_95_234/page-102.jpg
+   ✅ Extraídos 0 productos - Esta página muestra diferentes sistemas de apertura para col...
+   📊 Productos en BD: 4354
+
+📦 Procesando batch 35/47
+
+📄 Procesando página 197: /app/pdf_pages_95_234/page-103.jpg
+   ✅ Extraídos 21 productos - Lista de precios por zonas para columnas de 200cm de alto y ...
+
+📄 Procesando página 198: /app/pdf_pages_95_234/page-104.jpg
+   ✅ Extraídos 21 productos - Columnas de 200 cm de alto y 58 cm de fondo, de 1 puerta, 2 ...
+
+📄 Procesando página 199: /app/pdf_pages_95_234/page-105.jpg
+   ✅ Extraídos 21 productos - Lista de precios por zonas para columnas de cocina estándar ...
+   📊 Productos en BD: 4389
+
+📦 Procesando batch 36/47
+
+📄 Procesando página 200: /app/pdf_pages_95_234/page-106.jpg
+   ✅ Extraídos 0 productos - Página del catálogo de muebles de cocina LUIGGI HOME que mue...
+
+📄 Procesando página 201: /app/pdf_pages_95_234/page-107.jpg
+   ✅ Extraídos 21 productos - Lista de precios de columnas escobero de 1 y 2 puertas, alto...
+
+📄 Procesando página 202: /app/pdf_pages_95_234/page-108.jpg
+   ✅ Extraídos 10 productos - Productos de la familia de columnas: columna escobero, colum...
+   📊 Productos en BD: 4420
+
+📦 Procesando batch 37/47
+
+📄 Procesando página 203: /app/pdf_pages_95_234/page-109.jpg
+   ✅ Extraídos 6 productos - Columnas de cocina de 200cm de alto y 58cm de fondo...
+
+📄 Procesando página 204: /app/pdf_pages_95_234/page-110.jpg
+   ✅ Extraídos 6 productos - Listado de columnas de cocina con diferentes configuraciones...
+
+📄 Procesando página 205: /app/pdf_pages_95_234/page-111.jpg
+   ✅ Extraídos 7 productos - Lista de columnas con precios por zona...
+   📊 Productos en BD: 4439
+
+📦 Procesando batch 38/47
+
+📄 Procesando página 206: /app/pdf_pages_95_234/page-112.jpg
+   ✅ Extraídos 7 productos - Columnas de cocina con 5 cajones para horno de 60cm, diferen...
+
+📄 Procesando página 207: /app/pdf_pages_95_234/page-113.jpg
+   ✅ Extraídos 6 productos - Página de catálogo de LUIGGI HOME con columnas para horno....
+
+📄 Procesando página 208: /app/pdf_pages_95_234/page-114.jpg
+   ✅ Extraídos 7 productos - Listado de columnas caceroleras con diferentes combinaciones...
+   📊 Productos en BD: 4459
+
+📦 Procesando batch 39/47
+
+📄 Procesando página 209: /app/pdf_pages_95_234/page-115.jpg
+   ✅ Extraídos 7 productos - Columnas de 2 caceroleros, alto 200cm, fondo 58cm...
+
+📄 Procesando página 210: /app/pdf_pages_95_234/page-116.jpg
+   ✅ Extraídos 6 productos - Columnas de 2 caceroleros para horno de 600mm, alto 200cm y ...
+
+📄 Procesando página 211: /app/pdf_pages_95_234/page-117.jpg
+   ✅ Extraídos 4 productos - Columnas de cocina estándar de 200cm de alto y 58cm de fondo...
+   📊 Productos en BD: 4476
+
+📦 Procesando batch 40/47
+
+📄 Procesando página 212: /app/pdf_pages_95_234/page-118.jpg
+   ✅ Extraídos 4 productos - Columnas de 200cm de alto y 58cm de fondo...
+
+📄 Procesando página 213: /app/pdf_pages_95_234/page-119.jpg
+   ✅ Extraídos 4 productos - Columnas cacerolero de 200cm de alto y 58cm de fondo con dif...
+
+📄 Procesando página 214: /app/pdf_pages_95_234/page-120.jpg
+   ✅ Extraídos 4 productos - Columnas de 200cm de alto y 58cm de fondo con cajones y puer...
+   📊 Productos en BD: 4488
+
+📦 Procesando batch 41/47
+
+📄 Procesando página 215: /app/pdf_pages_95_234/page-121.jpg
+   ✅ Extraídos 4 productos - Columnas de 2 caceroleros con diferentes configuraciones de ...
+
+📄 Procesando página 216: /app/pdf_pages_95_234/page-122.jpg
+   ✅ Extraídos 4 productos - Columnas de 2 caceroleros de 200cm de alto y 58cm de fondo...
+
+📄 Procesando página 217: /app/pdf_pages_95_234/page-123.jpg
+   ✅ Extraídos 19 productos - Columnas de rincón angulares y lineales de 1 y 2 puertas, co...
+   📊 Productos en BD: 4515
+
+📦 Procesando batch 42/47
+
+📄 Procesando página 218: /app/pdf_pages_95_234/page-124.jpg
+   ✅ Extraídos 11 productos - Columnas rinconeras lineales de 1 y 2 puertas con precios po...
+
+📄 Procesando página 219: /app/pdf_pages_95_234/page-125.jpg
+   ✅ Extraídos 18 productos - Columnas de 200cm decorativos: columna rincón lineal 2 puert...
+
+📄 Procesando página 220: /app/pdf_pages_95_234/page-126.jpg
+   ✅ Extraídos 2 productos - Columnas decorativas terminales de 200cm de alto...
+   📊 Productos en BD: 4546
+
+📦 Procesando batch 43/47
+
+📄 Procesando página 221: /app/pdf_pages_95_234/page-127.jpg
+   ✅ Extraídos 21 productos - Listado de columnas de 220cm de alto y 58cm de fondo, de 1 y...
+
+📄 Procesando página 222: /app/pdf_pages_95_234/page-128.jpg
+   ✅ Extraídos 21 productos - Listado de precios para columnas de cocina, varias configura...
+
+📄 Procesando página 223: /app/pdf_pages_95_234/page-129.jpg
+   ✅ Extraídos 21 productos - Listado de columnas con una o dos vitrinas y columna escober...
+   📊 Productos en BD: 4595
+
+📦 Procesando batch 44/47
+
+📄 Procesando página 224: /app/pdf_pages_95_234/page-130.jpg
+   ✅ Extraídos 21 productos - Columnas escobero de 1 y 2 puertas. Alto 220cm, fondo 58cm. ...
+
+📄 Procesando página 225: /app/pdf_pages_95_234/page-131.jpg
+   ✅ Extraídos 6 productos - Columnas Frigorífico de 1 puerta con diferentes combinacione...
+
+📄 Procesando página 226: /app/pdf_pages_95_234/page-132.jpg
+   ✅ Extraídos 5 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+   📊 Productos en BD: 4627
+
+📦 Procesando batch 45/47
+
+📄 Procesando página 227: /app/pdf_pages_95_234/page-133.jpg
+   ✅ Extraídos 6 productos - Columnas de 220cm de alto y 58cm de fondo, con diferentes di...
+
+📄 Procesando página 228: /app/pdf_pages_95_234/page-134.jpg
+   ✅ Extraídos 8 productos - Columnas de 4 cajones para horno de 600mm, diferentes series...
+
+📄 Procesando página 229: /app/pdf_pages_95_234/page-135.jpg
+   ✅ Extraídos 6 productos - Columnas de 5 cajones con hueco para horno, alto 220cm y fon...
+   📊 Productos en BD: 4647
+
+📦 Procesando batch 46/47
+
+📄 Procesando página 230: /app/pdf_pages_95_234/page-136.jpg
+   ✅ Extraídos 6 productos - Columnas de cocina con horno...
+
+📄 Procesando página 231: /app/pdf_pages_95_234/page-137.jpg
+   ✅ Extraídos 8 productos - Listado de precios por zonas de columnas caceroleras de 220c...
+
+📄 Procesando página 232: /app/pdf_pages_95_234/page-138.jpg
+   ✅ Extraídos 6 productos - Columnas de 2 caceroleros con cajón, hueco para horno y una ...
+   📊 Productos en BD: 4666
+
+📦 Procesando batch 47/47
+
+📄 Procesando página 233: /app/pdf_pages_95_234/page-139.jpg
+   ✅ Extraídos 6 productos - Columnas de 2 caceroleros con cajón y hueco para horno. Alto...
+
+📄 Procesando página 234: /app/pdf_pages_95_234/page-140.jpg
+   ✅ Extraídos 6 productos - Lista de precios por zonas de columnas de cocina...
+   📊 Productos en BD: 4678
+
+✅ IMPORTACIÓN COMPLETADA
+   📄 Páginas procesadas: 140
+   📦 Productos encontrados: 2019
+   ✅ Productos importados: 2018
+   ❌ Errores: 0
+
+   📊 Total productos en BD: 4678

@@ -1,0 +1,289 @@
+
+🚀 Iniciando importación del catálogo
+   📁 Directorio: /app/pdf_pages_235_300
+   📄 Páginas: 1 a 66 (66 páginas)
+   📦 Batch size: 3
+
+📦 Procesando batch 1/22
+
+📄 Procesando página 95: /app/pdf_pages_235_300/page-01.jpg
+   ✅ Extraídos 4 productos - Página de catálogo con columnas de cocina de 220cm de alto y...
+
+📄 Procesando página 96: /app/pdf_pages_235_300/page-02.jpg
+   ✅ Extraídos 4 productos - Columnas de cocina con diferentes configuraciones de puertas...
+
+📄 Procesando página 97: /app/pdf_pages_235_300/page-03.jpg
+   ✅ Extraídos 4 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+   📊 Productos en BD: 4690
+
+📦 Procesando batch 2/22
+
+📄 Procesando página 98: /app/pdf_pages_235_300/page-04.jpg
+   ✅ Extraídos 4 productos - Listado de columnas cacerolero de 220cm de alto y 58cm de fo...
+
+📄 Procesando página 99: /app/pdf_pages_235_300/page-05.jpg
+   ✅ Extraídos 4 productos - Listado de columnas caceroleras con horno y microondas...
+
+📄 Procesando página 100: /app/pdf_pages_235_300/page-06.jpg
+   ✅ Extraídos 4 productos - Productos de la familia de columnas de 2 caceroleros, alto 2...
+   📊 Productos en BD: 4702
+
+📦 Procesando batch 3/22
+
+📄 Procesando página 101: /app/pdf_pages_235_300/page-07.jpg
+   ✅ Extraídos 13 productos - Página de catálogo con columnas de cocina angulares y para e...
+
+📄 Procesando página 102: /app/pdf_pages_235_300/page-08.jpg
+   ✅ Extraídos 18 productos - Productos de la familia de columnas rinconeras lineales de 1...
+
+📄 Procesando página 103: /app/pdf_pages_235_300/page-09.jpg
+   ✅ Extraídos 18 productos - Columnas de 220cm decorativas (rincón lineal 2 puertas, deco...
+   📊 Productos en BD: 4751
+
+📦 Procesando batch 4/22
+
+📄 Procesando página 104: /app/pdf_pages_235_300/page-10.jpg
+   ✅ Extraídos 2 productos - Columnas decorativas terminales de 220cm de alto...
+
+📄 Procesando página 105: /app/pdf_pages_235_300/page-11.jpg
+   ✅ Extraídos 21 productos - Página del catálogo de muebles de cocina LUIGGI HOME con col...
+
+📄 Procesando página 106: /app/pdf_pages_235_300/page-12.jpg
+   ✅ Extraídos 21 productos - Listado de columnas de 240cm de alto y 58cm de fondo, con di...
+   📊 Productos en BD: 4788
+
+📦 Procesando batch 5/22
+
+📄 Procesando página 107: /app/pdf_pages_235_300/page-13.jpg
+   ✅ Extraídos 21 productos - Listado de columnas de cocina, con una o dos puertas de vitr...
+
+📄 Procesando página 108: /app/pdf_pages_235_300/page-14.jpg
+   ✅ Extraídos 21 productos - Listado de columnas escobero de 1 y 2 puertas, alto 240cm y ...
+
+📄 Procesando página 109: /app/pdf_pages_235_300/page-15.jpg
+   ✅ Extraídos 6 productos - Columnas Frigo 1 puerta y variantes (con puertas adicionales...
+   📊 Productos en BD: 4829
+
+📦 Procesando batch 6/22
+
+📄 Procesando página 110: /app/pdf_pages_235_300/page-16.jpg
+   ✅ Extraídos 5 productos - Página de catálogo con columnas de cocina estándar de 240cm ...
+
+📄 Procesando página 111: /app/pdf_pages_235_300/page-17.jpg
+   ✅ Extraídos 6 productos - Página de catálogo de LUIGGI HOME con columnas de cocina de ...
+
+📄 Procesando página 112: /app/pdf_pages_235_300/page-18.jpg
+   ✅ Extraídos 6 productos - Columnas de cocina con 4 o 5 cajones, espacio para horno y 2...
+   📊 Productos en BD: 4846
+
+📦 Procesando batch 7/22
+
+📄 Procesando página 113: /app/pdf_pages_235_300/page-19.jpg
+   ✅ Extraídos 4 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+
+📄 Procesando página 114: /app/pdf_pages_235_300/page-20.jpg
+   ✅ Extraídos 6 productos - Listado de columnas caceroleras de 240cm de alto y 58cm de f...
+
+📄 Procesando página 115: /app/pdf_pages_235_300/page-21.jpg
+   ✅ Extraídos 6 productos - Lista de columnas de cocina de 240cm de alto y 58cm de fondo...
+   📊 Productos en BD: 4862
+
+📦 Procesando batch 8/22
+
+📄 Procesando página 116: /app/pdf_pages_235_300/page-22.jpg
+   ✅ Extraídos 6 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+
+📄 Procesando página 117: /app/pdf_pages_235_300/page-23.jpg
+   ✅ Extraídos 4 productos - Página del catálogo LUIGGI HOME con columnas de 240cm de alt...
+
+📄 Procesando página 118: /app/pdf_pages_235_300/page-24.jpg
+   ✅ Extraídos 4 productos - Columnas cacerolero de 240cm de alto y 58cm de fondo...
+   📊 Productos en BD: 4876
+
+📦 Procesando batch 9/22
+
+📄 Procesando página 119: /app/pdf_pages_235_300/page-25.jpg
+   ✅ Extraídos 4 productos - Columnas caceroleras con cajones, hueco para horno y microon...
+
+📄 Procesando página 120: /app/pdf_pages_235_300/page-26.jpg
+   ✅ Extraídos 4 productos - Columnas cacerolero para horno y microondas, diferentes seri...
+
+📄 Procesando página 121: /app/pdf_pages_235_300/page-27.jpg
+   ✅ Extraídos 4 productos - Columnas de cocina de 240cm de alto y 58cm de fondo con cajo...
+   📊 Productos en BD: 4888
+
+📦 Procesando batch 10/22
+
+📄 Procesando página 122: /app/pdf_pages_235_300/page-28.jpg
+   ✅ Extraídos 4 productos - Lista de columnas de cocina de 2 caceroleros con huecos para...
+
+📄 Procesando página 123: /app/pdf_pages_235_300/page-29.jpg
+   ✅ Extraídos 12 productos - Página de catálogo de muebles de cocina LUIGGI HOME con colu...
+
+📄 Procesando página 124: /app/pdf_pages_235_300/page-30.jpg
+   ✅ Extraídos 18 productos - Columnas rinconeras lineales de 1 y 2 puertas, altura 240cm,...
+   📊 Productos en BD: 4922
+
+📦 Procesando batch 11/22
+
+📄 Procesando página 125: /app/pdf_pages_235_300/page-31.jpg
+   ✅ Extraídos 18 productos - Columnas decorativas de 240cm de alto...
+
+📄 Procesando página 126: /app/pdf_pages_235_300/page-32.jpg
+   ✅ Extraídos 2 productos - Columnas decorativas terminales de 240cm de alto...
+
+📄 Procesando página 127: /app/pdf_pages_235_300/page-33.jpg
+   ✅ Extraídos 0 productos - La página muestra información sobre el sistema de apertura G...
+   📊 Productos en BD: 4942
+
+📦 Procesando batch 12/22
+
+📄 Procesando página 128: /app/pdf_pages_235_300/page-34.jpg
+   ✅ Extraídos 0 productos - Página de catálogo de muebles altos para el programa GOLA...
+
+📄 Procesando página 129: /app/pdf_pages_235_300/page-35.jpg
+   ✅ Extraídos 22 productos - Listado de módulos altos Gola de 35cm de fondo estándar, con...
+
+📄 Procesando página 130: /app/pdf_pages_235_300/page-36.jpg
+   ✅ Extraídos 22 productos - Muebles altos GOLA de 35cm de fondo estándar...
+   📊 Productos en BD: 4964
+
+📦 Procesando batch 13/22
+
+📄 Procesando página 131: /app/pdf_pages_235_300/page-37.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 758 column 20 (char 17677)
+
+📄 Procesando página 132: /app/pdf_pages_235_300/page-38.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 768 column 9 (char 17930)
+
+📄 Procesando página 133: /app/pdf_pages_235_300/page-39.jpg
+   ✅ Extraídos 22 productos - Listado de módulos altos Gola de 35cm de ancho y 58cm de fon...
+   📊 Productos en BD: 4986
+
+📦 Procesando batch 14/22
+
+📄 Procesando página 134: /app/pdf_pages_235_300/page-40.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 759 column 15 (char 17938)
+
+📄 Procesando página 135: /app/pdf_pages_235_300/page-41.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 757 column 22 (char 17838)
+
+📄 Procesando página 136: /app/pdf_pages_235_300/page-42.jpg
+   ✅ Extraídos 22 productos - Muebles altos GOLA de 40cm de fondo estándar...
+   📊 Productos en BD: 5008
+
+📦 Procesando batch 15/22
+
+📄 Procesando página 137: /app/pdf_pages_235_300/page-43.jpg
+   ❌ Error parsing JSON: Expecting value: line 773 column 14 (char 18060)
+
+📄 Procesando página 138: /app/pdf_pages_235_300/page-44.jpg
+   ✅ Extraídos 30 productos - Listado de muebles altos GOLA con una puerta abatible o una ...
+
+📄 Procesando página 139: /app/pdf_pages_235_300/page-45.jpg
+   ✅ Extraídos 22 productos - Página de catálogo de muebles altos Gola de 40cm de fondo y ...
+   📊 Productos en BD: 5060
+
+📦 Procesando batch 16/22
+
+📄 Procesando página 140: /app/pdf_pages_235_300/page-46.jpg
+   ❌ Error parsing JSON: Expecting property name enclosed in double quotes: line 752 column 20 (char 17737)
+
+📄 Procesando página 141: /app/pdf_pages_235_300/page-47.jpg
+   ❌ Error parsing JSON: Expecting property name enclosed in double quotes: line 742 column 19 (char 17882)
+
+📄 Procesando página 142: /app/pdf_pages_235_300/page-48.jpg
+   ✅ Extraídos 22 productos - Módulos altos con sistema GOLA de 45cm de fondo estándar...
+   📊 Productos en BD: 5081
+
+📦 Procesando batch 17/22
+
+📄 Procesando página 143: /app/pdf_pages_235_300/page-49.jpg
+   ❌ Error parsing JSON: Expecting property name enclosed in double quotes: line 759 column 55 (char 17866)
+
+📄 Procesando página 144: /app/pdf_pages_235_300/page-50.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 776 column 9 (char 17833)
+
+📄 Procesando página 145: /app/pdf_pages_235_300/page-51.jpg
+   ✅ Extraídos 22 productos - Página del catálogo de muebles de cocina LUIGGI HOME con mue...
+   📊 Productos en BD: 5103
+
+📦 Procesando batch 18/22
+
+📄 Procesando página 146: /app/pdf_pages_235_300/page-52.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 781 column 15 (char 17319)
+
+📄 Procesando página 147: /app/pdf_pages_235_300/page-53.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 759 column 15 (char 18115)
+
+📄 Procesando página 148: /app/pdf_pages_235_300/page-54.jpg
+   ✅ Extraídos 22 productos - Módulos altos GOLA de 60cm de fondo estándar...
+   📊 Productos en BD: 5125
+
+📦 Procesando batch 19/22
+
+📄 Procesando página 149: /app/pdf_pages_235_300/page-55.jpg
+   ❌ Error parsing JSON: Unterminated string starting at: line 777 column 9 (char 17821)
+
+📄 Procesando página 150: /app/pdf_pages_235_300/page-56.jpg
+   ❌ Error parsing JSON: Expecting ',' delimiter: line 770 column 17 (char 18040)
+
+📄 Procesando página 151: /app/pdf_pages_235_300/page-57.jpg
+   ✅ Extraídos 22 productos - Listado de muebles altos Gola de 60cm de ancho y fondo 58cm...
+   📊 Productos en BD: 5147
+
+📦 Procesando batch 20/22
+
+📄 Procesando página 152: /app/pdf_pages_235_300/page-58.jpg
+   ❌ Error parsing JSON: Expecting ',' delimiter: line 752 column 18 (char 17747)
+
+📄 Procesando página 153: /app/pdf_pages_235_300/page-59.jpg
+   ❌ Error parsing JSON: Expecting value: line 753 column 7 (char 17711)
+
+📄 Procesando página 154: /app/pdf_pages_235_300/page-60.jpg
+   ✅ Extraídos 26 productos - Página de catálogo de muebles altos Gola de 70cm de fondo es...
+   📊 Productos en BD: 5172
+
+📦 Procesando batch 21/22
+
+📄 Procesando página 155: /app/pdf_pages_235_300/page-61.jpg
+   ✅ Extraídos 22 productos - Módulos altos GOLA, serie 70, fondo estándar, con precios po...
+
+📄 Procesando página 156: /app/pdf_pages_235_300/page-62.jpg
+   ✅ Extraídos 20 productos - Página del catálogo de muebles de cocina LUIGGI HOME con mue...
+
+📄 Procesando página 157: /app/pdf_pages_235_300/page-63.jpg
+   ✅ Extraídos 14 productos - Módulos altos de cocina, serie GOLA, fondo estándar....
+   📊 Productos en BD: 5228
+
+📦 Procesando batch 22/22
+
+📄 Procesando página 158: /app/pdf_pages_235_300/page-64.jpg
+   ✅ Extraídos 26 productos - Página de catálogo de muebles altos GOLA de 70cm de alto y 5...
+
+📄 Procesando página 159: /app/pdf_pages_235_300/page-65.jpg
+   ✅ Extraídos 23 productos - Página del catálogo LUIGGI HOME con muebles altos GOLA de 2 ...
+
+📄 Procesando página 160: /app/pdf_pages_235_300/page-66.jpg
+   ✅ Extraídos 19 productos - Página de catálogo de muebles de cocina LUIGGI HOME con módu...
+   📊 Productos en BD: 5296
+
+✅ IMPORTACIÓN COMPLETADA
+   📄 Páginas procesadas: 66
+   📦 Productos encontrados: 656
+   ✅ Productos importados: 656
+   ❌ Errores: 15
+
+   Páginas con errores:
+      - Página 131: Unterminated string starting at: line 758 column 2...
+      - Página 132: Unterminated string starting at: line 768 column 9...
+      - Página 134: Unterminated string starting at: line 759 column 1...
+      - Página 135: Unterminated string starting at: line 757 column 2...
+      - Página 137: Expecting value: line 773 column 14 (char 18060)...
+      - Página 140: Expecting property name enclosed in double quotes:...
+      - Página 141: Expecting property name enclosed in double quotes:...
+      - Página 143: Expecting property name enclosed in double quotes:...
+      - Página 144: Unterminated string starting at: line 776 column 9...
+      - Página 146: Unterminated string starting at: line 781 column 1...
+
+   📊 Total productos en BD: 5296

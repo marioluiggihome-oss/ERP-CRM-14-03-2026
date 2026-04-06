@@ -1,0 +1,82 @@
+{
+  "summary": "Tested DESPIECE DE PUERTAS feature, door tolerances (-2mm alto, -3mm ancho), factories SALAMANCA/ZAMORA CRUD API, and MARIO/MARIO login. All 6 requested features working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/pytest/pytest_fabrica_puertas.xml",
+    "/app/backend/tests/test_fabrica_despiece_puertas.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Door tolerances correctly applied in backend: door_height_tolerance = 0.2 (2mm), door_width_tolerance = 0.3 (3mm)",
+    "DESPIECE DE PUERTAS section properly shows table with: Mueble, Descripción, Alto (cm), Ancho (cm), Puertas/Mueble, Cant. Muebles, Total Puertas",
+    "Factories SALAMANCA (SAL) and ZAMORA (ZAM) correctly seeded and available via /api/fabrica/factories"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fabrica_despiece_puertas.py"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 tests passed - login, factories SALAMANCA/ZAMORA, factory CRUD)",
+    "frontend": "100% (all UI features verified)"
+  },
+  "test_credentials": {
+    "username": "MARIO",
+    "password": "MARIO"
+  },
+  "seed_data_creation": "None needed - factories SALAMANCA and ZAMORA auto-seeded on startup",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 6 features verified working: (1) DESPIECE DE PUERTAS section shows in CASCO, PUERTA Y HERRAJE tab with correct door dimensions, (2) Door tolerances -2mm alto/-3mm ancho applied correctly (verified: 69.8cm height, 49.7cm width for 70x100 cabinet with 2 doors), (3) SALAMANCA and ZAMORA factories exist in API at /api/fabrica/factories, (4) OPTIMIZAR TABLEROS button visible in despiece modal footer, (5) Herrajes section shows Bisagras, Tiradores, Correderas, Soportes Baldas, (6) MARIO/MARIO login works",
+  "features_tested": {
+    "1_despiece_puertas_section": {
+      "status": "PASS",
+      "details": "Orange section '🚪 DESPIECE DE PUERTAS' visible in CASCO, PUERTA Y HERRAJE tab with table showing Mueble, Alto, Ancho, Puertas/Mueble, Total"
+    },
+    "2_door_tolerances": {
+      "status": "PASS",
+      "details": "Verified via API: B60-1P cabinet (70x60) produces door with height=69.8cm (-2mm) and width=59.7cm (-3mm). UI shows note: 'Las dimensiones de puerta incluyen tolerancias aplicadas (-2mm alto, -3mm ancho)'"
+    },
+    "3_factories_salamanca_zamora": {
+      "status": "PASS",
+      "details": "GET /api/fabrica/factories returns both factories: SALAMANCA (code=SAL) and ZAMORA (code=ZAM), both isActive=true"
+    },
+    "4_optimizar_tableros_button": {
+      "status": "PASS",
+      "details": "Button with data-testid='open-board-optimizer' visible in despiece modal footer alongside PDF, CSV, XML, IMPRIMIR buttons"
+    },
+    "5_herrajes_section": {
+      "status": "PASS",
+      "details": "CASCO, PUERTA Y HERRAJE tab shows colored boxes for: Bisagras (6), Correderas (0), Tiradores (3), Soportes Baldas (24) for 3x B100 cabinet"
+    },
+    "6_login_mario": {
+      "status": "PASS",
+      "details": "Login with MARIO/MARIO credentials successful, dashboard loads with full functionality"
+    }
+  },
+  "api_tests": {
+    "login": "POST /api/auth/login with MARIO/MARIO - 200 OK",
+    "factories_list": "GET /api/fabrica/factories - 200 OK, returns 2 factories",
+    "factories_salamanca": "Found: id=fab-salamanca, name=FÁBRICA SALAMANCA, code=SAL",
+    "factories_zamora": "Found: id=fab-zamora, name=FÁBRICA ZAMORA, code=ZAM",
+    "despiece_calculate": "POST /api/despiece/calculate - 200 OK, returns door component with tolerances applied",
+    "manufacturing_orders": "GET /api/fabrica/orders - 200 OK"
+  },
+  "ui_verified_elements": {
+    "despiece_modal_tabs": ["ORDEN MONTAJE", "LISTA CORTE", "BANDAS Y TRASERAS", "CASCO, PUERTA Y HERRAJE"],
+    "despiece_summary": "Shows Muebles count, Piezas Totales, Área Total m², Material Armazón",
+    "door_section_table_headers": ["MUEBLE", "DESCRIPCIÓN", "ALTO (CM)", "ANCHO (CM)", "PUERTAS/MUEBLE", "CANT. MUEBLES", "TOTAL PUERTAS"],
+    "herrajes_boxes": ["BISAGRAS", "CORREDERAS", "TIRADORES", "SOPORTES BALDAS"],
+    "footer_buttons": ["OPTIMIZAR TABLEROS", "PDF A4", "CSV", "XML", "IMPRIMIR", "CERRAR"]
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "summary": "Completed comprehensive testing of LUIGGI HOME ERP features: Login authentication (success/failure), MV/ZC library despiece calculations, PDF factory reports, CM/MM toggle, and password verification. All 23 backend tests passed. Frontend UI tests verified login flow, CM/MM toggle functionality, and error handling.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration36_features.py",
+    "/app/test_reports/pytest/pytest_iteration36.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Login.jsx correctly implements XMLHttpRequest for login to avoid 'body stream already read' issues",
+    "verify_password() in server.py supports bcrypt ($2b$/$2a$), SHA256 (64 hex chars), and plain text fallback",
+    "calculate_furniture_despiece() correctly handles MV prefixes (A, ASCE, B, BF, C, CH, etc.) and ZC prefixes (9A, 9B)",
+    "formatMeasure() in BudgetTable.jsx correctly multiplies by 10 for MM mode",
+    "factory_reports.py generates PDF with logo from global settings, order info, furniture list, and despiece"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration36_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% - 23/23 tests passed",
+    "frontend": "100% - All UI elements verified"
+  },
+  "test_credentials": {
+    "admin_user": "mario@luiggihome.es",
+    "admin_password": "Mario2025*"
+  },
+  "seed_data_creation": "No seed data created - used existing products and user accounts",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All requested features tested and working: 1) Login auth with bcrypt/SHA256 support, 2) MV/ZC despiece calculations with correct component detection, 3) PDF factory reports with logo, 4) CM/MM toggle in BudgetTable (formatMeasure multiplies by 10 for MM), 5) Password verification supports multiple hash formats. DESPIECE button requires canViewTechnicalDespiece permission.",
+  "features_tested": {
+    "1_login_success": {
+      "status": "PASS",
+      "endpoint": "POST /api/auth/login",
+      "details": "Returns success=true, user object (without password), and JWT tokens"
+    },
+    "2_login_failure_invalid_password": {
+      "status": "PASS",
+      "endpoint": "POST /api/auth/login",
+      "details": "Returns 401 with 'Credenciales no válidas' error"
+    },
+    "3_login_failure_nonexistent_user": {
+      "status": "PASS",
+      "endpoint": "POST /api/auth/login",
+      "details": "Returns 401 for unknown users"
+    },
+    "4_password_bcrypt_verification": {
+      "status": "PASS",
+      "details": "verify_password() correctly handles $2b$ and $2a$ bcrypt hashes"
+    },
+    "5_password_sha256_fallback": {
+      "status": "PASS",
+      "details": "verify_password() falls back to SHA256 for 64-char hex hashes"
+    },
+    "6_mv_despiece_calculation": {
+      "status": "PASS",
+      "endpoint": "POST /api/despiece/calculate",
+      "details": "MV products (A30D/I*-70) correctly generate LAT-I, LAT-D, TAPA-S, TRAS components"
+    },
+    "7_zc_despiece_calculation": {
+      "status": "PASS",
+      "endpoint": "POST /api/despiece/calculate",
+      "details": "ZC products (9A1P58350) correctly generate components with proper dimensions"
+    },
+    "8_despiece_fregadero": {
+      "status": "PASS",
+      "details": "Fregadero (sink) cabinets correctly exclude TAPA-S and include TRAV-F/TRAV-T"
+    },
+    "9_despiece_columna_shelves": {
+      "status": "PASS",
+      "details": "Columna 200cm correctly generates 5 shelves (BALDA)"
+    },
+    "10_pdf_report_endpoint": {
+      "status": "PASS",
+      "endpoint": "GET /api/fabrica/reports/production/{order_id}",
+      "details": "Endpoint exists and returns 404 for non-existent orders"
+    },
+    "11_cm_mm_toggle_ui": {
+      "status": "PASS",
+      "location": "BudgetTable sidebar - UNIDAD MEDIDAS section",
+      "details": "Toggle switches between CM (35, 90, 33) and MM (350, 900, 330) display"
+    },
+    "12_format_measure_function": {
+      "status": "PASS",
+      "details": "formatMeasure() returns value as-is for CM, multiplies by 10 for MM"
+    }
+  },
+  "api_tests_summary": {
+    "login_valid": "POST /api/auth/login - 200 OK with tokens",
+    "login_invalid_password": "POST /api/auth/login - 401 Unauthorized",
+    "login_nonexistent_user": "POST /api/auth/login - 401 Unauthorized",
+    "login_empty_credentials": "POST /api/auth/login - 401/422",
+    "despiece_calculate": "POST /api/despiece/calculate - 200 OK with components",
+    "production_report": "GET /api/fabrica/reports/production/{id} - 200/404",
+    "health_check": "GET /api/ - 200 OK",
+    "users_endpoint": "GET /api/users - 200 OK",
+    "clients_endpoint": "GET /api/clients - 200 OK",
+    "projects_endpoint": "GET /api/projects - 200 OK"
+  },
+  "ui_verified_elements": {
+    "login_page": {
+      "username_input": "data-testid='login-username' - FOUND",
+      "password_input": "data-testid='login-password' - FOUND",
+      "submit_button": "data-testid='login-submit' - FOUND",
+      "error_display": "Shows 'Credenciales no válidas' on failure"
+    },
+    "budget_table": {
+      "cm_mm_toggle": "UNIDAD MEDIDAS section with CM/MM switch - FOUND",
+      "export_pdf_btn": "data-testid='export-pdf-btn' - FOUND",
+      "confirm_order_btn": "data-testid='confirm-order-btn' - FOUND",
+      "library_section": "LIBRERÍA (4508) products - FOUND",
+      "measurement_columns": "AN (CM/MM), AL (CM/MM), FO (CM/MM) - FOUND"
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  },
+  "code_review_notes": {
+    "login_implementation": "Uses XMLHttpRequest instead of fetch to avoid 'body stream already read' error",
+    "password_verification": "Supports bcrypt (primary), SHA256 (legacy), and plain text (migration)",
+    "despiece_calculation": "Comprehensive detection of MV/ZC product types via code prefixes and name patterns",
+    "measurement_toggle": "localStorage persists user preference for CM/MM mode"
+  }
+}

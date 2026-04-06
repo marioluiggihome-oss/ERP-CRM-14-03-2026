@@ -1,0 +1,133 @@
+{
+  "summary": "Complete testing of Digitalizador → CRM integration. All 7 requested features verified and working correctly. Backend: 11/11 tests passed. Frontend: All UI flows verified via Playwright.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_digitalizador_crm_integration.py",
+    "/app/test_reports/pytest/pytest_crm_integration_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_digitalizador_crm_integration.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 CRM integration tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "test_credentials": {
+    "username": "MARIO",
+    "password": "MARIO"
+  },
+  "seed_data_creation": "Test data created and cleaned up after testing",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Digitalizador → CRM integration fully working. Existing budget 'Test Project' by 'Juan García' (217.80€) can be used for testing. Opportunity has tags ['digitalizador', 'presupuesto'].",
+  "features_tested": {
+    "digitalizador_crm_button_appears": {
+      "status": "PASSED",
+      "details": "Button 'Crear Oportunidad CRM' appears when budget has lines. Uses data-testid='create-crm-opportunity-btn'. Purple color."
+    },
+    "crm_modal_shows_budget_data": {
+      "status": "PASSED",
+      "details": "Modal shows 'PRESUPUESTO A VINCULAR' section with project name, total value (217,80 €), and line count (1 líneas · IVA 21% incluido)."
+    },
+    "creates_contact_in_crm": {
+      "status": "PASSED",
+      "details": "POST /api/crm/contacts creates contact with source='digitalizador' and notes referencing the project."
+    },
+    "creates_opportunity_in_crm": {
+      "status": "PASSED",
+      "details": "POST /api/crm/opportunities creates opportunity with correct value (217.80€), tags=['digitalizador', 'presupuesto'], stage='lead', probability=30."
+    },
+    "button_changes_after_creation": {
+      "status": "PASSED",
+      "details": "Button changes to 'Oportunidad Creada' (emerald/green color) with CheckCircle icon after successful creation."
+    },
+    "crm_dashboard_shows_opportunity": {
+      "status": "PASSED",
+      "details": "CRM Dashboard shows opportunity in 'TOP OPORTUNIDADES' with correct value (218€) and contact name."
+    },
+    "crm_contacts_shows_new_contact": {
+      "status": "PASSED",
+      "details": "CRM Contacts tab shows new contact with 'Lead' status, company, email, and phone from modal form."
+    }
+  },
+  "api_verification": {
+    "crm_contacts_get": {
+      "endpoint": "GET /api/crm/contacts",
+      "status": "200 OK",
+      "verified": true
+    },
+    "crm_contacts_post": {
+      "endpoint": "POST /api/crm/contacts",
+      "status": "200 OK",
+      "verified": true,
+      "fields_tested": ["name", "email", "phone", "company", "type", "source", "notes"]
+    },
+    "crm_opportunities_get": {
+      "endpoint": "GET /api/crm/opportunities",
+      "status": "200 OK",
+      "verified": true
+    },
+    "crm_opportunities_post": {
+      "endpoint": "POST /api/crm/opportunities",
+      "status": "200 OK",
+      "verified": true,
+      "fields_tested": ["title", "description", "contactId", "contactName", "company", "value", "probability", "stage", "notes", "tags", "assignedTo"]
+    },
+    "crm_dashboard": {
+      "endpoint": "GET /api/crm/dashboard",
+      "status": "200 OK",
+      "verified": true,
+      "fields_returned": ["totalContacts", "activeOpportunities", "pipelineValue", "topOpportunities"]
+    },
+    "digitalizador_history": {
+      "endpoint": "GET /api/digitalizador/history",
+      "status": "200 OK",
+      "verified": true
+    }
+  },
+  "ui_verification": {
+    "digitalizador_view": "Loads correctly with upload area, header controls (Historial, DTO Global, IVA, Descargar PDF)",
+    "historial_sidebar": "Opens with search, shows saved budgets with project name, customer, date, lines count, and total",
+    "budget_loaded_view": "Shows project name, acabado/armazón/costados, lines table, totals (bruto, base, IVA, total), action buttons",
+    "crm_button": "Purple button 'CREAR OPORTUNIDAD CRM' with Briefcase icon, changes to emerald 'OPORTUNIDAD CREADA' with CheckCircle after creation",
+    "crm_modal": "Purple header 'NUEVA OPORTUNIDAD CRM', budget preview section, form fields (nombre, empresa, email, teléfono), Cancelar/Crear Oportunidad buttons",
+    "success_message": "Green banner '¡Oportunidad \"Test Project\" creada en el CRM!' appears after creation",
+    "crm_dashboard": "Shows stats (contactos, oportunidades activas, ganadas, pipeline value), top opportunities list, activities",
+    "crm_contacts": "Table with contacto, empresa, contacto info, estado, valor total, acciones columns"
+  },
+  "backend_tests_summary": {
+    "test_get_contacts": "PASSED - GET /api/crm/contacts returns list",
+    "test_create_contact_from_digitalizador": "PASSED - POST /api/crm/contacts with digitalizador source",
+    "test_get_contact_by_id": "PASSED - GET /api/crm/contacts/{id}",
+    "test_get_opportunities": "PASSED - GET /api/crm/opportunities returns list",
+    "test_create_opportunity_from_digitalizador": "PASSED - POST /api/crm/opportunities with digitalizador tags",
+    "test_get_opportunity_by_id": "PASSED - GET /api/crm/opportunities/{id}",
+    "test_existing_digitalizador_opportunity": "PASSED - Found opportunities with 'digitalizador' tag",
+    "test_existing_digitalizador_contact": "PASSED - Found contacts with 'digitalizador' source",
+    "test_full_digitalizador_to_crm_flow": "PASSED - Complete flow: contact → opportunity → verify",
+    "test_dashboard_returns_stats": "PASSED - GET /api/crm/dashboard returns statistics",
+    "test_get_history": "PASSED - GET /api/digitalizador/history"
+  },
+  "playwright_tests_summary": {
+    "login_and_navigate": "PASSED - Login with MARIO/MARIO, navigate to Digitalizador",
+    "load_budget_from_history": "PASSED - Open Historial, click on 'Test Project' budget",
+    "crm_button_visible": "PASSED - 'Crear Oportunidad CRM' button visible when budget loaded",
+    "open_crm_modal": "PASSED - Click button opens modal with budget preview",
+    "fill_modal_form": "PASSED - Fill contact name, company, email, phone",
+    "create_opportunity": "PASSED - Click 'Crear Oportunidad' creates contact and opportunity",
+    "button_state_change": "PASSED - Button changes to 'Oportunidad Creada'",
+    "success_message": "PASSED - Success message displayed",
+    "verify_crm_dashboard": "PASSED - Navigate to CRM, see opportunity in dashboard",
+    "verify_crm_contacts": "PASSED - Navigate to Contacts tab, see new contact"
+  }
+}

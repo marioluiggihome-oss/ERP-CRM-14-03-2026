@@ -1,0 +1,130 @@
+{
+  "summary": "Tested Portal de Fábrica and Despiece PUERTAS calculation features. All 17 backend tests passed. UI tests verified navigation, order creation, status changes, and order expansion functionality.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fabrica_despiece_puertas.py",
+    "/app/test_reports/pytest/pytest_fabrica_puertas.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PUERTAS calculation correctly detects 2P (2 doors), 1P (1 door), and D/I patterns in product names/codes",
+    "Portal de Fábrica CRUD operations (create, list, update, delete orders) all working",
+    "Status changes properly update orders, delivered status sets actualDeliveryDate automatically",
+    "Dashboard stats API correctly aggregates orders by status, priority, and calculates pieces in production",
+    "PDF import is MOCKED - returns informative message but does not process PDF content"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fabrica_despiece_puertas.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% - All UI elements verified"
+  },
+  "test_credentials": {
+    "user": "MARIO",
+    "password": "MARIO"
+  },
+  "seed_data_creation": "Test orders created with TEST_ prefix and cleaned up after tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Portal de Fábrica fully functional. FÁBRICA sidebar button visible for admin/gerente/director comercial users. All CRUD operations working. Despiece PUERTAS calculation correctly detects door patterns (2P, 1P, D/I). PDF import is MOCKED and returns placeholder message.",
+  "features_tested": {
+    "despiece_2p_puertas": {
+      "status": "PASS",
+      "details": "Furniture with 2P pattern correctly has 2 doors in despiece calculation"
+    },
+    "despiece_1p_puertas": {
+      "status": "PASS",
+      "details": "Furniture with 1P pattern correctly has 1 door in despiece calculation"
+    },
+    "despiece_di_puertas": {
+      "status": "PASS",
+      "details": "Furniture with D/I pattern correctly has 1 door in despiece calculation"
+    },
+    "fabrica_create_order": {
+      "status": "PASS",
+      "details": "Creates order with auto-generated orderNumber (OF-YYYY-NNNN format)"
+    },
+    "fabrica_list_orders": {
+      "status": "PASS",
+      "details": "Lists orders with pagination and filters (status, priority, search)"
+    },
+    "fabrica_update_order": {
+      "status": "PASS",
+      "details": "Updates order details including customer name, priority, items"
+    },
+    "fabrica_delete_order": {
+      "status": "PASS",
+      "details": "Deletes order and returns 404 on subsequent GET"
+    },
+    "fabrica_status_change": {
+      "status": "PASS",
+      "details": "Changes order status through valid workflow (draft → confirmed → in_production → ready → delivered)"
+    },
+    "fabrica_delivery_date": {
+      "status": "PASS",
+      "details": "Sets estimated delivery date with optional notes"
+    },
+    "fabrica_dashboard_stats": {
+      "status": "PASS",
+      "details": "Returns byStatus, byPriority, pendingThisWeek, piecesInProduction, totalActive"
+    },
+    "fabrica_pdf_import_mocked": {
+      "status": "PASS",
+      "details": "MOCKED - Returns informative message without processing PDF"
+    },
+    "fabrica_sidebar_navigation": {
+      "status": "PASS",
+      "details": "FÁBRICA button visible in sidebar, navigates to Portal de Fábrica"
+    },
+    "fabrica_new_order_modal": {
+      "status": "PASS",
+      "details": "Modal opens with all fields (Cliente, Código, Teléfono, Prioridad, Dirección, Muebles, Notas)"
+    },
+    "fabrica_order_expansion": {
+      "status": "PASS",
+      "details": "Clicking order row expands to show items table with Código, Descripción, Dimensiones, Cantidad, Estado"
+    },
+    "fabrica_order_controls": {
+      "status": "PASS",
+      "details": "Expanded order shows status dropdown, Fecha Entrega button, Ver Despiece button, Eliminar button"
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": true,
+    "mocked_apis_list": [
+      "POST /api/fabrica/import-pdf - PDF import con IA está MOCKED, retorna mensaje informativo",
+      "GET /api/fabrica/orders/{id}/despiece - Despiece de orden utiliza función interna, parcialmente funcional"
+    ]
+  },
+  "ui_verified_elements": {
+    "portal_fabrica_page": {
+      "title": "Portal de Fábrica",
+      "subtitle": "Gestión de órdenes de fabricación",
+      "stats_cards": ["ACTIVAS", "EN PRODUCCIÓN", "LISTAS", "ENTREGA ESTA SEMANA", "PIEZAS PRODUCCIÓN"],
+      "filters": ["Search input", "Status dropdown", "Priority dropdown"],
+      "buttons": ["Importar PDF", "Nueva Orden", "Refresh"]
+    },
+    "order_list_item": {
+      "visible_info": ["Order number (OF-YYYY-NNNN)", "Status badge", "Priority badge", "Customer name", "Muebles count", "Piezas count", "Entrega date"],
+      "expandable": true
+    },
+    "expanded_order": {
+      "items_table": ["Código", "Descripción", "Dimensiones", "Cantidad", "Estado"],
+      "action_buttons": ["Status dropdown", "Fecha Entrega", "Ver Despiece", "Eliminar"],
+      "notes_section": true
+    },
+    "new_order_modal": {
+      "fields": ["Cliente", "Código Cliente", "Teléfono", "Prioridad", "Dirección de Entrega", "Muebles a Fabricar", "Notas Internas"],
+      "buttons": ["Cancelar", "Crear Orden"]
+    }
+  }
+}

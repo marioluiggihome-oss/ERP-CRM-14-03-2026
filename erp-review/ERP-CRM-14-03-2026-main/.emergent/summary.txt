@@ -1,0 +1,134 @@
+<analysis>Here is the handoff summary for the next agent:
+
+**original_problem_statement**: The user is building a comprehensive kitchen budgeting ERP/CRM application named **LUIGGI HOME**. The core relies on a multi-library system ('ZC' and 'MV') with detailed pricing, complex bill of materials (despiece) calculations, and order management. Recent priorities included fixing AI Telemetry (Reconocimiento Óptico) errors during large catalog uploads, creating production dashboards, managing custom roles, and strictly refining the mathematical formulas used to generate the manufacturing cutting lists (despieces).
+
+**User's preferred language**: **es (Spanish)**. (INSTRUCT NEXT AGENT: You MUST respond and communicate with the user entirely in Spanish).
+
+**what currently exists?** 
+A full-stack React/FastAPI/MongoDB ERP. It features a newly implemented background queue system for AI Telemetry that prevents gateway timeouts, automatic AI tariff detection (T1-T21) from catalog images, a Dashboard Fábrica for production metrics, and dynamic tariff/zone pricing in the budget tables. The system also contains recently updated and corrected mathematical formulas for generating cabinet cutting lists (despieces), along with a data normalization layer that ensures dimensions are always in centimeters.
+
+**Last working item**:
+- **Last item agent was working**: Correcting the mathematical formulas for despieces (cutting lists) based on a user-provided Word document, and fixing a bug where AI Telemetry occasionally imported dimensions in millimeters instead of centimeters (e.g., 900 instead of 90). The agent updated the math formulas in , added a normalization step in , and ran a script to fix 782 existing products in the database.
+- **Status**: USER VERIFICATION PENDING
+- **Agent Testing Done**: Y (Backend scripts verified dimension changes and math logic).
+- **Which testing method agent to use?** Frontend testing agent (to verify UI behavior on despieces) or manual backend curl for the  generation endpoint.
+- **User Testing Done**: N
+
+**All Pending/In progress Issue list**: 
+  - Issue 1: **Missing features requested in the User's Word Document (P0)**
+     - **Attempted fixes**: The agent successfully extracted the text from the user's Word document and fixed the math formulas (Issue #1 from the doc). However, the agent *missed/forgot* to implement the remaining 3 requirements mentioned in the document before the session ended.
+     - **Next debug checklist**: 
+        1. **Informe de producción:** Integrate the production report into the factory report (informe de fábrica) for each order. (Check PDF generation logic in  or ).
+        2. **Archivos adjuntos:** Ensure that when copies of orders are sent, the client's attached files are included.
+        3. **Logotipo:** Add the brand's logo to the generated order PDFs.
+     - **Why fix this issue and what will be achieved with the fix?** Fulfills the explicit requirements provided by the user in their uploaded document, ensuring factory PDFs are professional and complete.
+     - **Status**: NOT STARTED
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** Backend (PDF Generation & Emailing).
+     - **Blocked on other issue**: None.
+
+**In progress Task List**:
+*None active besides the missed Word document issues mentioned above.*
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - (P1) Refactor Frontend Monolith: Decompose  (>5300 lines) into smaller, manageable components.
+    - (P2) Populate User Manual: Write comprehensive content for the user manual ().
+    
+    Future Tasks:
+    - (P3) Continue Backend Refactoring: Extract Settings and Projects/Budgets logic from  to dedicated routers.
+    - (P3) Integrations: External billing systems integration.
+    - (P3) Alertas automáticas de producción urgente.
+    - (P3) Permisos granulares por fábrica para el rol Director Fábrica.
+
+**Completed work in this session**
+- **AI Telemetry Queue System ()**: Completely replaced  with a background  task and polling system to fix 502 Gateway Timeouts and body stream already read errors for large image processing (DONE).
+- **Auto-detection of Tariffs**: Instructed Gemini Vision to automatically extract the MV tariff (T1-T21) from catalog headers, removing the need for a manual dropdown (DONE).
+- **Dashboard Fábrica**: Created a new UI tab and backend endpoint () for KPIs, production status, and monthly sales trends (DONE).
+- **Role Management**: Created Director de Fábrica role and renamed tabs (Panel Director Comercial, Dashboard Fábrica) (DONE).
+- **Dynamic Pricing in **: Added UI dropdowns to select Tariffs/Zones and updated the React  hooks so prices actively change in the UI when the user switches tariffs (DONE).
+- **Despiece Math & Dimension Normalization**: Fixed formulas for Laterales, Tapas, Trasera, and Estantes to account for back-panel thickness. Wrote logic to convert AI-hallucinated millimeter dimensions into centimeters (DONE).
+
+**Earlier issues found/mentioned but not fixed**
+   - Issue 1: **User Document Requirements (Logos, Attachments, Factory Reports)**
+   - *See details in All Pending/In progress Issue list (Issue 1) above.*
+
+**Known issue recurrence from previous fork**
+  - **Issue recurrence in previous fork**: body stream already read / 502 Timeouts during AI Telemetry.
+  - **Recurrence count**: 3
+  - **Status**: RESOLVED (Fixed permanently by transitioning from synchronous HTTP requests to an asynchronous Job Queue with frontend polling).
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Telemetry Queue System**: Because 3 passes of Gemini Vision takes ~45-60 seconds per image, the standard 60s proxy timeout was killing requests. The backend now immediately returns a  via , and the frontend polls  every 2 seconds via .
+- **Dimension Normalization**: The AI sometimes extracts measurements in . A normalization function now checks if values > 150 and divides by 10 to force .
+- **Dynamic Tariffs**: Products store multiple prices in . The  uses a  callback hooked into React state to update UI prices dynamically.
+
+**key DB schema**
+  - : 
+  - :  (Width/Height/Depth are strictly enforced as CM).
+
+**changes in tech stack**
+  - Added Recharts () for the Factory Dashboard.
+
+**All files of reference**
+-  (New: Background processing for AI Telemetry)
+-  (Updated: Math formulas for despiece/cutting lists around line 2850+)
+-  (Updated: Pricing logic and tariff selectors)
+-  (Updated: Polling logic for telemetry, Dashboard UI)
+-  (New: KPI metrics)
+-  (Updated: Roles)
+
+**Areas that need refactoring**:
+-  (>5300 lines). Urgent candidate for decomposition.
+
+**key api endpoints**
+- : Initiates background Gemini parsing.
+- : Polls telemetry status.
+- : Fetches Factory KPIs.
+
+**Critical Info for New Agent**
+- **LANGUAGE:** Always speak Spanish.
+- **DESPIECE MATH:** The math logic for generating the Bill of Materials (Despiece) was just heavily altered in  to correctly calculate interior dimensions (subtracting back-panel thickness). Do not revert this math.
+- **WORD DOCUMENT PENDING ITEMS:** You *must* review the user's request regarding PDF Generation: they want the production report integrated into the factory report, client attachments sent with orders, and logos added to PDFs.
+
+**documents and test reports created in this job**
+  -  (Updated with Dashboard, Queue system, and Math fixes)
+  - 
+  - 
+  - 
+
+**Last 10 User Messages and any pending HUMAN messages** 
+1. User: error (Image showing body stream already read).
+2. Agent: Tried fixing with response.clone().
+3. User: han fallado varios lotes de importación (Images showing clone errors).
+4. Agent: Switched to arrayBuffer, then found out the issue was timeouts.
+5. User: da este error al importar telemetría ia (502 Bad Gateway timeout).
+6. Agent: Explained it was a proxy timeout, reduced AI passes from 3 to 2.
+7. User: si añada ese sistema [cola] y haz que sea más fluida la importación
+8. Agent: Implemented full Async Background Queue.
+9. User: ojo no estás calculando bien los despieces (Uploaded images and a Word Document).
+10. Agent: Fixed math formulas for pieces, added dimension normalization (mm -> cm), ran a database script to clean existing bad data. Waiting for user to verify the math fixes.
+
+**Project Health Check:**
+- Broken: Missing PDF/Report logic from the user's Word doc.
+- Mocked: User manual content.
+
+**3rd Party Integrations**:
+- **OpenAI / Gemini Vision** — uses Emergent LLM Key (used in ).
+- **Sendgrid (Emails)** — requires User API Key.
+
+**Testing status**:
+  - Testing agent used after significant changes: YES (Tested bulk-upserts, dashboard, and roles).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None explicitly created by main agent, but used .
+  - Known regressions: None currently.
+
+**Credentials to test flow:**
+- User: 
+- Password: 
+
+**What agent forgot to execute**:
+The agent focused on fixing the math formulas and database dimension anomalies mentioned in the user's Word Document, but completely forgot to execute the other three explicit requests in that document: 1) Integrating the production report into the factory report, 2) Sending client attachments with order copies, and 3) Adding the brand logo to the generated order PDFs. These are P0 tasks for the next agent.</analysis>
