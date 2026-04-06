@@ -10,8 +10,13 @@ from typing import Optional, Dict, Any
 from fastapi import HTTPException, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-# Configuración JWT
-JWT_SECRET = os.environ.get('JWT_SECRET', secrets.token_hex(32))
+# Configuración JWT (requiere variable de entorno obligatoria en producción)
+_jwt_secret = os.environ.get('JWT_SECRET')
+if not _jwt_secret:
+    import warnings
+    warnings.warn("JWT_SECRET not set! Using random secret (tokens won't persist across restarts)")
+    _jwt_secret = secrets.token_hex(32)
+JWT_SECRET = _jwt_secret
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24  # Token expira en 24 horas
 JWT_REFRESH_EXPIRATION_DAYS = 7  # Refresh token expira en 7 días
