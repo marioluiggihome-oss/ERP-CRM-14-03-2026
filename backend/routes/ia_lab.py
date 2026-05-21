@@ -10,7 +10,14 @@ import logging
 from typing import List, Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    EMERGENT_AVAILABLE = True
+except ImportError:
+    EMERGENT_AVAILABLE = False
+    LlmChat = None
+    UserMessage = None
+    ImageContent = None
 
 from config import db
 

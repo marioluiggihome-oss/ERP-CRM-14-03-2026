@@ -326,7 +326,10 @@ async def analyze_draft(request: DigitalizadorRequest):
     Returns structured data with quantities, descriptions, and dimensions.
     """
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        except ImportError:
+            raise HTTPException(status_code=503, detail="AI service not available in this environment")
         
         # Prepare the prompt for Gemini Vision
         extraction_prompt = """Analiza esta imagen de un presupuesto o boceto de cocina/muebles.

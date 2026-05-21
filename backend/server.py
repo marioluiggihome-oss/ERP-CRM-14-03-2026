@@ -13,7 +13,15 @@ from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 import base64
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+# emergentintegrations only works in Emergent environment - using fallback for Railway
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    EMERGENT_AVAILABLE = True
+except ImportError:
+    EMERGENT_AVAILABLE = False
+    LlmChat = None
+    UserMessage = None
+    ImageContent = None
 import json
 import bcrypt
 import jwt  # Para decodificar tokens en endpoints de export

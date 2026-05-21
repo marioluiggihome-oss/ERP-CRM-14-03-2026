@@ -212,7 +212,10 @@ async def create_opportunity_from_armario(project_id: str):
 async def ia_configure_armario(request: IAConfigRequest):
     """Usar IA para configurar la distribucion de modulos del armario"""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+        except ImportError:
+            raise HTTPException(status_code=503, detail="AI service not available in this environment")
         
         api_key = os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
@@ -307,7 +310,10 @@ async def ia_generate_layout(request: IALayoutRequest):
     Uses AI to interpret the user's description and create module configurations.
     """
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+        except ImportError:
+            raise HTTPException(status_code=503, detail="AI service not available in this environment")
         
         api_key = os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
@@ -416,7 +422,10 @@ Responde SOLO con el JSON, sin texto adicional."""
 async def ia_render_armario(request: IARenderRequest):
     """Generar render realista del armario usando IA"""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+        except ImportError:
+            raise HTTPException(status_code=503, detail="AI service not available in this environment")
         
         api_key = os.environ.get("EMERGENT_LLM_KEY")
         if not api_key:
