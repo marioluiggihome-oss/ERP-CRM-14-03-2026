@@ -108,14 +108,14 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return payload
 
 
-@router.get("", response_model=List[UserResponse])
+@router.get("")
 async def get_users(current_user: dict = Depends(get_current_user)):
     """Obtener todos los usuarios (sin passwords)"""
     users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
     return users
 
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}")
 async def get_user(user_id: str, current_user: dict = Depends(get_current_user)):
     """Obtener un usuario por ID (sin password)"""
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
