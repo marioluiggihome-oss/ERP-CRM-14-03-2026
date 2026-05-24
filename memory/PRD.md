@@ -1,11 +1,46 @@
 # LUIGGI HOME - Kitchen Budgeting ERP/CRM
 
 ## Estado: EN DESARROLLO ACTIVO
-## Última Actualización: 29 Marzo 2026
+## Última Actualización: 24 Mayo 2026
 
 ---
 
-## ✅ COMPLETADO EN ESTA SESIÓN (29 Marzo 2026)
+## ✅ COMPLETADO EN ESTA SESIÓN (24 Mayo 2026)
+
+### Bug crítico: `/api/users` y `/api/settings` devolvían 500
+- 🔴 **Root cause**: `routes/users.py`, `routes/settings.py` y `routes/products.py` importaban `verify_token` desde `routes/auth` pero esa función nunca existió ahí (la real es `verify_access_token` en `services/jwt_service`).
+- ✅ **Fix**: Las 3 rutas ahora usan `services.jwt_service.get_current_user` como dependencia.
+- ✅ **Impacto**: La pestaña "Red Distribución" ahora carga la lista de usuarios; "Settings" guarda cambios sin error 500.
+
+### Bug crítico: Aislamiento CRM era código muerto
+- 🔴 **Root cause**: Existían 2 routers CRM (`routes/crm.py` con aislamiento JWT-based y `routes/crm_module.py` legacy con `isAdmin` query param spoofeable). `server.py` solo wireaba `crm_module.py`.
+- ✅ **Fix**: Lógica de aislamiento portada al router activo `routes/crm_module.py` con:
+  - `GET /api/crm/contacts`: comerciales (no admin) solo ven contactos con `createdByUserId`/`assignedToId` == su id (o de sus tiendas vinculadas). Admin ve todo. Usa JWT si está presente; cae a `requestingUserId` por compatibilidad.
+  - `POST /api/crm/contacts`: guarda `createdByUserId` + `createdByUsername` del JWT y asigna `assignedToId = creador` si no se especifica.
+
+### Bug: `POST /api/clients` devolvía 500
+- 🔴 **Root cause**: Mismatch de nombres de campos. Frontend envía español (`codigo`, `nombre`, `cif`, `direccion`); modelo Pydantic `ClientCreate` solo aceptaba inglés (`code`, `name`, `taxId`, `address`).
+- ✅ **Fix**: `POST /clients` ahora acepta `dict` y normaliza ambas convenciones (ES↔EN). Se mantiene la unicidad por `codigo` y formato uppercase.
+
+### Mejora UX: Pestañas del Master visibles sin scroll
+- ✅ Contenedor de pestañas cambiado de `overflow-x-auto` a `flex-wrap` → todas las pestañas (17) se muestran en 2-3 filas, ninguna queda oculta.
+
+### Nueva pestaña: "DIGITALIZADOR IA" en Master
+- ✅ Nuevo componente `/app/frontend/src/components/settings/DigitalizadorAuditTab.jsx`.
+- ✅ Muestra auditoría de expedientes técnicos generados con el Digitalizador:
+  - Stats: total expedientes, líneas totales, usuarios activos
+  - Filtros: por usuario, búsqueda por expediente/proyecto/cliente
+  - Detalle expandible por expediente con líneas y datos del cliente
+  - Eliminar entrada del historial
+- ✅ Backend: usa endpoints existentes `GET /api/digitalizador/history` y `DELETE /api/digitalizador/history/{id}`.
+
+### Testing
+- ✅ **14/14 backend tests passed** (testing agent iteración 38)
+- ✅ Verificado: auth fix, CRM isolation con JWT, POST /clients ES+EN, DELETE /clients con/sin force, logo persiste en PUT /settings.
+
+---
+
+## ✅ COMPLETADO EN SESIÓN ANTERIOR (29 Marzo 2026)
 
 ### Sistema de Clientes de Tiendas (Clientes-de-Tiendas)
 - ✅ **Nueva arquitectura jerárquica de clientes implementada**:
@@ -15,19 +50,11 @@
      │       └── Clientes-de-Tiendas (clientes finales de cada tienda)
      └── Usuarios internos (comerciales, representantes, etc.)
   ```
-- ✅ **Backend - Nuevo router `/api/shop-clients`** (`/app/backend/routes/shop_clients.py`):
-  - `GET /api/shop-clients` - Obtener clientes (filtrado por usuario)
-  - `GET /api/shop-clients/stats` - Estadísticas de clientes
-  - `GET /api/shop-clients/by-owner/{id}` - Clientes por tienda propietaria
-  - `POST /api/shop-clients` - Crear nuevo cliente
-  - `PUT /api/shop-clients/{id}` - Actualizar cliente
-  - `DELETE /api/shop-clients/{id}` - Eliminar cliente
-  - `POST /api/shop-clients/import` - Importar clientes CSV
+- ✅ **Backend - Nuevo router `/api/shop-clients`** (`/app/backend/routes/shop_clients.py`)
 - ✅ **Permisos implementados**:
   - Tiendas (isTienda=true) solo ven sus propios clientes
   - Admins/Directores/Gerentes ven todos los clientes de todas las tiendas
 - ✅ **Frontend - Nueva pestaña "MIS CLIENTES"** en Panel Maestro
-- ✅ **Nueva API en frontend** - `shopClientsAPI` en `/app/frontend/src/services/api.js`
 - ✅ **Colección MongoDB**: `shop_clients`
 
 ### Verificación Tolerancias de Puertas ✅
