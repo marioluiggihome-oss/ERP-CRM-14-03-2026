@@ -1022,25 +1022,44 @@ async def get_client(client_id: str):
     return client
 
 @api_router.post("/clients")
-async def create_client(client: ClientCreate):
-    """Crear un nuevo cliente"""
-    # Check if codigo exists (only if codigo is not empty)
-    if client.codigo and client.codigo.strip():
-        existing = await db.clients.find_one({"codigo": client.codigo.upper()})
+async def create_client(client: dict):
+    """Crear un nuevo cliente. Acepta nombres de campo en español (codigo, nombre, cif, ...)
+    o en inglés (code, name, taxId, ...). Esto evita fallos por discrepancia entre el
+    formulario (español) y el modelo Pydantic (inglés)."""
+    # Normalizar nombres de campo a la convención usada en la BD (español)
+    field_map = {
+        "code": "codigo",
+        "name": "nombre",
+        "taxId": "cif",
+        "address": "direccion",
+        "city": "localidad",
+        "province": "provincia",
+        "postalCode": "codigoPostal",
+        "phone": "telefono",
+        "discount": "descuento",
+        "active": "activo",
+        "notes": "notas",
+    }
+    client_data = dict(client) if isinstance(client, dict) else {}
+    for en_key, es_key in field_map.items():
+        if en_key in client_data and es_key not in client_data:
+            client_data[es_key] = client_data.pop(en_key)
+
+    codigo = (client_data.get("codigo") or "").strip().upper()
+    if codigo:
+        existing = await db.clients.find_one({"codigo": codigo})
         if existing:
             raise HTTPException(status_code=400, detail="El código de cliente ya existe")
-    
-    client_data = client.model_dump()
+
     client_data["id"] = f"cli-{uuid.uuid4().hex[:8]}"
-    client_data["codigo"] = client_data["codigo"].upper()
+    client_data["codigo"] = codigo
     client_data["createdAt"] = datetime.now(timezone.utc).isoformat()
     client_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    
+
     await db.clients.insert_one(client_data)
-    
+
     # Return without _id
-    if "_id" in client_data:
-        del client_data["_id"]
+    client_data.pop("_id", None)
     return client_data
 
 @api_router.put("/clients/{client_id}")

@@ -2,7 +2,8 @@
 CRM Router - Customer Relationship Management
 Endpoints para gestión de contactos, oportunidades, actividades y calendario
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import HTTPBearer
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -16,16 +17,28 @@ from models.schemas import (
     CalendarEventModel, CalendarEventCreate, CalendarEventUpdate,
     ActivityModel, ActivityCreate, ActivityUpdate
 )
+from services.jwt_service import get_current_user as jwt_get_current_user
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["crm"])
+_optional_bearer = HTTPBearer(auto_error=False)
 
 # Database connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
+
+
+async def _get_user_or_none(credentials=Depends(_optional_bearer)):
+    """Resolve current user from JWT. Returns None if no/invalid token (graceful for legacy callers)."""
+    if not credentials:
+        return None
+    try:
+        return await jwt_get_current_user(credentials)
+    except Exception:
+        return None
 
 
 # ============================================
@@ -38,25 +51,50 @@ async def get_contacts(
     search: Optional[str] = None, 
     assignedTo: Optional[str] = None, 
     isAdmin: Optional[bool] = True,
-    requestingUserId: Optional[str] = None
+    requestingUserId: Optional[str] = None,
+    current_user: Optional[dict] = Depends(_get_user_or_none)
 ):
-    """Get all contacts with optional filters, including total value from opportunities"""
+    """Get all contacts with optional filters, including total value from opportunities.
+
+    SECURITY (JWT-based isolation):
+    - Si hay un JWT válido, se ignoran los params `isAdmin`/`requestingUserId` y
+      la decisión de admin viene del token + lookup en DB.
+    - Un comercial (no admin) SOLO ve contactos donde createdByUserId == su id
+      o assignedToId == su id.
+    """
     try:
-        # SEGURIDAD: Verificar rol del usuario en la base de datos
+        # SEGURIDAD: Resolver rol del usuario actual (preferir JWT sobre query params)
         verified_is_admin = False
-        if requestingUserId:
-            requesting_user = await db.users.find_one({"id": requestingUserId}, {"_id": 0})
-            if requesting_user:
-                verified_is_admin = (
-                    requesting_user.get("isAdmin", False) or 
-                    requesting_user.get("isResponsableDelegacion", False)
+        verified_user_id = None
+        if current_user and current_user.get("id"):
+            verified_user_id = current_user["id"]
+            db_user = await db.users.find_one({"id": verified_user_id}, {"_id": 0})
+            if db_user:
+                verified_is_admin = bool(
+                    db_user.get("isAdmin") or
+                    db_user.get("isGerente") or
+                    db_user.get("isDirectorComercial") or
+                    db_user.get("isResponsableDelegacion")
                 )
-        
-        effective_is_admin = verified_is_admin if requestingUserId else isAdmin
+        elif requestingUserId:
+            # Fallback legado: confiar en requestingUserId pero verificar en DB
+            verified_user_id = requestingUserId
+            db_user = await db.users.find_one({"id": requestingUserId}, {"_id": 0})
+            if db_user:
+                verified_is_admin = bool(
+                    db_user.get("isAdmin") or
+                    db_user.get("isGerente") or
+                    db_user.get("isDirectorComercial") or
+                    db_user.get("isResponsableDelegacion")
+                )
+        else:
+            # Sin token y sin requestingUserId: comportamiento anterior (compat)
+            verified_is_admin = bool(isAdmin)
         
         query = {}
         if status:
             query["status"] = status
+        search_filter = None
         if search:
             search_filter = [
                 {"name": {"$regex": search, "$options": "i"}},
@@ -64,25 +102,46 @@ async def get_contacts(
                 {"email": {"$regex": search, "$options": "i"}}
             ]
         
-        # SEGURIDAD: Si NO es admin verificado y tiene assignedTo, filtrar
-        if not effective_is_admin and assignedTo:
+        # SEGURIDAD: Si NO es admin, filtrar por createdByUserId/assignedToId del usuario
+        if not verified_is_admin and verified_user_id:
+            # Incluir tiendas vinculadas a este comercial (compat con flujo anterior)
+            shops = await db.users.find(
+                {"linkedRepresentativeId": verified_user_id},
+                {"id": 1, "_id": 0}
+            ).to_list(100)
+            shop_ids = [s["id"] for s in shops]
+            all_ids = [verified_user_id] + shop_ids
+
+            isolation_filter = {"$or": [
+                {"createdByUserId": {"$in": all_ids}},
+                {"assignedToId": {"$in": all_ids}},
+                {"assignedTo": {"$in": all_ids}},
+                {"createdBy": {"$in": all_ids}}
+            ]}
+
+            if search_filter:
+                query["$and"] = [isolation_filter, {"$or": search_filter}]
+            else:
+                query.update(isolation_filter)
+        elif not verified_is_admin and assignedTo:
+            # Compatibilidad legada cuando no hay token: filtrar por assignedTo
             shops = await db.users.find(
                 {"linkedRepresentativeId": assignedTo},
                 {"id": 1, "_id": 0}
             ).to_list(100)
             shop_ids = [s["id"] for s in shops]
-            
             all_ids = [assignedTo] + shop_ids
             assigned_filter = {"$or": [
                 {"assignedTo": {"$in": all_ids}},
-                {"createdBy": {"$in": all_ids}}
+                {"createdBy": {"$in": all_ids}},
+                {"assignedToId": {"$in": all_ids}},
+                {"createdByUserId": {"$in": all_ids}}
             ]}
-            
-            if search:
+            if search_filter:
                 query["$and"] = [assigned_filter, {"$or": search_filter}]
             else:
                 query.update(assigned_filter)
-        elif search:
+        elif search_filter:
             query["$or"] = search_filter
         
         contacts = await db.contacts.find(query, {"_id": 0}).sort("createdAt", -1).to_list(1000)
@@ -122,15 +181,26 @@ async def get_contact(contact_id: str):
 
 
 @router.post("/crm/contacts")
-async def create_contact(contact: ContactCreate):
-    """Create a new contact"""
+async def create_contact(
+    contact: ContactCreate,
+    current_user: Optional[dict] = Depends(_get_user_or_none)
+):
+    """Create a new contact. Si hay JWT, se asocia al usuario creador."""
     try:
         contact_dict = contact.model_dump()
         contact_obj = ContactModel(**contact_dict)
         doc = contact_obj.model_dump()
         doc['createdAt'] = doc['createdAt'].isoformat()
         doc['updatedAt'] = doc['updatedAt'].isoformat()
-        
+
+        # Aislamiento: guardar autor y por defecto asignar al creador
+        if current_user and current_user.get("id"):
+            user_id = current_user["id"]
+            doc['createdByUserId'] = user_id
+            doc['createdByUsername'] = current_user.get("username", "")
+            if not doc.get('assignedToId'):
+                doc['assignedToId'] = user_id
+
         await db.contacts.insert_one(doc)
         doc.pop('_id', None)
         return doc

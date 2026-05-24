@@ -273,18 +273,80 @@ def test_delete_client_no_links(admin_headers, temp_client_in_db):
     assert dr.status_code == 200, f"Delete unlinked client failed: {dr.status_code} {dr.text}"
 
 
-def test_post_clients_broken_codigo_field_regression(admin_headers):
-    """REGRESSION: POST /clients currently 500s due to server.py referencing
-    client.codigo while ClientCreate model only has 'code'. Document the issue."""
-    r = requests.post(f"{API}/clients",
-                      json={"name": "TEST CodigoRegression", "code": "TEST001"},
-                      headers=admin_headers, timeout=20)
-    # Expecting bug -> 500. If main agent fixes it, this assertion will flip to <400.
-    if r.status_code >= 500:
-        pytest.fail(
-            f"KNOWN BUG: POST /api/clients returns {r.status_code}. "
-            f"server.py line ~1028 uses client.codigo, but ClientCreate has 'code'. "
-            f"Body: {r.text}"
-        )
-    # If fixed, just assert success
-    assert r.status_code < 400
+def test_post_clients_spanish_payload(admin_headers):
+    """POST /clients with Spanish field names {nombre, codigo, cif, ...} -> 200"""
+    suffix = uuid.uuid4().hex[:6].upper()
+    payload = {
+        "nombre": f"TEST ClienteESP {suffix}",
+        "codigo": f"TESTESP{suffix}",
+        "cif": "B12345678",
+        "direccion": "Calle Falsa 123",
+        "localidad": "Madrid",
+        "provincia": "Madrid",
+        "codigoPostal": "28001",
+        "telefono": "600111222",
+        "descuento": 5,
+        "activo": True,
+        "notas": "TEST cliente español",
+    }
+    r = requests.post(f"{API}/clients", json=payload, headers=admin_headers, timeout=20)
+    assert r.status_code in (200, 201), f"POST /clients ES failed: {r.status_code} {r.text}"
+    body = r.json()
+    assert body.get("nombre") == payload["nombre"], f"nombre mismatch: {body}"
+    assert body.get("codigo") == payload["codigo"].upper(), f"codigo not uppercased: {body.get('codigo')}"
+    assert body.get("cif") == payload["cif"]
+    assert body.get("direccion") == payload["direccion"]
+    assert "id" in body and body["id"].startswith("cli-")
+
+    # Cleanup
+    requests.delete(f"{API}/clients/{body['id']}?force=true", headers=admin_headers, timeout=20)
+
+
+def test_post_clients_english_payload_normalized(admin_headers):
+    """POST /clients with English field names {name, code, taxId, address, ...} -> 200 (normalized to ES)"""
+    suffix = uuid.uuid4().hex[:6].upper()
+    payload = {
+        "name": f"TEST ClientENG {suffix}",
+        "code": f"TESTENG{suffix}",
+        "taxId": "B87654321",
+        "address": "Fake Street 99",
+        "city": "Barcelona",
+        "province": "Barcelona",
+        "postalCode": "08001",
+        "phone": "600999888",
+        "discount": 10,
+        "active": True,
+        "notes": "TEST english normalized",
+    }
+    r = requests.post(f"{API}/clients", json=payload, headers=admin_headers, timeout=20)
+    assert r.status_code in (200, 201), f"POST /clients EN failed: {r.status_code} {r.text}"
+    body = r.json()
+    # Should normalize to Spanish field names
+    assert body.get("nombre") == payload["name"], f"name->nombre mapping failed: {body}"
+    assert body.get("codigo") == payload["code"].upper(), f"code->codigo mapping failed: {body}"
+    assert body.get("cif") == payload["taxId"], f"taxId->cif mapping failed: {body}"
+    assert body.get("direccion") == payload["address"]
+    assert body.get("telefono") == payload["phone"]
+    assert "id" in body and body["id"].startswith("cli-")
+
+    # Cleanup
+    requests.delete(f"{API}/clients/{body['id']}?force=true", headers=admin_headers, timeout=20)
+
+
+def test_post_clients_duplicate_codigo_returns_400(admin_headers):
+    """POST /clients with a codigo that already exists -> 400"""
+    suffix = uuid.uuid4().hex[:6].upper()
+    codigo = f"TESTDUP{suffix}"
+    payload = {"nombre": f"TEST Dup1 {suffix}", "codigo": codigo}
+    r1 = requests.post(f"{API}/clients", json=payload, headers=admin_headers, timeout=20)
+    assert r1.status_code in (200, 201), f"First create failed: {r1.status_code} {r1.text}"
+    cid = r1.json().get("id")
+
+    # Second attempt with same codigo
+    r2 = requests.post(f"{API}/clients",
+                       json={"nombre": f"TEST Dup2 {suffix}", "codigo": codigo},
+                       headers=admin_headers, timeout=20)
+    assert r2.status_code == 400, f"Expected 400 on duplicate codigo, got {r2.status_code} {r2.text}"
+
+    # Cleanup
+    requests.delete(f"{API}/clients/{cid}?force=true", headers=admin_headers, timeout=20)
