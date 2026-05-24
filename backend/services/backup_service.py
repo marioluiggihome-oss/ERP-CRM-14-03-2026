@@ -1,6 +1,7 @@
 """
 Servicio de Backup Automático para LUIGGI HOME
 - Backup diario de MongoDB
+- Envío por email a marioluiggihome@gmail.com
 - Retención configurable
 - Logs de operaciones
 """
@@ -12,11 +13,13 @@ from pathlib import Path
 import logging
 import json
 import shutil
+import base64
 
 logger = logging.getLogger(__name__)
 
 BACKUP_DIR = Path("/app/backups")
 BACKUP_RETENTION_DAYS = 30  # Mantener backups de los últimos 30 días
+BACKUP_EMAIL = os.environ.get('BACKUP_EMAIL', 'marioluiggihome@gmail.com')
 
 class BackupService:
     def __init__(self, mongo_url: str, db_name: str):
@@ -25,6 +28,86 @@ class BackupService:
         self.backup_dir = BACKUP_DIR
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         self._scheduler_task = None
+    
+    async def send_backup_email(self, backup_result: dict, backup_path: str = None):
+        """Enviar email con el backup"""
+        try:
+            import resend
+            resend_key = os.environ.get('RESEND_API_KEY')
+            
+            if not resend_key:
+                logger.warning("RESEND_API_KEY no configurada, no se enviará email")
+                return False
+            
+            resend.api_key = resend_key
+            
+            # Preparar adjunto si el backup existe y es pequeño
+            attachments = []
+            if backup_path and os.path.exists(backup_path):
+                size_mb = os.path.getsize(backup_path) / (1024 * 1024)
+                if size_mb < 10:  # Solo adjuntar si es menor de 10MB
+                    with open(backup_path, 'rb') as f:
+                        file_content = base64.b64encode(f.read()).decode('utf-8')
+                    attachments = [{
+                        "filename": os.path.basename(backup_path),
+                        "content": file_content
+                    }]
+            
+            email_body = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #1e40af;">🔒 Backup Diario - LUIGGI HOME ERP</h2>
+                <hr style="border: 1px solid #e5e7eb;">
+                
+                <table style="width: 100%; margin: 20px 0;">
+                    <tr>
+                        <td style="padding: 8px; font-weight: bold;">📅 Fecha:</td>
+                        <td style="padding: 8px;">{datetime.now().strftime('%d/%m/%Y %H:%M')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; font-weight: bold;">📁 Archivo:</td>
+                        <td style="padding: 8px;">{backup_result.get('backup_name', 'N/A')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; font-weight: bold;">📊 Tamaño:</td>
+                        <td style="padding: 8px;">{backup_result.get('size_mb', 0)} MB</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; font-weight: bold;">✅ Estado:</td>
+                        <td style="padding: 8px; color: {'#16a34a' if backup_result.get('success') else '#dc2626'};">
+                            {'Exitoso' if backup_result.get('success') else 'Error'}
+                        </td>
+                    </tr>
+                </table>
+                
+                <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">
+                    {'📎 El backup está adjunto a este email.' if attachments else '⚠️ El backup es demasiado grande para adjuntar. Descárgalo desde el panel de administración.'}
+                </p>
+                
+                <hr style="border: 1px solid #e5e7eb; margin-top: 30px;">
+                <p style="color: #9ca3af; font-size: 11px; text-align: center;">
+                    Este es un mensaje automático del sistema LUIGGI HOME ERP.<br>
+                    Por favor, guarda este backup en tu Google Drive para mayor seguridad.
+                </p>
+            </div>
+            """
+            
+            email_params = {
+                "from": "LUIGGI HOME Backups <backups@luiggihome.es>",
+                "to": [BACKUP_EMAIL],
+                "subject": f"🔒 Backup {'✅' if backup_result.get('success') else '❌'} LUIGGI HOME - {datetime.now().strftime('%d/%m/%Y')}",
+                "html": email_body
+            }
+            
+            if attachments:
+                email_params["attachments"] = attachments
+            
+            resend.Emails.send(email_params)
+            logger.info(f"📧 Email de backup enviado a {BACKUP_EMAIL}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error enviando email de backup: {e}")
+            return False
         
     async def create_backup(self) -> dict:
         """Crear un backup completo de la base de datos"""
@@ -76,6 +159,9 @@ class BackupService:
                 }
                 
                 logger.info(f"Backup completado: {archive_path} ({size_mb} MB)")
+                
+                # Enviar email con el backup
+                await self.send_backup_email(result, archive_path)
                 
                 # Limpiar backups antiguos
                 await self.cleanup_old_backups()
