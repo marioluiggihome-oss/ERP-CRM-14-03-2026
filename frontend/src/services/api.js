@@ -1,6 +1,14 @@
 // API Service for LUIGGI HOME
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Helper: build Authorization header with JWT from localStorage (if present)
+const authHeaders = (extra = {}) => {
+  const token = (typeof localStorage !== 'undefined') ? localStorage.getItem('access_token') : null;
+  const h = { ...extra };
+  if (token) h['Authorization'] = `Bearer ${token}`;
+  return h;
+};
+
 // ============================================
 // AUTH
 // ============================================
@@ -49,13 +57,13 @@ export const expedientAPI = {
 
 export const usersAPI = {
   getAll: async () => {
-    const response = await fetch(`${API_URL}/api/users`);
+    const response = await fetch(`${API_URL}/api/users`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener usuarios');
     return response.json();
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_URL}/api/users/${id}`);
+    const response = await fetch(`${API_URL}/api/users/${id}`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Usuario no encontrado');
     return response.json();
   },
@@ -63,7 +71,7 @@ export const usersAPI = {
   create: async (user) => {
     const response = await fetch(`${API_URL}/api/users`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(user)
     });
     const data = await response.json();
@@ -76,7 +84,7 @@ export const usersAPI = {
   update: async (id, user) => {
     const response = await fetch(`${API_URL}/api/users/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(user)
     });
     const data = await response.json();
@@ -88,7 +96,8 @@ export const usersAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/users/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders()
     });
     const data = await response.json();
     if (!response.ok) {
@@ -587,7 +596,7 @@ export const materialsAPI = {
 
 export const settingsAPI = {
   get: async () => {
-    const response = await fetch(`${API_URL}/api/settings`);
+    const response = await fetch(`${API_URL}/api/settings`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener configuración');
     return response.json();
   },
@@ -595,7 +604,7 @@ export const settingsAPI = {
   update: async (settings) => {
     const response = await fetch(`${API_URL}/api/settings`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(settings)
     });
     if (!response.ok) throw new Error('Error al actualizar configuración');

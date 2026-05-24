@@ -258,6 +258,38 @@ const App = () => {
     }
   }, [state.currentUser]);
 
+  // After login: reload users and settings (endpoints protected by JWT, so they
+  // fail on initial mount when no token exists yet)
+  useEffect(() => {
+    if (!state.currentUser?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [usersRes, settingsRes] = await Promise.allSettled([
+          usersAPI.getAll(),
+          settingsAPI.get(),
+        ]);
+        if (cancelled) return;
+        const users = usersRes.status === 'fulfilled' ? usersRes.value : null;
+        const settings = settingsRes.status === 'fulfilled' ? settingsRes.value : null;
+        setState(prev => ({
+          ...prev,
+          ...(users ? { users } : {}),
+          ...(settings ? {
+            tarifa: settings.tarifa !== undefined ? settings.tarifa : prev.tarifa,
+            ivaPercent: settings.ivaPercent !== undefined ? settings.ivaPercent : prev.ivaPercent,
+            companyName: settings.companyName ?? prev.companyName,
+            companyLogo: settings.logo ?? prev.companyLogo,
+            brandColor: settings.brandColor ?? prev.brandColor,
+          } : {}),
+        }));
+      } catch (err) {
+        console.error('Error reloading users/settings post-login:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [state.currentUser?.id]);
+
   const handleLogin = (user) => {
     // Al hacer login, limpiar los items del presupuesto para evitar 
     // que un usuario vea los datos de otro usuario
