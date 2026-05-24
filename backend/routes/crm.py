@@ -33,10 +33,19 @@ async def get_contacts(
     assigned_to_id: str = None,
     search: str = None,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
 ):
-    """Obtener contactos con filtros"""
+    """Obtener contactos con filtros - Cada comercial solo ve sus propios contactos"""
     query = {}
+    
+    # Si NO es admin, solo ve sus propios contactos
+    if not current_user.get("isAdmin"):
+        user_id = current_user.get("sub") or current_user.get("id")
+        query["$or"] = [
+            {"createdByUserId": user_id},
+            {"assignedToId": user_id}
+        ]
     
     if status:
         query["status"] = status
@@ -47,14 +56,23 @@ async def get_contacts(
     if prescriptor_id:
         query["prescriptorId"] = prescriptor_id
     if assigned_to_id:
+        # Override the user filter if specific assignedTo is requested
         query["assignedToId"] = assigned_to_id
+        if "$or" in query:
+            del query["$or"]
     if search:
-        query["$or"] = [
+        search_query = [
             {"name": {"$regex": search, "$options": "i"}},
             {"company": {"$regex": search, "$options": "i"}},
             {"email": {"$regex": search, "$options": "i"}},
             {"phone": {"$regex": search, "$options": "i"}}
         ]
+        if "$or" in query:
+            # Combine with existing $or using $and
+            query = {"$and": [{"$or": query["$or"]}, {"$or": search_query}]}
+            del query["$and"][0]["$or"]
+        else:
+            query["$or"] = search_query
     
     contacts = await db.contacts.find(query, {"_id": 0}).sort("createdAt", -1).skip(skip).limit(limit).to_list(limit)
     return contacts
@@ -71,11 +89,20 @@ async def get_contact(contact_id: str):
 
 @router.post("/contacts")
 async def create_contact(contact: ContactCreate, current_user: dict = Depends(get_current_user)):
-    """Crear un nuevo contacto"""
+    """Crear un nuevo contacto - Se asocia al comercial que lo crea"""
     contact_dict = contact.model_dump()
     contact_dict["id"] = f"cont-{__import__('uuid').uuid4().hex[:8]}"
     contact_dict["createdAt"] = datetime.now(timezone.utc)
     contact_dict["updatedAt"] = datetime.now(timezone.utc)
+    
+    # Guardar el ID del usuario que crea el contacto
+    user_id = current_user.get("sub") or current_user.get("id")
+    contact_dict["createdByUserId"] = user_id
+    contact_dict["createdByUsername"] = current_user.get("username", "")
+    
+    # Si no tiene assignedToId, asignarlo al creador
+    if not contact_dict.get("assignedToId"):
+        contact_dict["assignedToId"] = user_id
     
     await db.contacts.insert_one(contact_dict)
     
