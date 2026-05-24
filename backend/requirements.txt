@@ -132,3 +132,4 @@ qrcode==8.2
 xlsxwriter==3.2.0
 resend==2.5.1
 slowapi==0.1.9
+reportlab==4.2.5
