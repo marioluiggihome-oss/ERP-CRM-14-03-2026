@@ -2603,6 +2603,8 @@ async def create_project(project: ProjectCreate, user_id: str, client_code: Opti
     project_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
     
     await db.projects.insert_one(project_data)
+    # insert_one añade _id (ObjectId no serializable). Quitarlo antes de devolver.
+    project_data.pop("_id", None)
     
     # Tracking de actividad
     tracker = get_tracker()
