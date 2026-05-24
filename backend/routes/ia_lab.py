@@ -100,9 +100,21 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
     
     for item in furniture_list:
         code = item.get('codigo_sugerido', '')
-        width = item.get('ancho_estimado', 0)
-        height = item.get('alto_estimado', 0) * 10
-        
+
+        # Normalización defensiva de unidades.
+        # El prompt pide ancho_estimado en mm y alto/fondo en cm, pero la IA
+        # ocasionalmente devuelve todo en la misma unidad. Detectamos por rango:
+        #   - Anchos válidos en mm: 250-1500. Si llega < 200, era cm → *10.
+        #   - Altos válidos en cm: 30-260. Si llega > 500, era mm → /10.
+        raw_ancho = item.get('ancho_estimado', 0) or 0
+        raw_alto = item.get('alto_estimado', 0) or 0
+        raw_fondo = item.get('fondo_estimado', 0) or 0
+
+        width = int(raw_ancho * 10) if raw_ancho and raw_ancho < 200 else int(raw_ancho)
+        alto_cm = int(raw_alto / 10) if raw_alto and raw_alto > 500 else int(raw_alto)
+        height = alto_cm * 10  # cm → mm para búsqueda en catálogo
+        fondo_cm = int(raw_fondo / 10) if raw_fondo and raw_fondo > 200 else int(raw_fondo)
+
         catalog_product = await search_product_in_catalog(code, width, height, library)
         
         enriched_item = {**item}
@@ -117,7 +129,7 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
             enriched_item['programa'] = catalog_product.get('programa', 'ESTÁNDAR')
             enriched_item['ancho_real'] = catalog_product.get('width', width)
             enriched_item['alto_real'] = catalog_product.get('height', height)
-            enriched_item['fondo_real'] = catalog_product.get('depth', item.get('fondo_estimado', 0) * 10)
+            enriched_item['fondo_real'] = catalog_product.get('depth', fondo_cm * 10)
             enriched_item['product_id'] = catalog_product.get('id', '')
             enriched_item['biblioteca'] = catalog_product.get('library', library or 'ZC')
         else:
