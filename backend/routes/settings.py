@@ -97,17 +97,16 @@ class SettingsUpdate(BaseModel):
         extra = "allow"
 
 
-@router.get("", response_model=SettingsModel)
+@router.get("")
 async def get_settings(current_user: dict = Depends(get_current_user)):
     """Obtener configuración global"""
     settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
     if not settings:
-        # Return defaults
-        return SettingsModel()
+        return {}
     return settings
 
 
-@router.put("", response_model=SettingsModel)
+@router.put("")
 async def update_settings(settings: SettingsUpdate, current_user: dict = Depends(get_current_user)):
     """Actualizar configuración global"""
     update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
@@ -121,7 +120,7 @@ async def update_settings(settings: SettingsUpdate, current_user: dict = Depends
     
     updated = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
     if not updated:
-        return SettingsModel()
+        return {}
     return updated
 
 
