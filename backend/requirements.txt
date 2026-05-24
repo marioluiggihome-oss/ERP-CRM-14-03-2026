@@ -133,5 +133,4 @@ xlsxwriter==3.2.0
 resend==2.5.1
 slowapi==0.1.9
 reportlab==4.2.5
-cairosvg==2.7.1
 openpyxl==3.1.5

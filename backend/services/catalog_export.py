@@ -12,7 +12,14 @@ from reportlab.lib.units import mm, cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from PIL import Image
-import cairosvg
+
+# cairosvg is optional - requires system library libcairo
+try:
+    import cairosvg
+    CAIROSVG_AVAILABLE = True
+except (ImportError, OSError):
+    CAIROSVG_AVAILABLE = False
+    cairosvg = None
 
 
 def get_cabinet_svg(code: str, name: str, category: str) -> str:
@@ -246,6 +253,8 @@ def get_cabinet_svg(code: str, name: str, category: str) -> str:
 def svg_to_png_bytes(svg_string: str, width: int = 40, height: int = 40) -> bytes:
     """Convierte SVG a PNG bytes"""
     try:
+        if not CAIROSVG_AVAILABLE:
+            raise ImportError("cairosvg not available")
         png_bytes = cairosvg.svg2png(
             bytestring=svg_string.encode('utf-8'),
             output_width=width,
