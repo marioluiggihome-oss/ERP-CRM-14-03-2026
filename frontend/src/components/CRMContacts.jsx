@@ -258,28 +258,30 @@ const CRMContacts = ({ currentUser }) => {
   });
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl">
-            <Users size={28} className="text-white" />
+    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-3 md:p-6">
+      {/* Header - Responsive */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 md:mb-6">
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="p-2 md:p-3 bg-indigo-600 rounded-xl md:rounded-2xl shadow-xl">
+            <Users size={20} className="text-white md:hidden" />
+            <Users size={28} className="text-white hidden md:block" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Contactos</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{contacts.length} contactos</p>
+            <h2 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tight">Contactos</h2>
+            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{contacts.length} contactos</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        {/* Filters - Horizontal scroll on mobile */}
+        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2 md:pb-0 -mx-3 px-3 md:mx-0 md:px-0">
           {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-white border-2 border-indigo-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
+            className="px-2 md:px-3 py-2 bg-white border-2 border-indigo-100 rounded-xl text-xs md:text-sm font-bold outline-none focus:border-indigo-500 min-w-[100px]"
             data-testid="status-filter"
           >
-            <option value="">Todos los estados</option>
+            <option value="">Estados</option>
             <option value="lead">Nuevos</option>
             <option value="active">Activos</option>
             <option value="customer">Clientes</option>
@@ -290,10 +292,10 @@ const CRMContacts = ({ currentUser }) => {
           <select
             value={segmentFilter}
             onChange={(e) => setSegmentFilter(e.target.value)}
-            className="px-3 py-2 bg-white border-2 border-indigo-100 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
+            className="px-2 md:px-3 py-2 bg-white border-2 border-indigo-100 rounded-xl text-xs md:text-sm font-bold outline-none focus:border-indigo-500 min-w-[100px]"
             data-testid="segment-filter"
           >
-            <option value="">Todos los segmentos</option>
+            <option value="">Segmentos</option>
             {CLIENT_SEGMENTS.map(seg => (
               <option key={seg} value={seg}>{seg}</option>
             ))}
@@ -328,15 +330,15 @@ const CRMContacts = ({ currentUser }) => {
           )}
 
           {/* Search */}
-          <div className="relative w-60">
+          <div className="relative w-full md:w-60">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={16} />
             <input 
               type="text" 
-              placeholder="Buscar contacto..."
+              placeholder="Buscar..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              className="w-full bg-white border-2 border-indigo-100 rounded-xl py-2 pl-10 pr-4 text-sm font-bold outline-none focus:border-indigo-500"
+              className="w-full bg-white border-2 border-indigo-100 rounded-xl py-2 pl-10 pr-4 text-xs md:text-sm font-bold outline-none focus:border-indigo-500"
               data-testid="search-contacts"
             />
           </div>
@@ -344,30 +346,107 @@ const CRMContacts = ({ currentUser }) => {
           {/* Add Contact */}
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg"
+            className="flex items-center gap-2 px-3 md:px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg whitespace-nowrap"
             data-testid="add-contact-btn"
           >
             <UserPlus size={16} />
-            Nuevo Contacto
+            <span className="hidden md:inline">Nuevo Contacto</span>
+            <span className="md:hidden">Nuevo</span>
           </button>
         </div>
       </div>
 
-      {/* Contacts Table */}
+      {/* Contacts - Card view for mobile, Table for desktop */}
       <div className="flex-1 bg-white rounded-2xl border-2 border-indigo-100 shadow-xl overflow-hidden">
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
           </div>
         ) : filteredContacts.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400">
-            <Users className="w-16 h-16 mb-4 opacity-50" />
-            <p className="font-black text-lg">Sin contactos</p>
-            <p className="text-sm">Añade tu primer contacto</p>
+          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8">
+            <Users className="w-12 h-12 md:w-16 md:h-16 mb-4 opacity-50" />
+            <p className="font-black text-base md:text-lg">Sin contactos</p>
+            <p className="text-xs md:text-sm">Añade tu primer contacto</p>
           </div>
         ) : (
           <div className="overflow-auto h-full">
-            <table className="w-full">
+            {/* Mobile Card View */}
+            <div className="md:hidden p-3 space-y-3">
+              {filteredContacts.map(contact => (
+                <div key={contact.id} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <span className="text-indigo-600 font-black text-sm">
+                          {contact.name?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{contact.name}</p>
+                        <p className="text-xs text-slate-500">{contact.company || 'Sin empresa'}</p>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${getStatusColor(contact.status)}`}>
+                      {getStatusName(contact.status)}
+                    </span>
+                  </div>
+                  
+                  {/* Contact info */}
+                  <div className="space-y-1 mb-3 text-xs text-slate-600">
+                    {contact.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail size={12} />
+                        <span className="truncate">{contact.email}</span>
+                      </div>
+                    )}
+                    {contact.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone size={12} />
+                        <span>{contact.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Tags */}
+                  {contact.tags && contact.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {contact.tags.map(tagId => {
+                        const bt = BUSINESS_TYPES.find(b => b.id === tagId);
+                        return bt ? (
+                          <span key={tagId} className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border ${bt.color}`}>
+                            {bt.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                    <span className="text-sm font-bold text-indigo-600">
+                      {formatCurrency(contact.totalValue || 0)}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openModal(contact)}
+                        className="p-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(contact.id)}
+                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Desktop Table View */}
+            <table className="w-full hidden md:table">
               <thead className="bg-slate-50 sticky top-0">
                 <tr>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Contacto</th>
