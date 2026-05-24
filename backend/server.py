@@ -3396,9 +3396,7 @@ async def fix_product_data():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Include the router in the main app (AFTER all endpoints are defined)
-app.include_router(api_router)
-
+# CORS Middleware - MUST be added BEFORE routers
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -3406,6 +3404,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include the router in the main app (AFTER middleware)
+app.include_router(api_router)
 
 # ============================================
 # STARTUP / SHUTDOWN EVENTS
