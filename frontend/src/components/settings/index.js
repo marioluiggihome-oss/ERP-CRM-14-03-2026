@@ -5,6 +5,7 @@
 
 export { default as TelemetryTab } from './TelemetryTab';
 export { default as TelemetryAuditTab } from './TelemetryAuditTab';
+export { default as DigitalizadorAuditTab } from './DigitalizadorAuditTab';
 export { default as IdentityTab } from './IdentityTab';
 export { default as SecurityTab } from './SecurityTab';
 export { default as DashboardTab } from './DashboardTab';

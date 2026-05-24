@@ -5,7 +5,7 @@ import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, libraries
 import CatalogImporter from './CatalogImporter';
 
 // Componentes refactorizados
-import { TelemetryTab, TelemetryAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab, DirectorTab, ShopClientsTab, PricingTab, BackupsTab, MaintenanceTab, InventoryTab, ArmazonesTab } from './settings';
+import { TelemetryTab, TelemetryAuditTab, DigitalizadorAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab, DirectorTab, ShopClientsTab, PricingTab, BackupsTab, MaintenanceTab, InventoryTab, ArmazonesTab } from './settings';
 
 // Lista de provincias de España con sus códigos
 const PROVINCIAS_ESPANA = [
@@ -1100,7 +1100,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         </div>
 
         {/* Tabs */}
-        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto shrink-0">
+        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-2 shrink-0">
           {/* Tab Panel Director Comercial - Solo Admin/Gerente/Director Comercial */}
           {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
@@ -1233,6 +1233,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               }`}
             >
               Telemetría IA
+            </button>
+          )}
+          
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+            <button
+              onClick={() => setActiveTab('digitalizador-audit')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'digitalizador-audit' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+              data-testid="digitalizador-audit-tab"
+            >
+              Digitalizador IA
             </button>
           )}
           
@@ -2915,6 +2927,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
           {activeTab === 'telemetry' && (
             <TelemetryTab state={state} setState={setState} />
+          )}
+
+          {activeTab === 'digitalizador-audit' && (
+            <DigitalizadorAuditTab state={state} />
           )}
 
           {activeTab === 'telemetry-audit' && (

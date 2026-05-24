@@ -1,0 +1,72 @@
+{
+  "summary": "Backend testing of iteration 37 patches (auth dependency fix in users/settings/products, settings logo persistence, CRM isolation, DELETE /clients force flag, digitalizador history). 9/12 tests passed. Auth-dependency-fix and DELETE /clients flows are GREEN. CRM isolation patch in routes/crm.py is DEAD CODE (router never registered). Independent pre-existing bug in POST /clients (field name mismatch).",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/crm/contacts",
+        "issue": "CRITICAL: The new isolation patch in /app/backend/routes/crm.py (createdByUserId/assignedToId) is DEAD CODE. server.py imports `crm_router` at line 62 but NEVER does `api_router.include_router(crm_router)`. The active handler is /app/backend/routes/crm_module.py (line 124) which does NOT save createdByUserId nor createdByUsername. Response shows createdByUserId is absent.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "GET /api/crm/contacts",
+        "issue": "CRITICAL: CRM isolation is broken. Non-admin reps see ALL contacts in the DB. Same root cause: routes/crm.py never wired in. crm_module.py uses insecure query-param-based isAdmin check (client-controllable) instead of JWT-based. Verified: a rep user (isRepresentative=true) calling GET /api/crm/contacts with their own token sees admin-created contacts.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "POST /api/clients",
+        "issue": "Returns 500 Internal Server Error. server.py line 1028 references `client.codigo` but the ClientCreate Pydantic model (models/schemas.py line 453) has field `code`, not `codigo`. This is pre-existing but blocks any client creation flow. Stack trace: AttributeError: 'ClientCreate' object has no attribute 'codigo'.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/users",
+        "issue": "FIXED by testing agent: response serialization failed with PydanticSerializationError on bson.ObjectId because user_to_response() in routes/users.py kept the Mongo _id. Fixed by excluding '_id' alongside 'password'."
+      },
+      {
+        "endpoint": "Auth login response shape",
+        "issue": "Token returned under `tokens.access_token` (snake_case) not `accessToken`. Frontend code should be consistent—worth verifying."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration37_fixes.py",
+    "/app/test_reports/pytest/iter37.xml"
+  ],
+  "action_items": [
+    "URGENT: Decide which CRM router to use. Either (a) add `api_router.include_router(crm_router)` BEFORE crm_module_router in server.py (line 156) so JWT-based isolation is active, or (b) port the createdByUserId + JWT isolation logic into crm_module.py (which is the currently-active handler). Currently the security patch in routes/crm.py is unreachable.",
+    "Fix POST /api/clients: in /app/backend/server.py line 1028 change `client.codigo` -> `client.code` (and matching `client_data['codigo']` -> `client_data['code']` on line 1035 if applicable). ClientCreate model uses 'code'.",
+    "After fixing CRM router wiring, re-run test_iteration37_fixes.py - tests test_post_contact_assigns_created_by_user_id and test_rep_only_sees_own_contacts should pass.",
+    "Consider also wiring crm_router for opportunities/calendar/activities which it also defines, OR remove routes/crm.py entirely if it is fully duplicated by crm_module.py."
+  ],
+  "critical_code_review_comments": [
+    "Two CRM routers coexist: routes/crm.py (newer, JWT-based, dead) and routes/crm_module.py (older, query-param-based, active). The duplicate is dangerous because the security upgrade is silently ignored.",
+    "crm_module.py GET /crm/contacts trusts the client-provided `isAdmin` query parameter — a non-admin can simply pass isAdmin=true to bypass filtering. Must be removed in favor of JWT-based check.",
+    "routes/users.py created its own get_current_user wrapper calling services.jwt_service.get_current_user — works but duplicates the dependency. Same pattern in routes/settings.py. Could be DRYer by importing require_auth directly.",
+    "Settings PUT correctly preserves logo because SettingsUpdate filters out None values before $set — VERIFIED working.",
+    "DELETE /clients/{id}?force=true works correctly: unlinks linkedClientId and deletes — VERIFIED.",
+    "routes/users.py: user_to_response() leaked Mongo _id (fixed in this iteration). Pattern of mutating user_data after insert_one is fragile — recommend using returned ObjectId pattern or projecting via find_one after insert."
+  ],
+  "updated_files": [
+    "/app/backend/routes/users.py (excluded _id from user_to_response)",
+    "/app/backend/tests/test_iteration37_fixes.py (new test file)"
+  ],
+  "success_rate": {
+    "backend": "75% - 9/12 tests passed",
+    "frontend": "N/A - frontend testing skipped per request"
+  },
+  "test_credentials": {
+    "admin_user": "mario@luiggihome.es",
+    "admin_password": "Mario2025*"
+  },
+  "seed_data_creation": "Created temporary rep user (isRepresentative=true) for CRM isolation testing; auto-cleaned via fixture teardown. Created temporary TEST_ clients via direct MongoDB insert (POST /clients is broken).",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Iteration 37 verified: GET /users, GET/PUT /settings (with logo preservation), GET /products, GET /digitalizador/history, DELETE /clients/{id} (with and without ?force=true) all work. The auth dependency fix (verify_token -> get_current_user) is solid. THREE remaining bugs to fix: (1) wire crm_router OR port logic to crm_module.py [BLOCKS CRM isolation feature], (2) POST /clients field name typo [BLOCKS client creation], (3) ensure user_to_response excludes _id (done by testing agent). After main agent fixes 1 and 2, rerun /app/backend/tests/test_iteration37_fixes.py — expect 12/12 green.",
+  "rca_of_the_issue": "CRM isolation root cause: two parallel router files (crm.py and crm_module.py) both declare /crm/contacts endpoints. server.py only includes crm_module_router (line 156); crm_router (line 62) is imported but never registered. Therefore the new JWT-based isolation written in crm.py never executes — FastAPI dispatches to crm_module.py's older handler which (a) does not save createdByUserId on POST, and (b) uses an unsafe query-param `isAdmin` check on GET that defaults to True and can be spoofed by any client. Reproduction: login as a non-admin rep user, GET /api/crm/contacts -> returns all contacts from all users including admin-owned ones. POST /api/crm/contacts -> response has no createdByUserId field. Mitigation: in /app/backend/server.py near line 156, add `api_router.include_router(crm_router)` BEFORE the crm_module_router line so FastAPI's first-match wins selects the secured router. Alternatively, delete crm.py and port the logic into crm_module.py. Decide based on which router is feature-complete (crm_module.py has totalValue calculation, notes endpoints, etc., that crm.py lacks)."
+}

@@ -25,14 +25,14 @@ client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
 
 # Authentication dependency
+from services.jwt_service import get_current_user as _get_current_user
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Verify JWT token and return current user"""
-    from routes.auth import verify_token
-    token = credentials.credentials
-    payload = verify_token(token)
-    if not payload:
+    user = await _get_current_user(credentials)
+    if not user:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
-    return payload
+    return user
 
 
 # Pydantic models
