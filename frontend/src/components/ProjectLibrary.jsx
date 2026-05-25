@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle, Copy } from 'lucide-react';
 import { projectsAPI, crmOpportunitiesAPI } from '../services/api';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // ─── Configuración de estados ───────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -126,24 +125,10 @@ const ProjectLibrary = ({ state, setState }) => {
 
   const handleStatusChange = async (projectId, newStatus) => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/projects/${projectId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          status: newStatus,
-          changedBy: state.currentUser?.username || 'usuario'
-        })
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert('Error: ' + (err.detail || 'No se pudo cambiar el estado'));
-        return;
-      }
-      const updated = await res.json();
+      const updated = await projectsAPI.changeStatus(
+        projectId, newStatus,
+        state.currentUser?.username || 'usuario'
+      );
       setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updated } : p));
     } catch (err) {
       alert('Error al cambiar estado: ' + err.message);
@@ -283,16 +268,7 @@ const ProjectLibrary = ({ state, setState }) => {
     );
     if (!newNum) return;
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/projects/${project.id}/clone?user_id=${state.currentUser?.id || 'admin'}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ budgetNumber: newNum })
-      });
-      if (!res.ok) { alert('Error al duplicar'); return; }
+      await projectsAPI.clone(project.id, newNum, state.currentUser?.id || 'admin');
       alert(`✅ Presupuesto duplicado como "${newNum}"`);
       loadProjects();
     } catch (err) {

@@ -617,17 +617,25 @@ export const settingsAPI = {
 // ============================================
 
 export const projectsAPI = {
+  _headers: () => {
+    const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  },
+
   getAll: async (userId = null) => {
-    const url = userId 
+    const url = userId
       ? `${API_URL}/api/projects?user_id=${userId}`
       : `${API_URL}/api/projects`;
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: projectsAPI._headers() });
     if (!response.ok) throw new Error('Error al obtener proyectos');
     return response.json();
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_URL}/api/projects/${id}`);
+    const response = await fetch(`${API_URL}/api/projects/${id}`, { headers: projectsAPI._headers() });
     if (!response.ok) throw new Error('Proyecto no encontrado');
     return response.json();
   },
@@ -635,7 +643,7 @@ export const projectsAPI = {
   create: async (project, userId) => {
     const response = await fetch(`${API_URL}/api/projects?user_id=${userId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: projectsAPI._headers(),
       body: JSON.stringify(project)
     });
     if (!response.ok) throw new Error('Error al crear proyecto');
@@ -645,7 +653,7 @@ export const projectsAPI = {
   update: async (id, project) => {
     const response = await fetch(`${API_URL}/api/projects/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: projectsAPI._headers(),
       body: JSON.stringify(project)
     });
     if (!response.ok) throw new Error('Error al actualizar proyecto');
@@ -654,9 +662,41 @@ export const projectsAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/projects/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: projectsAPI._headers()
     });
     if (!response.ok) throw new Error('Error al eliminar proyecto');
+    return response.json();
+  },
+
+  changeStatus: async (id, status, changedBy = 'usuario', note = '') => {
+    const response = await fetch(`${API_URL}/api/projects/${id}/status`, {
+      method: 'PATCH',
+      headers: projectsAPI._headers(),
+      body: JSON.stringify({ status, changedBy, note })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al cambiar estado');
+    }
+    return response.json();
+  },
+
+  clone: async (id, budgetNumber, userId) => {
+    const response = await fetch(`${API_URL}/api/projects/${id}/clone?user_id=${userId}`, {
+      method: 'POST',
+      headers: projectsAPI._headers(),
+      body: JSON.stringify({ budgetNumber })
+    });
+    if (!response.ok) throw new Error('Error al duplicar proyecto');
+    return response.json();
+  },
+
+  getStatusHistory: async (id) => {
+    const response = await fetch(`${API_URL}/api/projects/${id}/status-history`, {
+      headers: projectsAPI._headers()
+    });
+    if (!response.ok) throw new Error('Error al obtener historial');
     return response.json();
   }
 };
