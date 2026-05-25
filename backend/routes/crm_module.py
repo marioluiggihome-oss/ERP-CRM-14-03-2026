@@ -523,15 +523,37 @@ async def delete_opportunity(opp_id: str):
 # ============================================
 
 @router.get("/crm/contacts/inactive")
-async def get_inactive_contacts(days: int = 30, assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True):
-    """Get contacts that haven't had any activity in the specified days"""
+async def get_inactive_contacts(days: int = 30, assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True, current_user: Optional[dict] = Depends(_get_user_or_none)):
+    """Get contacts that haven't had any activity in the specified days — filtrado por JWT"""
     try:
         cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-        
+
+        # Resolver admin desde JWT
+        verified_is_admin = False
+        verified_user_id = None
+        if current_user and current_user.get("id"):
+            verified_user_id = current_user["id"]
+            db_user = await db.users.find_one({"id": verified_user_id}, {"_id": 0})
+            if db_user:
+                verified_is_admin = bool(
+                    db_user.get("isAdmin") or db_user.get("isGerente") or
+                    db_user.get("isDirectorComercial") or db_user.get("isResponsableDelegacion")
+                )
+        elif assignedTo:
+            verified_user_id = assignedTo
+            db_user = await db.users.find_one({"id": assignedTo}, {"_id": 0})
+            if db_user:
+                verified_is_admin = bool(db_user.get("isAdmin") or db_user.get("isGerente"))
+
         query = {}
-        if not isAdmin and assignedTo:
-            query["assignedTo"] = assignedTo
-        
+        if not verified_is_admin and verified_user_id:
+            shops = await db.users.find({"linkedRepresentativeId": verified_user_id}, {"id": 1, "_id": 0}).to_list(100)
+            all_ids = [verified_user_id] + [s["id"] for s in shops]
+            query["$or"] = [
+                {"assignedTo": {"$in": all_ids}},
+                {"createdByUserId": {"$in": all_ids}},
+            ]
+
         contacts = await db.contacts.find(query, {"_id": 0}).to_list(1000)
         
         inactive = []
@@ -813,12 +835,34 @@ async def create_reminder_from_opportunity(
 # ============================================
 
 @router.get("/crm/dashboard")
-async def get_crm_dashboard(assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True):
-    """Get CRM dashboard statistics"""
+async def get_crm_dashboard(assignedTo: Optional[str] = None, isAdmin: Optional[bool] = True, current_user: Optional[dict] = Depends(_get_user_or_none)):
+    """Get CRM dashboard statistics — filtrado por JWT"""
     try:
+        # Resolver admin desde JWT
+        verified_is_admin = False
+        verified_user_id = None
+        if current_user and current_user.get("id"):
+            verified_user_id = current_user["id"]
+            db_user = await db.users.find_one({"id": verified_user_id}, {"_id": 0})
+            if db_user:
+                verified_is_admin = bool(
+                    db_user.get("isAdmin") or db_user.get("isGerente") or
+                    db_user.get("isDirectorComercial") or db_user.get("isResponsableDelegacion")
+                )
+        elif assignedTo:
+            verified_user_id = assignedTo
+            db_user = await db.users.find_one({"id": assignedTo}, {"_id": 0})
+            if db_user:
+                verified_is_admin = bool(db_user.get("isAdmin") or db_user.get("isGerente"))
+
         base_filter = {}
-        if not isAdmin and assignedTo:
-            base_filter["assignedTo"] = assignedTo
+        if not verified_is_admin and verified_user_id:
+            shops = await db.users.find({"linkedRepresentativeId": verified_user_id}, {"id": 1, "_id": 0}).to_list(100)
+            all_ids = [verified_user_id] + [s["id"] for s in shops]
+            base_filter["$or"] = [
+                {"assignedTo": {"$in": all_ids}},
+                {"createdByUserId": {"$in": all_ids}},
+            ]
         
         total_contacts = await db.contacts.count_documents(base_filter)
         
