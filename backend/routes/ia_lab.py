@@ -216,9 +216,10 @@ async def analyze_kitchen_plan(
     Filtra productos por la biblioteca especificada (ZC o MV).
     """
     try:
-        api_key = os.environ.get('EMERGENT_LLM_KEY')
-        if not api_key:
-            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+        from services.llm_vision import analyze_image_with_gemini, is_vision_available
+        
+        if not is_vision_available():
+            raise HTTPException(status_code=503, detail="Vision IA no configurada. Añade GEMINI_API_KEY en variables de entorno")
         
         # Normalizar biblioteca
         active_library = (library or "ZC").upper()
@@ -227,19 +228,12 @@ async def analyze_kitchen_plan(
         file_content = await file.read()
         base64_image = base64.b64encode(file_content).decode('utf-8')
         
-        chat = LlmChat(
-            api_key=api_key,
+        response_text = await analyze_image_with_gemini(
+            image_base64=base64_image,
+            prompt=ANALYSIS_PROMPT_SINGLE,
             session_id=f"kitchen-plan-{uuid.uuid4().hex[:8]}",
-            system_message="Eres un experto en diseño de cocinas. Analiza planos y detecta muebles con precisión."
-        ).with_model("gemini", "gemini-2.0-flash")
-        
-        image_content = ImageContent(image_base64=base64_image)
-        
-        response = await chat.send_message(
-            UserMessage(text=ANALYSIS_PROMPT_SINGLE, file_contents=[image_content])
+            model="gemini-2.0-flash",
         )
-        
-        response_text = response.content if hasattr(response, 'content') else str(response)
         
         # Clean JSON from markdown
         if '```json' in response_text:
@@ -294,7 +288,11 @@ async def analyze_kitchen_plan_multi(
     try:
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
-            raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
+            api_key = None  # Permite usar Gemini directo si está disponible
+        
+        from services.llm_vision import analyze_image_with_gemini, is_vision_available
+        if not is_vision_available():
+            raise HTTPException(status_code=503, detail="Vision IA no configurada. Añade GEMINI_API_KEY en variables de entorno")
         
         # Normalizar biblioteca
         active_library = (library or "ZC").upper()
@@ -348,19 +346,12 @@ Responde SOLO con JSON:
   }}
 }}"""
 
-            chat = LlmChat(
-                api_key=api_key,
+            response_text = await analyze_image_with_gemini(
+                image_base64=base64_image,
+                prompt=analysis_prompt,
                 session_id=f"kitchen-multi-{uuid.uuid4().hex[:8]}",
-                system_message="Eres un experto en diseño de cocinas."
-            ).with_model("gemini", "gemini-2.0-flash")
-            
-            image_content = ImageContent(image_base64=base64_image)
-            
-            response = await chat.send_message(
-                UserMessage(text=analysis_prompt, file_contents=[image_content])
+                model="gemini-2.0-flash",
             )
-            
-            response_text = response.content if hasattr(response, 'content') else str(response)
             
             if '```json' in response_text:
                 response_text = response_text.split('```json')[1].split('```')[0]

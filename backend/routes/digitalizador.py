@@ -326,10 +326,10 @@ async def analyze_draft(request: DigitalizadorRequest):
     Returns structured data with quantities, descriptions, and dimensions.
     """
     try:
-        try:
-            from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
-        except ImportError:
-            raise HTTPException(status_code=503, detail="AI service not available in this environment")
+        from services.llm_vision import analyze_image_with_gemini, is_vision_available
+        
+        if not is_vision_available():
+            raise HTTPException(status_code=503, detail="Vision IA no configurada. Añade GEMINI_API_KEY en variables de entorno (https://aistudio.google.com/apikey)")
         
         # Prepare the prompt for Gemini Vision
         extraction_prompt = """Analiza esta imagen de un presupuesto o boceto de cocina/muebles.
@@ -371,27 +371,12 @@ IMPORTANTE:
 - Si hay un nombre de cliente o proyecto, ponlo en projectName
 - Responde SOLO con el JSON, sin texto adicional ni explicaciones"""
 
-        # Initialize Gemini Vision chat
-        llm_key = os.environ.get('EMERGENT_LLM_KEY')
-        if not llm_key:
-            raise HTTPException(status_code=500, detail="API key not configured")
-        
-        chat = LlmChat(
-            api_key=llm_key,
+        response = await analyze_image_with_gemini(
+            image_base64=request.imageBase64,
+            prompt=extraction_prompt,
             session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
-            system_message="Eres un asistente experto en extraer informacion de imagenes de presupuestos de cocinas."
-        ).with_model("gemini", "gemini-2.0-flash")
-        
-        # Create image content
-        image_content = ImageContent(
-            image_base64=request.imageBase64
+            model="gemini-2.0-flash",
         )
-        
-        # Send request
-        response = await chat.send_message(UserMessage(
-            text=extraction_prompt,
-            file_contents=[image_content]
-        ))
         
         response_text = response.strip() if isinstance(response, str) else str(response)
         
