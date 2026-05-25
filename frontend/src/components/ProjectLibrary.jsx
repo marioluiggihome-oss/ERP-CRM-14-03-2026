@@ -1,24 +1,122 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Trash2, Eye, Calendar, Euro, Search, FileText, Save, Loader, RefreshCw, Plus, Archive, ArchiveRestore, Filter, Target } from 'lucide-react';
+import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle } from 'lucide-react';
 import { projectsAPI, crmOpportunitiesAPI } from '../services/api';
 
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// ─── Configuración de estados ───────────────────────────────────────────────
+const STATUS_CONFIG = {
+  borrador:       { label: 'Borrador',       color: 'bg-slate-100 text-slate-600',   icon: FileText,     dot: 'bg-slate-400' },
+  draft:          { label: 'Borrador',       color: 'bg-slate-100 text-slate-600',   icon: FileText,     dot: 'bg-slate-400' },
+  enviado:        { label: 'Enviado',        color: 'bg-blue-100 text-blue-700',     icon: Send,         dot: 'bg-blue-500' },
+  aceptado:       { label: 'Aceptado',       color: 'bg-green-100 text-green-700',   icon: CheckCircle,  dot: 'bg-green-500' },
+  en_fabricacion: { label: 'En Fabricación', color: 'bg-orange-100 text-orange-700', icon: Factory,      dot: 'bg-orange-500' },
+  entregado:      { label: 'Entregado',      color: 'bg-indigo-100 text-indigo-700', icon: Truck,        dot: 'bg-indigo-500' },
+  rechazado:      { label: 'Rechazado',      color: 'bg-red-100 text-red-600',       icon: XCircle,      dot: 'bg-red-500' },
+  archived:       { label: 'Archivado',      color: 'bg-slate-100 text-slate-500',   icon: Archive,      dot: 'bg-slate-300' },
+};
+
+const TRANSITIONS = {
+  borrador:       [{ to: 'enviado',        label: 'Marcar como Enviado',        icon: Send }],
+  draft:          [{ to: 'enviado',        label: 'Marcar como Enviado',        icon: Send }],
+  enviado:        [{ to: 'aceptado',       label: 'Marcar como Aceptado',       icon: CheckCircle },
+                   { to: 'rechazado',      label: 'Marcar como Rechazado',      icon: XCircle }],
+  aceptado:       [{ to: 'en_fabricacion', label: 'Enviar a Fabricación',       icon: Factory },
+                   { to: 'rechazado',      label: 'Marcar como Rechazado',      icon: XCircle }],
+  en_fabricacion: [{ to: 'entregado',      label: 'Marcar como Entregado',      icon: Truck }],
+  entregado:      [],
+  rechazado:      [{ to: 'borrador',       label: 'Reabrir como Borrador',      icon: RotateCcw }],
+  archived:       [],
+};
+
+const StatusBadge = ({ status }) => {
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.borrador;
+  const Icon = cfg.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase ${cfg.color}`}>
+      <Icon size={11} />
+      {cfg.label}
+    </span>
+  );
+};
+
+const StatusDropdown = ({ project, onStatusChange }) => {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const transitions = TRANSITIONS[project.status] || [];
+
+  if (transitions.length === 0) return <StatusBadge status={project.status} />;
+
+  const handleChange = async (to) => {
+    setOpen(false);
+    setLoading(true);
+    try {
+      await onStatusChange(project.id, to);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="inline-flex items-center gap-1.5 focus:outline-none"
+        disabled={loading}
+      >
+        {loading ? <Loader size={14} className="animate-spin text-slate-400" /> : (
+          <>
+            <StatusBadge status={project.status} />
+            <ChevronDown size={12} className="text-slate-400" />
+          </>
+        )}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-8 z-50 bg-white rounded-xl shadow-2xl border border-slate-100 min-w-[200px] py-1 overflow-hidden">
+          {transitions.map(t => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.to}
+                onClick={() => handleChange(t.to)}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 uppercase text-left transition-colors"
+              >
+                <Icon size={14} className="text-slate-400" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Componente principal ────────────────────────────────────────────────────
 const ProjectLibrary = ({ state, setState }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [viewFilter, setViewFilter] = useState('active'); // 'active', 'archived', 'all'
+  const [viewFilter, setViewFilter] = useState('active');
+  const [expiryWarnings, setExpiryWarnings] = useState([]);
 
-  // Cargar proyectos desde MongoDB
-  useEffect(() => {
-    loadProjects();
-  }, []);
+  useEffect(() => { loadProjects(); }, []);
 
   const loadProjects = async () => {
     setIsLoading(true);
     try {
       const data = await projectsAPI.getAll(state.currentUser?.id);
       setProjects(data);
+      // Detectar presupuestos caducados o próximos a caducar (7 días)
+      const now = new Date();
+      const soon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const warnings = data.filter(p => {
+        if (!p.validUntil) return false;
+        const exp = new Date(p.validUntil);
+        return exp <= soon && p.status !== 'entregado' && p.status !== 'rechazado' && p.status !== 'archived';
+      });
+      setExpiryWarnings(warnings);
     } catch (err) {
       console.error('Error loading projects:', err);
     } finally {
@@ -26,51 +124,60 @@ const ProjectLibrary = ({ state, setState }) => {
     }
   };
 
+  const handleStatusChange = async (projectId, newStatus) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/projects/${projectId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          changedBy: state.currentUser?.username || 'usuario'
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Error: ' + (err.detail || 'No se pudo cambiar el estado'));
+        return;
+      }
+      const updated = await res.json();
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updated } : p));
+    } catch (err) {
+      alert('Error al cambiar estado: ' + err.message);
+    }
+  };
+
   const filteredProjects = projects.filter(p => {
-    // Primero aplicar filtro de estado (activo/archivado)
-    const statusMatch = viewFilter === 'all' 
-      ? true 
-      : viewFilter === 'archived' 
+    const statusMatch = viewFilter === 'all'
+      ? true
+      : viewFilter === 'archived'
         ? p.status === 'archived'
-        : p.status !== 'archived'; // 'active' muestra todo excepto archivados
-    
-    // Luego aplicar filtro de búsqueda
-    const searchMatch = (p.customerName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        : p.status !== 'archived';
+    const searchMatch =
+      (p.customerName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
       (p.budgetNumber?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-    
     return statusMatch && searchMatch;
   });
 
-  // Contar proyectos por estado
-  const projectCounts = {
+  // Contar por estado
+  const counts = {
     active: projects.filter(p => p.status !== 'archived').length,
     archived: projects.filter(p => p.status === 'archived').length,
-    all: projects.length
+    all: projects.length,
   };
 
-  // Guardar presupuesto actual como proyecto
   const saveCurrentBudget = async () => {
-    if (!state.budgetNumber) {
-      alert('Por favor, ingresa un número de expediente');
-      return;
-    }
-
+    if (!state.budgetNumber) { alert('Por favor, ingresa un número de expediente'); return; }
     const totalItems = state.budgetItemsMontada.length + state.budgetItemsDespiece.length;
-    if (totalItems === 0) {
-      alert('No hay items en el presupuesto actual para guardar');
-      return;
-    }
+    if (totalItems === 0) { alert('No hay items en el presupuesto actual para guardar'); return; }
 
     setIsSaving(true);
     try {
-      // Calcular total del presupuesto
-      const calculateTotal = (items, pointValue) => {
-        return items.reduce((sum, item) => sum + (item.totalPoints || 0) * pointValue, 0);
-      };
-      
-      const totalMontada = calculateTotal(state.budgetItemsMontada, state.pointValueMontada);
-      const totalDespiece = calculateTotal(state.budgetItemsDespiece, state.pointValueDespiece);
-      const totalPvp = totalMontada + totalDespiece;
+      const totalMontada = state.budgetItemsMontada.reduce((s, i) => s + (i.totalPoints || 0) * state.pointValueMontada, 0);
+      const totalDespiece = state.budgetItemsDespiece.reduce((s, i) => s + (i.totalPoints || 0) * state.pointValueDespiece, 0);
 
       const projectData = {
         budgetNumber: state.budgetNumber,
@@ -78,38 +185,30 @@ const ProjectLibrary = ({ state, setState }) => {
         customerAddress: state.customerAddress || '',
         internalReference: state.internalReference || '',
         itemsMontada: state.budgetItemsMontada.map(item => ({
-          id: item.id,
-          productId: item.productId,
-          productCode: item.productCode,
-          productName: item.productName,
-          quantity: item.quantity,
-          customWidth: item.customWidth,
-          customHeight: item.customHeight,
-          customDepth: item.customDepth,
-          unitPoints: item.unitPoints,
-          totalPoints: item.totalPoints
+          id: item.id, productId: item.productId, productCode: item.productCode,
+          productName: item.productName, quantity: item.quantity,
+          customWidth: item.customWidth, customHeight: item.customHeight, customDepth: item.customDepth,
+          unitPoints: item.unitPoints, totalPoints: item.totalPoints
         })),
         itemsDespiece: state.budgetItemsDespiece.map(item => ({
-          id: item.id,
-          productId: item.productId,
-          productCode: item.productCode,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPoints: item.unitPoints,
-          totalPoints: item.totalPoints
+          id: item.id, productId: item.productId, productCode: item.productCode,
+          productName: item.productName, quantity: item.quantity,
+          unitPoints: item.unitPoints, totalPoints: item.totalPoints
         })),
         doorColorLow: state.doorColorLow || '',
         doorColorHigh: state.doorColorHigh || '',
         doorColorColumns: state.doorColorColumns || '',
         sideColor: state.sideColor || '',
         selectedCarcassMaterialId: state.selectedCarcassMaterialId,
-        totalPvp: totalPvp,
-        status: 'draft'
+        totalPvp: totalMontada + totalDespiece,
+        status: 'borrador',
+        // Caducidad por defecto: 30 días
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       };
 
       await projectsAPI.create(projectData, state.currentUser?.id || 'admin');
       alert('Proyecto guardado correctamente');
-      loadProjects(); // Recargar lista
+      loadProjects();
     } catch (err) {
       alert('Error al guardar proyecto: ' + err.message);
     } finally {
@@ -132,9 +231,8 @@ const ProjectLibrary = ({ state, setState }) => {
         doorColorColumns: project.doorColorColumns || '',
         sideColor: project.sideColor || '',
         selectedCarcassMaterialId: project.selectedCarcassMaterialId || prev.selectedCarcassMaterialId,
-        currentTab: 'budget' // Ir a la mesa de trabajo
+        currentTab: 'budget'
       }));
-      alert('Proyecto cargado correctamente');
     }
   };
 
@@ -149,49 +247,65 @@ const ProjectLibrary = ({ state, setState }) => {
     }
   };
 
-  const toggleArchiveProject = async (project) => {
-    const isCurrentlyArchived = project.status === 'archived';
-    const action = isCurrentlyArchived ? 'desarchivar' : 'archivar';
-    
-    if (window.confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} el proyecto "${project.customerName || project.budgetNumber}"?`)) {
+  const toggleArchive = async (project) => {
+    const isArchived = project.status === 'archived';
+    if (window.confirm(`¿${isArchived ? 'Desarchivar' : 'Archivar'} el proyecto "${project.customerName || project.budgetNumber}"?`)) {
       try {
-        const newStatus = isCurrentlyArchived ? 'draft' : 'archived';
+        const newStatus = isArchived ? 'borrador' : 'archived';
         await projectsAPI.update(project.id, { status: newStatus });
-        setProjects(prev => prev.map(p => 
-          p.id === project.id ? { ...p, status: newStatus } : p
-        ));
+        setProjects(prev => prev.map(p => p.id === project.id ? { ...p, status: newStatus } : p));
       } catch (err) {
-        alert(`Error al ${action} proyecto: ` + err.message);
+        alert('Error: ' + err.message);
       }
     }
   };
 
-  const createOpportunityFromProject = async (project) => {
-    if (window.confirm(`¿Crear una oportunidad en el CRM para "${project.customerName || project.budgetNumber}"?`)) {
+  const createOpportunity = async (project) => {
+    if (window.confirm(`¿Crear oportunidad CRM para "${project.customerName || project.budgetNumber}"?`)) {
       try {
         const result = await crmOpportunitiesAPI.createFromProject(project.id);
-        alert(`✅ Oportunidad creada: "${result.opportunity.title}"\nValor: ${result.opportunity.value.toLocaleString('es-ES')}€\nContacto: ${result.contact.name}`);
+        alert(`✅ Oportunidad creada: "${result.opportunity.title}"\nValor: ${result.opportunity.value.toLocaleString('es-ES')}€`);
       } catch (err) {
-        alert('Error al crear oportunidad: ' + err.message);
+        alert('Error: ' + err.message);
       }
     }
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    try {
-      return new Date(dateStr).toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch {
-      return 'N/A';
-    }
+  const formatDate = (d) => {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    catch { return '—'; }
+  };
+
+  const isExpiringSoon = (p) => {
+    if (!p.validUntil) return false;
+    const exp = new Date(p.validUntil);
+    const now = new Date();
+    return exp <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) && exp > now;
+  };
+
+  const isExpired = (p) => {
+    if (!p.validUntil) return false;
+    return new Date(p.validUntil) < new Date();
   };
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-8">
+      {/* Avisos de caducidad */}
+      {expiryWarnings.length > 0 && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-amber-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-xs font-black text-amber-700 uppercase">
+              {expiryWarnings.length} presupuesto{expiryWarnings.length > 1 ? 's' : ''} próximo{expiryWarnings.length > 1 ? 's' : ''} a caducar
+            </p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              {expiryWarnings.map(p => p.budgetNumber).join(', ')}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -204,83 +318,39 @@ const ProjectLibrary = ({ state, setState }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Filtros de estado */}
-          <div className="flex bg-white rounded-xl border-2 border-indigo-100 p-1" data-testid="project-filter">
-            <button
-              onClick={() => setViewFilter('active')}
-              className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${
-                viewFilter === 'active' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : 'text-slate-500 hover:bg-indigo-50'
-              }`}
-              data-testid="filter-active"
-            >
-              Activos ({projectCounts.active})
-            </button>
-            <button
-              onClick={() => setViewFilter('archived')}
-              className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${
-                viewFilter === 'archived' 
-                  ? 'bg-slate-600 text-white shadow-md' 
-                  : 'text-slate-500 hover:bg-slate-100'
-              }`}
-              data-testid="filter-archived"
-            >
-              <Archive size={14} className="inline mr-1" />
-              Archivados ({projectCounts.archived})
-            </button>
-            <button
-              onClick={() => setViewFilter('all')}
-              className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${
-                viewFilter === 'all' 
-                  ? 'bg-orange-500 text-white shadow-md' 
-                  : 'text-slate-500 hover:bg-orange-50'
-              }`}
-              data-testid="filter-all"
-            >
-              Todos ({projectCounts.all})
-            </button>
+        <div className="flex items-center gap-3">
+          {/* Filtros */}
+          <div className="flex bg-white rounded-xl border-2 border-indigo-100 p-1">
+            {[['active', 'Activos', counts.active], ['archived', 'Archivados', counts.archived], ['all', 'Todos', counts.all]].map(([val, lbl, cnt]) => (
+              <button key={val} onClick={() => setViewFilter(val)}
+                className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${viewFilter === val ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-indigo-50'}`}>
+                {lbl} ({cnt})
+              </button>
+            ))}
           </div>
 
-          {/* Buscar */}
-          <div className="relative w-72">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={16} />
-            <input 
-              type="text" 
-              placeholder="Buscar proyecto..."
-              value={searchQuery}
+          {/* Búsqueda */}
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" size={15} />
+            <input type="text" placeholder="Buscar..." value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-white border-2 border-indigo-100 rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold outline-none focus:border-indigo-500 uppercase"
-              data-testid="search-projects"
-            />
+              className="w-full bg-white border-2 border-indigo-100 rounded-xl py-2.5 pl-9 pr-4 text-sm font-bold outline-none focus:border-indigo-500 uppercase" />
           </div>
 
-          {/* Refrescar */}
-          <button
-            onClick={loadProjects}
-            disabled={isLoading}
-            className="p-2.5 bg-white border-2 border-indigo-100 text-indigo-600 rounded-xl hover:bg-indigo-50 transition-all"
-            title="Refrescar lista"
-            data-testid="refresh-projects"
-          >
+          <button onClick={loadProjects} disabled={isLoading}
+            className="p-2.5 bg-white border-2 border-indigo-100 text-indigo-600 rounded-xl hover:bg-indigo-50 transition-all" title="Refrescar">
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
 
-          {/* Guardar actual */}
-          <button
-            onClick={saveCurrentBudget}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg disabled:opacity-50"
-            data-testid="save-current-budget"
-          >
+          <button onClick={saveCurrentBudget} disabled={isSaving}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg disabled:opacity-50">
             {isSaving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />}
             Guardar Actual
           </button>
         </div>
       </div>
 
-      {/* Contenido */}
+      {/* Lista */}
       {isLoading ? (
         <div className="flex-1 flex flex-col items-center justify-center">
           <Loader size={48} className="text-indigo-400 animate-spin mb-4" />
@@ -289,102 +359,109 @@ const ProjectLibrary = ({ state, setState }) => {
       ) : filteredProjects.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center opacity-40">
           <FileText size={80} className="text-slate-400 mb-4" strokeWidth={1} />
-          <p className="text-lg font-black uppercase tracking-widest text-slate-600">Sin proyectos archivados</p>
-          <p className="text-sm text-slate-400 mt-2">Guarda tu primer presupuesto usando el botón "Guardar Actual"</p>
+          <p className="text-lg font-black uppercase tracking-widest text-slate-600">Sin proyectos</p>
+          <p className="text-sm text-slate-400 mt-2">Guarda tu primer presupuesto usando "Guardar Actual"</p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 gap-4">
-            {filteredProjects.map(project => (
-              <div key={project.id} className="bg-white rounded-2xl p-5 shadow-lg border border-indigo-100 hover:shadow-xl transition-all group">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-black text-slate-900 uppercase">
-                        {project.customerName || 'Sin nombre'}
-                      </h3>
-                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${
-                        project.status === 'completed' 
-                          ? 'bg-green-100 text-green-600' 
-                          : project.status === 'archived'
-                          ? 'bg-slate-100 text-slate-600'
-                          : 'bg-orange-100 text-orange-600'
-                      }`}>
-                        {project.status === 'completed' ? 'Completado' : project.status === 'archived' ? 'Archivado' : 'Borrador'}
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-5 gap-4">
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Nº Expediente</p>
-                        <p className="text-sm font-black text-indigo-900">{project.budgetNumber}</p>
+            {filteredProjects.map(project => {
+              const expiring = isExpiringSoon(project);
+              const expired = isExpired(project);
+              return (
+                <div key={project.id}
+                  className={`bg-white rounded-2xl p-5 shadow-lg border transition-all hover:shadow-xl ${expiring ? 'border-amber-300' : expired ? 'border-red-200' : 'border-indigo-100'}`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3 className="text-lg font-black text-slate-900 uppercase">
+                          {project.customerName || 'Sin nombre'}
+                        </h3>
+                        <StatusDropdown project={project} onStatusChange={handleStatusChange} />
+                        {expiring && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[9px] font-black uppercase">
+                            <AlertTriangle size={10} /> Caduca pronto
+                          </span>
+                        )}
+                        {expired && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-600 rounded-lg text-[9px] font-black uppercase">
+                            <XCircle size={10} /> Caducado
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Fecha</p>
-                        <p className="text-sm font-black text-indigo-900">{formatDate(project.createdAt)}</p>
+
+                      <div className="grid grid-cols-6 gap-4">
+                        <div>
+                          <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Nº Expediente</p>
+                          <p className="text-sm font-black text-indigo-900">{project.budgetNumber}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Creado</p>
+                          <p className="text-sm font-black text-indigo-900">{formatDate(project.createdAt)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Válido hasta</p>
+                          <p className={`text-sm font-black ${expired ? 'text-red-500' : expiring ? 'text-amber-600' : 'text-slate-600'}`}>
+                            {formatDate(project.validUntil)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Montada</p>
+                          <p className="text-sm font-bold text-slate-600">{project.itemsMontada?.length || 0} items</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Despiece</p>
+                          <p className="text-sm font-bold text-slate-600">{project.itemsDespiece?.length || 0} items</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Total PVP</p>
+                          <p className="text-lg font-black text-orange-600">
+                            {(project.totalPvp || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Items Montada</p>
-                        <p className="text-sm font-bold text-slate-600">{project.itemsMontada?.length || 0}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Items Despiece</p>
-                        <p className="text-sm font-bold text-slate-600">{project.itemsDespiece?.length || 0}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Total PVP</p>
-                        <p className="text-lg font-black text-orange-600">
-                          {(project.totalPvp || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
+
+                      {project.customerAddress && (
+                        <p className="mt-2 text-xs text-slate-400">{project.customerAddress}</p>
+                      )}
+
+                      {/* Historial de estados (si hay) */}
+                      {project.statusHistory?.length > 0 && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <Clock size={11} className="text-slate-300" />
+                          <span className="text-[9px] text-slate-400 font-bold uppercase">
+                            Último cambio: {project.statusHistory[project.statusHistory.length - 1]?.at
+                              ? formatDate(project.statusHistory[project.statusHistory.length - 1].at)
+                              : '—'}
+                            {' '}por {project.statusHistory[project.statusHistory.length - 1]?.by || '—'}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {project.customerAddress && (
-                      <p className="mt-2 text-xs text-slate-400">{project.customerAddress}</p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 ml-4">
-                    <button 
-                      onClick={() => loadProject(project)}
-                      className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md"
-                      title="Cargar proyecto"
-                      data-testid={`load-project-${project.id}`}
-                    >
-                      <Eye size={18} />
-                    </button>
-                    <button 
-                      onClick={() => createOpportunityFromProject(project)}
-                      className="p-3 bg-purple-100 text-purple-600 rounded-xl hover:bg-purple-200 transition-all"
-                      title="Crear oportunidad en CRM"
-                      data-testid={`create-opp-${project.id}`}
-                    >
-                      <Target size={18} />
-                    </button>
-                    <button 
-                      onClick={() => toggleArchiveProject(project)}
-                      className={`p-3 rounded-xl transition-all ${
-                        project.status === 'archived'
-                          ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                      title={project.status === 'archived' ? 'Desarchivar proyecto' : 'Archivar proyecto'}
-                      data-testid={`archive-project-${project.id}`}
-                    >
-                      {project.status === 'archived' ? <ArchiveRestore size={18} /> : <Archive size={18} />}
-                    </button>
-                    <button 
-                      onClick={() => deleteProject(project.id)}
-                      className="p-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-all"
-                      title="Eliminar proyecto"
-                      data-testid={`delete-project-${project.id}`}
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex gap-2 ml-4">
+                      <button onClick={() => loadProject(project)}
+                        className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md" title="Cargar proyecto">
+                        <Eye size={18} />
+                      </button>
+                      <button onClick={() => createOpportunity(project)}
+                        className="p-3 bg-purple-100 text-purple-600 rounded-xl hover:bg-purple-200 transition-all" title="Crear oportunidad CRM">
+                        <Target size={18} />
+                      </button>
+                      <button onClick={() => toggleArchive(project)}
+                        className={`p-3 rounded-xl transition-all ${project.status === 'archived' ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        title={project.status === 'archived' ? 'Desarchivar' : 'Archivar'}>
+                        {project.status === 'archived' ? <ArchiveRestore size={18} /> : <Archive size={18} />}
+                      </button>
+                      <button onClick={() => deleteProject(project.id)}
+                        className="p-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-all" title="Eliminar">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

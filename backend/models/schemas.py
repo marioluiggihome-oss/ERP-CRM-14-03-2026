@@ -346,7 +346,13 @@ class ProjectModel(BaseModel):
     totalPvp: float = 0.0
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    status: str = "draft"
+    status: str = "borrador"
+    sentAt: Optional[datetime] = None
+    acceptedAt: Optional[datetime] = None
+    rejectedAt: Optional[datetime] = None
+    deliveredAt: Optional[datetime] = None
+    validUntil: Optional[datetime] = None
+    statusHistory: List[Dict] = []
 
 
 class ProjectCreate(BaseModel):
@@ -363,7 +369,8 @@ class ProjectCreate(BaseModel):
     sideColor: str = ""
     selectedCarcassMaterialId: Optional[str] = None
     totalPvp: float = 0.0
-    status: str = "draft"
+    status: str = "borrador"
+    validUntil: Optional[datetime] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -381,6 +388,7 @@ class ProjectUpdate(BaseModel):
     selectedCarcassMaterialId: Optional[str] = None
     totalPvp: Optional[float] = None
     status: Optional[str] = None
+    validUntil: Optional[datetime] = None
 
 
 # ============================================

@@ -2655,6 +2655,107 @@ async def delete_project(project_id: str):
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return {"message": "Proyecto eliminado"}
 
+
+@api_router.patch("/projects/{project_id}/status")
+async def change_project_status(project_id: str, body: dict):
+    """
+    Cambiar el estado de un presupuesto con historial de transiciones.
+    
+    Estados válidos: borrador, enviado, aceptado, en_fabricacion, entregado, rechazado
+    Transiciones permitidas:
+      borrador       → enviado
+      enviado        → aceptado, rechazado
+      aceptado       → en_fabricacion, rechazado
+      en_fabricacion → entregado
+      rechazado      → borrador  (reabrir)
+      entregado      → (estado final)
+    """
+    VALID_TRANSITIONS = {
+        "borrador":       ["enviado"],
+        "draft":          ["enviado"],  # compatibilidad con registros antiguos
+        "enviado":        ["aceptado", "rechazado"],
+        "aceptado":       ["en_fabricacion", "rechazado"],
+        "en_fabricacion": ["entregado"],
+        "rechazado":      ["borrador"],
+        "entregado":      [],
+    }
+
+    new_status = body.get("status")
+    changed_by = body.get("changedBy", "sistema")
+    note = body.get("note", "")
+
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Campo 'status' requerido")
+
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    current_status = project.get("status", "borrador")
+    allowed = VALID_TRANSITIONS.get(current_status, [])
+
+    if new_status not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Transición no permitida: '{current_status}' → '{new_status}'. Permitidas: {allowed}"
+        )
+
+    now = datetime.now(timezone.utc)
+
+    # Campos de fecha según nuevo estado
+    date_fields = {}
+    if new_status == "enviado":
+        date_fields["sentAt"] = now
+    elif new_status == "aceptado":
+        date_fields["acceptedAt"] = now
+    elif new_status == "rechazado":
+        date_fields["rejectedAt"] = now
+    elif new_status == "entregado":
+        date_fields["deliveredAt"] = now
+    elif new_status == "borrador":
+        # Al reabrir, limpiar fecha de rechazo
+        date_fields["rejectedAt"] = None
+
+    # Entrada de historial
+    history_entry = {
+        "from": current_status,
+        "to": new_status,
+        "at": now.isoformat(),
+        "by": changed_by,
+        "note": note
+    }
+
+    update_data = {
+        "status": new_status,
+        "updatedAt": now,
+        **date_fields
+    }
+
+    await db.projects.update_one(
+        {"id": project_id},
+        {
+            "$set": update_data,
+            "$push": {"statusHistory": history_entry}
+        }
+    )
+
+    updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    return updated
+
+
+@api_router.get("/projects/{project_id}/status-history")
+async def get_project_status_history(project_id: str):
+    """Obtener el historial de cambios de estado de un presupuesto"""
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0, "statusHistory": 1, "status": 1, "budgetNumber": 1})
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return {
+        "budgetNumber": project.get("budgetNumber"),
+        "currentStatus": project.get("status"),
+        "history": project.get("statusHistory", [])
+    }
+
+
 # ============================================
 # INIT DATA (seed admin user if needed)
 # ============================================
