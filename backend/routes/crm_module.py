@@ -18,6 +18,12 @@ from models.schemas import (
     ActivityModel, ActivityCreate, ActivityUpdate
 )
 from services.jwt_service import get_current_user as jwt_get_current_user
+import re as _re
+
+def _escape_regex(s: str) -> str:
+    """Escapar caracteres especiales de regex para evitar ReDoS"""
+    return _re.escape(str(s)) if s else s
+
 
 logger = logging.getLogger(__name__)
 
@@ -97,9 +103,9 @@ async def get_contacts(
         search_filter = None
         if search:
             search_filter = [
-                {"name": {"$regex": search, "$options": "i"}},
-                {"company": {"$regex": search, "$options": "i"}},
-                {"email": {"$regex": search, "$options": "i"}}
+                {"name": {"$regex": _escape_regex(search), "$options": "i"}},
+                {"company": {"$regex": _escape_regex(search), "$options": "i"}},
+                {"email": {"$regex": _escape_regex(search), "$options": "i"}}
             ]
         
         # SEGURIDAD: Si NO es admin, filtrar por createdByUserId/assignedToId del usuario
@@ -400,9 +406,9 @@ async def get_opportunities(
         search_filter = None
         if search:
             search_filter = [
-                {"title": {"$regex": search, "$options": "i"}},
-                {"description": {"$regex": search, "$options": "i"}},
-                {"contactName": {"$regex": search, "$options": "i"}}
+                {"title": {"$regex": _escape_regex(search), "$options": "i"}},
+                {"description": {"$regex": _escape_regex(search), "$options": "i"}},
+                {"contactName": {"$regex": _escape_regex(search), "$options": "i"}}
             ]
 
         if not verified_is_admin and verified_user_id:

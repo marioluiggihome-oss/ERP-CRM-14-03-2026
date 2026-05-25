@@ -36,7 +36,7 @@ const DirectorTab = () => {
   const loadDirectorData = useCallback(async () => {
     setDirectorLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/director/data`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -53,7 +53,7 @@ const DirectorTab = () => {
 
   const loadDirectorMetrics = useCallback(async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/director/metrics`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -68,7 +68,7 @@ const DirectorTab = () => {
 
   const loadDirectorTrends = useCallback(async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/director/trends`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -96,7 +96,7 @@ const DirectorTab = () => {
 
   const handleExport = async (type) => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/export/${type}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });

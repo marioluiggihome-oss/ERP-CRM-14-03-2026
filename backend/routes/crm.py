@@ -14,6 +14,12 @@ from models.schemas import (
     ActivityModel, ActivityCreate, ActivityUpdate
 )
 from services.jwt_service import get_current_user
+import re as _re
+
+def _escape_regex(s: str) -> str:
+    """Escapar caracteres especiales de regex para evitar ReDoS"""
+    return _re.escape(str(s)) if s else s
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,10 +68,10 @@ async def get_contacts(
             del query["$or"]
     if search:
         search_query = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"company": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
-            {"phone": {"$regex": search, "$options": "i"}}
+            {"name": {"$regex": _escape_regex(search), "$options": "i"}},
+            {"company": {"$regex": _escape_regex(search), "$options": "i"}},
+            {"email": {"$regex": _escape_regex(search), "$options": "i"}},
+            {"phone": {"$regex": _escape_regex(search), "$options": "i"}}
         ]
         if "$or" in query:
             # Combine with existing $or using $and

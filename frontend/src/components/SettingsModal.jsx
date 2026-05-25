@@ -457,7 +457,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const handleExportDatabase = async () => {
     setIsExportingDB(true);
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/export-database`, {
         method: 'GET',
         headers: {

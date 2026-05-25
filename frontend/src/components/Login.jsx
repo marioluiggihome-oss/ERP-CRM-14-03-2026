@@ -57,7 +57,7 @@ const Login = ({ onLogin, customLogo }) => {
         if (data.success && data.user) {
           // Guardar tokens
           if (data.tokens) {
-            localStorage.setItem('access_token', data.tokens.access_token);
+            localStorage.setItem('token', data.tokens.access_token);
             localStorage.setItem('refresh_token', data.tokens.refresh_token);
           }
           onLogin(data.user);
@@ -98,7 +98,7 @@ const Login = ({ onLogin, customLogo }) => {
         
         // Guardar tokens si existen
         if (result.tokens) {
-          localStorage.setItem('access_token', result.tokens.access_token);
+          localStorage.setItem('token', result.tokens.access_token);
           localStorage.setItem('refresh_token', result.tokens.refresh_token);
         }
         

@@ -8,6 +8,12 @@ from fastapi import APIRouter, HTTPException
 
 from config import db
 from models.schemas import ClientModel, ClientCreate, ClientUpdate
+import re as _re
+
+def _escape_regex(s: str) -> str:
+    """Escapar caracteres especiales de regex para evitar ReDoS"""
+    return _re.escape(str(s)) if s else s
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +37,10 @@ async def get_clients(
         query["segment"] = segment
     if search:
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"company": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
-            {"code": {"$regex": search, "$options": "i"}}
+            {"name": {"$regex": _escape_regex(search), "$options": "i"}},
+            {"company": {"$regex": _escape_regex(search), "$options": "i"}},
+            {"email": {"$regex": _escape_regex(search), "$options": "i"}},
+            {"code": {"$regex": _escape_regex(search), "$options": "i"}}
         ]
     
     clients = await db.clients.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)

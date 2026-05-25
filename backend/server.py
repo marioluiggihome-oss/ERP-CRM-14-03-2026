@@ -3669,7 +3669,7 @@ async def fix_product_data():
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=os.environ.get('CORS_ORIGINS', 'https://erp.luiggihome.es,http://localhost:3000').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -3732,9 +3732,54 @@ async def startup_event():
         # Índices para historial de cambios (order_history)
         await db.order_history.create_index("orderId")
         await db.order_history.create_index("timestamp")
-        await db.order_history.create_index([("orderId", 1), ("timestamp", -1)])  # Para consultas de timeline
+        await db.order_history.create_index([("orderId", 1), ("timestamp", -1)])
         logger.info("Índices de order_history creados")
-        
+
+        # Índices para CRM - contacts
+        await db.contacts.create_index("id", unique=True)
+        await db.contacts.create_index("createdByUserId", sparse=True)
+        await db.contacts.create_index("assignedToId", sparse=True)
+        await db.contacts.create_index("status")
+        await db.contacts.create_index("name")
+        await db.contacts.create_index([("assignedToId", 1), ("status", 1)])
+        logger.info("Índices de contacts creados")
+
+        # Índices para CRM - opportunities
+        await db.opportunities.create_index("id", unique=True)
+        await db.opportunities.create_index("contactId")
+        await db.opportunities.create_index("stage")
+        await db.opportunities.create_index("assignedTo", sparse=True)
+        await db.opportunities.create_index("createdByUserId", sparse=True)
+        await db.opportunities.create_index([("stage", 1), ("assignedTo", 1)])
+        await db.opportunities.create_index("updatedAt")
+        logger.info("Índices de opportunities creados")
+
+        # Índices para projects (presupuestos)
+        await db.projects.create_index("id", unique=True)
+        await db.projects.create_index("userId")
+        await db.projects.create_index("budgetNumber")
+        await db.projects.create_index("status")
+        await db.projects.create_index("clientCode", sparse=True)
+        await db.projects.create_index("validUntil", sparse=True)
+        await db.projects.create_index([("userId", 1), ("status", 1)])
+        await db.projects.create_index("updatedAt")
+        logger.info("Índices de projects creados")
+
+        # Índices para products (catálogo)
+        await db.products.create_index("id", unique=True)
+        await db.products.create_index("code")
+        await db.products.create_index("library")
+        await db.products.create_index("category")
+        await db.products.create_index([("library", 1), ("category", 1)])
+        await db.products.create_index([("library", 1), ("code", 1)])
+        logger.info("Índices de products creados")
+
+        # Índices para despiece_products
+        await db.despiece_products.create_index("id", unique=True)
+        await db.despiece_products.create_index("manufacturer")
+        await db.despiece_products.create_index("collection", sparse=True)
+        logger.info("Índices de despiece_products creados")
+
         logger.info("✅ Todos los índices de base de datos configurados correctamente")
         
     except Exception as e:
