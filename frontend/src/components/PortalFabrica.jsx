@@ -688,6 +688,15 @@ const PortalFabrica = ({ currentUser }) => {
     const [productSearch, setProductSearch] = useState('');
     const [productResults, setProductResults] = useState([]);
     const [searchingProducts, setSearchingProducts] = useState(false);
+    const [searchLibrary, setSearchLibrary] = useState(currentUser?.allowedLibraries?.[0] || 'ZC');
+    const [availableLibraries, setAvailableLibraries] = useState([]);
+
+    // Cargar librerías disponibles para el usuario
+    useEffect(() => {
+      const libs = currentUser?.allowedLibraries || ['ZC'];
+      setAvailableLibraries(libs);
+      setSearchLibrary(libs[0] || 'ZC');
+    }, [currentUser]);
     const [showProductDropdown, setShowProductDropdown] = useState(false);
 
     // Búsqueda en el catálogo de productos
@@ -700,7 +709,7 @@ const PortalFabrica = ({ currentUser }) => {
       const handler = setTimeout(async () => {
         try {
           setSearchingProducts(true);
-          const params = new URLSearchParams({ search: productSearch, limit: 20 });
+          const params = new URLSearchParams({ search: productSearch, limit: 20, library: searchLibrary });
           const response = await fetch(`${API_URL}/api/products?${params}`);
           if (!response.ok) return;
           const data = await response.json();
@@ -715,7 +724,7 @@ const PortalFabrica = ({ currentUser }) => {
         }
       }, 300);
       return () => { cancelled = true; clearTimeout(handler); };
-    }, [productSearch]);
+    }, [productSearch, searchLibrary]);
 
     const selectProduct = (product) => {
       const code = product.code || product.codigo || '';
@@ -905,7 +914,20 @@ const PortalFabrica = ({ currentUser }) => {
               <div className="bg-indigo-50 rounded-xl p-4">
                 {/* Buscador de productos del catálogo */}
                 <div className="relative mb-3">
-                  <label className="text-[10px] font-bold text-indigo-500 uppercase">🔍 Buscar producto en catálogo</label>
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="text-[10px] font-bold text-indigo-500 uppercase">🔍 Buscar en catálogo</label>
+                    {availableLibraries.length > 1 && (
+                      <select
+                        value={searchLibrary}
+                        onChange={e => { setSearchLibrary(e.target.value); setProductResults([]); setProductSearch(''); }}
+                        className="ml-auto text-[10px] font-bold px-2 py-1 border border-indigo-200 rounded-lg bg-white text-indigo-700"
+                      >
+                        {availableLibraries.map(lib => (
+                          <option key={lib} value={lib}>{lib}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={productSearch}

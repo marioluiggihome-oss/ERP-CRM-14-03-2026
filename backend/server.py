@@ -1464,14 +1464,23 @@ async def get_current_user_info(
 # ============================================
 
 @api_router.get("/products")
-async def get_products(module: Optional[str] = None, library: Optional[str] = None):
-    """Obtener todos los productos, opcionalmente filtrados por módulo y biblioteca"""
+async def get_products(module: Optional[str] = None, library: Optional[str] = None, search: Optional[str] = None, limit: Optional[int] = None):
+    """Obtener productos, filtrados por módulo, biblioteca y búsqueda de texto"""
+    import re as _re
     query = {}
     if module:
         query["module"] = module
     if library:
         query["library"] = library.upper()
-    products = await db.products.find(query, {"_id": 0}).to_list(10000)
+    if search and len(search) >= 2:
+        escaped = _re.escape(search)
+        query["$or"] = [
+            {"code": {"$regex": escaped, "$options": "i"}},
+            {"name": {"$regex": escaped, "$options": "i"}},
+            {"description": {"$regex": escaped, "$options": "i"}},
+        ]
+    max_results = min(limit, 200) if limit else (50 if search else 10000)
+    products = await db.products.find(query, {"_id": 0}).limit(max_results).to_list(max_results)
     
     # Asegurar que todos los productos tengan los campos mínimos requeridos
     for p in products:
