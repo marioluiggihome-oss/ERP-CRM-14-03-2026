@@ -86,15 +86,15 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
   }
 
   return (
-    <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+    <div className="h-full overflow-auto bg-gradient-to-br from-slate-50 to-indigo-50 p-3 md:p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Resumen Comercial</h1>
-        <p className="text-sm text-slate-500">Resumen de tu actividad comercial</p>
+      <div className="mb-4 md:mb-6 pl-12 md:pl-0">
+        <h1 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tight">Resumen Comercial</h1>
+        <p className="text-xs md:text-sm text-slate-500">Resumen de tu actividad comercial</p>
       </div>
 
       {/* Time Filter */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-1.5 md:gap-2 mb-4 md:mb-6 overflow-x-auto pb-1 -mx-3 px-3 md:mx-0 md:px-0 scrollbar-none">
         {[
           { id: '7d', label: 'Últimos 7 días' },
           { id: '30d', label: 'Últimos 30 días' },
@@ -104,7 +104,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
           <button
             key={filter.id}
             onClick={() => setTimeFilter(filter.id)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${
+            className={`px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase transition-all whitespace-nowrap shrink-0 ${
               timeFilter === filter.id
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -116,7 +116,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -171,9 +171,9 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Top Opportunities */}
-        <div className="col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="md:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <h2 className="font-black text-slate-900 uppercase text-sm">Mejores Oportunidades</h2>
             <button 
@@ -298,7 +298,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
 
       {/* Alertas de Clientes Inactivos */}
       {analytics && (
-        <div className="mt-6 grid grid-cols-2 gap-6">
+        <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Sin Oferta en 30+ días */}
           <div className="bg-white rounded-xl border border-orange-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-orange-100 bg-orange-50 flex items-center justify-between">

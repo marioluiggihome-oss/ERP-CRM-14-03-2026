@@ -232,16 +232,17 @@ const CRMPipeline = ({ currentUser }) => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-3 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl">
-            <Target size={28} className="text-white" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 gap-3">
+        <div className="flex items-center gap-3 md:gap-4 pl-12 md:pl-0">
+          <div className="p-2 md:p-3 bg-indigo-600 rounded-xl md:rounded-2xl shadow-xl">
+            <Target size={20} className="text-white md:hidden" />
+            <Target size={28} className="text-white hidden md:block" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Embudo de Ventas</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <h2 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tight">Embudo de Ventas</h2>
+            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">
               {businessTypeFilter === 'all' 
                 ? `${opportunities.length} oportunidades activas`
                 : businessTypeFilter === 'cocina_montada'
@@ -256,7 +257,7 @@ const CRMPipeline = ({ currentUser }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4 flex-wrap">
           {/* Filtro por tipo de negocio - Agrupado */}
           <div className="flex items-center gap-1 bg-white rounded-xl p-1 shadow border border-slate-200">
             {/* TODOS */}
@@ -342,29 +343,31 @@ const CRMPipeline = ({ currentUser }) => {
             </button>
           </div>
 
-          <label className="flex items-center gap-2 text-sm font-bold text-slate-600">
+          <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-600 whitespace-nowrap">
             <input
               type="checkbox"
               checked={showLost}
               onChange={(e) => setShowLost(e.target.checked)}
               className="rounded"
             />
-            Mostrar perdidas
+            <span className="hidden md:inline">Mostrar perdidas</span>
+            <span className="md:hidden">Perdidas</span>
           </label>
 
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-lg"
+            className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-[10px] md:text-xs hover:bg-indigo-700 transition-all shadow-lg whitespace-nowrap"
             data-testid="add-opportunity-btn"
           >
             <Plus size={16} />
-            Nueva Oportunidad
+            <span className="hidden md:inline">Nueva Oportunidad</span>
+            <span className="md:hidden">Nueva</span>
           </button>
         </div>
       </div>
 
       {/* Pipeline Kanban */}
-      <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
+      <div className="flex-1 flex gap-3 md:gap-4 overflow-x-auto pb-4 -mx-3 px-3 md:mx-0 md:px-0">
         {visibleStages.map(stage => {
           const totals = getStageTotals(stage.id);
           const stageOpps = getOpportunitiesByStage(stage.id);
@@ -372,7 +375,7 @@ const CRMPipeline = ({ currentUser }) => {
           return (
             <div
               key={stage.id}
-              className={`flex-shrink-0 w-80 flex flex-col bg-white rounded-2xl border-2 ${stage.lightColor} shadow-lg overflow-hidden`}
+              className={`flex-shrink-0 w-72 md:w-80 flex flex-col bg-white rounded-2xl border-2 ${stage.lightColor} shadow-lg overflow-hidden`}
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(stage.id)}
               data-testid={`stage-${stage.id}`}

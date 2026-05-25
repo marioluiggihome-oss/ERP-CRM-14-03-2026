@@ -261,7 +261,7 @@ const CRMContacts = ({ currentUser }) => {
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-3 md:p-6">
       {/* Header - Responsive */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 md:mb-6">
-        <div className="flex items-center gap-3 md:gap-4">
+        <div className="flex items-center gap-3 md:gap-4 pl-12 md:pl-0">
           <div className="p-2 md:p-3 bg-indigo-600 rounded-xl md:rounded-2xl shadow-xl">
             <Users size={20} className="text-white md:hidden" />
             <Users size={28} className="text-white hidden md:block" />

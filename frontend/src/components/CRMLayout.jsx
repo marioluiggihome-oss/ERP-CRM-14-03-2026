@@ -21,7 +21,7 @@ const CRMLayout = ({ currentUser }) => {
     <div className="h-full flex flex-col">
       {/* CRM Internal Navigation - Responsive */}
       <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-1 shrink-0">
-        <div className="flex items-center gap-2 md:mr-6 pl-12 md:pl-0">
+        <div className="hidden md:flex items-center gap-2 md:mr-6">
           <div className="p-2 bg-indigo-600 rounded-xl">
             <Target size={18} className="text-white" />
           </div>

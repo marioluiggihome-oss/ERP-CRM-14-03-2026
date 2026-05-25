@@ -298,9 +298,9 @@ const CRMCalendar = ({ currentUser }) => {
   return (
     <div className="h-full flex flex-col bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+      <div className="bg-white border-b border-slate-200 px-3 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-3">
+        <div className="flex items-center gap-2 md:gap-4 pl-12 md:pl-0 flex-wrap">
+          <div className="flex items-center gap-1 md:gap-2">
             <button 
               onClick={() => navigate('prev')}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -314,16 +314,16 @@ const CRMCalendar = ({ currentUser }) => {
               <ChevronRight size={20} />
             </button>
           </div>
-          <h2 className="text-xl font-black text-slate-900 capitalize">{getTitle()}</h2>
+          <h2 className="text-base md:text-xl font-black text-slate-900 capitalize">{getTitle()}</h2>
           <button 
             onClick={goToToday}
-            className="px-3 py-1 text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            className="px-2 md:px-3 py-1 text-xs md:text-sm font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
           >
             Hoy
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           {/* View Selector */}
           <div className="flex bg-slate-100 rounded-lg p-1">
             {Object.entries(VIEWS).map(([key, v]) => {
@@ -384,10 +384,11 @@ const CRMCalendar = ({ currentUser }) => {
           {/* Add Event Button */}
           <button
             onClick={() => openCreateModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs md:text-sm hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap"
           >
             <Plus size={16} />
-            Nuevo Evento
+            <span className="hidden md:inline">Nuevo Evento</span>
+            <span className="md:hidden">Nuevo</span>
           </button>
         </div>
       </div>
