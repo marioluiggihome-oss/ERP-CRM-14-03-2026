@@ -9,6 +9,7 @@ import {
 import { fabricaAPI, projectsAPI } from '../services/api';
 import ProductionDashboard from './ProductionDashboard';
 import OrderHistory from './OrderHistory';
+import ManufacturingReport from './ManufacturingReport';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -158,6 +159,11 @@ const PortalFabrica = ({ currentUser }) => {
   const [showDespieceModal, setShowDespieceModal] = useState(null);
   const [despieceData, setDespieceData] = useState(null);
   const [loadingDespiece, setLoadingDespiece] = useState(false);
+  const [industrialReportOrder, setIndustrialReportOrder] = useState(null);
+
+  const handleOpenIndustrialReport = (order) => {
+    setIndustrialReportOrder(order);
+  };
 
   // Cargar fábricas
   useEffect(() => {
@@ -610,6 +616,16 @@ const PortalFabrica = ({ currentUser }) => {
                     </button>
 
                     <button
+                      onClick={() => handleOpenIndustrialReport && handleOpenIndustrialReport(order)}
+                      className="px-3 py-1.5 bg-indigo-950 text-white rounded-lg text-sm font-bold hover:bg-indigo-800 flex items-center gap-1"
+                      data-testid={`industrial-report-${order.id}`}
+                      title="Abrir Informe Industrial completo (mismo que el del Pedido)"
+                    >
+                      <FileText size={14} />
+                      Informe Industrial
+                    </button>
+
+                    <button
                       onClick={() => handleDownloadProductionReport(order.id)}
                       className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-200 flex items-center gap-1"
                       data-testid={`download-report-${order.id}`}
@@ -667,6 +683,58 @@ const PortalFabrica = ({ currentUser }) => {
       height: 70,
       depth: 58
     });
+    
+    // Buscador de productos del catálogo
+    const [productSearch, setProductSearch] = useState('');
+    const [productResults, setProductResults] = useState([]);
+    const [searchingProducts, setSearchingProducts] = useState(false);
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
+
+    // Búsqueda en el catálogo de productos
+    useEffect(() => {
+      if (!productSearch || productSearch.length < 2) {
+        setProductResults([]);
+        return;
+      }
+      let cancelled = false;
+      const handler = setTimeout(async () => {
+        try {
+          setSearchingProducts(true);
+          const params = new URLSearchParams({ search: productSearch, limit: 20 });
+          const response = await fetch(`${API_URL}/api/products?${params}`);
+          if (!response.ok) return;
+          const data = await response.json();
+          if (cancelled) return;
+          const items = Array.isArray(data) ? data : (data.products || data.items || []);
+          setProductResults(items.slice(0, 20));
+          setShowProductDropdown(true);
+        } catch (err) {
+          console.error('Error buscando productos:', err);
+        } finally {
+          if (!cancelled) setSearchingProducts(false);
+        }
+      }, 300);
+      return () => { cancelled = true; clearTimeout(handler); };
+    }, [productSearch]);
+
+    const selectProduct = (product) => {
+      const code = product.code || product.codigo || '';
+      const name = product.name || product.nombre || product.description || '';
+      const width = parseFloat(product.width || product.ancho || 60);
+      const height = parseFloat(product.height || product.alto || 70);
+      const depth = parseFloat(product.depth || product.fondo || product.profundidad || 58);
+      setNewItem({
+        productCode: code,
+        productName: name,
+        quantity: 1,
+        width: width / 10 >= 30 ? width / 10 : width,  // mm → cm si viene grande
+        height: height / 10 >= 30 ? height / 10 : height,
+        depth: depth / 10 >= 30 ? depth / 10 : depth,
+      });
+      setProductSearch(code + ' - ' + name);
+      setShowProductDropdown(false);
+      setProductResults([]);
+    };
 
     const handleAddItem = () => {
       if (!newItem.productCode) return;
@@ -835,6 +903,51 @@ const PortalFabrica = ({ currentUser }) => {
             <div>
               <p className="text-xs font-bold text-indigo-400 uppercase mb-2">Muebles a Fabricar</p>
               <div className="bg-indigo-50 rounded-xl p-4">
+                {/* Buscador de productos del catálogo */}
+                <div className="relative mb-3">
+                  <label className="text-[10px] font-bold text-indigo-500 uppercase">🔍 Buscar producto en catálogo</label>
+                  <input
+                    type="text"
+                    value={productSearch}
+                    onChange={(e) => { setProductSearch(e.target.value); setShowProductDropdown(true); }}
+                    onFocus={() => productResults.length && setShowProductDropdown(true)}
+                    className="w-full mt-1 px-4 py-2.5 border border-indigo-300 rounded-lg text-sm bg-white"
+                    placeholder="Escribe código o nombre del mueble (mín. 2 caracteres)..."
+                    data-testid="fab-order-product-search"
+                  />
+                  {searchingProducts && (
+                    <div className="absolute right-3 top-9 text-xs text-indigo-500">Buscando...</div>
+                  )}
+                  {showProductDropdown && productResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white border border-indigo-200 rounded-xl shadow-2xl z-50">
+                      {productResults.map((p, idx) => {
+                        const code = p.code || p.codigo || '?';
+                        const name = p.name || p.nombre || p.description || '';
+                        const w = p.width || p.ancho || 0;
+                        const h = p.height || p.alto || 0;
+                        return (
+                          <button
+                            key={p.id || code + idx}
+                            type="button"
+                            onClick={() => selectProduct(p)}
+                            className="w-full px-4 py-2.5 text-left hover:bg-indigo-50 border-b border-indigo-50 last:border-b-0 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="font-black text-indigo-900 text-sm">{code}</div>
+                              <div className="text-xs text-slate-600 truncate">{name}</div>
+                            </div>
+                            <div className="text-[10px] text-slate-400 whitespace-nowrap">
+                              {w}×{h}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-[10px] text-indigo-400 mb-2">— o introduce los datos manualmente —</p>
+
                 <div className="grid grid-cols-6 gap-2 mb-2">
                   <input
                     type="text"
@@ -1665,6 +1778,40 @@ const PortalFabrica = ({ currentUser }) => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Informe Industrial Modal - Reutilizando ManufacturingReport */}
+      {industrialReportOrder && (
+        <div className="fixed inset-0 bg-black/70 z-[120] overflow-auto" data-testid="industrial-report-modal">
+          <ManufacturingReport
+            items={(industrialReportOrder.items || []).map(it => ({
+              productCode: it.productCode || it.code || '',
+              productName: it.productName || it.description || it.name || '',
+              quantity: it.quantity || 1,
+              width: parseFloat(it.width || it.ancho || 0),
+              height: parseFloat(it.height || it.alto || 0),
+              depth: parseFloat(it.depth || it.fondo || 58),
+              finish: it.finish || industrialReportOrder.finish || 'BLANCO',
+              carcassColor: it.carcassColor || industrialReportOrder.carcassColor || 'BLANCO',
+              doorColor: it.doorColor || industrialReportOrder.doorColor || 'BLANCO',
+            }))}
+            finish={industrialReportOrder.finish || 'BLANCO'}
+            carcassColor={industrialReportOrder.carcassColor || 'BLANCO'}
+            state={{
+              budgetNumber: industrialReportOrder.orderNumber || industrialReportOrder.id || 'FAB',
+              customerName: industrialReportOrder.customerName || '',
+              doorColorLow: industrialReportOrder.doorColor || 'BLANCO',
+              doorColorHigh: industrialReportOrder.doorColor || 'BLANCO',
+              doorColorColumns: industrialReportOrder.doorColor || 'BLANCO',
+              sideColor: industrialReportOrder.sideColor || 'BLANCO',
+              brandColor: '#6366f1',
+            }}
+            catalogs={[]}
+            logo={null}
+            distributorName={industrialReportOrder.factoryName || ''}
+            onBack={() => setIndustrialReportOrder(null)}
+          />
         </div>
       )}
     </div>
