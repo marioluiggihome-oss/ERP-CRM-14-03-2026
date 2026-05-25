@@ -951,7 +951,11 @@ async def delete_factory(factory_id: str):
 # ============================================
 
 async def seed_default_factories():
-    """Crear fábricas SALAMANCA y ZAMORA si no existen"""
+    """Crear fábricas SALAMANCA y ZAMORA si no existen.
+    
+    Busca por `id` (no por code) para evitar duplicados cuando el code se ha cambiado
+    manualmente en la UI (p.ej. "37" en lugar de "SAL").
+    """
     default_factories = [
         {
             "id": "fab-salamanca",
@@ -976,10 +980,15 @@ async def seed_default_factories():
     ]
     
     for factory in default_factories:
-        existing = await db.factories.find_one({"code": factory["code"]})
+        # Buscar por id que es el campo único (no por code que puede haber cambiado)
+        existing = await db.factories.find_one({"id": factory["id"]})
         if not existing:
-            await db.factories.insert_one(factory)
-            logger.info(f"Created default factory: {factory['name']}")
+            try:
+                await db.factories.insert_one(factory)
+                logger.info(f"Created default factory: {factory['name']}")
+            except Exception as e:
+                # Si falla por duplicado (raza), no romper el arranque
+                logger.debug(f"Skip seed factory {factory['id']}: {e}")
 
 
 # Ejecutar seed al importar el módulo
