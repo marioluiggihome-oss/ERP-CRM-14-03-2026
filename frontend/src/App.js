@@ -35,7 +35,13 @@ const App = () => {
   const [showAdminWorkView, setShowAdminWorkView] = useState(false);
   const [showCommercialWorkView, setShowCommercialWorkView] = useState(false);
   const [showUserManual, setShowUserManual] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // móvil: cerrado por defecto
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // Abierto por defecto en desktop (≥768px), cerrado en móvil
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  }); // toggle plegable en desktop y móvil
   
   const [state, setState] = useState(() => {
     const defaultState = {
@@ -632,15 +638,16 @@ const App = () => {
         />
       ) : (
         <>
-          {/* Botón hamburguesa - solo móvil */}
+          {/* Botón hamburguesa: visible en móvil + desktop como toggle */}
           <button
             onClick={() => setSidebarOpen(o => !o)}
-            className="md:hidden fixed top-3 left-3 z-[60] w-11 h-11 bg-slate-950 text-white rounded-xl shadow-2xl flex items-center justify-center border border-white/10"
-            aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
-            data-testid="mobile-menu-toggle"
+            className={`fixed top-3 z-[60] w-10 h-10 bg-slate-950 text-white rounded-xl shadow-2xl flex items-center justify-center border border-white/10 hover:bg-slate-800 transition-all ${sidebarOpen ? 'left-[5.25rem] md:left-[5.25rem]' : 'left-3'}`}
+            aria-label={sidebarOpen ? 'Ocultar menú' : 'Mostrar menú'}
+            data-testid="sidebar-toggle"
+            title={sidebarOpen ? 'Ocultar menú' : 'Mostrar menú'}
           >
             {sidebarOpen ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
             ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
             )}
@@ -655,7 +662,7 @@ const App = () => {
             />
           )}
 
-          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed -translate-x-full'} md:relative md:translate-x-0 transition-transform duration-200 w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl`} onClick={(e) => {
+          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-200 w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl`} onClick={(e) => {
             // En móvil cerrar al hacer click en un botón de navegación
             if (window.innerWidth < 768 && e.target.closest('button')) {
               setTimeout(() => setSidebarOpen(false), 150);
