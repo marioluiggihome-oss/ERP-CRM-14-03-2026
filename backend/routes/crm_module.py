@@ -172,11 +172,32 @@ async def get_contacts(
 
 
 @router.get("/crm/contacts/{contact_id}")
-async def get_contact(contact_id: str):
-    """Get a single contact by ID"""
+async def get_contact(contact_id: str, current_user: Optional[dict] = Depends(_get_user_or_none)):
+    """Get a single contact by ID — solo el propietario o admin puede verlo"""
     contact = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
     if not contact:
         raise HTTPException(status_code=404, detail="Contacto no encontrado")
+
+    if current_user and current_user.get("id"):
+        db_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+        is_admin = db_user and bool(
+            db_user.get("isAdmin") or db_user.get("isGerente") or
+            db_user.get("isDirectorComercial") or db_user.get("isResponsableDelegacion")
+        )
+        if not is_admin:
+            uid = current_user["id"]
+            # Obtener tiendas vinculadas a este comercial
+            shops = await db.users.find({"linkedRepresentativeId": uid}, {"id": 1, "_id": 0}).to_list(100)
+            allowed_ids = {uid} | {s["id"] for s in shops}
+            owner_ids = {
+                contact.get("createdByUserId"),
+                contact.get("assignedToId"),
+                contact.get("assignedTo"),
+                contact.get("createdBy"),
+            }
+            if not owner_ids.intersection(allowed_ids):
+                raise HTTPException(status_code=403, detail="No tienes permiso para ver este contacto")
+
     return contact
 
 
@@ -210,22 +231,39 @@ async def create_contact(
 
 
 @router.put("/crm/contacts/{contact_id}")
-async def update_contact(contact_id: str, update: ContactUpdate):
-    """Update a contact"""
+async def update_contact(contact_id: str, update: ContactUpdate, current_user: Optional[dict] = Depends(_get_user_or_none)):
+    """Update a contact — solo el propietario o admin puede modificarlo"""
     try:
+        existing = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Contacto no encontrado")
+
+        if current_user and current_user.get("id"):
+            db_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+            is_admin = db_user and bool(
+                db_user.get("isAdmin") or db_user.get("isGerente") or
+                db_user.get("isDirectorComercial") or db_user.get("isResponsableDelegacion")
+            )
+            if not is_admin:
+                uid = current_user["id"]
+                shops = await db.users.find({"linkedRepresentativeId": uid}, {"id": 1, "_id": 0}).to_list(100)
+                allowed_ids = {uid} | {s["id"] for s in shops}
+                owner_ids = {
+                    existing.get("createdByUserId"),
+                    existing.get("assignedToId"),
+                    existing.get("assignedTo"),
+                    existing.get("createdBy"),
+                }
+                if not owner_ids.intersection(allowed_ids):
+                    raise HTTPException(status_code=403, detail="No tienes permiso para modificar este contacto")
+
         update_data = {k: v for k, v in update.model_dump().items() if v is not None}
         if not update_data:
             raise HTTPException(status_code=400, detail="No hay datos para actualizar")
-        
+
         update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
-        
-        result = await db.contacts.update_one(
-            {"id": contact_id},
-            {"$set": update_data}
-        )
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Contacto no encontrado")
-        
+
+        await db.contacts.update_one({"id": contact_id}, {"$set": update_data})
         updated = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
         return updated
     except HTTPException:
@@ -236,14 +274,34 @@ async def update_contact(contact_id: str, update: ContactUpdate):
 
 
 @router.delete("/crm/contacts/{contact_id}")
-async def delete_contact(contact_id: str):
-    """Delete a contact and its related data"""
+async def delete_contact(contact_id: str, current_user: Optional[dict] = Depends(_get_user_or_none)):
+    """Delete a contact — solo el propietario o admin puede borrarlo"""
     try:
-        # Delete related opportunities
+        existing = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Contacto no encontrado")
+
+        if current_user and current_user.get("id"):
+            db_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+            is_admin = db_user and bool(
+                db_user.get("isAdmin") or db_user.get("isGerente") or
+                db_user.get("isDirectorComercial") or db_user.get("isResponsableDelegacion")
+            )
+            if not is_admin:
+                uid = current_user["id"]
+                shops = await db.users.find({"linkedRepresentativeId": uid}, {"id": 1, "_id": 0}).to_list(100)
+                allowed_ids = {uid} | {s["id"] for s in shops}
+                owner_ids = {
+                    existing.get("createdByUserId"),
+                    existing.get("assignedToId"),
+                    existing.get("assignedTo"),
+                    existing.get("createdBy"),
+                }
+                if not owner_ids.intersection(allowed_ids):
+                    raise HTTPException(status_code=403, detail="No tienes permiso para eliminar este contacto")
+
         await db.opportunities.delete_many({"contactId": contact_id})
-        # Delete related activities
         await db.activities.delete_many({"contactId": contact_id})
-        # Delete the contact
         result = await db.contacts.delete_one({"id": contact_id})
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Contacto no encontrado")
@@ -308,53 +366,63 @@ async def get_opportunities(
     search: Optional[str] = None,
     assignedTo: Optional[str] = None,
     isAdmin: Optional[bool] = True,
-    requestingUserId: Optional[str] = None
+    requestingUserId: Optional[str] = None,
+    current_user: Optional[dict] = Depends(_get_user_or_none)
 ):
-    """Get all opportunities with optional filters"""
+    """Get opportunities — cada usuario solo ve las suyas, admin ve todas"""
     try:
         verified_is_admin = False
-        if requestingUserId:
+        verified_user_id = None
+
+        if current_user and current_user.get("id"):
+            verified_user_id = current_user["id"]
+            db_user = await db.users.find_one({"id": verified_user_id}, {"_id": 0})
+            if db_user:
+                verified_is_admin = bool(
+                    db_user.get("isAdmin") or db_user.get("isGerente") or
+                    db_user.get("isDirectorComercial") or db_user.get("isResponsableDelegacion")
+                )
+        elif requestingUserId:
+            verified_user_id = requestingUserId
             requesting_user = await db.users.find_one({"id": requestingUserId}, {"_id": 0})
             if requesting_user:
-                verified_is_admin = (
-                    requesting_user.get("isAdmin", False) or 
-                    requesting_user.get("isResponsableDelegacion", False)
+                verified_is_admin = bool(
+                    requesting_user.get("isAdmin") or
+                    requesting_user.get("isResponsableDelegacion")
                 )
-        
-        effective_is_admin = verified_is_admin if requestingUserId else isAdmin
-        
+
         query = {}
         if stage:
             query["stage"] = stage
         if contactId:
             query["contactId"] = contactId
+
+        search_filter = None
         if search:
             search_filter = [
                 {"title": {"$regex": search, "$options": "i"}},
                 {"description": {"$regex": search, "$options": "i"}},
                 {"contactName": {"$regex": search, "$options": "i"}}
             ]
-        
-        if not effective_is_admin and assignedTo:
+
+        if not verified_is_admin and verified_user_id:
             shops = await db.users.find(
-                {"linkedRepresentativeId": assignedTo},
+                {"linkedRepresentativeId": verified_user_id},
                 {"id": 1, "_id": 0}
             ).to_list(100)
-            shop_ids = [s["id"] for s in shops]
-            all_ids = [assignedTo] + shop_ids
-            
-            assigned_filter = {"$or": [
+            all_ids = [verified_user_id] + [s["id"] for s in shops]
+            isolation_filter = {"$or": [
                 {"assignedTo": {"$in": all_ids}},
-                {"createdBy": {"$in": all_ids}}
+                {"createdBy": {"$in": all_ids}},
+                {"createdByUserId": {"$in": all_ids}},
             ]}
-            
-            if search:
-                query["$and"] = [assigned_filter, {"$or": search_filter}]
+            if search_filter:
+                query["$and"] = [isolation_filter, {"$or": search_filter}]
             else:
-                query.update(assigned_filter)
-        elif search:
+                query.update(isolation_filter)
+        elif search_filter:
             query["$or"] = search_filter
-        
+
         opportunities = await db.opportunities.find(query, {"_id": 0}).sort("updatedAt", -1).to_list(1000)
         return opportunities
     except Exception as e:
@@ -363,11 +431,26 @@ async def get_opportunities(
 
 
 @router.get("/crm/opportunities/{opp_id}")
-async def get_opportunity(opp_id: str):
-    """Get a single opportunity by ID"""
+async def get_opportunity(opp_id: str, current_user: Optional[dict] = Depends(_get_user_or_none)):
+    """Get a single opportunity — solo propietario o admin"""
     opp = await db.opportunities.find_one({"id": opp_id}, {"_id": 0})
     if not opp:
         raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+
+    if current_user and current_user.get("id"):
+        db_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+        is_admin = db_user and bool(
+            db_user.get("isAdmin") or db_user.get("isGerente") or
+            db_user.get("isDirectorComercial") or db_user.get("isResponsableDelegacion")
+        )
+        if not is_admin:
+            uid = current_user["id"]
+            shops = await db.users.find({"linkedRepresentativeId": uid}, {"id": 1, "_id": 0}).to_list(100)
+            allowed_ids = {uid} | {s["id"] for s in shops}
+            owner_ids = {opp.get("assignedTo"), opp.get("createdBy"), opp.get("createdByUserId")}
+            if not owner_ids.intersection(allowed_ids):
+                raise HTTPException(status_code=403, detail="No tienes permiso para ver esta oportunidad")
+
     return opp
 
 
