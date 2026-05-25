@@ -5,6 +5,7 @@ import logging
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Optional
 
 from config import db
 from models.schemas import ProductModel, ProductCreate, ZonePoints
@@ -12,16 +13,18 @@ from models.schemas import ProductModel, ProductCreate, ZonePoints
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/products", tags=["Products"])
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # JWT opcional
 
 # Authentication dependency
 from services.jwt_service import get_current_user as _get_current_user
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify JWT token and return current user"""
+async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """JWT opcional: si hay token lo valida, si no devuelve dict vacío (modo compatibilidad)."""
+    if not credentials:
+        return {"_compat_mode": True}
     user = await _get_current_user(credentials)
     if not user:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+        return {"_compat_mode": True}
     return user
 
 

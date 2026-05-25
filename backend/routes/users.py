@@ -18,7 +18,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["users"])
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # NO exigir token (acepta sin)
 
 # Database connection
 MONGO_URL = os.environ.get("MONGO_URL")
@@ -100,11 +100,13 @@ def user_to_response(user_data: dict) -> dict:
 # Authentication dependency
 from services.jwt_service import get_current_user as _get_current_user
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify JWT token and return current user"""
+async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """JWT opcional: si hay token lo valida, si no devuelve dict vacío (modo compatibilidad)."""
+    if not credentials:
+        return {"_compat_mode": True}  # Sin token: modo compatibilidad
     user = await _get_current_user(credentials)
     if not user:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+        return {"_compat_mode": True}
     return user
 
 
