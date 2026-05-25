@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle } from 'lucide-react';
+import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle, Copy } from 'lucide-react';
 import { projectsAPI, crmOpportunitiesAPI } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -271,6 +271,30 @@ const ProjectLibrary = ({ state, setState }) => {
     }
   };
 
+  const cloneProject = async (project) => {
+    const newNum = window.prompt(
+      `Duplicar "${project.budgetNumber}"\nNúmero de expediente para la copia:`,
+      `${project.budgetNumber}-COPIA`
+    );
+    if (!newNum) return;
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/projects/${project.id}/clone?user_id=${state.currentUser?.id || 'admin'}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ budgetNumber: newNum })
+      });
+      if (!res.ok) { alert('Error al duplicar'); return; }
+      alert(`✅ Presupuesto duplicado como "${newNum}"`);
+      loadProjects();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
   const formatDate = (d) => {
     if (!d) return '—';
     try { return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
@@ -421,6 +445,46 @@ const ProjectLibrary = ({ state, setState }) => {
                         </div>
                       </div>
 
+                      {/* Totales desglosados */}
+                      {(project.totalCoste > 0 || project.totalConIVA > 0) && (
+                        <div className="mt-3 flex items-center gap-6 bg-slate-50 rounded-xl px-4 py-2.5">
+                          {project.totalCoste > 0 && (
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Coste</p>
+                              <p className="text-sm font-black text-slate-600">
+                                {project.totalCoste.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                              </p>
+                            </div>
+                          )}
+                          {project.margen > 0 && (
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Margen</p>
+                              <p className="text-sm font-black text-green-600">{project.margen.toFixed(1)}%</p>
+                            </div>
+                          )}
+                          {project.descuentoAplicado > 0 && (
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Descuento</p>
+                              <p className="text-sm font-black text-amber-600">{project.descuentoAplicado.toFixed(1)}%</p>
+                            </div>
+                          )}
+                          {project.totalConIVA > 0 && (
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total c/IVA ({project.ivaRate || 21}%)</p>
+                              <p className="text-sm font-black text-indigo-700">
+                                {project.totalConIVA.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                              </p>
+                            </div>
+                          )}
+                          {project.versions?.length > 0 && (
+                            <div className="ml-auto">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Versiones</p>
+                              <p className="text-sm font-black text-slate-500">{project.versions.length} guardadas</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {project.customerAddress && (
                         <p className="mt-2 text-xs text-slate-400">{project.customerAddress}</p>
                       )}
@@ -443,6 +507,10 @@ const ProjectLibrary = ({ state, setState }) => {
                       <button onClick={() => loadProject(project)}
                         className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md" title="Cargar proyecto">
                         <Eye size={18} />
+                      </button>
+                      <button onClick={() => cloneProject(project)}
+                        className="p-3 bg-cyan-100 text-cyan-700 rounded-xl hover:bg-cyan-200 transition-all" title="Duplicar presupuesto">
+                        <Copy size={18} />
                       </button>
                       <button onClick={() => createOpportunity(project)}
                         className="p-3 bg-purple-100 text-purple-600 rounded-xl hover:bg-purple-200 transition-all" title="Crear oportunidad CRM">

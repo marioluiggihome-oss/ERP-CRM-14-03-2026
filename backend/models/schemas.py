@@ -344,6 +344,11 @@ class ProjectModel(BaseModel):
     sideColor: str = ""
     selectedCarcassMaterialId: Optional[str] = None
     totalPvp: float = 0.0
+    totalCoste: float = 0.0
+    margen: float = 0.0
+    descuentoAplicado: float = 0.0
+    totalConIVA: float = 0.0
+    ivaRate: float = 21.0
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: str = "borrador"
@@ -353,6 +358,7 @@ class ProjectModel(BaseModel):
     deliveredAt: Optional[datetime] = None
     validUntil: Optional[datetime] = None
     statusHistory: List[Dict] = []
+    versions: List[Dict] = []
 
 
 class ProjectCreate(BaseModel):
@@ -369,6 +375,11 @@ class ProjectCreate(BaseModel):
     sideColor: str = ""
     selectedCarcassMaterialId: Optional[str] = None
     totalPvp: float = 0.0
+    totalCoste: float = 0.0
+    margen: float = 0.0
+    descuentoAplicado: float = 0.0
+    totalConIVA: float = 0.0
+    ivaRate: float = 21.0
     status: str = "borrador"
     validUntil: Optional[datetime] = None
 
@@ -387,6 +398,11 @@ class ProjectUpdate(BaseModel):
     sideColor: Optional[str] = None
     selectedCarcassMaterialId: Optional[str] = None
     totalPvp: Optional[float] = None
+    totalCoste: Optional[float] = None
+    margen: Optional[float] = None
+    descuentoAplicado: Optional[float] = None
+    totalConIVA: Optional[float] = None
+    ivaRate: Optional[float] = None
     status: Optional[str] = None
     validUntil: Optional[datetime] = None
 

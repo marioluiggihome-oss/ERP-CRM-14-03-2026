@@ -2622,17 +2622,41 @@ async def create_project(project: ProjectCreate, user_id: str, client_code: Opti
 
 @api_router.put("/projects/{project_id}", response_model=ProjectModel)
 async def update_project(project_id: str, project: ProjectUpdate):
-    """Actualizar un proyecto"""
+    """Actualizar un proyecto guardando snapshot de versión anterior"""
     existing = await db.projects.find_one({"id": project_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    
+
     update_data = {k: v for k, v in project.model_dump().items() if v is not None}
-    update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
-    
+    now = datetime.now(timezone.utc)
+    update_data["updatedAt"] = now
+
+    # Guardar snapshot de la versión anterior si cambian items o totales
+    items_changed = (
+        "itemsMontada" in update_data or
+        "itemsDespiece" in update_data or
+        "totalPvp" in update_data
+    )
+    if items_changed:
+        snapshot = {
+            "versionAt": existing.get("updatedAt", existing.get("createdAt", now.isoformat())),
+            "savedAt": now.isoformat(),
+            "totalPvp": existing.get("totalPvp", 0),
+            "totalCoste": existing.get("totalCoste", 0),
+            "margen": existing.get("margen", 0),
+            "totalConIVA": existing.get("totalConIVA", 0),
+            "itemsMontada": existing.get("itemsMontada", []),
+            "itemsDespiece": existing.get("itemsDespiece", []),
+            "status": existing.get("status", "borrador"),
+        }
+        await db.projects.update_one(
+            {"id": project_id},
+            {"$push": {"versions": snapshot}}
+        )
+
     if update_data:
         await db.projects.update_one({"id": project_id}, {"$set": update_data})
-    
+
     # Tracking de actividad
     tracker = get_tracker()
     if tracker and existing.get("userId"):
@@ -2643,9 +2667,64 @@ async def update_project(project_id: str, project: ProjectUpdate):
             activity_type=ActivityType.BUDGET_UPDATE,
             details={"projectId": project_id}
         )
-    
+
     updated = await db.projects.find_one({"id": project_id}, {"_id": 0})
     return updated
+
+
+@api_router.post("/projects/{project_id}/clone")
+async def clone_project(project_id: str, user_id: str, body: dict = {}):
+    """
+    Duplicar un presupuesto existente como nuevo borrador.
+    Copia todos los items, colores y materiales.
+    El nuevo presupuesto parte como 'borrador' con número autogenerado.
+    """
+    original = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not original:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    now = datetime.now(timezone.utc)
+    new_budget_number = body.get("budgetNumber") or f"{original.get('budgetNumber', 'COPIA')}-COPIA"
+
+    new_project = {
+        "id": f"proj-{uuid.uuid4().hex[:8]}",
+        "userId": user_id,
+        "clientCode": original.get("clientCode", ""),
+        "budgetNumber": new_budget_number,
+        "customerName": original.get("customerName", ""),
+        "customerAddress": original.get("customerAddress", ""),
+        "internalReference": original.get("internalReference", ""),
+        "itemsMontada": original.get("itemsMontada", []),
+        "itemsDespiece": original.get("itemsDespiece", []),
+        "doorColorLow": original.get("doorColorLow", ""),
+        "doorColorHigh": original.get("doorColorHigh", ""),
+        "doorColorColumns": original.get("doorColorColumns", ""),
+        "sideColor": original.get("sideColor", ""),
+        "selectedCarcassMaterialId": original.get("selectedCarcassMaterialId"),
+        "totalPvp": original.get("totalPvp", 0),
+        "totalCoste": original.get("totalCoste", 0),
+        "margen": original.get("margen", 0),
+        "descuentoAplicado": original.get("descuentoAplicado", 0),
+        "totalConIVA": original.get("totalConIVA", 0),
+        "ivaRate": original.get("ivaRate", 21.0),
+        "status": "borrador",
+        "validUntil": (now.replace(microsecond=0) + timedelta(days=30)).isoformat(),
+        "statusHistory": [{
+            "from": "—",
+            "to": "borrador",
+            "at": now.isoformat(),
+            "by": "sistema",
+            "note": f"Clonado de {original.get('budgetNumber', project_id)}"
+        }],
+        "versions": [],
+        "createdAt": now,
+        "updatedAt": now,
+        "clonedFrom": project_id,
+    }
+
+    await db.projects.insert_one(new_project)
+    new_project.pop("_id", None)
+    return new_project
 
 @api_router.delete("/projects/{project_id}")
 async def delete_project(project_id: str):
