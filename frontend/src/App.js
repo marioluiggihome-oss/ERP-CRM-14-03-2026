@@ -35,6 +35,7 @@ const App = () => {
   const [showAdminWorkView, setShowAdminWorkView] = useState(false);
   const [showCommercialWorkView, setShowCommercialWorkView] = useState(false);
   const [showUserManual, setShowUserManual] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // móvil: cerrado por defecto
   
   const [state, setState] = useState(() => {
     const defaultState = {
@@ -631,7 +632,35 @@ const App = () => {
         />
       ) : (
         <>
-          <aside className="w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl">
+          {/* Botón hamburguesa - solo móvil */}
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            className="md:hidden fixed top-3 left-3 z-[60] w-11 h-11 bg-slate-950 text-white rounded-xl shadow-2xl flex items-center justify-center border border-white/10"
+            aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+            data-testid="mobile-menu-toggle"
+          >
+            {sidebarOpen ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            )}
+          </button>
+
+          {/* Overlay oscuro al abrir sidebar en móvil */}
+          {sidebarOpen && (
+            <div
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden fixed inset-0 bg-black/50 z-40"
+              data-testid="mobile-sidebar-overlay"
+            />
+          )}
+
+          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'fixed -translate-x-full'} md:relative md:translate-x-0 transition-transform duration-200 w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl`} onClick={(e) => {
+            // En móvil cerrar al hacer click en un botón de navegación
+            if (window.innerWidth < 768 && e.target.closest('button')) {
+              setTimeout(() => setSidebarOpen(false), 150);
+            }
+          }}>
             <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg border-b-4 border-slate-800 overflow-hidden transition-transform duration-200 hover:scale-105 shrink-0">
               {state.logo ? (
                 <img src={state.logo} alt="Logo" className="w-full h-full object-contain p-1.5" />
