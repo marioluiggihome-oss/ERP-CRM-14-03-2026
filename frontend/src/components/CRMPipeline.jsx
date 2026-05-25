@@ -287,7 +287,7 @@ const CRMPipeline = ({ currentUser }) => {
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-3 md:p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 gap-3">
-        <div className="flex items-center gap-3 md:gap-4 pl-12 md:pl-0">
+        <div className="flex items-center gap-3 md:gap-4 ">
           <div className="p-2 md:p-3 bg-indigo-600 rounded-xl md:rounded-2xl shadow-xl">
             <Target size={20} className="text-white md:hidden" />
             <Target size={28} className="text-white hidden md:block" />

@@ -3,7 +3,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Helper: build Authorization header with JWT from localStorage (if present)
 const authHeaders = (extra = {}) => {
-  const token = (typeof localStorage !== 'undefined') ? localStorage.getItem('access_token') : null;
+  const token = (typeof localStorage !== 'undefined') ? (localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')) : null;
   const h = { ...extra };
   if (token) h['Authorization'] = `Bearer ${token}`;
   return h;

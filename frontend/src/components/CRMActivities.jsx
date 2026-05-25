@@ -235,7 +235,7 @@ const CRMActivities = ({ currentUser }) => {
       {/* Header con estadísticas - Responsive */}
       <div className="bg-white border-b border-slate-200 p-4 md:p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="pl-12 md:pl-0">
+          <div className="">
             <h1 className="text-xl md:text-2xl font-black text-slate-900">Registro de Actividades</h1>
             <p className="text-xs md:text-sm text-slate-500">Visitas, llamadas, reuniones y más</p>
           </div>

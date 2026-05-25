@@ -299,7 +299,7 @@ const CRMCalendar = ({ currentUser }) => {
     <div className="h-full flex flex-col bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-3 md:px-6 py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-3">
-        <div className="flex items-center gap-2 md:gap-4 pl-12 md:pl-0 flex-wrap">
+        <div className="flex items-center gap-2 md:gap-4  flex-wrap">
           <div className="flex items-center gap-1 md:gap-2">
             <button 
               onClick={() => navigate('prev')}

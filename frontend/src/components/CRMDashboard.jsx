@@ -63,7 +63,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
   return (
     <div className="h-full overflow-auto bg-slate-50">
       {/* Hero header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-4 sm:px-6 pt-6 pb-10 pl-16 md:pl-6">
+      <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-4 sm:px-6 pt-6 pb-10">
         <div className="flex items-center justify-between mb-1">
           <div>
             <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest">CRM · Resumen comercial</p>

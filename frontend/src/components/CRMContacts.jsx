@@ -261,7 +261,7 @@ const CRMContacts = ({ currentUser }) => {
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-3 md:p-6">
       {/* Header */}
       <div className="flex flex-col gap-3 mb-4 md:mb-6">
-        <div className="flex items-center justify-between pl-14 md:pl-0">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-600 rounded-xl shadow-lg">
               <Users size={20} className="text-white" />
