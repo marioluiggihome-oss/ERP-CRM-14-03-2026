@@ -117,7 +117,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-xl p-3 sm:p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-blue-100 rounded-lg">
               <Users className="w-5 h-5 text-blue-600" />
@@ -126,11 +126,11 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
               <ArrowUpRight className="w-3 h-3 mr-1" /> +12%
             </span>
           </div>
-          <p className="text-2xl font-black text-slate-900">{dashboard?.totalContacts || 0}</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900">{dashboard?.totalContacts || 0}</p>
           <p className="text-xs text-slate-500 uppercase font-bold">Total Contactos</p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-xl p-3 sm:p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-purple-100 rounded-lg">
               <Target className="w-5 h-5 text-purple-600" />
@@ -139,11 +139,11 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
               <ArrowUpRight className="w-3 h-3 mr-1" /> +5
             </span>
           </div>
-          <p className="text-2xl font-black text-slate-900">{dashboard?.activeOpportunities || 0}</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900">{dashboard?.activeOpportunities || 0}</p>
           <p className="text-xs text-slate-500 uppercase font-bold">Oportunidades Abiertas</p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-xl p-3 sm:p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-green-100 rounded-lg">
               <TrendingUp className="w-5 h-5 text-green-600" />
@@ -152,11 +152,11 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
               <ArrowUpRight className="w-3 h-3 mr-1" /> +23%
             </span>
           </div>
-          <p className="text-2xl font-black text-slate-900">{dashboard?.wonThisMonth || 0}</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900">{dashboard?.wonThisMonth || 0}</p>
           <p className="text-xs text-slate-500 uppercase font-bold">Ventas Este Mes</p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-xl p-3 sm:p-5 border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-orange-100 rounded-lg">
               <Euro className="w-5 h-5 text-orange-600" />
@@ -165,13 +165,13 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
               <ArrowUpRight className="w-3 h-3 mr-1" /> +15%
             </span>
           </div>
-          <p className="text-2xl font-black text-slate-900">{formatCurrency(dashboard?.pipelineValue || 0)}</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900">{formatCurrency(dashboard?.pipelineValue || 0)}</p>
           <p className="text-xs text-slate-500 uppercase font-bold">Valor en Curso</p>
         </div>
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
         {/* Top Opportunities */}
         <div className="md:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">

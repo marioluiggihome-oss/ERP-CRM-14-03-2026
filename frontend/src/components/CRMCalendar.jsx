@@ -387,8 +387,8 @@ const CRMCalendar = ({ currentUser }) => {
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs md:text-sm hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap"
           >
             <Plus size={16} />
-            <span className="hidden md:inline">Nuevo Evento</span>
-            <span className="md:hidden">Nuevo</span>
+            <span className="hidden sm:inline">Nuevo Evento</span>
+            <span className="sm:hidden">Nuevo</span>
           </button>
         </div>
       </div>
@@ -425,23 +425,24 @@ const CRMCalendar = ({ currentUser }) => {
                       <div
                         key={idx}
                         onClick={() => openCreateModal(day)}
-                        className={`min-h-[100px] border-b border-r border-slate-100 p-1 cursor-pointer transition-colors hover:bg-slate-50 ${
+                        className={`min-h-[52px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-slate-100 p-0.5 sm:p-1 cursor-pointer transition-colors hover:bg-slate-50 ${
                           !isCurrentMonth ? 'bg-slate-50' : ''
                         } ${isToday(day) ? 'bg-indigo-50' : ''}`}
                       >
-                        <div className={`text-sm font-bold mb-1 ${
+                        <div className={`text-xs sm:text-sm font-bold mb-0.5 sm:mb-1 ${
                           isToday(day) ? 'text-indigo-600' : isCurrentMonth ? 'text-slate-900' : 'text-slate-300'
                         }`}>
                           {format(day, 'd')}
                         </div>
                         <div className="space-y-0.5">
-                          {dayEvents.slice(0, 2).map(evt => (
-                            <div
-                              key={evt.id}
-                              onClick={(e) => { e.stopPropagation(); openEditModal(evt); }}
-                              className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer ${EVENT_TYPES[evt.eventType]?.bgColor || 'bg-slate-100'} ${EVENT_TYPES[evt.eventType]?.textColor || 'text-slate-700'} ${evt.completed ? 'opacity-50 line-through' : ''}`}
-                            >
-                              {evt.title}
+                          {dayEvents.slice(0, 3).map(evt => (
+                            <div key={evt.id} onClick={(e) => { e.stopPropagation(); openEditModal(evt); }} className="cursor-pointer">
+                              {/* Móvil: solo punto */}
+                              <div className={`sm:hidden w-1.5 h-1.5 rounded-full mb-0.5 ${EVENT_TYPES[evt.eventType]?.bgColor?.replace('bg-', 'bg-') || 'bg-slate-400'}`} />
+                              {/* Desktop: texto completo */}
+                              <div className={`hidden sm:block text-[10px] px-1.5 py-0.5 rounded truncate ${EVENT_TYPES[evt.eventType]?.bgColor || 'bg-slate-100'} ${EVENT_TYPES[evt.eventType]?.textColor || 'text-slate-700'} ${evt.completed ? 'opacity-50 line-through' : ''}`}>
+                                {evt.title}
+                              </div>
                             </div>
                           ))}
                           {/* Prescriptor Notes (amber/orange) */}
@@ -588,7 +589,7 @@ const CRMCalendar = ({ currentUser }) => {
       {/* Event Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[92vh] overflow-hidden">
             <div className="bg-indigo-600 text-white px-6 py-4 flex justify-between items-center">
               <h2 className="font-black text-lg uppercase">
                 {editingEvent ? 'Editar Evento' : 'Nuevo Evento'}

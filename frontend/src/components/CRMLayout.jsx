@@ -37,15 +37,15 @@ const CRMLayout = ({ currentUser }) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                   isActive 
                     ? 'bg-indigo-600 text-white shadow-md' 
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
                 data-testid={`crm-tab-${tab.id}`}
               >
-                <Icon size={16} />
-                <span>{tab.name}</span>
+                <Icon size={15} />
+                <span className="hidden xs:inline sm:inline">{tab.name}</span>
               </button>
             );
           })}

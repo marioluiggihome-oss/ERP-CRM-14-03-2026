@@ -273,7 +273,7 @@ const CRMContacts = ({ currentUser }) => {
         </div>
 
         {/* Filters - Horizontal scroll on mobile */}
-        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2 md:pb-0 -mx-3 px-3 md:mx-0 md:px-0">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3 overflow-x-auto pb-1 md:pb-0">
           {/* Status Filter */}
           <select
             value={statusFilter}
@@ -568,8 +568,8 @@ const CRMContacts = ({ currentUser }) => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <h3 className="text-xl font-black text-slate-900 uppercase">
                 {editingContact ? 'Editar Contacto' : 'Nuevo Contacto'}
@@ -581,7 +581,7 @@ const CRMContacts = ({ currentUser }) => {
 
             <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre *</label>
                   <input
@@ -604,7 +604,7 @@ const CRMContacts = ({ currentUser }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
                   <input
@@ -627,7 +627,7 @@ const CRMContacts = ({ currentUser }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cargo</label>
                   <input
@@ -654,7 +654,7 @@ const CRMContacts = ({ currentUser }) => {
               </div>
 
               {/* Segmento y Colaborador */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Segmento</label>
                   <select
@@ -776,7 +776,7 @@ const CRMContacts = ({ currentUser }) => {
                   <p className="text-[10px] text-amber-600 mb-3">
                     Estos valores sobreescriben los valores por defecto del sistema solo para este cliente
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[10px] font-bold text-amber-600 uppercase mb-1">Incremento Ancho (€)</label>
                       <input

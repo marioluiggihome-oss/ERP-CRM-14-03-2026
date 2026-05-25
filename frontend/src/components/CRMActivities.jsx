@@ -241,7 +241,7 @@ const CRMActivities = ({ currentUser }) => {
           </div>
           
           {/* Stats - Grid responsive */}
-          <div className="grid grid-cols-3 gap-2 md:gap-4">
+          <div className="grid grid-cols-3 gap-2 md:gap-4 overflow-hidden">
             <div className="bg-indigo-50 rounded-xl p-3 text-center">
               <p className="text-2xl md:text-3xl font-black text-indigo-600">{todayCount}</p>
               <p className="text-[10px] md:text-xs font-bold text-indigo-500 uppercase">Hoy</p>
@@ -383,7 +383,7 @@ const CRMActivities = ({ currentUser }) => {
                 </div>
 
                 {/* Fecha y Hora - Grid */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold text-slate-600 uppercase mb-2 block">Fecha</label>
                     <input

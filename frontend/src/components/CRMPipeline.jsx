@@ -375,7 +375,7 @@ const CRMPipeline = ({ currentUser }) => {
           return (
             <div
               key={stage.id}
-              className={`flex-shrink-0 w-72 md:w-80 flex flex-col bg-white rounded-2xl border-2 ${stage.lightColor} shadow-lg overflow-hidden`}
+              className={`flex-shrink-0 w-64 sm:w-72 md:w-80 flex flex-col bg-white rounded-2xl border-2 ${stage.lightColor} shadow-lg overflow-hidden`}
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(stage.id)}
               data-testid={`stage-${stage.id}`}
@@ -523,7 +523,7 @@ const CRMPipeline = ({ currentUser }) => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Contacto</label>
                   <select
@@ -553,7 +553,7 @@ const CRMPipeline = ({ currentUser }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Valor (€)</label>
                   <input
