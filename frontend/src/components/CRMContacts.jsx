@@ -259,21 +259,28 @@ const CRMContacts = ({ currentUser }) => {
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 p-3 md:p-6">
-      {/* Header - Responsive */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 md:mb-6">
-        <div className="flex items-center gap-3 md:gap-4 pl-12 md:pl-0">
-          <div className="p-2 md:p-3 bg-indigo-600 rounded-xl md:rounded-2xl shadow-xl">
-            <Users size={20} className="text-white md:hidden" />
-            <Users size={28} className="text-white hidden md:block" />
+      {/* Header */}
+      <div className="flex flex-col gap-3 mb-4 md:mb-6">
+        <div className="flex items-center justify-between pl-14 md:pl-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg">
+              <Users size={20} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Contactos</h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{contacts.length} registros</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tight">Contactos</h2>
-            <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{contacts.length} contactos</p>
-          </div>
+          {/* Add button visible en header en móvil */}
+          <button onClick={() => openModal()}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-md md:hidden"
+            data-testid="add-contact-btn-mobile">
+            <UserPlus size={14} /> Nuevo
+          </button>
         </div>
 
-        {/* Filters - Horizontal scroll on mobile */}
-        <div className="flex flex-wrap items-center gap-2 md:gap-3 overflow-x-auto pb-1 md:pb-0">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* Status Filter */}
           <select
             value={statusFilter}
@@ -371,74 +378,82 @@ const CRMContacts = ({ currentUser }) => {
         ) : (
           <div className="overflow-auto h-full">
             {/* Mobile Card View */}
-            <div className="md:hidden p-3 space-y-3">
+            <div className="md:hidden p-3 space-y-2.5">
               {filteredContacts.map(contact => (
-                <div key={contact.id} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <span className="text-indigo-600 font-black text-sm">
+                <div key={contact.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden active:scale-[0.99] transition-transform">
+                  {/* Color top bar por estado */}
+                  <div className={`h-1 w-full ${contact.status === 'customer' ? 'bg-purple-500' : contact.status === 'active' ? 'bg-green-500' : contact.status === 'inactive' ? 'bg-slate-300' : 'bg-blue-400'}`} />
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base flex-shrink-0 ${
+                          contact.status === 'customer' ? 'bg-purple-100 text-purple-700' :
+                          contact.status === 'active' ? 'bg-green-100 text-green-700' :
+                          'bg-indigo-100 text-indigo-700'
+                        }`}>
                           {contact.name?.charAt(0).toUpperCase()}
-                        </span>
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-900 text-sm leading-tight">{contact.name}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">{contact.company || 'Sin empresa'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-slate-900 text-sm">{contact.name}</p>
-                        <p className="text-xs text-slate-500">{contact.company || 'Sin empresa'}</p>
-                      </div>
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${getStatusColor(contact.status)}`}>
+                        {getStatusName(contact.status)}
+                      </span>
                     </div>
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${getStatusColor(contact.status)}`}>
-                      {getStatusName(contact.status)}
-                    </span>
-                  </div>
-                  
-                  {/* Contact info */}
-                  <div className="space-y-1 mb-3 text-xs text-slate-600">
-                    {contact.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail size={12} />
-                        <span className="truncate">{contact.email}</span>
+
+                    {/* Info rápida */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
+                      {contact.phone && (
+                        <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-indigo-600">
+                          <Phone size={11} className="text-slate-400" />
+                          <span>{contact.phone}</span>
+                        </a>
+                      )}
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 truncate max-w-[160px]">
+                          <Mail size={11} />
+                          <span className="truncate">{contact.email}</span>
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Tags */}
+                    {contact.tags?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {contact.tags.map(tagId => {
+                          const bt = BUSINESS_TYPES.find(b => b.id === tagId);
+                          return bt ? (
+                            <span key={tagId} className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${bt.color}`}>
+                              {bt.name}
+                            </span>
+                          ) : null;
+                        })}
                       </div>
                     )}
-                    {contact.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone size={12} />
-                        <span>{contact.phone}</span>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-50">
+                      <span className="text-sm font-black text-indigo-600">
+                        {formatCurrency(contact.totalValue || 0)}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {!contact.convertedToClientId && (
+                          <button onClick={() => handleConvertToClient(contact)}
+                            className="p-2 bg-orange-50 text-orange-500 rounded-xl hover:bg-orange-100 transition-colors" title="Convertir a cliente">
+                            <UserCheck size={14} />
+                          </button>
+                        )}
+                        <button onClick={() => openModal(contact)}
+                          className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(contact.id)}
+                          className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors">
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                  
-                  {/* Tags */}
-                  {contact.tags && contact.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {contact.tags.map(tagId => {
-                        const bt = BUSINESS_TYPES.find(b => b.id === tagId);
-                        return bt ? (
-                          <span key={tagId} className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border ${bt.color}`}>
-                            {bt.name}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
-                  
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                    <span className="text-sm font-bold text-indigo-600">
-                      {formatCurrency(contact.totalValue || 0)}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openModal(contact)}
-                        className="p-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(contact.id)}
-                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
-                      >
-                        <Trash2 size={14} />
-                      </button>
                     </div>
                   </div>
                 </div>

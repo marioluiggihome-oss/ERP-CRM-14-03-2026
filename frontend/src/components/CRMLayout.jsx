@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Target, Users, CalendarDays, FileBarChart, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList } from 'lucide-react';
 import CRMDashboard from './CRMDashboard';
 import CRMPipeline from './CRMPipeline';
 import CRMContacts from './CRMContacts';
@@ -7,60 +7,49 @@ import CRMCalendar from './CRMCalendar';
 import CRMActivities from './CRMActivities';
 
 const CRM_TABS = [
-  { id: 'dashboard', name: 'Resumen', icon: LayoutDashboard },
-  { id: 'pipeline', name: 'Oportunidades', icon: Target },
-  { id: 'contacts', name: 'Contactos', icon: Users },
-  { id: 'activities', name: 'Actividades', icon: ClipboardList },
-  { id: 'calendar', name: 'Calendario', icon: CalendarDays },
+  { id: 'dashboard',   name: 'Resumen',       icon: LayoutDashboard, color: 'text-indigo-600',  activeBg: 'bg-indigo-600' },
+  { id: 'pipeline',    name: 'Oportunidades', icon: Target,          color: 'text-purple-600',  activeBg: 'bg-purple-600' },
+  { id: 'contacts',    name: 'Contactos',     icon: Users,           color: 'text-blue-600',    activeBg: 'bg-blue-600' },
+  { id: 'activities',  name: 'Actividades',   icon: ClipboardList,   color: 'text-green-600',   activeBg: 'bg-green-600' },
+  { id: 'calendar',    name: 'Calendario',    icon: CalendarDays,    color: 'text-orange-600',  activeBg: 'bg-orange-600' },
 ];
 
 const CRMLayout = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const activeConfig = CRM_TABS.find(t => t.id === activeTab);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* CRM Internal Navigation - Responsive */}
-      <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-1 shrink-0">
-        <div className="hidden md:flex items-center gap-2 md:mr-6">
-          <div className="p-2 bg-indigo-600 rounded-xl">
-            <Target size={18} className="text-white" />
-          </div>
-          <span className="text-lg font-black text-slate-900 uppercase">CRM</span>
-        </div>
-        
-        {/* Tabs - Horizontal scroll on mobile */}
-        <div className="flex gap-1 overflow-x-auto pb-1 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-none">
-          {CRM_TABS.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
-                  isActive 
-                    ? 'bg-indigo-600 text-white shadow-md' 
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-                data-testid={`crm-tab-${tab.id}`}
-              >
-                <Icon size={15} />
-                <span className="hidden xs:inline sm:inline">{tab.name}</span>
-              </button>
-            );
-          })}
-        </div>
+    <div className="h-full flex flex-col bg-white">
+      {/* Top Nav */}
+      <div className="bg-white border-b border-slate-100 px-3 sm:px-6 flex items-center gap-2 shrink-0 overflow-x-auto scrollbar-none">
+        {CRM_TABS.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              data-testid={`crm-tab-${tab.id}`}
+              className={`relative flex items-center gap-1.5 px-3 py-3.5 text-xs font-black uppercase tracking-wide whitespace-nowrap shrink-0 transition-all border-b-2 ${
+                isActive
+                  ? `border-indigo-600 text-indigo-700`
+                  : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-200'
+              }`}
+            >
+              <Icon size={14} />
+              <span className="hidden sm:inline">{tab.name}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* CRM Content */}
+      {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'dashboard' && (
-          <CRMDashboard onNavigate={(tab) => setActiveTab(tab)} currentUser={currentUser} />
-        )}
-        {activeTab === 'pipeline' && <CRMPipeline currentUser={currentUser} />}
-        {activeTab === 'contacts' && <CRMContacts currentUser={currentUser} />}
+        {activeTab === 'dashboard'  && <CRMDashboard onNavigate={setActiveTab} currentUser={currentUser} />}
+        {activeTab === 'pipeline'   && <CRMPipeline currentUser={currentUser} />}
+        {activeTab === 'contacts'   && <CRMContacts currentUser={currentUser} />}
         {activeTab === 'activities' && <CRMActivities currentUser={currentUser} />}
-        {activeTab === 'calendar' && <CRMCalendar currentUser={currentUser} />}
+        {activeTab === 'calendar'   && <CRMCalendar currentUser={currentUser} />}
       </div>
     </div>
   );
