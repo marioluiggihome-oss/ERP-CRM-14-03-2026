@@ -3669,7 +3669,7 @@ async def fix_product_data():
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', 'https://erp.luiggihome.es,http://localhost:3000').split(','),
+    allow_origins=os.environ.get('CORS_ORIGINS', 'https://erp.luiggihome.es,https://erp-crm-14-03-2026-production.up.railway.app,http://localhost:3000').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
