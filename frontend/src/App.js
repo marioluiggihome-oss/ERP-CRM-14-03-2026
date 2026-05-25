@@ -638,20 +638,18 @@ const App = () => {
         />
       ) : (
         <>
-          {/* Botón hamburguesa: visible en móvil + desktop como toggle */}
-          <button
-            onClick={() => setSidebarOpen(o => !o)}
-            className={`fixed top-3 z-[60] w-10 h-10 bg-slate-950 text-white rounded-xl shadow-2xl flex items-center justify-center border border-white/10 hover:bg-slate-800 transition-all ${sidebarOpen ? 'left-[5.25rem] md:left-[5.25rem]' : 'left-3'}`}
-            aria-label={sidebarOpen ? 'Ocultar menú' : 'Mostrar menú'}
-            data-testid="sidebar-toggle"
-            title={sidebarOpen ? 'Ocultar menú' : 'Mostrar menú'}
-          >
-            {sidebarOpen ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
-            ) : (
+          {/* Botón hamburguesa - solo visible cuando sidebar está cerrada */}
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="fixed top-3 left-3 z-[60] w-10 h-10 bg-slate-950 text-white rounded-xl shadow-2xl flex items-center justify-center border border-white/10 hover:bg-slate-800 transition-all"
+              aria-label="Mostrar menú"
+              data-testid="sidebar-toggle"
+              title="Mostrar menú"
+            >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-            )}
-          </button>
+            </button>
+          )}
 
           {/* Overlay oscuro al abrir sidebar en móvil */}
           {sidebarOpen && (
@@ -662,19 +660,29 @@ const App = () => {
             />
           )}
 
-          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-200 w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl`} onClick={(e) => {
+          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-300 ease-in-out w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl`} onClick={(e) => {
             // En móvil cerrar al hacer click en un botón de navegación
-            if (window.innerWidth < 768 && e.target.closest('button')) {
+            if (window.innerWidth < 768 && e.target.closest('button[data-nav]')) {
               setTimeout(() => setSidebarOpen(false), 150);
             }
           }}>
-            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg border-b-4 border-slate-800 overflow-hidden transition-transform duration-200 hover:scale-105 shrink-0">
+            {/* LOGO - Toca para colapsar/ocultar la sidebar */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg border-b-4 border-slate-800 overflow-hidden transition-all duration-200 hover:scale-95 hover:opacity-80 shrink-0 group relative"
+              title="Toca para ocultar el menú"
+              data-testid="sidebar-logo-toggle"
+            >
               {state.logo ? (
-                <img src={state.logo} alt="Logo" className="w-full h-full object-contain p-1.5" />
+                <img src={state.logo} alt="Logo" className="w-full h-full object-contain p-1.5 group-hover:opacity-60 transition-opacity" />
               ) : (
-                <div className="w-full h-full bg-brand flex items-center justify-center font-black text-white italic text-2xl">L</div>
+                <div className="w-full h-full bg-brand flex items-center justify-center font-black text-white italic text-2xl group-hover:opacity-60 transition-opacity">L</div>
               )}
-            </div>
+              {/* Icono de colapsar que aparece al hacer hover */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/40 rounded-2xl">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 19l-7-7 7-7" /></svg>
+              </div>
+            </button>
             
             <div className="flex flex-col gap-3 flex-1 w-full px-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
               {/* 
