@@ -701,6 +701,75 @@ export const projectsAPI = {
   }
 };
 
+
+// ============================================
+// INVOICES (FACTURACIÓN)
+// ============================================
+
+export const invoicesAPI = {
+  _h: () => {
+    const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  },
+  getAll: async (status = null, search = null) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (search) params.append('search', search);
+    const r = await fetch(`${API_URL}/api/invoices?${params}`, { headers: invoicesAPI._h() });
+    if (!r.ok) throw new Error('Error al obtener facturas');
+    return r.json();
+  },
+  getStats: async () => {
+    const r = await fetch(`${API_URL}/api/invoices/stats`, { headers: invoicesAPI._h() });
+    if (!r.ok) throw new Error('Error al obtener estadísticas');
+    return r.json();
+  },
+  getNextNumber: async () => {
+    const r = await fetch(`${API_URL}/api/invoices/next-number`, { headers: invoicesAPI._h() });
+    if (!r.ok) throw new Error('Error');
+    return r.json();
+  },
+  get: async (id) => {
+    const r = await fetch(`${API_URL}/api/invoices/${id}`, { headers: invoicesAPI._h() });
+    if (!r.ok) throw new Error('Factura no encontrada');
+    return r.json();
+  },
+  create: async (invoice) => {
+    const r = await fetch(`${API_URL}/api/invoices`, { method: 'POST', headers: invoicesAPI._h(), body: JSON.stringify(invoice) });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail || 'Error al crear factura'); }
+    return r.json();
+  },
+  createFromProject: async (projectId) => {
+    const r = await fetch(`${API_URL}/api/invoices/from-project/${projectId}`, { method: 'POST', headers: invoicesAPI._h() });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail || 'Error al crear factura'); }
+    return r.json();
+  },
+  update: async (id, data) => {
+    const r = await fetch(`${API_URL}/api/invoices/${id}`, { method: 'PUT', headers: invoicesAPI._h(), body: JSON.stringify(data) });
+    if (!r.ok) throw new Error('Error al actualizar factura');
+    return r.json();
+  },
+  changeStatus: async (id, status, paidAt = null) => {
+    const r = await fetch(`${API_URL}/api/invoices/${id}/status`, { method: 'PATCH', headers: invoicesAPI._h(), body: JSON.stringify({ status, paidAt }) });
+    if (!r.ok) throw new Error('Error al cambiar estado');
+    return r.json();
+  },
+  delete: async (id) => {
+    const r = await fetch(`${API_URL}/api/invoices/${id}`, { method: 'DELETE', headers: invoicesAPI._h() });
+    if (!r.ok) throw new Error('Error al eliminar factura');
+    return r.json();
+  },
+  downloadPdf: (id) => {
+    const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || '';
+    window.open(`${API_URL}/api/invoices/${id}/pdf`, '_blank');
+  },
+  sendEmail: async (id, email = null) => {
+    const r = await fetch(`${API_URL}/api/invoices/${id}/send-email`, { method: 'POST', headers: invoicesAPI._h(), body: JSON.stringify({ email }) });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail || 'Error al enviar email'); }
+    return r.json();
+  },
+};
+
 // ============================================
 // TELEMETRY (AI)
 // ============================================

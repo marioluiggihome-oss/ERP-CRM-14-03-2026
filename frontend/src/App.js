@@ -4,6 +4,7 @@ import "./App.css";
 import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
 import ProjectLibrary from './components/ProjectLibrary';
+import Invoices from './components/Invoices';
 import SettingsModal from './components/SettingsModal';
 import ManufacturingReport from './components/ManufacturingReport';
 import Login from './components/Login';
@@ -746,6 +747,18 @@ const App = () => {
                       >
                         <FolderOpen size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
+                      </button>
+                    )}
+
+                    {/* Facturación - Solo admin, gerente y director comercial */}
+                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'invoices'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'invoices' ? 'bg-orange-500 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="invoices-nav-btn"
+                      >
+                        <Receipt size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Facturas</span>
                       </button>
                     )}
                     

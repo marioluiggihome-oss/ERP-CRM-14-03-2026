@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle, Copy } from 'lucide-react';
-import { projectsAPI, crmOpportunitiesAPI } from '../services/api';
+import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle, Copy, Receipt } from 'lucide-react';
+import { projectsAPI, crmOpportunitiesAPI, invoicesAPI } from '../services/api';
 
 
 // ─── Configuración de estados ───────────────────────────────────────────────
@@ -261,6 +261,25 @@ const ProjectLibrary = ({ state, setState }) => {
     }
   };
 
+  const createInvoice = async (project) => {
+    if (!['aceptado', 'en_fabricacion', 'entregado'].includes(project.status)) {
+      alert('Solo puedes facturar presupuestos en estado Aceptado, En Fabricación o Entregado');
+      return;
+    }
+    if (project.invoiceId) {
+      alert(`Este presupuesto ya tiene factura: ${project.invoiceNumber}`);
+      return;
+    }
+    if (!window.confirm(`¿Crear factura para "${project.customerName || project.budgetNumber}"?`)) return;
+    try {
+      const inv = await invoicesAPI.createFromProject(project.id);
+      alert(`✅ Factura ${inv.invoiceNumber} creada correctamente`);
+      loadProjects();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
   const cloneProject = async (project) => {
     const newNum = window.prompt(
       `Duplicar "${project.budgetNumber}"\nNúmero de expediente para la copia:`,
@@ -493,6 +512,18 @@ const ProjectLibrary = ({ state, setState }) => {
                         className="p-3 bg-cyan-100 text-cyan-700 rounded-xl hover:bg-cyan-200 transition-all" title="Duplicar presupuesto">
                         <Copy size={18} />
                       </button>
+                      {['aceptado','en_fabricacion','entregado'].includes(project.status) && !project.invoiceId && (
+                        <button onClick={() => createInvoice(project)}
+                          className="p-3 bg-orange-100 text-orange-600 rounded-xl hover:bg-orange-200 transition-all" title="Crear factura">
+                          <Receipt size={18} />
+                        </button>
+                      )}
+                      {project.invoiceId && (
+                        <button onClick={() => invoicesAPI.downloadPdf(project.invoiceId)}
+                          className="p-3 bg-green-100 text-green-600 rounded-xl hover:bg-green-200 transition-all" title={`Factura ${project.invoiceNumber}`}>
+                          <Receipt size={18} />
+                        </button>
+                      )}
                       <button onClick={() => createOpportunity(project)}
                         className="p-3 bg-purple-100 text-purple-600 rounded-xl hover:bg-purple-200 transition-all" title="Crear oportunidad CRM">
                         <Target size={18} />

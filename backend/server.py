@@ -72,6 +72,7 @@ from routes import (
 from routes.fabrica import router as fabrica_router
 from routes.dashboard import router as dashboard_router
 from routes.factory_reports import router as factory_reports_router
+from routes.invoices import router as invoices_router
 from routes.backup import scheduler as backup_scheduler, start_backup_scheduler
 from routes.admin import router as admin_router
 from routes.exports import router as exports_router
@@ -157,6 +158,7 @@ api_router.include_router(crm_module_router)
 api_router.include_router(orders_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(factory_reports_router)
+api_router.include_router(invoices_router)
 api_router.include_router(admin_router)
 api_router.include_router(exports_router)
 api_router.include_router(maintenance_router)

@@ -444,6 +444,12 @@ class SettingsUpdate(BaseModel):
     logo: Optional[str] = None
     defaultCarcassMaterialId: Optional[str] = None
     montajesEnabled: Optional[bool] = None
+    companyName: Optional[str] = None
+    companyTaxId: Optional[str] = None
+    companyAddress: Optional[str] = None
+    companyPhone: Optional[str] = None
+    companyEmail: Optional[str] = None
+    companyIban: Optional[str] = None
 
 
 # ============================================
