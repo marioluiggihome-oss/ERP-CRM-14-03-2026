@@ -3127,12 +3127,12 @@ def calculate_furniture_despiece(
             shelf_count = 0
     # Bajos: normalmente 1 estante
     elif is_bajo:
-        if is_fregadero or is_horno:
-            shelf_count = 0  # Fregaderos y hornos sin estantes
-        elif h >= 70:
-            shelf_count = 2
+        if is_fregadero or is_horno or has_drawers:
+            shelf_count = 0  # Fregaderos, hornos y cajones sin estantes
+        elif h >= 80:
+            shelf_count = 2  # Bajos altos (80cm+) llevan 2 estantes
         else:
-            shelf_count = 1
+            shelf_count = 1  # Bajos estándar (70-72cm) solo 1 estante
     # Genérico: basado en altura
     elif h >= 70:
         shelf_count = 2 if h < 120 else 3 if h < 180 else 4
@@ -3202,46 +3202,115 @@ def calculate_furniture_despiece(
         else:
             num_doors = 4
     
+    # =============================================
+    # CAJONES - Detectar si el mueble tiene cajones
+    # =============================================
+    has_drawers = False
+    num_drawers = 0
+    drawer_height_cm = 0
+
+    # Detectar cajones por código/nombre
+    cajon_keywords = ['CAJ', 'CAJON', 'CAJÓN', 'DRAWER', 'BT', 'BCG', 'BCGF', 'BGF', 'BGC']
+    if any(k in code_upper or k in name_upper for k in cajon_keywords):
+        has_drawers = True
+        # Estimar número de cajones según la altura
+        if h >= 70:
+            num_drawers = 3
+        elif h >= 50:
+            num_drawers = 2
+        else:
+            num_drawers = 1
+        drawer_height_cm = round((h - 1.0) / num_drawers - 0.3, 1)  # Alto interior cajón
+
+    if has_drawers and num_drawers > 0:
+        drawer_width = ancho_interior - 2  # Ancho cajón = ancho interior menos guías
+        drawer_depth = fondo_interior - 4  # Fondo cajón = fondo interior menos frontal
+
+        # Frentes de cajón
+        add_component(
+            f"Frente cajón {'(' + str(num_drawers) + ' uds)' if num_drawers > 1 else ''}",
+            "FRENTE-CAJ",
+            "PUERTA COLOR",
+            round(drawer_height_cm, 1), round(w - 0.3, 1), 1.9, num_drawers,
+            f"Frente cajón acabado a elegir. {num_drawers} ud{'s' if num_drawers > 1 else ''}"
+        )
+        # Laterales cajón (x2 por cajón)
+        add_component(
+            "Laterales cajón",
+            "LAT-CAJ",
+            "Tablero 16mm",
+            round(drawer_depth, 1), round(drawer_height_cm - 1, 1), 1.6, num_drawers * 2,
+            "2 laterales por cajón"
+        )
+        # Fondo cajón
+        add_component(
+            "Fondo cajón",
+            "FOND-CAJ",
+            "Tablero 8mm",
+            round(drawer_width - 1, 1), round(drawer_depth, 1), 0.8, num_drawers,
+            "Fondo 8mm por cajón"
+        )
+        # Guías cajón
+        add_component(
+            "Guías cajón",
+            "GUIAS",
+            "HERRAJE",
+            0, 0, 0, num_drawers,
+            f"1 juego de guías por cajón ({num_drawers} juegos)"
+        )
+
     # Calcular dimensiones de puerta si tiene puertas
     if has_doors and num_doors > 0:
         # =============================================
-        # PUERTAS - Según documento:
-        # Alto puerta = Alto mueble - toleranciaAlto (configurable, por defecto 2mm)
-        # Ancho puerta (1P) = Ancho mueble - toleranciaAncho (configurable, por defecto 3mm)
-        # Ancho puerta (2P) = (Ancho mueble - toleranciaAncho entre puertas) / 2
+        # PUERTAS - Reglas según tipo de mueble:
+        #
+        # Columnas 4P: 2 puertas arriba + 2 puertas abajo
+        #   → door_height = h/2 - tolerancia (NO h completo)
+        # Columnas 2P: puerta única a toda la altura
+        # Altos/Bajos: altura completa del mueble
         # =============================================
-        door_height_tolerance = door_tolerance_height / 10  # Convertir mm a cm
-        door_width_tolerance = door_tolerance_width / 10    # Convertir mm a cm
-        door_gap_between = door_width_tolerance             # Separación entre puertas = tolerancia ancho
-        door_edge_tolerance = door_width_tolerance / 2      # Tolerancia lateral = tolerancia/2
-        
-        # Alto de puerta: altura del mueble - tolerancia
-        door_height = h - door_height_tolerance
-        
-        # Ancho de puerta según número de puertas
-        if num_doors == 1:
-            # Puerta única = ancho total - tolerancia
-            door_width = w - door_width_tolerance
-        elif num_doors == 2:
-            # Dos puertas = (ancho - separación entre puertas) / 2
-            door_width = (w - door_gap_between) / 2
-        elif num_doors == 3:
-            # Tres puertas
-            door_width = (w - (2 * door_gap_between)) / 3
-        else:  # 4 o más puertas
-            door_width = (w - ((num_doors - 1) * door_gap_between)) / num_doors
-        
-        # Grosor típico de puerta: 19mm (1.9cm)
+        door_height_tolerance = door_tolerance_height / 10  # mm → cm
+        door_width_tolerance = door_tolerance_width / 10    # mm → cm
+        door_gap_between = door_width_tolerance
         door_thickness_cm = 1.9
-        door_thickness_cm = 1.9
-        
-        # Agregar puerta(s) al despiece
+
+        # ── Alto de puerta ──────────────────────────
+        if is_columna and num_doors == 4:
+            # 4 puertas en 2 filas: cada puerta cubre la mitad de la altura
+            door_height = round(h / 2 - door_height_tolerance, 1)
+            door_rows = 2   # 2 filas de puertas
+        elif is_columna and num_doors == 6:
+            # 6 puertas en 3 filas (columnas muy altas)
+            door_height = round(h / 3 - door_height_tolerance, 1)
+            door_rows = 3
+        else:
+            # 1P, 2P, 3P → siempre la altura completa del mueble
+            door_height = round(h - door_height_tolerance, 1)
+            door_rows = 1
+
+        # ── Ancho de puerta ─────────────────────────
+        # En columnas 4P: 2 puertas por fila
+        doors_per_row = num_doors // door_rows if door_rows > 1 else num_doors
+        if doors_per_row == 1:
+            door_width = round(w - door_width_tolerance, 1)
+        elif doors_per_row == 2:
+            door_width = round((w - door_gap_between) / 2, 1)
+        elif doors_per_row == 3:
+            door_width = round((w - 2 * door_gap_between) / 3, 1)
+        else:
+            door_width = round((w - (doors_per_row - 1) * door_gap_between) / doors_per_row, 1)
+
+        # Descripción clara
+        door_desc = f"{num_doors} puerta{'s' if num_doors > 1 else ''} acabado a elegir"
+        if door_rows > 1:
+            door_desc += f" ({door_rows} filas × {doors_per_row} puertas, {door_height}cm alto c/u)"
+
         add_component(
             f"Puerta {'(' + str(num_doors) + ' uds)' if num_doors > 1 else ''}",
             "PUERTA",
-            "PUERTA COLOR",  # Material especial para puertas (se reemplaza con acabado)
-            round(door_height, 1), round(door_width, 1), door_thickness_cm, num_doors,
-            f"Puerta acabado a elegir. {num_doors} puerta{'s' if num_doors > 1 else ''}"
+            "PUERTA COLOR",
+            door_height, door_width, door_thickness_cm, num_doors,
+            door_desc
         )
     
     # =============================================
@@ -3258,19 +3327,18 @@ def calculate_furniture_despiece(
             "1 juego = 2 colgadores para mueble alto de pared"
         )
     
-    # BISAGRAS - Según número de puertas y altura del MUEBLE
+    # BISAGRAS - Según altura REAL de la puerta (no del mueble)
     if has_doors and num_doors > 0:
-        # Regla: 
-        # - Muebles de hasta 90cm de alto (altos normales): 2 bisagras por puerta
-        # - Muebles de más de 90cm de alto (semicolumnas, columnas, despenseros): 3 bisagras por puerta
-        bisagras_por_puerta = 2 if h <= 90 else 3
+        # En columnas 4P door_height = h/2, en el resto = h completo
+        real_door_h = door_height if 'door_height' in locals() else h
+        bisagras_por_puerta = 2 if real_door_h <= 90 else 3
         total_bisagras = bisagras_por_puerta * num_doors
         add_component(
-            f"Bisagras",
+            "Bisagras",
             "BISAG",
             "HERRAJE",
             0, 0, 0, total_bisagras,
-            f"{bisagras_por_puerta} bisagras por puerta (mueble {h}cm alto)"
+            f"{bisagras_por_puerta} bisagras/puerta (puerta {real_door_h}cm)"
         )
         
         # TIRADORES - 1 por puerta

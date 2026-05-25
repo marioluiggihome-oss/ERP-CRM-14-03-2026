@@ -188,36 +188,88 @@ const CRMPipeline = ({ currentUser }) => {
     }
   };
 
-  const handleDragStart = (opp) => {
-    setDraggedOpp(opp);
-  };
+  const PROBABILITY_MAP = { lead:20, contacted:35, proposal:55, negotiation:75, won:100, lost:0 };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
+  // ── Mouse drag ─────────────────────────────────────────────────────────────
+  const handleDragStart = (opp) => setDraggedOpp(opp);
+  const handleDragOver  = (e)   => e.preventDefault();
   const handleDrop = async (stageId) => {
     if (draggedOpp && draggedOpp.stage !== stageId) {
       try {
-        // Update probability based on stage
-        const probabilityMap = {
-          lead: 20,
-          contacted: 35,
-          proposal: 55,
-          negotiation: 75,
-          won: 100,
-          lost: 0
-        };
-        
         await crmOpportunitiesAPI.update(draggedOpp.id, {
           stage: stageId,
-          probability: probabilityMap[stageId]
+          probability: PROBABILITY_MAP[stageId]
         });
         loadData();
-      } catch (err) {
-        console.error('Error moving opportunity:', err);
-      }
+      } catch (err) { console.error('Error moving opportunity:', err); }
     }
+    setDraggedOpp(null);
+  };
+
+  // ── Touch drag (móvil/tablet) ───────────────────────────────────────────────
+  const touchDragRef = React.useRef({ opp: null, clone: null, startX: 0, startY: 0 });
+
+  const handleTouchStart = (e, opp) => {
+    const touch = e.touches[0];
+    touchDragRef.current.opp   = opp;
+    touchDragRef.current.startX = touch.clientX;
+    touchDragRef.current.startY = touch.clientY;
+
+    // Crear clon visual
+    const el = e.currentTarget;
+    const clone = el.cloneNode(true);
+    clone.style.cssText = `
+      position:fixed; z-index:9999; opacity:0.85; pointer-events:none;
+      width:${el.offsetWidth}px; left:${touch.clientX - el.offsetWidth/2}px;
+      top:${touch.clientY - 30}px; transform:scale(1.04);
+      box-shadow:0 20px 40px rgba(0,0,0,0.25); border-radius:12px;
+      transition: none;
+    `;
+    document.body.appendChild(clone);
+    touchDragRef.current.clone = clone;
+    setDraggedOpp(opp);
+  };
+
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const { clone } = touchDragRef.current;
+    if (clone) {
+      const el = e.currentTarget;
+      clone.style.left = `${touch.clientX - parseInt(clone.style.width)/2}px`;
+      clone.style.top  = `${touch.clientY - 30}px`;
+    }
+    // Highlight columna debajo del dedo
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    document.querySelectorAll('[data-stage-drop]').forEach(c => c.classList.remove('ring-2','ring-indigo-400'));
+    const col = el?.closest('[data-stage-drop]');
+    if (col) col.classList.add('ring-2','ring-indigo-400');
+  };
+
+  const handleTouchEnd = async (e) => {
+    const touch = e.changedTouches[0];
+    const { clone, opp } = touchDragRef.current;
+
+    // Eliminar clon
+    if (clone) { clone.remove(); touchDragRef.current.clone = null; }
+    document.querySelectorAll('[data-stage-drop]').forEach(c => c.classList.remove('ring-2','ring-indigo-400'));
+
+    // Detectar columna destino
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const col = el?.closest('[data-stage-drop]');
+    const targetStage = col?.getAttribute('data-stage-drop');
+
+    if (opp && targetStage && targetStage !== opp.stage) {
+      try {
+        await crmOpportunitiesAPI.update(opp.id, {
+          stage: targetStage,
+          probability: PROBABILITY_MAP[targetStage]
+        });
+        loadData();
+      } catch (err) { console.error('Error moving touch:', err); }
+    }
+    touchDragRef.current.opp = null;
+    setDraggedOpp(null);
     setDraggedOpp(null);
   };
 
@@ -378,6 +430,7 @@ const CRMPipeline = ({ currentUser }) => {
               className={`flex-shrink-0 w-64 sm:w-72 md:w-80 flex flex-col bg-white rounded-2xl border-2 ${stage.lightColor} shadow-lg overflow-hidden`}
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(stage.id)}
+              data-stage-drop={stage.id}
               data-testid={`stage-${stage.id}`}
             >
               {/* Stage Header */}
@@ -400,6 +453,10 @@ const CRMPipeline = ({ currentUser }) => {
                     key={opp.id}
                     draggable
                     onDragStart={() => handleDragStart(opp)}
+                    onTouchStart={(e) => handleTouchStart(e, opp)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    style={{touchAction: "none"}}
                     className={`bg-white rounded-xl border-2 border-slate-100 p-4 cursor-grab hover:shadow-md transition-all ${
                       draggedOpp?.id === opp.id ? 'opacity-50' : ''
                     }`}

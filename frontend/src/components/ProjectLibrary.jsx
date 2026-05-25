@@ -200,7 +200,12 @@ const ProjectLibrary = ({ state, setState }) => {
         doorColorColumns: state.doorColorColumns || '',
         sideColor: state.sideColor || '',
         selectedCarcassMaterialId: state.selectedCarcassMaterialId,
-        totalPvp: totalMontada + totalDespiece,
+        totalPvp: totalPvp,
+        totalCoste: Math.round(totalCoste * 100) / 100,
+        margen: Math.round(margen * 10) / 10,
+        totalConIVA: Math.round(totalConIVA * 100) / 100,
+        ivaRate: ivaRate,
+        descuentoAplicado: descuento,
         status: 'borrador',
         // Caducidad por defecto: 30 días
         validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
