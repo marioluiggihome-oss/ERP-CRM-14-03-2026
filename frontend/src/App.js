@@ -5,6 +5,7 @@ import BudgetTable from './components/BudgetTable';
 import Visualizer from './components/Visualizer';
 import ProjectLibrary from './components/ProjectLibrary';
 import Invoices from './components/Invoices';
+import CommandCenter from './components/CommandCenter';
 import SettingsModal from './components/SettingsModal';
 import ManufacturingReport from './components/ManufacturingReport';
 import Login from './components/Login';
@@ -759,6 +760,18 @@ const App = () => {
                       >
                         <Receipt size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Facturas</span>
+                      </button>
+                    )}
+
+                    {/* Panel de Mando - Solo admin y gerente */}
+                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'command'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'command' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="command-center-btn"
+                      >
+                        <Shield size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Mando</span>
                       </button>
                     )}
                     
