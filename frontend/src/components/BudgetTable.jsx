@@ -1882,7 +1882,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                             series: 'IA',
                             visualType: 'HUECO',
                             width: item.customWidth || item.width || 600,
-                            height: item.customHeight || item.height || 70,
+                            height: item.customHeight || item.height || 0,
                             depth: item.customDepth || item.depth || 58,
                             points: item.points || 0,
                             zonePoints: item.zonePoints || {},
