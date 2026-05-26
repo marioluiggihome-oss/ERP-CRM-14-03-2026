@@ -2281,7 +2281,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                   />
                 ) : (
                   /* TABLA DE MUEBLES (Modo Montada) */
-                  <table className="w-full text-left">
+                  <div className="overflow-x-auto">
+                  <table className="w-full text-left min-w-[700px]">
                   <thead className="bg-indigo-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
                     <tr>
                       <th className="p-2 pl-3 w-[45px]"></th>
@@ -2542,7 +2543,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
              {isCatalogOpen && <div onMouseDown={() => { isResizingCatalog.current = true; }} className="absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-orange-600/30 z-10"></div>}
              
              <div className="h-[calc(100%-50px)] overflow-y-auto">
-                <table className="w-full text-left">
+                <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[600px]">
                   <thead className="bg-indigo-950 text-white text-[10px] font-black uppercase sticky top-0 z-20">
                     <tr>
                       <th className="p-2 pl-3 w-[45px]"></th>
