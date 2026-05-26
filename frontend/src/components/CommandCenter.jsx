@@ -80,23 +80,35 @@ const CommandCenter = ({ currentUser }) => {
   const [dayFilter, setDayFilter] = useState(30);
   const [lastRefresh, setLastRefresh] = useState(null);
 
+  const safeFetch = async (url) => {
+    try {
+      const r = await fetch(url, { headers: getHeaders() });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) { 
+      console.error('Fetch error:', url, e);
+      return null; 
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const base = API_URL || '';
       const [ov, ua, al, tl, pf] = await Promise.all([
-        fetch(`${API_URL}/api/command-center/overview`, { headers: getHeaders() }).then(r => r.json()),
-        fetch(`${API_URL}/api/command-center/users-activity?days=${dayFilter}`, { headers: getHeaders() }).then(r => r.json()),
-        fetch(`${API_URL}/api/command-center/alerts`, { headers: getHeaders() }).then(r => r.json()),
-        fetch(`${API_URL}/api/command-center/activity-timeline?days=7`, { headers: getHeaders() }).then(r => r.json()),
-        fetch(`${API_URL}/api/command-center/performance/users?days=${dayFilter}`, { headers: getHeaders() }).then(r => r.json()),
+        safeFetch(`${base}/api/command-center/overview`),
+        safeFetch(`${base}/api/command-center/users-activity?days=${dayFilter}`),
+        safeFetch(`${base}/api/command-center/alerts`),
+        safeFetch(`${base}/api/command-center/activity-timeline?days=7`),
+        safeFetch(`${base}/api/command-center/performance/users?days=${dayFilter}`),
       ]);
-      setOverview(ov);
-      setUsersActivity(ua);
-      setAlerts(al);
-      setTimeline(tl);
-      setPerformance(pf);
+      if (ov) setOverview(ov);
+      if (ua) setUsersActivity(ua);
+      if (al) setAlerts(al);
+      if (tl) setTimeline(tl);
+      if (pf) setPerformance(pf);
       setLastRefresh(new Date());
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('CommandCenter load error:', e); }
     finally { setLoading(false); }
   }, [dayFilter]);
 

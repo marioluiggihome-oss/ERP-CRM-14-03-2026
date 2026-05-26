@@ -42,10 +42,16 @@ const Invoices = ({ currentUser }) => {
   const load = async () => {
     setLoading(true);
     try {
-      const [invs, st] = await Promise.all([invoicesAPI.getAll(statusFilter || null), invoicesAPI.getStats()]);
-      setInvoices(invs);
-      setStats(st);
-    } catch (e) { console.error(e); }
+      const [invs, st] = await Promise.all([
+        invoicesAPI.getAll(statusFilter || null).catch(() => []),
+        invoicesAPI.getStats().catch(() => ({ monthTotal:0, pendingTotal:0, issued:0, paid:0, overdue:0 }))
+      ]);
+      setInvoices(Array.isArray(invs) ? invs : []);
+      setStats(st || {});
+    } catch (e) { 
+      console.error('Invoices load error:', e);
+      setInvoices([]);
+    }
     finally { setLoading(false); }
   };
 

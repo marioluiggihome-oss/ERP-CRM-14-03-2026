@@ -29,6 +29,29 @@ import { initSecurityGuard } from './utils/securityGuard';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-full flex items-center justify-center bg-slate-50 p-8">
+          <div className="text-center">
+            <p className="text-2xl mb-2">⚠️</p>
+            <p className="font-black text-slate-700 text-sm uppercase">Error al cargar el módulo</p>
+            <p className="text-xs text-slate-400 mt-2 font-mono">{this.state.error?.message}</p>
+            <button onClick={() => this.setState({ hasError: false })} 
+              className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black">
+              Reintentar
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const APP_VERSION = 'v4.0-1779829874';
 
 const App = () => {
