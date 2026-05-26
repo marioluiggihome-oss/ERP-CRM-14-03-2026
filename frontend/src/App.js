@@ -29,6 +29,8 @@ import { initSecurityGuard } from './utils/securityGuard';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+const APP_VERSION = 'v4.0-1779829874';
+
 const App = () => {
   const [isManufacturingView, setIsManufacturingView] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -939,7 +941,7 @@ const App = () => {
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />
-               <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">BLINDADO v3.2 [REACT BUILD]</span>
+               <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">LUIGGI HOME ERP v4.0</span>
             </div>
           </main>
 

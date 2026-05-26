@@ -1,9 +1,8 @@
-FROM node:18-alpine AS builder2026
+# LUIGGI HOME ERP v4.0 - Build 20260526
+FROM node:18-alpine AS luiggi-builder-v4
 WORKDIR /app
-
 COPY package.json yarn.lock ./
 RUN yarn install --network-timeout 600000 --ignore-engines
-
 COPY . .
 ARG REACT_APP_BACKEND_URL
 ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
@@ -12,9 +11,9 @@ ENV CI=false
 ENV GENERATE_SOURCEMAP=false
 RUN yarn build
 
-FROM node:18-alpine AS runner2026
+FROM node:18-alpine AS luiggi-runner-v4
 RUN npm install -g serve
 WORKDIR /app
-COPY --from=builder2026 /app/build ./build
+COPY --from=luiggi-builder-v4 /app/build ./build
 EXPOSE 8080
 CMD ["serve", "-s", "build", "-l", "8080"]
