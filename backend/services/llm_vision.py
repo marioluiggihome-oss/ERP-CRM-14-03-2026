@@ -121,33 +121,39 @@ async def _analyze_with_google_genai(
     image_mime: str,
     api_key: str,
 ) -> str:
-    """Implementación con SDK oficial google-genai."""
+    """Implementación con SDK oficial google-genai (async)."""
+    import asyncio
     client = google_genai.Client(api_key=api_key)
-    
+
     image_bytes = base64.b64decode(image_base64)
-    
-    # Mapear nombres de modelo Emergent → Google
+
+    # Usar modelos estables disponibles en producción
     model_map = {
-        "gemini-2.5-flash": "gemini-2.5-flash",
-        "gemini-2.5-pro": "gemini-2.5-pro",
+        "gemini-2.5-flash": "gemini-2.0-flash",
+        "gemini-2.5-pro":   "gemini-2.0-flash",
         "gemini-2.0-flash": "gemini-2.0-flash",
         "gemini-1.5-flash": "gemini-1.5-flash",
-        "gemini-1.5-pro": "gemini-1.5-pro",
+        "gemini-1.5-pro":   "gemini-1.5-pro",
     }
-    google_model = model_map.get(model, "gemini-2.5-flash")
-    
-    response = client.models.generate_content(
-        model=google_model,
-        contents=[
-            google_genai_types.Part.from_bytes(
-                data=image_bytes,
-                mime_type=image_mime,
-            ),
-            prompt,
-        ],
-    )
-    
-    return response.text or ""
+    google_model = model_map.get(model, "gemini-2.0-flash")
+
+    # Ejecutar en executor para no bloquear el event loop
+    def _sync_call():
+        response = client.models.generate_content(
+            model=google_model,
+            contents=[
+                google_genai_types.Part.from_bytes(
+                    data=image_bytes,
+                    mime_type=image_mime,
+                ),
+                prompt,
+            ],
+        )
+        return response.text or ""
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, _sync_call)
+    return result
 
 
 async def _analyze_with_emergent(
