@@ -1211,6 +1211,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               Backups
             </button>
           )}
+
+          {/* Tab Facturación - Solo Admin */}
+          {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'billing' ? 'bg-emerald-700 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+            >
+              Facturación
+            </button>
+          )}
           
           {/* Pestaña Mantenimiento - Solo Admin */}
           {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
@@ -2892,6 +2904,40 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           )}
 
           {/* Tab Backups */}
+          {activeTab === 'billing' && (
+            <div className="p-6 space-y-6">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 uppercase mb-4">Datos de Facturación</h3>
+                <p className="text-xs text-slate-500 mb-6">Estos datos aparecerán en las facturas PDF generadas.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { key: 'companyName', label: 'Nombre / Razón Social', placeholder: 'LUIGGI HOME S.L.' },
+                    { key: 'companyTaxId', label: 'NIF / CIF', placeholder: 'B12345678' },
+                    { key: 'companyAddress', label: 'Dirección fiscal', placeholder: 'Calle...' },
+                    { key: 'companyPhone', label: 'Teléfono', placeholder: '+34 600 000 000' },
+                    { key: 'companyEmail', label: 'Email de facturación', placeholder: 'facturacion@empresa.es' },
+                    { key: 'companyIban', label: 'IBAN (datos bancarios)', placeholder: 'ES00 0000 0000 00 0000000000' },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</label>
+                      <input
+                        type="text"
+                        placeholder={field.placeholder}
+                        defaultValue={state.settings?.[field.key] || ''}
+                        onChange={async (e) => {
+                          try {
+                            await settingsAPI.update({ [field.key]: e.target.value });
+                          } catch (err) { console.error(err); }
+                        }}
+                        className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-medium"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'backups' && (
             <BackupsTab
               backups={backups}

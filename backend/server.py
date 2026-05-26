@@ -3793,6 +3793,16 @@ async def startup_event():
         await db.despiece_products.create_index("collection", sparse=True)
         logger.info("Índices de despiece_products creados")
 
+        # Índices para facturas
+        await db.invoices.create_index("id", unique=True)
+        await db.invoices.create_index("status")
+        await db.invoices.create_index("clientName")
+        await db.invoices.create_index("invoiceNumber")
+        await db.invoices.create_index("projectId", sparse=True)
+        await db.invoices.create_index("dueDate", sparse=True)
+        await db.invoices.create_index("createdAt")
+        logger.info("Índices de invoices creados")
+
         logger.info("✅ Todos los índices de base de datos configurados correctamente")
         
     except Exception as e:
