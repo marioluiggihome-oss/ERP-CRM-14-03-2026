@@ -271,9 +271,22 @@ async def analyze_kitchen_plan(
         logger.info(f"Kitchen plan analyzed: {len(data.get('muebles_detectados', []))} furniture items detected for {active_library}")
         return {"success": True, "analysis": data, "library": active_library}
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Kitchen plan analysis error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        tb = traceback.format_exc()
+        logger.error(f"Kitchen plan analysis error: {e}\n{tb}")
+        # Dar mensaje más descriptivo al usuario
+        msg = str(e)
+        if 'quota' in msg.lower() or '429' in msg:
+            raise HTTPException(status_code=429, detail="Límite de uso de IA alcanzado. Espera un momento.")
+        elif 'api_key' in msg.lower() or '400' in msg:
+            raise HTTPException(status_code=503, detail="Error de configuración de IA. Verifica GEMINI_API_KEY.")
+        elif 'timeout' in msg.lower():
+            raise HTTPException(status_code=504, detail="La IA tardó demasiado. Intenta con una imagen más pequeña.")
+        else:
+            raise HTTPException(status_code=500, detail=f"Error al analizar: {msg[:200]}")
 
 
 @router.post("/analyze-kitchen-plan-multi")
