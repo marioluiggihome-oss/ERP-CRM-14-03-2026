@@ -89,21 +89,16 @@ async def analyze_image_with_gemini(
 
     gemini_key = get_gemini_key()
     
-    # Opción 1: google.genai directo (preferida en producción Railway)
+    # SIEMPRE usar google-genai en producción Railway
     if gemini_key and GOOGLE_GENAI_AVAILABLE:
-        try:
-            return await _analyze_with_google_genai(
-                image_base64, prompt, model, image_mime, gemini_key
-            )
-        except Exception as e:
-            logger.error(f"google.genai falló: {e}", exc_info=True)
-            # Continuar al fallback si hay emergent disponible
-            if not (get_emergent_key() and EMERGENT_AVAILABLE):
-                raise
+        return await _analyze_with_google_genai(
+            image_base64, prompt, model, image_mime, gemini_key
+        )
     
-    # Opción 2: emergentintegrations (entorno Emergent)
+    # Fallback: emergentintegrations SOLO si estamos dentro de Emergent
+    # (no funciona en Railway con plan free)
     emergent_key = get_emergent_key()
-    if emergent_key and EMERGENT_AVAILABLE:
+    if emergent_key and EMERGENT_AVAILABLE and not gemini_key:
         return await _analyze_with_emergent(
             image_base64, prompt, session_id, model, emergent_key
         )
