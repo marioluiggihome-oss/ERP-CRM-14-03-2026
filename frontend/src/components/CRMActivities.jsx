@@ -49,7 +49,7 @@ const CRMActivities = ({ currentUser }) => {
   const fetchActivities = async () => {
     try {
       const response = await fetch(`${API_URL}/api/crm/activities`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -65,7 +65,7 @@ const CRMActivities = ({ currentUser }) => {
   const fetchContacts = async () => {
     try {
       const response = await fetch(`${API_URL}/api/crm/contacts`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -87,7 +87,7 @@ const CRMActivities = ({ currentUser }) => {
         method: editingId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}`
         },
         body: JSON.stringify({
           ...formData,
@@ -110,7 +110,7 @@ const CRMActivities = ({ currentUser }) => {
     try {
       await fetch(`${API_URL}/api/crm/activities/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}` }
       });
       fetchActivities();
     } catch (error) {

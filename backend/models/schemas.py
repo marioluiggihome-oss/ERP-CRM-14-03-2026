@@ -703,9 +703,14 @@ class ActivityModel(BaseModel):
     description: str
     contactId: Optional[str] = None
     opportunityId: Optional[str] = None
-    userId: str
+    userId: Optional[str] = ""
     userName: str = ""
+    title: Optional[str] = None
+    dueDate: Optional[str] = None
+    dueTime: Optional[str] = None
+    completed: bool = False
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ActivityCreate(BaseModel):
@@ -713,6 +718,11 @@ class ActivityCreate(BaseModel):
     description: str
     contactId: Optional[str] = None
     opportunityId: Optional[str] = None
+    userId: Optional[str] = None
+    userName: Optional[str] = ""
+    dueDate: Optional[str] = None
+    dueTime: Optional[str] = None
+    title: Optional[str] = None
 
 
 class ActivityUpdate(BaseModel):
