@@ -319,12 +319,21 @@ async def save_digitalizador_to_presupuestos(request: DigitalizadorToProjectRequ
 # IA ANALYSIS
 # ============================================
 
+# Límite máximo de imagen: 10 MB (base64 ≈ 13.3MB de string)
+MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10MB
+MAX_BASE64_LENGTH = MAX_IMAGE_BYTES * 4 // 3  # ~13.3M chars
+
+
 @router.post("/digitalizador/analyze")
 async def analyze_draft(request: DigitalizadorRequest):
     """
     Analyze a draft image using Gemini Vision to extract budget lines.
     Returns structured data with quantities, descriptions, and dimensions.
     """
+    # Validar tamaño de imagen para evitar DoS
+    if request.imageBase64 and len(request.imageBase64) > MAX_BASE64_LENGTH:
+        raise HTTPException(status_code=413, detail=f"Imagen demasiado grande. Máximo {MAX_IMAGE_BYTES // 1024 // 1024}MB.")
+
     try:
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         

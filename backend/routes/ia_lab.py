@@ -206,6 +206,11 @@ Responde SOLO con JSON válido:
 }"""
 
 
+# Límite máximo: 10MB
+MAX_KITCHEN_IMAGE = 10 * 1024 * 1024
+MAX_KITCHEN_BASE64 = MAX_KITCHEN_IMAGE * 4 // 3
+
+
 @router.post("/analyze-kitchen-plan")
 async def analyze_kitchen_plan(
     file: UploadFile = File(...),
