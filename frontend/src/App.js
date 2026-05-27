@@ -925,6 +925,7 @@ const App = () => {
 
           <main className="flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10">
             {state.currentTab === 'budget' && (
+              <ErrorBoundary>
               <BudgetTable 
                 items={state.currentModule === 'montada' ? state.budgetItemsMontada : state.budgetItemsDespiece} 
                 catalogs={state.catalogs} 
@@ -933,6 +934,7 @@ const App = () => {
                 setState={setState} 
                 onOpenManufacturing={() => setIsManufacturingView(true)} 
               />
+              </ErrorBoundary>
             )}
             {state.currentTab === 'visualizer' && state.currentUser?.canUseAIAnalysis && (
               <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
