@@ -90,9 +90,14 @@ const CRMActivities = ({ currentUser }) => {
           'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}`
         },
         body: JSON.stringify({
-          ...formData,
-          userId: currentUser?.id,
-          userName: currentUser?.clientName || currentUser?.username
+          activityType: formData.type || 'call',
+          description: [formData.subject, formData.notes].filter(Boolean).join(' - ') || formData.subject || 'Sin descripción',
+          contactId: formData.contactId || null,
+          title: formData.subject || '',
+          dueDate: formData.date || null,
+          dueTime: formData.time || null,
+          userId: currentUser?.id || '',
+          userName: currentUser?.clientName || currentUser?.username || ''
         })
       });
 
@@ -120,7 +125,7 @@ const CRMActivities = ({ currentUser }) => {
 
   const handleEdit = (activity) => {
     setFormData({
-      type: activity.type,
+      type: activity.activityType || activity.type || 'call',
       contactId: activity.contactId || '',
       contactName: activity.contactName || '',
       date: activity.date?.split('T')[0] || new Date().toISOString().split('T')[0],
@@ -157,7 +162,7 @@ const CRMActivities = ({ currentUser }) => {
       activity.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.notes?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesType = filterType === 'all' || activity.type === filterType;
+    const matchesType = filterType === 'all' || (activity.activityType || activity.type) === filterType;
     
     let matchesDate = true;
     if (filterDate !== 'all') {
@@ -522,7 +527,7 @@ const CRMActivities = ({ currentUser }) => {
                 {/* Actividades del día */}
                 <div className="space-y-2">
                   {dateActivities.map(activity => {
-                    const typeConfig = ACTIVITY_TYPES[activity.type] || ACTIVITY_TYPES.note;
+                    const typeConfig = ACTIVITY_TYPES[activity.activityType || activity.type] || ACTIVITY_TYPES.note;
                     const Icon = typeConfig.icon;
                     const isExpanded = expandedId === activity.id;
 
