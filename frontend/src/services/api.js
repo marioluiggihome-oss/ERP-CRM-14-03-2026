@@ -839,17 +839,21 @@ export const backupAPI = {
 // ============================================
 
 export const crmContactsAPI = {
+  _h: () => {
+    const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  },
+
   getAll: async (status = null, search = null, options = {}) => {
     let url = `${API_URL}/api/crm/contacts`;
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (search) params.append('search', search);
-    // Filtrado por comercial asignado (para usuarios no-admin)
     if (options.assignedTo) params.append('assignedTo', options.assignedTo);
     if (options.isAdmin !== undefined) params.append('isAdmin', options.isAdmin);
     if (params.toString()) url += `?${params.toString()}`;
     
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: crmContactsAPI._h() });
     if (!response.ok) throw new Error('Error al obtener contactos');
     return response.json();
   },
@@ -863,7 +867,7 @@ export const crmContactsAPI = {
   create: async (contact) => {
     const response = await fetch(`${API_URL}/api/crm/contacts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: crmContactsAPI._h(),
       body: JSON.stringify(contact)
     });
     if (!response.ok) throw new Error('Error al crear contacto');
@@ -873,7 +877,7 @@ export const crmContactsAPI = {
   update: async (id, contact) => {
     const response = await fetch(`${API_URL}/api/crm/contacts/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: crmContactsAPI._h(),
       body: JSON.stringify(contact)
     });
     if (!response.ok) throw new Error('Error al actualizar contacto');
@@ -882,7 +886,8 @@ export const crmContactsAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/crm/contacts/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: crmContactsAPI._h()
     });
     if (!response.ok) throw new Error('Error al eliminar contacto');
     return response.json();
