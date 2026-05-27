@@ -3803,6 +3803,38 @@ async def startup_event():
         await db.invoices.create_index("createdAt")
         logger.info("Índices de invoices creados")
 
+        # Índices para CRM - contactos, oportunidades, actividades
+        await db.contacts.create_index("id", unique=True)
+        await db.contacts.create_index("createdByUserId", sparse=True)
+        await db.contacts.create_index("status")
+        await db.contacts.create_index([("createdByUserId", 1), ("status", 1)])
+        await db.opportunities.create_index("id", unique=True)
+        await db.opportunities.create_index("contactId", sparse=True)
+        await db.opportunities.create_index("assignedTo", sparse=True)
+        await db.opportunities.create_index("stage")
+        await db.opportunities.create_index([("assignedTo", 1), ("stage", 1)])
+        await db.activities.create_index("id", unique=True)
+        await db.activities.create_index("contactId", sparse=True)
+        await db.activities.create_index("opportunityId", sparse=True)
+        await db.activities.create_index("userId", sparse=True)
+        await db.activities.create_index("createdAt")
+        logger.info("Índices de CRM creados")
+
+        # Índices para Command Center - actividad de usuarios
+        await db.user_activity.create_index("userId")
+        await db.user_activity.create_index("activityType")
+        await db.user_activity.create_index("timestamp")
+        await db.user_activity.create_index([("userId", 1), ("timestamp", -1)])
+        await db.user_activity.create_index([("activityType", 1), ("timestamp", -1)])
+        logger.info("Índices de user_activity creados")
+
+        # Índices para projects (presupuestos) - rendimiento panel mando
+        await db.projects.create_index("userId", sparse=True)
+        await db.projects.create_index("status")
+        await db.projects.create_index([("userId", 1), ("status", 1)])
+        await db.projects.create_index([("userId", 1), ("createdAt", -1)])
+        logger.info("Índices de projects creados")
+
         logger.info("✅ Todos los índices de base de datos configurados correctamente")
         
     except Exception as e:
