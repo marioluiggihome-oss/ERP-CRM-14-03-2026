@@ -941,6 +941,8 @@ const App = () => {
             )}
             {state.currentTab === 'library' && <ErrorBoundary><ProjectLibrary state={state} setState={setState} /></ErrorBoundary>}
             {state.currentTab === 'backup' && <BackupManager />}
+            {state.currentTab === 'invoices' && <ErrorBoundary><Invoices currentUser={state.currentUser} /></ErrorBoundary>}
+            {state.currentTab === 'command' && <ErrorBoundary><CommandCenter currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'digitalizador' && state.currentUser?.canUseDigitalizador && (
               <Digitalizador state={state} />
             )}
