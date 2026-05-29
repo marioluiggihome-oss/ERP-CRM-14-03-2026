@@ -7,6 +7,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import hashlib
+import secrets
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
@@ -205,19 +207,19 @@ def verify_password(password: str, hashed: str) -> bool:
     if hashed.startswith('$2b$') or hashed.startswith('$2a$'):
         try:
             return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-        except:
-            pass
+        except Exception:
+            return False
     
-    # Intento 2: SHA256 hash (64 caracteres hexadecimales)
+    # Intento 2: SHA256 hash (64 caracteres hexadecimales) - solo cuentas heredadas
     if len(hashed) == 64:
         try:
             sha256_hash = hashlib.sha256(password.encode()).hexdigest()
             return sha256_hash == hashed
-        except:
+        except Exception:
             pass
-    
-    # Intento 3: Plain text (para migración de datos antiguos)
-    return password == hashed
+
+    # No se admite comparación en texto plano: si el hash no es bcrypt ni sha256, rechazar.
+    return False
 
 
 # Add your routes to the router instead of directly to app
@@ -1026,7 +1028,7 @@ async def get_client(client_id: str):
     return client
 
 @api_router.post("/clients")
-async def create_client(client: dict):
+async def create_client(client: dict, current_user: dict = Depends(require_auth)):
     """Crear un nuevo cliente. Acepta nombres de campo en español (codigo, nombre, cif, ...)
     o en inglés (code, name, taxId, ...). Esto evita fallos por discrepancia entre el
     formulario (español) y el modelo Pydantic (inglés)."""
@@ -1067,7 +1069,7 @@ async def create_client(client: dict):
     return client_data
 
 @api_router.put("/clients/{client_id}")
-async def update_client(client_id: str, client: ClientUpdate):
+async def update_client(client_id: str, client: ClientUpdate, current_user: dict = Depends(require_auth)):
     """Actualizar un cliente"""
     existing = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not existing:
@@ -1094,7 +1096,7 @@ async def update_client(client_id: str, client: ClientUpdate):
     return updated
 
 @api_router.delete("/clients/{client_id}")
-async def delete_client(client_id: str, force: bool = False):
+async def delete_client(client_id: str, force: bool = False, current_user: dict = Depends(require_auth)):
     """Eliminar un cliente. Si force=True, desvincula usuarios automáticamente."""
     # Check if client has linked users
     linked_users = await db.users.count_documents({"linkedClientId": client_id})
@@ -1120,7 +1122,7 @@ async def delete_client(client_id: str, force: bool = False):
     return {"message": "Cliente eliminado"}
 
 @api_router.post("/clients/import-csv")
-async def import_clients_csv(data: dict):
+async def import_clients_csv(data: dict, current_user: dict = Depends(require_auth)):
     """Importar clientes desde CSV (lista de objetos)"""
     clients_data = data.get("clients", [])
     if not clients_data:
@@ -1175,7 +1177,7 @@ async def import_clients_csv(data: dict):
     }
 
 @api_router.post("/clients/from-contact/{contact_id}")
-async def create_client_from_contact(contact_id: str):
+async def create_client_from_contact(contact_id: str, current_user: dict = Depends(require_auth)):
     """Convertir un contacto del CRM en cliente potencial"""
     # Get contact from CRM
     contact = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
@@ -1224,7 +1226,7 @@ async def create_client_from_contact(contact_id: str):
     return client_data
 
 @api_router.post("/clients/{client_id}/activate")
-async def activate_client(client_id: str, data: dict):
+async def activate_client(client_id: str, data: dict, current_user: dict = Depends(require_auth)):
     """Activar un cliente potencial asignándole código"""
     codigo = data.get("codigo", "").upper().strip()
     if not codigo:
@@ -1258,7 +1260,7 @@ async def activate_client(client_id: str, data: dict):
     return updated
 
 @api_router.post("/clients/{client_id}/link-user")
-async def link_client_to_user(client_id: str, data: dict):
+async def link_client_to_user(client_id: str, data: dict, current_user: dict = Depends(require_auth)):
     """Vincular un cliente a un usuario del sistema"""
     user_id = data.get("userId", "")
     
@@ -1304,9 +1306,9 @@ async def login(request: Request, credentials: dict):
         # Intentar búsqueda en mayúsculas
         user = await db.users.find_one({"username": username.upper()}, {"_id": 0})
     if not user:
-        # Intentar búsqueda case-insensitive
+        # Intentar búsqueda case-insensitive (escapando metacaracteres regex)
         user = await db.users.find_one(
-            {"username": {"$regex": f"^{username}$", "$options": "i"}}, 
+            {"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}},
             {"_id": 0}
         )
     
@@ -1762,7 +1764,7 @@ async def get_product(product_id: str):
     return product
 
 @api_router.post("/products", response_model=ProductModel)
-async def create_product(product: ProductCreate):
+async def create_product(product: ProductCreate, current_user: dict = Depends(require_auth)):
     """Crear un nuevo producto"""
     product_obj = ProductModel(**product.model_dump())
     product_obj.code = product_obj.code.upper()
@@ -1775,7 +1777,7 @@ async def create_product(product: ProductCreate):
     return product_obj
 
 @api_router.post("/products/bulk")
-async def create_products_bulk(products: List[dict]):
+async def create_products_bulk(products: List[dict], current_user: dict = Depends(require_admin)):
     """Crear múltiples productos - acepta datos flexibles del importador IA"""
     created = []
     errors = []
@@ -1840,7 +1842,7 @@ async def create_products_bulk(products: List[dict]):
     }
 
 @api_router.post("/products/bulk-upsert")
-async def bulk_upsert_products(data: dict):
+async def bulk_upsert_products(data: dict, current_user: dict = Depends(require_admin)):
     """
     Crear productos nuevos o actualizar zonePoints de productos existentes.
     Para MV: actualiza la tarifa específica (T1, T2, ... T21) en zonePoints.
@@ -1929,7 +1931,7 @@ async def bulk_upsert_products(data: dict):
 
 
 @api_router.put("/products/{product_id}", response_model=ProductModel)
-async def update_product(product_id: str, product: ProductCreate):
+async def update_product(product_id: str, product: ProductCreate, current_user: dict = Depends(require_auth)):
     """Actualizar un producto"""
     existing = await db.products.find_one({"id": product_id}, {"_id": 0})
     if not existing:
@@ -1945,7 +1947,7 @@ async def update_product(product_id: str, product: ProductCreate):
     return updated
 
 @api_router.patch("/products/{product_id}/zone-points")
-async def update_product_zone_points(product_id: str, zone_points: dict):
+async def update_product_zone_points(product_id: str, zone_points: dict, current_user: dict = Depends(require_auth)):
     """Actualizar solo los zonePoints de un producto"""
     existing = await db.products.find_one({"id": product_id}, {"_id": 0})
     if not existing:
@@ -1966,7 +1968,7 @@ async def update_product_zone_points(product_id: str, zone_points: dict):
     return updated
 
 @api_router.delete("/products/{product_id}")
-async def delete_product(product_id: str):
+async def delete_product(product_id: str, current_user: dict = Depends(require_auth)):
     """Eliminar un producto"""
     result = await db.products.delete_one({"id": product_id})
     if result.deleted_count == 0:
@@ -2059,7 +2061,7 @@ Si no hay 12 zonas, incluye solo las que aparezcan. Extrae TODOS los productos d
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/products/fix-heights")
-async def fix_product_heights():
+async def fix_product_heights(current_user: dict = Depends(require_admin)):
     """
     Corregir alturas de productos que están en decímetros en vez de centímetros.
     Multiplica por 10 las alturas que son <= 30 (11, 12, 13, 14, 16, 20, 22, 24)
@@ -2086,7 +2088,7 @@ async def fix_product_heights():
     }
 
 @api_router.post("/products/fix-semicolumna-names")
-async def fix_semicolumna_names():
+async def fix_semicolumna_names(current_user: dict = Depends(require_admin)):
     """
     Corregir nombres de semicolumnas: 11cm -> 110cm, 12cm -> 120cm, etc.
     """
@@ -2123,7 +2125,7 @@ async def fix_semicolumna_names():
     }
 
 @api_router.post("/products/fix-names")
-async def fix_product_names():
+async def fix_product_names(current_user: dict = Depends(require_admin)):
     """
     Corregir nombres de productos para unificar unidades a centímetros.
     - Convierte '580cm' a '58cm', '330cm' a '33cm'
@@ -2167,7 +2169,7 @@ async def fix_product_names():
     }
 
 @api_router.delete("/products/bulk/delete")
-async def delete_products_bulk(product_ids: List[str]):
+async def delete_products_bulk(product_ids: List[str], current_user: dict = Depends(require_admin)):
     """Eliminar múltiples productos"""
     result = await db.products.delete_many({"id": {"$in": product_ids}})
     return {"message": f"{result.deleted_count} productos eliminados"}
@@ -2252,7 +2254,7 @@ async def get_projects_summary_by_client():
     }
 
 @api_router.get("/admin/all-work")
-async def get_all_work_for_admin():
+async def get_all_work_for_admin(current_user: dict = Depends(require_admin)):
     """
     [ADMIN ONLY] Obtener todos los trabajos de todos los usuarios.
     Incluye proyectos, oportunidades y digitalizaciones.
@@ -2300,7 +2302,7 @@ async def get_all_work_for_admin():
     }
 
 @api_router.get("/admin/metrics")
-async def get_admin_metrics():
+async def get_admin_metrics(current_user: dict = Depends(require_admin)):
     """
     [DIRECTOR COMERCIAL ONLY] Métricas completas del sistema por delegación y comercial.
     Incluye ventas, oportunidades, rendimiento de comerciales, etc.
@@ -2411,7 +2413,7 @@ async def get_admin_metrics():
 
 
 @api_router.get("/admin/metrics/trends")
-async def get_admin_metrics_trends():
+async def get_admin_metrics_trends(current_user: dict = Depends(require_admin)):
     """
     [DIRECTOR COMERCIAL ONLY] Métricas de tendencias mensuales.
     Devuelve datos agrupados por mes para gráficos de ventas y pipeline.
@@ -2525,10 +2527,17 @@ def get_month_label(month_str: str) -> str:
 
 
 @api_router.get("/commercial/my-shops-work")
-async def get_commercial_shops_work(commercial_id: str):
+async def get_commercial_shops_work(commercial_id: str, current_user: dict = Depends(require_auth)):
     """
     [COMERCIAL ONLY] Obtener todos los trabajos de las tiendas asignadas a este comercial.
+    Un usuario sin rol elevado solo puede consultar SUS propias tiendas.
     """
+    is_elevated = any(current_user.get(f) for f in (
+        "isAdmin", "isResponsableDelegacion", "isGerente", "isDirectorComercial", "isDirectorFabrica"
+    ))
+    if not is_elevated and commercial_id != current_user.get("id"):
+        raise HTTPException(status_code=403, detail="No puedes consultar los trabajos de otro comercial")
+
     # Get users (shops) assigned to this commercial
     shops = await db.users.find(
         {"linkedRepresentativeId": commercial_id},
@@ -2597,7 +2606,7 @@ async def check_budget_number(budget_number: str):
     return {"exists": False}
 
 @api_router.post("/projects", response_model=ProjectModel)
-async def create_project(project: ProjectCreate, user_id: str, client_code: Optional[str] = None):
+async def create_project(project: ProjectCreate, user_id: str, client_code: Optional[str] = None, current_user: dict = Depends(require_auth)):
     """
     Crear un nuevo proyecto/presupuesto.
     El client_code se usa para agrupar presupuestos por cliente.
@@ -2634,7 +2643,7 @@ async def create_project(project: ProjectCreate, user_id: str, client_code: Opti
     return project_data
 
 @api_router.put("/projects/{project_id}", response_model=ProjectModel)
-async def update_project(project_id: str, project: ProjectUpdate):
+async def update_project(project_id: str, project: ProjectUpdate, current_user: dict = Depends(require_auth)):
     """Actualizar un proyecto guardando snapshot de versión anterior"""
     existing = await db.projects.find_one({"id": project_id}, {"_id": 0})
     if not existing:
@@ -2686,7 +2695,7 @@ async def update_project(project_id: str, project: ProjectUpdate):
 
 
 @api_router.post("/projects/{project_id}/clone")
-async def clone_project(project_id: str, user_id: str, body: dict = {}):
+async def clone_project(project_id: str, user_id: str, body: dict = {}, current_user: dict = Depends(require_auth)):
     """
     Duplicar un presupuesto existente como nuevo borrador.
     Copia todos los items, colores y materiales.
@@ -2740,7 +2749,7 @@ async def clone_project(project_id: str, user_id: str, body: dict = {}):
     return new_project
 
 @api_router.delete("/projects/{project_id}")
-async def delete_project(project_id: str):
+async def delete_project(project_id: str, current_user: dict = Depends(require_auth)):
     """Eliminar un proyecto"""
     result = await db.projects.delete_one({"id": project_id})
     if result.deleted_count == 0:
@@ -2749,7 +2758,7 @@ async def delete_project(project_id: str):
 
 
 @api_router.patch("/projects/{project_id}/status")
-async def change_project_status(project_id: str, body: dict):
+async def change_project_status(project_id: str, body: dict, current_user: dict = Depends(require_auth)):
     """
     Cambiar el estado de un presupuesto con historial de transiciones.
     
@@ -2854,41 +2863,33 @@ async def get_project_status_history(project_id: str):
 
 @api_router.post("/init")
 async def init_data():
-    """Inicializar datos base (admin user con password hasheado)"""
-    # Check if admin exists
-    admin = await db.users.find_one({"id": "admin"})
+    """Comprobar el estado de inicialización de datos base.
+
+    El usuario administrador (master) se crea/actualiza automáticamente en el evento
+    de arranque (`startup`) usando MASTER_PASSWORD. Este endpoint ya NO crea usuarios
+    con contraseñas débiles; solo informa de si existe un administrador y migra a
+    bcrypt cualquier contraseña heredada en texto plano del admin master.
+    """
+    admin = await db.users.find_one(
+        {"$or": [{"id": "user-master-mario"}, {"isAdmin": True}]},
+        {"_id": 0}
+    )
+
     if not admin:
-        admin_data = {
-            "id": "admin",
-            "username": "MARIO",
-            "password": hash_password("MARIO"),  # Hash the password
-            "clientName": "LUIGGI MASTER DESIGN",
-            "isActive": True,
-            "isAdmin": True,
-            "isRepresentative": False,
-            "linkedRepresentativeId": None,
-            "allowedModules": ["montada", "despiece"],
-            "allowedCatalogIds": ["cat-m-base", "cat-d-base"],
-            "commercialDiscount": 45,
-            "canSeeCost": True,
-            "canSeeRetail": True,
-            "canUseAIAnalysis": True,
-            "canManageArticles": True,
-            "canViewTechnicalDespiece": True,
-            "canAccessCRM": True,
-            "useCustomBranding": True,
-            "canChangeLogo": True
+        return {
+            "message": "No hay administrador. Se creará automáticamente en el próximo "
+                       "arranque del servidor (define MASTER_PASSWORD).",
+            "initialized": False
         }
-        await db.users.insert_one(admin_data)
-        return {"message": "Admin creado", "admin": user_to_response(admin_data)}
-    
-    # If admin exists with plain text password, update to hashed
-    if admin.get("password") and not admin["password"].startswith("$2"):
-        hashed = hash_password(admin["password"])
-        await db.users.update_one({"id": "admin"}, {"$set": {"password": hashed}})
-        return {"message": "Admin password actualizado a hash"}
-    
-        raise HTTPException(status_code=500, detail=str(e))
+
+    # Migrar contraseña heredada en texto plano del admin a bcrypt, si procede.
+    pwd = admin.get("password") or ""
+    if pwd and not pwd.startswith("$2"):
+        hashed = hash_password(pwd)
+        await db.users.update_one({"id": admin["id"]}, {"$set": {"password": hashed}})
+        return {"message": "Contraseña del administrador migrada a hash bcrypt", "initialized": True}
+
+    return {"message": "Sistema ya inicializado", "initialized": True}
 
 
 # ============================================
@@ -3116,6 +3117,26 @@ def calculate_furniture_despiece(
     )
     
     # =============================================
+    # CAJONES - Detección (debe calcularse ANTES de las baldas, que dependen de has_drawers)
+    # =============================================
+    has_drawers = False
+    num_drawers = 0
+    drawer_height_cm = 0
+
+    # Detectar cajones por código/nombre
+    cajon_keywords = ['CAJ', 'CAJON', 'CAJÓN', 'DRAWER', 'BT', 'BCG', 'BCGF', 'BGF', 'BGC']
+    if any(k in code_upper or k in name_upper for k in cajon_keywords):
+        has_drawers = True
+        # Estimar número de cajones según la altura
+        if h >= 70:
+            num_drawers = 3
+        elif h >= 50:
+            num_drawers = 2
+        else:
+            num_drawers = 1
+        drawer_height_cm = round((h - 1.0) / num_drawers - 0.3, 1)  # Alto interior cajón
+
+    # =============================================
     # BALDAS / ESTANTES (Shelves)
     # Largo = ANCHO INTERIOR - margen soportes (0.5cm)
     # Ancho = FONDO INTERIOR - margen frontal (2cm retranqueo)
@@ -3216,25 +3237,8 @@ def calculate_furniture_despiece(
             num_doors = 4
     
     # =============================================
-    # CAJONES - Detectar si el mueble tiene cajones
+    # CAJONES - Alta de componentes (la detección se hizo antes de las baldas)
     # =============================================
-    has_drawers = False
-    num_drawers = 0
-    drawer_height_cm = 0
-
-    # Detectar cajones por código/nombre
-    cajon_keywords = ['CAJ', 'CAJON', 'CAJÓN', 'DRAWER', 'BT', 'BCG', 'BCGF', 'BGF', 'BGC']
-    if any(k in code_upper or k in name_upper for k in cajon_keywords):
-        has_drawers = True
-        # Estimar número de cajones según la altura
-        if h >= 70:
-            num_drawers = 3
-        elif h >= 50:
-            num_drawers = 2
-        else:
-            num_drawers = 1
-        drawer_height_cm = round((h - 1.0) / num_drawers - 0.3, 1)  # Alto interior cajón
-
     if has_drawers and num_drawers > 0:
         drawer_width = ancho_interior - 2  # Ancho cajón = ancho interior menos guías
         drawer_depth = fondo_interior - 4  # Fondo cajón = fondo interior menos frontal
@@ -3481,8 +3485,8 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
         user_id = payload.get("sub")
         user = await db.users.find_one({"id": user_id}, {"_id": 0})
         
-        if not user or user.get('role') != 'director_comercial':
-            raise HTTPException(status_code=403, detail="Solo el Director Comercial puede exportar la base de datos")
+        if not user or not (user.get('isAdmin') or user.get('isDirectorComercial')):
+            raise HTTPException(status_code=403, detail="Solo el Director Comercial o un administrador puede exportar la base de datos")
         
         # Create workbook
         wb = Workbook()
@@ -3590,7 +3594,14 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
         output.seek(0)
         
         # Log audit
-        await log_audit("database_export", user_id, "admin", True, {"tables": ["users", "products_montada", "products_despiece", "projects"]})
+        audit.log(
+            AuditAction.PROJECT_EXPORT,
+            user_id=user_id,
+            username=user.get("username"),
+            resource_type="database",
+            success=True,
+            details={"tables": ["users", "products_montada", "products_despiece", "projects"]}
+        )
         
         filename = f"LUIGGI_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
@@ -3607,7 +3618,7 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
         raise HTTPException(status_code=500, detail=f"Error exportando base de datos: {str(e)}")
 
 @api_router.post("/products/fix-data")
-async def fix_product_data():
+async def fix_product_data(current_user: dict = Depends(require_admin)):
     """
     Fix product data:
     1. Semicolumnas series: 11 -> 110, 12 -> 120, etc.
@@ -3844,11 +3855,11 @@ async def startup_event():
     # CREAR/ACTUALIZAR USUARIO MASTER
     # =============================================
     try:
-        hashed_password = bcrypt.hashpw("Mario2025*".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        master_user = {
-            "id": "user-master-mario",
+        now = datetime.now(timezone.utc)
+        # Campos de rol/permisos del usuario master (idempotentes en cada arranque).
+        # IMPORTANTE: la contraseña NO se incluye aquí para no sobrescribirla en cada reinicio.
+        master_fields = {
             "username": "MARIO",
-            "password": hashed_password,
             "email": "mario@luiggihome.es",
             "clientName": "ADMINISTRADOR MASTER",
             "phone": "",
@@ -3878,17 +3889,45 @@ async def startup_event():
             "allowedModules": ["montada", "despiece", "armarios"],
             "active": True,
             "isActive": True,
-            "createdAt": datetime.now(timezone.utc),
-            "updatedAt": datetime.now(timezone.utc)
+            "updatedAt": now,
         }
-        
-        # Usar upsert para crear o actualizar
-        await db.users.update_one(
-            {"username": "MARIO"},
-            {"$set": master_user},
-            upsert=True
-        )
-        logger.info("✅ Usuario MASTER (MARIO) configurado - Contraseña: Mario2025*")
+
+        # La contraseña del master se toma de la variable de entorno MASTER_PASSWORD.
+        # Si se define, se (re)establece en cada arranque (permite rotarla desde Railway).
+        master_password = os.environ.get('MASTER_PASSWORD')
+        existing_master = await db.users.find_one({"username": "MARIO"}, {"_id": 0, "password": 1})
+
+        if not existing_master:
+            # Primera creación: si no hay MASTER_PASSWORD, generar una temporal aleatoria
+            # y registrarla UNA sola vez para no quedar bloqueados.
+            if master_password:
+                initial_password = master_password
+                log_temp = False
+            else:
+                initial_password = secrets.token_urlsafe(12)
+                log_temp = True
+            doc = {
+                **master_fields,
+                "id": "user-master-mario",
+                "password": bcrypt.hashpw(initial_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+                "createdAt": now,
+            }
+            await db.users.insert_one(doc)
+            if log_temp:
+                logger.warning(
+                    "⚠️ Usuario MASTER (MARIO) creado con contraseña TEMPORAL: %s — "
+                    "cámbiala de inmediato y define MASTER_PASSWORD.", initial_password
+                )
+            else:
+                logger.info("✅ Usuario MASTER (MARIO) creado.")
+        else:
+            update = {"$set": dict(master_fields)}
+            if master_password:
+                update["$set"]["password"] = bcrypt.hashpw(
+                    master_password.encode('utf-8'), bcrypt.gensalt()
+                ).decode('utf-8')
+            await db.users.update_one({"username": "MARIO"}, update)
+            logger.info("✅ Usuario MASTER (MARIO) actualizado (roles/permisos).")
     except Exception as e:
         logger.warning(f"Error configurando usuario master: {e}")
     

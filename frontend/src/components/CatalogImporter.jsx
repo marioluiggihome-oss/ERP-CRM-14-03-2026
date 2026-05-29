@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { authHeaders } from '../services/api';
 import { Upload, Loader2, FileText, Check, AlertCircle, Package, Trash2, Download } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -70,7 +71,7 @@ const CatalogImporter = ({ onProductsImported }) => {
 
       const response = await fetch(`${API_URL}/api/products/bulk?module=montada`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(productsToImport)
       });
 
