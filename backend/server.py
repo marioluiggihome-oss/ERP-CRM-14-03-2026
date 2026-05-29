@@ -1028,7 +1028,7 @@ async def get_client(client_id: str):
     return client
 
 @api_router.post("/clients")
-async def create_client(client: dict):
+async def create_client(client: dict, current_user: dict = Depends(require_auth)):
     """Crear un nuevo cliente. Acepta nombres de campo en español (codigo, nombre, cif, ...)
     o en inglés (code, name, taxId, ...). Esto evita fallos por discrepancia entre el
     formulario (español) y el modelo Pydantic (inglés)."""
@@ -1069,7 +1069,7 @@ async def create_client(client: dict):
     return client_data
 
 @api_router.put("/clients/{client_id}")
-async def update_client(client_id: str, client: ClientUpdate):
+async def update_client(client_id: str, client: ClientUpdate, current_user: dict = Depends(require_auth)):
     """Actualizar un cliente"""
     existing = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not existing:
@@ -1096,7 +1096,7 @@ async def update_client(client_id: str, client: ClientUpdate):
     return updated
 
 @api_router.delete("/clients/{client_id}")
-async def delete_client(client_id: str, force: bool = False):
+async def delete_client(client_id: str, force: bool = False, current_user: dict = Depends(require_auth)):
     """Eliminar un cliente. Si force=True, desvincula usuarios automáticamente."""
     # Check if client has linked users
     linked_users = await db.users.count_documents({"linkedClientId": client_id})
@@ -1122,7 +1122,7 @@ async def delete_client(client_id: str, force: bool = False):
     return {"message": "Cliente eliminado"}
 
 @api_router.post("/clients/import-csv")
-async def import_clients_csv(data: dict):
+async def import_clients_csv(data: dict, current_user: dict = Depends(require_auth)):
     """Importar clientes desde CSV (lista de objetos)"""
     clients_data = data.get("clients", [])
     if not clients_data:
@@ -1177,7 +1177,7 @@ async def import_clients_csv(data: dict):
     }
 
 @api_router.post("/clients/from-contact/{contact_id}")
-async def create_client_from_contact(contact_id: str):
+async def create_client_from_contact(contact_id: str, current_user: dict = Depends(require_auth)):
     """Convertir un contacto del CRM en cliente potencial"""
     # Get contact from CRM
     contact = await db.contacts.find_one({"id": contact_id}, {"_id": 0})
@@ -1226,7 +1226,7 @@ async def create_client_from_contact(contact_id: str):
     return client_data
 
 @api_router.post("/clients/{client_id}/activate")
-async def activate_client(client_id: str, data: dict):
+async def activate_client(client_id: str, data: dict, current_user: dict = Depends(require_auth)):
     """Activar un cliente potencial asignándole código"""
     codigo = data.get("codigo", "").upper().strip()
     if not codigo:
@@ -1260,7 +1260,7 @@ async def activate_client(client_id: str, data: dict):
     return updated
 
 @api_router.post("/clients/{client_id}/link-user")
-async def link_client_to_user(client_id: str, data: dict):
+async def link_client_to_user(client_id: str, data: dict, current_user: dict = Depends(require_auth)):
     """Vincular un cliente a un usuario del sistema"""
     user_id = data.get("userId", "")
     
@@ -1764,7 +1764,7 @@ async def get_product(product_id: str):
     return product
 
 @api_router.post("/products", response_model=ProductModel)
-async def create_product(product: ProductCreate):
+async def create_product(product: ProductCreate, current_user: dict = Depends(require_auth)):
     """Crear un nuevo producto"""
     product_obj = ProductModel(**product.model_dump())
     product_obj.code = product_obj.code.upper()
@@ -1931,7 +1931,7 @@ async def bulk_upsert_products(data: dict, current_user: dict = Depends(require_
 
 
 @api_router.put("/products/{product_id}", response_model=ProductModel)
-async def update_product(product_id: str, product: ProductCreate):
+async def update_product(product_id: str, product: ProductCreate, current_user: dict = Depends(require_auth)):
     """Actualizar un producto"""
     existing = await db.products.find_one({"id": product_id}, {"_id": 0})
     if not existing:
@@ -1947,7 +1947,7 @@ async def update_product(product_id: str, product: ProductCreate):
     return updated
 
 @api_router.patch("/products/{product_id}/zone-points")
-async def update_product_zone_points(product_id: str, zone_points: dict):
+async def update_product_zone_points(product_id: str, zone_points: dict, current_user: dict = Depends(require_auth)):
     """Actualizar solo los zonePoints de un producto"""
     existing = await db.products.find_one({"id": product_id}, {"_id": 0})
     if not existing:
@@ -1968,7 +1968,7 @@ async def update_product_zone_points(product_id: str, zone_points: dict):
     return updated
 
 @api_router.delete("/products/{product_id}")
-async def delete_product(product_id: str):
+async def delete_product(product_id: str, current_user: dict = Depends(require_auth)):
     """Eliminar un producto"""
     result = await db.products.delete_one({"id": product_id})
     if result.deleted_count == 0:
@@ -2606,7 +2606,7 @@ async def check_budget_number(budget_number: str):
     return {"exists": False}
 
 @api_router.post("/projects", response_model=ProjectModel)
-async def create_project(project: ProjectCreate, user_id: str, client_code: Optional[str] = None):
+async def create_project(project: ProjectCreate, user_id: str, client_code: Optional[str] = None, current_user: dict = Depends(require_auth)):
     """
     Crear un nuevo proyecto/presupuesto.
     El client_code se usa para agrupar presupuestos por cliente.
@@ -2643,7 +2643,7 @@ async def create_project(project: ProjectCreate, user_id: str, client_code: Opti
     return project_data
 
 @api_router.put("/projects/{project_id}", response_model=ProjectModel)
-async def update_project(project_id: str, project: ProjectUpdate):
+async def update_project(project_id: str, project: ProjectUpdate, current_user: dict = Depends(require_auth)):
     """Actualizar un proyecto guardando snapshot de versión anterior"""
     existing = await db.projects.find_one({"id": project_id}, {"_id": 0})
     if not existing:
@@ -2695,7 +2695,7 @@ async def update_project(project_id: str, project: ProjectUpdate):
 
 
 @api_router.post("/projects/{project_id}/clone")
-async def clone_project(project_id: str, user_id: str, body: dict = {}):
+async def clone_project(project_id: str, user_id: str, body: dict = {}, current_user: dict = Depends(require_auth)):
     """
     Duplicar un presupuesto existente como nuevo borrador.
     Copia todos los items, colores y materiales.
@@ -2749,7 +2749,7 @@ async def clone_project(project_id: str, user_id: str, body: dict = {}):
     return new_project
 
 @api_router.delete("/projects/{project_id}")
-async def delete_project(project_id: str):
+async def delete_project(project_id: str, current_user: dict = Depends(require_auth)):
     """Eliminar un proyecto"""
     result = await db.projects.delete_one({"id": project_id})
     if result.deleted_count == 0:
@@ -2758,7 +2758,7 @@ async def delete_project(project_id: str):
 
 
 @api_router.patch("/projects/{project_id}/status")
-async def change_project_status(project_id: str, body: dict):
+async def change_project_status(project_id: str, body: dict, current_user: dict = Depends(require_auth)):
     """
     Cambiar el estado de un presupuesto con historial de transiciones.
     

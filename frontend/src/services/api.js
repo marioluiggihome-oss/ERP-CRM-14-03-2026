@@ -133,7 +133,7 @@ export const clientsAPI = {
   create: async (client) => {
     const response = await fetch(`${API_URL}/api/clients`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(client)
     });
     const data = await response.json();
@@ -146,7 +146,7 @@ export const clientsAPI = {
   update: async (id, client) => {
     const response = await fetch(`${API_URL}/api/clients/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(client)
     });
     const data = await response.json();
@@ -165,7 +165,9 @@ export const clientsAPI = {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('DELETE', url, true);
-      
+      const _auth = authHeaders();
+      if (_auth['Authorization']) xhr.setRequestHeader('Authorization', _auth['Authorization']);
+
       xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
           try {
@@ -196,7 +198,7 @@ export const clientsAPI = {
   importCSV: async (clients) => {
     const response = await fetch(`${API_URL}/api/clients/import-csv`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ clients })
     });
     if (!response.ok) throw new Error('Error al importar clientes');
@@ -212,7 +214,7 @@ export const clientsAPI = {
   createFromContact: async (contactId) => {
     const response = await fetch(`${API_URL}/api/clients/from-contact/${contactId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: authHeaders({ 'Content-Type': 'application/json' })
     });
     const data = await response.json();
     if (!response.ok) {
@@ -224,7 +226,7 @@ export const clientsAPI = {
   activate: async (id, codigo) => {
     const response = await fetch(`${API_URL}/api/clients/${id}/activate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ codigo })
     });
     const data = await response.json();
@@ -237,7 +239,7 @@ export const clientsAPI = {
   linkUser: async (id, userId) => {
     const response = await fetch(`${API_URL}/api/clients/${id}/link-user`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ userId })
     });
     const data = await response.json();
@@ -422,7 +424,7 @@ export const productsAPI = {
   create: async (product) => {
     const response = await fetch(`${API_URL}/api/products`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(product)
     });
     if (!response.ok) throw new Error('Error al crear producto');
@@ -432,7 +434,7 @@ export const productsAPI = {
   createBulk: async (products) => {
     const response = await fetch(`${API_URL}/api/products/bulk`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(products)
     });
     if (!response.ok) throw new Error('Error al crear productos');
@@ -510,7 +512,7 @@ export const productsAPI = {
   update: async (id, product) => {
     const response = await fetch(`${API_URL}/api/products/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(product)
     });
     if (!response.ok) throw new Error('Error al actualizar producto');
@@ -519,7 +521,8 @@ export const productsAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/products/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders()
     });
     if (!response.ok) throw new Error('Error al eliminar producto');
     return response.json();

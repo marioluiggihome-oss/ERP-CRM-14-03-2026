@@ -53,7 +53,7 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
 
   const loadTrends = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/admin/metrics/trends`);
+      const response = await fetch(`${API_URL}/api/admin/metrics/trends`, { headers: authHeaders() });
       const result = await response.json();
       setTrends(result);
     } catch (err) {
