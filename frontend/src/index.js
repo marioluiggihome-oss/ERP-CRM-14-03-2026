@@ -3,6 +3,15 @@ import ReactDOM from "react-dom/client";
 import "@/index.css";
 import App from "@/App";
 
+// En producción, silenciar logs informativos para no filtrar datos de negocio por consola.
+// Se mantienen console.warn y console.error para diagnóstico de problemas reales.
+if (process.env.NODE_ENV === 'production') {
+  const noop = () => {};
+  console.log = noop;
+  console.info = noop;
+  console.debug = noop;
+}
+
 // Clean the root element before mounting
 const rootElement = document.getElementById("root");
 if (rootElement) {

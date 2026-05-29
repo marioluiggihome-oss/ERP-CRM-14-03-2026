@@ -203,11 +203,9 @@ const clearConsole = () => {
     console.log('%cLUIGGI HOME - Acceso no autorizado prohibido', 'color: orange; font-size: 14px;');
   };
   
-  // Limpiar al inicio
+  // Mostrar aviso de marca una sola vez. NOTA: no se limpia la consola periódicamente
+  // porque ocultaría errores reales y dificulta el soporte/diagnóstico.
   clear();
-  
-  // Limpiar periódicamente
-  setInterval(clear, 5000);
 };
 
 // Detectar y bloquear iframes externos
@@ -238,8 +236,8 @@ const addWatermark = () => {
 
 // Inicializar todas las protecciones
 export const initSecurityGuard = () => {
-  // Solo activar en producción
-  if (process.env.NODE_ENV === 'production' || true) { // Activar siempre por ahora
+  // Solo activar en producción (en desarrollo entorpece el trabajo y oculta errores)
+  if (process.env.NODE_ENV === 'production') {
     disableRightClick();
     disableKeyboardShortcuts();
     disableTextSelection();

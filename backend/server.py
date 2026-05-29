@@ -7,6 +7,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import hashlib
+import secrets
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
@@ -205,19 +207,19 @@ def verify_password(password: str, hashed: str) -> bool:
     if hashed.startswith('$2b$') or hashed.startswith('$2a$'):
         try:
             return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-        except:
-            pass
+        except Exception:
+            return False
     
-    # Intento 2: SHA256 hash (64 caracteres hexadecimales)
+    # Intento 2: SHA256 hash (64 caracteres hexadecimales) - solo cuentas heredadas
     if len(hashed) == 64:
         try:
             sha256_hash = hashlib.sha256(password.encode()).hexdigest()
             return sha256_hash == hashed
-        except:
+        except Exception:
             pass
-    
-    # Intento 3: Plain text (para migración de datos antiguos)
-    return password == hashed
+
+    # No se admite comparación en texto plano: si el hash no es bcrypt ni sha256, rechazar.
+    return False
 
 
 # Add your routes to the router instead of directly to app
@@ -1304,9 +1306,9 @@ async def login(request: Request, credentials: dict):
         # Intentar búsqueda en mayúsculas
         user = await db.users.find_one({"username": username.upper()}, {"_id": 0})
     if not user:
-        # Intentar búsqueda case-insensitive
+        # Intentar búsqueda case-insensitive (escapando metacaracteres regex)
         user = await db.users.find_one(
-            {"username": {"$regex": f"^{username}$", "$options": "i"}}, 
+            {"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}},
             {"_id": 0}
         )
     
@@ -2854,41 +2856,33 @@ async def get_project_status_history(project_id: str):
 
 @api_router.post("/init")
 async def init_data():
-    """Inicializar datos base (admin user con password hasheado)"""
-    # Check if admin exists
-    admin = await db.users.find_one({"id": "admin"})
+    """Comprobar el estado de inicialización de datos base.
+
+    El usuario administrador (master) se crea/actualiza automáticamente en el evento
+    de arranque (`startup`) usando MASTER_PASSWORD. Este endpoint ya NO crea usuarios
+    con contraseñas débiles; solo informa de si existe un administrador y migra a
+    bcrypt cualquier contraseña heredada en texto plano del admin master.
+    """
+    admin = await db.users.find_one(
+        {"$or": [{"id": "user-master-mario"}, {"isAdmin": True}]},
+        {"_id": 0}
+    )
+
     if not admin:
-        admin_data = {
-            "id": "admin",
-            "username": "MARIO",
-            "password": hash_password("MARIO"),  # Hash the password
-            "clientName": "LUIGGI MASTER DESIGN",
-            "isActive": True,
-            "isAdmin": True,
-            "isRepresentative": False,
-            "linkedRepresentativeId": None,
-            "allowedModules": ["montada", "despiece"],
-            "allowedCatalogIds": ["cat-m-base", "cat-d-base"],
-            "commercialDiscount": 45,
-            "canSeeCost": True,
-            "canSeeRetail": True,
-            "canUseAIAnalysis": True,
-            "canManageArticles": True,
-            "canViewTechnicalDespiece": True,
-            "canAccessCRM": True,
-            "useCustomBranding": True,
-            "canChangeLogo": True
+        return {
+            "message": "No hay administrador. Se creará automáticamente en el próximo "
+                       "arranque del servidor (define MASTER_PASSWORD).",
+            "initialized": False
         }
-        await db.users.insert_one(admin_data)
-        return {"message": "Admin creado", "admin": user_to_response(admin_data)}
-    
-    # If admin exists with plain text password, update to hashed
-    if admin.get("password") and not admin["password"].startswith("$2"):
-        hashed = hash_password(admin["password"])
-        await db.users.update_one({"id": "admin"}, {"$set": {"password": hashed}})
-        return {"message": "Admin password actualizado a hash"}
-    
-        raise HTTPException(status_code=500, detail=str(e))
+
+    # Migrar contraseña heredada en texto plano del admin a bcrypt, si procede.
+    pwd = admin.get("password") or ""
+    if pwd and not pwd.startswith("$2"):
+        hashed = hash_password(pwd)
+        await db.users.update_one({"id": admin["id"]}, {"$set": {"password": hashed}})
+        return {"message": "Contraseña del administrador migrada a hash bcrypt", "initialized": True}
+
+    return {"message": "Sistema ya inicializado", "initialized": True}
 
 
 # ============================================
@@ -3116,6 +3110,26 @@ def calculate_furniture_despiece(
     )
     
     # =============================================
+    # CAJONES - Detección (debe calcularse ANTES de las baldas, que dependen de has_drawers)
+    # =============================================
+    has_drawers = False
+    num_drawers = 0
+    drawer_height_cm = 0
+
+    # Detectar cajones por código/nombre
+    cajon_keywords = ['CAJ', 'CAJON', 'CAJÓN', 'DRAWER', 'BT', 'BCG', 'BCGF', 'BGF', 'BGC']
+    if any(k in code_upper or k in name_upper for k in cajon_keywords):
+        has_drawers = True
+        # Estimar número de cajones según la altura
+        if h >= 70:
+            num_drawers = 3
+        elif h >= 50:
+            num_drawers = 2
+        else:
+            num_drawers = 1
+        drawer_height_cm = round((h - 1.0) / num_drawers - 0.3, 1)  # Alto interior cajón
+
+    # =============================================
     # BALDAS / ESTANTES (Shelves)
     # Largo = ANCHO INTERIOR - margen soportes (0.5cm)
     # Ancho = FONDO INTERIOR - margen frontal (2cm retranqueo)
@@ -3216,25 +3230,8 @@ def calculate_furniture_despiece(
             num_doors = 4
     
     # =============================================
-    # CAJONES - Detectar si el mueble tiene cajones
+    # CAJONES - Alta de componentes (la detección se hizo antes de las baldas)
     # =============================================
-    has_drawers = False
-    num_drawers = 0
-    drawer_height_cm = 0
-
-    # Detectar cajones por código/nombre
-    cajon_keywords = ['CAJ', 'CAJON', 'CAJÓN', 'DRAWER', 'BT', 'BCG', 'BCGF', 'BGF', 'BGC']
-    if any(k in code_upper or k in name_upper for k in cajon_keywords):
-        has_drawers = True
-        # Estimar número de cajones según la altura
-        if h >= 70:
-            num_drawers = 3
-        elif h >= 50:
-            num_drawers = 2
-        else:
-            num_drawers = 1
-        drawer_height_cm = round((h - 1.0) / num_drawers - 0.3, 1)  # Alto interior cajón
-
     if has_drawers and num_drawers > 0:
         drawer_width = ancho_interior - 2  # Ancho cajón = ancho interior menos guías
         drawer_depth = fondo_interior - 4  # Fondo cajón = fondo interior menos frontal
@@ -3481,8 +3478,8 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
         user_id = payload.get("sub")
         user = await db.users.find_one({"id": user_id}, {"_id": 0})
         
-        if not user or user.get('role') != 'director_comercial':
-            raise HTTPException(status_code=403, detail="Solo el Director Comercial puede exportar la base de datos")
+        if not user or not (user.get('isAdmin') or user.get('isDirectorComercial')):
+            raise HTTPException(status_code=403, detail="Solo el Director Comercial o un administrador puede exportar la base de datos")
         
         # Create workbook
         wb = Workbook()
@@ -3590,7 +3587,14 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
         output.seek(0)
         
         # Log audit
-        await log_audit("database_export", user_id, "admin", True, {"tables": ["users", "products_montada", "products_despiece", "projects"]})
+        audit.log(
+            AuditAction.PROJECT_EXPORT,
+            user_id=user_id,
+            username=user.get("username"),
+            resource_type="database",
+            success=True,
+            details={"tables": ["users", "products_montada", "products_despiece", "projects"]}
+        )
         
         filename = f"LUIGGI_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
@@ -3844,11 +3848,11 @@ async def startup_event():
     # CREAR/ACTUALIZAR USUARIO MASTER
     # =============================================
     try:
-        hashed_password = bcrypt.hashpw("Mario2025*".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        master_user = {
-            "id": "user-master-mario",
+        now = datetime.now(timezone.utc)
+        # Campos de rol/permisos del usuario master (idempotentes en cada arranque).
+        # IMPORTANTE: la contraseña NO se incluye aquí para no sobrescribirla en cada reinicio.
+        master_fields = {
             "username": "MARIO",
-            "password": hashed_password,
             "email": "mario@luiggihome.es",
             "clientName": "ADMINISTRADOR MASTER",
             "phone": "",
@@ -3878,17 +3882,45 @@ async def startup_event():
             "allowedModules": ["montada", "despiece", "armarios"],
             "active": True,
             "isActive": True,
-            "createdAt": datetime.now(timezone.utc),
-            "updatedAt": datetime.now(timezone.utc)
+            "updatedAt": now,
         }
-        
-        # Usar upsert para crear o actualizar
-        await db.users.update_one(
-            {"username": "MARIO"},
-            {"$set": master_user},
-            upsert=True
-        )
-        logger.info("✅ Usuario MASTER (MARIO) configurado - Contraseña: Mario2025*")
+
+        # La contraseña del master se toma de la variable de entorno MASTER_PASSWORD.
+        # Si se define, se (re)establece en cada arranque (permite rotarla desde Railway).
+        master_password = os.environ.get('MASTER_PASSWORD')
+        existing_master = await db.users.find_one({"username": "MARIO"}, {"_id": 0, "password": 1})
+
+        if not existing_master:
+            # Primera creación: si no hay MASTER_PASSWORD, generar una temporal aleatoria
+            # y registrarla UNA sola vez para no quedar bloqueados.
+            if master_password:
+                initial_password = master_password
+                log_temp = False
+            else:
+                initial_password = secrets.token_urlsafe(12)
+                log_temp = True
+            doc = {
+                **master_fields,
+                "id": "user-master-mario",
+                "password": bcrypt.hashpw(initial_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+                "createdAt": now,
+            }
+            await db.users.insert_one(doc)
+            if log_temp:
+                logger.warning(
+                    "⚠️ Usuario MASTER (MARIO) creado con contraseña TEMPORAL: %s — "
+                    "cámbiala de inmediato y define MASTER_PASSWORD.", initial_password
+                )
+            else:
+                logger.info("✅ Usuario MASTER (MARIO) creado.")
+        else:
+            update = {"$set": dict(master_fields)}
+            if master_password:
+                update["$set"]["password"] = bcrypt.hashpw(
+                    master_password.encode('utf-8'), bcrypt.gensalt()
+                ).decode('utf-8')
+            await db.users.update_one({"username": "MARIO"}, update)
+            logger.info("✅ Usuario MASTER (MARIO) actualizado (roles/permisos).")
     except Exception as e:
         logger.warning(f"Error configurando usuario master: {e}")
     

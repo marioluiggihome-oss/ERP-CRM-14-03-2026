@@ -4,14 +4,20 @@ Maneja la creación, validación y renovación de tokens JWT
 """
 import jwt
 import os
-import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
 from fastapi import HTTPException, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Configuración JWT
-JWT_SECRET = os.environ.get('JWT_SECRET', secrets.token_hex(32))
+# JWT_SECRET es OBLIGATORIO: sin él, la app no debe arrancar (evita secretos por defecto
+# inseguros y secretos aleatorios distintos por proceso que invalidarían los tokens).
+JWT_SECRET = os.environ.get('JWT_SECRET')
+if not JWT_SECRET:
+    raise RuntimeError(
+        "La variable de entorno JWT_SECRET es obligatoria. "
+        "Configúrala con un valor largo y aleatorio (p. ej. `openssl rand -hex 32`)."
+    )
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24  # Token expira en 24 horas
 JWT_REFRESH_EXPIRATION_DAYS = 7  # Refresh token expira en 7 días

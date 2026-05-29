@@ -38,7 +38,14 @@ calendar_events_collection = db['calendar_events']
 activities_collection = db['activities']
 
 # JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'your-super-secret-jwt-key-change-in-production')
+# JWT_SECRET es obligatorio (sin valor por defecto inseguro). Debe coincidir con el
+# usado en services/jwt_service.py (misma variable de entorno).
+JWT_SECRET = os.environ.get('JWT_SECRET')
+if not JWT_SECRET:
+    raise RuntimeError(
+        "La variable de entorno JWT_SECRET es obligatoria. "
+        "Configúrala con un valor largo y aleatorio (p. ej. `openssl rand -hex 32`)."
+    )
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 REFRESH_TOKEN_EXPIRATION_DAYS = 7
