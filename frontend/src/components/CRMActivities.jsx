@@ -104,9 +104,17 @@ const CRMActivities = ({ currentUser }) => {
       if (response.ok) {
         fetchActivities();
         resetForm();
+      } else {
+        let detail = 'No se pudo registrar la actividad';
+        try {
+          const err = await response.json();
+          detail = err.detail || detail;
+        } catch (_) {}
+        alert(`Error: ${detail}`);
       }
     } catch (error) {
       console.error('Error saving activity:', error);
+      alert('Error de conexión al registrar la actividad');
     }
   };
 
@@ -362,10 +370,10 @@ const CRMActivities = ({ currentUser }) => {
                     value={formData.contactId}
                     onChange={(e) => {
                       const contact = contacts.find(c => c.id === e.target.value);
-                      setFormData({ 
-                        ...formData, 
+                      setFormData({
+                        ...formData,
                         contactId: e.target.value,
-                        contactName: contact ? `${contact.nombre} ${contact.apellidos || ''}`.trim() : ''
+                        contactName: contact ? (contact.name || '').trim() : ''
                       });
                     }}
                     className="w-full p-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
@@ -373,7 +381,7 @@ const CRMActivities = ({ currentUser }) => {
                     <option value="">Seleccionar contacto...</option>
                     {contacts.map(contact => (
                       <option key={contact.id} value={contact.id}>
-                        {contact.nombre} {contact.apellidos} {contact.empresa ? `(${contact.empresa})` : ''}
+                        {contact.name}{contact.company ? ` (${contact.company})` : ''}
                       </option>
                     ))}
                   </select>
