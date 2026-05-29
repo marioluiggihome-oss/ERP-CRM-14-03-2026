@@ -44,6 +44,9 @@ def create_access_token(user_data: Dict[str, Any], expires_delta: Optional[timed
         "isRepresentative": user_data.get("isRepresentative", False),
         "isTienda": user_data.get("isTienda", False),
         "isPrescriptor": user_data.get("isPrescriptor", False),
+        "isGerente": user_data.get("isGerente", False),
+        "isDirectorComercial": user_data.get("isDirectorComercial", False),
+        "isDirectorFabrica": user_data.get("isDirectorFabrica", False),
         "iat": datetime.now(timezone.utc),
         "type": "access"
     }
@@ -122,12 +125,38 @@ def verify_refresh_token(token: str) -> Dict[str, Any]:
     return payload
 
 
+def _payload_to_user(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Construir el dict de usuario a partir del payload del token JWT."""
+    return {
+        "id": payload.get("sub"),
+        "username": payload.get("username"),
+        "isAdmin": payload.get("isAdmin", False),
+        "isResponsableDelegacion": payload.get("isResponsableDelegacion", False),
+        "isRepresentative": payload.get("isRepresentative", False),
+        "isTienda": payload.get("isTienda", False),
+        "isPrescriptor": payload.get("isPrescriptor", False),
+        "isGerente": payload.get("isGerente", False),
+        "isDirectorComercial": payload.get("isDirectorComercial", False),
+        "isDirectorFabrica": payload.get("isDirectorFabrica", False),
+    }
+
+
+# Roles considerados "elevados" para acceso administrativo / de dirección.
+ADMIN_ROLE_FLAGS = (
+    "isAdmin",
+    "isResponsableDelegacion",
+    "isGerente",
+    "isDirectorComercial",
+    "isDirectorFabrica",
+)
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> Optional[Dict[str, Any]]:
     """
     Dependency para obtener el usuario actual del token JWT
-    
+
     Uso en endpoints:
         @router.get("/protected")
         async def protected_route(current_user: dict = Depends(get_current_user)):
@@ -135,18 +164,10 @@ async def get_current_user(
     """
     if not credentials:
         return None
-    
+
     try:
         payload = verify_access_token(credentials.credentials)
-        return {
-            "id": payload.get("sub"),
-            "username": payload.get("username"),
-            "isAdmin": payload.get("isAdmin", False),
-            "isResponsableDelegacion": payload.get("isResponsableDelegacion", False),
-            "isRepresentative": payload.get("isRepresentative", False),
-            "isTienda": payload.get("isTienda", False),
-            "isPrescriptor": payload.get("isPrescriptor", False)
-        }
+        return _payload_to_user(payload)
     except HTTPException:
         return None
 
@@ -156,7 +177,7 @@ async def require_auth(
 ) -> Dict[str, Any]:
     """
     Dependency que REQUIERE autenticación (lanza error si no hay token)
-    
+
     Uso en endpoints:
         @router.get("/protected")
         async def protected_route(current_user: dict = Depends(require_auth)):
@@ -164,27 +185,20 @@ async def require_auth(
     """
     if not credentials:
         raise HTTPException(status_code=401, detail="Autenticación requerida")
-    
+
     payload = verify_access_token(credentials.credentials)
-    return {
-        "id": payload.get("sub"),
-        "username": payload.get("username"),
-        "isAdmin": payload.get("isAdmin", False),
-        "isResponsableDelegacion": payload.get("isResponsableDelegacion", False),
-        "isRepresentative": payload.get("isRepresentative", False),
-        "isTienda": payload.get("isTienda", False),
-        "isPrescriptor": payload.get("isPrescriptor", False)
-    }
+    return _payload_to_user(payload)
 
 
 async def require_admin(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> Dict[str, Any]:
     """
-    Dependency que requiere rol de administrador
+    Dependency que requiere un rol elevado (admin, responsable de delegación,
+    gerente, director comercial o director de fábrica).
     """
     user = await require_auth(credentials)
-    if not user.get("isAdmin") and not user.get("isResponsableDelegacion"):
+    if not any(user.get(flag) for flag in ADMIN_ROLE_FLAGS):
         raise HTTPException(status_code=403, detail="Acceso denegado: se requiere rol de administrador")
     return user
 

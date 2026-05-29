@@ -2,7 +2,7 @@
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Helper: build Authorization header with JWT from localStorage (if present)
-const authHeaders = (extra = {}) => {
+export const authHeaders = (extra = {}) => {
   const token = (typeof localStorage !== 'undefined') ? (localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')) : null;
   const h = { ...extra };
   if (token) h['Authorization'] = `Bearer ${token}`;
@@ -443,7 +443,7 @@ export const productsAPI = {
   bulkCreate: async (products) => {
     const response = await fetch(`${API_URL}/api/products/bulk`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(products)
     });
     
@@ -477,7 +477,7 @@ export const productsAPI = {
   bulkUpsert: async (products, tariff = 'T1', library = 'MV') => {
     const response = await fetch(`${API_URL}/api/products/bulk-upsert`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ products, tariff, library })
     });
     
@@ -528,7 +528,7 @@ export const productsAPI = {
   deleteBulk: async (ids) => {
     const response = await fetch(`${API_URL}/api/products/bulk/delete`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(ids)
     });
     if (!response.ok) throw new Error('Error al eliminar productos');
@@ -1268,13 +1268,13 @@ export const armariosAPI = {
 
 export const adminMetricsAPI = {
   get: async () => {
-    const response = await fetch(`${API_URL}/api/admin/metrics`);
+    const response = await fetch(`${API_URL}/api/admin/metrics`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener métricas');
     return response.json();
   },
 
   getTrends: async () => {
-    const response = await fetch(`${API_URL}/api/admin/metrics/trends`);
+    const response = await fetch(`${API_URL}/api/admin/metrics/trends`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener tendencias');
     return response.json();
   }

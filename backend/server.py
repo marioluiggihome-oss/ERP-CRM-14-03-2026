@@ -1777,7 +1777,7 @@ async def create_product(product: ProductCreate):
     return product_obj
 
 @api_router.post("/products/bulk")
-async def create_products_bulk(products: List[dict]):
+async def create_products_bulk(products: List[dict], current_user: dict = Depends(require_admin)):
     """Crear múltiples productos - acepta datos flexibles del importador IA"""
     created = []
     errors = []
@@ -1842,7 +1842,7 @@ async def create_products_bulk(products: List[dict]):
     }
 
 @api_router.post("/products/bulk-upsert")
-async def bulk_upsert_products(data: dict):
+async def bulk_upsert_products(data: dict, current_user: dict = Depends(require_admin)):
     """
     Crear productos nuevos o actualizar zonePoints de productos existentes.
     Para MV: actualiza la tarifa específica (T1, T2, ... T21) en zonePoints.
@@ -2061,7 +2061,7 @@ Si no hay 12 zonas, incluye solo las que aparezcan. Extrae TODOS los productos d
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/products/fix-heights")
-async def fix_product_heights():
+async def fix_product_heights(current_user: dict = Depends(require_admin)):
     """
     Corregir alturas de productos que están en decímetros en vez de centímetros.
     Multiplica por 10 las alturas que son <= 30 (11, 12, 13, 14, 16, 20, 22, 24)
@@ -2088,7 +2088,7 @@ async def fix_product_heights():
     }
 
 @api_router.post("/products/fix-semicolumna-names")
-async def fix_semicolumna_names():
+async def fix_semicolumna_names(current_user: dict = Depends(require_admin)):
     """
     Corregir nombres de semicolumnas: 11cm -> 110cm, 12cm -> 120cm, etc.
     """
@@ -2125,7 +2125,7 @@ async def fix_semicolumna_names():
     }
 
 @api_router.post("/products/fix-names")
-async def fix_product_names():
+async def fix_product_names(current_user: dict = Depends(require_admin)):
     """
     Corregir nombres de productos para unificar unidades a centímetros.
     - Convierte '580cm' a '58cm', '330cm' a '33cm'
@@ -2169,7 +2169,7 @@ async def fix_product_names():
     }
 
 @api_router.delete("/products/bulk/delete")
-async def delete_products_bulk(product_ids: List[str]):
+async def delete_products_bulk(product_ids: List[str], current_user: dict = Depends(require_admin)):
     """Eliminar múltiples productos"""
     result = await db.products.delete_many({"id": {"$in": product_ids}})
     return {"message": f"{result.deleted_count} productos eliminados"}
@@ -2254,7 +2254,7 @@ async def get_projects_summary_by_client():
     }
 
 @api_router.get("/admin/all-work")
-async def get_all_work_for_admin():
+async def get_all_work_for_admin(current_user: dict = Depends(require_admin)):
     """
     [ADMIN ONLY] Obtener todos los trabajos de todos los usuarios.
     Incluye proyectos, oportunidades y digitalizaciones.
@@ -2302,7 +2302,7 @@ async def get_all_work_for_admin():
     }
 
 @api_router.get("/admin/metrics")
-async def get_admin_metrics():
+async def get_admin_metrics(current_user: dict = Depends(require_admin)):
     """
     [DIRECTOR COMERCIAL ONLY] Métricas completas del sistema por delegación y comercial.
     Incluye ventas, oportunidades, rendimiento de comerciales, etc.
@@ -2413,7 +2413,7 @@ async def get_admin_metrics():
 
 
 @api_router.get("/admin/metrics/trends")
-async def get_admin_metrics_trends():
+async def get_admin_metrics_trends(current_user: dict = Depends(require_admin)):
     """
     [DIRECTOR COMERCIAL ONLY] Métricas de tendencias mensuales.
     Devuelve datos agrupados por mes para gráficos de ventas y pipeline.
@@ -2527,10 +2527,17 @@ def get_month_label(month_str: str) -> str:
 
 
 @api_router.get("/commercial/my-shops-work")
-async def get_commercial_shops_work(commercial_id: str):
+async def get_commercial_shops_work(commercial_id: str, current_user: dict = Depends(require_auth)):
     """
     [COMERCIAL ONLY] Obtener todos los trabajos de las tiendas asignadas a este comercial.
+    Un usuario sin rol elevado solo puede consultar SUS propias tiendas.
     """
+    is_elevated = any(current_user.get(f) for f in (
+        "isAdmin", "isResponsableDelegacion", "isGerente", "isDirectorComercial", "isDirectorFabrica"
+    ))
+    if not is_elevated and commercial_id != current_user.get("id"):
+        raise HTTPException(status_code=403, detail="No puedes consultar los trabajos de otro comercial")
+
     # Get users (shops) assigned to this commercial
     shops = await db.users.find(
         {"linkedRepresentativeId": commercial_id},
@@ -3611,7 +3618,7 @@ async def export_database(credentials: HTTPAuthorizationCredentials = Depends(se
         raise HTTPException(status_code=500, detail=f"Error exportando base de datos: {str(e)}")
 
 @api_router.post("/products/fix-data")
-async def fix_product_data():
+async def fix_product_data(current_user: dict = Depends(require_admin)):
     """
     Fix product data:
     1. Semicolumnas series: 11 -> 110, 12 -> 120, etc.

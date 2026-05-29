@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authHeaders } from '../services/api';
 import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Store, User, Calendar, Euro, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -23,7 +24,7 @@ const CommercialWorkView = ({ isOpen, onClose, currentUser }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/commercial/my-shops-work?commercial_id=${currentUser.id}`);
+      const response = await fetch(`${API_URL}/api/commercial/my-shops-work?commercial_id=${currentUser.id}`, { headers: authHeaders() });
       const result = await response.json();
       setData(result);
     } catch (err) {

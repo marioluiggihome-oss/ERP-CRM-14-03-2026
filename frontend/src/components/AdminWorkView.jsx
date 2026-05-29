@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authHeaders } from '../services/api';
 import { X, Briefcase, FolderOpen, FileText, Users, Search, RefreshCw, Building2, User, Calendar, Euro, ChevronDown, ChevronUp, TrendingUp, Target, Award, Store, UserCheck, BarChart3, Maximize2, Minimize2, PieChart, UtensilsCrossed, DoorOpen } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend, FunnelChart, Funnel, LabelList } from 'recharts';
 
@@ -30,7 +31,7 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/all-work`);
+      const response = await fetch(`${API_URL}/api/admin/all-work`, { headers: authHeaders() });
       const result = await response.json();
       setData(result);
     } catch (err) {
@@ -42,7 +43,7 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
 
   const loadMetrics = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/admin/metrics`);
+      const response = await fetch(`${API_URL}/api/admin/metrics`, { headers: authHeaders() });
       const result = await response.json();
       setMetrics(result);
     } catch (err) {
