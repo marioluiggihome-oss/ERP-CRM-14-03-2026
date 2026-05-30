@@ -97,7 +97,26 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
     Filtra por biblioteca si se especifica.
     """
     enriched = []
-    
+
+    # Tipos/subtipos que son electrodomésticos o accesorios, NO muebles del catálogo.
+    # No deben contar como "producto no encontrado".
+    APPLIANCE_TIPOS = {'ELECTRODOMESTICO', 'ELECTRODOMÉSTICO'}
+    APPLIANCE_SUBTIPOS = {'CAMPANA', 'EXTRACTOR', 'PLACA', 'PLACA_COCCION', 'HORNO',
+                          'MICROONDAS', 'NEVERA', 'FRIGORIFICO', 'LAVAVAJILLAS',
+                          'FREGADERO', 'GRIFO', 'VITRO', 'INDUCCION'}
+
+    def _is_appliance(it):
+        tipo = (it.get('tipo') or '').upper()
+        subtipo = (it.get('subtipo') or '').upper()
+        nombre = (it.get('nombre') or it.get('descripcion') or '').upper()
+        if tipo in APPLIANCE_TIPOS:
+            return True
+        if any(s in subtipo for s in APPLIANCE_SUBTIPOS):
+            return True
+        if any(s in nombre for s in APPLIANCE_SUBTIPOS):
+            return True
+        return False
+
     for item in furniture_list:
         code = item.get('codigo_sugerido', '')
 
@@ -132,14 +151,25 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
             enriched_item['fondo_real'] = catalog_product.get('depth', fondo_cm * 10)
             enriched_item['product_id'] = catalog_product.get('id', '')
             enriched_item['biblioteca'] = catalog_product.get('library', library or 'ZC')
+        elif _is_appliance(item):
+            # Electrodoméstico/accesorio: no es un mueble del catálogo. No cuenta como
+            # "no encontrado" ni "encontrado"; se marca aparte para la sección propia.
+            enriched_item['producto_encontrado'] = False
+            enriched_item['es_electrodomestico'] = True
+            enriched_item['codigo_catalogo'] = code
+            enriched_item['nombre_catalogo'] = f"{item.get('tipo', '')} {item.get('subtipo', '').replace('_', ' ')}".strip()
+            enriched_item['puntos'] = 0
+            enriched_item['precio_pvp'] = 0
+            enriched_item['mensaje'] = "Electrodoméstico / accesorio (no es mueble del catálogo)"
         else:
             enriched_item['producto_encontrado'] = False
+            enriched_item['es_electrodomestico'] = False
             enriched_item['codigo_catalogo'] = code
             enriched_item['nombre_catalogo'] = f"{item.get('tipo', '')} {item.get('subtipo', '').replace('_', ' ')}"
             enriched_item['puntos'] = 0
             enriched_item['precio_pvp'] = 0
             enriched_item['mensaje'] = f"Producto no encontrado en catálogo {library or 'ZC'} - revisar manualmente"
-        
+
         enriched.append(enriched_item)
     
     return enriched
@@ -263,13 +293,19 @@ async def analyze_kitchen_plan(
             
             total_pvp = sum(m.get('precio_pvp', 0) for m in data['muebles_detectados'])
             productos_encontrados = sum(1 for m in data['muebles_detectados'] if m.get('producto_encontrado'))
-            productos_no_encontrados = sum(1 for m in data['muebles_detectados'] if not m.get('producto_encontrado'))
-            
+            electrodomesticos = sum(1 for m in data['muebles_detectados'] if m.get('es_electrodomestico'))
+            # "No encontrados" reales = ni encontrados ni electrodomésticos
+            productos_no_encontrados = sum(1 for m in data['muebles_detectados']
+                                           if not m.get('producto_encontrado') and not m.get('es_electrodomestico'))
+            muebles_cotizables = len(data['muebles_detectados']) - electrodomesticos
+
             data['resumen_precios'] = {
                 'total_pvp': total_pvp,
+                'total_puntos': sum(m.get('puntos', 0) for m in data['muebles_detectados']),
                 'productos_encontrados': productos_encontrados,
                 'productos_no_encontrados': productos_no_encontrados,
-                'mensaje': f"{productos_encontrados} productos cotizados de {len(data['muebles_detectados'])} detectados",
+                'electrodomesticos': electrodomesticos,
+                'mensaje': f"{productos_encontrados} productos cotizados de {muebles_cotizables} muebles detectados",
                 'biblioteca': active_library
             }
         
@@ -411,13 +447,18 @@ Responde SOLO con JSON:
         
         total_pvp = sum(m.get('precio_pvp', 0) for m in enriched_furniture)
         productos_encontrados = sum(1 for m in enriched_furniture if m.get('producto_encontrado'))
-        productos_no_encontrados = sum(1 for m in enriched_furniture if not m.get('producto_encontrado'))
-        
+        electrodomesticos = sum(1 for m in enriched_furniture if m.get('es_electrodomestico'))
+        productos_no_encontrados = sum(1 for m in enriched_furniture
+                                       if not m.get('producto_encontrado') and not m.get('es_electrodomestico'))
+        muebles_cotizables = len(enriched_furniture) - electrodomesticos
+
         total_summary['resumen_precios'] = {
             'total_pvp': total_pvp,
+            'total_puntos': sum(m.get('puntos', 0) for m in enriched_furniture),
             'productos_encontrados': productos_encontrados,
             'productos_no_encontrados': productos_no_encontrados,
-            'mensaje': f"{productos_encontrados} productos cotizados de {len(enriched_furniture)} detectados"
+            'electrodomesticos': electrodomesticos,
+            'mensaje': f"{productos_encontrados} productos cotizados de {muebles_cotizables} muebles detectados"
         }
         
         logger.info(f"Multi-wall kitchen plan analyzed: {len(enriched_furniture)} furniture items from {len(files)} walls for {active_library}")
