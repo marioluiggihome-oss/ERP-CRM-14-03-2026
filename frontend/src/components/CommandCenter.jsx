@@ -79,6 +79,7 @@ const CommandCenter = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [dayFilter, setDayFilter] = useState(30);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
   const safeFetch = async (url) => {
     try {
@@ -107,8 +108,10 @@ const CommandCenter = ({ currentUser }) => {
       if (al) setAlerts(al);
       if (tl) setTimeline(tl);
       if (pf) setPerformance(pf);
+      // Si NINGUNA llamada devolvió datos, el backend no es accesible (o falta REACT_APP_BACKEND_URL)
+      setLoadError(!ov && !ua && !al && !tl && !pf);
       setLastRefresh(new Date());
-    } catch (e) { console.error('CommandCenter load error:', e); }
+    } catch (e) { console.error('CommandCenter load error:', e); setLoadError(true); }
     finally { setLoading(false); }
   }, [dayFilter]);
 
@@ -183,6 +186,21 @@ const CommandCenter = ({ currentUser }) => {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 sm:p-6">
+
+        {/* Aviso de conexión: evita el "área en blanco" cuando el backend no responde */}
+        {loadError && !overview && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <AlertTriangle className="w-12 h-12 text-amber-400 mb-3" />
+            <p className="font-black text-slate-700 text-sm uppercase">No se pudieron cargar los datos</p>
+            <p className="text-xs text-slate-400 mt-2 max-w-sm">
+              No hay conexión con el servidor. Comprueba que el backend está en marcha y que
+              <span className="font-mono"> REACT_APP_BACKEND_URL</span> está configurado.
+            </p>
+            <button onClick={load} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black">
+              Reintentar
+            </button>
+          </div>
+        )}
 
         {/* ── RESUMEN ─────────────────────────────────────────────── */}
         {activeTab === 'overview' && overview && (

@@ -32,6 +32,10 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) {
+    // Surfacing real para diagnosticar "pantallas en blanco": deja el error y el stack en consola
+    console.error('[ErrorBoundary] Módulo falló al renderizar:', error, info?.componentStack);
+  }
   render() {
     if (this.state.hasError) {
       return (
