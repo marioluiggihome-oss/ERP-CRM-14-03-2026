@@ -291,6 +291,8 @@ async def analyze_kitchen_plan(
             raise HTTPException(status_code=503, detail="GEMINI_API_KEY rechazada por Google (401). Verifica que sea una API key válida de AI Studio (empieza por 'AIza'), sin espacios ni comillas, y que la Generative Language API esté activada.")
         elif 'api_key' in ml or 'api key not valid' in ml or '400' in msg:
             raise HTTPException(status_code=503, detail="Error de configuración de IA. Verifica GEMINI_API_KEY.")
+        elif 'not_found' in ml or '404' in msg or 'not found' in ml:
+            raise HTTPException(status_code=503, detail="El modelo de IA no está disponible para tu clave. Actualiza el SDK o revisa el acceso a Gemini en tu proyecto.")
         elif 'timeout' in msg.lower():
             raise HTTPException(status_code=504, detail="La IA tardó demasiado. Intenta con una imagen más pequeña.")
         else:

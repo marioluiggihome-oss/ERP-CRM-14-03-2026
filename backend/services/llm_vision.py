@@ -131,20 +131,19 @@ async def _analyze_with_google_genai(
 
     image_bytes = base64.b64decode(image_base64)
 
-    # Usar modelos estables disponibles en producción
-    model_map = {
-        "gemini-2.5-flash": "gemini-2.0-flash",
-        "gemini-2.5-pro":   "gemini-2.0-flash",
-        "gemini-2.0-flash": "gemini-2.0-flash",
-        "gemini-1.5-flash": "gemini-1.5-flash",
-        "gemini-1.5-pro":   "gemini-1.5-pro",
-    }
-    google_model = model_map.get(model, "gemini-2.0-flash")
+    # Lista ordenada de modelos a intentar. Si Google devuelve NOT_FOUND/404 para
+    # uno (porque ese nombre fue renombrado/retirado), se prueba el siguiente.
+    requested = model or "gemini-2.5-flash"
+    candidates = []
+    for m in [requested, "gemini-2.5-flash", "gemini-2.0-flash",
+              "gemini-flash-latest", "gemini-1.5-flash"]:
+        if m not in candidates:
+            candidates.append(m)
 
     # Ejecutar en executor para no bloquear el event loop
-    def _sync_call():
+    def _sync_call(model_name):
         response = client.models.generate_content(
-            model=google_model,
+            model=model_name,
             contents=[
                 google_genai_types.Part.from_bytes(
                     data=image_bytes,
@@ -156,8 +155,18 @@ async def _analyze_with_google_genai(
         return response.text or ""
 
     loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, _sync_call)
-    return result
+    last_err = None
+    for model_name in candidates:
+        try:
+            return await loop.run_in_executor(None, _sync_call, model_name)
+        except Exception as e:
+            msg = str(e)
+            if 'NOT_FOUND' in msg or '404' in msg or 'not found' in msg.lower() or 'not supported' in msg.lower():
+                last_err = e
+                logger.warning(f"Modelo Gemini '{model_name}' no disponible, probando siguiente: {msg[:120]}")
+                continue
+            raise
+    raise last_err or RuntimeError("Ningún modelo de Gemini disponible para esta clave")
 
 
 async def _analyze_with_emergent(
