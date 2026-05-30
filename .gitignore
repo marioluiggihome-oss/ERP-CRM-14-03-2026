@@ -150,6 +150,10 @@ frontend/node_modules/.cache/default-development/44.pack
 *.env
 *.env.*
 .env.*
+
+# Permitir plantillas de ejemplo (deben ir al final para anular las reglas anteriores)
+!.env.example
+!**/.env.example
 credentials.json
 *.key
 .credentials

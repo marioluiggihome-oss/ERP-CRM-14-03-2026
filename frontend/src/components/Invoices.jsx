@@ -36,21 +36,25 @@ const Invoices = ({ currentUser }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => { load(); }, [statusFilter]);
 
   const load = async () => {
     setLoading(true);
+    let failed = false;
     try {
       const [invs, st] = await Promise.all([
-        invoicesAPI.getAll(statusFilter || null).catch(() => []),
+        invoicesAPI.getAll(statusFilter || null).catch(() => { failed = true; return []; }),
         invoicesAPI.getStats().catch(() => ({ monthTotal:0, pendingTotal:0, issued:0, paid:0, overdue:0 }))
       ]);
       setInvoices(Array.isArray(invs) ? invs : []);
       setStats(st || {});
-    } catch (e) { 
+      setLoadError(failed);
+    } catch (e) {
       console.error('Invoices load error:', e);
       setInvoices([]);
+      setLoadError(true);
     }
     finally { setLoading(false); }
   };
@@ -185,6 +189,16 @@ const Invoices = ({ currentUser }) => {
         {loading ? (
           <div className="flex items-center justify-center h-40">
             <Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center h-48 text-center">
+            <AlertTriangle className="w-12 h-12 text-amber-400 mb-3" />
+            <p className="font-black text-slate-700 text-sm uppercase">No se pudieron cargar las facturas</p>
+            <p className="text-xs text-slate-400 mt-2 max-w-sm">
+              No hay conexión con el servidor. Comprueba que el backend está en marcha y que
+              <span className="font-mono"> REACT_APP_BACKEND_URL</span> está configurado.
+            </p>
+            <button onClick={load} className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-black">Reintentar</button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-slate-300">
