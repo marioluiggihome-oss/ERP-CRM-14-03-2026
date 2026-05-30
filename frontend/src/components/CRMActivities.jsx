@@ -164,20 +164,27 @@ const CRMActivities = ({ currentUser }) => {
   };
 
   // Filtrar actividades
+  // Campo de fecha robusto: usa date, dueDate o createdAt según lo que traiga el backend
+  const getActivityDate = (a) => a.date || a.dueDate || (a.createdAt ? String(a.createdAt).slice(0, 10) : '');
+
   const filteredActivities = activities.filter(activity => {
-    const matchesSearch = 
-      activity.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.notes?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const q = searchTerm.toLowerCase();
+    const matchesSearch = !q ||
+      (activity.title || '').toLowerCase().includes(q) ||
+      (activity.subject || '').toLowerCase().includes(q) ||
+      (activity.contactName || '').toLowerCase().includes(q) ||
+      (activity.notes || '').toLowerCase().includes(q) ||
+      (activity.description || '').toLowerCase().includes(q);
+
     const matchesType = filterType === 'all' || (activity.activityType || activity.type) === filterType;
-    
+
     let matchesDate = true;
-    if (filterDate !== 'all') {
-      const activityDate = new Date(activity.date);
+    const rawDate = getActivityDate(activity);
+    if (filterDate !== 'all' && rawDate) {
+      const activityDate = new Date(rawDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (filterDate === 'today') {
         matchesDate = activityDate.toDateString() === today.toDateString();
       } else if (filterDate === 'week') {
@@ -190,11 +197,11 @@ const CRMActivities = ({ currentUser }) => {
         matchesDate = activityDate >= monthAgo;
       }
     }
-    
+
     return matchesSearch && matchesType && matchesDate;
   }).sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.time || '00:00'}`);
-    const dateB = new Date(`${b.date}T${b.time || '00:00'}`);
+    const dateA = new Date(`${getActivityDate(a)}T${a.time || '00:00'}`);
+    const dateB = new Date(`${getActivityDate(b)}T${b.time || '00:00'}`);
     return dateB - dateA;
   });
 
