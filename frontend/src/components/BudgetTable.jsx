@@ -2466,6 +2466,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     })}
                   </tbody>
                 </table>
+                </div>
                 )}
              </div>
           </div>
@@ -2723,6 +2724,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                     })}
                   </tbody>
                 </table>
+                </div>
              </div>
           </div>
         )}
