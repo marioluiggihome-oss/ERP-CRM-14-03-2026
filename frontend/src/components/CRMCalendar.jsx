@@ -403,7 +403,8 @@ const CRMCalendar = ({ currentUser }) => {
           <>
             {/* Month View */}
             {view === 'month' && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+                <div className="min-w-[640px]">
                 {/* Weekday Headers */}
                 <div className="grid grid-cols-7 border-b border-slate-200">
                   {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
@@ -465,12 +466,14 @@ const CRMCalendar = ({ currentUser }) => {
                     );
                   })}
                 </div>
+                </div>
               </div>
             )}
 
             {/* Week View */}
             {view === 'week' && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+                <div className="min-w-[720px]">
                 {/* Day Headers */}
                 <div className="grid grid-cols-8 border-b border-slate-200">
                   <div className="p-2 bg-slate-50 border-r border-slate-200"></div>
@@ -520,6 +523,7 @@ const CRMCalendar = ({ currentUser }) => {
                       })}
                     </div>
                   ))}
+                </div>
                 </div>
               </div>
             )}
@@ -615,7 +619,7 @@ const CRMCalendar = ({ currentUser }) => {
               {/* Type */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Evento</label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                   {Object.entries(EVENT_TYPES).map(([key, type]) => (
                     <button
                       key={key}

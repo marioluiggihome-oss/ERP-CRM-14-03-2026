@@ -642,6 +642,30 @@ async def create_activity(activity: ActivityCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.put("/crm/activities/{activity_id}")
+async def update_activity(activity_id: str, updates: dict):
+    """Update an existing activity"""
+    try:
+        updates.pop('id', None)
+        updates.pop('_id', None)
+        updates['updatedAt'] = datetime.now(timezone.utc).isoformat()
+
+        result = await db.activities.update_one(
+            {"id": activity_id},
+            {"$set": updates}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Actividad no encontrada")
+
+        doc = await db.activities.find_one({"id": activity_id}, {"_id": 0})
+        return doc
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update activity error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/crm/activities/{activity_id}")
 async def delete_activity(activity_id: str):
     """Delete an activity"""
@@ -687,6 +711,55 @@ async def get_calendar_events(
             query["completed"] = completed
         
         events = await db.calendar_events.find(query, {"_id": 0}).sort("startDate", 1).to_list(500)
+
+        # Incluir también las ACTIVIDADES del CRM (llamadas, visitas, reuniones...)
+        # como eventos del calendario, para que se vean en él. Se mapean sobre la marcha.
+        act_query = {}
+        if assignedTo:
+            act_query["$or"] = [{"assignedTo": assignedTo}, {"userId": assignedTo}]
+        if contactId:
+            act_query["contactId"] = contactId
+        activities = await db.activities.find(act_query, {"_id": 0}).to_list(500)
+
+        ACT_COLORS = {
+            'call': '#3b82f6', 'llamada': '#3b82f6',
+            'visit': '#f97316', 'visita': '#f97316',
+            'meeting': '#8b5cf6', 'reunion': '#8b5cf6', 'reunión': '#8b5cf6',
+            'video': '#06b6d4', 'email': '#10b981', 'note': '#64748b', 'nota': '#64748b',
+        }
+        for a in activities:
+            # Fecha de la actividad: usa 'date'/'time', con fallbacks a dueDate/createdAt
+            day = a.get('date') or a.get('dueDate')
+            if not day:
+                ca = a.get('createdAt')
+                day = (ca[:10] if isinstance(ca, str) else None)
+            if not day:
+                continue
+            t = a.get('time') or a.get('dueTime') or '09:00'
+            start_iso = f"{day}T{t}:00" if len(str(day)) == 10 else str(day)
+            # Filtrar por rango si se pidió (comparación por prefijo de fecha)
+            if start and day < start[:10]:
+                continue
+            if end and day > end[:10]:
+                continue
+            atype = (a.get('type') or 'note').lower()
+            events.append({
+                "id": a.get('id'),
+                "title": a.get('title') or a.get('subject') or atype.upper(),
+                "description": a.get('description') or a.get('notes') or '',
+                "eventType": atype,
+                "startDate": start_iso,
+                "endDate": start_iso,
+                "allDay": False,
+                "contactId": a.get('contactId'),
+                "contactName": a.get('contactName', ''),
+                "assignedTo": a.get('assignedTo') or a.get('userId', ''),
+                "completed": a.get('completed', False),
+                "color": ACT_COLORS.get(atype, '#64748b'),
+                "isActivity": True,  # marca para distinguirlo de un evento "puro"
+            })
+
+        events.sort(key=lambda e: e.get('startDate') or '')
         return events
     except Exception as e:
         logger.error(f"Get calendar events error: {e}")
