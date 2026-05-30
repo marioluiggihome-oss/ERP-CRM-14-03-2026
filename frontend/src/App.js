@@ -56,7 +56,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const APP_VERSION = 'v4.0-1779829874';
+const APP_VERSION = 'v4.1-render-facturas-mando';
 
 const App = () => {
   const [isManufacturingView, setIsManufacturingView] = useState(false);
@@ -972,7 +972,7 @@ const App = () => {
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />
-               <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">LUIGGI HOME ERP v4.0</span>
+               <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">LUIGGI HOME ERP v4.1</span>
             </div>
           </main>
 
