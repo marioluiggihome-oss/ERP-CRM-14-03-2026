@@ -151,6 +151,8 @@ async def _analyze_with_google_genai(
                 ),
                 prompt,
             ],
+            # temperature=0 -> respuestas estables/repetibles para el mismo plano
+            config=google_genai_types.GenerateContentConfig(temperature=0),
         )
         return response.text or ""
 
