@@ -35,14 +35,23 @@ except ImportError:
     EMERGENT_AVAILABLE = False
 
 
+def _clean_key(raw: Optional[str]) -> Optional[str]:
+    """Limpia una API key de espacios, saltos de línea y comillas accidentales
+    (causa típica de 401 al pegar el valor en el panel de variables)."""
+    if not raw:
+        return None
+    key = raw.strip().strip('"').strip("'").strip()
+    return key or None
+
+
 def get_gemini_key() -> Optional[str]:
     """Devuelve la API key de Gemini si está disponible."""
-    return os.environ.get('GEMINI_API_KEY')
+    return _clean_key(os.environ.get('GEMINI_API_KEY'))
 
 
 def get_emergent_key() -> Optional[str]:
     """Devuelve la EMERGENT_LLM_KEY si está disponible."""
-    return os.environ.get('EMERGENT_LLM_KEY')
+    return _clean_key(os.environ.get('EMERGENT_LLM_KEY'))
 
 
 def is_vision_available() -> bool:
