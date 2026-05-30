@@ -507,17 +507,21 @@ const App = () => {
     
     const tipo = (furniture.tipo || 'MUEBLE').toUpperCase();
     const subtipo = furniture.subtipo ? furniture.subtipo.replace(/_/g, ' ') : '';
-    const ancho = furniture.ancho_estimado || furniture.width || 600;
-    const alto = furniture.alto_estimado || furniture.height || 70;
-    const fondo = furniture.fondo_estimado || furniture.depth || 58;
-    const iaCode = furniture.codigo_sugerido;
-    
-    // Generar posibles códigos y buscar en catálogo
+    // Preferir dimensiones REALES del catálogo (backend) sobre las estimadas por la IA
+    const ancho = furniture.ancho_real || furniture.width || furniture.ancho_estimado || 600;
+    const alto = furniture.alto_real || furniture.height || furniture.alto_estimado || 70;
+    const fondo = furniture.fondo_real || furniture.depth || furniture.fondo_estimado || 58;
+    // Código CONFIRMADO por el backend (no la simple sugerencia de la IA)
+    const matchedCode = furniture.code || furniture.codigo_catalogo;
+    const iaCode = matchedCode || furniture.codigo_sugerido;
+
+    // Generar posibles códigos y buscar en catálogo (el código confirmado va primero)
     const possibleCodes = generatePossibleCodes(tipo, subtipo, ancho, alto);
-    if (iaCode) possibleCodes.unshift(iaCode);
-    
+    if (furniture.codigo_sugerido) possibleCodes.unshift(furniture.codigo_sugerido);
+    if (matchedCode) possibleCodes.unshift(matchedCode);
+
     console.log('Códigos posibles:', possibleCodes);
-    
+
     const foundProduct = findProductInCatalog(possibleCodes, iaCode);
     
     let newItem;
@@ -540,6 +544,29 @@ const App = () => {
         category: foundProduct.category || tipo,
         points: foundProduct.points || 0,
         zonePoints: foundProduct.zonePoints || {},
+        fromAI: true,
+        catalogMatch: true
+      };
+    } else if (furniture.producto_encontrado && matchedCode) {
+      // El backend YA encontró el producto en su catálogo (aunque el catálogo del
+      // frontend no lo tenga cargado): usar SUS datos -> código, nombre, medidas y puntos.
+      console.log('✅ Usando match del backend:', matchedCode);
+      const puntos = furniture.points ?? furniture.puntos ?? 0;
+      newItem = {
+        id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        productId: furniture.productId || furniture.product_id || matchedCode,
+        productCode: matchedCode.toUpperCase(),
+        productName: furniture.name || furniture.nombre_catalogo || `${tipo} ${subtipo}`.trim(),
+        quantity: 1,
+        customWidth: ancho,
+        customHeight: alto,
+        customDepth: fondo,
+        width: ancho,
+        height: alto,
+        depth: fondo,
+        category: furniture.category || furniture.categoria || tipo,
+        points: puntos,
+        zonePoints: furniture.zonePoints || {},
         fromAI: true,
         catalogMatch: true
       };
