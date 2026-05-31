@@ -32,27 +32,53 @@ async def start_telemetry_job(
     Devuelve inmediatamente un job_id para consultar el progreso.
     """
     try:
+        from services.pdf_utils import is_pdf_bytes, pdf_base64_to_png_base64
+
         # Convertir archivos a base64
         files_data = []
         for file in files:
             content = await file.read()
-            
-            # Validar que sea imagen
+
+            # Validar tipo
             magic_bytes = content[:8]
             is_jpeg = magic_bytes[:2] == b'\xff\xd8'
             is_png = magic_bytes[:8] == b'\x89PNG\r\n\x1a\n'
             is_gif = magic_bytes[:6] in (b'GIF87a', b'GIF89a')
-            
+            is_pdf = is_pdf_bytes(content)
+
+            if is_pdf:
+                # Los catálogos suelen venir en PDF (a veces escaneados). Cada
+                # página se rasteriza a PNG para que la IA pueda analizarla.
+                try:
+                    pdf_b64 = base64.b64encode(content).decode('utf-8')
+                    page_images = pdf_base64_to_png_base64(pdf_b64, dpi=150)
+                except Exception as e:
+                    logger.error(f"Error convirtiendo PDF {file.filename}: {e}")
+                    page_images = []
+
+                if not page_images:
+                    logger.warning(f"PDF sin páginas convertibles: {file.filename}")
+                    continue
+
+                base_name = file.filename or "catalogo.pdf"
+                for page_idx, page_b64 in enumerate(page_images):
+                    files_data.append({
+                        "filename": f"{base_name} (pág. {page_idx + 1})",
+                        "base64": page_b64
+                    })
+                logger.info(f"PDF {base_name}: {len(page_images)} página(s) añadida(s) al job")
+                continue
+
             if not (is_jpeg or is_png or is_gif):
                 logger.warning(f"Skipping non-image file: {file.filename}")
                 continue
-            
+
             base64_image = base64.b64encode(content).decode('utf-8')
             files_data.append({
                 "filename": file.filename,
                 "base64": base64_image
             })
-        
+
         if not files_data:
             return {"success": False, "error": "No se encontraron imágenes válidas"}
         
