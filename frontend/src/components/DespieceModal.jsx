@@ -15,6 +15,10 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   const [copiedCascoId, setCopiedCascoId] = useState(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [showBoardOptimizer, setShowBoardOptimizer] = useState(false);
+  // Lista de Compra: tamaño de tablero (mm) y % de merma configurables
+  const [boardW, setBoardW] = useState(2440);
+  const [boardH, setBoardH] = useState(1220);
+  const [wastePct, setWastePct] = useState(15);
   const printRef = useRef(null);
   
   // Editable header fields
@@ -569,14 +573,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     // Herrajes — reutiliza el cálculo de herrajes.
     const hw = calculateHerrajes || {};
 
-    // Tableros estándar 2440x1220 = 2.9768 m². Estimación orientativa de
-    // nº de tableros necesarios por material (con ~15% de merma típica).
-    const BOARD_M2 = 2.44 * 1.22;
+    // Tablero configurable (mm → m²) y % de merma. Estimación orientativa de
+    // nº de tableros necesarios por material.
+    const BOARD_M2 = ((boardW || 2440) / 1000) * ((boardH || 1220) / 1000);
+    const wasteFactor = 1 + ((Number(wastePct) || 0) / 100);
     const boards = Object.entries(boardsByMaterial).map(([material, d]) => ({
       material,
       area: d.area,
       pieces: d.pieces,
-      estBoards: Math.ceil((d.area * 1.15) / BOARD_M2),
+      estBoards: BOARD_M2 > 0 ? Math.ceil((d.area * wasteFactor) / BOARD_M2) : 0,
     })).sort((a, b) => b.area - a.area);
 
     const totalArea = boards.reduce((s, b) => s + b.area, 0);
@@ -596,7 +601,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         colgadores: hw.colgadores || 0,
       },
     };
-  }, [despieceData, carcassMaterialName, calculateBandasYTraseras, calculateHerrajes]);
+  }, [despieceData, carcassMaterialName, calculateBandasYTraseras, calculateHerrajes, boardW, boardH, wastePct]);
 
   // Exportar PDF - Genera contenido según la pestaña activa
   const handleExportPDF = () => {
@@ -2342,12 +2347,39 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
               {/* ===================== LISTA DE COMPRA ===================== */}
               {activeView === 'compra' && shoppingList && (
                 <div className="space-y-6" data-testid="view-compra">
+                  {/* Configuración del tablero y merma */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex flex-wrap items-end gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-purple-600 uppercase block mb-1">Tablero (mm)</label>
+                      <div className="flex items-center gap-2">
+                        <input type="number" value={boardW} onChange={e => setBoardW(Number(e.target.value))}
+                          className="w-20 px-2 py-1.5 border border-purple-300 rounded-lg text-sm text-center font-bold" title="Ancho del tablero (mm)" />
+                        <span className="text-purple-400 font-black">×</span>
+                        <input type="number" value={boardH} onChange={e => setBoardH(Number(e.target.value))}
+                          className="w-20 px-2 py-1.5 border border-purple-300 rounded-lg text-sm text-center font-bold" title="Alto del tablero (mm)" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-purple-600 uppercase block mb-1">Merma (%)</label>
+                      <input type="number" value={wastePct} onChange={e => setWastePct(Number(e.target.value))}
+                        className="w-20 px-2 py-1.5 border border-purple-300 rounded-lg text-sm text-center font-bold" title="Porcentaje de merma" />
+                    </div>
+                    <div className="flex gap-1.5">
+                      {[[2440,1220],[2750,1830],[3050,1525]].map(([w,h]) => (
+                        <button key={`${w}x${h}`} type="button" onClick={() => { setBoardW(w); setBoardH(h); }}
+                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border ${boardW===w&&boardH===h ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-600 border-purple-200 hover:bg-purple-100'}`}>
+                          {w}×{h}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Resumen superior */}
                   <div className="grid grid-cols-3 gap-4">
                     <div className="bg-purple-950 text-white p-5 rounded-2xl">
                       <p className="text-[10px] font-black uppercase text-purple-300 mb-1">Tableros estimados</p>
                       <p className="text-3xl font-black">{shoppingList.totalBoards}</p>
-                      <p className="text-[10px] text-purple-300 mt-1">tableros 244×122 (incl. ~15% merma)</p>
+                      <p className="text-[10px] text-purple-300 mt-1">tableros {boardW}×{boardH} (incl. ~{wastePct}% merma)</p>
                     </div>
                     <div className="bg-emerald-600 text-white p-5 rounded-2xl">
                       <p className="text-[10px] font-black uppercase text-emerald-100 mb-1">Canto total</p>
@@ -2430,7 +2462,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                     <p className="text-xs text-purple-700">
                       <strong>Uso:</strong> Resumen agregado de todo lo necesario para fabricar esta orden:
                       tableros por material, metros de canto y herrajes. El número de tableros es una
-                      estimación (superficie + 15% merma); para el corte exacto usa <strong>Optimizar Tableros</strong>.
+                      estimación (superficie + merma configurable, tablero {boardW}×{boardH}mm); para el corte
+                      exacto usa <strong>Optimizar Tableros</strong>.
                     </p>
                   </div>
                 </div>

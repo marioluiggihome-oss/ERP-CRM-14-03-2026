@@ -767,6 +767,7 @@ const PortalFabrica = ({ currentUser }) => {
     const [selPrograma, setSelPrograma] = useState('TODOS');
     const [selCategory, setSelCategory] = useState('TODAS');
     const [selSeries, setSelSeries] = useState('TODAS');
+    const [selApertura, setSelApertura] = useState('TODAS');
     const [fW, setFW] = useState('');
     const [fH, setFH] = useState('');
     const [fD, setFD] = useState('');
@@ -815,11 +816,20 @@ const PortalFabrica = ({ currentUser }) => {
       return Array.from(new Set(base.map(p => p.series || 'GENERAL'))).sort();
     }, [catalogProducts, selPrograma, selCategory]);
 
+    const uniqueAperturas = useMemo(() => {
+      let base = catalogProducts;
+      if (selPrograma !== 'TODOS') base = base.filter(p => (p.programa || 'ESTÁNDAR') === selPrograma);
+      if (selCategory !== 'TODAS') base = base.filter(p => (p.category || 'OTROS') === selCategory);
+      if (selSeries !== 'TODAS') base = base.filter(p => (p.series || 'GENERAL') === selSeries);
+      return Array.from(new Set(base.filter(p => p.apertura).map(p => p.apertura))).sort();
+    }, [catalogProducts, selPrograma, selCategory, selSeries]);
+
     const filteredCatalog = useMemo(() => {
       return catalogProducts.filter(p => {
         if (selPrograma !== 'TODOS' && (p.programa || 'ESTÁNDAR') !== selPrograma) return false;
         if (selCategory !== 'TODAS' && (p.category || 'OTROS') !== selCategory) return false;
         if (selSeries !== 'TODAS' && (p.series || 'GENERAL') !== selSeries) return false;
+        if (selApertura !== 'TODAS' && p.apertura !== selApertura) return false;
         const w = parseFloat(p.width || p.ancho || 0);
         const h = parseFloat(p.height || p.alto || 0);
         const d = parseFloat(p.depth || p.fondo || 0);
@@ -830,7 +840,7 @@ const PortalFabrica = ({ currentUser }) => {
         if (fD && Math.round(cm(d)) !== Math.round(parseFloat(fD))) return false;
         return true;
       });
-    }, [catalogProducts, selPrograma, selCategory, selSeries, fW, fH, fD]);
+    }, [catalogProducts, selPrograma, selCategory, selSeries, selApertura, fW, fH, fD]);
 
     const handleAddItem = () => {
       if (!newItem.productCode) return;
@@ -1072,7 +1082,7 @@ const PortalFabrica = ({ currentUser }) => {
                     <div className="flex flex-wrap gap-2 mb-3">
                       <select
                         value={selPrograma}
-                        onChange={e => { setSelPrograma(e.target.value); setSelCategory('TODAS'); setSelSeries('TODAS'); }}
+                        onChange={e => { setSelPrograma(e.target.value); setSelCategory('TODAS'); setSelSeries('TODAS'); setSelApertura('TODAS'); }}
                         className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-1.5 px-3 text-[11px] font-black uppercase text-indigo-900 outline-none"
                       >
                         <option value="TODOS">📁 PROGRAMA</option>
@@ -1080,7 +1090,7 @@ const PortalFabrica = ({ currentUser }) => {
                       </select>
                       <select
                         value={selCategory}
-                        onChange={e => { setSelCategory(e.target.value); setSelSeries('TODAS'); }}
+                        onChange={e => { setSelCategory(e.target.value); setSelSeries('TODAS'); setSelApertura('TODAS'); }}
                         className="bg-purple-100 border-2 border-purple-400 rounded-lg py-1.5 px-3 text-[11px] font-black uppercase text-purple-900 outline-none disabled:opacity-40"
                         disabled={selPrograma === 'TODOS'}
                       >
@@ -1089,13 +1099,23 @@ const PortalFabrica = ({ currentUser }) => {
                       </select>
                       <select
                         value={selSeries}
-                        onChange={e => setSelSeries(e.target.value)}
+                        onChange={e => { setSelSeries(e.target.value); setSelApertura('TODAS'); }}
                         className="bg-amber-100 border-2 border-amber-400 rounded-lg py-1.5 px-3 text-[11px] font-black uppercase text-amber-900 outline-none disabled:opacity-40"
                         disabled={selCategory === 'TODAS'}
                       >
                         <option value="TODAS">📄 SERIE</option>
                         {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
+                      {uniqueAperturas.length > 0 && (
+                        <select
+                          value={selApertura}
+                          onChange={e => setSelApertura(e.target.value)}
+                          className="bg-green-100 border-2 border-green-400 rounded-lg py-1.5 px-3 text-[11px] font-black uppercase text-green-900 outline-none"
+                        >
+                          <option value="TODAS">🚪 APERTURA</option>
+                          {uniqueAperturas.map(a => <option key={a} value={a}>{a === '1P D/I' ? '1P ↔ D/I' : a}</option>)}
+                        </select>
+                      )}
                       <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1 border border-blue-200">
                         <span className="text-[9px] font-black text-blue-600">📐</span>
                         <input type="number" placeholder="A" value={fW} onChange={e => setFW(e.target.value)} className="w-12 bg-white border border-blue-300 rounded px-1.5 py-1 text-xs text-center outline-none" title="Ancho (cm)" />
