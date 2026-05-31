@@ -33,6 +33,8 @@ class UserCreate(BaseModel):
     password: str
     clientName: str = ""
     commercialDiscount: float = 0
+    discountMontada: float = 0
+    discountDespiece: float = 0
     isAdmin: bool = False
     isRepresentative: bool = False
     isResponsableDelegacion: bool = False
@@ -45,12 +47,17 @@ class UserCreate(BaseModel):
     provinciaCode: Optional[str] = None
     accessExpirationDate: Optional[str] = None
 
+    class Config:
+        extra = "allow"
+
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     clientName: Optional[str] = None
     commercialDiscount: Optional[float] = None
+    discountMontada: Optional[float] = None
+    discountDespiece: Optional[float] = None
     isAdmin: Optional[bool] = None
     isRepresentative: Optional[bool] = None
     isResponsableDelegacion: Optional[bool] = None
@@ -63,6 +70,9 @@ class UserUpdate(BaseModel):
     provinciaCode: Optional[str] = None
     accessExpirationDate: Optional[str] = None
     isActive: Optional[bool] = None
+
+    class Config:
+        extra = "allow"
 
 
 class UserResponse(BaseModel):
