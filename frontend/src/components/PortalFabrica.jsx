@@ -1507,7 +1507,47 @@ const PortalFabrica = ({ currentUser }) => {
               <p className="text-indigo-400 text-sm">Gestión de órdenes de fabricación</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            {/* Selector de orden + Despiece / Informe Industrial (misma acción que dentro de cada orden) */}
+            <div className="flex items-center gap-2 bg-white border border-indigo-200 rounded-xl pl-3 pr-1.5 py-1.5">
+              <select
+                value={selectedOrder || ''}
+                onChange={(e) => setSelectedOrder(e.target.value || null)}
+                className="text-sm font-bold text-indigo-700 bg-transparent focus:outline-none max-w-[180px]"
+                data-testid="header-order-select"
+                title="Selecciona una orden para Despiece / Informe Industrial"
+              >
+                <option value="">Selecciona orden…</option>
+                {filteredOrdersByFactory.map(o => (
+                  <option key={o.id} value={o.id}>
+                    {o.orderNumber}{o.customerName ? ` — ${o.customerName}` : ''}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => selectedOrder && handleViewDespiece(selectedOrder)}
+                disabled={!selectedOrder}
+                className="px-3 py-1.5 bg-orange-600 text-white rounded-lg font-bold text-sm hover:bg-orange-700 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                data-testid="header-despiece-btn"
+                title="Ver Despiece de la orden seleccionada"
+              >
+                <Scissors size={16} />
+                Despiece
+              </button>
+              <button
+                onClick={() => {
+                  const ord = filteredOrdersByFactory.find(o => o.id === selectedOrder);
+                  if (ord) handleOpenIndustrialReport(ord);
+                }}
+                disabled={!selectedOrder}
+                className="px-3 py-1.5 bg-indigo-950 text-white rounded-lg font-bold text-sm hover:bg-indigo-800 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                data-testid="header-industrial-report-btn"
+                title="Abrir Informe Industrial de la orden seleccionada"
+              >
+                <FileText size={16} />
+                Informe Industrial
+              </button>
+            </div>
             <button
               onClick={() => setShowImportFromProjectsModal(true)}
               className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 flex items-center gap-2"
