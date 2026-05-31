@@ -1,0 +1,57 @@
+name: Frontend Build
+
+# Compila el frontend en cada Pull Request y en cada push a las ramas
+# principales. Objetivo: que un error de sintaxis (JSX roto, import inexistente,
+# etc.) NUNCA llegue a producción ni rompa el deploy de Railway.
+#
+# La configuración replica exactamente la del build de producción
+# (frontend/nixpacks.toml): Node 18, yarn, CI=false y openssl-legacy-provider.
+# Así el CI falla ante los mismos errores que romperían el deploy real, sin
+# falsas alarmas por warnings que producción tolera.
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-build.yml"
+  push:
+    branches:
+      - main
+      - "claude/**"
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-build.yml"
+
+# Cancela ejecuciones antiguas de la misma rama/PR si llega un push nuevo.
+concurrency:
+  group: frontend-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compilar frontend (Node 18 / yarn)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      # Mismas variables que el build de producción (frontend/nixpacks.toml).
+      CI: "false"
+      NODE_OPTIONS: "--openssl-legacy-provider"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Instalar dependencias
+        run: yarn install --frozen-lockfile
+
+      - name: Compilar (yarn build)
+        run: yarn build

@@ -10,6 +10,7 @@ import { fabricaAPI, projectsAPI } from '../services/api';
 import ProductionDashboard from './ProductionDashboard';
 import OrderHistory from './OrderHistory';
 import ManufacturingReport from './ManufacturingReport';
+import DespieceModal from './DespieceModal';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -156,9 +157,10 @@ const PortalFabrica = ({ currentUser }) => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showImportFromProjectsModal, setShowImportFromProjectsModal] = useState(false);
   const [showDeliveryDateModal, setShowDeliveryDateModal] = useState(null);
-  const [showDespieceModal, setShowDespieceModal] = useState(null);
-  const [despieceData, setDespieceData] = useState(null);
-  const [loadingDespiece, setLoadingDespiece] = useState(false);
+  // Orden seleccionada para abrir el Despiece COMPLETO (5 secciones) reutilizando
+  // el mismo DespieceModal del presupuesto. El modal calcula el despiece por su
+  // cuenta a partir de los items de la orden.
+  const [despieceOrder, setDespieceOrder] = useState(null);
   const [industrialReportOrder, setIndustrialReportOrder] = useState(null);
 
   const handleOpenIndustrialReport = (order) => {
@@ -303,26 +305,35 @@ const PortalFabrica = ({ currentUser }) => {
     }
   };
 
-  // Ver despiece de una orden
-  const handleViewDespiece = async (orderId) => {
-    setLoadingDespiece(true);
-    setShowDespieceModal(orderId);
-    try {
-      const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/despiece`);
-      if (response.ok) {
-        const data = await response.json();
-        setDespieceData(data);
-      } else {
-        const error = await response.json();
-        alert('Error: ' + (error.detail || 'No se pudo cargar el despiece'));
-        setShowDespieceModal(null);
-      }
-    } catch (error) {
-      alert('Error al cargar despiece: ' + error.message);
-      setShowDespieceModal(null);
-    } finally {
-      setLoadingDespiece(false);
+  // Mapea los items de una orden de fábrica al formato de "items" que espera el
+  // DespieceModal del presupuesto (item.isManual + customWidth/Height/Depth...).
+  // Así reutilizamos el despiece COMPLETO (5 secciones + exportaciones) sin
+  // duplicar lógica de cálculo.
+  const mapOrderItemsForDespiece = (order) => {
+    return (order?.items || []).map((it, idx) => ({
+      id: it.id || `ord-${idx}`,
+      productId: it.id || `ord-${idx}`,
+      isManual: false,
+      // El DespieceModal busca el producto en su catálogo por productId; como en
+      // fábrica no hay catálogo cargado, usamos customReference para forzar el
+      // código y pasamos las medidas reales como custom*.
+      customReference: it.productCode || it.code || '',
+      productName: it.productName || it.description || it.name || '',
+      customWidth: parseFloat(it.width || it.ancho || 0) || 0,
+      customHeight: parseFloat(it.height || it.alto || 0) || 0,
+      customDepth: parseFloat(it.depth || it.fondo || 58) || 0,
+      quantity: parseInt(it.quantity) || 1,
+    }));
+  };
+
+  // Ver despiece COMPLETO de una orden (reutiliza DespieceModal del presupuesto).
+  const handleViewDespiece = (orderId) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      alert('No se encontró la orden');
+      return;
     }
+    setDespieceOrder(order);
   };
 
   // Descargar informe de producción PDF
@@ -1746,101 +1757,27 @@ const PortalFabrica = ({ currentUser }) => {
       {showImportModal && <ImportModal />}
       {showImportFromProjectsModal && <ImportFromProjectsModal />}
       
-      {/* Modal de Despiece */}
-      {showDespieceModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
-              <div>
-                <h2 className="text-xl font-black uppercase tracking-wider">
-                  Despiece de Orden
-                </h2>
-                <p className="text-orange-100 text-sm">
-                  {despieceData?.orderNumber} - {despieceData?.customerName}
-                </p>
-              </div>
-              <button 
-                onClick={() => { setShowDespieceModal(null); setDespieceData(null); }}
-                className="p-2 hover:bg-white/20 rounded-xl transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 overflow-auto p-6">
-              {loadingDespiece ? (
-                <div className="flex items-center justify-center py-20">
-                  <RefreshCw size={32} className="text-orange-600 animate-spin" />
-                </div>
-              ) : despieceData ? (
-                <div className="space-y-6">
-                  {despieceData.items?.map((item, itemIdx) => (
-                    <div key={itemIdx} className="border border-orange-200 rounded-xl overflow-hidden">
-                      {/* Item header */}
-                      <div className="bg-orange-50 px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl font-black text-orange-800">{item.productCode}</span>
-                          <span className="text-orange-600">{item.productName}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="px-3 py-1 bg-orange-200 text-orange-800 rounded-full text-sm font-bold">
-                            x{item.quantity}
-                          </span>
-                          <span className="text-sm text-orange-600">{item.dimensions}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Components table */}
-                      <table className="w-full">
-                        <thead className="bg-orange-100/50">
-                          <tr className="text-xs font-bold text-orange-700 uppercase">
-                            <th className="px-4 py-2 text-left">Pieza</th>
-                            <th className="px-4 py-2 text-left">Material</th>
-                            <th className="px-4 py-2 text-center">Largo</th>
-                            <th className="px-4 py-2 text-center">Ancho</th>
-                            <th className="px-4 py-2 text-center">Espesor</th>
-                            <th className="px-4 py-2 text-center">Cant.</th>
-                            <th className="px-4 py-2 text-left">Notas</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-orange-100">
-                          {item.components?.map((comp, compIdx) => (
-                            <tr key={compIdx} className="hover:bg-orange-50/50">
-                              <td className="px-4 py-2 font-medium text-gray-800">{comp.name}</td>
-                              <td className="px-4 py-2 text-sm text-gray-600">{comp.material}</td>
-                              <td className="px-4 py-2 text-center font-mono">{comp.length}</td>
-                              <td className="px-4 py-2 text-center font-mono">{comp.width}</td>
-                              <td className="px-4 py-2 text-center font-mono">{comp.thickness}</td>
-                              <td className="px-4 py-2 text-center font-bold text-orange-700">{comp.quantity}</td>
-                              <td className="px-4 py-2 text-xs text-gray-500">{comp.notes}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Scissors size={48} className="mx-auto text-orange-200 mb-4" />
-                  <p className="text-orange-400">No hay datos de despiece</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Footer */}
-            <div className="bg-orange-50 px-6 py-3 flex justify-end gap-3 border-t border-orange-200">
-              <button
-                onClick={() => { setShowDespieceModal(null); setDespieceData(null); }}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition-colors"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Despiece COMPLETO de la orden — reutiliza el mismo DespieceModal del
+          presupuesto (5 secciones: Orden Montaje, Lista Corte, Bandas y Traseras,
+          Casco/Puerta/Herraje, Puertas Proveedor + Optimizar Tableros / PDF / CSV / XML).
+          El modal calcula el despiece por su cuenta a partir de los items de la orden. */}
+      {despieceOrder && (
+        <DespieceModal
+          isOpen={true}
+          onClose={() => setDespieceOrder(null)}
+          items={mapOrderItemsForDespiece(despieceOrder)}
+          catalogs={[]}
+          carcassMaterialName={despieceOrder.carcassColor || despieceOrder.material || 'Blanco SUPERPAN'}
+          carcassBackThickness={8}
+          customerName={despieceOrder.customerName || ''}
+          projectReference={despieceOrder.orderNumber || ''}
+          expedientNumber={despieceOrder.expedientNumber || despieceOrder.manufacturingNumber || ''}
+          doorColorLow={despieceOrder.doorColor || ''}
+          doorColorHigh={despieceOrder.doorColor || ''}
+          doorColorColumns={despieceOrder.doorColor || ''}
+          sideColor={despieceOrder.sideColor || ''}
+          doorHasVeta={!!despieceOrder.doorHasVeta}
+        />
       )}
 
       {/* Informe Industrial Modal - Reutilizando ManufacturingReport */}
@@ -1873,6 +1810,7 @@ const PortalFabrica = ({ currentUser }) => {
             logo={null}
             distributorName={industrialReportOrder.factoryName || ''}
             onBack={() => setIndustrialReportOrder(null)}
+            onOpenDespiece={() => setDespieceOrder(industrialReportOrder)}
           />
         </div>
       )}

@@ -19,9 +19,10 @@
 - [x] Render de Facturas/Mando (estaban en blanco).
 - [x] Build del frontend fallaba por JSX roto en `BudgetTable.jsx` (2 `</div>`).
 - [x] Build del frontend fallaba por bloque duplicado/corrupto en `DespieceCatalog.jsx`.
-- [ ] **Añadir CI (GitHub Action) que compile el frontend en cada PR** para que un
-      error de sintaxis NUNCA llegue a producción ni rompa el deploy. *(Muy recomendado:
-      ha roto el deploy 3 veces.)*
+- [x] **Añadir CI (GitHub Action) que compile el frontend en cada PR** para que un
+      error de sintaxis NUNCA llegue a producción ni rompa el deploy.
+      → `.github/workflows/frontend-build.yml` (Node 18 + yarn, misma config que el
+      deploy de Railway).
 
 ### 🟠 IA — acierto del catálogo (palanca 1)
 - [x] Estabilidad: `temperature=0` en el análisis (resultados repetibles).

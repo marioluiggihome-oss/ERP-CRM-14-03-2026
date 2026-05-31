@@ -1,8 +1,12 @@
 import React from 'react';
-import { ArrowLeft, Printer, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Printer, FileText, Download, Scissors } from 'lucide-react';
 import { generateManufacturingPDF } from '../services/pdfGenerator';
 
-const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, logo, distributorName, onBack }) => {
+// onOpenDespiece (opcional): si se pasa, muestra un botón "Despiece" en la
+// cabecera que abre el despiece COMPLETO (5 secciones). Lo usa el Portal de
+// Fábrica para tener todo en el mismo Informe Industrial. Desde el presupuesto
+// no se pasa, por lo que el botón no aparece y no afecta a ese flujo.
+const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, logo, distributorName, onBack, onOpenDespiece }) => {
   
   const allProducts = catalogs
     .flatMap(c => c.products.map(p => ({ ...p, catalogId: c.id })));
@@ -43,6 +47,17 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
         </h1>
 
         <div className="flex gap-2">
+          {onOpenDespiece && (
+            <button
+              onClick={onOpenDespiece}
+              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs hover:bg-indigo-700 transition-all shadow-xl"
+              data-testid="report-despiece-btn"
+              title="Ver despiece completo: corte, bandas, herrajes, puertas proveedor…"
+            >
+              <Scissors size={18} />
+              Despiece
+            </button>
+          )}
           <button
             onClick={handleExportPDF}
             className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs hover:bg-emerald-700 transition-all shadow-xl"
@@ -118,29 +133,39 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
             </thead>
             <tbody className="divide-y divide-indigo-50">
               {items.filter(item => !item.isManual).map((item, idx) => {
+                // El producto del catálogo es OPCIONAL: en el Portal de Fábrica el
+                // catálogo va vacío, así que usamos los datos del propio item como
+                // fallback (no descartamos la fila si no hay producto en catálogo).
                 const product = allProducts.find(p => p.id === item.productId);
-                
-                if (!product) return null;
 
-                // Calcular cortes especiales
+                const code = item.customReference || item.productCode || product?.code || '—';
+                const name = product?.name || item.productName || item.description || '—';
+                const width = item.customWidth ?? item.width ?? product?.width ?? '';
+                const height = item.customHeight ?? item.height ?? product?.height ?? '';
+                const depth = item.customDepth ?? item.depth ?? product?.depth ?? '';
+
+                // Cortes especiales: solo se pueden detectar si tenemos las medidas
+                // originales del catálogo para comparar.
                 const specialCuts = [];
-                if (Number(item.customWidth) !== Number(product.width)) specialCuts.push('C.ANCHO');
-                if (Number(item.customHeight) !== Number(product.height)) specialCuts.push('C.ALTO');
-                if (Number(item.customDepth) !== Number(product.depth)) specialCuts.push('C.FONDO');
+                if (product) {
+                  if (Number(item.customWidth) !== Number(product.width)) specialCuts.push('C.ANCHO');
+                  if (Number(item.customHeight) !== Number(product.height)) specialCuts.push('C.ALTO');
+                  if (Number(item.customDepth) !== Number(product.depth)) specialCuts.push('C.FONDO');
+                }
                 if (item.hasVigaCut) specialCuts.push('C.VIGA');
-                
+
                 const notesDisplay = [...specialCuts];
                 if (item.notes) notesDisplay.push(item.notes);
 
                 return (
-                  <tr key={item.id} className="hover:bg-indigo-50/50">
+                  <tr key={item.id || idx} className="hover:bg-indigo-50/50">
                     <td className="p-4 font-black text-indigo-900 text-lg">{item.quantity}</td>
                     <td className="p-4 font-black text-indigo-600 uppercase text-xs">
-                      {item.customReference || product.code}
+                      {code}
                     </td>
-                    <td className="p-4 font-bold text-indigo-900 text-sm">{product.name}</td>
+                    <td className="p-4 font-bold text-indigo-900 text-sm">{name}</td>
                     <td className="p-4 text-center font-mono text-xs font-bold text-indigo-800">
-                      {item.customWidth} × {item.customHeight} × {item.customDepth} mm
+                      {width} × {height} × {depth} mm
                     </td>
                     <td className="p-4 text-center text-xs font-black uppercase text-indigo-600">
                       {item.openingDirection || 'N/A'}
