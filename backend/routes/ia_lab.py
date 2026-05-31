@@ -26,68 +26,112 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ia-lab", tags=["IA Lab"])
 
 
-async def search_product_in_catalog(code: str, width: int = None, height: int = None, library: str = None) -> dict:
+# Mapa de tipo detectado por la IA -> categorías del catálogo (ZC y MV).
+# El ancho es el dato más fiable de un plano (va rotulado); la altura la
+# estima la IA y puede no coincidir, así que el emparejamiento prioriza
+# TIPO + ANCHO dentro de la biblioteca correcta.
+_TIPO_TO_CATEGORIES = {
+    'ALTO': ['ALTOS', 'ALTOS GOLA', 'ALTO GOLA', 'SOBREMODULOS', 'SOBREMÓDULOS', 'VITRINAS'],
+    'BAJO': ['BAJOS', 'BAJOS GOLA'],
+    'COLUMNA': ['COLUMNAS', 'COLUMNAS GOLA'],
+    'SEMICOLUMNA': ['SEMICOLUMNAS', 'SEMICOLUMNAS GOLA'],
+    'COSTADO': ['COSTADOS'],
+}
+
+
+async def _match_by_type_and_width(tipo: str, width: int, height: int, base_filter: dict) -> dict:
+    """Empareja por TIPO + ANCHO (y, si ayuda, altura) dentro de la biblioteca.
+
+    Estrategia: filtra por las categorías del tipo y busca el producto cuyo
+    ancho sea el más cercano al detectado. Es robusto entre librerías (ZC/MV)
+    porque no depende del formato del código, solo de categoría + medida.
     """
-    Busca un producto en el catálogo por código.
-    Intenta varias variantes del código si no encuentra exacto.
-    Filtra por biblioteca si se especifica.
-    Devuelve el producto con sus precios reales.
-    """
-    if not code:
+    if not tipo or not width:
         return None
-    
-    code = code.upper().strip()
-    
-    # Construir filtro base con biblioteca si se especifica
+    cats = _TIPO_TO_CATEGORIES.get((tipo or '').upper())
+    if not cats:
+        return None
+
+    # Tolerancia de ancho: ±60mm (los anchos son estándar: 300,400,...)
+    cat_filter = {
+        **base_filter,
+        "category": {"$in": cats},
+        "width": {"$gte": width - 60, "$lte": width + 60},
+    }
+    candidates = await db.products.find(cat_filter, {"_id": 0}).to_list(200)
+    if not candidates:
+        return None
+
+    def score(p):
+        pw = float(p.get('width') or 0)
+        ph = float(p.get('height') or 0)
+        s = abs(pw - width)
+        if height:
+            s += abs(ph - height) * 0.3  # la altura pesa menos (la estima la IA)
+        return s
+
+    candidates.sort(key=score)
+    return candidates[0]
+
+
+async def search_product_in_catalog(code: str, width: int = None, height: int = None,
+                                     library: str = None, tipo: str = None) -> dict:
+    """
+    Busca un producto en el catálogo.
+    Orden: código exacto -> referencia -> variantes de código -> TIPO+ANCHO -> dimensiones.
+    Filtra por biblioteca si se especifica.
+    """
+    code = (code or '').upper().strip()
+
     base_filter = {}
     if library:
         base_filter["library"] = library.upper()
-    
-    # 1. Búsqueda exacta
-    search_filter = {**base_filter, "code": code}
-    product = await db.products.find_one(search_filter, {"_id": 0})
-    if product:
-        return product
-    
-    # 2. Buscar con referencia
-    search_filter = {**base_filter, "reference": code}
-    product = await db.products.find_one(search_filter, {"_id": 0})
-    if product:
-        return product
-    
-    # 3. Buscar variantes del código
-    match = re.match(r'^(\d+)([A-Z]+)(\d*)([A-Z]*)(\d+)$', code)
-    if match:
-        altura_prefix = match.group(1)
-        tipo = match.group(2)
-        num_puertas = match.group(3)
-        tipo_puerta = match.group(4)
-        ancho = match.group(5)
-        
-        pattern = f".*{tipo}.*{num_puertas}.*{tipo_puerta}.*{ancho}$"
-        search_filter = {**base_filter, "code": {"$regex": pattern, "$options": "i"}}
-        product = await db.products.find_one(search_filter, {"_id": 0})
+
+    if code:
+        # 1. Búsqueda exacta
+        product = await db.products.find_one({**base_filter, "code": code}, {"_id": 0})
         if product:
             return product
-        
-        pattern_simple = f".*{tipo}.*{ancho}$"
-        search_filter = {**base_filter, "code": {"$regex": pattern_simple, "$options": "i"}}
-        product = await db.products.find_one(search_filter, {"_id": 0})
+
+        # 2. Buscar con referencia
+        product = await db.products.find_one({**base_filter, "reference": code}, {"_id": 0})
         if product:
             return product
-    
-    # 4. Buscar por dimensiones si se proporcionan
+
+        # 3. Buscar variantes del código (formato ZC: 9A1P600, etc.)
+        match = re.match(r'^(\d+)([A-Z]+)(\d*)([A-Z]*)(\d+)$', code)
+        if match:
+            tipo_code = match.group(2)
+            num_puertas = match.group(3)
+            tipo_puerta = match.group(4)
+            ancho = match.group(5)
+
+            pattern = f".*{tipo_code}.*{num_puertas}.*{tipo_puerta}.*{ancho}$"
+            product = await db.products.find_one({**base_filter, "code": {"$regex": pattern, "$options": "i"}}, {"_id": 0})
+            if product:
+                return product
+
+            pattern_simple = f".*{tipo_code}.*{ancho}$"
+            product = await db.products.find_one({**base_filter, "code": {"$regex": pattern_simple, "$options": "i"}}, {"_id": 0})
+            if product:
+                return product
+
+    # 4. Emparejamiento por TIPO + ANCHO (clave para que funcione en MV y ZC
+    #    aunque el código sugerido por la IA no exista en esa biblioteca).
+    product = await _match_by_type_and_width(tipo, width, height, base_filter)
+    if product:
+        return product
+
+    # 5. Último recurso: por dimensiones (ancho + alto aproximados).
     if width and height:
-        search_filter = {
+        products = await db.products.find({
             **base_filter,
             "width": {"$gte": width - 50, "$lte": width + 50},
             "height": {"$gte": height - 100, "$lte": height + 100}
-        }
-        products = await db.products.find(search_filter, {"_id": 0}).limit(5).to_list(5)
-        
+        }, {"_id": 0}).limit(5).to_list(5)
         if products:
             return products[0]
-    
+
     return None
 
 
@@ -134,7 +178,9 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
         height = alto_cm * 10  # cm → mm para búsqueda en catálogo
         fondo_cm = int(raw_fondo / 10) if raw_fondo and raw_fondo > 200 else int(raw_fondo)
 
-        catalog_product = await search_product_in_catalog(code, width, height, library)
+        catalog_product = await search_product_in_catalog(
+            code, width, height, library, tipo=item.get('tipo')
+        )
         
         enriched_item = {**item}
         
@@ -241,6 +287,32 @@ MAX_KITCHEN_IMAGE = 10 * 1024 * 1024
 MAX_KITCHEN_BASE64 = MAX_KITCHEN_IMAGE * 4 // 3
 
 
+def build_analysis_prompt(library: str) -> str:
+    """Devuelve el prompt de análisis adaptado a la biblioteca.
+
+    El sistema de códigos del prompt base es ZC. Para MV (Muebles Valencia) la
+    nomenclatura es distinta, así que NO se le pide a la IA que invente códigos
+    ZC: el emparejamiento real lo hace el backend por TIPO + ANCHO contra el
+    catálogo de la biblioteca. Lo importante en ambas es detectar bien el
+    TIPO y el ANCHO (que va rotulado en el plano).
+    """
+    lib = (library or 'ZC').upper()
+    if lib == 'MV':
+        return ANALYSIS_PROMPT_SINGLE + """
+
+IMPORTANTE — BIBLIOTECA MV (MUEBLES VALENCIA):
+- Esta cocina usa el catálogo MV, cuya nomenclatura de códigos es DISTINTA a la
+  descrita arriba. NO fuerces el formato de código ZC.
+- Lo CRÍTICO es detectar correctamente para cada mueble: el TIPO
+  (ALTO/BAJO/COLUMNA/SEMICOLUMNA/COSTADO), el ANCHO en mm (suele ir rotulado
+  en el plano: 300, 400, 450, 500, 600, 700, 800, 900, 1000, 1200) y el nº de
+  puertas. La altura/fondo estímalas como siempre.
+- En "codigo_sugerido" pon tu mejor estimación, pero prioriza acertar TIPO y
+  ANCHO: el sistema buscará el producto MV que corresponda por tipo y medida.
+"""
+    return ANALYSIS_PROMPT_SINGLE
+
+
 @router.post("/analyze-kitchen-plan")
 async def analyze_kitchen_plan(
     file: UploadFile = File(...),
@@ -265,7 +337,7 @@ async def analyze_kitchen_plan(
         
         response_text = await analyze_image_with_gemini(
             image_base64=base64_image,
-            prompt=ANALYSIS_PROMPT_SINGLE,
+            prompt=build_analysis_prompt(active_library),
             session_id=f"kitchen-plan-{uuid.uuid4().hex[:8]}",
             model="gemini-2.0-flash",
         )
@@ -404,6 +476,16 @@ Responde SOLO con JSON:
     "total_columnas": 0
   }}
 }}"""
+
+            # Para MV la nomenclatura de códigos es distinta: no forzar el formato
+            # ZC; el backend empareja por TIPO + ANCHO contra el catálogo MV.
+            if active_library == 'MV':
+                analysis_prompt += """
+
+IMPORTANTE — BIBLIOTECA MV (MUEBLES VALENCIA): el sistema de códigos de arriba es
+de otra biblioteca. NO fuerces ese formato. Prioriza detectar bien el TIPO y el
+ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente.
+"""
 
             response_text = await analyze_image_with_gemini(
                 image_base64=base64_image,
