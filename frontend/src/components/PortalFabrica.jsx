@@ -1810,6 +1810,7 @@ const PortalFabrica = ({ currentUser }) => {
             logo={null}
             distributorName={industrialReportOrder.factoryName || ''}
             onBack={() => setIndustrialReportOrder(null)}
+            onOpenDespiece={() => setDespieceOrder(industrialReportOrder)}
           />
         </div>
       )}
