@@ -771,7 +771,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         const updated = await usersAPI.update(editingUserId, updateData);
         setState(prev => ({
           ...prev,
-          users: prev.users.map(u => u.id === editingUserId ? updated : u)
+          users: prev.users.map(u => u.id === editingUserId ? updated : u),
+          // Si se edita al usuario con sesión iniciada, refrescar currentUser
+          // para que el presupuesto recalcule el COSTO (descuento) al instante,
+          // sin necesidad de volver a iniciar sesión.
+          ...(prev.currentUser?.id === editingUserId
+            ? { currentUser: { ...prev.currentUser, ...updated } }
+            : {})
         }));
       } else {
         // Create new user
