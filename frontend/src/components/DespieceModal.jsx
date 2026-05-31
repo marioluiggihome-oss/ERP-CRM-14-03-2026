@@ -234,9 +234,11 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     const totalUnidades = supplierDoors.reduce((sum, d) => sum + (parseInt(d.unidades) || 1), 0);
     
     // Generar CSV
+    // PRIVACIDAD: el proveedor NO debe ver el nombre del cliente. Se usa la
+    // referencia / nº de pedido de venta como identificador del pedido.
+    const refPedido = editableProjectRef || editableExpedient || '-';
     let csv = "PEDIDO PUERTAS - PROVEEDOR\n";
-    csv += `Cliente: ${editableCustomerName || '-'}\n`;
-    csv += `Expediente: ${editableExpedient || '-'}\n`;
+    csv += `Ref. Pedido: ${refPedido}\n`;
     csv += `Fecha: ${new Date().toLocaleDateString('es-ES')}\n\n`;
     csv += "Mueble;Color;Alto (cm);Ancho (cm);Veta;Unidades;Tipo;Observaciones\n";
     
@@ -313,16 +315,12 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         
         <div class="info-box">
           <div class="info-item">
-            <div class="info-label">Cliente</div>
-            <div class="info-value">${editableCustomerName || '-'}</div>
+            <div class="info-label">Ref. Pedido</div>
+            <div class="info-value">${editableProjectRef || editableExpedient || '-'}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Expediente</div>
             <div class="info-value">${editableExpedient || '-'}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Referencia</div>
-            <div class="info-value">${editableProjectRef || '-'}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Fecha Pedido</div>
@@ -536,6 +534,69 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       colgadores: totalColgadores  // NUEVO
     };
   }, [despieceData]);
+
+  // ============================================================
+  // LISTA DE COMPRA AGREGADA (hoja de materiales del taller)
+  // Junta en un solo lugar lo que hay que comprar/consumir para fabricar
+  // toda la orden: tableros por material (m² + nº piezas), canto por material
+  // (metros lineales) y herrajes totales. Reutiliza los cálculos existentes.
+  // ============================================================
+  const shoppingList = useMemo(() => {
+    if (!despieceData?.items) return null;
+
+    // Tableros por material (m² y piezas) — incluye TODOS los materiales
+    // (casco, traseras, puertas, frentes de cajón, etc.).
+    const boardsByMaterial = {};
+    despieceData.items.forEach(item => {
+      const itemQty = item.itemQuantity || 1;
+      item.components?.forEach(comp => {
+        // Los herrajes (length/width 0) no son tablero: se cuentan aparte.
+        const isHardware = (!comp.length || !comp.width);
+        const material = comp.material || carcassMaterialName || 'MELAMINA';
+        const qty = (comp.quantity || 1) * itemQty;
+        if (isHardware) return;
+        const area = ((comp.length || 0) * (comp.width || 0) * qty) / 10000; // m²
+        if (!boardsByMaterial[material]) boardsByMaterial[material] = { area: 0, pieces: 0 };
+        boardsByMaterial[material].area += area;
+        boardsByMaterial[material].pieces += qty;
+      });
+    });
+
+    // Canto por material (ml) — reutiliza el cálculo de bandas.
+    const edgeByMaterial = (calculateBandasYTraseras?.cantoByMaterial) || {};
+    const totalEdge = parseFloat(calculateBandasYTraseras?.totalCanto || 0);
+
+    // Herrajes — reutiliza el cálculo de herrajes.
+    const hw = calculateHerrajes || {};
+
+    // Tableros estándar 2440x1220 = 2.9768 m². Estimación orientativa de
+    // nº de tableros necesarios por material (con ~15% de merma típica).
+    const BOARD_M2 = 2.44 * 1.22;
+    const boards = Object.entries(boardsByMaterial).map(([material, d]) => ({
+      material,
+      area: d.area,
+      pieces: d.pieces,
+      estBoards: Math.ceil((d.area * 1.15) / BOARD_M2),
+    })).sort((a, b) => b.area - a.area);
+
+    const totalArea = boards.reduce((s, b) => s + b.area, 0);
+    const totalBoards = boards.reduce((s, b) => s + b.estBoards, 0);
+
+    return {
+      boards,
+      totalArea,
+      totalBoards,
+      edgeByMaterial,
+      totalEdge,
+      hardware: {
+        bisagras: hw.bisagras || 0,
+        correderas: hw.correderas || 0,
+        tiradores: hw.tiradores || 0,
+        soportesBaldas: hw.soportesBaldas || 0,
+        colgadores: hw.colgadores || 0,
+      },
+    };
+  }, [despieceData, carcassMaterialName, calculateBandasYTraseras, calculateHerrajes]);
 
   // Exportar PDF - Genera contenido según la pestaña activa
   const handleExportPDF = () => {
@@ -1216,7 +1277,11 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         xmlContent += `        <Quantity>${qty}</Quantity>\n`;
         xmlContent += `        <Grain>${tieneVeta ? '1' : '0'}</Grain>\n`;
         xmlContent += `        <GrainDirection>vertical</GrainDirection>\n`;
-        xmlContent += `        <EdgeBanding l1="0" l2="0" w1="0" w2="0"/>\n`;
+        // Cantos reales calculados a partir de las notas de la pieza (1L/2L/4L).
+        // l1/l2 = lados largos, w1/w2 = lados cortos. Valor = mm de canto (0 = sin canto).
+        const { cantos } = calculateCantoForComponent(piece, 1);
+        const edge = (v) => (v > 0 ? 1 : 0);
+        xmlContent += `        <EdgeBanding l1="${edge(cantos.l1)}" l2="${edge(cantos.l2)}" w1="${edge(cantos.w1)}" w2="${edge(cantos.w2)}"/>\n`;
         xmlContent += `      </Part>\n`;
       });
       xmlContent += `    </Material>\n`;
@@ -1230,7 +1295,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    const nombreArchivo = `CORTE_${(editableExpedient || 'EXP').replace(/[^a-zA-Z0-9-]/g, '_')}_${(editableCustomerName || 'CLIENTE').replace(/[^a-zA-Z0-9]/g, '_').substring(0,20)}_${new Date().toISOString().split('T')[0]}.xml`;
+    // PRIVACIDAD: el nombre del archivo usa la referencia/expediente, no el cliente.
+    const refArchivo = (editableProjectRef || editableExpedient || 'EXP').replace(/[^a-zA-Z0-9-]/g, '_');
+    const nombreArchivo = `CORTE_${refArchivo}_${new Date().toISOString().split('T')[0]}.xml`;
     link.setAttribute('download', nombreArchivo);
     document.body.appendChild(link);
     link.click();
@@ -1376,14 +1443,26 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
           <button
             onClick={() => setActiveView('puertas_proveedor')}
             className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
-              activeView === 'puertas_proveedor' 
-                ? 'bg-blue-600 text-white shadow-lg' 
+              activeView === 'puertas_proveedor'
+                ? 'bg-blue-600 text-white shadow-lg'
                 : 'bg-white text-blue-500 hover:bg-blue-50 border border-blue-200'
             }`}
             data-testid="tab-puertas-proveedor"
           >
             <Truck size={14} />
             Puertas Proveedor
+          </button>
+          <button
+            onClick={() => setActiveView('compra')}
+            className={`px-5 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeView === 'compra'
+                ? 'bg-purple-600 text-white shadow-lg'
+                : 'bg-white text-purple-500 hover:bg-purple-50 border border-purple-200'
+            }`}
+            data-testid="tab-compra"
+          >
+            <Box size={14} />
+            Lista de Compra
           </button>
         </div>
 
@@ -2255,6 +2334,103 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       <strong>Uso:</strong> Esta sección permite modificar las dimensiones de las puertas antes de enviar el pedido al proveedor.
                       Puede cambiar medidas, orientación de veta y añadir observaciones específicas para cada puerta.
                       El archivo exportado (CSV o PDF) está listo para enviar al proveedor de puertas.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ===================== LISTA DE COMPRA ===================== */}
+              {activeView === 'compra' && shoppingList && (
+                <div className="space-y-6" data-testid="view-compra">
+                  {/* Resumen superior */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-purple-950 text-white p-5 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-purple-300 mb-1">Tableros estimados</p>
+                      <p className="text-3xl font-black">{shoppingList.totalBoards}</p>
+                      <p className="text-[10px] text-purple-300 mt-1">tableros 244×122 (incl. ~15% merma)</p>
+                    </div>
+                    <div className="bg-emerald-600 text-white p-5 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-emerald-100 mb-1">Canto total</p>
+                      <p className="text-3xl font-black">{shoppingList.totalEdge} <span className="text-base">ml</span></p>
+                      <p className="text-[10px] text-emerald-100 mt-1">metros lineales de canto</p>
+                    </div>
+                    <div className="bg-amber-600 text-white p-5 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase text-amber-100 mb-1">Superficie total</p>
+                      <p className="text-3xl font-black">{shoppingList.totalArea.toFixed(2)} <span className="text-base">m²</span></p>
+                      <p className="text-[10px] text-amber-100 mt-1">a cortar (todos los materiales)</p>
+                    </div>
+                  </div>
+
+                  {/* Tableros por material */}
+                  <div>
+                    <h3 className="text-sm font-black text-purple-900 uppercase mb-3 flex items-center gap-2">
+                      <Box size={16} /> Tableros por material
+                    </h3>
+                    <table className="w-full text-sm">
+                      <thead className="bg-purple-100 text-purple-800">
+                        <tr>
+                          <th className="text-left p-3 text-xs font-black uppercase">Material</th>
+                          <th className="text-center p-3 text-xs font-black uppercase">Piezas</th>
+                          <th className="text-center p-3 text-xs font-black uppercase">Superficie (m²)</th>
+                          <th className="text-center p-3 text-xs font-black uppercase">Tableros estim.</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-purple-50">
+                        {shoppingList.boards.map((b, i) => (
+                          <tr key={i} className="hover:bg-purple-50/50">
+                            <td className="p-3 font-bold text-purple-900">{b.material}</td>
+                            <td className="p-3 text-center font-mono">{b.pieces}</td>
+                            <td className="p-3 text-center font-mono font-bold">{b.area.toFixed(3)}</td>
+                            <td className="p-3 text-center font-black text-purple-700">{b.estBoards}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Canto por material */}
+                  {Object.keys(shoppingList.edgeByMaterial).length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-black text-emerald-900 uppercase mb-3 flex items-center gap-2">
+                        <Grid3X3 size={16} /> Canto por material (ml)
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {Object.entries(shoppingList.edgeByMaterial).map(([mat, ml], i) => (
+                          <div key={i} className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                            <p className="text-xs font-bold text-emerald-700">{mat}</p>
+                            <p className="text-lg font-black text-emerald-900">{ml.toFixed(2)} ml</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Herrajes totales */}
+                  <div>
+                    <h3 className="text-sm font-black text-amber-900 uppercase mb-3 flex items-center gap-2">
+                      <Wrench size={16} /> Herrajes totales
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      {[
+                        ['Bisagras', shoppingList.hardware.bisagras],
+                        ['Correderas (juegos)', shoppingList.hardware.correderas],
+                        ['Tiradores', shoppingList.hardware.tiradores],
+                        ['Soportes balda', shoppingList.hardware.soportesBaldas],
+                        ['Colgadores (juegos)', shoppingList.hardware.colgadores],
+                      ].map(([label, val], i) => (
+                        <div key={i} className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                          <p className="text-2xl font-black text-amber-700">{val}</p>
+                          <p className="text-[10px] font-bold text-amber-600 uppercase mt-1">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                    <p className="text-xs text-purple-700">
+                      <strong>Uso:</strong> Resumen agregado de todo lo necesario para fabricar esta orden:
+                      tableros por material, metros de canto y herrajes. El número de tableros es una
+                      estimación (superficie + 15% merma); para el corte exacto usa <strong>Optimizar Tableros</strong>.
                     </p>
                   </div>
                 </div>
