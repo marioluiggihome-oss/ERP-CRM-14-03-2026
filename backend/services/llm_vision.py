@@ -85,16 +85,35 @@ async def analyze_image_with_gemini(
         RuntimeError si no hay forma de hacer Vision en el entorno actual
     """
     # Limpiar prefijo data: si viene
+    is_pdf_header = False
     if image_base64.startswith('data:'):
         # data:image/jpeg;base64,XXXX → XXXX
         header, image_base64 = image_base64.split(',', 1)
+        header_l = header.lower()
         # Detectar MIME del header
-        if 'png' in header.lower():
+        if 'pdf' in header_l:
+            is_pdf_header = True
+        elif 'png' in header_l:
             image_mime = 'image/png'
-        elif 'jpeg' in header.lower() or 'jpg' in header.lower():
+        elif 'jpeg' in header_l or 'jpg' in header_l:
             image_mime = 'image/jpeg'
-        elif 'webp' in header.lower():
+        elif 'webp' in header_l:
             image_mime = 'image/webp'
+
+    # Si el contenido es un PDF (por header o por magic bytes), rasterizar la
+    # primera página a PNG: Gemini Vision no acepta PDFs directamente aquí.
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+        if is_pdf_header or is_pdf_base64(image_base64):
+            pages = pdf_base64_to_png_base64(image_base64, dpi=150, max_pages=1)
+            if not pages:
+                raise RuntimeError("No se pudo convertir el PDF a imagen.")
+            image_base64 = pages[0]
+            image_mime = 'image/png'
+    except RuntimeError:
+        raise
+    except Exception as e:
+        logger.warning(f"No se pudo evaluar/convertir PDF en vision: {e}")
 
     gemini_key = get_gemini_key()
     
