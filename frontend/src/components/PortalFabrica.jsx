@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Factory, Package, Clock, CheckCircle, Truck, AlertTriangle, 
   Plus, Search, Filter, Calendar, FileText, Upload, Download,
@@ -756,6 +756,82 @@ const PortalFabrica = ({ currentUser }) => {
       setProductResults([]);
     };
 
+    // ============================================================
+    // EXPLORADOR DE CATÁLOGO CON FILTROS (igual que en presupuestos)
+    // Carga TODOS los productos de la librería y filtra en cliente por
+    // Programa → Categoría → Serie + medidas, mostrando los módulos en rejilla.
+    // ============================================================
+    const [showCatalogBrowser, setShowCatalogBrowser] = useState(false);
+    const [catalogProducts, setCatalogProducts] = useState([]);
+    const [catalogLoading, setCatalogLoading] = useState(false);
+    const [selPrograma, setSelPrograma] = useState('TODOS');
+    const [selCategory, setSelCategory] = useState('TODAS');
+    const [selSeries, setSelSeries] = useState('TODAS');
+    const [fW, setFW] = useState('');
+    const [fH, setFH] = useState('');
+    const [fD, setFD] = useState('');
+
+    // Cargar todo el catálogo de la librería al abrir el explorador o cambiar de librería
+    useEffect(() => {
+      if (!showCatalogBrowser) return;
+      let cancelled = false;
+      (async () => {
+        try {
+          setCatalogLoading(true);
+          const params = new URLSearchParams({ library: searchLibrary, limit: 2000 });
+          const response = await fetch(`${API_URL}/api/products?${params}`);
+          if (!response.ok) return;
+          const data = await response.json();
+          if (cancelled) return;
+          const items = Array.isArray(data) ? data : (data.products || data.items || []);
+          setCatalogProducts(items);
+        } catch (err) {
+          console.error('Error cargando catálogo:', err);
+        } finally {
+          if (!cancelled) setCatalogLoading(false);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [showCatalogBrowser, searchLibrary]);
+
+    // Reiniciar filtros dependientes al cambiar el de arriba
+    const uniqueProgramas = useMemo(() => {
+      const s = new Set(catalogProducts.map(p => p.programa || 'ESTÁNDAR'));
+      return Array.from(s).sort();
+    }, [catalogProducts]);
+
+    const uniqueCategories = useMemo(() => {
+      const base = selPrograma === 'TODOS'
+        ? catalogProducts
+        : catalogProducts.filter(p => (p.programa || 'ESTÁNDAR') === selPrograma);
+      return Array.from(new Set(base.map(p => p.category || 'OTROS'))).sort();
+    }, [catalogProducts, selPrograma]);
+
+    const uniqueSeries = useMemo(() => {
+      let base = selPrograma === 'TODOS'
+        ? catalogProducts
+        : catalogProducts.filter(p => (p.programa || 'ESTÁNDAR') === selPrograma);
+      if (selCategory !== 'TODAS') base = base.filter(p => (p.category || 'OTROS') === selCategory);
+      return Array.from(new Set(base.map(p => p.series || 'GENERAL'))).sort();
+    }, [catalogProducts, selPrograma, selCategory]);
+
+    const filteredCatalog = useMemo(() => {
+      return catalogProducts.filter(p => {
+        if (selPrograma !== 'TODOS' && (p.programa || 'ESTÁNDAR') !== selPrograma) return false;
+        if (selCategory !== 'TODAS' && (p.category || 'OTROS') !== selCategory) return false;
+        if (selSeries !== 'TODAS' && (p.series || 'GENERAL') !== selSeries) return false;
+        const w = parseFloat(p.width || p.ancho || 0);
+        const h = parseFloat(p.height || p.alto || 0);
+        const d = parseFloat(p.depth || p.fondo || 0);
+        // Las medidas del catálogo pueden venir en mm; normalizar a cm para comparar.
+        const cm = (v) => (v / 10 >= 30 ? v / 10 : v);
+        if (fW && Math.round(cm(w)) !== Math.round(parseFloat(fW))) return false;
+        if (fH && Math.round(cm(h)) !== Math.round(parseFloat(fH))) return false;
+        if (fD && Math.round(cm(d)) !== Math.round(parseFloat(fD))) return false;
+        return true;
+      });
+    }, [catalogProducts, selPrograma, selCategory, selSeries, fW, fH, fD]);
+
     const handleAddItem = () => {
       if (!newItem.productCode) return;
       setFormData(prev => ({
@@ -978,6 +1054,96 @@ const PortalFabrica = ({ currentUser }) => {
                     </div>
                   )}
                 </div>
+
+                {/* Botón para abrir/cerrar el explorador de catálogo con filtros */}
+                <button
+                  type="button"
+                  onClick={() => setShowCatalogBrowser(v => !v)}
+                  className="w-full mb-3 py-2 bg-white border-2 border-indigo-300 text-indigo-700 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-indigo-100 flex items-center justify-center gap-2"
+                  data-testid="toggle-catalog-browser"
+                >
+                  <Package size={14} />
+                  {showCatalogBrowser ? 'Ocultar catálogo' : 'Explorar catálogo por módulos'}
+                </button>
+
+                {/* Explorador de catálogo con filtros Programa/Categoría/Serie/Medidas */}
+                {showCatalogBrowser && (
+                  <div className="mb-3 bg-white border border-indigo-200 rounded-xl p-3">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <select
+                        value={selPrograma}
+                        onChange={e => { setSelPrograma(e.target.value); setSelCategory('TODAS'); setSelSeries('TODAS'); }}
+                        className="bg-indigo-100 border-2 border-indigo-400 rounded-lg py-1.5 px-3 text-[11px] font-black uppercase text-indigo-900 outline-none"
+                      >
+                        <option value="TODOS">📁 PROGRAMA</option>
+                        {uniqueProgramas.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <select
+                        value={selCategory}
+                        onChange={e => { setSelCategory(e.target.value); setSelSeries('TODAS'); }}
+                        className="bg-purple-100 border-2 border-purple-400 rounded-lg py-1.5 px-3 text-[11px] font-black uppercase text-purple-900 outline-none disabled:opacity-40"
+                        disabled={selPrograma === 'TODOS'}
+                      >
+                        <option value="TODAS">📂 CATEGORÍA</option>
+                        {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <select
+                        value={selSeries}
+                        onChange={e => setSelSeries(e.target.value)}
+                        className="bg-amber-100 border-2 border-amber-400 rounded-lg py-1.5 px-3 text-[11px] font-black uppercase text-amber-900 outline-none disabled:opacity-40"
+                        disabled={selCategory === 'TODAS'}
+                      >
+                        <option value="TODAS">📄 SERIE</option>
+                        {uniqueSeries.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <div className="flex items-center gap-1.5 bg-blue-50 rounded-lg px-2 py-1 border border-blue-200">
+                        <span className="text-[9px] font-black text-blue-600">📐</span>
+                        <input type="number" placeholder="A" value={fW} onChange={e => setFW(e.target.value)} className="w-12 bg-white border border-blue-300 rounded px-1.5 py-1 text-xs text-center outline-none" title="Ancho (cm)" />
+                        <input type="number" placeholder="H" value={fH} onChange={e => setFH(e.target.value)} className="w-12 bg-white border border-blue-300 rounded px-1.5 py-1 text-xs text-center outline-none" title="Alto (cm)" />
+                        <input type="number" placeholder="F" value={fD} onChange={e => setFD(e.target.value)} className="w-12 bg-white border border-blue-300 rounded px-1.5 py-1 text-xs text-center outline-none" title="Fondo (cm)" />
+                        {(fW || fH || fD) && (
+                          <button type="button" onClick={() => { setFW(''); setFH(''); setFD(''); }} className="p-1 bg-red-100 text-red-500 hover:bg-red-200 rounded" title="Limpiar medidas">
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {catalogLoading ? (
+                      <div className="py-8 text-center text-indigo-400 text-sm flex items-center justify-center gap-2">
+                        <RefreshCw size={16} className="animate-spin" /> Cargando catálogo…
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-[10px] text-slate-400 mb-2">{filteredCatalog.length} módulos</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                          {filteredCatalog.map((p, idx) => {
+                            const code = p.code || p.codigo || '?';
+                            const name = p.name || p.nombre || p.description || '';
+                            const w = p.width || p.ancho || 0;
+                            const h = p.height || p.alto || 0;
+                            return (
+                              <button
+                                key={p.id || code + idx}
+                                type="button"
+                                onClick={() => selectProduct(p)}
+                                className="text-left p-2 border border-indigo-100 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                                title="Seleccionar este módulo"
+                              >
+                                <div className="font-black text-indigo-900 text-xs truncate">{code}</div>
+                                <div className="text-[10px] text-slate-600 truncate">{name}</div>
+                                <div className="text-[9px] text-slate-400 mt-0.5">{w}×{h}</div>
+                              </button>
+                            );
+                          })}
+                          {filteredCatalog.length === 0 && (
+                            <p className="col-span-full text-center text-slate-400 text-xs py-6">Sin módulos con estos filtros</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 <p className="text-[10px] text-indigo-400 mb-2">— o introduce los datos manualmente —</p>
 
