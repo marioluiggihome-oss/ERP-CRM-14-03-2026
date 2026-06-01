@@ -25,7 +25,18 @@
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
         <title>LUIGGI HOME</title>
-        <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
+        <script>
+            // emergent-main.js envuelve window.fetch y consume el cuerpo de las
+            // respuestas, provocando "body stream already read" al GUARDAR
+            // (contactos, visitas, presupuestos...). Solo se carga dentro del
+            // editor de la plataforma (iframe); en producción (acceso directo)
+            // NO se carga, para no romper los guardados.
+            if (window.self !== window.top) {
+                var emMain = document.createElement('script');
+                emMain.src = 'https://assets.emergent.sh/scripts/emergent-main.js';
+                document.head.appendChild(emMain);
+            }
+        </script>
         
         <!-- Script de protección temprana -->
         <script>
