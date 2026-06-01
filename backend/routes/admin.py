@@ -56,17 +56,34 @@ async def db_health():
     except Exception as e:
         out["storage_error"] = str(e)
 
-    # Test de escritura real: si esto falla, ESE es el problema de guardado.
-    try:
-        test_doc = {"_diag": True, "ts": datetime.utcnow()}
-        res = await _db._diag_write_test.insert_one(test_doc)
-        await _db._diag_write_test.delete_one({"_id": res.inserted_id})
-        out["write_test"] = "OK"
-    except Exception as e:
-        out["ok"] = False
-        out["write_test"] = "FALLO"
-        out["write_error"] = str(e)
-        logger.error(f"db-health write test failed: {e}")
+    # Test de ESCRITURA real en las colecciones donde fallaba el guardado.
+    # Inserta un documento de prueba (marcado con _diag) y lo borra. Si alguna
+    # falla, ese es el problema y veremos el error exacto por colección.
+    writes = {}
+    for coll in ["contacts", "calendar_events", "projects", "diag_scratch"]:
+        try:
+            doc = {"id": f"_diag-{datetime.utcnow().timestamp()}", "_diag": True,
+                   "name": "DIAG TEST", "ts": datetime.utcnow()}
+            res = await _db[coll].insert_one(doc)
+            await _db[coll].delete_one({"_id": res.inserted_id})
+            writes[coll] = "OK"
+        except Exception as e:
+            writes[coll] = f"FALLO: {e}"
+            out["ok"] = False
+            logger.error(f"db-health write test '{coll}' failed: {e}")
+    out["write_test"] = writes
+
+    # Índices de cada colección (para detectar índices únicos que bloqueen
+    # escrituras por duplicado).
+    idx = {}
+    for coll in ["contacts", "calendar_events", "projects"]:
+        try:
+            info = await _db[coll].index_information()
+            idx[coll] = {name: {"keys": v.get("key"), "unique": v.get("unique", False)}
+                         for name, v in info.items()}
+        except Exception as e:
+            idx[coll] = f"error: {e}"
+    out["indexes"] = idx
 
     return out
 
