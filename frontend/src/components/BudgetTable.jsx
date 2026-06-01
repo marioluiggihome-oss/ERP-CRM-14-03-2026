@@ -1,5 +1,6 @@
 import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, PanelBottomClose, PanelBottomOpen, PanelTopClose, PanelTopOpen, FileText, ChevronDown, ChevronUp, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download, Scissors, CheckCircle, Paperclip, Mail, X, Upload, Image, FileImage, LayoutGrid, LayoutList, ArrowRightLeft, LogOut, Package, Factory, Wand2, Library } from 'lucide-react';
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { exportToPdf } from '../utils/pdfHelper';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import { DOOR_FINISHES, MV_TARIFFS, CabinetCategory } from '../constants';
@@ -891,11 +892,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
 
     try {
       // Verificar si ya existe un presupuesto con este número
-      const checkResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects/check-budget-number/${encodeURIComponent(state.budgetNumber)}`);
+      // Usar axios (XHR) en lugar de fetch: un script externo (emergent-main.js)
+      // envuelve window.fetch y consume el cuerpo de la respuesta, provocando
+      // "body stream already read". axios no usa fetch, así que lo evita.
       let checkData = {};
       try {
-        const checkRaw = await checkResponse.text();
-        checkData = checkRaw ? JSON.parse(checkRaw) : {};
+        const checkResp = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/projects/check-budget-number/${encodeURIComponent(state.budgetNumber)}`);
+        checkData = checkResp.data || {};
       } catch (_) { checkData = {}; }
       
       let shouldOverwrite = false;
@@ -952,38 +955,19 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         totalPvp: total // Incluir el total del presupuesto
       };
 
-      let response;
-      if (shouldOverwrite && existingProjectId) {
-        // Actualizar proyecto existente
-        response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects/${existingProjectId}?user_id=${state.currentUser.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(projectData)
-        });
-      } else {
-        // Crear nuevo proyecto
-        response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects?user_id=${state.currentUser.id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(projectData)
-        });
-      }
-
-      // Leer el cuerpo UNA SOLA VEZ (como texto) y parsear. Evita el error
-      // "body stream already read" que ocurre si .json() se invoca más de una
-      // vez sobre la misma Response.
-      const rawBody = await response.text();
-      let payload = {};
-      try { payload = rawBody ? JSON.parse(rawBody) : {}; } catch (_) { payload = {}; }
-
-      if (!response.ok) {
-        const det = payload && payload.detail;
+      // Guardado con axios (XHR) para evitar el wrapper de window.fetch.
+      let savedProject;
+      try {
+        const saveResp = (shouldOverwrite && existingProjectId)
+          ? await axios.put(`${process.env.REACT_APP_BACKEND_URL}/api/projects/${existingProjectId}?user_id=${state.currentUser.id}`, projectData)
+          : await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/projects?user_id=${state.currentUser.id}`, projectData);
+        savedProject = saveResp.data;
+      } catch (err) {
+        const det = err?.response?.data?.detail;
         const msg = typeof det === 'string' ? det
-          : (det ? JSON.stringify(det) : 'Error al guardar el proyecto');
+          : (det ? JSON.stringify(det) : (err?.message || 'Error al guardar el proyecto'));
         throw new Error(msg);
       }
-
-      const savedProject = payload;
 
       // Obtener siguiente número de expediente (sin código de cliente ya que se limpiará)
       // El próximo expediente se generará cuando se seleccione un nuevo cliente
