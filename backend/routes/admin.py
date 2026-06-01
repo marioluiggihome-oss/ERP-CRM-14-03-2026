@@ -88,6 +88,21 @@ async def db_health():
     return out
 
 
+@router.get("/recent-errors")
+async def recent_errors(limit: int = 20):
+    """Últimos errores de guardado (422/500) capturados por el servidor.
+
+    Permite ver el error EXACTO de un fallo al crear contacto/visita/
+    presupuesto sin necesidad de la consola del navegador: reproduce el fallo
+    en la app y luego abre esta URL.
+    """
+    try:
+        docs = await _db.error_log.find({}, {"_id": 0}).sort("ts", -1).to_list(limit)
+        return {"count": len(docs), "errors": docs}
+    except Exception as e:
+        return {"count": 0, "errors": [], "error": str(e)}
+
+
 @router.post("/cleanup-telemetry")
 async def cleanup_telemetry(days: int = 90):
     """Purga telemetría/actividad antigua para liberar espacio en la BD.
