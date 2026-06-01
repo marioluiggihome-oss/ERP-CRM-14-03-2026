@@ -47,9 +47,25 @@ class ActivityTracker:
         """Crear índices para optimizar consultas"""
         await self.collection.create_index("userId")
         await self.collection.create_index("activityType")
-        await self.collection.create_index("timestamp")
         await self.collection.create_index([("userId", 1), ("timestamp", -1)])
         await self.collection.create_index([("activityType", 1), ("timestamp", -1)])
+
+        # Índice TTL en 'timestamp': caduca la telemetría a los 180 días para
+        # que la colección no crezca sin límite y acabe llenando la cuota de la
+        # BD (lo que bloquearía las escrituras de contactos/visitas/presupuestos).
+        # Como en despliegues previos puede existir ya un índice simple
+        # 'timestamp_1' (sin TTL), MongoDB daría conflicto: en ese caso lo
+        # eliminamos y lo recreamos con expiración.
+        TTL_SECONDS = 180 * 24 * 3600
+        try:
+            await self.collection.create_index("timestamp", expireAfterSeconds=TTL_SECONDS)
+        except Exception:
+            try:
+                await self.collection.drop_index("timestamp_1")
+                await self.collection.create_index("timestamp", expireAfterSeconds=TTL_SECONDS)
+                logger.info("Índice 'timestamp' recreado con TTL de 180 días")
+            except Exception as e:
+                logger.warning(f"No se pudo aplicar TTL a la actividad: {e}")
         logger.info("Índices de actividad creados")
     
     async def track(
