@@ -193,6 +193,25 @@ async def _server_error_handler(request, exc):
     await _log_request_error(request, 500, str(exc))
     return _JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
+@app.exception_handler(_StarletteHTTPException)
+async def _http_exception_handler(request, exc):
+    # Captura los errores HTTP lanzados explícitamente (HTTPException 400/401/
+    # 403/404/500...), que NO pasan por el handler de 500. Registra los de
+    # escritura con código >= 400 y devuelve la respuesta estándar.
+    try:
+        if exc.status_code >= 400 and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            body = ""
+            try:
+                raw = await request.body()
+                body = raw.decode("utf-8", "ignore")
+            except Exception:
+                pass
+            await _log_request_error(request, exc.status_code, exc.detail, body)
+    except Exception:
+        pass
+    return _JSONResponse(status_code=exc.status_code, content={"detail": exc.detail},
+                         headers=getattr(exc, "headers", None))
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
