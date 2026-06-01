@@ -200,14 +200,15 @@ const CRMActivities = ({ currentUser }) => {
 
     return matchesSearch && matchesType && matchesDate;
   }).sort((a, b) => {
-    const dateA = new Date(`${getActivityDate(a)}T${a.time || '00:00'}`);
-    const dateB = new Date(`${getActivityDate(b)}T${b.time || '00:00'}`);
+    const dateA = new Date(`${getActivityDate(a)}T${a.time || a.dueTime || '00:00'}`);
+    const dateB = new Date(`${getActivityDate(b)}T${b.time || b.dueTime || '00:00'}`);
     return dateB - dateA;
   });
 
-  // Agrupar por fecha
+  // Agrupar por fecha — usar el campo robusto (date || dueDate || createdAt)
+  // para que no salga "Invalid Date" cuando la actividad se guardó en dueDate.
   const groupedActivities = filteredActivities.reduce((groups, activity) => {
-    const date = activity.date?.split('T')[0] || 'Sin fecha';
+    const date = getActivityDate(activity) || 'Sin fecha';
     if (!groups[date]) groups[date] = [];
     groups[date].push(activity);
     return groups;
@@ -215,30 +216,35 @@ const CRMActivities = ({ currentUser }) => {
 
   // Estadísticas rápidas
   const todayCount = activities.filter(a => {
-    const actDate = new Date(a.date).toDateString();
-    return actDate === new Date().toDateString();
+    const raw = getActivityDate(a);
+    if (!raw) return false;
+    return new Date(raw).toDateString() === new Date().toDateString();
   }).length;
 
   const weekCount = activities.filter(a => {
-    const actDate = new Date(a.date);
+    const raw = getActivityDate(a);
+    if (!raw) return false;
+    const actDate = new Date(raw);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     return actDate >= weekAgo;
   }).length;
 
   const formatDate = (dateStr) => {
+    if (!dateStr || dateStr === 'Sin fecha') return 'Sin fecha';
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Sin fecha';
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     if (date.toDateString() === today.toDateString()) return 'Hoy';
     if (date.toDateString() === yesterday.toDateString()) return 'Ayer';
-    
-    return date.toLocaleDateString('es-ES', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long' 
+
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
     });
   };
 
@@ -570,7 +576,7 @@ const CRMActivities = ({ currentUser }) => {
                                 </span>
                                 <span className="text-xs text-slate-500 flex items-center gap-1">
                                   <Clock size={12} />
-                                  {activity.time || '00:00'}
+                                  {activity.time || activity.dueTime || '00:00'}
                                 </span>
                                 {activity.duration && (
                                   <span className="text-xs text-slate-400">

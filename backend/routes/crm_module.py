@@ -618,6 +618,13 @@ async def create_activity(activity: ActivityCreate):
     """Create a new activity"""
     try:
         act_dict = activity.model_dump()
+        # El formulario envía la fecha/hora en dueDate/dueTime. Poblar también
+        # date/time (que es lo que leen las vistas) para que no salga "Invalid
+        # Date" y la fecha aparezca correctamente en lista y dashboard.
+        if not act_dict.get("date") and act_dict.get("dueDate"):
+            act_dict["date"] = act_dict["dueDate"]
+        if not act_dict.get("time") and act_dict.get("dueTime"):
+            act_dict["time"] = act_dict["dueTime"]
         act_obj = ActivityModel(**act_dict)
         doc = act_obj.model_dump()
         doc['createdAt'] = doc['createdAt'].isoformat()

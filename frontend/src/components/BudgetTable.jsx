@@ -892,7 +892,11 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
     try {
       // Verificar si ya existe un presupuesto con este número
       const checkResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/projects/check-budget-number/${encodeURIComponent(state.budgetNumber)}`);
-      const checkData = await checkResponse.json();
+      let checkData = {};
+      try {
+        const checkRaw = await checkResponse.text();
+        checkData = checkRaw ? JSON.parse(checkRaw) : {};
+      } catch (_) { checkData = {}; }
       
       let shouldOverwrite = false;
       let existingProjectId = null;
@@ -965,12 +969,21 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         });
       }
 
+      // Leer el cuerpo UNA SOLA VEZ (como texto) y parsear. Evita el error
+      // "body stream already read" que ocurre si .json() se invoca más de una
+      // vez sobre la misma Response.
+      const rawBody = await response.text();
+      let payload = {};
+      try { payload = rawBody ? JSON.parse(rawBody) : {}; } catch (_) { payload = {}; }
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Error al guardar el proyecto');
+        const det = payload && payload.detail;
+        const msg = typeof det === 'string' ? det
+          : (det ? JSON.stringify(det) : 'Error al guardar el proyecto');
+        throw new Error(msg);
       }
 
-      const savedProject = await response.json();
+      const savedProject = payload;
 
       // Obtener siguiente número de expediente (sin código de cliente ya que se limpiará)
       // El próximo expediente se generará cuando se seleccione un nuevo cliente
