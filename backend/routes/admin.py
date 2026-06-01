@@ -5,9 +5,12 @@ Endpoints de Administración del Sistema - LUIGGI HOME
 - Estadísticas del sistema
 """
 from fastapi import APIRouter, HTTPException, Depends, Request
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 import logging
+import os
+
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from services.backup_service import get_backup_service
 from services.activity_tracker import get_tracker, ActivityType
@@ -15,6 +18,76 @@ from services.activity_tracker import get_tracker, ActivityType
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+# Conexión a BD (mismo patrón que el resto de routers)
+_MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+_DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
+_admin_client = AsyncIOMotorClient(_MONGO_URL)
+_db = _admin_client[_DB_NAME]
+
+
+# ==================== DIAGNÓSTICO DE BASE DE DATOS ====================
+
+@router.get("/db-health")
+async def db_health():
+    """Diagnóstico de la base de datos: tamaño, límite y test de ESCRITURA real.
+
+    Sirve para confirmar si los fallos al guardar (contactos, visitas,
+    presupuestos) se deben a que la BD no acepta escrituras (p.ej. cuota de
+    almacenamiento llena en Atlas). Hace un insert+delete de prueba.
+    """
+    out = {"ok": True}
+    try:
+        stats = await _db.command("dbStats", scale=1024 * 1024)  # MB
+        out["storage"] = {
+            "dataSize_MB": round(stats.get("dataSize", 0), 2),
+            "storageSize_MB": round(stats.get("storageSize", 0), 2),
+            "indexSize_MB": round(stats.get("indexSize", 0), 2),
+            "objects": stats.get("objects", 0),
+        }
+        # Colecciones más grandes por nº de documentos
+        sizes = {}
+        for name in await _db.list_collection_names():
+            try:
+                sizes[name] = await _db[name].estimated_document_count()
+            except Exception:
+                pass
+        out["top_collections"] = dict(sorted(sizes.items(), key=lambda x: -x[1])[:10])
+    except Exception as e:
+        out["storage_error"] = str(e)
+
+    # Test de escritura real: si esto falla, ESE es el problema de guardado.
+    try:
+        test_doc = {"_diag": True, "ts": datetime.utcnow()}
+        res = await _db._diag_write_test.insert_one(test_doc)
+        await _db._diag_write_test.delete_one({"_id": res.inserted_id})
+        out["write_test"] = "OK"
+    except Exception as e:
+        out["ok"] = False
+        out["write_test"] = "FALLO"
+        out["write_error"] = str(e)
+        logger.error(f"db-health write test failed: {e}")
+
+    return out
+
+
+@router.post("/cleanup-telemetry")
+async def cleanup_telemetry(days: int = 90):
+    """Purga telemetría/actividad antigua para liberar espacio en la BD.
+
+    Borra documentos de las colecciones de telemetría con más de `days` días.
+    Útil si la BD se ha llenado por el registro de actividad sin tope.
+    """
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    deleted = {}
+    # user_activity usa 'timestamp'; telemetry_audit puede usar 'timestamp' o 'createdAt'.
+    for coll, field in [("user_activity", "timestamp"), ("telemetry_audit", "timestamp")]:
+        try:
+            r = await _db[coll].delete_many({field: {"$lt": cutoff}})
+            deleted[coll] = r.deleted_count
+        except Exception as e:
+            deleted[coll] = f"error: {e}"
+    return {"success": True, "cutoff_days": days, "deleted": deleted}
 
 
 # ==================== BACKUP ENDPOINTS ====================
