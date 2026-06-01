@@ -144,6 +144,55 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(429, rate_limit_exceeded_handler)
 
+# ============================================================
+# CAPTURA DE ERRORES DE GUARDADO (diagnóstico)
+# Registra en db.error_log los fallos de validación (422) y de servidor (500)
+# con la ruta, el método, el error y un extracto del cuerpo. Permite ver el
+# error exacto sin necesidad de la consola del navegador, vía
+# GET /api/admin/recent-errors.
+# ============================================================
+from fastapi.exceptions import RequestValidationError as _RVE
+from fastapi.responses import JSONResponse as _JSONResponse
+from starlette.exceptions import HTTPException as _StarletteHTTPException
+
+async def _log_request_error(request, status_code, detail, body_text=None):
+    try:
+        from datetime import datetime as _dt, timezone as _tz
+        doc = {
+            "ts": _dt.now(_tz.utc).isoformat(),
+            "method": request.method,
+            "path": str(request.url.path),
+            "status": status_code,
+            "detail": detail,
+            "body": (body_text or "")[:2000],
+        }
+        # Solo registrar escrituras (POST/PUT/PATCH/DELETE) para no llenar.
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            await db.error_log.insert_one(doc)
+    except Exception as _e:
+        logger.error(f"No se pudo registrar error de request: {_e}")
+
+@app.exception_handler(_RVE)
+async def _validation_error_handler(request, exc):
+    body = ""
+    try:
+        raw = await request.body()
+        body = raw.decode("utf-8", "ignore")
+    except Exception:
+        pass
+    # Convertir errores a texto plano (campo + mensaje) para guardar/mostrar.
+    errors = [
+        {"campo": ".".join(str(p) for p in e.get("loc", [])), "msg": e.get("msg", "")}
+        for e in exc.errors()
+    ]
+    await _log_request_error(request, 422, errors, body)
+    return _JSONResponse(status_code=422, content={"detail": errors})
+
+@app.exception_handler(500)
+async def _server_error_handler(request, exc):
+    await _log_request_error(request, 500, str(exc))
+    return _JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
