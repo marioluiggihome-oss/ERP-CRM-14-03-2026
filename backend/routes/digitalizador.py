@@ -370,12 +370,26 @@ Para cada linea encontrada, devuelve en formato JSON:
     {
       "quantity": 1,
       "reference": "referencia o codigo si existe",
-      "description": "descripcion completa del articulo incluyendo medidas CORRECTAS en centimetros"
+      "description": "descripcion completa del articulo incluyendo medidas CORRECTAS en centimetros",
+      "price": 0,
+      "discount": 0
     }
   ]
 }
 
-IMPORTANTE: 
+PRECIOS (MUY IMPORTANTE):
+- Si el documento es un presupuesto/factura con columnas (PRECIO, DTOS/DTO%, TOTAL),
+  extrae para cada linea:
+  - "price": el PRECIO UNITARIO (columna PRECIO), como numero decimal con punto
+    (ej: 187.46). NO el total de la linea, sino el precio por unidad.
+  - "discount": el descuento de esa linea en % (columna DTOS o DTO%), como numero
+    (ej: 40 para 40%). Si no hay descuento, pon 0.
+- Respeta la fila: cada linea tiene su PRECIO, su DTOS y su TOTAL alineados; no
+  mezcles valores de filas distintas. Si una fila no tiene descuento, el siguiente
+  numero suele ser directamente el TOTAL (price = total en ese caso).
+- Si es un boceto a mano sin precios, deja price=0 y discount=0.
+
+IMPORTANTE:
 - Incluye las medidas en la descripcion tal como aparecen (ej: "Costado 110 x 60")
 - Si hay un nombre de cliente o proyecto, ponlo en projectName
 - Responde SOLO con el JSON, sin texto adicional ni explicaciones"""
@@ -496,13 +510,18 @@ IMPORTANTE:
                 if not matched_products and description:
                     matched_products = await search_catalog_fuzzy(description, library=active_library)
                 
+                # Precio y descuento vienen del PDF/imagen (no del catálogo, ya que
+                # los códigos de proveedor no están en el catálogo del usuario).
+                pdf_price = float(line.get("price") or 0)
+                pdf_discount = float(line.get("discount") or 0)
+
                 extracted_lines.append(DigitalizadorLine(
                     id=f"LINE-{uuid.uuid4().hex[:8]}",
                     quantity=int(line.get("quantity") or 1),
                     reference=reference,
                     description=description,
-                    price=float(line.get("price") or 0),
-                    discount=0,
+                    price=pdf_price,
+                    discount=pdf_discount,
                     isManual=False,
                     matchedProducts=matched_products
                 ))
