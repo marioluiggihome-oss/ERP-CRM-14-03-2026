@@ -612,6 +612,29 @@ export const settingsAPI = {
     });
     if (!response.ok) throw new Error('Error al actualizar configuración');
     return response.json();
+  },
+
+  // Logo POR USUARIO: el backend guarda el logo en la ficha del usuario si tiene
+  // marca personalizada; si es admin sin marca propia, actualiza el global.
+  updateLogo: async (logo) => {
+    const response = await fetch(`${API_URL}/api/settings/logo`, {
+      method: 'PUT',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ logo })
+    });
+    if (!response.ok) {
+      let detail = 'Error al actualizar el logo';
+      try { const e = await response.json(); detail = e.detail || detail; } catch (_) {}
+      throw new Error(detail);
+    }
+    return response.json();
+  },
+
+  // Logo efectivo del usuario actual (su logo propio o el global por defecto).
+  getLogo: async () => {
+    const response = await fetch(`${API_URL}/api/settings/logo`, { headers: authHeaders() });
+    if (!response.ok) throw new Error('Error al obtener el logo');
+    return response.json();
   }
 };
 

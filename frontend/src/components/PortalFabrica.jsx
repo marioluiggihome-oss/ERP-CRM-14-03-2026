@@ -1993,7 +1993,7 @@ const PortalFabrica = ({ currentUser }) => {
               brandColor: '#6366f1',
             }}
             catalogs={[]}
-            logo={null}
+            logo={(currentUser?.useCustomBranding && currentUser?.logo) ? currentUser.logo : null}
             distributorName={industrialReportOrder.factoryName || ''}
             onBack={() => setIndustrialReportOrder(null)}
             onOpenDespiece={() => setDespieceOrder(industrialReportOrder)}
