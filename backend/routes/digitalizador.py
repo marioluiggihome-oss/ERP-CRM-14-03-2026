@@ -394,25 +394,58 @@ IMPORTANTE:
 - Si hay un nombre de cliente o proyecto, ponlo en projectName
 - Responde SOLO con el JSON, sin texto adicional ni explicaciones"""
 
-        response = await analyze_image_with_gemini(
-            image_base64=request.imageBase64,
-            prompt=extraction_prompt,
-            session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
-            model="gemini-2.0-flash",
-        )
-        
-        response_text = response.strip() if isinstance(response, str) else str(response)
-        
+        # Determinar las imágenes a analizar. Si es un PDF, convertir TODAS las
+        # páginas a PNG y analizar cada una (Gemini Vision procesa una imagen por
+        # llamada). Si es una imagen normal, se usa tal cual.
+        page_images = []
+        try:
+            from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+            raw_b64 = request.imageBase64 or ""
+            stripped_b64 = raw_b64.split(",", 1)[1] if raw_b64.startswith("data:") else raw_b64
+            is_pdf = ("pdf" in raw_b64[:40].lower()) or is_pdf_base64(stripped_b64)
+            if is_pdf:
+                page_images = pdf_base64_to_png_base64(stripped_b64, dpi=150, max_pages=None) or []
+                logger.info(f"Digitalizador: PDF con {len(page_images)} página(s)")
+        except Exception as e:
+            logger.warning(f"Digitalizador: no se pudo convertir PDF multipágina: {e}")
+            page_images = []
+        if not page_images:
+            page_images = [request.imageBase64]  # imagen normal o fallback
+
+        def _clean_json(text):
+            t = text.strip() if isinstance(text, str) else str(text)
+            if t.startswith("```"):
+                t = t.split("```")[1]
+                if t.startswith("json"):
+                    t = t[4:]
+            return t.strip()
+
+        # Analizar cada página y JUNTAR las líneas de todas
+        merged_lines = []
+        project_name = ""
+        response_text = ""
+        for pimg in page_images:
+            page_resp = await analyze_image_with_gemini(
+                image_base64=pimg,
+                prompt=extraction_prompt,
+                session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
+                model="gemini-2.0-flash",
+            )
+            response_text = _clean_json(page_resp)
+            try:
+                page_parsed = json.loads(response_text)
+            except json.JSONDecodeError:
+                m = re.search(r'\{[\s\S]*\}', response_text)
+                if not m:
+                    continue
+                page_parsed = json.loads(m.group())
+            if not project_name:
+                project_name = str(page_parsed.get("projectName") or "")
+            merged_lines.extend(page_parsed.get("lines", []) or [])
+
         # Try to parse JSON from response
         try:
-            # Clean up response - remove markdown code blocks if present
-            if response_text.startswith("```"):
-                response_text = response_text.split("```")[1]
-                if response_text.startswith("json"):
-                    response_text = response_text[4:]
-            response_text = response_text.strip()
-            
-            parsed = json.loads(response_text)
+            parsed = {"projectName": project_name, "lines": merged_lines}
             
             # Helper function for fuzzy search in catalog
             async def search_catalog_fuzzy(search_text: str, limit: int = 3, library: str = "ZC"):
