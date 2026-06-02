@@ -398,31 +398,6 @@ IMPORTANTE:
 - Si hay un nombre de cliente o proyecto, ponlo en projectName
 - Responde SOLO con el JSON, sin texto adicional ni explicaciones"""
 
-        # Determinar las imágenes a analizar. Si es un PDF, convertir TODAS las
-        # páginas a PNG y analizar cada una (Gemini Vision procesa una imagen por
-        # llamada). Si es una imagen normal, se usa tal cual.
-        page_images = []
-        try:
-            from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
-            raw_b64 = request.imageBase64 or ""
-            stripped_b64 = raw_b64.split(",", 1)[1] if raw_b64.startswith("data:") else raw_b64
-            is_pdf = ("pdf" in raw_b64[:40].lower()) or is_pdf_base64(stripped_b64)
-            if is_pdf:
-                page_images = pdf_base64_to_png_base64(stripped_b64, dpi=150, max_pages=None) or []
-                logger.info(f"Digitalizador: PDF con {len(page_images)} página(s)")
-        except Exception as e:
-            logger.warning(f"Digitalizador: no se pudo convertir PDF multipágina: {e}")
-            page_images = []
-        if not page_images:
-            page_images = [request.imageBase64]  # imagen normal o fallback
-
-        # Tope de seguridad para no exceder el tiempo de la petición.
-        total_pages = len(page_images)
-        pages_truncated = total_pages > MAX_PDF_PAGES
-        if pages_truncated:
-            logger.warning(f"Digitalizador: PDF con {total_pages} páginas, se procesan las primeras {MAX_PDF_PAGES}")
-            page_images = page_images[:MAX_PDF_PAGES]
-
         def _clean_json(text):
             t = text.strip() if isinstance(text, str) else str(text)
             if t.startswith("```"):
@@ -431,32 +406,92 @@ IMPORTANTE:
                     t = t[4:]
             return t.strip()
 
-        # Analizar cada página y JUNTAR las líneas de todas
-        merged_lines = []
-        project_name = ""
-        response_text = ""
-        for pimg in page_images:
-            page_resp = await analyze_image_with_gemini(
-                image_base64=pimg,
-                prompt=extraction_prompt,
-                session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
-                model="gemini-2.0-flash",
-            )
-            response_text = _clean_json(page_resp)
+        def _parse_json_loose(text):
             try:
-                page_parsed = json.loads(response_text)
+                return json.loads(text)
             except json.JSONDecodeError:
-                m = re.search(r'\{[\s\S]*\}', response_text)
-                if not m:
-                    continue
-                page_parsed = json.loads(m.group())
-            if not project_name:
-                project_name = str(page_parsed.get("projectName") or "")
-            merged_lines.extend(page_parsed.get("lines", []) or [])
+                m = re.search(r'\{[\s\S]*\}', text)
+                try:
+                    return json.loads(m.group()) if m else None
+                except Exception:
+                    return None
 
-        # Try to parse JSON from response
+        # Detectar si es un PDF y, si es DIGITAL (tiene texto), extraer el texto de
+        # TODAS las páginas y analizarlo como TEXTO. Es mucho más fiable que la
+        # visión para tablas densas de varias páginas (el caso de los presupuestos
+        # de proveedor). Si es escaneado/imagen, se usa visión por página.
+        raw_b64 = request.imageBase64 or ""
+        stripped_b64 = raw_b64.split(",", 1)[1] if raw_b64.startswith("data:") else raw_b64
+        is_pdf = False
+        pdf_text = ""
         try:
+            from services.pdf_utils import is_pdf_base64, pdf_base64_to_text, pdf_base64_to_png_base64
+            is_pdf = ("pdf" in raw_b64[:40].lower()) or is_pdf_base64(stripped_b64)
+            if is_pdf:
+                pdf_text = pdf_base64_to_text(stripped_b64) or ""
+        except Exception as e:
+            logger.warning(f"Digitalizador: detección/lectura de PDF: {e}")
+
+        parsed = None
+
+        if is_pdf and len(pdf_text.strip()) >= 100:
+            # --- PDF DIGITAL: analizar TODO el texto (todas las páginas) de una vez ---
+            from services.llm_vision import chat_with_gemini
+            logger.info(f"Digitalizador: PDF de texto ({len(pdf_text)} chars) → modo texto")
+            text_prompt = (
+                extraction_prompt
+                + "\n\nTEXTO COMPLETO DEL DOCUMENTO (incluye TODAS las páginas, "
+                  "extrae las líneas de TODAS ellas):\n\n"
+                + pdf_text[:60000]
+            )
+            try:
+                resp = await chat_with_gemini(
+                    prompt=text_prompt,
+                    system_message="Eres un experto extrayendo líneas de presupuestos/facturas de muebles.",
+                    model="gemini-2.0-flash",
+                )
+                parsed = _parse_json_loose(_clean_json(resp))
+            except Exception as e:
+                logger.warning(f"Digitalizador: fallo modo texto, se usará visión: {e}")
+                parsed = None
+
+        if parsed is None:
+            # --- VISIÓN: imagen normal o PDF escaneado (sin capa de texto) ---
+            page_images = []
+            try:
+                if is_pdf:
+                    page_images = pdf_base64_to_png_base64(stripped_b64, dpi=150, max_pages=MAX_PDF_PAGES) or []
+                    logger.info(f"Digitalizador: PDF escaneado, {len(page_images)} página(s) por visión")
+            except Exception as e:
+                logger.warning(f"Digitalizador: conversión PDF→imagen: {e}")
+            if not page_images:
+                page_images = [request.imageBase64]  # imagen normal o fallback
+
+            merged_lines = []
+            project_name = ""
+            for pimg in page_images:
+                page_resp = await analyze_image_with_gemini(
+                    image_base64=pimg,
+                    prompt=extraction_prompt,
+                    session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
+                    model="gemini-2.0-flash",
+                )
+                pp = _parse_json_loose(_clean_json(page_resp))
+                if not pp:
+                    continue
+                if not project_name:
+                    project_name = str(pp.get("projectName") or "")
+                merged_lines.extend(pp.get("lines", []) or [])
             parsed = {"projectName": project_name, "lines": merged_lines}
+
+        # Texto crudo para depuración/registro (rawText de la respuesta).
+        try:
+            response_text = json.dumps(parsed, ensure_ascii=False)[:4000]
+        except Exception:
+            response_text = ""
+
+        # Construir respuesta con emparejamiento de catálogo
+        try:
             
             # Helper function for fuzzy search in catalog
             async def search_catalog_fuzzy(search_text: str, limit: int = 3, library: str = "ZC"):
