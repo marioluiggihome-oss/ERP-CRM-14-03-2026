@@ -322,6 +322,10 @@ async def save_digitalizador_to_presupuestos(request: DigitalizadorToProjectRequ
 # Límite máximo de imagen: 10 MB (base64 ≈ 13.3MB de string)
 MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10MB
 MAX_BASE64_LENGTH = MAX_IMAGE_BYTES * 4 // 3  # ~13.3M chars
+# Tope de páginas a analizar por PDF. Cada página es una llamada a la IA, así
+# que un PDF enorme podría tardar tanto que la petición caduque (timeout). Se
+# procesan hasta este número y se informa si el PDF tiene más.
+MAX_PDF_PAGES = 25
 
 
 @router.post("/digitalizador/analyze")
@@ -411,6 +415,13 @@ IMPORTANTE:
             page_images = []
         if not page_images:
             page_images = [request.imageBase64]  # imagen normal o fallback
+
+        # Tope de seguridad para no exceder el tiempo de la petición.
+        total_pages = len(page_images)
+        pages_truncated = total_pages > MAX_PDF_PAGES
+        if pages_truncated:
+            logger.warning(f"Digitalizador: PDF con {total_pages} páginas, se procesan las primeras {MAX_PDF_PAGES}")
+            page_images = page_images[:MAX_PDF_PAGES]
 
         def _clean_json(text):
             t = text.strip() if isinstance(text, str) else str(text)
