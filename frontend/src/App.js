@@ -364,7 +364,10 @@ const App = () => {
       doorColorColumns: '',
       sideColor: '',
       golaAlto: false, golaAltoColor: '',
-      golaBajo: false, golaBajoColor: ''
+      golaBajo: false, golaBajoColor: '',
+      // Logo POR USUARIO: si el usuario tiene marca propia y logo, usar el suyo;
+      // si no, mantener el logo global cargado por defecto.
+      logo: (user.useCustomBranding && user.logo) ? user.logo : prev.logo
     }));
     
     // Recargar productos de la biblioteca del usuario

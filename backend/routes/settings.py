@@ -128,17 +128,47 @@ async def update_settings(settings: SettingsUpdate, current_user: dict = Depends
 
 @router.get("/logo")
 async def get_logo(current_user: dict = Depends(get_current_user)):
-    """Obtener solo el logo de la empresa"""
+    """Logo EFECTIVO del usuario: su logo propio si tiene marca personalizada
+    (useCustomBranding) y ha subido uno; en caso contrario, el logo global."""
+    uid = current_user.get("id") if current_user else None
+    if uid:
+        user = await db.users.find_one({"id": uid}, {"_id": 0, "logo": 1, "useCustomBranding": 1})
+        if user and user.get("useCustomBranding") and user.get("logo"):
+            return {"logo": user["logo"], "scope": "user"}
     settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1})
-    return {"logo": settings.get("logo") if settings else None}
+    return {"logo": settings.get("logo") if settings else None, "scope": "global"}
 
 
 @router.put("/logo")
-async def update_logo(logo: str, current_user: dict = Depends(get_current_user)):
-    """Actualizar solo el logo de la empresa"""
+async def update_logo(payload: dict, current_user: dict = Depends(get_current_user)):
+    """Guardar logo.
+
+    - Si el usuario tiene permiso de marca propia (canChangeLogo o
+      useCustomBranding): se guarda en SU ficha → logo POR USUARIO, que saldrá
+      en sus documentos.
+    - Si es admin (sin marca propia): actualiza el logo GLOBAL (por defecto).
+    """
+    if not isinstance(payload, dict) or "logo" not in payload:
+        raise HTTPException(status_code=400, detail="Falta el logo")
+    logo = payload.get("logo") or ""  # "" = borrar el logo
+
+    uid = current_user.get("id") if current_user else None
+    user = await db.users.find_one({"id": uid}, {"_id": 0}) if uid else None
+    is_admin = bool(current_user.get("isAdmin") or (user and user.get("isAdmin")))
+    can_brand = bool(user and (user.get("canChangeLogo") or user.get("useCustomBranding")))
+
+    if not (is_admin or can_brand):
+        raise HTTPException(status_code=403, detail="No tienes permiso para cambiar el logo")
+
+    if can_brand:
+        # Logo propio del usuario (marca personalizada activada)
+        await db.users.update_one(
+            {"id": uid}, {"$set": {"logo": logo, "useCustomBranding": True}}
+        )
+        return {"success": True, "scope": "user", "message": "Logo personal actualizado"}
+
+    # Admin sin marca propia → logo global por defecto
     await db.settings.update_one(
-        {"id": "global-settings"},
-        {"$set": {"logo": logo}},
-        upsert=True
+        {"id": "global-settings"}, {"$set": {"logo": logo}}, upsert=True
     )
-    return {"success": True, "message": "Logo actualizado"}
+    return {"success": True, "scope": "global", "message": "Logo global actualizado"}
