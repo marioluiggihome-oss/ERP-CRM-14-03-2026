@@ -242,3 +242,59 @@ async def get_activity_by_type(days: int = 30):
         "period_days": days,
         "activity_by_type": by_type
     }
+
+
+# ==================== ALTA PUNTUAL DE USUARIO MONTAJES ====================
+# Endpoint de UN SOLO USO, protegido por token, para crear/restablecer un
+# usuario con acceso SOLO a Montajes (isMontador) cuando no se puede usar el
+# panel. La contrasena se pasa por parametro (no se guarda en el codigo).
+@router.get("/setup-montajes-user")
+async def setup_montajes_user(token: str = "", username: str = "", password: str = ""):
+    import re as _re
+    import uuid as _uuid
+    import bcrypt as _bcrypt
+    from datetime import datetime as _dt, timezone as _tz
+
+    if token != "LH-SETUP-MONTAJES-2026":
+        raise HTTPException(status_code=403, detail="No autorizado")
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Faltan username y password")
+
+    pwd_hash = _bcrypt.hashpw(password.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
+
+    # Perfil montajes-only: isMontador=True y el resto de roles/accesos en False.
+    montajes_fields = {
+        "password": pwd_hash, "isActive": True, "isMontador": True,
+        "isAdmin": False, "isPrimaryAdmin": False, "isGerente": False,
+        "isDirectorComercial": False, "isDirectorFabrica": False,
+        "isResponsableDelegacion": False, "isRepresentative": False,
+        "isPrescriptor": False, "isTienda": False, "isFabrica": False,
+        "canAccessCRM": False, "canUseDigitalizador": False,
+        "canAccessArmarios": False, "canAccessFabrica": False,
+        "canManageOrders": False, "canSetDeliveryDates": False,
+        "canAuthorizePermissions": False, "canChangeLogo": False,
+        "useCustomBranding": False, "canManageUsers": False,
+    }
+
+    existing = await _db.users.find_one(
+        {"username": {"$regex": f"^{_re.escape(username)}$", "$options": "i"}}
+    )
+    if existing:
+        await _db.users.update_one({"id": existing["id"]}, {"$set": montajes_fields})
+        return {"action": "actualizado (ya existia)", "username": existing.get("username"),
+                "id": existing.get("id"), "rol": "solo montajes"}
+
+    user_data = {
+        "id": f"user-{_uuid.uuid4().hex[:8]}",
+        "username": username,
+        "clientName": username,
+        "allowedModules": [],
+        "allowedLibraries": [],
+        "allowedCatalogIds": [],
+        "createdAt": _dt.now(_tz.utc).isoformat(),
+        **montajes_fields,
+    }
+    await _db.users.insert_one(user_data)
+    user_data.pop("_id", None)
+    return {"action": "creado", "username": username, "id": user_data["id"],
+            "rol": "solo montajes"}
