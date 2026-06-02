@@ -107,3 +107,35 @@ def pdf_base64_to_png_base64(
 
     logger.info(f"PDF convertido: {len(images)} página(s) rasterizada(s) a PNG.")
     return images
+
+
+def pdf_base64_to_text(pdf_b64: str, max_pages: Optional[int] = None) -> str:
+    """Extrae el TEXTO de un PDF digital (todas las páginas por defecto).
+
+    Devuelve "" si no hay PyMuPDF, si no se puede decodificar/abrir, o si el PDF
+    es escaneado (sin capa de texto).
+    """
+    if not PYMUPDF_AVAILABLE:
+        return ""
+    if pdf_b64.startswith("data:"):
+        pdf_b64 = pdf_b64.split(",", 1)[1]
+    try:
+        pdf_bytes = base64.b64decode(pdf_b64)
+    except Exception:
+        return ""
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception:
+        return ""
+    try:
+        total = doc.page_count
+        limit = total if max_pages is None else min(total, max_pages)
+        parts = []
+        for i in range(limit):
+            try:
+                parts.append(doc.load_page(i).get_text() or "")
+            except Exception:
+                continue
+        return "\n".join(parts)
+    finally:
+        doc.close()
