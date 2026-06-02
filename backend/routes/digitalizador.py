@@ -469,13 +469,21 @@ IMPORTANTE:
 
             merged_lines = []
             project_name = ""
+            vision_error = None
             for pimg in page_images:
-                page_resp = await analyze_image_with_gemini(
-                    image_base64=pimg,
-                    prompt=extraction_prompt,
-                    session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
-                    model="gemini-2.0-flash",
-                )
+                try:
+                    page_resp = await analyze_image_with_gemini(
+                        image_base64=pimg,
+                        prompt=extraction_prompt,
+                        session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
+                        model="gemini-2.0-flash",
+                    )
+                except Exception as e:
+                    # Un fallo en una página (timeout, cuota IA…) no debe tumbar
+                    # todo el análisis: se registra y se sigue con las demás.
+                    vision_error = str(e)
+                    logger.warning(f"Digitalizador: fallo IA en una página: {e}")
+                    continue
                 pp = _parse_json_loose(_clean_json(page_resp))
                 if not pp:
                     continue
@@ -483,6 +491,13 @@ IMPORTANTE:
                     project_name = str(pp.get("projectName") or "")
                 merged_lines.extend(pp.get("lines", []) or [])
             parsed = {"projectName": project_name, "lines": merged_lines}
+            # Si no se obtuvo nada y hubo error de IA, devolver mensaje claro
+            # (en vez de un 500 genérico "Error al analizar la imagen").
+            if not merged_lines and vision_error:
+                return DigitalizadorResponse(
+                    success=False, projectName="", lines=[], rawText="",
+                    error=f"La IA no pudo procesar el documento: {vision_error}"
+                )
 
         # Texto crudo para depuración/registro (rawText de la respuesta).
         try:
@@ -624,7 +639,12 @@ IMPORTANTE:
             
     except Exception as e:
         logger.error(f"Digitalizador analyze error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error analizando imagen: {str(e)}")
+        # Devolver el motivo en la respuesta (success=False) en vez de un 500
+        # genérico, para que el usuario vea qué ha fallado realmente.
+        return DigitalizadorResponse(
+            success=False, projectName="", lines=[], rawText="",
+            error=f"Error analizando el documento: {str(e)}"
+        )
 
 
 # ============================================
