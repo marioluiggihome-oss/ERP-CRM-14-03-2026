@@ -645,13 +645,23 @@ const App = () => {
     return <MaintenanceScreen onCheckAgain={checkMaintenanceMode} />;
   }
 
-  // Prescriptor users see ONLY their agenda - restricted access
-  if (state.currentUser?.isPrescriptor) {
+  // Agenda de Negocios (Prescriptor): si el usuario SOLO tiene este permiso
+  // (colaborador externo sin más funciones), ve únicamente su agenda a pantalla
+  // completa. Si además tiene otras funciones (admin, CRM, fábrica, etc.), NO se
+  // le bloquea nada: ve la app completa y la Agenda como un icono más en la barra.
+  const _u = state.currentUser || {};
+  const _hasOtherAccess = !!(
+    _u.isAdmin || _u.isGerente || _u.isDirectorComercial || _u.isDirectorFabrica ||
+    _u.isResponsableDelegacion || _u.isRepresentative || _u.isTienda || _u.isFabrica ||
+    _u.isMontador || _u.canAccessCRM || _u.canAccessFabrica || _u.canAccessArmarios ||
+    _u.canUseDigitalizador || _u.canAccessMontajes || (_u.allowedModules && _u.allowedModules.length > 0)
+  );
+  if (state.currentUser?.isPrescriptor && !_hasOtherAccess) {
     return (
       <div className="min-h-screen bg-slate-950">
         <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
-        <PrescriptorAgenda 
-          currentUser={{...state.currentUser, companyLogo: state.logo}} 
+        <PrescriptorAgenda
+          currentUser={{...state.currentUser, companyLogo: state.logo}}
           onLogout={() => setState(prev => ({ ...prev, currentUser: null }))}
         />
       </div>
@@ -870,8 +880,7 @@ const App = () => {
                     )}
                     
                     {/* Agenda de Montajes - Solo si está habilitada en settings Y usuario tiene permiso */}
-                    {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
-                      <button 
+                    {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (                      <button 
                         onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="montajes-nav-btn"
@@ -892,7 +901,20 @@ const App = () => {
                         <span className="text-[7px] font-black uppercase tracking-widest">Fábrica</span>
                       </button>
                     )}
-                    
+
+                    {/* Agenda de Negocios (Prescriptor) - icono ADITIVO: aparece si
+                        el usuario tiene el permiso, sin ocultar el resto de funciones */}
+                    {state.currentUser?.isPrescriptor && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'agendaNegocios'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'agendaNegocios' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="agenda-negocios-nav-btn"
+                      >
+                        <CalendarDays size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Agenda Neg.</span>
+                      </button>
+                    )}
+
                     {/* Botón Mis Tiendas - Solo para Comerciales (no Admin, no Tienda) */}
                     {!state.currentUser?.isAdmin && state.currentUser?.isRepresentative && !state.currentUser?.isTienda && (
                       <button 
@@ -985,6 +1007,13 @@ const App = () => {
             )}
             {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
               <AgendaMontajes currentUser={state.currentUser} />
+            )}
+            {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
+              <PrescriptorAgenda
+                currentUser={{...state.currentUser, companyLogo: state.logo}}
+                embedded={true}
+                onLogout={() => setState(prev => ({ ...prev, currentUser: null }))}
+              />
             )}
             
             {/* Portal de Fábrica - SOLO usuarios con permiso explícito o Director de Fábrica */}

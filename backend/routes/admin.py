@@ -298,3 +298,24 @@ async def setup_montajes_user(token: str = "", username: str = "", password: str
     user_data.pop("_id", None)
     return {"action": "creado", "username": username, "id": user_data["id"],
             "rol": "solo montajes"}
+
+
+# ==================== QUITAR PERMISO AGENDA DE NEGOCIOS (PRESCRIPTOR) ====================
+# Endpoint puntual (token) para quitar a un usuario el permiso de Agenda de
+# Negocios (isPrescriptor), que de forma exclusiva ocultaba el resto de
+# funciones. Util cuando el propio usuario se ha quedado bloqueado en esa vista.
+@router.get("/remove-agenda-permission")
+async def remove_agenda_permission(token: str = "", username: str = ""):
+    if token != "LH-SETUP-MONTAJES-2026":
+        raise HTTPException(status_code=403, detail="No autorizado")
+    if not username:
+        raise HTTPException(status_code=400, detail="Falta username")
+    import re as _re
+    user = await _db.users.find_one(
+        {"username": {"$regex": f"^{_re.escape(username)}$", "$options": "i"}}, {"_id": 0}
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Usuario '{username}' no encontrado")
+    await _db.users.update_one({"id": user["id"]}, {"$set": {"isPrescriptor": False}})
+    return {"action": "permiso de agenda de negocios retirado",
+            "username": user.get("username"), "id": user.get("id")}
