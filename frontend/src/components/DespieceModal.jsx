@@ -19,6 +19,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   const [boardW, setBoardW] = useState(2440);
   const [boardH, setBoardH] = useState(1220);
   const [wastePct, setWastePct] = useState(15);
+  // Costes y margen: precios unitarios configurables (€) y PVP de venta.
+  const [priceBoardM2, setPriceBoardM2] = useState(18);   // €/m² de tablero
+  const [priceEdgeMl, setPriceEdgeMl] = useState(0.6);    // €/ml de canto
+  const [priceHinge, setPriceHinge] = useState(1.5);      // €/bisagra
+  const [priceSlide, setPriceSlide] = useState(8);        // €/juego correderas
+  const [priceHandle, setPriceHandle] = useState(2);      // €/tirador
+  const [priceShelfSup, setPriceShelfSup] = useState(0.2);// €/soporte balda
+  const [priceHanger, setPriceHanger] = useState(3);      // €/juego colgadores
+  const [salePvp, setSalePvp] = useState(0);              // PVP de venta (para margen)
   const printRef = useRef(null);
   
   // Editable header fields
@@ -587,6 +596,21 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     const totalArea = boards.reduce((s, b) => s + b.area, 0);
     const totalBoards = boards.reduce((s, b) => s + b.estBoards, 0);
 
+    // ---- COSTES Y MARGEN ----
+    // Coste de tablero: por superficie real a cortar (m²) × precio, con merma.
+    const costBoards = totalArea * wasteFactor * (Number(priceBoardM2) || 0);
+    const costEdge = totalEdge * (Number(priceEdgeMl) || 0);
+    const hwCost =
+      (hw.bisagras || 0) * (Number(priceHinge) || 0) +
+      (hw.correderas || 0) * (Number(priceSlide) || 0) +
+      (hw.tiradores || 0) * (Number(priceHandle) || 0) +
+      (hw.soportesBaldas || 0) * (Number(priceShelfSup) || 0) +
+      (hw.colgadores || 0) * (Number(priceHanger) || 0);
+    const costTotal = costBoards + costEdge + hwCost;
+    const pvp = Number(salePvp) || 0;
+    const margin = pvp - costTotal;
+    const marginPct = pvp > 0 ? (margin / pvp) * 100 : 0;
+
     return {
       boards,
       totalArea,
@@ -600,8 +624,10 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         soportesBaldas: hw.soportesBaldas || 0,
         colgadores: hw.colgadores || 0,
       },
+      costs: { costBoards, costEdge, hwCost, costTotal, pvp, margin, marginPct },
     };
-  }, [despieceData, carcassMaterialName, calculateBandasYTraseras, calculateHerrajes, boardW, boardH, wastePct]);
+  }, [despieceData, carcassMaterialName, calculateBandasYTraseras, calculateHerrajes, boardW, boardH, wastePct,
+      priceBoardM2, priceEdgeMl, priceHinge, priceSlide, priceHandle, priceShelfSup, priceHanger, salePvp]);
 
   // Exportar PDF - Genera contenido según la pestaña activa
   const handleExportPDF = () => {
@@ -2391,6 +2417,65 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       <p className="text-3xl font-black">{shoppingList.totalArea.toFixed(2)} <span className="text-base">m²</span></p>
                       <p className="text-[10px] text-amber-100 mt-1">a cortar (todos los materiales)</p>
                     </div>
+                  </div>
+
+                  {/* ===== COSTES Y MARGEN ===== */}
+                  <div className="bg-slate-900 text-white rounded-2xl p-5">
+                    <h3 className="text-sm font-black uppercase mb-4 flex items-center gap-2">💶 Costes y Margen de Fabricación</h3>
+                    {/* Precios unitarios configurables */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      {[
+                        ['Tablero €/m²', priceBoardM2, setPriceBoardM2],
+                        ['Canto €/ml', priceEdgeMl, setPriceEdgeMl],
+                        ['Bisagra €', priceHinge, setPriceHinge],
+                        ['Correderas €', priceSlide, setPriceSlide],
+                        ['Tirador €', priceHandle, setPriceHandle],
+                        ['Soporte balda €', priceShelfSup, setPriceShelfSup],
+                        ['Colgador €', priceHanger, setPriceHanger],
+                        ['PVP venta €', salePvp, setSalePvp],
+                      ].map(([label, val, setter], i) => (
+                        <div key={i}>
+                          <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">{label}</label>
+                          <input type="number" step="0.01" value={val}
+                            onChange={e => setter(Number(e.target.value))}
+                            className="w-full px-2 py-1.5 rounded-lg text-sm text-center font-bold bg-slate-800 border border-slate-700 text-white" />
+                        </div>
+                      ))}
+                    </div>
+                    {/* Desglose de coste */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div className="bg-slate-800 rounded-xl p-3">
+                        <p className="text-[9px] uppercase text-slate-400">Coste tableros</p>
+                        <p className="text-xl font-black">{shoppingList.costs.costBoards.toFixed(2)} €</p>
+                      </div>
+                      <div className="bg-slate-800 rounded-xl p-3">
+                        <p className="text-[9px] uppercase text-slate-400">Coste canto</p>
+                        <p className="text-xl font-black">{shoppingList.costs.costEdge.toFixed(2)} €</p>
+                      </div>
+                      <div className="bg-slate-800 rounded-xl p-3">
+                        <p className="text-[9px] uppercase text-slate-400">Coste herrajes</p>
+                        <p className="text-xl font-black">{shoppingList.costs.hwCost.toFixed(2)} €</p>
+                      </div>
+                    </div>
+                    {/* Total coste + margen */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-orange-600 rounded-xl p-4">
+                        <p className="text-[9px] uppercase text-orange-100">Coste total materiales</p>
+                        <p className="text-2xl font-black">{shoppingList.costs.costTotal.toFixed(2)} €</p>
+                      </div>
+                      <div className="bg-indigo-600 rounded-xl p-4">
+                        <p className="text-[9px] uppercase text-indigo-100">PVP venta</p>
+                        <p className="text-2xl font-black">{shoppingList.costs.pvp.toFixed(2)} €</p>
+                      </div>
+                      <div className={`rounded-xl p-4 ${shoppingList.costs.margin >= 0 ? 'bg-emerald-600' : 'bg-red-600'}`}>
+                        <p className="text-[9px] uppercase text-white/80">Margen</p>
+                        <p className="text-2xl font-black">{shoppingList.costs.margin.toFixed(2)} €</p>
+                        <p className="text-[10px] text-white/80">{shoppingList.costs.pvp > 0 ? shoppingList.costs.marginPct.toFixed(1) + '%' : 'pon el PVP'}</p>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-3">
+                      Coste = tableros (m²×€ con merma) + canto (ml×€) + herrajes (uds×€). Pon el <strong>PVP de venta</strong> para ver el margen. Los precios se pueden ajustar arriba.
+                    </p>
                   </div>
 
                   {/* Tableros por material */}
