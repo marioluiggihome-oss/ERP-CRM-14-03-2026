@@ -26,52 +26,83 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ia-lab", tags=["IA Lab"])
 
 
-# Mapa de tipo detectado por la IA -> categorías del catálogo (ZC y MV).
-# El ancho es el dato más fiable de un plano (va rotulado); la altura la
-# estima la IA y puede no coincidir, así que el emparejamiento prioriza
-# TIPO + ANCHO dentro de la biblioteca correcta.
-_TIPO_TO_CATEGORIES = {
-    'ALTO': ['ALTOS', 'ALTOS GOLA', 'ALTO GOLA', 'SOBREMODULOS', 'SOBREMÓDULOS', 'VITRINAS'],
-    'BAJO': ['BAJOS', 'BAJOS GOLA'],
-    'COLUMNA': ['COLUMNAS', 'COLUMNAS GOLA'],
-    'SEMICOLUMNA': ['SEMICOLUMNAS', 'SEMICOLUMNAS GOLA'],
-    'COSTADO': ['COSTADOS'],
+# Raíz de categoría del catálogo por tipo detectado por la IA. Se usa con un
+# regex "^RAIZ" para cubrir TODAS las variantes: singular y plural y GOLA.
+#   MV usa singular: ALTO / BAJO / COLUMNA / SEMICOLUMNA
+#   ZC usa plural:   ALTOS / BAJOS / COLUMNAS ... (y "ALTOS GOLA", etc.)
+_TIPO_TO_CAT_ROOT = {
+    'ALTO': 'ALTO',
+    'BAJO': 'BAJO',
+    'COLUMNA': 'COLUMNA',
+    'SEMICOLUMNA': 'SEMICOLUMNA',
+    'COSTADO': 'COSTADO',
 }
+
+
+def _resolve_price(p, library=None):
+    """Precio/puntos de un producto. MV y ZC guardan el valor en 'points'; si
+    viene a 0, se usa la primera tarifa de zonePoints (T1 para MV, Z1 para ZC)."""
+    try:
+        price = float(p.get('points', 0) or 0)
+    except Exception:
+        price = 0
+    if not price:
+        zp = p.get('zonePoints') or {}
+        if isinstance(zp, dict):
+            key = 'T1' if (library or '').upper() == 'MV' else 'Z1'
+            try:
+                price = float(zp.get(key, 0) or 0)
+            except Exception:
+                price = 0
+    return price
+
+
+def _to_cm(v):
+    """Normaliza una medida a cm. La IA detecta anchos/altos en mm (p.ej. 600)
+    y el catálogo los guarda en cm (p.ej. 60); si el valor es 'grande' se asume
+    mm y se divide entre 10."""
+    try:
+        v = float(v or 0)
+    except Exception:
+        return 0.0
+    return v / 10.0 if v >= 200 else v
 
 
 async def _match_by_type_and_width(tipo: str, width: int, height: int, base_filter: dict) -> dict:
     """Empareja por TIPO + ANCHO (y, si ayuda, altura) dentro de la biblioteca.
 
-    Estrategia: filtra por las categorías del tipo y busca el producto cuyo
-    ancho sea el más cercano al detectado. Es robusto entre librerías (ZC/MV)
-    porque no depende del formato del código, solo de categoría + medida.
+    Robusto entre ZC y MV: no depende del formato del código, solo de categoría
+    (por raíz, cubre singular/plural/GOLA) + medida (normalizada a cm).
     """
     if not tipo or not width:
         return None
-    cats = _TIPO_TO_CATEGORIES.get((tipo or '').upper())
-    if not cats:
+    cat_root = _TIPO_TO_CAT_ROOT.get((tipo or '').upper().strip())
+    if not cat_root:
         return None
 
-    # Tolerancia de ancho: ±60mm (los anchos son estándar: 300,400,...)
-    cat_filter = {
-        **base_filter,
-        "category": {"$in": cats},
-        "width": {"$gte": width - 60, "$lte": width + 60},
-    }
-    candidates = await db.products.find(cat_filter, {"_id": 0}).to_list(200)
+    width_cm = _to_cm(width)
+    height_cm = _to_cm(height) if height else 0
+
+    # Candidatos por categoría (regex que cubre ALTO/ALTOS/ALTO GOLA…) + biblioteca.
+    cat_filter = {**base_filter, "category": {"$regex": f"^{cat_root}", "$options": "i"}}
+    candidates = await db.products.find(cat_filter, {"_id": 0}).to_list(3000)
     if not candidates:
         return None
 
     def score(p):
-        pw = float(p.get('width') or 0)
-        ph = float(p.get('height') or 0)
-        s = abs(pw - width)
-        if height:
-            s += abs(ph - height) * 0.3  # la altura pesa menos (la estima la IA)
+        pw_cm = _to_cm(p.get('width'))
+        s = abs(pw_cm - width_cm)
+        if height_cm:
+            s += abs(_to_cm(p.get('height')) - height_cm) * 0.3  # la altura pesa menos
         return s
 
     candidates.sort(key=score)
-    return candidates[0]
+    best = candidates[0]
+    # Aceptar solo si el ancho está razonablemente cerca (±8 cm); los anchos son
+    # estándar (30,40,45,60,80,90,120…), así que un buen match debe ser exacto.
+    if abs(_to_cm(best.get('width')) - width_cm) > 8:
+        return None
+    return best
 
 
 async def search_product_in_catalog(code: str, width: int = None, height: int = None,
@@ -188,8 +219,9 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
             enriched_item['producto_encontrado'] = True
             enriched_item['codigo_catalogo'] = catalog_product.get('code', code)
             enriched_item['nombre_catalogo'] = catalog_product.get('name', '')
-            enriched_item['puntos'] = catalog_product.get('points', 0) or catalog_product.get('T1', 0)
-            enriched_item['precio_pvp'] = catalog_product.get('points', 0) or catalog_product.get('T1', 0)
+            _precio = _resolve_price(catalog_product, library)
+            enriched_item['puntos'] = _precio
+            enriched_item['precio_pvp'] = _precio
             enriched_item['categoria'] = catalog_product.get('category', '')
             enriched_item['programa'] = catalog_product.get('programa', 'ESTÁNDAR')
             enriched_item['ancho_real'] = catalog_product.get('width', width)
