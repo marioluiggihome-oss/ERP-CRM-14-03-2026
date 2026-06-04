@@ -30,8 +30,18 @@ const ClientSelector = ({
   const [newClientEmail, setNewClientEmail] = useState('');
   const containerRef = useRef(null);
 
-  // Check if user can access clients
-  const canAccessClients = currentUser && !currentUser.isPrescriptor;
+  // Check if user can access clients.
+  // El permiso de prescriptor (Agenda de Negocios) NO debe quitar el acceso a
+  // clientes a quien ademas es admin o tiene otras funciones: solo restringe a
+  // un prescriptor "puro" (colaborador externo sin nada mas).
+  const _isPurePrescriptor = currentUser?.isPrescriptor
+    && !currentUser?.isAdmin
+    && !currentUser?.isGerente
+    && !currentUser?.isDirectorComercial
+    && !currentUser?.isResponsableDelegacion
+    && !currentUser?.isRepresentative
+    && !currentUser?.canAccessCRM;
+  const canAccessClients = currentUser && !_isPurePrescriptor;
   
   // Check if user can create new clients
   const canCreateClients = currentUser && (
