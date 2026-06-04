@@ -890,6 +890,13 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
     const itemsMontadaCopy = [...state.budgetItemsMontada];
     const itemsDespieceCopy = [...state.budgetItemsDespiece];
 
+    // El backend exige JWT (require_auth). Enviar el token en TODAS las
+    // peticiones de guardado para no recibir 401 "Autenticación requerida".
+    const _token = localStorage.getItem('luiggi_access_token')
+      || localStorage.getItem('token')
+      || localStorage.getItem('access_token');
+    const authCfg = _token ? { headers: { Authorization: `Bearer ${_token}` } } : {};
+
     try {
       // Verificar si ya existe un presupuesto con este número
       // Usar axios (XHR) en lugar de fetch: un script externo (emergent-main.js)
@@ -897,7 +904,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
       // "body stream already read". axios no usa fetch, así que lo evita.
       let checkData = {};
       try {
-        const checkResp = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/projects/check-budget-number/${encodeURIComponent(state.budgetNumber)}`);
+        const checkResp = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/projects/check-budget-number/${encodeURIComponent(state.budgetNumber)}`, authCfg);
         checkData = checkResp.data || {};
       } catch (_) { checkData = {}; }
       
@@ -959,8 +966,8 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
       let savedProject;
       try {
         const saveResp = (shouldOverwrite && existingProjectId)
-          ? await axios.put(`${process.env.REACT_APP_BACKEND_URL}/api/projects/${existingProjectId}?user_id=${state.currentUser.id}`, projectData)
-          : await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/projects?user_id=${state.currentUser.id}`, projectData);
+          ? await axios.put(`${process.env.REACT_APP_BACKEND_URL}/api/projects/${existingProjectId}?user_id=${state.currentUser.id}`, projectData, authCfg)
+          : await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/projects?user_id=${state.currentUser.id}`, projectData, authCfg);
         savedProject = saveResp.data;
       } catch (err) {
         const det = err?.response?.data?.detail;

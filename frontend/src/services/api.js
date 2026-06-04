@@ -1,5 +1,22 @@
 // API Service for LUIGGI HOME
+import axios from 'axios';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Interceptor GLOBAL de axios: añade el token JWT a TODAS las peticiones axios
+// automáticamente. Evita errores 401 "Autenticación requerida" en cualquier
+// llamada (p.ej. guardar presupuesto) por olvidar la cabecera Authorization.
+axios.interceptors.request.use((config) => {
+  try {
+    const t = localStorage.getItem('luiggi_access_token')
+      || localStorage.getItem('token')
+      || localStorage.getItem('access_token');
+    if (t) {
+      config.headers = config.headers || {};
+      if (!config.headers.Authorization) config.headers.Authorization = `Bearer ${t}`;
+    }
+  } catch (_) {}
+  return config;
+});
 
 // Helper: build Authorization header with JWT from localStorage (if present)
 export const authHeaders = (extra = {}) => {
