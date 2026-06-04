@@ -319,3 +319,31 @@ async def remove_agenda_permission(token: str = "", username: str = ""):
     await _db.users.update_one({"id": user["id"]}, {"$set": {"isPrescriptor": False}})
     return {"action": "permiso de agenda de negocios retirado",
             "username": user.get("username"), "id": user.get("id")}
+
+
+# ==================== CONCEDER ADMIN A UN USUARIO (PUNTUAL, TOKEN) ====================
+# Endpoint puntual (token) para asegurar que un usuario es administrador y ve el
+# Panel Maestro. Limpia los roles que ocultan MASTER (isTienda/isFabrica) y los
+# roles exclusivos (isPrescriptor) que limitan la vista.
+@router.get("/grant-admin")
+async def grant_admin(token: str = "", username: str = ""):
+    if token != "LH-SETUP-MONTAJES-2026":
+        raise HTTPException(status_code=403, detail="No autorizado")
+    if not username:
+        raise HTTPException(status_code=400, detail="Falta username")
+    import re as _re
+    user = await _db.users.find_one(
+        {"username": {"$regex": f"^{_re.escape(username)}$", "$options": "i"}}, {"_id": 0}
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Usuario '{username}' no encontrado")
+    await _db.users.update_one({"id": user["id"]}, {"$set": {
+        "isAdmin": True,
+        "isActive": True,
+        "isTienda": False,
+        "isFabrica": False,
+        "isPrescriptor": False,
+    }})
+    return {"action": "usuario ahora es ADMIN (ve Panel Maestro)",
+            "username": user.get("username"), "id": user.get("id"),
+            "antes": {k: user.get(k) for k in ["isAdmin", "isRepresentative", "isTienda", "isFabrica", "isPrescriptor"]}}
