@@ -1099,3 +1099,71 @@ async def create_opportunity_from_project(project_id: str, businessType: str = "
     except Exception as e:
         logger.error(f"Create opportunity from project error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# NOTAS / CALENDARIO DEL PRESCRIPTOR (Agenda de Negocios)
+# La Agenda usa estos endpoints para el calendario de notas. Antes no existian
+# (la pestana Calendario fallaba con 404). Se guardan en prescriptor_notes.
+# ============================================================
+@router.get("/prescriptor/notes")
+async def get_prescriptor_notes(prescriptor_id: str = "", start: str = "", end: str = ""):
+    """Notas del prescriptor, opcionalmente filtradas por rango de fechas (date)."""
+    try:
+        query = {}
+        if prescriptor_id:
+            query["prescriptorId"] = prescriptor_id
+        if start and end:
+            query["date"] = {"$gte": start, "$lte": end}
+        elif start:
+            query["date"] = {"$gte": start}
+        notes = await db.prescriptor_notes.find(query, {"_id": 0}).sort("date", 1).to_list(2000)
+        return notes
+    except Exception as e:
+        logger.error(f"Get prescriptor notes error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/prescriptor/notes")
+async def create_prescriptor_note(note: dict):
+    """Crear una nota del prescriptor."""
+    try:
+        doc = {**(note or {})}
+        doc["id"] = f"pnote-{uuid.uuid4().hex[:8]}"
+        doc["createdAt"] = datetime.now(timezone.utc).isoformat()
+        doc["updatedAt"] = doc["createdAt"]
+        await db.prescriptor_notes.insert_one(doc)
+        doc.pop("_id", None)
+        return doc
+    except Exception as e:
+        logger.error(f"Create prescriptor note error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/prescriptor/notes/{note_id}")
+async def update_prescriptor_note(note_id: str, note: dict):
+    """Actualizar una nota del prescriptor."""
+    try:
+        update_data = {k: v for k, v in (note or {}).items() if k not in ("id", "_id", "createdAt")}
+        update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+        await db.prescriptor_notes.update_one({"id": note_id}, {"$set": update_data})
+        updated = await db.prescriptor_notes.find_one({"id": note_id}, {"_id": 0})
+        if not updated:
+            raise HTTPException(status_code=404, detail="Nota no encontrada")
+        return updated
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update prescriptor note error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/prescriptor/notes/{note_id}")
+async def delete_prescriptor_note(note_id: str):
+    """Eliminar una nota del prescriptor."""
+    try:
+        res = await db.prescriptor_notes.delete_one({"id": note_id})
+        return {"success": True, "deleted": res.deleted_count}
+    except Exception as e:
+        logger.error(f"Delete prescriptor note error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
