@@ -801,6 +801,19 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Agenda de Negocios (Prescriptor) - icono ADITIVO, justo debajo del CRM:
+                        aparece si el usuario tiene el permiso, sin ocultar el resto de funciones */}
+                    {state.currentUser?.isPrescriptor && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'agendaNegocios'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'agendaNegocios' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="agenda-negocios-nav-btn"
+                      >
+                        <CalendarDays size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Agenda Neg.</span>
+                      </button>
+                    )}
+
                     <button 
                       onClick={() => setState(p => ({...p, currentTab: 'budget'}))} 
                       className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -899,19 +912,6 @@ const App = () => {
                       >
                         <Factory size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Fábrica</span>
-                      </button>
-                    )}
-
-                    {/* Agenda de Negocios (Prescriptor) - icono ADITIVO: aparece si
-                        el usuario tiene el permiso, sin ocultar el resto de funciones */}
-                    {state.currentUser?.isPrescriptor && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'agendaNegocios'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'agendaNegocios' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="agenda-negocios-nav-btn"
-                      >
-                        <CalendarDays size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Agenda Neg.</span>
                       </button>
                     )}
 
