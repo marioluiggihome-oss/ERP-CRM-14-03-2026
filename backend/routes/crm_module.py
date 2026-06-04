@@ -177,6 +177,27 @@ async def get_contacts(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/crm/contacts/by-prescriptor/{prescriptor_id}")
+async def get_contacts_by_prescriptor(prescriptor_id: str):
+    """Contactos creados por un prescriptor (Agenda de Negocios).
+
+    Los devuelve por prescriptorId; tambien incluye los que tenga asociados como
+    creador (createdByUserId) por si se guardaron antes de fijar el prescriptor.
+    """
+    try:
+        contacts = await db.contacts.find(
+            {"$or": [
+                {"prescriptorId": prescriptor_id},
+                {"createdByUserId": prescriptor_id},
+            ]},
+            {"_id": 0},
+        ).sort("createdAt", -1).to_list(1000)
+        return contacts
+    except Exception as e:
+        logger.error(f"Get contacts by prescriptor error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/crm/contacts/{contact_id}")
 async def get_contact(contact_id: str, current_user: Optional[dict] = Depends(_get_user_or_none)):
     """Get a single contact by ID — solo el propietario o admin puede verlo"""
