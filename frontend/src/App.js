@@ -731,7 +731,7 @@ const App = () => {
             />
           )}
 
-          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-300 ease-in-out w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl`} onClick={(e) => {
+          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-300 ease-in-out w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl overflow-y-auto max-h-screen`} onClick={(e) => {
             // En móvil cerrar al hacer click en un botón de navegación
             if (window.innerWidth < 768 && e.target.closest('button[data-nav]')) {
               setTimeout(() => setSidebarOpen(false), 150);
