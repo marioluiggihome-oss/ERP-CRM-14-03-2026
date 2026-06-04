@@ -396,6 +396,58 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     };
   };
 
+  // ====== PEDIDO DE COMPRA A PROVEEDOR (tableros / canto / herrajes) ======
+  // Usa la Lista de Compra agregada (shoppingList). Privacidad: usa la
+  // referencia/expediente, no el nombre del cliente.
+  const handleExportPurchaseOrderCSV = () => {
+    if (!shoppingList) { alert('No hay datos para el pedido'); return; }
+    const ref = editableProjectRef || editableExpedient || '-';
+    let csv = "PEDIDO DE COMPRA - PROVEEDOR\n";
+    csv += `Ref. Pedido: ${ref}\n`;
+    csv += `Fecha: ${new Date().toLocaleDateString('es-ES')}\n\n`;
+    csv += "TABLEROS\nMaterial;Tableros (uds);Superficie (m2)\n";
+    shoppingList.boards.forEach(b => { csv += `${b.material};${b.estBoards};${b.area.toFixed(3)}\n`; });
+    csv += `\nCANTO\nMaterial;Metros lineales (ml)\n`;
+    Object.entries(shoppingList.edgeByMaterial).forEach(([m, ml]) => { csv += `${m};${Number(ml).toFixed(2)}\n`; });
+    csv += `\nHERRAJES\nConcepto;Cantidad\n`;
+    const hw = shoppingList.hardware;
+    csv += `Bisagras;${hw.bisagras}\nCorrederas (juegos);${hw.correderas}\nTiradores;${hw.tiradores}\nSoportes balda;${hw.soportesBaldas}\nColgadores (juegos);${hw.colgadores}\n`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `PEDIDO_COMPRA_${(ref || 'REF').replace(/[^a-zA-Z0-9-]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  };
+
+  const handleExportPurchaseOrderPDF = () => {
+    if (!shoppingList) { alert('No hay datos para el pedido'); return; }
+    const ref = editableProjectRef || editableExpedient || '-';
+    const fecha = new Date().toLocaleDateString('es-ES');
+    const hw = shoppingList.hardware;
+    const rowsBoards = shoppingList.boards.map(b => `<tr><td>${b.material}</td><td class="c">${b.estBoards}</td><td class="c">${b.area.toFixed(3)} m²</td></tr>`).join('');
+    const rowsEdge = Object.entries(shoppingList.edgeByMaterial).map(([m, ml]) => `<tr><td>${m}</td><td class="c">${Number(ml).toFixed(2)} ml</td></tr>`).join('');
+    const w = window.open('', '_blank');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pedido de compra</title>
+      <style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:12px;color:#222}
+      .h{background:#6d28d9;color:#fff;padding:16px;margin-bottom:14px}.h h1{font-size:18px;margin:0}
+      .info{font-size:11px;color:#555;margin-bottom:14px}h2{font-size:13px;margin:16px 0 6px}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px}th{background:#ede9fe;text-align:left;padding:8px;font-size:11px}
+      td{padding:8px;border-bottom:1px solid #eee}.c{text-align:center}</style></head><body>
+      <div class="h"><h1>📦 PEDIDO DE COMPRA — PROVEEDOR</h1></div>
+      <div class="info"><strong>Ref. Pedido:</strong> ${ref} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</div>
+      <h2>Tableros</h2><table><thead><tr><th>Material</th><th class="c">Tableros (uds)</th><th class="c">Superficie</th></tr></thead><tbody>${rowsBoards}</tbody></table>
+      <h2>Canto</h2><table><thead><tr><th>Material</th><th class="c">Metros lineales</th></tr></thead><tbody>${rowsEdge}</tbody></table>
+      <h2>Herrajes</h2><table><thead><tr><th>Concepto</th><th class="c">Cantidad</th></tr></thead><tbody>
+      <tr><td>Bisagras</td><td class="c">${hw.bisagras}</td></tr>
+      <tr><td>Correderas (juegos)</td><td class="c">${hw.correderas}</td></tr>
+      <tr><td>Tiradores</td><td class="c">${hw.tiradores}</td></tr>
+      <tr><td>Soportes de balda</td><td class="c">${hw.soportesBaldas}</td></tr>
+      <tr><td>Colgadores (juegos)</td><td class="c">${hw.colgadores}</td></tr>
+      </tbody></table></body></html>`);
+    w.document.close();
+    w.onload = () => w.print();
+  };
+
   const handleEditComponent = (productId, componentId, field, value) => {
     const key = `${productId}-${componentId}`;
     setEditedComponents(prev => ({
@@ -2543,12 +2595,27 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                     </div>
                   </div>
 
+                  {/* Exportar PEDIDO DE COMPRA a proveedor */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button onClick={handleExportPurchaseOrderPDF}
+                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2"
+                      data-testid="purchase-order-pdf">
+                      <FileText size={16} /> Pedido de compra (PDF)
+                    </button>
+                    <button onClick={handleExportPurchaseOrderCSV}
+                      className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2"
+                      data-testid="purchase-order-csv">
+                      <Download size={16} /> Pedido de compra (CSV)
+                    </button>
+                  </div>
+
                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
                     <p className="text-xs text-purple-700">
                       <strong>Uso:</strong> Resumen agregado de todo lo necesario para fabricar esta orden:
                       tableros por material, metros de canto y herrajes. El número de tableros es una
                       estimación (superficie + merma configurable, tablero {boardW}×{boardH}mm); para el corte
-                      exacto usa <strong>Optimizar Tableros</strong>.
+                      exacto usa <strong>Optimizar Tableros</strong>. El <strong>Pedido de compra</strong>
+                      genera el documento (PDF/CSV) para enviar al proveedor con la referencia del pedido.
                     </p>
                   </div>
                 </div>
