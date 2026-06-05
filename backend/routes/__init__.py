@@ -16,6 +16,7 @@ from .armarios import router as armarios_router
 from .digitalizador import router as digitalizador_router
 from .crm_module import router as crm_module_router
 from .orders import router as orders_router
+from .ai_engine import ai_engine_router
 
 __all__ = [
     'ia_lab_router',
@@ -32,5 +33,6 @@ __all__ = [
     'armarios_router',
     'digitalizador_router',
     'crm_module_router',
-    'orders_router'
+    'orders_router',
+    'ai_engine_router',
 ]

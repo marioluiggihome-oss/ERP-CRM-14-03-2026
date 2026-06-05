@@ -1,27 +1,33 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield } from 'lucide-react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image } from 'lucide-react';
 import "./App.css";
-import BudgetTable from './components/BudgetTable';
-import Visualizer from './components/Visualizer';
-import ProjectLibrary from './components/ProjectLibrary';
-import Invoices from './components/Invoices';
-import CommandCenter from './components/CommandCenter';
-import SettingsModal from './components/SettingsModal';
-import ManufacturingReport from './components/ManufacturingReport';
+
+// ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
+// Esto reduce el bundle inicial de ~1.5MB a ~400KB (solo Login + shell)
+const BudgetTable = lazy(() => import('./components/BudgetTable'));
+const Visualizer = lazy(() => import('./components/Visualizer'));
+const ProjectLibrary = lazy(() => import('./components/ProjectLibrary'));
+const Invoices = lazy(() => import('./components/Invoices'));
+const CommandCenter = lazy(() => import('./components/CommandCenter'));
+const SettingsModal = lazy(() => import('./components/SettingsModal'));
+const ManufacturingReport = lazy(() => import('./components/ManufacturingReport'));
+const CRMLayout = lazy(() => import('./components/CRMLayout'));
+const Digitalizador = lazy(() => import('./components/Digitalizador'));
+const AgendaMontajes = lazy(() => import('./components/AgendaMontajes'));
+const AdminWorkView = lazy(() => import('./components/AdminWorkView'));
+const CommercialWorkView = lazy(() => import('./components/CommercialWorkView'));
+const PrescriptorAgenda = lazy(() => import('./components/PrescriptorAgenda'));
+const Armarios = lazy(() => import('./components/Armarios'));
+const PortalFabrica = lazy(() => import('./components/PortalFabrica'));
+const UserManualModal = lazy(() => import('./components/UserManualModal'));
+const MisPedidos = lazy(() => import('./components/MisPedidos'));
+const BackupManager = lazy(() => import('./components/BackupManager'));
+const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
+
+// ─── Carga directa: componentes ligeros necesarios al inicio ────────────────
 import Login from './components/Login';
-import BackupManager from './components/BackupManager';
-import CRMLayout from './components/CRMLayout';
-import Digitalizador from './components/Digitalizador';
-import AgendaMontajes from './components/AgendaMontajes';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import MaintenancePanel from './components/MaintenancePanel';
-import AdminWorkView from './components/AdminWorkView';
-import CommercialWorkView from './components/CommercialWorkView';
-import PrescriptorAgenda from './components/PrescriptorAgenda';
-import Armarios from './components/Armarios';
-import PortalFabrica from './components/PortalFabrica';
-import UserManualModal from './components/UserManualModal';
-import MisPedidos from './components/MisPedidos';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI } from './services/api';
 import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './services/authService';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
@@ -880,6 +886,18 @@ const App = () => {
                       </button>
                     )}
                     
+                    {/* Render 3D Studio - Usuarios con acceso a IA (NO para Tienda) */}
+                    {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'renderStudio'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'renderStudio' ? 'bg-purple-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="render-studio-nav-btn"
+                      >
+                        <Image size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Render 3D</span>
+                      </button>
+                    )}
+                    
                     {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
                     {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
                       <button 
@@ -981,6 +999,7 @@ const App = () => {
           </aside>
 
           <main className="flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10">
+            <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
             {state.currentTab === 'budget' && (
               <ErrorBoundary>
               <BudgetTable 
@@ -1022,6 +1041,11 @@ const App = () => {
               <PortalFabrica currentUser={state.currentUser} />
             )}
             
+            {/* Render 3D Studio */}
+            {state.currentTab === 'renderStudio' && state.currentUser?.canUseAIAnalysis && (
+              <AIRenderStudio state={state} />
+            )}
+
             {/* Mis Pedidos */}
             {state.currentTab === 'misPedidos' && (
               <MisPedidos currentUser={state.currentUser} />
@@ -1029,6 +1053,7 @@ const App = () => {
             
             {/* CRM - Single Component with internal navigation */}
             {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} />}
+            </Suspense>
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />
@@ -1036,12 +1061,14 @@ const App = () => {
             </div>
           </main>
 
-          <SettingsModal 
-            isOpen={state.showSettings || false} 
-            onClose={() => setState(p => ({...p, showSettings: false}))} 
-            state={state} 
-            setState={setState} 
-          />
+          <Suspense fallback={null}>
+            <SettingsModal 
+              isOpen={state.showSettings || false} 
+              onClose={() => setState(p => ({...p, showSettings: false}))} 
+              state={state} 
+              setState={setState} 
+            />
+          </Suspense>
 
           {/* Maintenance Panel Modal - ADMIN ONLY */}
           {showMaintenancePanel && state.currentUser?.isAdmin && (
@@ -1075,25 +1102,31 @@ const App = () => {
           )}
 
           {/* Admin Work View Modal - ADMIN ONLY */}
-          <AdminWorkView 
-            isOpen={showAdminWorkView}
-            onClose={() => setShowAdminWorkView(false)}
-            currentUser={state.currentUser}
-          />
+          <Suspense fallback={null}>
+            <AdminWorkView 
+              isOpen={showAdminWorkView}
+              onClose={() => setShowAdminWorkView(false)}
+              currentUser={state.currentUser}
+            />
+          </Suspense>
 
           {/* Commercial Work View Modal - COMMERCIAL ONLY */}
-          <CommercialWorkView 
-            isOpen={showCommercialWorkView}
-            onClose={() => setShowCommercialWorkView(false)}
-            currentUser={state.currentUser}
-          />
+          <Suspense fallback={null}>
+            <CommercialWorkView 
+              isOpen={showCommercialWorkView}
+              onClose={() => setShowCommercialWorkView(false)}
+              currentUser={state.currentUser}
+            />
+          </Suspense>
 
           {/* User Manual Modal - Disponible para todos los usuarios */}
-          <UserManualModal 
-            isOpen={showUserManual}
-            onClose={() => setShowUserManual(false)}
-            currentUser={state.currentUser}
-          />
+          <Suspense fallback={null}>
+            <UserManualModal 
+              isOpen={showUserManual}
+              onClose={() => setShowUserManual(false)}
+              currentUser={state.currentUser}
+            />
+          </Suspense>
         </>
       )}
     </div>

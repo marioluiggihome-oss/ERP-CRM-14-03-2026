@@ -51,6 +51,7 @@ from services.jwt_service import (
     security
 )
 from services.rate_limiter import limiter, get_limit, rate_limit_exceeded_handler
+from services.global_rate_limiter import GlobalRateLimitMiddleware
 from services.audit_service import audit, AuditAction
 
 # Routers modulares
@@ -69,7 +70,8 @@ from routes import (
     armarios_router,
     digitalizador_router,
     crm_module_router,
-    orders_router
+    orders_router,
+    ai_engine_router,
 )
 from routes.fabrica import router as fabrica_router
 from routes.dashboard import router as dashboard_router
@@ -240,6 +242,7 @@ api_router.include_router(settings_router)
 api_router.include_router(materials_router)
 api_router.include_router(expedient_router)
 api_router.include_router(shop_clients_router)
+api_router.include_router(ai_engine_router)
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 
@@ -3757,6 +3760,9 @@ async def fix_product_data(current_user: dict = Depends(require_admin)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Global Rate Limiting Middleware - protege TODOS los endpoints automáticamente
+app.add_middleware(GlobalRateLimitMiddleware, default_rpm=60)
+
 # CORS Middleware - MUST be added BEFORE routers
 app.add_middleware(
     CORSMiddleware,
@@ -3913,6 +3919,42 @@ async def startup_event():
         await db.projects.create_index([("userId", 1), ("status", 1)])
         await db.projects.create_index([("userId", 1), ("createdAt", -1)])
         logger.info("Índices de projects creados")
+
+        # Índices para montajes
+        await db.montajes.create_index("id", unique=True)
+        await db.montajes.create_index("status")
+        await db.montajes.create_index("assignedTo", sparse=True)
+        await db.montajes.create_index("scheduledDate", sparse=True)
+        await db.montajes.create_index([("status", 1), ("scheduledDate", 1)])
+        logger.info("Índices de montajes creados")
+
+        # Índices para audit_log (seguridad y trazabilidad)
+        await db.audit_log.create_index("userId", sparse=True)
+        await db.audit_log.create_index("action")
+        await db.audit_log.create_index("timestamp")
+        await db.audit_log.create_index([("userId", 1), ("timestamp", -1)])
+        await db.audit_log.create_index([("action", 1), ("timestamp", -1)])
+        logger.info("Índices de audit_log creados")
+
+        # Índices para settings
+        await db.settings.create_index("key", unique=True)
+        logger.info("Índices de settings creados")
+
+        # Índices para libraries
+        await db.libraries.create_index("id", unique=True)
+        await db.libraries.create_index("code", unique=True)
+        logger.info("Índices de libraries creados")
+
+        # Índices para distributor_requests
+        await db.distributor_requests.create_index("status")
+        await db.distributor_requests.create_index("createdAt")
+        logger.info("Índices de distributor_requests creados")
+
+        # Text search indexes para búsqueda rápida
+        await db.products.create_index([("name", "text"), ("description", "text"), ("code", "text")])
+        await db.clients.create_index([("name", "text"), ("email", "text"), ("phone", "text")])
+        await db.contacts.create_index([("name", "text"), ("email", "text"), ("company", "text")])
+        logger.info("Índices de texto completo creados")
 
         logger.info("✅ Todos los índices de base de datos configurados correctamente")
         
