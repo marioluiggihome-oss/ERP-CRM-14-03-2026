@@ -731,7 +731,7 @@ const App = () => {
             />
           )}
 
-          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-300 ease-in-out w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl overflow-y-auto max-h-screen`} onClick={(e) => {
+          <aside className={`${sidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 md:relative md:translate-x-0' : 'fixed -translate-x-full md:hidden'} transition-transform duration-300 ease-in-out w-20 bg-slate-950 flex flex-col items-center py-6 gap-4 shrink-0 border-r border-white/5 z-50 shadow-2xl overflow-hidden max-h-screen`} onClick={(e) => {
             // En móvil cerrar al hacer click en un botón de navegación
             if (window.innerWidth < 768 && e.target.closest('button[data-nav]')) {
               setTimeout(() => setSidebarOpen(false), 150);
@@ -755,7 +755,7 @@ const App = () => {
               </div>
             </button>
             
-            <div className="flex flex-col gap-3 flex-1 w-full px-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+            <div className="flex flex-col gap-3 flex-1 w-full px-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent min-h-0">
               {/* 
                 IMPORTANTE: Usuarios con isFabrica o que SOLO tienen canAccessFabrica
                 no deben ver otros módulos - solo ven el botón de FÁBRICA
@@ -931,7 +931,7 @@ const App = () => {
               })()}
             </div>
 
-            <div className="mt-auto flex flex-col gap-6 w-full px-2">
+            <div className="mt-auto flex flex-col gap-4 w-full px-2 shrink-0 pb-4">
               {/* Botón de Ayuda - Visible para todos excepto Tiendas y Montadores */}
               {!state.currentUser?.isTienda && !state.currentUser?.isMontador && (
                 <button 
