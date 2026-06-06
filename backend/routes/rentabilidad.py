@@ -16,6 +16,8 @@ from typing import Optional
 import uuid
 import logging
 import os
+import json
+import re
 from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
@@ -140,3 +142,96 @@ async def get_rentabilidad(userId: Optional[str] = None):
     except Exception as e:
         logger.error(f"Get rentabilidad error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----------------------------- IMPORTAR FACTURA (IA) -----------------------------
+
+_INVOICE_PROMPT = """Eres un experto en facturas de proveedor de muebles/cocinas.
+Extrae los datos de la siguiente FACTURA y responde SOLO con JSON valido:
+{
+  "proveedor": "nombre del proveedor/emisor",
+  "fecha": "YYYY-MM-DD",
+  "importe": 0,                // IMPORTE TOTAL de la factura (con IVA) como numero decimal
+  "base": 0,                   // base imponible si aparece (numero), si no 0
+  "concepto": "resumen breve de lo facturado",
+  "categoria": "MOBILIARIO|ELECTRODOMESTICOS|ENCIMERA|TRANSPORTE|MONTAJE|SUBCONTRATA|OTROS",
+  "proyecto": "nº de expediente/proyecto si aparece (ej EXP-2026-001 o similar), si no vacio"
+}
+Importante: los importes en numero con punto decimal, sin simbolo de moneda.
+"""
+
+
+def _clean_json(text):
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = t.split("```")[1]
+        if t.startswith("json"):
+            t = t[4:]
+    return t.strip()
+
+
+def _parse_json_loose(text):
+    try:
+        return json.loads(text)
+    except Exception:
+        m = re.search(r'\{[\s\S]*\}', text or "")
+        try:
+            return json.loads(m.group()) if m else None
+        except Exception:
+            return None
+
+
+@router.post("/rentabilidad/parse-invoice")
+async def parse_invoice(payload: dict):
+    """Lee una factura de proveedor (PDF/imagen en base64) con IA y devuelve los
+    datos extraidos (proveedor, importe, concepto, fecha, categoria, proyecto)
+    para que el usuario los revise antes de registrar el coste."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_text, pdf_base64_to_png_base64
+        from services.llm_vision import chat_with_gemini, analyze_image_with_gemini
+
+        parsed = None
+        is_pdf = ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped)
+        if is_pdf:
+            text = pdf_base64_to_text(stripped) or ""
+            if len(text.strip()) >= 50:
+                resp = await chat_with_gemini(
+                    prompt=_INVOICE_PROMPT + "\n\nTEXTO DE LA FACTURA:\n\n" + text[:30000],
+                    system_message="Extraes datos de facturas de proveedor.",
+                    model="gemini-2.0-flash",
+                )
+                parsed = _parse_json_loose(_clean_json(resp))
+        if parsed is None:
+            # Escaneada o imagen: usar vision sobre la primera pagina/imagen.
+            img = stripped
+            if is_pdf:
+                pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
+                if pages:
+                    img = pages[0]
+            resp = await analyze_image_with_gemini(
+                image_base64=img, prompt=_INVOICE_PROMPT,
+                session_id=f"invoice-{uuid.uuid4().hex[:8]}", model="gemini-2.0-flash",
+            )
+            parsed = _parse_json_loose(_clean_json(resp))
+
+        if not parsed:
+            return {"success": False, "error": "No se pudieron extraer datos de la factura"}
+
+        return {
+            "success": True,
+            "data": {
+                "proveedor": str(parsed.get("proveedor") or ""),
+                "fecha": str(parsed.get("fecha") or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+                "importe": float(parsed.get("importe") or parsed.get("base") or 0),
+                "concepto": str(parsed.get("concepto") or ""),
+                "categoria": str(parsed.get("categoria") or "OTROS").upper(),
+                "proyecto": str(parsed.get("proyecto") or ""),
+            },
+        }
+    except Exception as e:
+        logger.error(f"Parse invoice error: {e}")
+        return {"success": False, "error": str(e)}
