@@ -3,8 +3,9 @@ Backup and Export System for LUIGGI HOME
 Exports all data and code in ZIP format
 Includes daily automated backups with email notification
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse, JSONResponse
+from services.jwt_service import require_admin
 import os
 import zipfile
 import shutil
@@ -396,8 +397,8 @@ async def list_backup_parts():
     return {"parts": parts}
 
 @router.get("/export-db-only")
-async def export_database_only():
-    """Export only the database (smaller file)"""
+async def export_database_only(user=Depends(require_admin)):
+    """Export only the database (smaller file) — solo ADMIN (vuelca toda la BD)"""
     try:
         os.makedirs(BACKUP_DIR, exist_ok=True)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')

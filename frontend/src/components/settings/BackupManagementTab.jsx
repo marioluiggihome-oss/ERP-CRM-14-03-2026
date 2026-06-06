@@ -5,6 +5,12 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Download, Upload, RefreshCw, Trash2, Clock, HardDrive, Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 
+// Los endpoints de backup requieren sesión de ADMIN: enviar el token JWT.
+const authHeader = () => {
+  const t = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
+
 const BackupManagementTab = () => {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +21,7 @@ const BackupManagementTab = () => {
   const fetchBackups = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/backup/list`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/backup/list`, { headers: authHeader() });
       if (!response.ok) throw new Error('Error cargando backups');
       const data = await response.json();
       setBackups(data.backups || []);
@@ -35,7 +41,7 @@ const BackupManagementTab = () => {
     setMessage(null);
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/backup/create`, {
-        method: 'POST'
+        method: 'POST', headers: authHeader()
       });
       const data = await response.json();
       
@@ -61,7 +67,7 @@ const BackupManagementTab = () => {
     setMessage(null);
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/backup/restore/${encodeURIComponent(backupName)}`, {
-        method: 'POST'
+        method: 'POST', headers: authHeader()
       });
       const data = await response.json();
       
