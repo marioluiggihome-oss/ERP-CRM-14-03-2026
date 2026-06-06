@@ -1632,6 +1632,17 @@ export const fabricaAPI = {
     return data;
   },
 
+  // Hoja de ruta de taller: marcar/desmarcar una fase de produccion de la orden.
+  updateOrderPhase: async (orderId, phase, done = true) => {
+    const params = new URLSearchParams({ phase, done: done ? 'true' : 'false' });
+    const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/phase?${params.toString()}`, {
+      method: 'PATCH', headers: authHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'Error al actualizar fase');
+    return data;
+  },
+
   setDeliveryDate: async (orderId, estimatedDate, notes = '') => {
     const params = new URLSearchParams({ estimated_date: estimatedDate });
     if (notes) params.append('notes', notes);
