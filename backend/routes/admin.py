@@ -14,6 +14,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from services.backup_service import get_backup_service
 from services.activity_tracker import get_tracker, ActivityType
+from services.jwt_service import require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -125,8 +126,8 @@ async def cleanup_telemetry(days: int = 90):
 # ==================== BACKUP ENDPOINTS ====================
 
 @router.post("/backup/create")
-async def create_backup():
-    """Crear un backup manual de la base de datos"""
+async def create_backup(user=Depends(require_admin)):
+    """Crear un backup manual de la base de datos (solo ADMIN)"""
     backup_service = get_backup_service()
     if not backup_service:
         raise HTTPException(status_code=500, detail="Servicio de backup no inicializado")
@@ -140,8 +141,8 @@ async def create_backup():
 
 
 @router.get("/backup/list")
-async def list_backups():
-    """Listar todos los backups disponibles"""
+async def list_backups(user=Depends(require_admin)):
+    """Listar todos los backups disponibles (solo ADMIN)"""
     backup_service = get_backup_service()
     if not backup_service:
         raise HTTPException(status_code=500, detail="Servicio de backup no inicializado")
@@ -154,8 +155,8 @@ async def list_backups():
 
 
 @router.post("/backup/restore/{backup_name}")
-async def restore_backup(backup_name: str):
-    """Restaurar un backup específico (¡CUIDADO: sobrescribe datos actuales!)"""
+async def restore_backup(backup_name: str, user=Depends(require_admin)):
+    """Restaurar un backup específico (solo ADMIN; ¡sobrescribe datos!)"""
     backup_service = get_backup_service()
     if not backup_service:
         raise HTTPException(status_code=500, detail="Servicio de backup no inicializado")
