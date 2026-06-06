@@ -23,6 +23,9 @@ function useSpeechRecognition() {
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef(null);
+  // Acumulado SOLO de los resultados finales. El texto interino (en progreso)
+  // NO se acumula: se muestra final + interino actual. Asi no se repite.
+  const finalRef = useRef('');
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -34,17 +37,18 @@ function useSpeechRecognition() {
       recognition.lang = 'es-ES';
 
       recognition.onresult = (event) => {
-        let finalTranscript = '';
         let interimTranscript = '';
+        // Recorrer SOLO los resultados nuevos desde resultIndex.
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           if (result.isFinal) {
-            finalTranscript += result[0].transcript;
+            finalRef.current += result[0].transcript;  // los finales se acumulan UNA vez
           } else {
-            interimTranscript += result[0].transcript;
+            interimTranscript += result[0].transcript;  // el interino es solo el actual
           }
         }
-        setTranscript(prev => prev + finalTranscript + interimTranscript);
+        // Mostrar lo confirmado + lo que se esta diciendo ahora (sin repetir).
+        setTranscript(finalRef.current + interimTranscript);
       };
 
       recognition.onerror = (event) => {
@@ -62,8 +66,9 @@ function useSpeechRecognition() {
 
   const startListening = useCallback(() => {
     if (recognitionRef.current) {
+      finalRef.current = '';
       setTranscript('');
-      recognitionRef.current.start();
+      try { recognitionRef.current.start(); } catch (_) {}
       setIsListening(true);
     }
   }, []);
@@ -76,6 +81,7 @@ function useSpeechRecognition() {
   }, []);
 
   const resetTranscript = useCallback(() => {
+    finalRef.current = '';
     setTranscript('');
   }, []);
 
