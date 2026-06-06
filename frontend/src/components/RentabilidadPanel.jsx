@@ -19,12 +19,15 @@ const RentabilidadPanel = ({ currentUser }) => {
   // Importar factura por IA
   const [importing, setImporting] = useState(false);
   const [invoice, setInvoice] = useState(null); // datos extraidos + projectRef elegido
+  const [analytics, setAnalytics] = useState({ bySupplier: [], byCategory: [], byMonth: [] });
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const r = await fetch(`${API_URL}/api/rentabilidad`);
       if (r.ok) setData(await r.json());
+      const a = await fetch(`${API_URL}/api/rentabilidad/analytics`);
+      if (a.ok) setAnalytics(await a.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -222,6 +225,43 @@ const RentabilidadPanel = ({ currentUser }) => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* ===== ANÁLISIS ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
+        {/* Cocinas menos rentables */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <h3 className="text-xs font-black text-red-600 uppercase mb-3">🔻 Cocinas menos rentables</h3>
+          {[...data.rows].filter(r => r.coste > 0).sort((a, b) => a.margenPct - b.margenPct).slice(0, 5).map((r, i) => (
+            <div key={r.projectId} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
+              <span className="text-sm font-medium text-slate-700 truncate">{i + 1}. {r.ref || r.cliente || '—'}</span>
+              <span className={`text-sm font-black ${r.margenPct >= 0 ? 'text-amber-600' : 'text-red-600'}`}>{r.margenPct}%</span>
+            </div>
+          ))}
+          {data.rows.filter(r => r.coste > 0).length === 0 && <p className="text-sm text-slate-400">Registra costes para ver el ranking</p>}
+        </div>
+        {/* Gasto por proveedor */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <h3 className="text-xs font-black text-orange-600 uppercase mb-3">🏷️ Gasto por proveedor</h3>
+          {analytics.bySupplier.slice(0, 6).map((s, i) => (
+            <div key={i} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
+              <span className="text-sm text-slate-700 truncate">{s.nombre}</span>
+              <span className="text-sm font-bold text-orange-600 font-mono">{eur(s.total)}</span>
+            </div>
+          ))}
+          {analytics.bySupplier.length === 0 && <p className="text-sm text-slate-400">Sin costes aún</p>}
+        </div>
+        {/* Gasto por categoría */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4">
+          <h3 className="text-xs font-black text-indigo-600 uppercase mb-3">📦 Gasto por categoría</h3>
+          {analytics.byCategory.map((c, i) => (
+            <div key={i} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
+              <span className="text-sm text-slate-700 truncate">{c.nombre}</span>
+              <span className="text-sm font-bold text-indigo-600 font-mono">{eur(c.total)}</span>
+            </div>
+          ))}
+          {analytics.byCategory.length === 0 && <p className="text-sm text-slate-400">Sin costes aún</p>}
+        </div>
       </div>
 
       {/* Modal de costes de un proyecto */}

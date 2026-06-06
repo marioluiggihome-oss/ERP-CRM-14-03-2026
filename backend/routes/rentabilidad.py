@@ -235,3 +235,33 @@ async def parse_invoice(payload: dict):
     except Exception as e:
         logger.error(f"Parse invoice error: {e}")
         return {"success": False, "error": str(e)}
+
+
+# ----------------------------- ANALITICA DE RENTABILIDAD -----------------------------
+
+@router.get("/rentabilidad/analytics")
+async def rentabilidad_analytics():
+    """Analitica de costes: gasto por proveedor, por categoria y por mes.
+    Responde a: '¿que proveedor reduce mi margen?' y la evolucion mensual."""
+    try:
+        by_supplier, by_category, by_month = {}, {}, {}
+        async for c in db.project_costs.find({}, {"_id": 0, "proveedor": 1, "categoria": 1, "importe": 1, "fecha": 1}):
+            imp = float(c.get("importe", 0) or 0)
+            prov = (c.get("proveedor") or "(sin proveedor)").strip() or "(sin proveedor)"
+            cat = (c.get("categoria") or "OTROS").strip() or "OTROS"
+            mes = (c.get("fecha") or "")[:7] or "(sin fecha)"
+            by_supplier[prov] = by_supplier.get(prov, 0) + imp
+            by_category[cat] = by_category.get(cat, 0) + imp
+            by_month[mes] = by_month.get(mes, 0) + imp
+
+        def top(d):
+            return [{"nombre": k, "total": round(v, 2)} for k, v in sorted(d.items(), key=lambda x: -x[1])]
+
+        return {
+            "bySupplier": top(by_supplier),
+            "byCategory": top(by_category),
+            "byMonth": [{"mes": k, "total": round(v, 2)} for k, v in sorted(by_month.items())],
+        }
+    except Exception as e:
+        logger.error(f"Rentabilidad analytics error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
