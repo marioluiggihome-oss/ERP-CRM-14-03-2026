@@ -3,7 +3,7 @@
  * Cruza Ventas (presupuestos) con Costes (facturas/gastos) -> Margen.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro } from 'lucide-react';
+import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -16,6 +16,9 @@ const RentabilidadPanel = ({ currentUser }) => {
   const [costModal, setCostModal] = useState(null); // proyecto seleccionado para añadir/ver costes
   const [costs, setCosts] = useState([]);
   const [form, setForm] = useState({ proveedor: '', concepto: '', categoria: 'MOBILIARIO', importe: '' });
+  // Importar factura por IA
+  const [importing, setImporting] = useState(false);
+  const [invoice, setInvoice] = useState(null); // datos extraidos + projectRef elegido
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,6 +60,54 @@ const RentabilidadPanel = ({ currentUser }) => {
     load();
   };
 
+  // ---- Importar factura por IA ----
+  const handleInvoiceFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.onerror = rej;
+        fr.readAsDataURL(file);
+      });
+      const r = await fetch(`${API_URL}/api/rentabilidad/parse-invoice`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileBase64: b64 }),
+      });
+      const j = await r.json();
+      if (!j.success) { alert('No se pudo leer la factura: ' + (j.error || '')); return; }
+      // Intentar casar el proyecto detectado con uno existente
+      const detected = (j.data.proyecto || '').trim();
+      const match = data.rows.find(row => row.ref && detected &&
+        row.ref.toLowerCase() === detected.toLowerCase());
+      setInvoice({ ...j.data, projectRef: match ? match.ref : '' });
+    } catch (err) {
+      alert('Error al importar la factura: ' + err.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const saveInvoiceCost = async () => {
+    if (!invoice.projectRef) { alert('Selecciona el proyecto al que asignar la factura'); return; }
+    if (!invoice.importe || Number(invoice.importe) <= 0) { alert('Indica el importe'); return; }
+    try {
+      const r = await fetch(`${API_URL}/api/project-costs`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectRef: invoice.projectRef, proveedor: invoice.proveedor,
+          concepto: invoice.concepto, categoria: invoice.categoria,
+          importe: Number(invoice.importe), fecha: invoice.fecha, source: 'factura',
+        }),
+      });
+      if (r.ok) { setInvoice(null); load(); }
+      else alert('Error al registrar el coste');
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
   const rows = data.rows.filter(r =>
     !search || (r.ref || '').toLowerCase().includes(search.toLowerCase())
     || (r.cliente || '').toLowerCase().includes(search.toLowerCase()));
@@ -72,10 +123,59 @@ const RentabilidadPanel = ({ currentUser }) => {
             <p className="text-sm text-slate-500">Venta − Coste = Margen por cocina</p>
           </div>
         </div>
-        <button onClick={load} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-sm flex items-center gap-2">
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Actualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${importing ? 'bg-purple-200 text-purple-500' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
+            <Sparkles size={16} className={importing ? 'animate-pulse' : ''} />
+            {importing ? 'Leyendo factura…' : 'Importar factura (IA)'}
+            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleInvoiceFile} disabled={importing} />
+          </label>
+          <button onClick={load} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-sm flex items-center gap-2">
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Actualizar
+          </button>
+        </div>
       </div>
+
+      {/* Modal: revisar factura leída por IA antes de registrar */}
+      {invoice && (
+        <div className="fixed inset-0 bg-black/60 z-[130] flex items-center justify-center p-4" onClick={() => setInvoice(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-purple-600 text-white px-6 py-4 flex justify-between items-center">
+              <h2 className="text-lg font-black flex items-center gap-2"><Sparkles size={18} /> Factura leída — revisa y asigna</h2>
+              <button onClick={() => setInvoice(null)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Proyecto (obligatorio)</label>
+                <select value={invoice.projectRef} onChange={e => setInvoice({ ...invoice, projectRef: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm font-bold ${invoice.projectRef ? 'border-emerald-300' : 'border-red-300'}`}>
+                  <option value="">— Selecciona proyecto —</option>
+                  {data.rows.map(r => <option key={r.projectId} value={r.ref}>{r.ref} · {r.cliente}</option>)}
+                </select>
+                {invoice.proyecto && !invoice.projectRef && (
+                  <p className="text-[11px] text-amber-600 mt-1">La IA detectó "{invoice.proyecto}" pero no coincide con ningún proyecto. Selecciónalo a mano.</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Proveedor</label>
+                  <input value={invoice.proveedor} onChange={e => setInvoice({ ...invoice, proveedor: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Importe €</label>
+                  <input type="number" step="0.01" value={invoice.importe} onChange={e => setInvoice({ ...invoice, importe: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm text-right font-bold" /></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Fecha</label>
+                  <input value={invoice.fecha} onChange={e => setInvoice({ ...invoice, fecha: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Categoría</label>
+                  <select value={invoice.categoria} onChange={e => setInvoice({ ...invoice, categoria: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    {['MOBILIARIO','ELECTRODOMESTICOS','ENCIMERA','TRANSPORTE','MONTAJE','SUBCONTRATA','OTROS'].map(c => <option key={c}>{c}</option>)}
+                  </select></div>
+              </div>
+              <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Concepto</label>
+                <input value={invoice.concepto} onChange={e => setInvoice({ ...invoice, concepto: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+              <button onClick={saveInvoiceCost} className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2">
+                <Plus size={16} /> Registrar coste en el proyecto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Totales */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
