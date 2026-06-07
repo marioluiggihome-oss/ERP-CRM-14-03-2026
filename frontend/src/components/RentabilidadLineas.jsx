@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FileText, Upload, Sparkles, Plus, Trash2, X, Save, Euro,
-  Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw
+  Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw,
+  ArrowUp, ArrowDown, Filter, Files
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -12,7 +13,7 @@ const TABS = [
   { key: 'factura', label: 'Factura de venta', icon: FileCheck },
 ];
 
-const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC`;
 
 const fileToB64 = (file) => new Promise((res, rej) => {
   const fr = new FileReader();
@@ -21,7 +22,6 @@ const fileToB64 = (file) => new Promise((res, rej) => {
   fr.readAsDataURL(file);
 });
 
-// Abre un base64/data-url en una pestaña nueva (via blob, mas fiable que data: directo)
 const openDoc = (dataUrl, mime) => {
   try {
     let b64 = dataUrl, m = mime || 'application/octet-stream';
@@ -40,15 +40,42 @@ const openDoc = (dataUrl, mime) => {
   }
 };
 
+// Extraer numero de referencia para ordenar numericamente (ej: "LG26 / 15" -> 15)
+const extractRefNumber = (ref) => {
+  if (!ref) return 999999;
+  const match = ref.match(/(\d+)\s*$/);
+  return match ? parseInt(match[1], 10) : 999999;
+};
+
 const RentabilidadLineas = ({ currentUser }) => {
   const [docType, setDocType] = useState('factura');
   const [fichas, setFichas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editor, setEditor] = useState(null);     // ficha en edicion
-  const [viewing, setViewing] = useState(null);   // ficha en consulta (con docs)
+  const [editor, setEditor] = useState(null);
+  const [viewing, setViewing] = useState(null);
   const [parsing, setParsing] = useState(false);
+  const [parsingMulti, setParsingMulti] = useState(false);
+  const [multiProgress, setMultiProgress] = useState({ current: 0, total: 0 });
   const [matching, setMatching] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Filtros por columna
+  const [columnFilters, setColumnFilters] = useState({
+    ref: '',
+    cliente: '',
+    fechaDesde: '',
+    fechaHasta: '',
+    ventaMin: '',
+    ventaMax: '',
+    costeMin: '',
+    costeMax: '',
+    margenMin: '',
+    margenMax: '',
+  });
+
+  // Ordenacion
+  const [sortColumn, setSortColumn] = useState('ref');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,7 +94,7 @@ const RentabilidadLineas = ({ currentUser }) => {
     return { venta, coste, margen, margenPct: venta > 0 ? (margen / venta * 100) : 0 };
   };
 
-  // ── Subir documento de venta → IA extrae lineas ──
+  // ── Subir UN documento de venta ──
   const handleSaleDoc = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
@@ -84,7 +111,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         ref: data.data.ref || '',
         cliente: data.data.cliente || '',
         fecha: data.data.fecha || '',
-        docType,                       // manda la pestaña elegida por el usuario
+        docType,
         lines: data.data.lines || [],
         saleDoc: { b64, name: file.name },
         costDocs: [],
@@ -94,7 +121,70 @@ const RentabilidadLineas = ({ currentUser }) => {
     finally { setParsing(false); }
   };
 
-  // ── Subir pantallazo de costes → IA empareja ──
+  // ── Subir VARIAS facturas a la vez ──
+  const handleMultiUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
+
+    setParsingMulti(true);
+    setMultiProgress({ current: 0, total: files.length });
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      setMultiProgress({ current: i + 1, total: files.length });
+      try {
+        const b64 = await fileToB64(files[i]);
+        const r = await fetch(`${API_URL}/api/rentabilidad/parse-sale-doc`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileBase64: b64 }),
+        });
+        const data = await r.json();
+        if (!data.success) { errorCount++; continue; }
+
+        // Guardar directamente la ficha
+        const fichaData = {
+          ref: data.data.ref || '',
+          cliente: data.data.cliente || '',
+          fecha: data.data.fecha || '',
+          docType,
+          lines: data.data.lines || [],
+          createdBy: currentUser?.id,
+          createdByName: currentUser?.clientName || currentUser?.username,
+        };
+
+        const saveR = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fichaData),
+        });
+        const saveData = await saveR.json();
+        const fid = saveData?.ficha?.id;
+
+        // Guardar el documento asociado
+        if (fid) {
+          await fetch(`${API_URL}/api/rentabilidad/fichas/${fid}/docs`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileBase64: b64, filename: files[i].name, kind: 'venta' }),
+          });
+        }
+        successCount++;
+      } catch {
+        errorCount++;
+      }
+    }
+
+    setParsingMulti(false);
+    setMultiProgress({ current: 0, total: 0 });
+    load();
+
+    if (errorCount > 0) {
+      alert(`Importacion completada: ${successCount} facturas importadas, ${errorCount} con errores.`);
+    }
+  };
+
+  // ── Subir pantallazo de costes ──
   const handleCostShot = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file || !editor) return;
@@ -138,7 +228,6 @@ const RentabilidadLineas = ({ currentUser }) => {
       });
       const data = await r.json();
       const fid = data?.ficha?.id;
-      // Guardar los documentos subidos (venta + costes) para poder consultarlos
       if (fid) {
         const uploads = [];
         if (editor.saleDoc) uploads.push({ ...editor.saleDoc, kind: 'venta' });
@@ -172,17 +261,129 @@ const RentabilidadLineas = ({ currentUser }) => {
   };
 
   const removeFicha = async (id) => {
-    if (!window.confirm('¿Eliminar esta ficha y sus documentos?')) return;
+    if (!window.confirm('Eliminar esta ficha y sus documentos?')) return;
     await fetch(`${API_URL}/api/rentabilidad/fichas/${id}`, { method: 'DELETE' });
     load();
   };
 
-  const shown = fichas.filter(f => (f.docType || 'factura') === docType);
+  // Filtrado y ordenacion
+  const filteredAndSorted = useMemo(() => {
+    let rows = fichas.filter(f => (f.docType || 'factura') === docType);
+
+    // Aplicar filtros por columna
+    if (columnFilters.ref) {
+      rows = rows.filter(f => (f.ref || '').toLowerCase().includes(columnFilters.ref.toLowerCase()));
+    }
+    if (columnFilters.cliente) {
+      rows = rows.filter(f => (f.cliente || '').toLowerCase().includes(columnFilters.cliente.toLowerCase()));
+    }
+    if (columnFilters.fechaDesde) {
+      rows = rows.filter(f => (f.fecha || '') >= columnFilters.fechaDesde);
+    }
+    if (columnFilters.fechaHasta) {
+      rows = rows.filter(f => (f.fecha || '') <= columnFilters.fechaHasta);
+    }
+    if (columnFilters.ventaMin) {
+      rows = rows.filter(f => { const tt = f.totals || totals(f.lines); return (tt.venta || 0) >= Number(columnFilters.ventaMin); });
+    }
+    if (columnFilters.ventaMax) {
+      rows = rows.filter(f => { const tt = f.totals || totals(f.lines); return (tt.venta || 0) <= Number(columnFilters.ventaMax); });
+    }
+    if (columnFilters.costeMin) {
+      rows = rows.filter(f => { const tt = f.totals || totals(f.lines); return (tt.coste || 0) >= Number(columnFilters.costeMin); });
+    }
+    if (columnFilters.costeMax) {
+      rows = rows.filter(f => { const tt = f.totals || totals(f.lines); return (tt.coste || 0) <= Number(columnFilters.costeMax); });
+    }
+    if (columnFilters.margenMin) {
+      rows = rows.filter(f => { const tt = f.totals || totals(f.lines); return (tt.margen || 0) >= Number(columnFilters.margenMin); });
+    }
+    if (columnFilters.margenMax) {
+      rows = rows.filter(f => { const tt = f.totals || totals(f.lines); return (tt.margen || 0) <= Number(columnFilters.margenMax); });
+    }
+
+    // Ordenacion
+    rows.sort((a, b) => {
+      let va, vb;
+      const ta = a.totals || totals(a.lines);
+      const tb = b.totals || totals(b.lines);
+      switch (sortColumn) {
+        case 'ref':
+          va = extractRefNumber(a.ref);
+          vb = extractRefNumber(b.ref);
+          break;
+        case 'cliente':
+          va = (a.cliente || '').toLowerCase();
+          vb = (b.cliente || '').toLowerCase();
+          break;
+        case 'fecha':
+          va = a.fecha || '';
+          vb = b.fecha || '';
+          break;
+        case 'venta':
+          va = ta.venta || 0;
+          vb = tb.venta || 0;
+          break;
+        case 'coste':
+          va = ta.coste || 0;
+          vb = tb.coste || 0;
+          break;
+        case 'margen':
+          va = ta.margen || 0;
+          vb = tb.margen || 0;
+          break;
+        default:
+          va = extractRefNumber(a.ref);
+          vb = extractRefNumber(b.ref);
+      }
+      if (va < vb) return sortDirection === 'asc' ? -1 : 1;
+      if (va > vb) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return rows;
+  }, [fichas, docType, columnFilters, sortColumn, sortDirection]);
+
+  const handleSort = (col) => {
+    if (sortColumn === col) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(col);
+      setSortDirection('asc');
+    }
+  };
+
+  const clearColumnFilters = () => {
+    setColumnFilters({
+      ref: '', cliente: '', fechaDesde: '', fechaHasta: '',
+      ventaMin: '', ventaMax: '', costeMin: '', costeMax: '',
+      margenMin: '', margenMax: '',
+    });
+  };
+
+  const hasActiveFilters = Object.values(columnFilters).some(v => v !== '');
+
   const et = editor ? totals(editor.lines) : null;
+
+  const SortHeader = ({ col, label, align = 'left' }) => (
+    <th
+      className={`p-3 text-xs font-black uppercase cursor-pointer hover:bg-slate-200 select-none text-${align}`}
+      onClick={() => handleSort(col)}
+    >
+      <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
+        {label}
+        {sortColumn === col ? (
+          sortDirection === 'asc' ? <ArrowUp size={12} className="text-indigo-600" /> : <ArrowDown size={12} className="text-indigo-600" />
+        ) : (
+          <ArrowUp size={10} className="text-slate-300" />
+        )}
+      </div>
+    </th>
+  );
 
   return (
     <div>
-      {/* Pestañas: el usuario controla el estado del documento */}
+      {/* Pestanas */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         {TABS.map(t => {
           const Icon = t.icon;
@@ -195,10 +396,17 @@ const RentabilidadLineas = ({ currentUser }) => {
           );
         })}
         <div className="ml-auto flex items-center gap-2">
+          {/* Multi-upload: subir varias facturas a la vez */}
+          <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${parsingMulti ? 'bg-green-200 text-green-600' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+            <Files size={16} className={parsingMulti ? 'animate-pulse' : ''} />
+            {parsingMulti ? `Importando ${multiProgress.current}/${multiProgress.total}...` : 'Subir varias facturas'}
+            <input type="file" accept="image/*,application/pdf" className="hidden" multiple onChange={handleMultiUpload} disabled={parsingMulti || parsing} />
+          </label>
+          {/* Single upload */}
           <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${parsing ? 'bg-purple-200 text-purple-500' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
             <Sparkles size={16} className={parsing ? 'animate-pulse' : ''} />
-            {parsing ? 'Leyendo…' : 'Subir documento de venta'}
-            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleSaleDoc} disabled={parsing} />
+            {parsing ? 'Leyendo...' : 'Subir documento de venta'}
+            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleSaleDoc} disabled={parsing || parsingMulti} />
           </label>
           <button onClick={load} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
@@ -206,42 +414,153 @@ const RentabilidadLineas = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* Lista de fichas de la pestaña activa */}
+      {/* Barra de filtros activos */}
+      {hasActiveFilters && (
+        <div className="flex items-center gap-2 mb-3 px-2">
+          <Filter size={14} className="text-indigo-500" />
+          <span className="text-xs font-bold text-slate-500">Filtros activos</span>
+          <button onClick={clearColumnFilters} className="text-xs text-red-500 hover:text-red-700 font-bold ml-2 underline">
+            Limpiar todos
+          </button>
+          <span className="text-xs text-slate-400 ml-auto">{filteredAndSorted.length} resultados</span>
+        </div>
+      )}
+
+      {/* Tabla */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-100 text-slate-600">
             <tr>
-              <th className="text-left p-3 text-xs font-black uppercase">Nº / Ref</th>
-              <th className="text-left p-3 text-xs font-black uppercase">Cliente</th>
-              <th className="text-left p-3 text-xs font-black uppercase">Fecha</th>
-              <th className="text-right p-3 text-xs font-black uppercase">Venta</th>
-              <th className="text-right p-3 text-xs font-black uppercase">Coste</th>
-              <th className="text-right p-3 text-xs font-black uppercase">Margen</th>
+              <SortHeader col="ref" label="N. / Ref" />
+              <SortHeader col="cliente" label="Cliente" />
+              <SortHeader col="fecha" label="Fecha" />
+              <SortHeader col="venta" label="Venta" align="right" />
+              <SortHeader col="coste" label="Coste" align="right" />
+              <SortHeader col="margen" label="Margen" align="right" />
               <th className="text-center p-3 text-xs font-black uppercase">Docs</th>
               <th className="p-3"></th>
             </tr>
+            {/* Fila de filtros */}
+            <tr className="bg-slate-50 border-t border-slate-200">
+              <th className="p-1.5">
+                <input
+                  value={columnFilters.ref}
+                  onChange={e => setColumnFilters(prev => ({ ...prev, ref: e.target.value }))}
+                  placeholder="Filtrar..."
+                  className="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal"
+                />
+              </th>
+              <th className="p-1.5">
+                <input
+                  value={columnFilters.cliente}
+                  onChange={e => setColumnFilters(prev => ({ ...prev, cliente: e.target.value }))}
+                  placeholder="Filtrar..."
+                  className="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal"
+                />
+              </th>
+              <th className="p-1.5">
+                <div className="flex gap-1">
+                  <input
+                    type="date"
+                    value={columnFilters.fechaDesde}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, fechaDesde: e.target.value }))}
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal"
+                    title="Desde"
+                  />
+                  <input
+                    type="date"
+                    value={columnFilters.fechaHasta}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, fechaHasta: e.target.value }))}
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal"
+                    title="Hasta"
+                  />
+                </div>
+              </th>
+              <th className="p-1.5">
+                <div className="flex gap-0.5">
+                  <input
+                    type="number"
+                    value={columnFilters.ventaMin}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMin: e.target.value }))}
+                    placeholder="Min"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                  <input
+                    type="number"
+                    value={columnFilters.ventaMax}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMax: e.target.value }))}
+                    placeholder="Max"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                </div>
+              </th>
+              <th className="p-1.5">
+                <div className="flex gap-0.5">
+                  <input
+                    type="number"
+                    value={columnFilters.costeMin}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, costeMin: e.target.value }))}
+                    placeholder="Min"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                  <input
+                    type="number"
+                    value={columnFilters.costeMax}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, costeMax: e.target.value }))}
+                    placeholder="Max"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                </div>
+              </th>
+              <th className="p-1.5">
+                <div className="flex gap-0.5">
+                  <input
+                    type="number"
+                    value={columnFilters.margenMin}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, margenMin: e.target.value }))}
+                    placeholder="Min"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                  <input
+                    type="number"
+                    value={columnFilters.margenMax}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, margenMax: e.target.value }))}
+                    placeholder="Max"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                </div>
+              </th>
+              <th className="p-1.5"></th>
+              <th className="p-1.5">
+                {hasActiveFilters && (
+                  <button onClick={clearColumnFilters} className="text-red-500 hover:text-red-700">
+                    <X size={14} />
+                  </button>
+                )}
+              </th>
+            </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {shown.map(f => {
+            {filteredAndSorted.map(f => {
               const tt = f.totals || totals(f.lines);
               return (
                 <tr key={f.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openFicha(f.id)}>
-                  <td className="p-3 font-black text-indigo-700">{f.ref || '—'}</td>
-                  <td className="p-3 text-slate-700">{f.cliente || '—'}</td>
-                  <td className="p-3 text-slate-500">{f.fecha || '—'}</td>
+                  <td className="p-3 font-black text-indigo-700">{f.ref || '-'}</td>
+                  <td className="p-3 text-slate-700">{f.cliente || '-'}</td>
+                  <td className="p-3 text-slate-500">{f.fecha || '-'}</td>
                   <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
                   <td className="p-3 text-right font-mono text-orange-600">{eur(tt.coste)}</td>
                   <td className={`p-3 text-right font-mono font-black ${tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
-                  <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
+                  <td className="p-3 text-center text-slate-500">{f.numDocs || 0} \uD83D\uDCCE</td>
                   <td className="p-3 text-right">
                     <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
                   </td>
                 </tr>
               );
             })}
-            {shown.length === 0 && (
+            {filteredAndSorted.length === 0 && (
               <tr><td colSpan={8} className="p-8 text-center text-slate-400">
-                {loading ? 'Cargando…' : `Sin ${TABS.find(t => t.key === docType)?.label.toLowerCase()}. Sube un documento de venta para empezar.`}
+                {loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : `Sin ${TABS.find(t => t.key === docType)?.label.toLowerCase()}. Sube un documento de venta para empezar.`}
               </td></tr>
             )}
           </tbody>
@@ -253,13 +572,13 @@ const RentabilidadLineas = ({ currentUser }) => {
         <div className="fixed inset-0 bg-black/60 z-[140] flex items-center justify-center p-4" onClick={() => !saving && setEditor(null)}>
           <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-emerald-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
-              <h2 className="text-lg font-black flex items-center gap-2"><FileText size={18} /> {TABS.find(t => t.key === editor.docType)?.label} — líneas y costes</h2>
+              <h2 className="text-lg font-black flex items-center gap-2"><FileText size={18} /> {TABS.find(t => t.key === editor.docType)?.label} - lineas y costes</h2>
               <button onClick={() => !saving && setEditor(null)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
             </div>
             <div className="p-5 overflow-y-auto">
               {/* Cabecera editable */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-                <div><label className="text-[10px] font-black text-slate-400 uppercase">Nº / Ref</label>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase">N. / Ref</label>
                   <input value={editor.ref} onChange={e => setEditor({ ...editor, ref: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Cliente</label>
                   <input value={editor.cliente} onChange={e => setEditor({ ...editor, cliente: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
@@ -275,10 +594,10 @@ const RentabilidadLineas = ({ currentUser }) => {
               <div className="flex items-center gap-2 mb-2">
                 <label className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer ${matching ? 'bg-blue-200 text-blue-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                   <Sparkles size={14} className={matching ? 'animate-pulse' : ''} />
-                  {matching ? 'Emparejando…' : 'Subir pantallazo de costes (IA empareja)'}
+                  {matching ? 'Emparejando...' : 'Subir pantallazo de costes (IA empareja)'}
                   <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleCostShot} disabled={matching} />
                 </label>
-                <button onClick={addLine} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold flex items-center gap-1"><Plus size={14} /> Añadir línea</button>
+                <button onClick={addLine} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold flex items-center gap-1"><Plus size={14} /> Anadir linea</button>
               </div>
 
               {/* Tabla de lineas editable */}
@@ -288,8 +607,8 @@ const RentabilidadLineas = ({ currentUser }) => {
                     <tr>
                       <th className="text-left p-2 text-[10px] font-black uppercase">Ref</th>
                       <th className="text-left p-2 text-[10px] font-black uppercase">Concepto</th>
-                      <th className="text-right p-2 text-[10px] font-black uppercase">Venta €</th>
-                      <th className="text-right p-2 text-[10px] font-black uppercase">Coste €</th>
+                      <th className="text-right p-2 text-[10px] font-black uppercase">Venta</th>
+                      <th className="text-right p-2 text-[10px] font-black uppercase">Coste</th>
                       <th className="text-right p-2 text-[10px] font-black uppercase">Margen</th>
                       <th className="p-2"></th>
                     </tr>
@@ -308,7 +627,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                         </tr>
                       );
                     })}
-                    {editor.lines.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-slate-400 text-xs">Sin líneas</td></tr>}
+                    {editor.lines.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-slate-400 text-xs">Sin lineas</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -331,14 +650,14 @@ const RentabilidadLineas = ({ currentUser }) => {
         </div>
       )}
 
-      {/* ── Consulta de ficha (con documentos asociados) ── */}
+      {/* ── Consulta de ficha ── */}
       {viewing && (
         <div className="fixed inset-0 bg-black/60 z-[140] flex items-center justify-center p-4" onClick={() => setViewing(null)}>
           <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-slate-800 text-white px-6 py-4 flex justify-between items-center shrink-0">
               <div>
-                <h2 className="text-lg font-black">{viewing.ref || 'Ficha'} · {viewing.cliente}</h2>
-                <p className="text-xs opacity-70">{TABS.find(t => t.key === viewing.docType)?.label} · {viewing.fecha}</p>
+                <h2 className="text-lg font-black">{viewing.ref || 'Ficha'} - {viewing.cliente}</h2>
+                <p className="text-xs opacity-70">{TABS.find(t => t.key === viewing.docType)?.label} - {viewing.fecha}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => { setViewing(null); setEditor({ ...viewing, saleDoc: null, costDocs: [], existingDocs: viewing.docs || [] }); }}
@@ -354,7 +673,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                 {(viewing.docs || []).map(d => (
                   <button key={d.id} onClick={() => viewDoc(viewing.id, d.id)}
                     className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 border ${d.kind === 'venta' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'} hover:shadow`}>
-                    <Eye size={14} /> {d.kind === 'venta' ? '📄 Venta' : '🧾 Coste'}: {d.filename}
+                    <Eye size={14} /> {d.kind === 'venta' ? 'Venta' : 'Coste'}: {d.filename}
                   </button>
                 ))}
               </div>
