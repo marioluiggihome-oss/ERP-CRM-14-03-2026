@@ -154,8 +154,8 @@ async def _analyze_with_google_genai(
     # uno (porque ese nombre fue renombrado/retirado), se prueba el siguiente.
     requested = model or "gemini-2.5-flash"
     candidates = []
-    for m in [requested, "gemini-2.5-flash", "gemini-2.0-flash",
-              "gemini-flash-latest", "gemini-1.5-flash"]:
+    for m in [requested, "gemini-2.5-flash",
+              "gemini-flash-latest", "gemini-2.5-pro"]:
         if m not in candidates:
             candidates.append(m)
 
@@ -222,19 +222,33 @@ async def chat_with_gemini(
     
     if gemini_key and GOOGLE_GENAI_AVAILABLE:
         client = google_genai.Client(api_key=gemini_key)
-        model_map = {
-            "gemini-2.5-flash": "gemini-2.5-flash",
-            "gemini-2.5-pro": "gemini-2.5-pro",
-            "gemini-2.0-flash": "gemini-2.0-flash",
-        }
-        google_model = model_map.get(model, "gemini-2.5-flash")
-        
+
+        # Lista ordenada de modelos a intentar. Si Google retira/renombra uno
+        # (NOT_FOUND/404), se prueba el siguiente, igual que en visión.
+        requested = model or "gemini-2.5-flash"
+        candidates = []
+        for m in [requested, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]:
+            if m not in candidates:
+                candidates.append(m)
+
         contents = f"{system_message}\n\n{prompt}" if system_message else prompt
-        response = client.models.generate_content(
-            model=google_model,
-            contents=contents,
-        )
-        return response.text or ""
+
+        last_err = None
+        for model_name in candidates:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                )
+                return response.text or ""
+            except Exception as e:
+                msg = str(e)
+                if 'NOT_FOUND' in msg or '404' in msg or 'not found' in msg.lower() or 'not supported' in msg.lower():
+                    last_err = e
+                    logger.warning(f"Modelo Gemini '{model_name}' no disponible, probando siguiente: {msg[:120]}")
+                    continue
+                raise
+        raise last_err or RuntimeError("Ningún modelo de Gemini disponible para esta clave")
     
     emergent_key = get_emergent_key()
     if emergent_key and EMERGENT_AVAILABLE:
