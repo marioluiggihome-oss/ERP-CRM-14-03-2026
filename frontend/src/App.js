@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import GlobalEventReminder from './components/GlobalEventReminder';
 import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp } from 'lucide-react';
 import "./App.css";
 
@@ -334,6 +335,25 @@ const App = () => {
       }
     })();
     return () => { cancelled = true; };
+  }, [state.currentUser?.id]);
+
+  // Enlace directo por URL: ?tab=crm (alias amigables → pestaña interna)
+  const deepLinkApplied = useRef(false);
+  useEffect(() => {
+    if (deepLinkApplied.current || !state.currentUser?.id) return;
+    deepLinkApplied.current = true;
+    try {
+      const tab = new URLSearchParams(window.location.search).get('tab');
+      if (!tab) return;
+      const map = {
+        crm: 'crm-dashboard', presupuesto: 'budget', presup2: 'presupuestador2',
+        presupuestador2: 'presupuestador2', rentabilidad: 'rentabilidad', facturas: 'invoices',
+        archivo: 'library', mando: 'command', pedidos: 'misPedidos', digitalizador: 'digitalizador',
+        armarios: 'armarios', montajes: 'montajes', fabrica: 'fabrica', render: 'renderStudio',
+      };
+      const target = map[tab.toLowerCase()] || tab;
+      setState(p => ({ ...p, currentTab: target }));
+    } catch { /* noop */ }
   }, [state.currentUser?.id]);
 
   const handleLogin = (user) => {
@@ -1022,6 +1042,12 @@ const App = () => {
               </button>
             </div>
           </aside>
+
+          {/* Aviso GLOBAL de eventos próximos (aparece en cualquier pantalla) */}
+          <GlobalEventReminder
+            currentUser={state.currentUser}
+            onOpenCalendar={() => setState(p => ({ ...p, currentTab: 'crm-dashboard' }))}
+          />
 
           <main className="flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10">
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
