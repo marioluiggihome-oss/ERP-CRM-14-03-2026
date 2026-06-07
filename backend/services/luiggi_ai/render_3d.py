@@ -9,6 +9,7 @@ optimizados que producen resultados de alta calidad.
 """
 
 import logging
+import time
 from typing import Optional, Dict, Any, List
 from enum import Enum
 
@@ -327,17 +328,7 @@ class Render3DService:
             f"The image should look like a professional interior design visualization."
         )
 
-        result = await self.engine.create_task(prompt=task_prompt)
-
-        if result.get("success"):
-            task_id = result["task_id"]
-            # Esperar resultado (render puede tardar)
-            final = await self.engine.wait_for_completion(task_id, timeout=180)
-            final["parsed_params"] = parsed_params
-            final["prompt_used"] = prompt
-            return final
-
-        return result
+        return await self._render_with_gemini(task_prompt, prompt, parsed_params)
 
     async def generate_render_from_params(
         self,
@@ -369,15 +360,34 @@ class Render3DService:
             f"Output: A single photorealistic interior design visualization image."
         )
 
-        result = await self.engine.create_task(prompt=task_prompt)
+        return await self._render_with_gemini(task_prompt, prompt)
 
-        if result.get("success"):
-            task_id = result["task_id"]
-            final = await self.engine.wait_for_completion(task_id, timeout=180)
-            final["prompt_used"] = prompt
-            return final
-
-        return result
+    async def _render_with_gemini(self, task_prompt: str, prompt: str,
+                                  parsed_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Genera el render con Gemini y lo devuelve como data URL (marca blanca)."""
+        from services.llm_vision import generate_image_with_gemini
+        start = time.time()
+        try:
+            data_url = await generate_image_with_gemini(task_prompt)
+        except Exception as e:
+            logger.error(f"Render (Gemini) error: {e}")
+            return {
+                "success": False,
+                "status": "failed",
+                "error": "No se pudo generar el render. Inténtalo de nuevo.",
+                "engine": self.config.brand_name,
+            }
+        out = {
+            "success": True,
+            "status": "completed",
+            "result": {"images": [data_url]},
+            "engine": self.config.brand_name,
+            "duration_seconds": round(time.time() - start, 1),
+            "prompt_used": prompt,
+        }
+        if parsed_params is not None:
+            out["parsed_params"] = parsed_params
+        return out
 
     def get_materials_catalog(self) -> Dict[str, Any]:
         """Devuelve el catálogo completo de materiales disponibles."""
