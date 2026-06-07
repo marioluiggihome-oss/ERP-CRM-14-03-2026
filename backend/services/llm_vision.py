@@ -265,3 +265,88 @@ async def chat_with_gemini(
     raise RuntimeError(
         "Chat IA no disponible. Configura GEMINI_API_KEY en las variables de entorno."
     )
+
+
+# ============================================================================
+# GENERACIÓN DE IMÁGENES (render) con Gemini — usado por Render 3D y Armarios
+# ============================================================================
+
+# Modelos de imagen candidatos (cascada ante retirada/renombrado de modelos)
+GEMINI_IMAGE_MODELS = [
+    "gemini-2.5-flash-image",
+    "gemini-3-pro-image-preview",
+    "gemini-2.5-flash-image-preview",
+]
+
+
+def _extract_inline_image(response) -> Optional[str]:
+    """Extrae la primera imagen de una respuesta de google-genai como data URL."""
+    try:
+        for cand in (getattr(response, "candidates", None) or []):
+            content = getattr(cand, "content", None)
+            for part in (getattr(content, "parts", None) or []):
+                inline = getattr(part, "inline_data", None)
+                data = getattr(inline, "data", None) if inline else None
+                if data:
+                    mime = getattr(inline, "mime_type", None) or "image/png"
+                    if isinstance(data, (bytes, bytearray)):
+                        b64 = base64.b64encode(data).decode("ascii")
+                    else:
+                        b64 = str(data)  # algunas versiones ya devuelven base64
+                    return f"data:{mime};base64,{b64}"
+    except Exception as e:
+        logger.warning(f"No se pudo extraer imagen de la respuesta: {e}")
+    return None
+
+
+async def generate_image_with_gemini(
+    prompt: str,
+    reference_image_base64: Optional[str] = None,
+    reference_mime: str = "image/png",
+) -> str:
+    """
+    Genera una imagen con Gemini a partir de un prompt (y opcionalmente una
+    imagen de referencia). Devuelve un data URL 'data:image/png;base64,...'.
+
+    Funciona en Railway usando GEMINI_API_KEY (SDK google-genai). Lanza
+    RuntimeError si no hay forma de generar imagen en este entorno.
+    """
+    import asyncio
+
+    key = get_gemini_key()
+    if not (key and GOOGLE_GENAI_AVAILABLE):
+        raise RuntimeError("Generación de imágenes no disponible: configura GEMINI_API_KEY.")
+
+    client = google_genai.Client(api_key=key)
+
+    contents = []
+    if reference_image_base64:
+        try:
+            ref = reference_image_base64
+            if ref.startswith("data:"):
+                ref = ref.split(",", 1)[1]
+            img_bytes = base64.b64decode(ref)
+            contents.append(google_genai_types.Part.from_bytes(data=img_bytes, mime_type=reference_mime))
+        except Exception as e:
+            logger.warning(f"Imagen de referencia ignorada: {e}")
+    contents.append(prompt)
+
+    def _sync_call(model_name):
+        cfg = google_genai_types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"])
+        resp = client.models.generate_content(model=model_name, contents=contents, config=cfg)
+        return _extract_inline_image(resp)
+
+    loop = asyncio.get_event_loop()
+    last_err = None
+    for model_name in GEMINI_IMAGE_MODELS:
+        try:
+            data_url = await loop.run_in_executor(None, _sync_call, model_name)
+            if data_url:
+                return data_url
+            last_err = RuntimeError(f"'{model_name}' no devolvió imagen")
+            logger.warning(f"Modelo de imagen '{model_name}' no devolvió imagen, probando siguiente")
+        except Exception as e:
+            last_err = e
+            logger.warning(f"Modelo de imagen '{model_name}' falló: {str(e)[:140]}")
+            continue
+    raise RuntimeError(f"No se pudo generar la imagen. {last_err or ''}".strip())
