@@ -320,9 +320,13 @@ async def delete_backup(filename: str):
     os.remove(filepath)
     return {"success": True, "message": f"Backup {filename} deleted"}
 
-@router.post("/send-email")
+@router.api_route("/send-email", methods=["GET", "POST"])
 async def send_backup_email():
-    """Create backup and send via email to marioluiggihome@gmail.com"""
+    """Crear backup completo (JSON de toda la BD) y enviarlo por email.
+
+    Acepta GET y POST para que funcione tanto desde el boton del panel (POST)
+    como pegando la URL en el navegador (GET).
+    """
     try:
         result = await create_daily_backup_with_email()
         return {
