@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -3776,6 +3777,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Compresión Gzip: respuestas mas ligeras (catalogos, presupuestos, listados
+# grandes cargan mucho mas rapido). Solo comprime respuestas > 500 bytes.
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 # Include the router in the main app (AFTER middleware)
 app.include_router(api_router)
 
@@ -3959,6 +3964,24 @@ async def startup_event():
         await db.clients.create_index([("name", "text"), ("email", "text"), ("phone", "text")])
         await db.contacts.create_index([("name", "text"), ("email", "text"), ("company", "text")])
         logger.info("Índices de texto completo creados")
+
+        # Índices para colecciones de rendimiento adicionales (rentabilidad,
+        # calendario, agenda prescriptor y Google Calendar)
+        await db.project_costs.create_index("projectRef")
+        await db.calendar_events.create_index("startDate")
+        await db.calendar_events.create_index("assignedTo", sparse=True)
+        await db.calendar_events.create_index([("assignedTo", 1), ("startDate", 1)])
+        await db.activities.create_index("assignedTo", sparse=True)
+        await db.activities.create_index("date", sparse=True)
+        await db.prescriptor_notes.create_index("prescriptorId", sparse=True)
+        await db.prescriptor_notes.create_index([("prescriptorId", 1), ("date", 1)])
+        await db.sale_fichas.create_index("id", unique=True, sparse=True)
+        await db.sale_fichas.create_index("createdBy", sparse=True)
+        await db.sale_fichas.create_index("createdAt")
+        await db.sale_ficha_docs.create_index("fichaId")
+        await db.google_calendar_connections.create_index("userId", unique=True, sparse=True)
+        await db.google_calendar_links.create_index([("userId", 1), ("module", 1), ("erpId", 1)])
+        logger.info("Índices adicionales de rendimiento creados")
 
         logger.info("✅ Todos los índices de base de datos configurados correctamente")
         
