@@ -9,6 +9,9 @@ import {
   addDays, addMonths, subMonths, isSameMonth, isSameDay, isToday
 } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { googleCalendarAPI } from '../services/api';
+import GoogleCalendarConnect from './GoogleCalendarConnect';
+import GoogleSyncModal from './GoogleSyncModal';
 
 const CLIENT_SEGMENTS = [
   "PROMOTOR",
@@ -54,6 +57,9 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
   const [savingNote, setSavingNote] = useState(false);
   const [showNewContactInNote, setShowNewContactInNote] = useState(false);
   const [newContactInNote, setNewContactInNote] = useState({ name: '', phone: '', company: '', segment: '' });
+  // Google Calendar (por usuario, aislado en el backend)
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [pendingGoogleEvent, setPendingGoogleEvent] = useState(null);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -281,8 +287,20 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
       }
 
       if (response.ok) {
+        const saved = await response.json().catch(() => null);
         setShowNoteModal(false);
         loadCalendarNotes();
+        // Si tiene Google conectado, preguntar si guardar también allí (notas nuevas).
+        if (googleConnected && !editingNote) {
+          setPendingGoogleEvent({
+            title: noteData.title || 'Nota',
+            startDate: noteData.date,
+            endDate: noteData.date,
+            description: noteData.content || '',
+            allDay: true,
+            erpId: saved?.id,
+          });
+        }
       } else {
         const err = await response.json();
         alert('Error: ' + (err.detail || 'No se pudo guardar'));
@@ -395,6 +413,7 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
                 Nuevo Contacto
               </button>
             )}
+            <GoogleCalendarConnect compact onStatusChange={(s) => setGoogleConnected(!!s.connected)} />
             {onLogout && (
               <button
                 onClick={onLogout}
@@ -944,6 +963,14 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
           </div>
         </div>
       )}
+
+      {/* Preguntar si guardar también en Google Calendar */}
+      <GoogleSyncModal
+        event={pendingGoogleEvent}
+        defaultContext="prescriptor"
+        currentUser={currentUser}
+        onClose={() => setPendingGoogleEvent(null)}
+      />
     </div>
   );
 };

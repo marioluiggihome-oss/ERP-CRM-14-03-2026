@@ -4,7 +4,9 @@ import {
   Clock, MapPin, User, Target, Phone, Users as UsersIcon, Check,
   Trash2, Edit2, CalendarDays, LayoutGrid, List, CheckCircle2
 } from 'lucide-react';
-import { crmCalendarAPI, crmContactsAPI, crmOpportunitiesAPI } from '../services/api';
+import { crmCalendarAPI, crmContactsAPI, crmOpportunitiesAPI, googleCalendarAPI } from '../services/api';
+import GoogleCalendarConnect from './GoogleCalendarConnect';
+import GoogleSyncModal from './GoogleSyncModal';
 import { 
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
   addDays, addMonths, subMonths, addWeeks, subWeeks,
@@ -42,7 +44,10 @@ const CRMCalendar = ({ currentUser }) => {
   const [filterType, setFilterType] = useState('');
   const [viewAllEvents, setViewAllEvents] = useState(false);
   const [showPrescriptorNotes, setShowPrescriptorNotes] = useState(true);
-  
+  // Google Calendar (por usuario, aislado en el backend)
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [pendingGoogleEvent, setPendingGoogleEvent] = useState(null);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -63,7 +68,7 @@ const CRMCalendar = ({ currentUser }) => {
 
   useEffect(() => {
     loadData();
-  }, [currentDate, view, viewAllEvents, filterType]);
+  }, [currentDate, view, viewAllEvents, filterType, googleConnected]);
 
   useEffect(() => {
     loadContactsAndOpportunities();
@@ -102,7 +107,34 @@ const CRMCalendar = ({ currentUser }) => {
       }
       
       const data = await crmCalendarAPI.getEvents(params);
-      setEvents(data);
+
+      // Traer también los eventos de Google del propio usuario (solo lectura)
+      // y fusionarlos. El backend garantiza que cada usuario ve solo los suyos.
+      let merged = Array.isArray(data) ? data : [];
+      if (googleConnected) {
+        try {
+          const gres = await googleCalendarAPI.getEvents(params.startDate, params.endDate);
+          const gEvents = (gres?.events || []).map(g => ({
+            id: g.id,
+            title: g.title,
+            description: g.description,
+            location: g.location,
+            startDate: g.startDate,
+            endDate: g.endDate,
+            allDay: g.allDay,
+            eventType: 'otro',
+            color: g.color || '#16a34a',
+            completed: false,
+            source: 'google',
+            readOnlyFromGoogle: true,
+            htmlLink: g.htmlLink,
+          }));
+          merged = merged.concat(gEvents);
+        } catch (gerr) {
+          console.warn('No se pudieron cargar eventos de Google:', gerr);
+        }
+      }
+      setEvents(merged);
     } catch (err) {
       console.error('Error loading calendar events:', err);
     } finally {
@@ -213,14 +245,30 @@ const CRMCalendar = ({ currentUser }) => {
         assignedToName: currentUser?.clientName || currentUser?.username
       };
 
+      let erpId = editingEvent?.id;
       if (editingEvent) {
         await crmCalendarAPI.update(editingEvent.id, eventData);
       } else {
-        await crmCalendarAPI.create(eventData, currentUser?.id, currentUser?.clientName || currentUser?.username);
+        const created = await crmCalendarAPI.create(eventData, currentUser?.id, currentUser?.clientName || currentUser?.username);
+        erpId = created?.id || erpId;
       }
-      
+
       setShowModal(false);
       loadData();
+
+      // Si el usuario tiene Google Calendar conectado, preguntar si quiere
+      // guardar también allí (solo para eventos nuevos del ERP, no los de Google).
+      if (googleConnected && !editingEvent?.source) {
+        setPendingGoogleEvent({
+          title: eventData.title,
+          startDate: eventData.startDate,
+          endDate: eventData.endDate,
+          description: eventData.description || '',
+          location: eventData.location || '',
+          allDay: !!eventData.allDay,
+          erpId,
+        });
+      }
     } catch (err) {
       alert('Error al guardar evento: ' + err.message);
     }
@@ -324,6 +372,9 @@ const CRMCalendar = ({ currentUser }) => {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+          {/* Google Calendar (conectar / estado por usuario) */}
+          <GoogleCalendarConnect compact onStatusChange={(s) => setGoogleConnected(!!s.connected)} />
+
           {/* View Selector */}
           <div className="flex bg-slate-100 rounded-lg p-1">
             {Object.entries(VIEWS).map(([key, v]) => {
@@ -783,6 +834,14 @@ const CRMCalendar = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Preguntar si guardar también en Google Calendar */}
+      <GoogleSyncModal
+        event={pendingGoogleEvent}
+        defaultContext="crm"
+        currentUser={currentUser}
+        onClose={() => { setPendingGoogleEvent(null); loadData(); }}
+      />
     </div>
   );
 };
