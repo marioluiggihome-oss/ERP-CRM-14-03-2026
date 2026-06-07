@@ -1808,3 +1808,69 @@ export const ordersAPI = {
     return data;
   }
 };
+
+// ============================================
+// GOOGLE CALENDAR (integración OAuth por usuario)
+// Cada usuario conecta su propia cuenta; el aislamiento lo garantiza el backend.
+// ============================================
+export const googleCalendarAPI = {
+  // Estado: { configured, connected, email }
+  status: async () => {
+    const r = await fetch(`${API_URL}/api/google-calendar/status`, { headers: authHeaders() });
+    return r.json();
+  },
+  // Obtiene la URL de consentimiento y redirige el navegador a Google.
+  connect: async (returnPath = '/') => {
+    const r = await fetch(
+      `${API_URL}/api/google-calendar/connect?return_path=${encodeURIComponent(returnPath)}`,
+      { headers: authHeaders() }
+    );
+    const data = await r.json();
+    if (!r.ok || !data.url) throw new Error(data.detail || 'No se pudo iniciar la conexión con Google');
+    window.location.href = data.url;
+  },
+  disconnect: async () => {
+    const r = await fetch(`${API_URL}/api/google-calendar/disconnect`, {
+      method: 'POST', headers: authHeaders(),
+    });
+    return r.json();
+  },
+  // Eventos del propio usuario en el rango (ISO 'YYYY-MM-DD' o datetime).
+  getEvents: async (start, end) => {
+    const qs = new URLSearchParams();
+    if (start) qs.set('start', start);
+    if (end) qs.set('end', end);
+    const r = await fetch(`${API_URL}/api/google-calendar/events?${qs.toString()}`, { headers: authHeaders() });
+    return r.json();
+  },
+  // Push ERP→Google. event: { title, startDate, endDate, description, location, allDay, module, erpId }
+  createEvent: async (event) => {
+    const r = await fetch(`${API_URL}/api/google-calendar/events`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(event),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'No se pudo guardar en Google Calendar');
+    return data;
+  },
+  updateEvent: async (googleEventId, event) => {
+    const r = await fetch(`${API_URL}/api/google-calendar/events/${googleEventId}`, {
+      method: 'PUT',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(event),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'No se pudo actualizar en Google Calendar');
+    return data;
+  },
+  deleteEvent: async (googleEventId, module, erpId) => {
+    const qs = new URLSearchParams();
+    if (module) qs.set('module', module);
+    if (erpId) qs.set('erpId', erpId);
+    const r = await fetch(`${API_URL}/api/google-calendar/events/${googleEventId}?${qs.toString()}`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    return r.json();
+  },
+};

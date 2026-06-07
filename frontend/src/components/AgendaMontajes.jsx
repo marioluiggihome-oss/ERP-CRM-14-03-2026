@@ -10,7 +10,9 @@ import {
   Building2, Tag, CheckCircle, Clock, AlertCircle, Pause,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { montadoresAPI, montajesAPI } from '../services/api';
+import { montadoresAPI, montajesAPI, googleCalendarAPI } from '../services/api';
+import GoogleCalendarConnect from './GoogleCalendarConnect';
+import GoogleSyncModal from './GoogleSyncModal';
 
 // Especialidades de montadores
 const SPECIALTIES = [
@@ -52,6 +54,9 @@ const AgendaMontajes = ({ currentUser }) => {
   const [editingMontador, setEditingMontador] = useState(null);
   const [editingMontaje, setEditingMontaje] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Google Calendar (por usuario, aislado en el backend)
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [pendingGoogleEvent, setPendingGoogleEvent] = useState(null);
   
   // Form states
   const [montadorForm, setMontadorForm] = useState({
@@ -225,15 +230,33 @@ const AgendaMontajes = ({ currentUser }) => {
     
     setIsSaving(true);
     try {
+      let createdId = editingMontaje?.id;
       if (editingMontaje) {
         await montajesAPI.update(editingMontaje.id, montajeForm);
       } else {
-        await montajesAPI.create(montajeForm);
+        const created = await montajesAPI.create(montajeForm);
+        createdId = created?.id || createdId;
       }
+      const wasNew = !editingMontaje;
+      const mf = montajeForm;
       setShowMontajeModal(false);
       setEditingMontaje(null);
       resetMontajeForm();
       loadMontajes();
+
+      // Si tiene Google conectado, preguntar si guardar también allí (montajes nuevos).
+      if (googleConnected && wasNew) {
+        const hasTime = !!mf.scheduledTime;
+        setPendingGoogleEvent({
+          title: `Montaje: ${mf.clientName}`,
+          startDate: hasTime ? `${mf.scheduledDate}T${mf.scheduledTime}` : mf.scheduledDate,
+          endDate: hasTime ? `${mf.scheduledDate}T${mf.scheduledTime}` : mf.scheduledDate,
+          description: mf.projectDescription || '',
+          location: mf.clientAddress || '',
+          allDay: !hasTime,
+          erpId: createdId,
+        });
+      }
     } catch (err) {
       alert(err.message);
     } finally {
@@ -327,6 +350,8 @@ const AgendaMontajes = ({ currentUser }) => {
             </div>
           </div>
           
+          <GoogleCalendarConnect compact onStatusChange={(s) => setGoogleConnected(!!s.connected)} />
+
           {/* Tabs */}
           <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm">
             {/* Solo mostrar pestaña Montadores a admins */}
@@ -1038,6 +1063,14 @@ const AgendaMontajes = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Preguntar si guardar también en Google Calendar */}
+      <GoogleSyncModal
+        event={pendingGoogleEvent}
+        defaultContext="montajes"
+        currentUser={currentUser}
+        onClose={() => setPendingGoogleEvent(null)}
+      />
     </div>
   );
 };
