@@ -143,6 +143,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessArmarios: false,
     canAccessFabrica: false,  // Acceso a Portal de Fábrica
     canAccessMontajes: false,  // Acceso a Agenda de Montajes
+    canUsePresupuestador2: false,  // Acceso al Presupuestador 2 (MV por tarifa)
     canAuthorizePermissions: false,
     useCustomBranding: false,
     canChangeLogo: false,
@@ -714,6 +715,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessArmarios: false,
       canAccessFabrica: false,
       canAccessMontajes: false,
+      canUsePresupuestador2: false,
       canAuthorizePermissions: false,
       useCustomBranding: false,
       canChangeLogo: false
@@ -1499,6 +1501,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.canManageArticles && <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[9px] font-black">INVENTARIO</span>}
                               {user.canAccessCRM && <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[9px] font-black">CRM</span>}
                               {user.canUseDigitalizador && <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-[9px] font-black">DIGITALIZADOR</span>}
+                              {user.canUsePresupuestador2 && <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black">PRESUP. 2</span>}
                               {user.canAccessFabrica && (
                                 <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black">
                                   FÁBRICA{user.factoryId && factories.find(f => f.id === user.factoryId) ? ` (${factories.find(f => f.id === user.factoryId).code})` : ''}
@@ -2004,6 +2007,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             className="w-4 h-4 rounded accent-orange-600"
                           />
                           <span className="text-xs font-bold text-slate-700">Digitalizador</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={!!userForm.canUsePresupuestador2}
+                            onChange={(e) => setUserForm({...userForm, canUsePresupuestador2: e.target.checked})}
+                            className="w-4 h-4 rounded accent-emerald-600"
+                          />
+                          <span className="text-xs font-bold text-slate-700">Presupuestador 2</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer bg-emerald-100 px-2 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors border border-emerald-300">
                           <input
