@@ -523,7 +523,7 @@ Si no puedes identificar una medida específica, usa valores estándar:
         response = await loop.run_in_executor(
             None,
             lambda: gemini_client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 contents=[
                     types.Part.from_bytes(
                         data=pdf_bytes,

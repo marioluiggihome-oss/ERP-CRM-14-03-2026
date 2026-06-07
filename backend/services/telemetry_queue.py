@@ -311,7 +311,7 @@ Responde SOLO con JSON válido, sin texto adicional."""
             api_key=api_key,
             session_id=f"telemetry-{uuid.uuid4().hex[:8]}",
             system_message=system_prompt
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         user_message = UserMessage(
             text=f"Analiza esta página del catálogo de muebles de cocina. {'IMPORTANTE: Extrae productos DIFERENTES a los anteriores.' if extracted_codes else 'Extrae TODOS los productos visibles, incluyendo variantes de altura si las hay.'}",

@@ -202,7 +202,7 @@ async def parse_invoice(payload: dict):
                 resp = await chat_with_gemini(
                     prompt=_INVOICE_PROMPT + "\n\nTEXTO DE LA FACTURA:\n\n" + text[:30000],
                     system_message="Extraes datos de facturas de proveedor.",
-                    model="gemini-2.0-flash",
+                    model="gemini-2.5-flash",
                 )
                 parsed = _parse_json_loose(_clean_json(resp))
         if parsed is None:
@@ -214,7 +214,7 @@ async def parse_invoice(payload: dict):
                     img = pages[0]
             resp = await analyze_image_with_gemini(
                 image_base64=img, prompt=_INVOICE_PROMPT,
-                session_id=f"invoice-{uuid.uuid4().hex[:8]}", model="gemini-2.0-flash",
+                session_id=f"invoice-{uuid.uuid4().hex[:8]}", model="gemini-2.5-flash",
             )
             parsed = _parse_json_loose(_clean_json(resp))
 

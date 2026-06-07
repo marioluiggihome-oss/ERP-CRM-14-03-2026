@@ -487,7 +487,7 @@ Extrae hasta 50 productos. Responde SOLO con JSON válido."""
                         api_key=api_key,
                         session_id=f"product-analysis-mv-{uuid.uuid4()}",
                         system_message=system_prompt
-                    ).with_model("gemini", "gemini-2.0-flash")
+                    ).with_model("gemini", "gemini-2.5-flash")
                     
                     user_prompt = f"""Analiza esta página de TARIFA MV.
 PRIMERO: Detecta el número de tarifa del encabezado (T1, T2, T3... T21).
@@ -662,7 +662,7 @@ REGLAS CRÍTICAS:
                 api_key=api_key,
                 session_id=f"product-analysis-{uuid.uuid4()}",
                 system_message=system_prompt
-            ).with_model("gemini", "gemini-2.0-flash")
+            ).with_model("gemini", "gemini-2.5-flash")
             
             # Create message with image - different prompt for MV vs ZC
             if library == 'MV':
@@ -2090,7 +2090,7 @@ Si no hay 12 zonas, incluye solo las que aparezcan. Extrae TODOS los productos d
         # Use Gemini Vision
         chat = LlmChat(
             api_key=os.environ.get('EMERGENT_LLM_KEY'),
-            model="gemini/gemini-2.0-flash",
+            model="gemini/gemini-2.5-flash",
             session_id=f"catalog-extract-{uuid.uuid4().hex[:8]}",
             system_prompt="Eres un extractor de datos de catálogos de muebles. Responde SOLO con JSON válido."
         )

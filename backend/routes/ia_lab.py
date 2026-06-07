@@ -371,7 +371,7 @@ async def analyze_kitchen_plan(
             image_base64=base64_image,
             prompt=build_analysis_prompt(active_library),
             session_id=f"kitchen-plan-{uuid.uuid4().hex[:8]}",
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
         )
         
         # Clean JSON from markdown
@@ -523,7 +523,7 @@ ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente
                 image_base64=base64_image,
                 prompt=analysis_prompt,
                 session_id=f"kitchen-multi-{uuid.uuid4().hex[:8]}",
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
             )
             
             if '```json' in response_text:
