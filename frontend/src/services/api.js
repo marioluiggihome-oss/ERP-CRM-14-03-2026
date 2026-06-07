@@ -847,17 +847,23 @@ export const backupAPI = {
   },
 
   triggerManual: async () => {
-    const response = await fetch(`${API_URL}/api/backup/manual`, {
-      method: 'POST'
+    // Genera el backup COMPLETO (JSON de todas las colecciones) y lo envia por
+    // email a marioluiggihome@gmail.com. Endpoint real: /api/backup/send-email.
+    const response = await fetch(`${API_URL}/api/backup/send-email`, {
+      method: 'POST', headers: authHeaders()
     });
-    if (!response.ok) throw new Error('Error al crear backup');
-    return response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.success === false) {
+      throw new Error(data.error || data.detail || 'Error al crear/enviar backup');
+    }
+    return data;
   },
 
+  // Descargar el JSON de toda la BD (requiere admin).
   download: async () => {
-    const response = await fetch(`${API_URL}/api/backup/download`);
-    if (!response.ok) throw new Error('Error al descargar backup');
-    return response.json();
+    const response = await fetch(`${API_URL}/api/backup/export-db-only`, { headers: authHeaders() });
+    if (!response.ok) throw new Error('Error al descargar backup (requiere admin)');
+    return response.blob();
   },
 
   restore: async (backupData) => {
