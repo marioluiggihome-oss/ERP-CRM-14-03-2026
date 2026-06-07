@@ -265,3 +265,306 @@ async def rentabilidad_analytics():
     except Exception as e:
         logger.error(f"Rentabilidad analytics error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# RENTABILIDAD POR LINEAS (ficha por expediente: presupuesto/pedido/factura)
+# ----------------------------------------------------------------------------
+# Flujo:
+#  1) Subir documento de VENTA (presupuesto/pedido/factura) -> IA extrae LINEAS.
+#  2) Subir pantallazo(s) de COSTE -> IA empareja el coste con cada linea.
+#  3) Margen por linea (venta - coste). Se guarda la ficha + los documentos
+#     subidos, que quedan consultables al abrir la ficha.
+# Colecciones: sale_fichas (la ficha con sus lineas) y sale_ficha_docs (los
+# archivos subidos, en base64, para poder consultarlos despues).
+# ============================================================================
+
+_SALE_LINES_PROMPT = """Eres un experto en presupuestos, pedidos y facturas de VENTA de muebles/cocinas y electrodomesticos.
+Extrae la cabecera y TODAS las lineas del documento y responde SOLO con JSON valido:
+{
+  "docType": "presupuesto|pedido|factura",   // deducelo del documento
+  "ref": "numero del documento (ej LG26/38) o vacio",
+  "cliente": "nombre del cliente",
+  "fecha": "YYYY-MM-DD",
+  "lineas": [
+    {
+      "ref": "referencia/codigo del articulo si aparece, si no vacio",
+      "concepto": "descripcion de la linea",
+      "cantidad": 1,
+      "venta": 0   // IMPORTE de VENTA de esa linea (con su descuento aplicado), numero decimal sin simbolo
+    }
+  ]
+}
+Incluye tambien las lineas de servicios (montaje, transporte, fabricacion, etc.).
+Si una linea no tiene importe, pon venta: 0. Numeros con punto decimal, sin moneda.
+"""
+
+_COST_MATCH_PROMPT_HEAD = """Eres un experto en costes de muebles/cocinas. Te doy:
+1) Una lista de LINEAS de un documento de venta (cada una con un indice).
+2) Una imagen/pantallazo con COSTES (factura de proveedor, lista de precios, portal...).
+Lee los costes de la imagen y EMPAREJA cada coste con la linea de venta que le corresponde
+(por referencia o por nombre del producto). Responde SOLO con JSON valido:
+{
+  "asignaciones": [
+    { "indice": 0, "coste": 0.0, "confianza": "alta|media|baja" }
+  ]
+}
+Solo incluye las lineas para las que encuentres un coste en la imagen. El "indice" es el
+de la lista que te paso. Numeros con punto decimal, sin simbolo de moneda.
+
+LINEAS DE VENTA:
+"""
+
+
+def _ficha_totals(lines):
+    venta = sum(float(l.get("venta", 0) or 0) for l in lines)
+    coste = sum(float(l.get("coste", 0) or 0) for l in lines)
+    margen = venta - coste
+    return {
+        "venta": round(venta, 2),
+        "coste": round(coste, 2),
+        "margen": round(margen, 2),
+        "margenPct": round((margen / venta * 100) if venta > 0 else 0, 1),
+    }
+
+
+@router.post("/rentabilidad/parse-sale-doc")
+async def parse_sale_doc(payload: dict):
+    """Lee un documento de venta (presupuesto/pedido/factura) y extrae sus lineas."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_text, pdf_base64_to_png_base64
+        from services.llm_vision import chat_with_gemini, analyze_image_with_gemini
+
+        parsed = None
+        is_pdf = ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped)
+        if is_pdf:
+            text = pdf_base64_to_text(stripped) or ""
+            if len(text.strip()) >= 50:
+                resp = await chat_with_gemini(
+                    prompt=_SALE_LINES_PROMPT + "\n\nTEXTO DEL DOCUMENTO:\n\n" + text[:30000],
+                    system_message="Extraes lineas de documentos de venta.",
+                )
+                parsed = _parse_json_loose(_clean_json(resp))
+        if parsed is None:
+            img = stripped
+            if is_pdf:
+                pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
+                if pages:
+                    img = pages[0]
+            resp = await analyze_image_with_gemini(
+                image_base64=img, prompt=_SALE_LINES_PROMPT,
+                session_id=f"saledoc-{uuid.uuid4().hex[:8]}",
+            )
+            parsed = _parse_json_loose(_clean_json(resp))
+
+        if not parsed or not isinstance(parsed.get("lineas"), list):
+            return {"success": False, "error": "No se pudieron extraer las lineas del documento"}
+
+        lines = []
+        for l in parsed.get("lineas", []):
+            lines.append({
+                "id": f"ln-{uuid.uuid4().hex[:6]}",
+                "ref": str(l.get("ref") or ""),
+                "concepto": str(l.get("concepto") or ""),
+                "cantidad": float(l.get("cantidad") or 1),
+                "venta": round(float(l.get("venta") or 0), 2),
+                "coste": 0.0,
+            })
+        return {
+            "success": True,
+            "data": {
+                "docType": str(parsed.get("docType") or "factura"),
+                "ref": str(parsed.get("ref") or ""),
+                "cliente": str(parsed.get("cliente") or ""),
+                "fecha": str(parsed.get("fecha") or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+                "lines": lines,
+            },
+        }
+    except Exception as e:
+        logger.error(f"Parse sale doc error: {e}")
+        return {"success": False, "error": "No se pudo leer el documento. Intentalo de nuevo."}
+
+
+@router.post("/rentabilidad/match-line-costs")
+async def match_line_costs(payload: dict):
+    """Lee un pantallazo de costes y lo empareja con las lineas de venta dadas."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    lines = (payload or {}).get("lines") or []
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    if not lines:
+        raise HTTPException(status_code=400, detail="Faltan las lineas de venta")
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+        from services.llm_vision import analyze_image_with_gemini
+
+        # Construir el listado indexado de lineas para el prompt
+        listado = "\n".join(
+            f"{i}. [{(l.get('ref') or '').strip()}] {(l.get('concepto') or '').strip()}"
+            for i, l in enumerate(lines)
+        )
+        prompt = _COST_MATCH_PROMPT_HEAD + listado
+
+        img = stripped
+        if ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped):
+            pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
+            if pages:
+                img = pages[0]
+
+        resp = await analyze_image_with_gemini(
+            image_base64=img, prompt=prompt,
+            session_id=f"costmatch-{uuid.uuid4().hex[:8]}",
+        )
+        parsed = _parse_json_loose(_clean_json(resp)) or {}
+        asignaciones = parsed.get("asignaciones") or []
+
+        # Aplicar costes sobre una copia de las lineas
+        out_lines = [dict(l) for l in lines]
+        applied = 0
+        for a in asignaciones:
+            try:
+                idx = int(a.get("indice"))
+            except Exception:
+                continue
+            if 0 <= idx < len(out_lines):
+                out_lines[idx]["coste"] = round(float(a.get("coste") or 0), 2)
+                out_lines[idx]["_match"] = a.get("confianza", "media")
+                applied += 1
+
+        return {"success": True, "lines": out_lines, "matched": applied,
+                "totals": _ficha_totals(out_lines)}
+    except Exception as e:
+        logger.error(f"Match line costs error: {e}")
+        return {"success": False, "error": "No se pudo leer el pantallazo de costes. Intentalo de nuevo."}
+
+
+# ----------------------------- FICHAS (guardado) -----------------------------
+
+@router.get("/rentabilidad/fichas")
+async def list_fichas(userId: Optional[str] = None):
+    """Lista las fichas de rentabilidad por lineas (resumen)."""
+    try:
+        query = {"createdBy": userId} if userId else {}
+        fichas = await db.sale_fichas.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+        for f in fichas:
+            f["totals"] = _ficha_totals(f.get("lines", []))
+            f["numDocs"] = await db.sale_ficha_docs.count_documents({"fichaId": f.get("id")})
+        return fichas
+    except Exception as e:
+        logger.error(f"List fichas error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/rentabilidad/fichas/{ficha_id}")
+async def get_ficha(ficha_id: str):
+    """Detalle de una ficha + metadatos de sus documentos (sin el base64)."""
+    f = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
+    if not f:
+        raise HTTPException(status_code=404, detail="Ficha no encontrada")
+    f["totals"] = _ficha_totals(f.get("lines", []))
+    docs = await db.sale_ficha_docs.find(
+        {"fichaId": ficha_id}, {"_id": 0, "dataBase64": 0}
+    ).sort("uploadedAt", 1).to_list(100)
+    f["docs"] = docs
+    return f
+
+
+@router.post("/rentabilidad/fichas")
+async def save_ficha(payload: dict):
+    """Crea o actualiza una ficha de rentabilidad por lineas."""
+    try:
+        fid = (payload or {}).get("id") or f"fic-{uuid.uuid4().hex[:8]}"
+        lines = payload.get("lines") or []
+        norm_lines = []
+        for l in lines:
+            venta = round(float(l.get("venta") or 0), 2)
+            coste = round(float(l.get("coste") or 0), 2)
+            norm_lines.append({
+                "id": l.get("id") or f"ln-{uuid.uuid4().hex[:6]}",
+                "ref": str(l.get("ref") or ""),
+                "concepto": str(l.get("concepto") or ""),
+                "cantidad": float(l.get("cantidad") or 1),
+                "venta": venta,
+                "coste": coste,
+                "margen": round(venta - coste, 2),
+            })
+        doc = {
+            "id": fid,
+            "ref": str(payload.get("ref") or ""),
+            "docType": str(payload.get("docType") or "factura"),
+            "cliente": str(payload.get("cliente") or ""),
+            "fecha": str(payload.get("fecha") or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+            "projectRef": str(payload.get("projectRef") or ""),
+            "lines": norm_lines,
+            "createdBy": payload.get("createdBy", ""),
+            "createdByName": payload.get("createdByName", ""),
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+        }
+        existing = await db.sale_fichas.find_one({"id": fid}, {"_id": 0, "createdAt": 1})
+        doc["createdAt"] = (existing or {}).get("createdAt") or doc["updatedAt"]
+        await db.sale_fichas.update_one({"id": fid}, {"$set": doc}, upsert=True)
+        doc["totals"] = _ficha_totals(norm_lines)
+        return {"success": True, "ficha": doc}
+    except Exception as e:
+        logger.error(f"Save ficha error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/rentabilidad/fichas/{ficha_id}")
+async def delete_ficha(ficha_id: str):
+    try:
+        await db.sale_fichas.delete_one({"id": ficha_id})
+        await db.sale_ficha_docs.delete_many({"fichaId": ficha_id})
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Delete ficha error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----------------------------- DOCUMENTOS DE LA FICHA -----------------------------
+
+@router.post("/rentabilidad/fichas/{ficha_id}/docs")
+async def add_ficha_doc(ficha_id: str, payload: dict):
+    """Guarda un documento (venta o coste) asociado a la ficha para consultarlo luego."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    # Detectar mime del prefijo data: si viene
+    mime = "application/octet-stream"
+    if b64.startswith("data:"):
+        try:
+            mime = b64.split(";", 1)[0].split(":", 1)[1] or mime
+        except Exception:
+            pass
+    doc = {
+        "id": f"doc-{uuid.uuid4().hex[:8]}",
+        "fichaId": ficha_id,
+        "kind": str(payload.get("kind") or "venta"),   # 'venta' | 'coste'
+        "filename": str(payload.get("filename") or "documento"),
+        "mime": mime,
+        "dataBase64": b64,
+        "uploadedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.sale_ficha_docs.insert_one(doc)
+    return {"success": True, "id": doc["id"], "kind": doc["kind"],
+            "filename": doc["filename"], "mime": doc["mime"], "uploadedAt": doc["uploadedAt"]}
+
+
+@router.get("/rentabilidad/fichas/{ficha_id}/docs/{doc_id}")
+async def get_ficha_doc(ficha_id: str, doc_id: str):
+    """Devuelve el documento (base64) para consultarlo/descargarlo."""
+    d = await db.sale_ficha_docs.find_one({"id": doc_id, "fichaId": ficha_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    return d
+
+
+@router.delete("/rentabilidad/fichas/{ficha_id}/docs/{doc_id}")
+async def delete_ficha_doc(ficha_id: str, doc_id: str):
+    await db.sale_ficha_docs.delete_one({"id": doc_id, "fichaId": ficha_id})
+    return {"success": True}
