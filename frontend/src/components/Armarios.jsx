@@ -493,6 +493,13 @@ const Armarios = ({ state, setState }) => {
   const [draggedAccessory, setDraggedAccessory] = useState(null);
   const [dropTargetModule, setDropTargetModule] = useState(null);
   
+  // Toggle puertas abiertas/cerradas
+  const [doorsOpen, setDoorsOpen] = useState(true);
+  
+  // Subida de archivos de referencia
+  const [referenceFile, setReferenceFile] = useState(null);
+  const [referencePreview, setReferencePreview] = useState(null);
+  
   // Accesorios disponibles para arrastrar
   const DRAGGABLE_ACCESSORIES = [
     { id: 'shelf', name: 'Balda', icon: '📏', field: 'shelves', max: 12 },
@@ -554,6 +561,48 @@ const Armarios = ({ state, setState }) => {
     setDraggedAccessory(null);
     setDropTargetModule(null);
     setSelectedModule(moduleIndex);
+  };
+
+  // ========== PLANTILLAS PREDEFINIDAS ==========
+  const LAYOUT_TEMPLATES = [
+    { id: 'ropa_corta', name: 'Ropa Corta', icon: '👕', description: 'Ideal para camisas, camisetas y ropa doblada',
+      config: { shelves: 6, drawers: 2, hangingRods: 1, hangingHeight: 1000, extras: {} } },
+    { id: 'ropa_larga', name: 'Ropa Larga', icon: '👗', description: 'Vestidos, abrigos y prendas largas',
+      config: { shelves: 2, drawers: 1, hangingRods: 1, hangingHeight: 1600, extras: {} } },
+    { id: 'mixto', name: 'Mixto', icon: '👔', description: 'Combinación equilibrada de barras, baldas y cajones',
+      config: { shelves: 4, drawers: 2, hangingRods: 1, hangingHeight: 1200, extras: {} } },
+    { id: 'zapatero', name: 'Zapatero', icon: '👟', description: 'Optimizado para calzado con baldas inclinadas',
+      config: { shelves: 8, drawers: 0, hangingRods: 0, hangingHeight: 0, extras: { shoesRack: true } } },
+    { id: 'cajones', name: 'Cajones', icon: '🗄️', description: 'Máximo almacenaje en cajones para ropa interior y accesorios',
+      config: { shelves: 2, drawers: 5, hangingRods: 0, hangingHeight: 0, extras: { jewelryTray: true } } },
+    { id: 'vestidor', name: 'Vestidor', icon: '✨', description: 'Distribución premium con todos los accesorios',
+      config: { shelves: 3, drawers: 2, hangingRods: 2, hangingHeight: 1200, extras: { trousersRack: true, led: true } } },
+  ];
+
+  const applyTemplate = (templateId, moduleIndex = selectedModule) => {
+    const template = LAYOUT_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    setModuleConfigs(prev => {
+      const newConfigs = [...prev];
+      newConfigs[moduleIndex] = { ...newConfigs[moduleIndex], ...template.config, id: moduleIndex + 1 };
+      return newConfigs;
+    });
+  };
+
+  const applyTemplateToAll = (templateId) => {
+    const template = LAYOUT_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    setModuleConfigs(prev => prev.map((mod, i) => ({ ...mod, ...template.config, id: i + 1 })));
+  };
+
+  // Subir archivo de referencia
+  const handleReferenceUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setReferenceFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setReferencePreview(ev.target.result);
+    reader.readAsDataURL(file);
   };
 
   // Ajustar módulos al cambiar el número (en el handler)
@@ -1570,29 +1619,48 @@ const Armarios = ({ state, setState }) => {
     setRenderImage(null);
     
     try {
-      const result = await armariosAPI.iaRender({
+      const payload = {
         width: wardrobeConfig.width,
         height: wardrobeConfig.height,
         depth: wardrobeConfig.depth,
         modules: wardrobeConfig.modules,
-        numDoors: wardrobeConfig.numDoors,  // Número de puertas configurado
-        doorType: wardrobeConfig.doorType,
+        numDoors: wardrobeConfig.numDoors || wardrobeConfig.modules,
+        doorType: wardrobeConfig.doorType || 'sliding',
         exteriorColorName: getColorByName(wardrobeConfig.exteriorColor).name,
         exteriorColorHex: getColorByName(wardrobeConfig.exteriorColor).hex,
         interiorColorName: getColorByName(wardrobeConfig.interiorColor).name,
         handleColorName: getColorByName(wardrobeConfig.handleColor).name,
-        moduleConfigs: moduleConfigs,
-        roomStyle: roomStyle
-      });
+        moduleConfigs: moduleConfigs.slice(0, wardrobeConfig.modules).map(m => ({
+          shelves: m.shelves || 0,
+          drawers: m.drawers || 0,
+          hangingRods: m.hangingRods || 0,
+          hangingHeight: m.hangingHeight || 0,
+          shoesRack: m.extras?.shoesRack || false,
+          trousersRack: m.extras?.trousersRack || false,
+          mirrorDoor: m.extras?.mirror || false
+        })),
+        roomStyle: roomStyle || 'moderno'
+      };
+
+      // Si hay archivo de referencia, incluirlo como base64
+      if (referenceFile && referencePreview) {
+        payload.referenceImage = referencePreview;
+      }
+
+      const result = await armariosAPI.iaRender(payload);
       
       if (result.success && result.image) {
         setRenderImage(`data:${result.image.mime_type};base64,${result.image.data}`);
       } else {
-        setRenderError(result.error || 'No se pudo generar el render');
+        setRenderError(result.error || 'No se pudo generar el render. Inténtalo de nuevo.');
       }
     } catch (error) {
       console.error('Error render:', error);
-      setRenderError(error.message || 'Error al generar render');
+      if (error.message?.includes('Failed to fetch')) {
+        setRenderError('Error de conexión con el servidor. Verifica tu conexión a internet.');
+      } else {
+        setRenderError(error.message || 'Error inesperado al generar render');
+      }
     } finally {
       setRenderLoading(false);
     }
@@ -1800,7 +1868,8 @@ const Armarios = ({ state, setState }) => {
             ))}
           </div>
           
-          {/* PUERTAS - Superpuestas sobre el interior */}
+          {/* PUERTAS - Superpuestas sobre el interior (con toggle) */}
+          {!doorsOpen ? null : (
           <div className="absolute inset-0 flex z-10 pointer-events-none">
             {[...Array(numDoors)].map((_, doorIndex) => {
               const isSliding = doorType === DoorType.SLIDING;
@@ -1842,6 +1911,7 @@ const Armarios = ({ state, setState }) => {
             })}
           </div>
           
+          )}
           {/* Marco exterior */}
           <div className="absolute inset-0 border-4 border-slate-700/20 rounded-t-lg pointer-events-none" />
         </div>
@@ -2377,25 +2447,66 @@ const Armarios = ({ state, setState }) => {
             {renderWardrobeVisual()}
           </div>
           
-          {/* Info color seleccionado */}
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 shadow-sm border">
-              <div 
-                className="w-5 h-5 rounded border"
-                style={{ backgroundColor: getColorByName(wardrobeConfig.exteriorColor).hex }}
-              />
-              <span className="text-xs font-bold text-slate-600">
-                Exterior: {getColorByName(wardrobeConfig.exteriorColor).name}
-              </span>
+          {/* Controles de visualización */}
+          <div className="mt-3 flex items-center justify-center gap-3">
+            {/* Toggle puertas */}
+            <button
+              onClick={() => setDoorsOpen(!doorsOpen)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all shadow-sm border ${
+                doorsOpen 
+                  ? 'bg-purple-100 border-purple-300 text-purple-700' 
+                  : 'bg-green-100 border-green-300 text-green-700'
+              }`}
+            >
+              {doorsOpen ? <Eye size={14} /> : <EyeOff size={14} />}
+              {doorsOpen ? 'Puertas cerradas' : 'Interior visible'}
+            </button>
+            {/* Info colores */}
+            <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
+              <div className="w-4 h-4 rounded border" style={{ backgroundColor: getColorByName(wardrobeConfig.exteriorColor).hex }} />
+              <span className="text-[10px] font-bold text-slate-600">{getColorByName(wardrobeConfig.exteriorColor).name}</span>
             </div>
-            <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 shadow-sm border">
-              <div 
-                className="w-5 h-5 rounded border"
-                style={{ backgroundColor: getColorByName(wardrobeConfig.interiorColor).hex }}
-              />
-              <span className="text-xs font-bold text-slate-600">
-                Interior: {getColorByName(wardrobeConfig.interiorColor).name}
-              </span>
+            <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm border">
+              <div className="w-4 h-4 rounded border" style={{ backgroundColor: getColorByName(wardrobeConfig.interiorColor).hex }} />
+              <span className="text-[10px] font-bold text-slate-600">{getColorByName(wardrobeConfig.interiorColor).name}</span>
+            </div>
+            {/* Subir referencia */}
+            <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 cursor-pointer hover:bg-blue-100 transition-colors">
+              <FolderOpen size={14} />
+              <span className="text-[10px] font-bold">Subir referencia</span>
+              <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleReferenceUpload} />
+            </label>
+          </div>
+          
+          {/* Plantillas rápidas */}
+          <div className="mt-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Layers size={14} className="text-amber-600" />
+              <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-wider">PLANTILLAS RÁPIDAS — Módulo {selectedModule + 1}</h4>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {LAYOUT_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  onClick={() => applyTemplate(tpl.id)}
+                  title={tpl.description}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-xs font-bold text-slate-700 hover:border-amber-500 hover:shadow-md hover:scale-105 transition-all"
+                >
+                  <span>{tpl.icon}</span>
+                  <span>{tpl.name}</span>
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  const tplId = LAYOUT_TEMPLATES[2].id;
+                  applyTemplateToAll(tplId);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-400 transition-all"
+                title="Aplicar Mixto a todos los módulos"
+              >
+                <RefreshCw size={12} />
+                Aplicar a todos
+              </button>
             </div>
           </div>
           
@@ -3244,7 +3355,7 @@ const Armarios = ({ state, setState }) => {
             {/* Contenido */}
             <div className="p-8">
               {/* Configuración del render */}
-              <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-3 gap-4 mb-6">
                 <div>
                   <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Estilo de habitación</label>
                   <select
@@ -3258,6 +3369,8 @@ const Armarios = ({ state, setState }) => {
                     <option value="minimalista">Minimalista</option>
                     <option value="industrial">Industrial</option>
                     <option value="rustico">Rústico</option>
+                    <option value="bohemio">Bohemio</option>
+                    <option value="japones">Japonés</option>
                   </select>
                 </div>
                 <div>
@@ -3267,6 +3380,28 @@ const Armarios = ({ state, setState }) => {
                     <p><span className="font-bold">Color:</span> {getColorByName(wardrobeConfig.exteriorColor).name}</p>
                     <p><span className="font-bold">Puerta:</span> {wardrobeConfig.doorType === 'sliding' ? 'Corredera' : wardrobeConfig.doorType === 'folding' ? 'Plegable' : 'Abatible'}</p>
                     <p><span className="font-bold">Módulos:</span> {wardrobeConfig.modules}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Imagen de referencia</label>
+                  <div className="mt-2">
+                    {referencePreview ? (
+                      <div className="relative">
+                        <img src={referencePreview} alt="Referencia" className="w-full h-24 object-cover rounded-xl border" />
+                        <button
+                          onClick={() => { setReferenceFile(null); setReferencePreview(null); }}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 bg-slate-100 rounded-xl border-2 border-dashed border-slate-300 cursor-pointer hover:border-cyan-400 transition-colors">
+                        <FolderOpen size={20} className="text-slate-400" />
+                        <span className="text-[10px] text-slate-400 mt-1">Subir foto/plano</span>
+                        <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleReferenceUpload} />
+                      </label>
+                    )}
                   </div>
                 </div>
               </div>

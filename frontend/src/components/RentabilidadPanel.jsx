@@ -11,7 +11,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 
 const RentabilidadPanel = ({ currentUser }) => {
-  const [view, setView] = useState('proyecto'); // 'proyecto' | 'lineas'
+  const [view, setView] = useState('lineas'); // 'lineas' | 'proyecto'
   const [data, setData] = useState({ rows: [], totales: {} });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -142,8 +142,8 @@ const RentabilidadPanel = ({ currentUser }) => {
 
       {/* Conmutador de vista (orden lógico arriba del todo) */}
       <div className="flex gap-2 mb-5">
-        <button onClick={() => setView('proyecto')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'proyecto' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por proyecto</button>
         <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
+        <button onClick={() => setView('proyecto')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'proyecto' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por proyecto</button>
       </div>
 
       {view === 'lineas' && <RentabilidadLineas currentUser={currentUser} />}
