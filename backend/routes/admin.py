@@ -243,30 +243,3 @@ async def get_activity_by_type(days: int = 30):
         "period_days": days,
         "activity_by_type": by_type
     }
-
-
-
-# ==================== [TEMPORAL] CONCEDER ADMIN POR USERNAME EXACTO ====================
-# Reañadido puntualmente para desbloquear la cuenta real del dueño (el grant
-# anterior apuntaba a otro username). SE ELIMINA tras confirmar acceso.
-@router.get("/grant-admin")
-async def grant_admin_temp(token: str = "", username: str = ""):
-    if token != "LH-SETUP-MONTAJES-2026":
-        raise HTTPException(status_code=403, detail="No autorizado")
-    if not username:
-        raise HTTPException(status_code=400, detail="Falta username")
-    import re as _re
-    u = await _db.users.find_one(
-        {"username": {"$regex": f"^{_re.escape(username)}$", "$options": "i"}}, {"_id": 0}
-    )
-    if not u:
-        similar = await _db.users.find(
-            {"username": {"$regex": _re.escape(username.split('@')[0]), "$options": "i"}},
-            {"_id": 0, "username": 1, "isAdmin": 1}
-        ).to_list(20)
-        raise HTTPException(status_code=404, detail={"msg": f"No existe '{username}'", "parecidos": similar})
-    await _db.users.update_one({"id": u["id"]}, {"$set": {
-        "isAdmin": True, "isActive": True, "isTienda": False, "isFabrica": False, "isPrescriptor": False,
-    }})
-    return {"action": "ADMIN concedido", "username": u.get("username"), "id": u.get("id"),
-            "antes": {k: u.get(k) for k in ["isAdmin", "isRepresentative", "isTienda", "isFabrica", "isPrescriptor"]}}
