@@ -1,0 +1,451 @@
+"""
+Reports Router - Generador de informes con filtros avanzados
+=============================================================
+Permite generar informes de rentabilidad, ventas, costes y márgenes
+con filtros por fecha, cliente, categoría, tipo de documento, etc.
+Exporta en JSON (para frontend) y PDF (para descarga).
+"""
+from fastapi import APIRouter, Query, HTTPException
+from typing import Optional, List
+from datetime import datetime, date
+import logging
+
+logger = logging.getLogger("reports")
+router = APIRouter(tags=["reports"])
+
+
+# ========== HELPERS ==========
+
+def classify_line(concepto: str) -> str:
+    """Clasifica una línea de factura en categoría de producto."""
+    c = concepto.lower()
+    if 'lavadora' in c:
+        return 'Lavadoras'
+    elif 'secadora' in c:
+        return 'Secadoras'
+    elif 'lavavajillas' in c:
+        return 'Lavavajillas'
+    elif 'combi' in c or 'frigorífico' in c or 'frigorifico' in c:
+        return 'Refrigeración'
+    elif 'campana' in c:
+        return 'Campanas'
+    elif 'placa' in c or 'inducción' in c or 'induccion' in c:
+        return 'Placas de cocción'
+    elif 'horno' in c:
+        return 'Hornos'
+    elif 'microondas' in c:
+        return 'Microondas'
+    elif 'grifo' in c or 'monomando' in c:
+        return 'Grifería'
+    elif 'fregadero' in c:
+        return 'Fregaderos'
+    elif 'fabricación' in c or 'fabricacion' in c or 'cocina completa' in c or 'mueble' in c:
+        return 'Fabricación mobiliario'
+    elif 'transporte' in c or 'entregado' in c or 'envío' in c or 'envio' in c:
+        return 'Transporte/Logística'
+    elif 'armario' in c or 'vestidor' in c:
+        return 'Armarios'
+    elif 'encimera' in c or 'silestone' in c or 'dekton' in c:
+        return 'Encimeras'
+    elif 'montaje' in c or 'instalación' in c or 'instalacion' in c:
+        return 'Montaje/Instalación'
+    else:
+        return 'Otros'
+
+
+# ========== ENDPOINTS ==========
+
+@router.get("/reports/rentabilidad")
+async def generate_rentabilidad_report(
+    fecha_desde: Optional[str] = Query(None, description="Fecha inicio (YYYY-MM-DD)"),
+    fecha_hasta: Optional[str] = Query(None, description="Fecha fin (YYYY-MM-DD)"),
+    cliente: Optional[str] = Query(None, description="Filtrar por nombre de cliente (parcial)"),
+    categoria: Optional[str] = Query(None, description="Filtrar por categoría de producto"),
+    doc_type: Optional[str] = Query(None, description="Tipo de documento: factura, presupuesto, pedido"),
+    min_venta: Optional[float] = Query(None, description="Venta mínima por línea"),
+    max_venta: Optional[float] = Query(None, description="Venta máxima por línea"),
+    created_by: Optional[str] = Query(None, description="Filtrar por usuario creador"),
+    sort_by: Optional[str] = Query("fecha", description="Ordenar por: fecha, venta, margen, cliente"),
+    sort_order: Optional[str] = Query("desc", description="Orden: asc, desc"),
+):
+    """
+    Genera un informe de rentabilidad por líneas con filtros avanzados.
+    Devuelve datos estructurados para el frontend y para generar PDF.
+    """
+    from server import db
+    
+    try:
+        # Obtener todas las fichas de rentabilidad
+        fichas_cursor = db["rentabilidad_fichas"].find({})
+        fichas = await fichas_cursor.to_list(length=1000)
+        
+        # Aplicar filtros
+        filtered_fichas = []
+        for ficha in fichas:
+            # Filtro por fecha
+            ficha_fecha = ficha.get("fecha", "")
+            if fecha_desde and ficha_fecha < fecha_desde:
+                continue
+            if fecha_hasta and ficha_fecha > fecha_hasta:
+                continue
+            
+            # Filtro por cliente
+            if cliente:
+                ficha_cliente = ficha.get("cliente", "").lower()
+                if cliente.lower() not in ficha_cliente:
+                    continue
+            
+            # Filtro por tipo de documento
+            if doc_type:
+                if ficha.get("docType", "").lower() != doc_type.lower():
+                    continue
+            
+            # Filtro por creador
+            if created_by:
+                if created_by.lower() not in ficha.get("createdByName", "").lower():
+                    continue
+            
+            # Filtrar líneas por categoría y rango de venta
+            lines = ficha.get("lines", [])
+            filtered_lines = []
+            for line in lines:
+                # Filtro por categoría
+                if categoria:
+                    line_cat = classify_line(line.get("concepto", ""))
+                    if categoria.lower() not in line_cat.lower():
+                        continue
+                
+                # Filtro por rango de venta
+                line_venta = line.get("venta", 0)
+                if min_venta is not None and line_venta < min_venta:
+                    continue
+                if max_venta is not None and line_venta > max_venta:
+                    continue
+                
+                filtered_lines.append(line)
+            
+            if filtered_lines:
+                ficha_copy = {
+                    "id": ficha.get("id", ""),
+                    "ref": ficha.get("ref", ""),
+                    "cliente": ficha.get("cliente", ""),
+                    "fecha": ficha_fecha,
+                    "docType": ficha.get("docType", ""),
+                    "createdByName": ficha.get("createdByName", ""),
+                    "lines": filtered_lines,
+                    "totals": {
+                        "venta": sum(l.get("venta", 0) for l in filtered_lines),
+                        "coste": sum(l.get("coste", 0) for l in filtered_lines),
+                        "margen": sum(l.get("margen", 0) for l in filtered_lines),
+                    }
+                }
+                ficha_copy["totals"]["margenPct"] = (
+                    (ficha_copy["totals"]["margen"] / ficha_copy["totals"]["venta"] * 100)
+                    if ficha_copy["totals"]["venta"] > 0 else 0
+                )
+                filtered_fichas.append(ficha_copy)
+        
+        # Ordenar
+        sort_key_map = {
+            "fecha": lambda x: x.get("fecha", ""),
+            "venta": lambda x: x["totals"]["venta"],
+            "margen": lambda x: x["totals"]["margen"],
+            "cliente": lambda x: x.get("cliente", ""),
+        }
+        sort_fn = sort_key_map.get(sort_by, sort_key_map["fecha"])
+        filtered_fichas.sort(key=sort_fn, reverse=(sort_order == "desc"))
+        
+        # Calcular totales generales
+        total_venta = sum(f["totals"]["venta"] for f in filtered_fichas)
+        total_coste = sum(f["totals"]["coste"] for f in filtered_fichas)
+        total_margen = sum(f["totals"]["margen"] for f in filtered_fichas)
+        total_lines = sum(len(f["lines"]) for f in filtered_fichas)
+        
+        # Análisis por categoría
+        categorias = {}
+        for ficha in filtered_fichas:
+            for line in ficha["lines"]:
+                cat = classify_line(line.get("concepto", ""))
+                if cat not in categorias:
+                    categorias[cat] = {"venta": 0, "coste": 0, "margen": 0, "count": 0}
+                categorias[cat]["venta"] += line.get("venta", 0)
+                categorias[cat]["coste"] += line.get("coste", 0)
+                categorias[cat]["margen"] += line.get("margen", 0)
+                categorias[cat]["count"] += 1
+        
+        # Análisis por cliente
+        clientes = {}
+        for ficha in filtered_fichas:
+            cli = ficha.get("cliente", "Sin nombre")
+            if cli not in clientes:
+                clientes[cli] = {"venta": 0, "coste": 0, "margen": 0, "docs": 0}
+            clientes[cli]["venta"] += ficha["totals"]["venta"]
+            clientes[cli]["coste"] += ficha["totals"]["coste"]
+            clientes[cli]["margen"] += ficha["totals"]["margen"]
+            clientes[cli]["docs"] += 1
+        
+        # Top productos por venta
+        all_lines = []
+        for ficha in filtered_fichas:
+            for line in ficha["lines"]:
+                all_lines.append({
+                    **line,
+                    "cliente": ficha.get("cliente", ""),
+                    "docRef": ficha.get("ref", ""),
+                    "fecha": ficha.get("fecha", ""),
+                    "categoria": classify_line(line.get("concepto", ""))
+                })
+        all_lines.sort(key=lambda x: x.get("venta", 0), reverse=True)
+        
+        return {
+            "success": True,
+            "generatedAt": datetime.utcnow().isoformat(),
+            "filters": {
+                "fecha_desde": fecha_desde,
+                "fecha_hasta": fecha_hasta,
+                "cliente": cliente,
+                "categoria": categoria,
+                "doc_type": doc_type,
+                "min_venta": min_venta,
+                "max_venta": max_venta,
+                "created_by": created_by,
+            },
+            "summary": {
+                "totalVenta": round(total_venta, 2),
+                "totalCoste": round(total_coste, 2),
+                "totalMargen": round(total_margen, 2),
+                "margenPct": round((total_margen / total_venta * 100) if total_venta > 0 else 0, 1),
+                "numFichas": len(filtered_fichas),
+                "numLineas": total_lines,
+            },
+            "byCategory": [
+                {"categoria": k, **v, "pctTotal": round(v["venta"] / total_venta * 100, 1) if total_venta > 0 else 0}
+                for k, v in sorted(categorias.items(), key=lambda x: x[1]["venta"], reverse=True)
+            ],
+            "byClient": [
+                {"cliente": k, **v, "pctTotal": round(v["venta"] / total_venta * 100, 1) if total_venta > 0 else 0}
+                for k, v in sorted(clientes.items(), key=lambda x: x[1]["venta"], reverse=True)
+            ],
+            "fichas": filtered_fichas,
+            "topLines": all_lines[:20],
+        }
+    
+    except Exception as e:
+        logger.error(f"Error generando informe: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/reports/rentabilidad/pdf")
+async def generate_rentabilidad_pdf(
+    fecha_desde: Optional[str] = Query(None),
+    fecha_hasta: Optional[str] = Query(None),
+    cliente: Optional[str] = Query(None),
+    categoria: Optional[str] = Query(None),
+    doc_type: Optional[str] = Query(None),
+    min_venta: Optional[float] = Query(None),
+    max_venta: Optional[float] = Query(None),
+    created_by: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query("fecha"),
+    sort_order: Optional[str] = Query("desc"),
+):
+    """
+    Genera un PDF del informe de rentabilidad con los mismos filtros.
+    """
+    from fastapi.responses import StreamingResponse
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.units import mm
+    import io
+    
+    # Obtener datos con los mismos filtros
+    data = await generate_rentabilidad_report(
+        fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+        cliente=cliente, categoria=categoria, doc_type=doc_type,
+        min_venta=min_venta, max_venta=max_venta,
+        created_by=created_by, sort_by=sort_by, sort_order=sort_order
+    )
+    
+    if not data.get("success"):
+        raise HTTPException(status_code=500, detail="Error generando datos del informe")
+    
+    # Generar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm, topMargin=20*mm, bottomMargin=20*mm)
+    styles = getSampleStyleSheet()
+    elements = []
+    
+    # Título
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=18, spaceAfter=6)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey)
+    
+    elements.append(Paragraph("INFORME DE RENTABILIDAD POR LÍNEAS", title_style))
+    elements.append(Paragraph(f"Luiggi Home ERP — Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
+    
+    # Filtros aplicados
+    filters_text = []
+    if fecha_desde: filters_text.append(f"Desde: {fecha_desde}")
+    if fecha_hasta: filters_text.append(f"Hasta: {fecha_hasta}")
+    if cliente: filters_text.append(f"Cliente: {cliente}")
+    if categoria: filters_text.append(f"Categoría: {categoria}")
+    if doc_type: filters_text.append(f"Tipo: {doc_type}")
+    if filters_text:
+        elements.append(Spacer(1, 4*mm))
+        elements.append(Paragraph(f"Filtros: {' | '.join(filters_text)}", subtitle_style))
+    
+    elements.append(Spacer(1, 8*mm))
+    
+    # Resumen
+    summary = data["summary"]
+    elements.append(Paragraph("RESUMEN", styles['Heading2']))
+    summary_data = [
+        ["Facturación Total", "Coste Total", "Margen Bruto", "% Margen", "Documentos", "Líneas"],
+        [
+            f"{summary['totalVenta']:,.2f} €",
+            f"{summary['totalCoste']:,.2f} €",
+            f"{summary['totalMargen']:,.2f} €",
+            f"{summary['margenPct']:.1f}%",
+            str(summary['numFichas']),
+            str(summary['numLineas']),
+        ]
+    ]
+    t = Table(summary_data, colWidths=[80, 70, 80, 50, 60, 50])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e1b4b')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 8*mm))
+    
+    # Por categoría
+    if data["byCategory"]:
+        elements.append(Paragraph("POR CATEGORÍA", styles['Heading2']))
+        cat_data = [["Categoría", "Líneas", "Venta (€)", "Coste (€)", "Margen (€)", "% Total"]]
+        for cat in data["byCategory"]:
+            cat_data.append([
+                cat["categoria"],
+                str(cat["count"]),
+                f"{cat['venta']:,.2f}",
+                f"{cat['coste']:,.2f}",
+                f"{cat['margen']:,.2f}",
+                f"{cat['pctTotal']:.1f}%",
+            ])
+        t2 = Table(cat_data, colWidths=[100, 40, 70, 70, 70, 45])
+        t2.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e1b4b')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ]))
+        elements.append(t2)
+        elements.append(Spacer(1, 8*mm))
+    
+    # Por cliente
+    if data["byClient"]:
+        elements.append(Paragraph("POR CLIENTE", styles['Heading2']))
+        cli_data = [["Cliente", "Docs", "Venta (€)", "Coste (€)", "Margen (€)", "% Total"]]
+        for cli in data["byClient"]:
+            cli_data.append([
+                cli["cliente"][:30],
+                str(cli["docs"]),
+                f"{cli['venta']:,.2f}",
+                f"{cli['coste']:,.2f}",
+                f"{cli['margen']:,.2f}",
+                f"{cli['pctTotal']:.1f}%",
+            ])
+        t3 = Table(cli_data, colWidths=[120, 35, 70, 70, 70, 45])
+        t3.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e1b4b')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ]))
+        elements.append(t3)
+        elements.append(Spacer(1, 8*mm))
+    
+    # Top líneas
+    if data["topLines"]:
+        elements.append(Paragraph("TOP LÍNEAS POR VENTA", styles['Heading2']))
+        top_data = [["Ref", "Concepto", "Cliente", "Venta (€)", "Categoría"]]
+        for line in data["topLines"][:15]:
+            top_data.append([
+                line.get("ref", "—")[:12],
+                line.get("concepto", "")[:40],
+                line.get("cliente", "")[:20],
+                f"{line.get('venta', 0):,.2f}",
+                line.get("categoria", ""),
+            ])
+        t4 = Table(top_data, colWidths=[55, 160, 85, 55, 80])
+        t4.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e1b4b')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTSIZE', (0, 0), (-1, -1), 6.5),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ]))
+        elements.append(t4)
+    
+    # Footer
+    elements.append(Spacer(1, 10*mm))
+    elements.append(Paragraph("Generado por LuiggiAI Engine — Luiggi Home ERP v4.1", subtitle_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"informe_rentabilidad_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/reports/available-filters")
+async def get_available_filters():
+    """Devuelve los valores disponibles para los filtros (clientes, categorías, etc.)"""
+    from server import db
+    
+    try:
+        fichas_cursor = db["rentabilidad_fichas"].find({})
+        fichas = await fichas_cursor.to_list(length=1000)
+        
+        clientes = set()
+        categorias = set()
+        creadores = set()
+        doc_types = set()
+        fechas = []
+        
+        for ficha in fichas:
+            clientes.add(ficha.get("cliente", ""))
+            doc_types.add(ficha.get("docType", ""))
+            creadores.add(ficha.get("createdByName", ""))
+            if ficha.get("fecha"):
+                fechas.append(ficha["fecha"])
+            for line in ficha.get("lines", []):
+                categorias.add(classify_line(line.get("concepto", "")))
+        
+        return {
+            "clientes": sorted([c for c in clientes if c]),
+            "categorias": sorted([c for c in categorias if c]),
+            "creadores": sorted([c for c in creadores if c]),
+            "docTypes": sorted([d for d in doc_types if d]),
+            "fechaMin": min(fechas) if fechas else None,
+            "fechaMax": max(fechas) if fechas else None,
+        }
+    except Exception as e:
+        logger.error(f"Error obteniendo filtros: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

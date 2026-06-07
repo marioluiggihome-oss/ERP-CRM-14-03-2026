@@ -26,6 +26,7 @@ const MisPedidos = lazy(() => import('./components/MisPedidos'));
 const BackupManager = lazy(() => import('./components/BackupManager'));
 const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
+const ReportGenerator = lazy(() => import('./components/ReportGenerator'));
 
 // ─── Carga directa: componentes ligeros necesarios al inicio ────────────────
 import Login from './components/Login';
@@ -943,6 +944,18 @@ const App = () => {
                       </button>
                     )}
                     
+                    {/* Informes - Admin y usuarios con acceso a rentabilidad */}
+                    {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'informes'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'informes' ? 'bg-amber-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="informes-nav-btn"
+                      >
+                        <FileText size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Informes</span>
+                      </button>
+                    )}
+                    
                     {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
                     {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
                       <button 
@@ -1099,6 +1112,11 @@ const App = () => {
             {/* Render 3D Studio */}
             {state.currentTab === 'renderStudio' && state.currentUser?.canUseAIAnalysis && (
               <AIRenderStudio state={state} />
+            )}
+
+            {/* Generador de Informes */}
+            {state.currentTab === 'informes' && (state.currentUser?.isAdmin || state.currentUser?.isRepresentative) && (
+              <ReportGenerator />
             )}
 
             {/* Mis Pedidos */}
