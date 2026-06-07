@@ -6,14 +6,24 @@ subyacente, sanitiza respuestas y mantiene la abstracción white-label.
 """
 
 import asyncio
+import base64
 import httpx
 import logging
+import re
 import time
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
+from urllib.parse import urlparse
 
 from .config import get_ai_config
 
 logger = logging.getLogger("luiggi_ai.core")
+
+# Ruta pública del proxy de assets (sirve imágenes del proveedor ocultando su
+# origen). Debe coincidir con el endpoint registrado en routes/ai_engine.py.
+ASSET_PROXY_PATH = "/api/ai-engine/asset"
+
+_URL_RE = re.compile(r'https?://[^\s"\'<>)\]}]+', re.IGNORECASE)
+_IMG_EXT_RE = re.compile(r'\.(png|jpe?g|webp|gif|bmp|tiff?)(\?|#|$)', re.IGNORECASE)
 
 
 class LuiggiAICore:
@@ -26,6 +36,14 @@ class LuiggiAICore:
         self.config = get_ai_config()
         self._client: Optional[httpx.AsyncClient] = None
         self._task_cache: Dict[str, Any] = {}
+        # Términos de sanitización ordenados por longitud descendente para que
+        # las frases completas ("powered by manus") se reemplacen antes que las
+        # palabras sueltas ("manus") y no queden restos.
+        self._sanitize_pairs: List[Tuple[str, str]] = sorted(
+            self.config.sanitize_replacements.items(),
+            key=lambda kv: len(kv[0]),
+            reverse=True,
+        )
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Obtiene o crea el cliente HTTP."""
@@ -41,16 +59,89 @@ class LuiggiAICore:
             )
         return self._client
 
+    # ─── Sanitización / White-label ───────────────────────────────────────
+
+    def _is_provider_host(self, host: str) -> bool:
+        """True si el host pertenece a un dominio del proveedor subyacente."""
+        host = (host or "").lower()
+        return any(
+            host == h or host.endswith("." + h)
+            for h in self.config.provider_asset_hosts
+        )
+
+    def proxy_url(self, original_url: str) -> str:
+        """
+        Convierte una URL del proveedor en una URL del proxy interno, de modo
+        que el navegador del cliente nunca vea el origen real.
+        """
+        token = base64.urlsafe_b64encode(original_url.encode("utf-8")).decode("ascii").rstrip("=")
+        return f"{ASSET_PROXY_PATH}?u={token}"
+
+    @staticmethod
+    def decode_proxy_token(token: str) -> str:
+        """Decodifica el token del proxy a la URL original (usado por el router)."""
+        pad = "=" * (-len(token) % 4)
+        return base64.urlsafe_b64decode((token + pad).encode("ascii")).decode("utf-8")
+
+    def _rewrite_provider_urls(self, text: str) -> str:
+        """Reescribe cualquier URL que apunte al proveedor para pasarla por el proxy."""
+        if not text or "http" not in text:
+            return text
+
+        def _repl(m: "re.Match") -> str:
+            url = m.group(0)
+            try:
+                host = urlparse(url).netloc.split("@")[-1].split(":")[0]
+            except Exception:
+                return url
+            return self.proxy_url(url) if self._is_provider_host(host) else url
+
+        return _URL_RE.sub(_repl, text)
+
+    @staticmethod
+    def _smart_case(matched: str, replacement: str) -> str:
+        """Adapta la capitalización del reemplazo a la del término encontrado."""
+        if matched.isupper():
+            return replacement.upper()
+        if matched[:1].isupper():
+            return replacement[:1].upper() + replacement[1:]
+        return replacement
+
     def _sanitize_response(self, text: str) -> str:
         """
-        Sanitiza la respuesta eliminando cualquier referencia al proveedor.
+        Sanitiza la respuesta eliminando cualquier referencia al proveedor:
+        1) reescribe las URLs del proveedor para servirlas por el proxy interno,
+        2) reemplaza nombres/marcas de forma insensible a mayúsculas y dando
+           prioridad a las frases más largas.
         """
         if not text:
             return text
-        result = text
-        for term, replacement in self.config.sanitize_replacements.items():
-            result = result.replace(term, replacement)
+        result = self._rewrite_provider_urls(text)
+        for term, replacement in self._sanitize_pairs:
+            if not term:
+                continue
+            pattern = re.compile(re.escape(term), re.IGNORECASE)
+            result = pattern.sub(lambda m: self._smart_case(m.group(0), replacement), result)
         return result
+
+    def _collect_image_urls(self, data: Any, out: List[str]) -> None:
+        """Recorre la estructura y recolecta URLs de imagen del proveedor."""
+        if isinstance(data, str):
+            for url in _URL_RE.findall(data):
+                host = ""
+                try:
+                    host = urlparse(url).netloc.split(":")[0]
+                except Exception:
+                    pass
+                if _IMG_EXT_RE.search(url) or self._is_provider_host(host):
+                    if url not in out:
+                        out.append(url)
+        elif isinstance(data, dict):
+            for v in data.values():
+                self._collect_image_urls(v, out)
+        elif isinstance(data, list):
+            for v in data:
+                self._collect_image_urls(v, out)
 
     def _sanitize_dict(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Sanitiza recursivamente un diccionario."""
@@ -178,8 +269,13 @@ class LuiggiAICore:
 
             if response.status_code == 200:
                 data = response.json()
+                # Extraer URLs de imagen del proveedor ANTES de sanitizar y
+                # servirlas por el proxy interno (oculta el origen real).
+                raw_images: List[str] = []
+                self._collect_image_urls(data, raw_images)
                 sanitized = self._sanitize_dict(data)
                 sanitized["engine"] = self.config.brand_name
+                sanitized["images"] = [self.proxy_url(u) for u in raw_images]
                 return {"success": True, **sanitized}
             else:
                 return {

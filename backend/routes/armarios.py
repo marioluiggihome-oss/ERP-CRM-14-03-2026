@@ -335,7 +335,7 @@ Reglas de diseno:
 - "joyero" va en zona media
 
 Debes responder UNICAMENTE con un JSON valido sin explicaciones."""
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         prompt = f"""El usuario quiere configurar un armario con {request.modules} modulos.
 Dimensiones: {request.width}mm ancho x {request.height}mm alto x {request.depth}mm fondo.
@@ -422,23 +422,8 @@ Responde SOLO con el JSON, sin texto adicional."""
 async def ia_render_armario(request: IARenderRequest):
     """Generar render realista del armario usando IA"""
     try:
-        try:
-            from emergentintegrations.llm.chat import LlmChat, UserMessage
-        except ImportError:
-            raise HTTPException(status_code=503, detail="AI service not available in this environment")
-        
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
-            raise HTTPException(status_code=500, detail="Clave de IA no configurada")
-        
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"armario-render-{uuid.uuid4()}",
-            system_message="You are a professional interior designer creating photorealistic renders of wardrobes. You must follow specifications EXACTLY."
-        )
-        
-        chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])  # Nano Banana model
-        
+        from services.llm_vision import generate_image_with_gemini
+
         # Construir descripcion del tipo de puerta
         door_type_desc = {
             "sliding": "PUERTAS CORREDERAS (sliding doors on rails, overlap when open)",
@@ -517,26 +502,23 @@ IMAGE REQUIREMENTS:
 IMPORTANT: The wardrobe MUST have EXACTLY {doors_count} {request.doorType} doors. DO NOT add more or fewer doors.
 Generate ONE high-quality photorealistic image."""
 
-        msg = UserMessage(text=prompt)
-        text_response, images = await chat.send_message_multimodal_response(msg)
-        
-        if images and len(images) > 0:
-            # Devolver la imagen en base64
-            return {
-                "success": True,
-                "image": {
-                    "data": images[0]["data"],
-                    "mime_type": images[0].get("mime_type", "image/png")
-                },
-                "description": text_response[:500] if text_response else None
-            }
-        else:
-            return {
-                "success": False,
-                "error": "No se pudo generar la imagen",
-                "text_response": text_response
-            }
-            
+        try:
+            data_url = await generate_image_with_gemini(prompt)
+        except Exception as e:
+            logger.error(f"Error generando render de armario: {e}")
+            return {"success": False, "error": "No se pudo generar la imagen. Inténtalo de nuevo."}
+
+        # data_url = 'data:image/png;base64,XXXX' → separar mime y base64 para el frontend
+        mime = "image/png"
+        b64 = data_url
+        if isinstance(data_url, str) and data_url.startswith("data:"):
+            head, b64 = data_url.split(",", 1)
+            mime = head[5:].split(";", 1)[0] or mime
+        return {
+            "success": True,
+            "image": {"data": b64, "mime_type": mime},
+        }
+
     except Exception as e:
         logger.error(f"Error en IA render: {e}")
         raise HTTPException(status_code=500, detail=str(e))

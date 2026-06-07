@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import GlobalEventReminder from './components/GlobalEventReminder';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp } from 'lucide-react';
 import "./App.css";
 
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
 // Esto reduce el bundle inicial de ~1.5MB a ~400KB (solo Login + shell)
 const BudgetTable = lazy(() => import('./components/BudgetTable'));
+const Presupuestador2 = lazy(() => import('./components/Presupuestador2'));
 const Visualizer = lazy(() => import('./components/Visualizer'));
 const ProjectLibrary = lazy(() => import('./components/ProjectLibrary'));
 const Invoices = lazy(() => import('./components/Invoices'));
@@ -23,6 +25,7 @@ const UserManualModal = lazy(() => import('./components/UserManualModal'));
 const MisPedidos = lazy(() => import('./components/MisPedidos'));
 const BackupManager = lazy(() => import('./components/BackupManager'));
 const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
+const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
 
 // ─── Carga directa: componentes ligeros necesarios al inicio ────────────────
 import Login from './components/Login';
@@ -332,6 +335,25 @@ const App = () => {
       }
     })();
     return () => { cancelled = true; };
+  }, [state.currentUser?.id]);
+
+  // Enlace directo por URL: ?tab=crm (alias amigables → pestaña interna)
+  const deepLinkApplied = useRef(false);
+  useEffect(() => {
+    if (deepLinkApplied.current || !state.currentUser?.id) return;
+    deepLinkApplied.current = true;
+    try {
+      const tab = new URLSearchParams(window.location.search).get('tab');
+      if (!tab) return;
+      const map = {
+        crm: 'crm-dashboard', presupuesto: 'budget', presup2: 'presupuestador2',
+        presupuestador2: 'presupuestador2', rentabilidad: 'rentabilidad', facturas: 'invoices',
+        archivo: 'library', mando: 'command', pedidos: 'misPedidos', digitalizador: 'digitalizador',
+        armarios: 'armarios', montajes: 'montajes', fabrica: 'fabrica', render: 'renderStudio',
+      };
+      const target = map[tab.toLowerCase()] || tab;
+      setState(p => ({ ...p, currentTab: target }));
+    } catch { /* noop */ }
   }, [state.currentUser?.id]);
 
   const handleLogin = (user) => {
@@ -827,7 +849,18 @@ const App = () => {
                       <FileText size={18}/>
                       <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
                     </button>
-                    
+
+                    {/* Presupuestador 2 (MV por tarifa) - requiere autorización por usuario */}
+                    {(state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'presupuestador2'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador2' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <Receipt size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Presup. 2</span>
+                      </button>
+                    )}
+
                     {/* Archivo - NO visible para Tienda/Punto de Venta - JUSTO DEBAJO DE PRESUPUESTO */}
                     {!state.currentUser?.isTienda && (
                       <button 
@@ -848,6 +881,18 @@ const App = () => {
                       >
                         <Receipt size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Facturas</span>
+                      </button>
+                    )}
+
+                    {/* Rentabilidad por proyecto - admin/gerente/director comercial */}
+                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'rentabilidad'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'rentabilidad' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="rentabilidad-nav-btn"
+                      >
+                        <TrendingUp size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Rentab.</span>
                       </button>
                     )}
 
@@ -998,6 +1043,12 @@ const App = () => {
             </div>
           </aside>
 
+          {/* Aviso GLOBAL de eventos próximos (aparece en cualquier pantalla) */}
+          <GlobalEventReminder
+            currentUser={state.currentUser}
+            onOpenCalendar={() => setState(p => ({ ...p, currentTab: 'crm-dashboard' }))}
+          />
+
           <main className="flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10">
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
             {state.currentTab === 'budget' && (
@@ -1012,12 +1063,16 @@ const App = () => {
               />
               </ErrorBoundary>
             )}
+            {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin) && (
+              <ErrorBoundary><Presupuestador2 currentUser={state.currentUser} /></ErrorBoundary>
+            )}
             {state.currentTab === 'visualizer' && state.currentUser?.canUseAIAnalysis && (
               <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
             )}
             {state.currentTab === 'library' && <ErrorBoundary><ProjectLibrary state={state} setState={setState} /></ErrorBoundary>}
             {state.currentTab === 'backup' && <BackupManager />}
             {state.currentTab === 'invoices' && <ErrorBoundary><Invoices currentUser={state.currentUser} /></ErrorBoundary>}
+            {state.currentTab === 'rentabilidad' && <ErrorBoundary><RentabilidadPanel currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'command' && <ErrorBoundary><CommandCenter currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'digitalizador' && state.currentUser?.canUseDigitalizador && (
               <Digitalizador state={state} />

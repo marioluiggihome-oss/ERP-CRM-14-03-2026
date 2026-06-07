@@ -326,6 +326,32 @@ const PortalFabrica = ({ currentUser }) => {
     }));
   };
 
+  // Hoja de ruta de taller: fases en orden de proceso.
+  const PRODUCTION_PHASES = [
+    { key: 'corte', label: 'Corte' },
+    { key: 'cantear', label: 'Cantear' },
+    { key: 'montar', label: 'Montar' },
+    { key: 'herraje', label: 'Herraje' },
+    { key: 'qc', label: 'QC' },
+    { key: 'embalaje', label: 'Embalaje' },
+  ];
+
+  const handlePhaseToggle = async (orderId, phase, done) => {
+    // Actualización optimista local + persistencia.
+    setOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const phases = { ...(o.productionPhases || {}) };
+      phases[phase] = done ? new Date().toISOString() : null;
+      return { ...o, productionPhases: phases };
+    }));
+    try {
+      await fabricaAPI.updateOrderPhase(orderId, phase, done);
+    } catch (e) {
+      console.error('Error fase:', e);
+      loadData(); // revertir si falla
+    }
+  };
+
   // Ver despiece COMPLETO de una orden (reutiliza DespieceModal del presupuesto).
   const handleViewDespiece = (orderId) => {
     const order = orders.find(o => o.id === orderId);
@@ -654,6 +680,42 @@ const PortalFabrica = ({ currentUser }) => {
                       <Trash2 size={14} />
                       Eliminar
                     </button>
+                  </div>
+
+                  {/* Hoja de ruta de taller (fases de produccion) */}
+                  <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    {(() => {
+                      const phases = order.productionPhases || {};
+                      const doneCount = PRODUCTION_PHASES.filter(p => phases[p.key]).length;
+                      const pct = Math.round(doneCount / PRODUCTION_PHASES.length * 100);
+                      return (
+                        <>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">🛠️ Hoja de ruta de taller</p>
+                            <span className="text-xs font-black text-slate-600">{pct}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-200 rounded-full mb-3 overflow-hidden">
+                            <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {PRODUCTION_PHASES.map(p => {
+                              const isDone = !!phases[p.key];
+                              return (
+                                <button
+                                  key={p.key}
+                                  onClick={() => handlePhaseToggle(order.id, p.key, !isDone)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${isDone ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-400'}`}
+                                  data-testid={`phase-${p.key}-${order.id}`}
+                                  title={isDone ? `Hecho: ${new Date(phases[p.key]).toLocaleString('es-ES')}` : 'Pendiente'}
+                                >
+                                  {isDone ? '✓ ' : ''}{p.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Notes */}

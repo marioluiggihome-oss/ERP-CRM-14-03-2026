@@ -3,8 +3,9 @@ Backup and Export System for LUIGGI HOME
 Exports all data and code in ZIP format
 Includes daily automated backups with email notification
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse, JSONResponse
+from services.jwt_service import require_admin
 import os
 import zipfile
 import shutil
@@ -319,9 +320,13 @@ async def delete_backup(filename: str):
     os.remove(filepath)
     return {"success": True, "message": f"Backup {filename} deleted"}
 
-@router.post("/send-email")
+@router.api_route("/send-email", methods=["GET", "POST"])
 async def send_backup_email():
-    """Create backup and send via email to marioluiggihome@gmail.com"""
+    """Crear backup completo (JSON de toda la BD) y enviarlo por email.
+
+    Acepta GET y POST para que funcione tanto desde el boton del panel (POST)
+    como pegando la URL en el navegador (GET).
+    """
     try:
         result = await create_daily_backup_with_email()
         return {
@@ -396,8 +401,8 @@ async def list_backup_parts():
     return {"parts": parts}
 
 @router.get("/export-db-only")
-async def export_database_only():
-    """Export only the database (smaller file)"""
+async def export_database_only(user=Depends(require_admin)):
+    """Export only the database (smaller file) — solo ADMIN (vuelca toda la BD)"""
     try:
         os.makedirs(BACKUP_DIR, exist_ok=True)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')

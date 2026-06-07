@@ -397,6 +397,40 @@ async def update_order_status(order_id: str, status: str, notes: str = ""):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Fases de la hoja de ruta de taller (en orden de proceso)
+PRODUCTION_PHASES = ["corte", "cantear", "montar", "herraje", "qc", "embalaje"]
+
+
+@router.patch("/orders/{order_id}/phase")
+async def update_order_phase(order_id: str, phase: str, done: bool = True):
+    """Marcar/desmarcar una FASE de la hoja de ruta de taller de una orden.
+
+    Fases: corte → cantear → montar → herraje → qc → embalaje.
+    Guarda en productionPhases.{fase} = ISO timestamp (hecha) o None (pendiente).
+    """
+    phase = (phase or "").lower().strip()
+    if phase not in PRODUCTION_PHASES:
+        raise HTTPException(status_code=400, detail=f"Fase inválida. Válidas: {PRODUCTION_PHASES}")
+    try:
+        order = await db.manufacturing_orders.find_one({"id": order_id}, {"_id": 0, "productionPhases": 1})
+        if not order:
+            raise HTTPException(status_code=404, detail="Orden no encontrada")
+        phases = order.get("productionPhases") or {}
+        phases[phase] = datetime.now(timezone.utc).isoformat() if done else None
+        await db.manufacturing_orders.update_one(
+            {"id": order_id},
+            {"$set": {"productionPhases": phases, "updatedAt": datetime.now(timezone.utc).isoformat()}}
+        )
+        completed = [p for p in PRODUCTION_PHASES if phases.get(p)]
+        return {"success": True, "productionPhases": phases,
+                "progress": round(len(completed) / len(PRODUCTION_PHASES) * 100)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update order phase error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.patch("/orders/{order_id}/delivery-date")
 async def set_delivery_date(order_id: str, estimated_date: str, notes: str = ""):
     """Establecer fecha estimada de entrega"""
@@ -489,7 +523,7 @@ Si no puedes identificar una medida específica, usa valores estándar:
         response = await loop.run_in_executor(
             None,
             lambda: gemini_client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 contents=[
                     types.Part.from_bytes(
                         data=pdf_bytes,

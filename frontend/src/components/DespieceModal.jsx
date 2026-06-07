@@ -471,6 +471,55 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     window.print();
   };
 
+  // ====== ETIQUETAS POR PIEZA (para el taller) ======
+  // Una etiqueta por cada pieza de tablero del despiece: codigo del mueble,
+  // nombre de pieza, medidas (largo x ancho), grosor y cantos. Excluye herrajes.
+  const handleExportLabels = () => {
+    if (!despieceData?.items) { alert('No hay despiece para etiquetar'); return; }
+    const ref = editableProjectRef || editableExpedient || '';
+    const labels = [];
+    despieceData.items.forEach(item => {
+      const itemQty = parseInt(item.itemQuantity) || 1;
+      (item.components || []).forEach(comp => {
+        if (!comp.length || !comp.width) return; // herrajes fuera
+        const qty = (parseInt(comp.quantity) || 1) * itemQty;
+        const { cantos } = calculateCantoForComponent(comp, 1);
+        const edges = [cantos.l1 > 0 && 'L1', cantos.l2 > 0 && 'L2', cantos.w1 > 0 && 'C1', cantos.w2 > 0 && 'C2'].filter(Boolean).join(' ');
+        for (let i = 0; i < qty; i++) {
+          labels.push({
+            code: item.productCode || '',
+            piece: comp.nameShort || comp.name || '',
+            name: comp.name || '',
+            material: comp.material || carcassMaterialName || '',
+            l: comp.length, w: comp.width, t: comp.thickness || 18,
+            edges, idx: i + 1, total: qty,
+          });
+        }
+      });
+    });
+    if (labels.length === 0) { alert('No hay piezas que etiquetar'); return; }
+    const cells = labels.map(L => `
+      <div class="lbl">
+        <div class="code">${L.code}</div>
+        <div class="piece">${L.piece}</div>
+        <div class="dim">${L.l} × ${L.w} <span class="t">· ${L.t}mm</span></div>
+        <div class="meta">${L.material}${L.edges ? ' · Canto: ' + L.edges : ''}</div>
+        <div class="foot">${ref ? 'Ref ' + ref + ' · ' : ''}pza ${L.idx}/${L.total}</div>
+      </div>`).join('');
+    const w = window.open('', '_blank');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Etiquetas</title>
+      <style>@page{size:A4;margin:8mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0}
+      .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+      .lbl{border:1px solid #333;border-radius:4px;padding:6px 8px;height:34mm;display:flex;flex-direction:column;justify-content:space-between;page-break-inside:avoid}
+      .code{font-size:15px;font-weight:800;color:#1e293b}
+      .piece{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase}
+      .dim{font-size:18px;font-weight:800;color:#ea580c}.dim .t{font-size:11px;color:#64748b}
+      .meta{font-size:9px;color:#64748b}.foot{font-size:8px;color:#94a3b8;border-top:1px dashed #cbd5e1;padding-top:3px}
+      </style></head><body><div class="grid">${cells}</div></body></html>`);
+    w.document.close();
+    w.onload = () => w.print();
+  };
+
   // Calcular canto necesario para cada pieza
   const calculateCantoForComponent = (comp, quantity = 1) => {
     const length = comp.length || 0;
@@ -2606,6 +2655,11 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2"
                       data-testid="purchase-order-csv">
                       <Download size={16} /> Pedido de compra (CSV)
+                    </button>
+                    <button onClick={handleExportLabels}
+                      className="flex-1 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2"
+                      data-testid="export-labels">
+                      <Box size={16} /> Etiquetas por pieza
                     </button>
                   </div>
 

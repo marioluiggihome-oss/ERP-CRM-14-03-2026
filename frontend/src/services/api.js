@@ -847,17 +847,23 @@ export const backupAPI = {
   },
 
   triggerManual: async () => {
-    const response = await fetch(`${API_URL}/api/backup/manual`, {
-      method: 'POST'
+    // Genera el backup COMPLETO (JSON de todas las colecciones) y lo envia por
+    // email a marioluiggihome@gmail.com. Endpoint real: /api/backup/send-email.
+    const response = await fetch(`${API_URL}/api/backup/send-email`, {
+      method: 'POST', headers: authHeaders()
     });
-    if (!response.ok) throw new Error('Error al crear backup');
-    return response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.success === false) {
+      throw new Error(data.error || data.detail || 'Error al crear/enviar backup');
+    }
+    return data;
   },
 
+  // Descargar el JSON de toda la BD (requiere admin).
   download: async () => {
-    const response = await fetch(`${API_URL}/api/backup/download`);
-    if (!response.ok) throw new Error('Error al descargar backup');
-    return response.json();
+    const response = await fetch(`${API_URL}/api/backup/export-db-only`, { headers: authHeaders() });
+    if (!response.ok) throw new Error('Error al descargar backup (requiere admin)');
+    return response.blob();
   },
 
   restore: async (backupData) => {
@@ -1632,6 +1638,17 @@ export const fabricaAPI = {
     return data;
   },
 
+  // Hoja de ruta de taller: marcar/desmarcar una fase de produccion de la orden.
+  updateOrderPhase: async (orderId, phase, done = true) => {
+    const params = new URLSearchParams({ phase, done: done ? 'true' : 'false' });
+    const response = await fetch(`${API_URL}/api/fabrica/orders/${orderId}/phase?${params.toString()}`, {
+      method: 'PATCH', headers: authHeaders()
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'Error al actualizar fase');
+    return data;
+  },
+
   setDeliveryDate: async (orderId, estimatedDate, notes = '') => {
     const params = new URLSearchParams({ estimated_date: estimatedDate });
     if (notes) params.append('notes', notes);
@@ -1790,4 +1807,70 @@ export const ordersAPI = {
     }
     return data;
   }
+};
+
+// ============================================
+// GOOGLE CALENDAR (integración OAuth por usuario)
+// Cada usuario conecta su propia cuenta; el aislamiento lo garantiza el backend.
+// ============================================
+export const googleCalendarAPI = {
+  // Estado: { configured, connected, email }
+  status: async () => {
+    const r = await fetch(`${API_URL}/api/google-calendar/status`, { headers: authHeaders() });
+    return r.json();
+  },
+  // Obtiene la URL de consentimiento y redirige el navegador a Google.
+  connect: async (returnPath = '/') => {
+    const r = await fetch(
+      `${API_URL}/api/google-calendar/connect?return_path=${encodeURIComponent(returnPath)}`,
+      { headers: authHeaders() }
+    );
+    const data = await r.json();
+    if (!r.ok || !data.url) throw new Error(data.detail || 'No se pudo iniciar la conexión con Google');
+    window.location.href = data.url;
+  },
+  disconnect: async () => {
+    const r = await fetch(`${API_URL}/api/google-calendar/disconnect`, {
+      method: 'POST', headers: authHeaders(),
+    });
+    return r.json();
+  },
+  // Eventos del propio usuario en el rango (ISO 'YYYY-MM-DD' o datetime).
+  getEvents: async (start, end) => {
+    const qs = new URLSearchParams();
+    if (start) qs.set('start', start);
+    if (end) qs.set('end', end);
+    const r = await fetch(`${API_URL}/api/google-calendar/events?${qs.toString()}`, { headers: authHeaders() });
+    return r.json();
+  },
+  // Push ERP→Google. event: { title, startDate, endDate, description, location, allDay, module, erpId }
+  createEvent: async (event) => {
+    const r = await fetch(`${API_URL}/api/google-calendar/events`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(event),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'No se pudo guardar en Google Calendar');
+    return data;
+  },
+  updateEvent: async (googleEventId, event) => {
+    const r = await fetch(`${API_URL}/api/google-calendar/events/${googleEventId}`, {
+      method: 'PUT',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(event),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'No se pudo actualizar en Google Calendar');
+    return data;
+  },
+  deleteEvent: async (googleEventId, module, erpId) => {
+    const qs = new URLSearchParams();
+    if (module) qs.set('module', module);
+    if (erpId) qs.set('erpId', erpId);
+    const r = await fetch(`${API_URL}/api/google-calendar/events/${googleEventId}?${qs.toString()}`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    return r.json();
+  },
 };

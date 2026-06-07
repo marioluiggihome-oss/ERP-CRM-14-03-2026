@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Calendar, ChevronLeft, ChevronRight, Plus, X, Save, Loader2,
   Clock, MapPin, User, Target, Phone, Users as UsersIcon, Check,
   Trash2, Edit2, CalendarDays, LayoutGrid, List, CheckCircle2
 } from 'lucide-react';
-import { crmCalendarAPI, crmContactsAPI, crmOpportunitiesAPI } from '../services/api';
+import { crmCalendarAPI, crmContactsAPI, crmOpportunitiesAPI, googleCalendarAPI } from '../services/api';
+import GoogleCalendarConnect from './GoogleCalendarConnect';
+import GoogleSyncModal from './GoogleSyncModal';
 import { 
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
   addDays, addMonths, subMonths, addWeeks, subWeeks,
@@ -25,7 +27,8 @@ const EVENT_TYPES = {
 const VIEWS = {
   month: { name: 'Mes', icon: LayoutGrid },
   week: { name: 'Semana', icon: CalendarDays },
-  day: { name: 'Día', icon: List }
+  day: { name: 'Día', icon: Clock },
+  lista: { name: 'Lista', icon: List }
 };
 
 const CRMCalendar = ({ currentUser }) => {
@@ -42,7 +45,12 @@ const CRMCalendar = ({ currentUser }) => {
   const [filterType, setFilterType] = useState('');
   const [viewAllEvents, setViewAllEvents] = useState(false);
   const [showPrescriptorNotes, setShowPrescriptorNotes] = useState(true);
-  
+  // Google Calendar (por usuario, aislado en el backend)
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [pendingGoogleEvent, setPendingGoogleEvent] = useState(null);
+  // Vista de listado (por día/semana/mes). El aviso pop-up es global (App).
+  const [listRange, setListRange] = useState('mes'); // 'dia' | 'semana' | 'mes'
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -63,7 +71,7 @@ const CRMCalendar = ({ currentUser }) => {
 
   useEffect(() => {
     loadData();
-  }, [currentDate, view, viewAllEvents, filterType]);
+  }, [currentDate, view, viewAllEvents, filterType, googleConnected]);
 
   useEffect(() => {
     loadContactsAndOpportunities();
@@ -80,7 +88,7 @@ const CRMCalendar = ({ currentUser }) => {
       };
       
       // Date range based on view
-      if (view === 'month') {
+      if (view === 'month' || view === 'lista') {
         const start = startOfMonth(currentDate);
         const end = endOfMonth(currentDate);
         params.startDate = format(start, "yyyy-MM-dd'T'00:00:00");
@@ -102,7 +110,34 @@ const CRMCalendar = ({ currentUser }) => {
       }
       
       const data = await crmCalendarAPI.getEvents(params);
-      setEvents(data);
+
+      // Traer también los eventos de Google del propio usuario (solo lectura)
+      // y fusionarlos. El backend garantiza que cada usuario ve solo los suyos.
+      let merged = Array.isArray(data) ? data : [];
+      if (googleConnected) {
+        try {
+          const gres = await googleCalendarAPI.getEvents(params.startDate, params.endDate);
+          const gEvents = (gres?.events || []).map(g => ({
+            id: g.id,
+            title: g.title,
+            description: g.description,
+            location: g.location,
+            startDate: g.startDate,
+            endDate: g.endDate,
+            allDay: g.allDay,
+            eventType: 'otro',
+            color: g.color || '#16a34a',
+            completed: false,
+            source: 'google',
+            readOnlyFromGoogle: true,
+            htmlLink: g.htmlLink,
+          }));
+          merged = merged.concat(gEvents);
+        } catch (gerr) {
+          console.warn('No se pudieron cargar eventos de Google:', gerr);
+        }
+      }
+      setEvents(merged);
     } catch (err) {
       console.error('Error loading calendar events:', err);
     } finally {
@@ -213,14 +248,30 @@ const CRMCalendar = ({ currentUser }) => {
         assignedToName: currentUser?.clientName || currentUser?.username
       };
 
+      let erpId = editingEvent?.id;
       if (editingEvent) {
         await crmCalendarAPI.update(editingEvent.id, eventData);
       } else {
-        await crmCalendarAPI.create(eventData, currentUser?.id, currentUser?.clientName || currentUser?.username);
+        const created = await crmCalendarAPI.create(eventData, currentUser?.id, currentUser?.clientName || currentUser?.username);
+        erpId = created?.id || erpId;
       }
-      
+
       setShowModal(false);
       loadData();
+
+      // Si el usuario tiene Google Calendar conectado, preguntar si quiere
+      // guardar también allí (solo para eventos nuevos del ERP, no los de Google).
+      if (googleConnected && !editingEvent?.source) {
+        setPendingGoogleEvent({
+          title: eventData.title,
+          startDate: eventData.startDate,
+          endDate: eventData.endDate,
+          description: eventData.description || '',
+          location: eventData.location || '',
+          allDay: !!eventData.allDay,
+          erpId,
+        });
+      }
     } catch (err) {
       alert('Error al guardar evento: ' + err.message);
     }
@@ -249,7 +300,7 @@ const CRMCalendar = ({ currentUser }) => {
   };
 
   const navigate = (direction) => {
-    if (view === 'month') {
+    if (view === 'month' || view === 'lista') {
       setCurrentDate(direction === 'next' ? addMonths(currentDate, 1) : subMonths(currentDate, 1));
     } else if (view === 'week') {
       setCurrentDate(direction === 'next' ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
@@ -286,7 +337,7 @@ const CRMCalendar = ({ currentUser }) => {
   }, []);
 
   const getTitle = () => {
-    if (view === 'month') return format(currentDate, 'MMMM yyyy', { locale: es });
+    if (view === 'month' || view === 'lista') return format(currentDate, 'MMMM yyyy', { locale: es });
     if (view === 'week') {
       const start = startOfWeek(currentDate, { weekStartsOn: 1 });
       const end = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -324,6 +375,9 @@ const CRMCalendar = ({ currentUser }) => {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+          {/* Google Calendar (conectar / estado por usuario) */}
+          <GoogleCalendarConnect compact onStatusChange={(s) => setGoogleConnected(!!s.connected)} />
+
           {/* View Selector */}
           <div className="flex bg-slate-100 rounded-lg p-1">
             {Object.entries(VIEWS).map(([key, v]) => {
@@ -430,10 +484,20 @@ const CRMCalendar = ({ currentUser }) => {
                           !isCurrentMonth ? 'bg-slate-50' : ''
                         } ${isToday(day) ? 'bg-indigo-50' : ''}`}
                       >
-                        <div className={`text-xs sm:text-sm font-bold mb-0.5 sm:mb-1 ${
-                          isToday(day) ? 'text-indigo-600' : isCurrentMonth ? 'text-slate-900' : 'text-slate-300'
-                        }`}>
-                          {format(day, 'd')}
+                        <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                          <span className={`text-xs sm:text-sm font-bold ${
+                            isToday(day) ? 'text-indigo-600' : isCurrentMonth ? 'text-slate-900' : 'text-slate-300'
+                          }`}>
+                            {format(day, 'd')}
+                          </span>
+                          {(dayEvents.length + dayPrescriptorNotes.length) > 1 && (
+                            <span
+                              className="text-[9px] font-black text-white bg-indigo-500 rounded-full px-1.5 min-w-[16px] text-center leading-4"
+                              title={`${dayEvents.length + dayPrescriptorNotes.length} gestiones este día`}
+                            >
+                              {dayEvents.length + dayPrescriptorNotes.length}
+                            </span>
+                          )}
                         </div>
                         <div className="space-y-0.5">
                           {dayEvents.slice(0, 3).map(evt => (
@@ -586,6 +650,70 @@ const CRMCalendar = ({ currentUser }) => {
                 </div>
               </div>
             )}
+
+            {/* Vista Lista (listado por día / semana / mes) */}
+            {view === 'lista' && (() => {
+              const inRange = (d) => {
+                if (listRange === 'dia') return isSameDay(d, currentDate);
+                if (listRange === 'semana') {
+                  const ws = startOfWeek(currentDate, { weekStartsOn: 1 });
+                  const we = endOfWeek(currentDate, { weekStartsOn: 1 });
+                  return d >= ws && d <= we;
+                }
+                return isSameMonth(d, currentDate);
+              };
+              const listed = [...events]
+                .filter(e => { try { return inRange(parseISO(e.startDate)); } catch { return false; } })
+                .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+              const groups = {};
+              listed.forEach(e => {
+                const k = format(parseISO(e.startDate), 'yyyy-MM-dd');
+                (groups[k] = groups[k] || []).push(e);
+              });
+              const keys = Object.keys(groups).sort();
+              return (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-2 p-3 border-b border-slate-100">
+                    {[['dia', 'Día'], ['semana', 'Semana'], ['mes', 'Mes']].map(([k, label]) => (
+                      <button key={k} onClick={() => setListRange(k)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold ${listRange === k ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                        {label}
+                      </button>
+                    ))}
+                    <span className="ml-auto text-xs text-slate-400">{listed.length} eventos</span>
+                  </div>
+                  <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100">
+                    {keys.length === 0 && <div className="p-8 text-center text-slate-400">No hay eventos en este rango</div>}
+                    {keys.map(k => (
+                      <div key={k} className="p-3">
+                        <p className="text-xs font-black text-slate-500 uppercase mb-2 capitalize">
+                          {format(parseISO(k + 'T00:00:00'), "EEEE d 'de' MMMM", { locale: es })}
+                        </p>
+                        <div className="space-y-1.5">
+                          {groups[k].map(evt => (
+                            <div key={evt.id} onClick={() => openEditModal(evt)}
+                              className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:shadow-sm ${EVENT_TYPES[evt.eventType]?.bgColor || 'bg-slate-100'} ${evt.completed ? 'opacity-50' : ''}`}>
+                              <span className="text-xs font-mono font-bold text-slate-600 w-12 shrink-0">
+                                {evt.allDay ? 'Todo' : format(parseISO(evt.startDate), 'HH:mm')}
+                              </span>
+                              <span className={`flex-1 font-bold text-sm truncate ${EVENT_TYPES[evt.eventType]?.textColor || 'text-slate-700'} ${evt.completed ? 'line-through' : ''}`}>
+                                {evt.title}
+                              </span>
+                              {evt.contactName && <span className="text-xs text-slate-500 hidden sm:flex items-center gap-1"><User size={11} />{evt.contactName}</span>}
+                              {evt.source === 'google' && <span className="text-[9px] font-black text-green-700 bg-green-100 px-1.5 py-0.5 rounded">G</span>}
+                              {!evt.completed && !evt.source && (
+                                <button onClick={(e) => { e.stopPropagation(); handleComplete(evt); }} className="p-1 hover:bg-white/50 rounded shrink-0" title="Completar"><Check size={14} /></button>
+                              )}
+                              {evt.completed && <CheckCircle2 size={14} className="text-green-600 shrink-0" />}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
       </div>
@@ -783,6 +911,14 @@ const CRMCalendar = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Preguntar si guardar también en Google Calendar */}
+      <GoogleSyncModal
+        event={pendingGoogleEvent}
+        defaultContext="crm"
+        currentUser={currentUser}
+        onClose={() => { setPendingGoogleEvent(null); loadData(); }}
+      />
     </div>
   );
 };

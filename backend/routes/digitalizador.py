@@ -448,7 +448,7 @@ IMPORTANTE:
                 resp = await chat_with_gemini(
                     prompt=text_prompt,
                     system_message="Eres un experto extrayendo líneas de presupuestos/facturas de muebles.",
-                    model="gemini-2.0-flash",
+                    model="gemini-2.5-flash",
                 )
                 parsed = _parse_json_loose(_clean_json(resp))
             except Exception as e:
@@ -476,7 +476,7 @@ IMPORTANTE:
                         image_base64=pimg,
                         prompt=extraction_prompt,
                         session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
-                        model="gemini-2.0-flash",
+                        model="gemini-2.5-flash",
                     )
                 except Exception as e:
                     # Un fallo en una página (timeout, cuota IA…) no debe tumbar

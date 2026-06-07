@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -80,6 +81,7 @@ from routes.invoices import router as invoices_router
 from routes.command_center import router as command_center_router
 from routes.backup import scheduler as backup_scheduler, start_backup_scheduler
 from routes.admin import router as admin_router
+from routes.rentabilidad import router as rentabilidad_router
 from routes.exports import router as exports_router
 from routes.maintenance import router as maintenance_router
 from routes.telemetry import router as telemetry_router
@@ -88,6 +90,7 @@ from routes.settings import router as settings_router
 from routes.materials import router as materials_router
 from routes.expedient import router as expedient_router
 from routes.shop_clients import router as shop_clients_router
+from routes.google_calendar import google_calendar_router
 
 # Servicios de backup y tracking
 from services.backup_service import init_backup_service
@@ -234,6 +237,7 @@ api_router.include_router(factory_reports_router)
 api_router.include_router(invoices_router)
 api_router.include_router(command_center_router)
 api_router.include_router(admin_router)
+api_router.include_router(rentabilidad_router)
 api_router.include_router(exports_router)
 api_router.include_router(maintenance_router)
 api_router.include_router(telemetry_router)
@@ -243,6 +247,7 @@ api_router.include_router(materials_router)
 api_router.include_router(expedient_router)
 api_router.include_router(shop_clients_router)
 api_router.include_router(ai_engine_router)
+api_router.include_router(google_calendar_router)
 # Nota: auth, products, clients, projects están en server.py
 # Se integrarán gradualmente para evitar conflictos
 
@@ -483,7 +488,7 @@ Extrae hasta 50 productos. Responde SOLO con JSON válido."""
                         api_key=api_key,
                         session_id=f"product-analysis-mv-{uuid.uuid4()}",
                         system_message=system_prompt
-                    ).with_model("gemini", "gemini-2.0-flash")
+                    ).with_model("gemini", "gemini-2.5-flash")
                     
                     user_prompt = f"""Analiza esta página de TARIFA MV.
 PRIMERO: Detecta el número de tarifa del encabezado (T1, T2, T3... T21).
@@ -658,7 +663,7 @@ REGLAS CRÍTICAS:
                 api_key=api_key,
                 session_id=f"product-analysis-{uuid.uuid4()}",
                 system_message=system_prompt
-            ).with_model("gemini", "gemini-2.0-flash")
+            ).with_model("gemini", "gemini-2.5-flash")
             
             # Create message with image - different prompt for MV vs ZC
             if library == 'MV':
@@ -2086,7 +2091,7 @@ Si no hay 12 zonas, incluye solo las que aparezcan. Extrae TODOS los productos d
         # Use Gemini Vision
         chat = LlmChat(
             api_key=os.environ.get('EMERGENT_LLM_KEY'),
-            model="gemini/gemini-2.0-flash",
+            model="gemini/gemini-2.5-flash",
             session_id=f"catalog-extract-{uuid.uuid4().hex[:8]}",
             system_prompt="Eres un extractor de datos de catálogos de muebles. Responde SOLO con JSON válido."
         )
@@ -3772,6 +3777,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Compresión Gzip: respuestas mas ligeras (catalogos, presupuestos, listados
+# grandes cargan mucho mas rapido). Solo comprime respuestas > 500 bytes.
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 # Include the router in the main app (AFTER middleware)
 app.include_router(api_router)
 
@@ -3956,6 +3965,24 @@ async def startup_event():
         await db.contacts.create_index([("name", "text"), ("email", "text"), ("company", "text")])
         logger.info("Índices de texto completo creados")
 
+        # Índices para colecciones de rendimiento adicionales (rentabilidad,
+        # calendario, agenda prescriptor y Google Calendar)
+        await db.project_costs.create_index("projectRef")
+        await db.calendar_events.create_index("startDate")
+        await db.calendar_events.create_index("assignedTo", sparse=True)
+        await db.calendar_events.create_index([("assignedTo", 1), ("startDate", 1)])
+        await db.activities.create_index("assignedTo", sparse=True)
+        await db.activities.create_index("date", sparse=True)
+        await db.prescriptor_notes.create_index("prescriptorId", sparse=True)
+        await db.prescriptor_notes.create_index([("prescriptorId", 1), ("date", 1)])
+        await db.sale_fichas.create_index("id", unique=True, sparse=True)
+        await db.sale_fichas.create_index("createdBy", sparse=True)
+        await db.sale_fichas.create_index("createdAt")
+        await db.sale_ficha_docs.create_index("fichaId")
+        await db.google_calendar_connections.create_index("userId", unique=True, sparse=True)
+        await db.google_calendar_links.create_index([("userId", 1), ("module", 1), ("erpId", 1)])
+        logger.info("Índices adicionales de rendimiento creados")
+
         logger.info("✅ Todos los índices de base de datos configurados correctamente")
         
     except Exception as e:
@@ -4060,6 +4087,13 @@ async def startup_event():
     
     # Start backup scheduler from backup module
     start_backup_scheduler()
+
+    # Recordatorios de calendario por email (avisa al usuario asignado)
+    try:
+        from services.calendar_reminder_service import start_reminder_scheduler
+        start_reminder_scheduler()
+    except Exception as e:
+        logger.warning(f"No se pudo iniciar el programador de recordatorios: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
