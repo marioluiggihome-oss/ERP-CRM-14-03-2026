@@ -271,3 +271,50 @@ async def get_task_status(task_id: str, user=Depends(require_auth)):
     engine = get_engine()
     result = await engine.get_task_status(task_id)
     return result
+
+
+# ==================== DESCRIBIR IMAGEN DE REFERENCIA (para el render) ====================
+# Sube una imagen/PDF de referencia (foto de cocina, plano, estilo) y la IA de
+# vision (Gemini) la describe para enriquecer la descripcion del render 3D.
+# Independiente del motor Manus, para que funcione con la GEMINI_API_KEY.
+_REF_PROMPT = (
+    "Eres un disenador de cocinas. Describe esta imagen de referencia para "
+    "generar un render 3D fotorrealista de cocina: distribucion, materiales y "
+    "acabados de muebles, color de puertas, encimera, tiradores, suelo, pared, "
+    "iluminacion y estilo. Devuelve un parrafo descriptivo en espanol, conciso "
+    "y concreto, listo para usar como prompt de render. Solo el texto, sin "
+    "encabezados."
+)
+
+
+@ai_engine_router.post("/describe-reference")
+async def describe_reference(payload: dict, user=Depends(require_auth)):
+    """Describe una imagen/PDF de referencia (base64) para el render 3D."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+        from services.llm_vision import analyze_image_with_gemini
+        img = stripped
+        # Si es un PDF, rasterizar la primera pagina.
+        try:
+            if ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped):
+                pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
+                if pages:
+                    img = pages[0]
+        except Exception:
+            pass
+        import uuid as _uuid
+        resp = await analyze_image_with_gemini(
+            image_base64=img, prompt=_REF_PROMPT,
+            session_id=f"render-ref-{_uuid.uuid4().hex[:8]}", model="gemini-2.0-flash",
+        )
+        text = (resp or "").strip()
+        if text.startswith("```"):
+            text = text.strip("`").strip()
+        return {"success": True, "description": text}
+    except Exception as e:
+        logger.error(f"describe-reference error: {e}")
+        return {"success": False, "error": str(e)}

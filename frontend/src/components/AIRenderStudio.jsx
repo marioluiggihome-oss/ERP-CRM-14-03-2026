@@ -159,6 +159,7 @@ export default function AIRenderStudio({ state }) {
   const [renderHistory, setRenderHistory] = useState([]);
   const [error, setError] = useState(null);
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [analyzingRef, setAnalyzingRef] = useState(false);
   const [params, setParams] = useState({
     layout: 'L-shape',
     countertop: 'quartz_white',
@@ -182,6 +183,43 @@ export default function AIRenderStudio({ state }) {
   const getAuthHeaders = () => {
     const token = localStorage.getItem('luiggi_access_token');
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  };
+
+  // ─── Subir imagen/PDF de referencia → la IA la describe y enriquece el prompt ───
+  const handleReferenceUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setAnalyzingRef(true);
+    setError(null);
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.onerror = rej;
+        fr.readAsDataURL(file);
+      });
+      const response = await fetch(`${API_URL}/api/ai-engine/describe-reference`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ fileBase64: b64 }),
+      });
+      const data = await response.json();
+      if (data.success && data.description) {
+        setDescription(prev => {
+          const next = prev?.trim()
+            ? `${prev.trim()}\n\n[Referencia subida] ${data.description}`
+            : data.description;
+          return next;
+        });
+      } else {
+        setError(data.error || 'No se pudo leer la imagen de referencia');
+      }
+    } catch (err) {
+      setError('Error al subir la referencia: ' + err.message);
+    } finally {
+      setAnalyzingRef(false);
+    }
   };
 
   // ─── Generar render por descripción natural ─────────────────────────────
@@ -339,9 +377,16 @@ export default function AIRenderStudio({ state }) {
 
               {/* Campo de texto */}
               <div className="flex-1 flex flex-col">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Descripción de la cocina
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Descripción de la cocina
+                  </label>
+                  <label className={`text-[11px] font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg ${analyzingRef ? 'bg-purple-200 text-purple-500' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}>
+                    <Image size={14} className={analyzingRef ? 'animate-pulse' : ''} />
+                    {analyzingRef ? 'Analizando…' : 'Subir imagen de referencia'}
+                    <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
+                  </label>
+                </div>
                 <textarea
                   ref={textareaRef}
                   value={description}
