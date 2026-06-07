@@ -48,10 +48,8 @@ const CRMCalendar = ({ currentUser }) => {
   // Google Calendar (por usuario, aislado en el backend)
   const [googleConnected, setGoogleConnected] = useState(false);
   const [pendingGoogleEvent, setPendingGoogleEvent] = useState(null);
-  // Aviso (pop-up) de evento próximo + vista de listado
-  const [reminderEvent, setReminderEvent] = useState(null);
+  // Vista de listado (por día/semana/mes). El aviso pop-up es global (App).
   const [listRange, setListRange] = useState('mes'); // 'dia' | 'semana' | 'mes'
-  const notifiedRef = useRef(new Set());
 
   const [formData, setFormData] = useState({
     title: '',
@@ -319,38 +317,6 @@ const CRMCalendar = ({ currentUser }) => {
       return isSameDay(evtDate, date);
     });
   };
-
-  // Aviso (pop-up) cuando un evento está a punto de empezar
-  useEffect(() => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      try { Notification.requestPermission(); } catch { /* noop */ }
-    }
-    const check = () => {
-      const now = new Date();
-      for (const evt of events) {
-        if (!evt?.startDate || evt.completed || notifiedRef.current.has(evt.id)) continue;
-        let start;
-        try { start = parseISO(evt.startDate); } catch { continue; }
-        const diffMin = (start.getTime() - now.getTime()) / 60000;
-        const remind = Number(evt.reminderMinutes ?? evt.reminder ?? 15);
-        if (diffMin <= remind && diffMin >= -2) {
-          notifiedRef.current.add(evt.id);
-          setReminderEvent(evt);
-          try {
-            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-              new Notification(`Recordatorio: ${evt.title}`, {
-                body: format(start, "EEEE d 'a las' HH:mm", { locale: es }),
-              });
-            }
-          } catch { /* noop */ }
-          break;
-        }
-      }
-    };
-    check();
-    const id = setInterval(check, 30000);
-    return () => clearInterval(id);
-  }, [events]);
 
   // Month View Calendar Grid
   const monthDays = useMemo(() => {
@@ -942,28 +908,6 @@ const CRMCalendar = ({ currentUser }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Pop-up de aviso cuando se acerca un evento */}
-      {reminderEvent && (
-        <div className="fixed bottom-4 right-4 z-[200] w-80 bg-white rounded-2xl shadow-2xl border border-indigo-200 p-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-indigo-100 rounded-xl shrink-0"><Clock size={18} className="text-indigo-600" /></div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black text-indigo-500 uppercase">Recordatorio de evento</p>
-              <p className="font-bold text-slate-800 truncate">{reminderEvent.title}</p>
-              <p className="text-xs text-slate-500">
-                {(() => { try { return format(parseISO(reminderEvent.startDate), "EEEE d 'a las' HH:mm", { locale: es }); } catch { return ''; } })()}
-              </p>
-              {reminderEvent.contactName && <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><User size={11} />{reminderEvent.contactName}</p>}
-            </div>
-            <button onClick={() => setReminderEvent(null)} className="text-slate-300 hover:text-slate-600 shrink-0"><X size={16} /></button>
-          </div>
-          <div className="flex gap-2 mt-3">
-            <button onClick={() => { openEditModal(reminderEvent); setReminderEvent(null); }} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold">Ver evento</button>
-            <button onClick={() => setReminderEvent(null)} className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold">Cerrar</button>
           </div>
         </div>
       )}

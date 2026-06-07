@@ -4088,6 +4088,13 @@ async def startup_event():
     # Start backup scheduler from backup module
     start_backup_scheduler()
 
+    # Recordatorios de calendario por email (avisa al usuario asignado)
+    try:
+        from services.calendar_reminder_service import start_reminder_scheduler
+        start_reminder_scheduler()
+    except Exception as e:
+        logger.warning(f"No se pudo iniciar el programador de recordatorios: {e}")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     backup_scheduler.shutdown()
