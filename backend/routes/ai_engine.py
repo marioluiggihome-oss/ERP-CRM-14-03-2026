@@ -16,11 +16,14 @@ Endpoints:
 
 import logging
 import io
+from urllib.parse import urlparse
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from services.jwt_service import require_auth
+from services.jwt_service import require_auth, verify_access_token
 from services.luiggi_ai import get_engine, get_render_service, get_ai_config
 
 logger = logging.getLogger("luiggi_ai.router")
@@ -158,7 +161,7 @@ async def transcribe_audio(
     # Leer archivo
     audio_data = await file.read()
 
-    # Usar OpenAI Whisper como fallback del navegador
+    # Transcripción en servidor como fallback cuando el navegador no la soporta
     try:
         import openai
         client = openai.AsyncOpenAI(api_key=config.whisper_api_key)
@@ -273,10 +276,80 @@ async def get_task_status(task_id: str, user=Depends(require_auth)):
     return result
 
 
+# ─── Proxy de assets (white-label) ────────────────────────────────────────────
+# Sirve las imágenes generadas a través de este backend para que el navegador
+# del cliente nunca vea el dominio del proveedor subyacente. Solo se permiten
+# URLs cuyo host pertenezca a la lista de dominios autorizados (evita SSRF).
+_IMG_CONTENT_TYPES = ("image/", "application/pdf", "application/octet-stream")
+
+
+@ai_engine_router.get("/asset")
+async def proxy_asset(
+    u: str,
+    t: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Descarga y reenvía un asset del proveedor ocultando su origen.
+
+    Acepta el token JWT por cabecera `Authorization` o por query param `t`,
+    porque las etiquetas <img> del navegador no pueden enviar cabeceras.
+    """
+    token = t
+    if not token and authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+    if not token:
+        raise HTTPException(status_code=401, detail="Autenticación requerida")
+    verify_access_token(token)  # lanza 401 si es inválido/expirado
+
+    engine = get_engine()
+    config = get_ai_config()
+
+    try:
+        original_url = engine.decode_proxy_token(u)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Recurso no válido")
+
+    host = ""
+    try:
+        parsed = urlparse(original_url)
+        host = parsed.netloc.split("@")[-1].split(":")[0].lower()
+    except Exception:
+        host = ""
+
+    if parsed.scheme not in ("http", "https") or not engine._is_provider_host(host):
+        # Nunca permitir URLs arbitrarias (protección anti-SSRF).
+        raise HTTPException(status_code=403, detail="Recurso no autorizado")
+
+    # Solo el host de la API necesita el token de autorización; los CDN/buckets
+    # usan URLs prefirmadas y rechazan cabeceras de auth extra.
+    headers = {}
+    api_host = urlparse(config.provider_base_url).netloc.split(":")[0].lower()
+    if host == api_host:
+        headers["Authorization"] = f"Bearer {config.provider_api_key}"
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+            resp = await client.get(original_url, headers=headers)
+    except Exception as e:
+        logger.error(f"Proxy asset error: {e}")
+        raise HTTPException(status_code=502, detail="No se pudo obtener el recurso")
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail="Recurso no disponible")
+
+    content_type = resp.headers.get("content-type", "application/octet-stream")
+    return Response(
+        content=resp.content,
+        media_type=content_type,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
 # ==================== DESCRIBIR IMAGEN DE REFERENCIA (para el render) ====================
-# Sube una imagen/PDF de referencia (foto de cocina, plano, estilo) y la IA de
-# vision (Gemini) la describe para enriquecer la descripcion del render 3D.
-# Independiente del motor Manus, para que funcione con la GEMINI_API_KEY.
+# Sube una imagen/PDF de referencia (foto de cocina, plano, estilo) y el motor
+# de vision la describe para enriquecer la descripcion del render 3D. Usa una
+# ruta de vision independiente del motor de render principal.
 _REF_PROMPT = (
     "Eres un disenador de cocinas. Describe esta imagen de referencia para "
     "generar un render 3D fotorrealista de cocina: distribucion, materiales y "
@@ -314,7 +387,12 @@ async def describe_reference(payload: dict, user=Depends(require_auth)):
         text = (resp or "").strip()
         if text.startswith("```"):
             text = text.strip("`").strip()
+        if not text:
+            return {"success": False, "error": "No se pudo interpretar la imagen de referencia. Pruebe con otra imagen."}
+        # Sanitizar por si el motor de vision incluyera alguna marca propia.
+        text = get_engine()._sanitize_response(text)
         return {"success": True, "description": text}
     except Exception as e:
+        # Nunca exponer el detalle del proveedor al cliente: log interno + mensaje genérico.
         logger.error(f"describe-reference error: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "No se pudo analizar la imagen de referencia. Inténtelo de nuevo."}

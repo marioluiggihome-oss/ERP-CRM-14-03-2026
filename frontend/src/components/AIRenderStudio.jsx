@@ -185,6 +185,17 @@ export default function AIRenderStudio({ state }) {
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   };
 
+  // Las imágenes del render se sirven por el proxy interno (marca blanca). Como
+  // un <img> no puede enviar cabeceras, el token JWT viaja como query param.
+  const assetSrc = (path) => {
+    if (!path) return path;
+    if (typeof path === 'string' && path.startsWith('/api/ai-engine/asset')) {
+      const token = localStorage.getItem('luiggi_access_token') || '';
+      return `${API_URL}${path}&t=${encodeURIComponent(token)}`;
+    }
+    return path;
+  };
+
   // ─── Subir imagen/PDF de referencia → la IA la describe y enriquece el prompt ───
   const handleReferenceUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -216,7 +227,7 @@ export default function AIRenderStudio({ state }) {
         setError(data.error || 'No se pudo leer la imagen de referencia');
       }
     } catch (err) {
-      setError('Error al subir la referencia: ' + err.message);
+      setError('No se pudo subir la imagen de referencia. Inténtelo de nuevo.');
     } finally {
       setAnalyzingRef(false);
     }
@@ -617,7 +628,7 @@ export default function AIRenderStudio({ state }) {
               <div className="flex-1 bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center relative">
                 {renderResult?.result?.images?.[0] ? (
                   <img
-                    src={renderResult.result.images[0]}
+                    src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
                     className="w-full h-full object-contain"
                   />
@@ -685,7 +696,7 @@ export default function AIRenderStudio({ state }) {
                     title={item.description}
                   >
                     {item?.result?.images?.[0] ? (
-                      <img src={item.result.images[0]} alt="" className="w-full h-full object-cover" />
+                      <img src={assetSrc(item.result.images[0])} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400">
                         <Image size={16} />
@@ -706,7 +717,7 @@ export default function AIRenderStudio({ state }) {
             <X size={32} />
           </button>
           <img
-            src={renderResult.result.images[0]}
+            src={assetSrc(renderResult.result.images[0])}
             alt="Render 3D"
             className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
           />
