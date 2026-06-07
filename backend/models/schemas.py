@@ -981,6 +981,13 @@ class IARenderRequest(BaseModel):
     depth: int
     modules: int
     moduleConfigs: List[Dict]
+    doorType: str = "sliding"
+    numDoors: int = 3
+    exteriorColorName: str = "Blanco Standard"
+    exteriorColorHex: str = "#FFFFFF"
+    interiorColorName: str = "Blanco"
+    handleColorName: str = "Plata"
+    roomStyle: str = "Moderno"
 
 
 class IALayoutRequest(BaseModel):

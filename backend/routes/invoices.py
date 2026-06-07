@@ -2,8 +2,8 @@
 Módulo de Facturación - LUIGGI HOME
 Generación de facturas PDF, envío por email y gestión del ciclo de vida
 """
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File as FastAPIFile
+from fastapi.responses import StreamingResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone, timedelta
@@ -598,7 +598,7 @@ async def send_invoice_by_email(invoice_id: str, body: dict = {}):
 @router.patch("/{invoice_id}/status")
 async def change_invoice_status(invoice_id: str, body: dict):
     """Cambiar estado de la factura"""
-    valid = ["draft", "issued", "paid", "overdue", "cancelled"]
+    valid = ["draft", "issued", "paid", "overdue", "cancelled", "partial"]
     new_status = body.get("status")
     if new_status not in valid:
         raise HTTPException(400, f"Estado inválido. Válidos: {valid}")
@@ -610,3 +610,285 @@ async def change_invoice_status(invoice_id: str, body: dict):
 
     await db.invoices.update_one({"id": invoice_id}, {"$set": update})
     return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FACTURA ELECTRÓNICA (FacturaE 3.2.2)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/{invoice_id}/facturae")
+async def download_facturae_xml(invoice_id: str):
+    """Descargar factura en formato FacturaE 3.2.2 (XML)"""
+    from services.facturacion import FacturaeGenerator
+
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Factura no encontrada")
+
+    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+
+    generator = FacturaeGenerator(settings)
+    # Determinar tipo por la serie
+    inv_number = inv.get("invoiceNumber", "")
+    if inv_number.startswith("REC-"):
+        inv_type = "rectificativa"
+    elif inv_number.startswith("PRO-"):
+        inv_type = "proforma"
+    else:
+        inv_type = "factura"
+
+    xml_content = generator.generate(inv, inv_type)
+
+    return Response(
+        content=xml_content.encode("utf-8"),
+        media_type="application/xml",
+        headers={"Content-Disposition": f"attachment; filename=FacturaE_{inv_number}.xml"}
+    )
+
+
+@router.get("/{invoice_id}/sii-json")
+async def get_sii_json(invoice_id: str):
+    """Obtener JSON para envío al SII de la AEAT"""
+    from services.facturacion import AccountingExporter
+
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Factura no encontrada")
+
+    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+    exporter = AccountingExporter()
+    sii_data = exporter.export_sii_json([inv], settings)
+    return sii_data
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPORTACIÓN CONTABLE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ExportRequest(BaseModel):
+    format: str = "csv"  # csv | a3 | sage | sii
+    dateFrom: Optional[str] = None
+    dateTo: Optional[str] = None
+    status: Optional[str] = None
+
+
+@router.post("/export/accounting")
+async def export_accounting(req: ExportRequest):
+    """Exportar facturas en formato contable (CSV estándar, a3, Sage, SII)"""
+    from services.facturacion import AccountingExporter
+
+    query = {}
+    if req.status:
+        query["status"] = req.status
+    if req.dateFrom:
+        query["issueDate"] = {"$gte": req.dateFrom}
+    if req.dateTo:
+        if "issueDate" in query:
+            query["issueDate"]["$lte"] = req.dateTo
+        else:
+            query["issueDate"] = {"$lte": req.dateTo}
+
+    invoices = await db.invoices.find(query, {"_id": 0}).sort("issueDate", 1).to_list(5000)
+    if not invoices:
+        raise HTTPException(404, "No hay facturas para exportar con esos filtros")
+
+    exporter = AccountingExporter()
+    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+
+    if req.format == "a3":
+        content = exporter.export_a3_format(invoices)
+        filename = f"facturas_a3_{datetime.now().strftime('%Y%m%d')}.txt"
+        media_type = "text/plain"
+    elif req.format == "sage":
+        content = exporter.export_sage_format(invoices)
+        filename = f"facturas_sage_{datetime.now().strftime('%Y%m%d')}.csv"
+        media_type = "text/csv"
+    elif req.format == "sii":
+        import json
+        sii_data = exporter.export_sii_json(invoices, settings)
+        content = json.dumps(sii_data, ensure_ascii=False, indent=2)
+        filename = f"facturas_sii_{datetime.now().strftime('%Y%m%d')}.json"
+        media_type = "application/json"
+    else:
+        content = exporter.export_csv_standard(invoices)
+        filename = f"facturas_contabilidad_{datetime.now().strftime('%Y%m%d')}.csv"
+        media_type = "text/csv"
+
+    return Response(
+        content=content.encode("utf-8"),
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# COBROS PARCIALES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class PaymentCreate(BaseModel):
+    amount: float
+    paymentMethod: str = "transferencia"
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/{invoice_id}/payments")
+async def register_payment(invoice_id: str, payment: PaymentCreate):
+    """Registrar un cobro parcial o total"""
+    from services.facturacion import PaymentTracker
+    tracker = PaymentTracker(db)
+    try:
+        result = await tracker.register_payment(
+            invoice_id=invoice_id,
+            amount=payment.amount,
+            payment_method=payment.paymentMethod,
+            reference=payment.reference,
+            notes=payment.notes
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/{invoice_id}/payments")
+async def get_payments(invoice_id: str):
+    """Obtener historial de cobros de una factura"""
+    from services.facturacion import PaymentTracker
+    tracker = PaymentTracker(db)
+    try:
+        return await tracker.get_balance(invoice_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@router.delete("/payments/{payment_id}")
+async def cancel_payment(payment_id: str, body: dict = {}):
+    """Anular un cobro registrado"""
+    from services.facturacion import PaymentTracker
+    tracker = PaymentTracker(db)
+    try:
+        return await tracker.cancel_payment(payment_id, body.get("reason", ""))
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@router.get("/reports/aging")
+async def get_aging_report():
+    """Informe de antigüedad de deuda"""
+    from services.facturacion import PaymentTracker
+    tracker = PaymentTracker(db)
+    return await tracker.get_aging_report()
+
+
+@router.post("/check-overdue")
+async def check_overdue():
+    """Detectar y marcar facturas vencidas (ejecutar periódicamente)"""
+    from services.facturacion import PaymentTracker
+    tracker = PaymentTracker(db)
+    overdue = await tracker.check_overdue_invoices()
+    return {"message": f"{len(overdue)} facturas marcadas como vencidas", "count": len(overdue)}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SERIES DE FACTURACIÓN
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/series/next")
+async def get_next_number_by_series(series: str = "FAC"):
+    """Obtener siguiente número por serie (FAC, REC, PRO)"""
+    year = datetime.now(timezone.utc).year
+    prefix = f"{series}-{year}-"
+    last = await db.invoices.find_one(
+        {"invoiceNumber": {"$regex": f"^{prefix}"}},
+        sort=[("invoiceNumber", -1)]
+    )
+    if last:
+        try:
+            last_num = int(last["invoiceNumber"].split("-")[-1])
+        except:
+            last_num = 0
+    else:
+        last_num = 0
+    return {"series": series, "nextNumber": f"{prefix}{last_num + 1:03d}"}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ARCHIVOS ADJUNTOS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.post("/{invoice_id}/attachments")
+async def upload_attachment(invoice_id: str, file: UploadFile = FastAPIFile(...)):
+    """Subir archivo adjunto a una factura (albarán, contrato, foto, etc.)"""
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Factura no encontrada")
+
+    # Leer archivo
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:  # Max 10MB
+        raise HTTPException(400, "Archivo demasiado grande (máx. 10MB)")
+
+    # Guardar como base64 en MongoDB (para simplicidad)
+    attachment = {
+        "id": f"att-{uuid.uuid4().hex[:8]}",
+        "filename": file.filename,
+        "contentType": file.content_type,
+        "size": len(content),
+        "data": base64.b64encode(content).decode("utf-8"),
+        "uploadedAt": datetime.now(timezone.utc).isoformat()
+    }
+
+    await db.invoices.update_one(
+        {"id": invoice_id},
+        {"$push": {"attachments": attachment}}
+    )
+
+    return {
+        "id": attachment["id"],
+        "filename": attachment["filename"],
+        "size": attachment["size"],
+        "uploadedAt": attachment["uploadedAt"]
+    }
+
+
+@router.get("/{invoice_id}/attachments")
+async def list_attachments(invoice_id: str):
+    """Listar archivos adjuntos de una factura"""
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0, "attachments": 1})
+    if not inv:
+        raise HTTPException(404, "Factura no encontrada")
+    attachments = inv.get("attachments", [])
+    # No devolver el contenido base64 en el listado
+    return [{k: v for k, v in a.items() if k != "data"} for a in attachments]
+
+
+@router.get("/{invoice_id}/attachments/{attachment_id}")
+async def download_attachment(invoice_id: str, attachment_id: str):
+    """Descargar un archivo adjunto"""
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Factura no encontrada")
+
+    attachments = inv.get("attachments", [])
+    attachment = next((a for a in attachments if a["id"] == attachment_id), None)
+    if not attachment:
+        raise HTTPException(404, "Adjunto no encontrado")
+
+    content = base64.b64decode(attachment["data"])
+    return Response(
+        content=content,
+        media_type=attachment.get("contentType", "application/octet-stream"),
+        headers={"Content-Disposition": f"attachment; filename={attachment['filename']}"}
+    )
+
+
+@router.delete("/{invoice_id}/attachments/{attachment_id}")
+async def delete_attachment(invoice_id: str, attachment_id: str):
+    """Eliminar un archivo adjunto"""
+    result = await db.invoices.update_one(
+        {"id": invoice_id},
+        {"$pull": {"attachments": {"id": attachment_id}}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(404, "Adjunto no encontrado")
+    return {"message": "Adjunto eliminado"}
