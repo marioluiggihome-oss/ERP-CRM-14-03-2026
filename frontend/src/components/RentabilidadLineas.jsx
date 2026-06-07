@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FileText, Upload, Sparkles, Plus, Trash2, X, Save, Euro,
   Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw,
-  ArrowUp, ArrowDown, Filter, Files
+  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -76,6 +76,10 @@ const RentabilidadLineas = ({ currentUser }) => {
   // Ordenacion
   const [sortColumn, setSortColumn] = useState('ref');
   const [sortDirection, setSortDirection] = useState('asc');
+
+  // Paginacion
+  const [pageSize, setPageSize] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -344,6 +348,11 @@ const RentabilidadLineas = ({ currentUser }) => {
     return rows;
   }, [fichas, docType, columnFilters, sortColumn, sortDirection]);
 
+  // Paginacion sobre los datos filtrados y ordenados
+  const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedRows = filteredAndSorted.slice((safePage - 1) * pageSize, safePage * pageSize);
+
   const handleSort = (col) => {
     if (sortColumn === col) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -359,6 +368,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       ventaMin: '', ventaMax: '', costeMin: '', costeMax: '',
       margenMin: '', margenMax: '',
     });
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = Object.values(columnFilters).some(v => v !== '');
@@ -388,7 +398,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         {TABS.map(t => {
           const Icon = t.icon;
           return (
-            <button key={t.key} onClick={() => setDocType(t.key)}
+            <button key={t.key} onClick={() => { setDocType(t.key); setCurrentPage(1); }}
               className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
                 docType === t.key ? 'bg-emerald-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
               <Icon size={16} /> {t.label}
@@ -541,7 +551,7 @@ const RentabilidadLineas = ({ currentUser }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredAndSorted.map(f => {
+            {paginatedRows.map(f => {
               const tt = f.totals || totals(f.lines);
               return (
                 <tr key={f.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openFicha(f.id)}>
@@ -566,6 +576,46 @@ const RentabilidadLineas = ({ currentUser }) => {
           </tbody>
         </table>
       </div>
+
+      {/* Barra de paginacion */}
+      {filteredAndSorted.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-3 px-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-bold">Filas:</span>
+            {[25, 50, 100, 500, 1000].map(size => (
+              <button
+                key={size}
+                onClick={() => { setPageSize(size); setCurrentPage(1); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  pageSize === size ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">
+              Mostrando {((safePage - 1) * pageSize) + 1}-{Math.min(safePage * pageSize, filteredAndSorted.length)} de {filteredAndSorted.length}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="text-xs font-bold text-slate-700">P\u00e1g {safePage}/{totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Editor de ficha ── */}
       {editor && (

@@ -66,7 +66,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const APP_VERSION = 'v4.1-render-facturas-mando';
+const APP_VERSION = 'v4.2-crm-paginacion-presup2';
 
 const App = () => {
   const [isManufacturingView, setIsManufacturingView] = useState(false);
@@ -862,7 +862,19 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Archivo - NO visible para Tienda/Punto de Venta - JUSTO DEBAJO DE PRESUPUESTO */}
+                    {/* Mis Pedidos - Visible para todos los usuarios NO tienda - DEBAJO DE PRESUPUESTOS */}
+                    {!state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="mis-pedidos-nav-btn"
+                      >
+                        <ShoppingBag size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Pedidos</span>
+                      </button>
+                    )}
+
+                    {/* Archivo - NO visible para Tienda/Punto de Venta */}
                     {!state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
@@ -881,7 +893,7 @@ const App = () => {
                         data-testid="invoices-nav-btn"
                       >
                         <Receipt size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Facturas</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">G. Comercial</span>
                       </button>
                     )}
 
@@ -906,18 +918,6 @@ const App = () => {
                       >
                         <Shield size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Mando</span>
-                      </button>
-                    )}
-                    
-                    {/* Mis Pedidos - Visible para todos los usuarios NO tienda */}
-                    {!state.currentUser?.isTienda && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="mis-pedidos-nav-btn"
-                      >
-                        <ShoppingBag size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Pedidos</span>
                       </button>
                     )}
                     
