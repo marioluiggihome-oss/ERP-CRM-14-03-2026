@@ -4,12 +4,14 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles } from 'lucide-react';
+import RentabilidadLineas from './RentabilidadLineas';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 
 const RentabilidadPanel = ({ currentUser }) => {
+  const [view, setView] = useState('proyecto'); // 'proyecto' | 'lineas'
   const [data, setData] = useState({ rows: [], totales: {} });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -138,6 +140,15 @@ const RentabilidadPanel = ({ currentUser }) => {
         </div>
       </div>
 
+      {/* Conmutador de vista (orden lógico arriba del todo) */}
+      <div className="flex gap-2 mb-5">
+        <button onClick={() => setView('proyecto')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'proyecto' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por proyecto</button>
+        <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
+      </div>
+
+      {view === 'lineas' && <RentabilidadLineas currentUser={currentUser} />}
+
+      {view === 'proyecto' && (<>
       {/* Modal: revisar factura leída por IA antes de registrar */}
       {invoice && (
         <div className="fixed inset-0 bg-black/60 z-[130] flex items-center justify-center p-4" onClick={() => setInvoice(null)}>
@@ -316,6 +327,7 @@ const RentabilidadPanel = ({ currentUser }) => {
           </div>
         </div>
       )}
+      </>)}
     </div>
   );
 };
