@@ -5,6 +5,7 @@ import "./App.css";
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
 // Esto reduce el bundle inicial de ~1.5MB a ~400KB (solo Login + shell)
 const BudgetTable = lazy(() => import('./components/BudgetTable'));
+const Presupuestador2 = lazy(() => import('./components/Presupuestador2'));
 const Visualizer = lazy(() => import('./components/Visualizer'));
 const ProjectLibrary = lazy(() => import('./components/ProjectLibrary'));
 const Invoices = lazy(() => import('./components/Invoices'));
@@ -828,7 +829,18 @@ const App = () => {
                       <FileText size={18}/>
                       <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
                     </button>
-                    
+
+                    {/* Presupuestador 2 (MV por tarifa) - requiere autorización por usuario */}
+                    {(state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'presupuestador2'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador2' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <Receipt size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Presup. 2</span>
+                      </button>
+                    )}
+
                     {/* Archivo - NO visible para Tienda/Punto de Venta - JUSTO DEBAJO DE PRESUPUESTO */}
                     {!state.currentUser?.isTienda && (
                       <button 
@@ -1024,6 +1036,9 @@ const App = () => {
                 onOpenManufacturing={() => setIsManufacturingView(true)} 
               />
               </ErrorBoundary>
+            )}
+            {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin) && (
+              <ErrorBoundary><Presupuestador2 currentUser={state.currentUser} /></ErrorBoundary>
             )}
             {state.currentTab === 'visualizer' && state.currentUser?.canUseAIAnalysis && (
               <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
