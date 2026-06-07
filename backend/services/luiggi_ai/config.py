@@ -27,6 +27,18 @@ class AIConfig:
     provider_api_key: str = field(default_factory=lambda: os.environ.get("MANUS_API_KEY", ""))
     provider_base_url: str = "https://api.manus.im/v2"
 
+    # Dominios del proveedor cuyos assets (imágenes/archivos) deben servirse
+    # SIEMPRE a través del proxy interno para que el navegador del cliente no
+    # vea nunca el origen real. Cualquier URL que apunte aquí se reescribe.
+    provider_asset_hosts: List[str] = field(default_factory=lambda: [
+        "manus.im",
+        "manus.computer",
+        "manuscdn.com",
+        "amazonaws.com",  # buckets del proveedor
+        "googleapis.com",
+        "storage.googleapis.com",
+    ])
+
     # ─── Configuración de render 3D ───────────────────────────────────────
     render_enabled: bool = True
     render_default_style: str = "photorealistic"
@@ -46,28 +58,37 @@ class AIConfig:
     max_requests_per_minute: int = 10
     max_concurrent_tasks: int = 3
 
-    # ─── Palabras/frases prohibidas en respuestas (sanitización) ──────────
-    sanitize_terms: List[str] = field(default_factory=lambda: [
-        "manus",
-        "Manus",
-        "MANUS",
-        "manus.im",
-        "powered by manus",
-        "created by manus",
-        "manus team",
-        "manus ai",
-    ])
-
-    # ─── Reemplazos en respuestas ─────────────────────────────────────────
+    # ─── Reemplazos en respuestas (sanitización white-label) ──────────────
+    # IMPORTANTE: la sanitización se aplica de forma INSENSIBLE A MAYÚSCULAS y
+    # dando prioridad a las claves más largas (frase completa antes que palabra
+    # suelta), por lo que el orden de este diccionario NO importa. Las URLs que
+    # apunten al proveedor se reescriben aparte (proxy), no aquí.
+    #
+    # Cubre el proveedor de render (Manus) y los proveedores auxiliares de
+    # visión/voz (Google Gemini, OpenAI/Whisper) por si algún mensaje de error
+    # o respuesta se filtrara hacia el cliente.
     sanitize_replacements: Dict[str, str] = field(default_factory=lambda: {
-        "manus": "LuiggiAI",
-        "Manus": "LuiggiAI",
-        "MANUS": "LUIGGIAI",
-        "manus.im": "luiggihome.es",
+        # Proveedor de render
         "powered by manus": "powered by LuiggiAI",
         "created by manus": "developed by LuiggiAI",
         "manus team": "LuiggiAI team",
+        "manuscdn.com": "luiggihome.es",
+        "manus.computer": "luiggihome.es",
+        "manus.im": "luiggihome.es",
         "manus ai": "LuiggiAI",
+        "manus": "LuiggiAI",
+        # Proveedores de visión / voz
+        "google generative ai": "LuiggiAI",
+        "generativelanguage": "LuiggiAI",
+        "googleapis.com": "luiggihome.es",
+        "gemini": "LuiggiAI",
+        "google ai": "LuiggiAI",
+        "openai": "LuiggiAI",
+        "whisper": "LuiggiAI Voice",
+        "gpt-4": "LuiggiAI",
+        "gpt-3": "LuiggiAI",
+        "anthropic": "LuiggiAI",
+        "claude": "LuiggiAI",
     })
 
     def validate(self) -> bool:
