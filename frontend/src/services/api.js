@@ -1091,8 +1091,8 @@ export const crmDashboardAPI = {
     if (options.assignedTo) params.append('assignedTo', options.assignedTo);
     if (options.isAdmin !== undefined) params.append('isAdmin', options.isAdmin);
     if (params.toString()) url += `?${params.toString()}`;
-    
-    const response = await fetch(url);
+
+    const response = await fetch(url, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener dashboard CRM');
     return response.json();
   }
@@ -1104,7 +1104,7 @@ export const crmDashboardAPI = {
 
 export const crmAnalyticsAPI = {
   getInactiveClients: async (daysWithoutOffer = 30, daysWithoutPurchase = 60) => {
-    const response = await fetch(`${API_URL}/api/crm/analytics/inactive-clients?days_without_offer=${daysWithoutOffer}&days_without_purchase=${daysWithoutPurchase}`);
+    const response = await fetch(`${API_URL}/api/crm/analytics/inactive-clients?days_without_offer=${daysWithoutOffer}&days_without_purchase=${daysWithoutPurchase}`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener análisis de clientes');
     return response.json();
   }

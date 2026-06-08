@@ -1102,13 +1102,39 @@ async def get_crm_dashboard(assignedTo: Optional[str] = None, isAdmin: Optional[
         stages = await db.opportunities.aggregate(stage_pipeline).to_list(10)
         by_stage = {s["_id"]: {"count": s["count"], "value": s["value"]} for s in stages}
         
-        # Recent activities
+        # Valor del pipeline abierto (oportunidades no ganadas/perdidas)
+        pipe_val = await db.opportunities.aggregate([
+            {"$match": {**base_filter, "stage": {"$nin": ["won", "lost"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$value"}}}
+        ]).to_list(1)
+        pipeline_value = pipe_val[0]["total"] if pipe_val else 0
+
+        # Oportunidades perdidas este mes
+        lost_this_month = await db.opportunities.count_documents({
+            **base_filter, "stage": "lost",
+            "closedAt": {"$gte": datetime.now(timezone.utc).replace(day=1).isoformat()}
+        })
+
+        # Top oportunidades abiertas (previsión ponderada, riesgo y ranking)
+        top_opportunities = await db.opportunities.find(
+            {**base_filter, "stage": {"$nin": ["won", "lost"]}},
+            {"_id": 0, "id": 1, "title": 1, "company": 1, "contactName": 1,
+             "stage": 1, "value": 1, "probability": 1}
+        ).sort("value", -1).limit(20).to_list(20)
+
+        # Actividades recientes / pendientes
         recent_activities = await db.activities.find(
             base_filter if base_filter else {},
             {"_id": 0}
         ).sort("createdAt", -1).limit(10).to_list(10)
-        
-        # Upcoming events
+
+        # Eventos de hoy (startDate empieza por la fecha de hoy)
+        _today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        events_today = await db.calendar_events.count_documents({
+            **base_filter, "startDate": {"$regex": f"^{_today}"}
+        })
+
+        # Próximos eventos
         upcoming_filter = {
             **base_filter,
             "startDate": {"$gte": datetime.now(timezone.utc).isoformat()},
@@ -1118,18 +1144,109 @@ async def get_crm_dashboard(assignedTo: Optional[str] = None, isAdmin: Optional[
             upcoming_filter,
             {"_id": 0}
         ).sort("startDate", 1).limit(5).to_list(5)
-        
+
         return {
             "totalContacts": total_contacts,
             "activeOpportunities": active_opportunities,
             "wonThisMonth": won_this_month,
-            "revenueThisMonth": revenue_this_month,
-            "byStage": by_stage,
-            "recentActivities": recent_activities,
-            "upcomingEvents": upcoming_events
+            "wonValueThisMonth": revenue_this_month,
+            "revenueThisMonth": revenue_this_month,  # compat
+            "lostThisMonth": lost_this_month,
+            "pipelineValue": pipeline_value,
+            "pipelineByStage": by_stage,
+            "byStage": by_stage,  # compat
+            "topOpportunities": top_opportunities,
+            "upcomingActivities": recent_activities,
+            "recentActivities": recent_activities,  # compat
+            "eventsToday": events_today,
+            "upcomingEvents": upcoming_events,
         }
     except Exception as e:
         logger.error(f"Get CRM dashboard error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/crm/analytics/inactive-clients")
+async def get_inactive_clients_analytics(
+    days_without_offer: int = 30,
+    days_without_purchase: int = 60,
+    current_user: Optional[dict] = Depends(_get_user_or_none),
+):
+    """Clientes sin presupuesto / sin compra reciente (alertas del Panel CRM).
+
+    Devuelve {summary, withoutRecentOffer[], withoutRecentPurchase[]} ya filtrado
+    por usuario (admin/dirección ve todo).
+    """
+    try:
+        verified_is_admin = False
+        verified_user_id = None
+        if current_user and current_user.get("id"):
+            verified_user_id = current_user["id"]
+            du = await db.users.find_one({"id": verified_user_id}, {"_id": 0})
+            if du:
+                verified_is_admin = bool(
+                    du.get("isAdmin") or du.get("isGerente")
+                    or du.get("isDirectorComercial") or du.get("isResponsableDelegacion")
+                )
+        base_filter = {}
+        if not verified_is_admin and verified_user_id:
+            shops = await db.users.find({"linkedRepresentativeId": verified_user_id}, {"id": 1, "_id": 0}).to_list(100)
+            all_ids = [verified_user_id] + [s["id"] for s in shops]
+            base_filter["$or"] = [{"assignedTo": {"$in": all_ids}}, {"createdByUserId": {"$in": all_ids}}]
+
+        contacts = await db.contacts.find(
+            base_filter, {"_id": 0, "id": 1, "name": 1, "company": 1, "email": 1}
+        ).to_list(2000)
+        opps = await db.opportunities.find(
+            base_filter, {"_id": 0, "contactId": 1, "createdAt": 1, "stage": 1, "closedAt": 1}
+        ).to_list(8000)
+
+        last_offer, last_purchase = {}, {}
+        for o in opps:
+            cid = o.get("contactId")
+            if not cid:
+                continue
+            ca = o.get("createdAt") or ""
+            if ca and ca > last_offer.get(cid, ""):
+                last_offer[cid] = ca
+            if o.get("stage") == "won":
+                cl = o.get("closedAt") or o.get("createdAt") or ""
+                if cl and cl > last_purchase.get(cid, ""):
+                    last_purchase[cid] = cl
+
+        def _days_since(iso):
+            if not iso:
+                return None
+            try:
+                d = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+                if d.tzinfo is None:
+                    d = d.replace(tzinfo=timezone.utc)
+                return (datetime.now(timezone.utc) - d).days
+            except Exception:
+                return None
+
+        without_offer, without_purchase = [], []
+        for c in contacts:
+            cid = c.get("id")
+            d_off = _days_since(last_offer.get(cid))
+            if d_off is None or d_off >= days_without_offer:
+                without_offer.append({**c, "daysWithoutOffer": d_off if d_off is not None else 9999})
+            d_pur = _days_since(last_purchase.get(cid))
+            if d_pur is None or d_pur >= days_without_purchase:
+                without_purchase.append({**c, "daysWithoutPurchase": d_pur if d_pur is not None else 9999})
+
+        without_offer.sort(key=lambda x: -x["daysWithoutOffer"])
+        without_purchase.sort(key=lambda x: -x["daysWithoutPurchase"])
+        return {
+            "summary": {
+                "totalWithoutOffer30Days": len(without_offer),
+                "totalWithoutPurchase60Days": len(without_purchase),
+            },
+            "withoutRecentOffer": without_offer[:50],
+            "withoutRecentPurchase": without_purchase[:50],
+        }
+    except Exception as e:
+        logger.error(f"Inactive clients analytics error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
