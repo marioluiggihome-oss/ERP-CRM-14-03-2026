@@ -84,10 +84,15 @@ const RentabilidadLineas = ({ currentUser }) => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API_URL}/api/rentabilidad/fichas`);
+      // Cada usuario ve SOLO sus documentos (los que sube). Admin/dirección ven todos.
+      const elevated = currentUser?.isAdmin || currentUser?.isGerente
+        || currentUser?.isDirectorComercial || currentUser?.isResponsableDelegacion
+        || currentUser?.isDirectorFabrica;
+      const qs = (!elevated && currentUser?.id) ? `?userId=${encodeURIComponent(currentUser.id)}` : '';
+      const r = await fetch(`${API_URL}/api/rentabilidad/fichas${qs}`);
       setFichas(await r.json());
     } catch { /* noop */ } finally { setLoading(false); }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -561,7 +566,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                   <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
                   <td className="p-3 text-right font-mono text-orange-600">{eur(tt.coste)}</td>
                   <td className={`p-3 text-right font-mono font-black ${tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
-                  <td className="p-3 text-center text-slate-500">{f.numDocs || 0} \uD83D\uDCCE</td>
+                  <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
                   <td className="p-3 text-right">
                     <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
                   </td>

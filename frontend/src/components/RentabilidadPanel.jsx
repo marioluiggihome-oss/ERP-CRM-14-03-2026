@@ -5,13 +5,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter } from 'lucide-react';
 import RentabilidadLineas from './RentabilidadLineas';
+import ReportGenerator from './ReportGenerator';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 
 const RentabilidadPanel = ({ currentUser }) => {
-  const [view, setView] = useState('proyecto'); // 'proyecto' por defecto | 'lineas'
+  const [view, setView] = useState('lineas'); // 'lineas' (por líneas/documentos) por defecto | 'proyecto' | 'informes'
   const [data, setData] = useState({ rows: [], totales: {} });
   const [loading, setLoading] = useState(true);
   const [costModal, setCostModal] = useState(null);
@@ -273,11 +274,14 @@ const RentabilidadPanel = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* Conmutador de vista - Por proyecto primero */}
+      {/* Conmutador de vista - Por líneas (documentos) por defecto */}
       <div className="flex gap-2 mb-5">
+        <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
         <button onClick={() => setView('proyecto')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'proyecto' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por proyecto</button>
-        <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por lineas (documentos)</button>
+        <button onClick={() => setView('informes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'informes' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Generador de informes</button>
       </div>
+
+      {view === 'informes' && <ReportGenerator />}
 
       {view === 'lineas' && <RentabilidadLineas currentUser={currentUser} />}
 
