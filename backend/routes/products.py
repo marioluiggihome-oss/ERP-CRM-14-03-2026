@@ -1,6 +1,7 @@
 """
 Router para Productos del Catálogo
 """
+import re
 import logging
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends
@@ -45,10 +46,11 @@ async def get_products(
     if category:
         query["category"] = category
     if search:
+        _s = re.escape(search)
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"code": {"$regex": search, "$options": "i"}},
-            {"reference": {"$regex": search, "$options": "i"}}
+            {"name": {"$regex": _s, "$options": "i"}},
+            {"code": {"$regex": _s, "$options": "i"}},
+            {"reference": {"$regex": _s, "$options": "i"}}
         ]
     
     products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
