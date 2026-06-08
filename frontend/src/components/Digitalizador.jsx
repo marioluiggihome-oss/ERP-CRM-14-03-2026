@@ -44,7 +44,8 @@ const Digitalizador = ({ state }) => {
   const [isGeneratingExp, setIsGeneratingExp] = useState(false);  // Loading state para generar exp
   const [showCostMode, setShowCostMode] = useState(false);  // Mostrar precio COSTO vs PVP
   const [documentTitle, setDocumentTitle] = useState('Presupuesto Técnico');  // Título editable del documento
-  const [isValorado, setIsValorado] = useState(true);  // Mostrar/ocultar precios
+  const [isValorado, setIsValorado] = useState(true);  // Mostrar/ocultar precios por línea
+  const [showTotals, setShowTotals] = useState(true);  // Mostrar/ocultar bloque de totales (independiente)
   const fileInputRef = useRef(null);
 
   // Obtener descuento del usuario actual
@@ -734,16 +735,68 @@ const Digitalizador = ({ state }) => {
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden">
             <Logo className="w-8 h-8" customLogo={state.logo} />
           </div>
-          <button 
+          <button
             onClick={() => setShowHistory(!showHistory)}
             className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
           >
             <History size={16} />
             <span className="text-xs font-bold uppercase tracking-wider">Historial</span>
           </button>
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+            title="Empezar un presupuesto nuevo"
+          >
+            <Plus size={16} />
+            <span className="text-xs font-bold uppercase tracking-wider">Nuevo</span>
+          </button>
+          {lines.length > 0 && (
+            <button
+              onClick={handleSaveBudget}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50"
+              title="Guardar"
+            >
+              {isSaving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />}
+              <span className="text-xs font-bold uppercase tracking-wider">Guardar</span>
+            </button>
+          )}
+          {lines.length > 0 && (
+            <input
+              value={documentTitle}
+              onChange={(e) => setDocumentTitle(e.target.value)}
+              className="bg-white/10 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider text-white placeholder-white/40 outline-none focus:bg-white/20 w-40"
+              placeholder="Título del documento"
+              title="Título del documento (editable)"
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Toggles independientes: precios por línea y bloque de totales */}
+          {lines.length > 0 && (
+            <>
+              <button
+                onClick={() => setIsValorado(!isValorado)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-[11px] uppercase transition-all ${
+                  isValorado ? 'bg-green-500 text-white shadow-lg' : 'bg-white/10 text-white/60 hover:bg-white/20'
+                }`}
+                title="Mostrar/ocultar precios por línea"
+              >
+                <Percent size={14} /> Precios Línea
+              </button>
+              <button
+                onClick={() => setShowTotals(!showTotals)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-[11px] uppercase transition-all ${
+                  showTotals ? 'bg-indigo-500 text-white shadow-lg' : 'bg-white/10 text-white/60 hover:bg-white/20'
+                }`}
+                title="Mostrar/ocultar bloque de totales"
+              >
+                <FileText size={14} /> Totales
+              </button>
+            </>
+          )}
+
           {/* Candado - Modo Bloqueado/Desbloqueado */}
           <button
             onClick={() => {
@@ -1217,8 +1270,8 @@ const Digitalizador = ({ state }) => {
                 </button>
               </div>
 
-              {/* Totals Footer - Solo si valorado */}
-              {isValorado && (
+              {/* Totals Footer - toggle independiente "TOTALES" */}
+              {showTotals && (
               <div className={`${showCostMode ? 'bg-purple-950' : 'bg-indigo-950'} text-white p-6 transition-colors`}>
                 {/* Indicador de modo COSTO */}
                 {showCostMode && (
