@@ -1022,7 +1022,7 @@ const App = () => {
               
               {/* Panel Maestro: un ADMIN siempre lo ve (aunque tenga ademas rol de
                   fabrica/tienda). Un Comercial lo ve si no es Tienda ni solo Fabrica. */}
-              {(state.currentUser?.isAdmin || (state.currentUser?.isRepresentative && !state.currentUser?.isTienda && !state.currentUser?.isFabrica)) && (
+              {(state.currentUser?.isAdmin || (state.currentUser?.isRepresentative && !state.currentUser?.isTienda && !state.currentUser?.isFabrica)) && state.currentUser?.canAccessMaster !== false && (
                 <button 
                     onClick={() => setState(p => ({...p, showSettings: true}))} 
                     className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}

@@ -222,6 +222,7 @@ class UserUpdate(BaseModel):
     canAccessCRM: Optional[bool] = None
     canUseDigitalizador: Optional[bool] = None
     canAccessArmarios: Optional[bool] = None
+    canAccessMaster: Optional[bool] = None  # Acceso al Panel MASTER (config)
     canAuthorizePermissions: Optional[bool] = None
     useCustomBranding: Optional[bool] = None
     canChangeLogo: Optional[bool] = None
