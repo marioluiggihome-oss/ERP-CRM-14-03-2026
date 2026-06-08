@@ -189,10 +189,11 @@ async def get_digitalizador_history(userId: str = None, search: str = None, limi
             query["userId"] = userId
         
         if search:
+            _s = re.escape(search)
             query["$or"] = [
-                {"expNumber": {"$regex": search, "$options": "i"}},
-                {"projectName": {"$regex": search, "$options": "i"}},
-                {"customerName": {"$regex": search, "$options": "i"}}
+                {"expNumber": {"$regex": _s, "$options": "i"}},
+                {"projectName": {"$regex": _s, "$options": "i"}},
+                {"customerName": {"$regex": _s, "$options": "i"}}
             ]
         
         cursor = db.digitalizador_history.find(query).sort("createdAt", -1).limit(limit)
@@ -556,8 +557,8 @@ IMPORTANTE:
                     return matches
                 
                 # Search by partial code or name match
-                regex_patterns = [{"code": {"$regex": word, "$options": "i"}} for word in search_words if len(word) >= 3]
-                regex_patterns.extend([{"name": {"$regex": word, "$options": "i"}} for word in search_words if len(word) >= 3])
+                regex_patterns = [{"code": {"$regex": re.escape(word), "$options": "i"}} for word in search_words if len(word) >= 3]
+                regex_patterns.extend([{"name": {"$regex": re.escape(word), "$options": "i"}} for word in search_words if len(word) >= 3])
                 
                 if regex_patterns:
                     query = {"$and": [base_filter, {"$or": regex_patterns}]}
@@ -700,8 +701,8 @@ async def search_digitalizador_catalog(q: str, limit: int = 5, library: str = "Z
             }]}
         
         # Search by partial matches
-        regex_patterns = [{"code": {"$regex": word, "$options": "i"}} for word in search_words if len(word) >= 2]
-        regex_patterns.extend([{"name": {"$regex": word, "$options": "i"}} for word in search_words if len(word) >= 2])
+        regex_patterns = [{"code": {"$regex": re.escape(word), "$options": "i"}} for word in search_words if len(word) >= 2]
+        regex_patterns.extend([{"name": {"$regex": re.escape(word), "$options": "i"}} for word in search_words if len(word) >= 2])
         
         if regex_patterns:
             query = {"$and": [base_filter, {"$or": regex_patterns}]}
