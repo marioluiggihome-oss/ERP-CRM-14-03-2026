@@ -349,7 +349,7 @@ export default function AIRenderStudio({ state }) {
             <div className="flex-1 flex flex-col p-6 gap-5">
               <div className="text-center">
                 <p className="text-sm text-slate-600 font-medium">
-                  Describe la cocina que quieres. Puedes hablar o escribir.
+                  Describe lo que quieres (cocina, armario, baño, mueble a medida…). Puedes hablar o escribir.
                 </p>
               </div>
 
@@ -390,7 +390,7 @@ export default function AIRenderStudio({ state }) {
               <div className="flex-1 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Descripción de la cocina
+                    Descripción del diseño
                   </label>
                   <label className={`text-[11px] font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg ${analyzingRef ? 'bg-purple-200 text-purple-500' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}>
                     <Image size={14} className={analyzingRef ? 'animate-pulse' : ''} />
@@ -402,7 +402,7 @@ export default function AIRenderStudio({ state }) {
                   ref={textareaRef}
                   value={description}
                   onChange={(e) => { setDescription(e.target.value); setTranscript(e.target.value); }}
-                  placeholder="Ej: Quiero una cocina en L con encimera de mármol blanco, muebles de roble natural, tiradores negros y suelo de madera..."
+                  placeholder="Describe lo que quieres: cocina, armario empotrado, baño, dormitorio, estantería... Ej: 'Armario empotrado con puertas blancas lacadas, tirador fresado en los laterales color madera, interior con columna de baldas'"
                   className="flex-1 min-h-[150px] p-4 border border-slate-200 rounded-xl text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all"
                 />
               </div>
@@ -676,7 +676,7 @@ export default function AIRenderStudio({ state }) {
                 </div>
                 <h3 className="font-black text-slate-700 uppercase tracking-wider mb-2">Render 3D Studio</h3>
                 <p className="text-sm text-slate-500 leading-relaxed">
-                  Describe tu cocina ideal usando voz o texto, o selecciona materiales manualmente.
+                  Describe lo que quieres (cocina, armario empotrado, baño, dormitorio, mueble a medida…) usando voz o texto, o selecciona materiales manualmente.
                   LuiggiAI generará un render fotorrealista en segundos.
                 </p>
               </div>

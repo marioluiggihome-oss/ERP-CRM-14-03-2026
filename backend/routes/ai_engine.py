@@ -351,12 +351,14 @@ async def proxy_asset(
 # de vision la describe para enriquecer la descripcion del render 3D. Usa una
 # ruta de vision independiente del motor de render principal.
 _REF_PROMPT = (
-    "Eres un disenador de cocinas. Describe esta imagen de referencia para "
-    "generar un render 3D fotorrealista de cocina: distribucion, materiales y "
-    "acabados de muebles, color de puertas, encimera, tiradores, suelo, pared, "
-    "iluminacion y estilo. Devuelve un parrafo descriptivo en espanol, conciso "
-    "y concreto, listo para usar como prompt de render. Solo el texto, sin "
-    "encabezados."
+    "Eres un disenador de interiores y mobiliario a medida (cocinas, armarios "
+    "empotrados, banos, dormitorios, estanterias, muebles a medida...). Describe "
+    "esta imagen de referencia para generar un render 3D fotorrealista del MISMO "
+    "tipo de elemento que aparece (no asumas que es una cocina): tipo de mueble o "
+    "espacio, distribucion, materiales y acabados, color de puertas, tiradores, "
+    "interior (baldas, columnas, cajones), suelo, pared, iluminacion y estilo. "
+    "Devuelve un parrafo descriptivo en espanol, conciso y concreto, listo para "
+    "usar como prompt de render. Solo el texto, sin encabezados."
 )
 
 
