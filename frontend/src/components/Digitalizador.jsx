@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle, Lock, Unlock, RefreshCw } from 'lucide-react';
+import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle, Lock, Unlock, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import Logo from './Logo';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -773,29 +773,25 @@ const Digitalizador = ({ state }) => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Toggles independientes: precios por línea y bloque de totales */}
-          {lines.length > 0 && (
-            <>
-              <button
-                onClick={() => setIsValorado(!isValorado)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-[11px] uppercase transition-all ${
-                  isValorado ? 'bg-green-500 text-white shadow-lg' : 'bg-white/10 text-white/60 hover:bg-white/20'
-                }`}
-                title="Mostrar/ocultar precios por línea"
-              >
-                <Percent size={14} /> Precios Línea
-              </button>
-              <button
-                onClick={() => setShowTotals(!showTotals)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-[11px] uppercase transition-all ${
-                  showTotals ? 'bg-indigo-500 text-white shadow-lg' : 'bg-white/10 text-white/60 hover:bg-white/20'
-                }`}
-                title="Mostrar/ocultar bloque de totales"
-              >
-                <FileText size={14} /> Totales
-              </button>
-            </>
-          )}
+          {/* Toggles SIEMPRE visibles: ocultar/mostrar precios por línea y totales */}
+          <button
+            onClick={() => setIsValorado(!isValorado)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-[11px] uppercase transition-all ${
+              isValorado ? 'bg-green-500 text-white shadow-lg' : 'bg-white/10 text-white/50 hover:bg-white/20'
+            }`}
+            title={isValorado ? 'Ocultar precios por línea' : 'Mostrar precios por línea'}
+          >
+            {isValorado ? <Eye size={14} /> : <EyeOff size={14} />} Precios
+          </button>
+          <button
+            onClick={() => setShowTotals(!showTotals)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-[11px] uppercase transition-all ${
+              showTotals ? 'bg-indigo-500 text-white shadow-lg' : 'bg-white/10 text-white/50 hover:bg-white/20'
+            }`}
+            title={showTotals ? 'Ocultar totales' : 'Mostrar totales'}
+          >
+            {showTotals ? <Eye size={14} /> : <EyeOff size={14} />} Totales
+          </button>
 
           {/* Candado - Modo Bloqueado/Desbloqueado */}
           <button
