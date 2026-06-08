@@ -81,6 +81,34 @@ const RentabilidadPanel = ({ currentUser }) => {
     load();
   };
 
+  // ---- Conversiones: presupuesto -> pedido -> factura ----
+  const [converting, setConverting] = useState('');
+
+  const toPedido = async (r) => {
+    if (!window.confirm(`¿Pasar el presupuesto ${r.ref || ''} a PEDIDO?`)) return;
+    setConverting(r.projectId);
+    try {
+      const res = await fetch(`${API_URL}/api/rentabilidad/presupuesto-to-pedido/${r.projectId}`, { method: 'POST' });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.detail || 'Error');
+      await load();
+    } catch (e) { alert('No se pudo convertir a pedido: ' + e.message); }
+    finally { setConverting(''); }
+  };
+
+  const toFactura = async (r) => {
+    if (!window.confirm(`¿Facturar el pedido ${r.ref || ''}? Se generará una factura.`)) return;
+    setConverting(r.projectId);
+    try {
+      const res = await fetch(`${API_URL}/api/rentabilidad/pedido-to-factura/${r.projectId}`, { method: 'POST' });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.detail || 'Error');
+      alert('Factura creada: ' + (j.invoiceNumber || ''));
+      await load();
+    } catch (e) { alert('No se pudo facturar: ' + e.message); }
+    finally { setConverting(''); }
+  };
+
   // ---- Importar factura por IA ----
   const handleInvoiceFile = async (e) => {
     const file = e.target.files?.[0];
@@ -328,6 +356,7 @@ const RentabilidadPanel = ({ currentUser }) => {
               <SortHeader col="margen" label="Margen" align="right" />
               <SortHeader col="margenPct" label="%" align="right" />
               <th className="text-center p-3 text-xs font-black uppercase">Costes</th>
+              <th className="text-center p-3 text-xs font-black uppercase">Documento</th>
             </tr>
             {/* Fila de filtros por columna */}
             <tr className="bg-slate-50 border-t border-slate-200">
@@ -437,10 +466,24 @@ const RentabilidadPanel = ({ currentUser }) => {
                     <Plus size={12} /> Coste
                   </button>
                 </td>
+                <td className="p-3 text-center">
+                  {r.invoiceId ? (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[11px] font-black">FACTURA {r.invoiceNumber || ''}</span>
+                  ) : r.orderId ? (
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[11px] font-black">PEDIDO</span>
+                      <button onClick={() => toFactura(r)} disabled={converting === r.projectId}
+                        className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-bold hover:bg-blue-700 disabled:opacity-50">→ Factura</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => toPedido(r)} disabled={converting === r.projectId}
+                      className="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50">→ Pedido</button>
+                  )}
+                </td>
               </tr>
             ))}
             {filteredRows.length === 0 && (
-              <tr><td colSpan={8} className="p-8 text-center text-slate-400">{loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : 'Sin proyectos'}</td></tr>
+              <tr><td colSpan={9} className="p-8 text-center text-slate-400">{loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : 'Sin proyectos'}</td></tr>
             )}
           </tbody>
         </table>
