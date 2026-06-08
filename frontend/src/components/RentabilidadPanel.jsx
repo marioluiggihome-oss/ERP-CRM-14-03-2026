@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter } from 'lucide-react';
 import RentabilidadLineas from './RentabilidadLineas';
 import ReportGenerator from './ReportGenerator';
+import IngresosACuenta from './IngresosACuenta';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -278,8 +279,11 @@ const RentabilidadPanel = ({ currentUser }) => {
       <div className="flex gap-2 mb-5">
         <button onClick={() => setView('lineas')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'lineas' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por líneas (documentos)</button>
         <button onClick={() => setView('proyecto')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'proyecto' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Por proyecto</button>
+        <button onClick={() => setView('ingresos')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'ingresos' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Ingresos a cuenta</button>
         <button onClick={() => setView('informes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${view === 'informes' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Generador de informes</button>
       </div>
+
+      {view === 'ingresos' && <IngresosACuenta currentUser={currentUser} />}
 
       {view === 'informes' && <ReportGenerator />}
 

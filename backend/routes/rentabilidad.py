@@ -656,3 +656,133 @@ async def pedido_to_factura(project_id: str):
         )
     return {"success": True, "invoiceId": doc.get("id"),
             "invoiceNumber": doc.get("invoiceNumber"), "message": "Pedido facturado"}
+
+
+# ============================================================================
+# INGRESOS A CUENTA (anticipos del cliente) — localizados por IA de un documento
+# Coleccion: ingresos_cuenta  { id, fecha, importe, concepto, metodo, cliente,
+#                               projectRef, createdBy, createdByName, createdAt }
+# ============================================================================
+
+_INGRESOS_PROMPT = """Eres un experto en documentos de cobro de empresas de
+muebles/cocinas. Localiza en el documento TODOS los INGRESOS A CUENTA / ANTICIPOS
+/ PAGOS A CUENTA del cliente (señales, entregas a cuenta, transferencias o pagos
+parciales recibidos). Responde SOLO con JSON valido:
+{
+  "cliente": "nombre del cliente si aparece, si no vacio",
+  "proyecto": "nº de expediente/presupuesto si aparece (ej EXP-2026-001), si no vacio",
+  "ingresos": [
+    {"fecha": "YYYY-MM-DD", "importe": 0, "concepto": "descripcion (ej: señal, a cuenta, transferencia)", "metodo": "transferencia|efectivo|tarjeta|otro"}
+  ],
+  "total": 0
+}
+Importes en numero con punto decimal, sin simbolo de moneda. 'total' es la suma de
+los ingresos a cuenta localizados. Si no encuentras ninguno, devuelve "ingresos": [].
+"""
+
+
+@router.post("/rentabilidad/parse-ingresos")
+async def parse_ingresos(payload: dict):
+    """Lee un documento (PDF/imagen) y localiza con IA los ingresos a cuenta."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_text, pdf_base64_to_png_base64
+        from services.llm_vision import chat_with_gemini, analyze_image_with_gemini
+
+        parsed = None
+        is_pdf = ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped)
+        if is_pdf:
+            text = pdf_base64_to_text(stripped) or ""
+            if len(text.strip()) >= 50:
+                resp = await chat_with_gemini(
+                    prompt=_INGRESOS_PROMPT + "\n\nTEXTO DEL DOCUMENTO:\n\n" + text[:30000],
+                    system_message="Localizas ingresos a cuenta/anticipos en documentos.",
+                    model="gemini-2.5-flash",
+                )
+                parsed = _parse_json_loose(_clean_json(resp))
+        if parsed is None:
+            img = stripped
+            if is_pdf:
+                pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
+                if pages:
+                    img = pages[0]
+            resp = await analyze_image_with_gemini(
+                image_base64=img, prompt=_INGRESOS_PROMPT,
+                session_id=f"ingresos-{uuid.uuid4().hex[:8]}", model="gemini-2.5-flash",
+            )
+            parsed = _parse_json_loose(_clean_json(resp))
+
+        if not parsed:
+            return {"success": False, "error": "No se pudieron localizar ingresos a cuenta"}
+
+        ingresos = []
+        for it in (parsed.get("ingresos") or []):
+            try:
+                imp = float(it.get("importe") or 0)
+            except Exception:
+                imp = 0
+            if imp <= 0:
+                continue
+            ingresos.append({
+                "fecha": str(it.get("fecha") or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+                "importe": round(imp, 2),
+                "concepto": str(it.get("concepto") or "Ingreso a cuenta"),
+                "metodo": str(it.get("metodo") or "otro"),
+            })
+        return {
+            "success": True,
+            "data": {
+                "cliente": str(parsed.get("cliente") or ""),
+                "proyecto": str(parsed.get("proyecto") or ""),
+                "ingresos": ingresos,
+                "total": round(sum(i["importe"] for i in ingresos), 2),
+            },
+        }
+    except Exception as e:
+        logger.error(f"Parse ingresos error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/rentabilidad/ingresos")
+async def list_ingresos(userId: Optional[str] = None):
+    """Lista los ingresos a cuenta (cada usuario los suyos si se pasa userId)."""
+    query = {"createdBy": userId} if userId else {}
+    items = await db.ingresos_cuenta.find(query, {"_id": 0}).sort("fecha", -1).to_list(3000)
+    total = round(sum(float(i.get("importe", 0) or 0) for i in items), 2)
+    return {"items": items, "total": total}
+
+
+@router.post("/rentabilidad/ingresos")
+async def create_ingreso(payload: dict):
+    """Registra un ingreso a cuenta."""
+    try:
+        imp = float((payload or {}).get("importe") or 0)
+    except Exception:
+        imp = 0
+    if imp <= 0:
+        raise HTTPException(status_code=400, detail="Importe inválido")
+    now = datetime.now(timezone.utc)
+    doc = {
+        "id": f"ing-{uuid.uuid4().hex[:8]}",
+        "fecha": str(payload.get("fecha") or now.strftime("%Y-%m-%d")),
+        "importe": round(imp, 2),
+        "concepto": str(payload.get("concepto") or "Ingreso a cuenta"),
+        "metodo": str(payload.get("metodo") or "otro"),
+        "cliente": str(payload.get("cliente") or ""),
+        "projectRef": str(payload.get("projectRef") or payload.get("proyecto") or ""),
+        "createdBy": payload.get("createdBy", ""),
+        "createdByName": payload.get("createdByName", ""),
+        "createdAt": now.isoformat(),
+    }
+    await db.ingresos_cuenta.insert_one(doc)
+    doc.pop("_id", None)
+    return {"success": True, "ingreso": doc}
+
+
+@router.delete("/rentabilidad/ingresos/{ingreso_id}")
+async def delete_ingreso(ingreso_id: str):
+    await db.ingresos_cuenta.delete_one({"id": ingreso_id})
+    return {"success": True}
