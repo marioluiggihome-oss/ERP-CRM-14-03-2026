@@ -135,14 +135,14 @@ export const clientsAPI = {
     if (activo !== null) params.append('activo', activo);
     if (search) params.append('search', search);
     if (params.toString()) url += `?${params.toString()}`;
-    
-    const response = await fetch(url);
+
+    const response = await fetch(url, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener clientes');
     return response.json();
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_URL}/api/clients/${id}`);
+    const response = await fetch(`${API_URL}/api/clients/${id}`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Cliente no encontrado');
     return response.json();
   },

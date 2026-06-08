@@ -477,6 +477,7 @@ class ClientModel(BaseModel):
     notes: str = ""
     linkedUserId: Optional[str] = None
     assignedRepresentativeId: Optional[str] = None
+    createdByUserId: Optional[str] = None  # Usuario que creó el cliente (aislamiento por usuario)
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
