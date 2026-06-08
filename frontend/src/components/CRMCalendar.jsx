@@ -595,6 +595,26 @@ const CRMCalendar = ({ currentUser }) => {
             {/* Day View */}
             {view === 'day' && (
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                {/* Resumen: TODOS los eventos del día (incluye los de fuera de 7-20h y todo el día) */}
+                {(() => {
+                  const dayAll = getEventsForDate(currentDate)
+                    .slice()
+                    .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+                  if (dayAll.length === 0) return null;
+                  return (
+                    <div className="p-3 border-b border-slate-100 bg-slate-50">
+                      <p className="text-xs font-black text-slate-500 uppercase mb-2">{dayAll.length} evento(s) este día</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {dayAll.map(evt => (
+                          <button key={evt.id} onClick={() => openEditModal(evt)}
+                            className={`text-xs px-2.5 py-1 rounded-lg font-bold ${EVENT_TYPES[evt.eventType]?.bgColor || 'bg-slate-100'} ${EVENT_TYPES[evt.eventType]?.textColor || 'text-slate-700'} ${evt.completed ? 'opacity-50 line-through' : ''}`}>
+                            {evt.allDay ? 'Todo el día' : (() => { try { return format(parseISO(evt.startDate), 'HH:mm'); } catch { return ''; } })()} · {evt.title}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="max-h-[600px] overflow-y-auto">
                   {dayHours.map(hour => {
                     const hourEvents = events.filter(evt => {
