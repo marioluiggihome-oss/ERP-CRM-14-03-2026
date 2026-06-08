@@ -355,9 +355,9 @@ const DespieceBudgeter = ({ isOpen, onClose, currentUser, onBudgetSaved }) => {
         </div>
         
         {/* Content */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Panel izquierdo - Filtros y catálogo */}
-          <div className="w-[400px] bg-slate-50 border-r border-slate-200 flex flex-col shrink-0">
+          <div className="w-full md:w-[400px] max-h-[45vh] md:max-h-none bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0">
             {/* Filtros */}
             <div className="p-4 border-b border-slate-200 bg-white">
               <div className="flex items-center justify-between mb-3">
