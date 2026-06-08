@@ -49,6 +49,7 @@ const extractRefNumber = (ref) => {
 
 const RentabilidadLineas = ({ currentUser }) => {
   const [docType, setDocType] = useState('factura');
+  const [converting, setConverting] = useState('');
   const [fichas, setFichas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editor, setEditor] = useState(null);
@@ -267,6 +268,35 @@ const RentabilidadLineas = ({ currentUser }) => {
       const d = await r.json();
       openDoc(d.dataBase64, d.mime);
     } catch { alert('No se pudo abrir el documento'); }
+  };
+
+  // ── Convertir documento al siguiente tipo: presupuesto → pedido → factura ──
+  const convertFicha = async (f) => {
+    const cur = f.docType || 'factura';
+    const next = cur === 'presupuesto' ? 'pedido' : cur === 'pedido' ? 'factura' : null;
+    if (!next) return;
+    const nextLabel = next === 'pedido' ? 'Pedido' : 'Factura';
+    if (!window.confirm(`¿Crear un ${nextLabel} a partir de "${f.ref || ''}"? Se copiarán las líneas.`)) return;
+    setConverting(f.id);
+    try {
+      // Traer la ficha completa (con sus líneas) por si la lista no las incluye
+      let full = f;
+      try { const d = await fetch(`${API_URL}/api/rentabilidad/fichas/${f.id}`); if (d.ok) full = await d.json(); } catch { /* usa f */ }
+      const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ref: full.ref, cliente: full.cliente,
+          fecha: new Date().toISOString().slice(0, 10),
+          docType: next, lines: full.lines || [], projectRef: full.projectRef || '',
+          createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
+        }),
+      });
+      if (!r.ok) throw new Error('Error');
+      setDocType(next);
+      setCurrentPage(1);
+      await load();
+    } catch (e) { alert('No se pudo convertir: ' + (e.message || '')); }
+    finally { setConverting(''); }
   };
 
   const removeFicha = async (id) => {
@@ -567,7 +597,13 @@ const RentabilidadLineas = ({ currentUser }) => {
                   <td className="p-3 text-right font-mono text-orange-600">{eur(tt.coste)}</td>
                   <td className={`p-3 text-right font-mono font-black ${tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
                   <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    {(f.docType || 'factura') !== 'factura' && (
+                      <button onClick={() => convertFicha(f)} disabled={converting === f.id}
+                        className="mr-2 px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50">
+                        → {(f.docType || 'factura') === 'presupuesto' ? 'Pedido' : 'Factura'}
+                      </button>
+                    )}
                     <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
                   </td>
                 </tr>
