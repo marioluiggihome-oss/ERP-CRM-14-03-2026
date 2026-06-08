@@ -412,7 +412,7 @@ export default function AIRenderStudio({ state }) {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">
                   Estilo de render
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {MATERIALS.styles.map(s => (
                     <button
                       key={s.id}
@@ -454,7 +454,7 @@ export default function AIRenderStudio({ state }) {
               {/* Layout */}
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Distribución</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {MATERIALS.layouts.map(l => (
                     <button
                       key={l.id}
@@ -523,7 +523,7 @@ export default function AIRenderStudio({ state }) {
               {/* Estilo */}
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Estilo</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {MATERIALS.styles.map(s => (
                     <button
                       key={s.id}

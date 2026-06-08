@@ -2412,7 +2412,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   )}
 
                   {/* Clients table */}
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-slate-50 border-b border-slate-200">
                         <tr>

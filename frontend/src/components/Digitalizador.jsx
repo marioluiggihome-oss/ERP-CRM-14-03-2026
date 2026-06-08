@@ -730,8 +730,8 @@ const Digitalizador = ({ state }) => {
   return (
     <div className="h-full flex flex-col bg-slate-200 overflow-hidden">
       {/* Header */}
-      <header className="bg-indigo-950 text-white px-6 py-3 flex items-center justify-between shrink-0 no-print">
-        <div className="flex items-center gap-4">
+      <header className="bg-indigo-950 text-white px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-y-2 shrink-0 no-print">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden">
             <Logo className="w-8 h-8" customLogo={state.logo} />
           </div>
@@ -772,7 +772,7 @@ const Digitalizador = ({ state }) => {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           {/* Toggles SIEMPRE visibles: ocultar/mostrar precios por línea y totales */}
           <button
             onClick={() => setIsValorado(!isValorado)}
@@ -1023,7 +1023,7 @@ const Digitalizador = ({ state }) => {
                 </div>
 
                 {/* Config Fields */}
-                <div className="grid grid-cols-3 gap-6 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
                   <div>
                     <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block mb-1">Acabado</label>
                     <input

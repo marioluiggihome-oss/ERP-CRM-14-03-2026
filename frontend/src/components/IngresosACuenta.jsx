@@ -138,7 +138,7 @@ const IngresosACuenta = ({ currentUser }) => {
         <p className="text-[11px] opacity-80">{items.length} registro(s)</p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-100 text-slate-600">
             <tr>
