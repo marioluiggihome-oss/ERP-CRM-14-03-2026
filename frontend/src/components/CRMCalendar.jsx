@@ -593,83 +593,104 @@ const CRMCalendar = ({ currentUser }) => {
             )}
 
             {/* Day View */}
-            {view === 'day' && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                {/* Resumen: TODOS los eventos del día (incluye los de fuera de 7-20h y todo el día) */}
-                {(() => {
-                  const dayAll = getEventsForDate(currentDate)
-                    .slice()
-                    .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
-                  if (dayAll.length === 0) return null;
-                  return (
-                    <div className="p-3 border-b border-slate-100 bg-slate-50">
-                      <p className="text-xs font-black text-slate-500 uppercase mb-2">{dayAll.length} evento(s) este día</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {dayAll.map(evt => (
+            {view === 'day' && (() => {
+              const HOUR_PX = 48;
+              const dayEvts = getEventsForDate(currentDate);
+              const allDay = dayEvts.filter(e => e.allDay);
+              const timed = dayEvts.filter(e => !e.allDay).map(e => {
+                let s; try { s = parseISO(e.startDate); } catch { return null; }
+                let en = null; try { en = parseISO(e.endDate); } catch { en = null; }
+                const startM = s.getHours() * 60 + s.getMinutes();
+                let endM = en ? en.getHours() * 60 + en.getMinutes() : startM + 60;
+                if (endM <= startM) endM = startM + 60;
+                return { e, startM, dur: endM - startM };
+              }).filter(Boolean).sort((a, b) => a.startM - b.startM);
+              // Agrupar solapados y repartir en columnas (estilo Google)
+              const positioned = []; let cluster = []; let clusterEnd = -1;
+              const flush = () => {
+                const colEnds = [];
+                cluster.forEach(it => {
+                  let c = 0; while (c < colEnds.length && colEnds[c] > it.startM) c++;
+                  colEnds[c] = it.startM + it.dur; it.col = c;
+                });
+                const total = colEnds.length || 1;
+                cluster.forEach(it => { it.cols = total; positioned.push(it); });
+                cluster = [];
+              };
+              timed.forEach(it => {
+                if (cluster.length === 0) { cluster.push(it); clusterEnd = it.startM + it.dur; }
+                else if (it.startM < clusterEnd) { cluster.push(it); clusterEnd = Math.max(clusterEnd, it.startM + it.dur); }
+                else { flush(); cluster.push(it); clusterEnd = it.startM + it.dur; }
+              });
+              if (cluster.length) flush();
+              const now = new Date();
+              const nowTop = (now.getHours() * 60 + now.getMinutes()) * (HOUR_PX / 60);
+              return (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  {allDay.length > 0 && (
+                    <div className="flex border-b border-slate-200">
+                      <div className="w-14 shrink-0 text-[10px] text-slate-400 text-right pr-2 py-2 border-r border-slate-100">Todo el día</div>
+                      <div className="flex-1 p-1.5 flex flex-wrap gap-1">
+                        {allDay.map(evt => (
                           <button key={evt.id} onClick={() => openEditModal(evt)}
-                            className={`text-xs px-2.5 py-1 rounded-lg font-bold ${EVENT_TYPES[evt.eventType]?.bgColor || 'bg-slate-100'} ${EVENT_TYPES[evt.eventType]?.textColor || 'text-slate-700'} ${evt.completed ? 'opacity-50 line-through' : ''}`}>
-                            {evt.allDay ? 'Todo el día' : (() => { try { return format(parseISO(evt.startDate), 'HH:mm'); } catch { return ''; } })()} · {evt.title}
+                            className={`text-xs px-2 py-1 rounded font-bold text-white ${evt.completed ? 'opacity-50 line-through' : ''}`}
+                            style={{ background: evt.color || EVENT_TYPES[evt.eventType]?.color || '#3b82f6' }}>
+                            {evt.title}
                           </button>
                         ))}
                       </div>
                     </div>
-                  );
-                })()}
-                <div className="max-h-[600px] overflow-y-auto">
-                  {dayHours.map(hour => {
-                    const hourEvents = events.filter(evt => {
-                      const evtDate = parseISO(evt.startDate);
-                      return isSameDay(evtDate, currentDate) && evtDate.getHours() === hour;
-                    });
-                    return (
-                      <div key={hour} className="flex border-b border-slate-100">
-                        <div className="w-20 p-3 text-sm font-bold text-slate-400 text-right border-r border-slate-200 bg-slate-50 shrink-0">
-                          {hour}:00
-                        </div>
-                        <div 
-                          onClick={() => openCreateModal(setHours(currentDate, hour))}
-                          className="flex-1 min-h-[60px] p-2 hover:bg-slate-50 cursor-pointer"
-                        >
-                          {hourEvents.map(evt => (
-                            <div
-                              key={evt.id}
-                              onClick={(e) => { e.stopPropagation(); openEditModal(evt); }}
-                              className={`p-2 rounded-lg mb-1 cursor-pointer ${EVENT_TYPES[evt.eventType]?.bgColor || 'bg-slate-100'} ${evt.completed ? 'opacity-50' : ''}`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className={`font-bold text-sm ${EVENT_TYPES[evt.eventType]?.textColor || 'text-slate-700'} ${evt.completed ? 'line-through' : ''}`}>
-                                  {evt.title}
+                  )}
+                  <div className="max-h-[600px] overflow-y-auto">
+                    <div className="flex">
+                      <div className="w-14 shrink-0">
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <div key={h} style={{ height: HOUR_PX }} className="text-[10px] text-slate-400 text-right pr-2 border-r border-slate-100">
+                            <span className="-translate-y-1.5 inline-block">{h === 0 ? '' : `${h}:00`}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="relative flex-1" style={{ height: 24 * HOUR_PX }}>
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <div key={h} onClick={() => openCreateModal(setHours(currentDate, h))}
+                            style={{ height: HOUR_PX, top: h * HOUR_PX }}
+                            className="absolute left-0 right-0 border-b border-slate-100 hover:bg-slate-50 cursor-pointer" />
+                        ))}
+                        {isToday(currentDate) && (
+                          <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: nowTop }}>
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 -mt-1 -ml-1 absolute" />
+                            <div className="h-0.5 bg-red-500 ml-1" />
+                          </div>
+                        )}
+                        {positioned.map(({ e: evt, startM, dur, col, cols }) => {
+                          const top = startM * (HOUR_PX / 60);
+                          const height = Math.max(dur * (HOUR_PX / 60) - 2, 20);
+                          const widthPct = 100 / cols;
+                          const color = evt.color || EVENT_TYPES[evt.eventType]?.color || '#3b82f6';
+                          let hhmm = ''; try { hhmm = format(parseISO(evt.startDate), 'HH:mm'); } catch { hhmm = ''; }
+                          return (
+                            <div key={evt.id} onClick={(ev) => { ev.stopPropagation(); openEditModal(evt); }}
+                              className={`absolute rounded-md px-1.5 py-0.5 text-white overflow-hidden cursor-pointer shadow-sm z-10 ${evt.completed ? 'opacity-60' : ''}`}
+                              style={{ top, height, left: `calc(${col * widthPct}% + 2px)`, width: `calc(${widthPct}% - 4px)`, background: color }}
+                              title={`${hhmm} ${evt.title}`}>
+                              <div className="flex items-start justify-between gap-1">
+                                <span className={`text-[11px] font-bold leading-tight ${evt.completed ? 'line-through' : ''}`}>
+                                  {hhmm} {evt.title}
                                 </span>
                                 {!evt.completed && evt.source !== 'google' && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleComplete(evt); }}
-                                    className="p-1 hover:bg-white/50 rounded"
-                                    title="Marcar completado"
-                                  >
-                                    <Check size={14} />
-                                  </button>
+                                  <button onClick={(ev) => { ev.stopPropagation(); handleComplete(evt); }} className="shrink-0 hover:bg-white/20 rounded" title="Completar"><Check size={12} /></button>
                                 )}
-                                {evt.completed && <CheckCircle2 size={14} className="text-green-600" />}
+                                {evt.completed && <CheckCircle2 size={12} className="shrink-0" />}
                               </div>
-                              {evt.contactName && (
-                                <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                                  <User size={10} /> {evt.contactName}
-                                </p>
-                              )}
-                              {evt.location && (
-                                <p className="text-xs text-slate-500 flex items-center gap-1">
-                                  <MapPin size={10} /> {evt.location}
-                                </p>
-                              )}
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Vista Lista (listado por día / semana / mes) */}
             {view === 'lista' && (() => {
