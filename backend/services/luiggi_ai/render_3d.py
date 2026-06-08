@@ -349,6 +349,8 @@ class Render3DService:
         self,
         description: str,
         params_override: Optional[Dict[str, Any]] = None,
+        reference_image: Optional[str] = None,
+        reference_mime: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -356,6 +358,9 @@ class Render3DService:
         Args:
             description: Descripción en lenguaje natural
             params_override: Parámetros explícitos que sobreescriben el parsing
+            reference_image: Imagen/PDF de referencia (base64) que el modelo debe
+                respetar (distribución, proporciones, medidas).
+            reference_mime: MIME de la imagen de referencia.
 
         Returns:
             Dict con el resultado del render
@@ -371,6 +376,10 @@ class Render3DService:
         space_type = self.detect_space_type(description)
         parsed_params["space_type"] = space_type
 
+        # Preparar la imagen de referencia (si es PDF, convertir 1ª página a PNG)
+        ref_b64, ref_mime = self._prepare_reference(reference_image, reference_mime)
+        parsed_params["hasReference"] = bool(ref_b64)
+
         # Construir prompt GENÉRICO guiado por la descripción del usuario
         prompt = self.build_render_prompt(
             description=description,
@@ -379,19 +388,64 @@ class Render3DService:
         )
 
         # Crear tarea de generación de imagen (genérica, dirigida por el brief)
+        ref_note = (
+            "An IMAGE has been attached as visual reference (a photo, a sketch or a "
+            "technical breakdown/despiece). Use it to respect the real LAYOUT, "
+            "PROPORTIONS and MEASUREMENTS of the piece (number and size of doors, "
+            "drawers, shelves and columns). Keep the geometry faithful to the "
+            "reference; apply the finishes/colors from the brief. "
+            if ref_b64 else ""
+        )
         task_prompt = (
             "Generate a single high-quality, photorealistic 3D render image based "
             "STRICTLY on the following design brief. Reproduce exactly what is "
             "described (type of furniture or space, exterior doors, finishes, "
             "colors, handles/pulls, materials and interior layout such as shelves, "
             "columns or drawers). Do NOT default to a kitchen unless the brief "
-            "explicitly asks for one.\n\n"
+            "explicitly asks for one. "
+            + ref_note
+            + "\n\n"
             f"{prompt}\n\n"
             "The result must look like a professional interior design "
             "visualization. No text, watermarks, or logos in the image."
         )
 
-        return await self._render_with_gemini(task_prompt, prompt, parsed_params)
+        return await self._render_with_gemini(
+            task_prompt, prompt, parsed_params,
+            reference_image_base64=ref_b64, reference_mime=ref_mime,
+        )
+
+    def _prepare_reference(self, reference_image, reference_mime):
+        """Normaliza la referencia: quita el prefijo data:, y si es PDF convierte
+        la primera página a PNG para que el modelo de imagen la pueda usar."""
+        if not reference_image:
+            return None, "image/png"
+        try:
+            raw = reference_image
+            mime = reference_mime or "image/png"
+            if raw.startswith("data:"):
+                header, raw = raw.split(",", 1)
+                if "pdf" in header.lower():
+                    mime = "application/pdf"
+                elif "png" in header.lower():
+                    mime = "image/png"
+                elif "webp" in header.lower():
+                    mime = "image/webp"
+                elif "jpeg" in header.lower() or "jpg" in header.lower():
+                    mime = "image/jpeg"
+            from services.pdf_utils import is_pdf_base64, pdf_base64_to_png_base64
+            if mime == "application/pdf" or is_pdf_base64(raw):
+                pages = pdf_base64_to_png_base64(raw, dpi=150, max_pages=1) or []
+                if pages:
+                    p = pages[0]
+                    if p.startswith("data:"):
+                        p = p.split(",", 1)[1]
+                    return p, "image/png"
+                return None, "image/png"
+            return raw, mime
+        except Exception as e:
+            logger.warning(f"Referencia de render ignorada: {e}")
+            return None, "image/png"
 
     async def generate_render_from_params(
         self,
@@ -426,12 +480,18 @@ class Render3DService:
         return await self._render_with_gemini(task_prompt, prompt)
 
     async def _render_with_gemini(self, task_prompt: str, prompt: str,
-                                  parsed_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                                  parsed_params: Optional[Dict[str, Any]] = None,
+                                  reference_image_base64: Optional[str] = None,
+                                  reference_mime: str = "image/png") -> Dict[str, Any]:
         """Genera el render con Gemini y lo devuelve como data URL (marca blanca)."""
         from services.llm_vision import generate_image_with_gemini
         start = time.time()
         try:
-            data_url = await generate_image_with_gemini(task_prompt)
+            data_url = await generate_image_with_gemini(
+                task_prompt,
+                reference_image_base64=reference_image_base64,
+                reference_mime=reference_mime or "image/png",
+            )
         except Exception as e:
             logger.error(f"Render (Gemini) error: {e}")
             return {

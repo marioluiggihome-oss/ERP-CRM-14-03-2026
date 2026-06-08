@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2 } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -154,6 +154,7 @@ const MATERIALS = {
 export default function AIRenderStudio({ state }) {
   const [mode, setMode] = useState('natural'); // 'natural' | 'params'
   const [description, setDescription] = useState('');
+  const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) para que el modelo la "vea"
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderResult, setRenderResult] = useState(null);
   const [renderHistory, setRenderHistory] = useState([]);
@@ -215,6 +216,9 @@ export default function AIRenderStudio({ state }) {
         headers: getAuthHeaders(),
         body: JSON.stringify({ fileBase64: b64 }),
       });
+      // Guardar la imagen para pasársela TAMBIÉN al generador (no solo el texto),
+      // así el render respeta distribución, proporciones y medidas de la referencia.
+      setRefImage(b64);
       const data = await response.json();
       if (data.success && data.description) {
         setDescription(prev => {
@@ -246,6 +250,7 @@ export default function AIRenderStudio({ state }) {
         body: JSON.stringify({
           description: description.trim(),
           style: params.style,
+          referenceImage: refImage || undefined,
         }),
       });
 
@@ -398,6 +403,12 @@ export default function AIRenderStudio({ state }) {
                     <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
                   </label>
                 </div>
+                {refImage && (
+                  <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 w-fit">
+                    <CheckCircle size={13} /> Referencia adjunta — el render la respetará
+                    <button onClick={() => setRefImage(null)} className="ml-1 text-emerald-500 hover:text-red-500" title="Quitar referencia"><X size={13} /></button>
+                  </div>
+                )}
                 <textarea
                   ref={textareaRef}
                   value={description}

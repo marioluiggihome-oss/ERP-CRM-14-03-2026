@@ -38,6 +38,8 @@ class RenderRequest(BaseModel):
     description: str = Field(..., description="Descripción en lenguaje natural de la cocina")
     style: Optional[str] = Field(None, description="Estilo de render (photorealistic, warm, etc.)")
     layout: Optional[str] = Field(None, description="Layout override (L-shape, island, etc.)")
+    referenceImage: Optional[str] = Field(None, description="Imagen/PDF de referencia en base64 para condicionar el render")
+    referenceMime: Optional[str] = Field(None, description="MIME de la imagen de referencia")
 
 
 class RenderParamsRequest(BaseModel):
@@ -107,6 +109,8 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
     result = await service.generate_render(
         description=request.description,
         params_override=overrides if overrides else None,
+        reference_image=request.referenceImage,
+        reference_mime=request.referenceMime,
     )
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")
