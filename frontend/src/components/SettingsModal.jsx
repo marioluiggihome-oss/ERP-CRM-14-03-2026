@@ -144,6 +144,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessFabrica: false,  // Acceso a Portal de Fábrica
     canAccessMontajes: false,  // Acceso a Agenda de Montajes
     canUsePresupuestador2: false,  // Acceso al Presupuestador 2 (MV por tarifa)
+    canAccessMaster: true,  // Acceso al Panel MASTER (config) - visible por defecto
     canAuthorizePermissions: false,
     useCustomBranding: false,
     canChangeLogo: false,
@@ -716,6 +717,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessFabrica: false,
       canAccessMontajes: false,
       canUsePresupuestador2: false,
+      canAccessMaster: true,
       canAuthorizePermissions: false,
       useCustomBranding: false,
       canChangeLogo: false
@@ -2025,6 +2027,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             className="w-4 h-4 rounded accent-emerald-600"
                           />
                           <span className="text-xs font-black text-emerald-800">FÁBRICA</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-indigo-100 px-2 py-1.5 rounded-lg hover:bg-indigo-200 transition-colors border border-indigo-300">
+                          <input
+                            type="checkbox"
+                            checked={userForm.canAccessMaster !== false}
+                            onChange={(e) => setUserForm({...userForm, canAccessMaster: e.target.checked})}
+                            className="w-4 h-4 rounded accent-indigo-600"
+                          />
+                          <span className="text-xs font-black text-indigo-800">Panel MASTER</span>
                         </label>
                         
                         {/* Columna 3: Otros permisos */}
