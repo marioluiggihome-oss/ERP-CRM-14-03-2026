@@ -303,6 +303,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     }
   };
 
+  const handleBackfillClients = async () => {
+    if (!window.confirm('¿Asignar TODOS los clientes sin dueño al usuario MARIO? (datos antiguos, una sola vez)')) return;
+    try {
+      const res = await clientsAPI.backfillOwner('MARIO');
+      alert(`Listo: ${res.asignados} cliente(s) asignados a ${res.usuario}.`);
+      loadClients();
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
   // Backup states
   const [backups, setBackups] = useState([]);
   const [loadingBackups, setLoadingBackups] = useState(false);
@@ -2247,6 +2256,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
                     
                     <div className="flex gap-2">
+                      <button
+                        onClick={handleBackfillClients}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase transition-colors"
+                        title="Asignar los clientes antiguos (sin dueño) al usuario MARIO"
+                      >
+                        Asignar antiguos a MARIO
+                      </button>
                       <label className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase cursor-pointer transition-colors">
                         <Upload size={14} />
                         Importar CSV

@@ -76,6 +76,46 @@ async def get_clients(
     return clients
 
 
+@router.post("/backfill-owner")
+async def backfill_owner(payload: dict = None, current_user: dict = Depends(get_current_user)):
+    """Asigna los clientes SIN dueño a un usuario (por defecto MARIO).
+
+    Pensado para datos antiguos creados antes del aislamiento por usuario. Solo
+    admin/dirección. Body opcional: {"username": "MARIO"}.
+    """
+    if not _is_elevated(current_user):
+        raise HTTPException(status_code=403, detail="Solo administración puede reasignar clientes")
+    username = ((payload or {}).get("username") or "MARIO").strip()
+    rx = {"$regex": f"^{_re.escape(username)}$", "$options": "i"}
+    target = await db.users.find_one(
+        {"$or": [{"username": rx}, {"clientName": rx}]},
+        {"_id": 0, "id": 1, "username": 1, "clientName": 1},
+    )
+    if not target:
+        raise HTTPException(status_code=404, detail=f"No se encontró el usuario '{username}'")
+    uid = target["id"]
+    sin_dueno = {"$or": [
+        {"createdByUserId": {"$exists": False}},
+        {"createdByUserId": ""},
+        {"createdByUserId": None},
+    ]}
+    res = await db.clients.update_many(sin_dueno, {"$set": {"createdByUserId": uid}})
+    await db.clients.update_many(
+        {"$or": [
+            {"assignedRepresentativeId": {"$exists": False}},
+            {"assignedRepresentativeId": ""},
+            {"assignedRepresentativeId": None},
+        ]},
+        {"$set": {"assignedRepresentativeId": uid}},
+    )
+    return {
+        "success": True,
+        "asignados": res.modified_count,
+        "usuario": target.get("username") or target.get("clientName"),
+        "userId": uid,
+    }
+
+
 @router.get("/segments")
 async def get_client_segments():
     """Obtener lista de segmentos disponibles"""

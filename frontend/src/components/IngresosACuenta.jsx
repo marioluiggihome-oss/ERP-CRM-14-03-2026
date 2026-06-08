@@ -13,8 +13,9 @@ const IngresosACuenta = ({ currentUser }) => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
-  const [review, setReview] = useState(null); // { cliente, proyecto, ingresos: [] }
+  const [review, setReview] = useState(null); // { cliente, proyecto, ingresos: [], targetId, fileB64, fileName, fileMime }
   const [saving, setSaving] = useState(false);
+  const [asignables, setAsignables] = useState([]); // pedidos/facturas a los que asignar
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,8 +26,20 @@ const IngresosACuenta = ({ currentUser }) => {
       const qs = (!elevated && currentUser?.id) ? `?userId=${encodeURIComponent(currentUser.id)}` : '';
       const r = await fetch(`${API_URL}/api/rentabilidad/ingresos${qs}`);
       if (r.ok) { const j = await r.json(); setItems(j.items || []); setTotal(j.total || 0); }
+      const a = await fetch(`${API_URL}/api/rentabilidad/asignables${qs}`);
+      if (a.ok) setAsignables(await a.json());
     } catch { /* noop */ } finally { setLoading(false); }
   }, [currentUser]);
+
+  const verDoc = async (docId) => {
+    try {
+      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos/doc/${docId}`);
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      const w = window.open();
+      if (w) w.document.write(`<iframe src="data:${d.mime};base64,${d.dataBase64}" style="width:100%;height:100%;border:0"></iframe>`);
+    } catch { alert('No se pudo abrir el documento'); }
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -49,7 +62,10 @@ const IngresosACuenta = ({ currentUser }) => {
       const j = await r.json();
       if (!j.success) { alert('No se pudieron localizar ingresos: ' + (j.error || '')); return; }
       if (!(j.data.ingresos || []).length) { alert('La IA no encontró ingresos a cuenta en el documento.'); return; }
-      setReview({ cliente: j.data.cliente || '', proyecto: j.data.proyecto || '', ingresos: j.data.ingresos });
+      setReview({
+        cliente: j.data.cliente || '', proyecto: j.data.proyecto || '', ingresos: j.data.ingresos,
+        targetId: '', fileB64: b64, fileName: file.name, fileMime: file.type || 'application/octet-stream',
+      });
     } catch (err) {
       alert('Error al leer el documento: ' + err.message);
     } finally { setImporting(false); }
@@ -64,6 +80,8 @@ const IngresosACuenta = ({ currentUser }) => {
 
   const saveAll = async () => {
     if (!review?.ingresos?.length) { setReview(null); return; }
+    if (!review.targetId) { alert('Asigna el ingreso a un pedido o una factura.'); return; }
+    const target = asignables.find(a => a.id === review.targetId);
     setSaving(true);
     try {
       for (const ing of review.ingresos) {
@@ -72,6 +90,10 @@ const IngresosACuenta = ({ currentUser }) => {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...ing, cliente: review.cliente, proyecto: review.proyecto,
+            targetId: review.targetId,
+            targetType: target?.docType || '',
+            targetRef: target?.ref || '',
+            docBase64: review.fileB64, docName: review.fileName, docMime: review.fileMime,
             createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
           }),
         });
@@ -125,6 +147,8 @@ const IngresosACuenta = ({ currentUser }) => {
               <th className="text-left p-3 text-xs font-black uppercase">Proyecto</th>
               <th className="text-left p-3 text-xs font-black uppercase">Concepto</th>
               <th className="text-left p-3 text-xs font-black uppercase">Método</th>
+              <th className="text-left p-3 text-xs font-black uppercase">Asignado a</th>
+              <th className="text-center p-3 text-xs font-black uppercase">Doc</th>
               <th className="text-right p-3 text-xs font-black uppercase">Importe</th>
               <th className="p-3"></th>
             </tr>
@@ -137,12 +161,24 @@ const IngresosACuenta = ({ currentUser }) => {
                 <td className="p-3 font-bold text-indigo-700">{i.projectRef || '—'}</td>
                 <td className="p-3 text-slate-700">{i.concepto || '—'}</td>
                 <td className="p-3 text-[11px] uppercase text-slate-500">{i.metodo || '—'}</td>
+                <td className="p-3">
+                  {i.targetRef ? (
+                    <span className={`px-2 py-1 rounded-lg text-[11px] font-black ${i.targetType === 'factura' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {(i.targetType || '').toUpperCase()} {i.targetRef}
+                    </span>
+                  ) : <span className="text-slate-300">—</span>}
+                </td>
+                <td className="p-3 text-center">
+                  {i.docId ? (
+                    <button onClick={() => verDoc(i.docId)} title="Ver documento archivado" className="text-slate-500 hover:text-teal-600">📎</button>
+                  ) : <span className="text-slate-300">—</span>}
+                </td>
                 <td className="p-3 text-right font-mono font-black text-teal-700">{eur(i.importe)}</td>
                 <td className="p-3 text-right"><button onClick={() => delIngreso(i.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button></td>
               </tr>
             ))}
             {items.length === 0 && (
-              <tr><td colSpan={7} className="p-8 text-center text-slate-400">{loading ? 'Cargando…' : 'Sin ingresos a cuenta. Sube un documento y la IA los localizará.'}</td></tr>
+              <tr><td colSpan={9} className="p-8 text-center text-slate-400">{loading ? 'Cargando…' : 'Sin ingresos a cuenta. Sube un documento y la IA los localizará.'}</td></tr>
             )}
           </tbody>
         </table>
@@ -162,6 +198,19 @@ const IngresosACuenta = ({ currentUser }) => {
                   <input value={review.cliente} onChange={e => setReview({ ...review, cliente: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Proyecto / Expediente</label>
                   <input value={review.proyecto} onChange={e => setReview({ ...review, proyecto: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Asignar a pedido / factura (obligatorio)</label>
+                <select value={review.targetId} onChange={e => setReview({ ...review, targetId: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm font-bold ${review.targetId ? 'border-emerald-300' : 'border-red-300'}`}>
+                  <option value="">— Selecciona pedido o factura —</option>
+                  {asignables.map(a => (
+                    <option key={a.id} value={a.id}>{(a.docType || '').toUpperCase()} · {a.ref || '(sin ref)'} · {a.cliente || ''}</option>
+                  ))}
+                </select>
+                {asignables.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1">No hay pedidos/facturas aún. Créalos en "Por líneas (documentos)" para poder asignar el ingreso.</p>
+                )}
               </div>
               <table className="w-full text-sm">
                 <thead className="text-slate-500"><tr>

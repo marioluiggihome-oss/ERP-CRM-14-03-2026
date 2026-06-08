@@ -755,24 +755,66 @@ async def list_ingresos(userId: Optional[str] = None):
     return {"items": items, "total": total}
 
 
+@router.get("/rentabilidad/asignables")
+async def list_asignables(userId: Optional[str] = None):
+    """Documentos a los que asignar un ingreso a cuenta: PEDIDOS y FACTURAS
+    (fichas de rentabilidad por líneas). Cada usuario los suyos si se pasa userId."""
+    q = {"docType": {"$in": ["pedido", "factura"]}}
+    if userId:
+        q["createdBy"] = userId
+    items = await db.sale_fichas.find(
+        q, {"_id": 0, "id": 1, "docType": 1, "ref": 1, "cliente": 1}
+    ).sort("createdAt", -1).to_list(3000)
+    return items
+
+
 @router.post("/rentabilidad/ingresos")
 async def create_ingreso(payload: dict):
-    """Registra un ingreso a cuenta."""
+    """Registra un ingreso a cuenta. SIEMPRE se asigna a un pedido o factura y se
+    archiva el documento del que se detectó."""
     try:
         imp = float((payload or {}).get("importe") or 0)
     except Exception:
         imp = 0
     if imp <= 0:
         raise HTTPException(status_code=400, detail="Importe inválido")
+
+    target_id = str((payload or {}).get("targetId") or "")
+    if not target_id:
+        raise HTTPException(status_code=400, detail="El ingreso debe asignarse a un pedido o una factura")
+
     now = datetime.now(timezone.utc)
+    iid = f"ing-{uuid.uuid4().hex[:8]}"
+
+    # Archivar el documento (si viene en base64) en su propia colección
+    doc_id = ""
+    doc_b64 = (payload or {}).get("docBase64") or ""
+    if doc_b64:
+        stripped = doc_b64.split(",", 1)[1] if doc_b64.startswith("data:") else doc_b64
+        doc_id = f"ingdoc-{uuid.uuid4().hex[:8]}"
+        await db.ingreso_docs.insert_one({
+            "id": doc_id,
+            "ingresoId": iid,
+            "dataBase64": stripped,
+            "mime": str(payload.get("docMime") or "application/octet-stream"),
+            "filename": str(payload.get("docName") or "documento"),
+            "createdBy": payload.get("createdBy", ""),
+            "createdAt": now.isoformat(),
+        })
+
     doc = {
-        "id": f"ing-{uuid.uuid4().hex[:8]}",
+        "id": iid,
         "fecha": str(payload.get("fecha") or now.strftime("%Y-%m-%d")),
         "importe": round(imp, 2),
         "concepto": str(payload.get("concepto") or "Ingreso a cuenta"),
         "metodo": str(payload.get("metodo") or "otro"),
         "cliente": str(payload.get("cliente") or ""),
         "projectRef": str(payload.get("projectRef") or payload.get("proyecto") or ""),
+        "targetType": str(payload.get("targetType") or ""),   # pedido | factura
+        "targetId": target_id,                                  # id de la ficha
+        "targetRef": str(payload.get("targetRef") or ""),
+        "docId": doc_id,
+        "docName": str(payload.get("docName") or ""),
         "createdBy": payload.get("createdBy", ""),
         "createdByName": payload.get("createdByName", ""),
         "createdAt": now.isoformat(),
@@ -782,7 +824,17 @@ async def create_ingreso(payload: dict):
     return {"success": True, "ingreso": doc}
 
 
+@router.get("/rentabilidad/ingresos/doc/{doc_id}")
+async def get_ingreso_doc(doc_id: str):
+    """Devuelve el documento archivado de un ingreso (para consultarlo)."""
+    d = await db.ingreso_docs.find_one({"id": doc_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    return d
+
+
 @router.delete("/rentabilidad/ingresos/{ingreso_id}")
 async def delete_ingreso(ingreso_id: str):
     await db.ingresos_cuenta.delete_one({"id": ingreso_id})
+    await db.ingreso_docs.delete_many({"ingresoId": ingreso_id})
     return {"success": True}

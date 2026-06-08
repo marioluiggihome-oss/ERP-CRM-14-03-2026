@@ -147,6 +147,18 @@ export const clientsAPI = {
     return response.json();
   },
 
+  // Asigna los clientes antiguos (sin dueño) a un usuario. Solo admin/dirección.
+  backfillOwner: async (username = 'MARIO') => {
+    const response = await fetch(`${API_URL}/api/clients/backfill-owner`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ username }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'Error en la reasignación');
+    return data;
+  },
+
   create: async (client) => {
     const response = await fetch(`${API_URL}/api/clients`, {
       method: 'POST',
