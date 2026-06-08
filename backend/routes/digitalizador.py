@@ -367,6 +367,17 @@ Extrae TODAS las lineas que encuentres, incluyendo:
 - Cualquier articulo con medidas o descripciones
 - Electrodomesticos con sus codigos y descripciones
 
+EXTRACCION COMPLETA (CRITICO para presupuestos impresos de varias paginas):
+- Si el documento tiene articulos numerados de forma consecutiva en una columna
+  '#' (por ejemplo del 1 al 55), extrae CADA numero de TODAS las paginas, sin
+  saltarte ninguno y sin detenerte a la mitad. El JSON debe tener tantas lineas
+  como numeros aparezcan.
+- Une al campo "description" el texto tecnico que aparezca debajo de un articulo
+  (ej: "Lados: 4C - Canto: BLANCO", "Mano: Izquierda"). Si ves "Mano: Izquierda/
+  Derecha", inclúyelo en la descripcion.
+- NO extraigas como articulos las filas de resumen/totales: "Total Lineas Bruto",
+  "Base Imponible", "I.V.A.", "TOTAL DOCUMENTO", etc. Ignoralas.
+
 Para cada linea encontrada, devuelve en formato JSON:
 {
   "projectName": "nombre del proyecto o cliente si lo encuentras",
