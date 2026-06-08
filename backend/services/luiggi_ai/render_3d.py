@@ -286,6 +286,65 @@ class Render3DService:
 
         return params
 
+    def detect_space_type(self, description: str) -> str:
+        """Detecta QUÉ se quiere renderizar para no forzar siempre 'cocina'.
+
+        Devuelve una frase en inglés lista para el prompt del modelo de imagen.
+        """
+        d = (description or "").lower()
+        if any(x in d for x in ["armario", "empotrado", "ropero", "closet", "wardrobe", "vestidor", "walk-in", "walk in"]):
+            return "fitted/built-in wardrobe (custom closet) with exterior doors and interior shelving, drawers and columns"
+        if any(x in d for x in ["vitrina", "aparador", "cómoda", "comoda", "buffet", "sideboard"]):
+            return "custom sideboard/cabinet furniture piece"
+        if any(x in d for x in ["estanter", "librer", "bookcase", "shelving"]):
+            return "custom shelving / bookcase unit"
+        if any(x in d for x in ["baño", "bano", "aseo", "lavabo", "bathroom", "vanity"]):
+            return "bathroom with custom vanity/cabinetry"
+        if any(x in d for x in ["dormitorio", "habitaci", "bedroom"]):
+            return "bedroom with custom furniture"
+        if any(x in d for x in ["salón", "salon", "comedor", "living", "tv"]):
+            return "living room with custom furniture"
+        if any(x in d for x in ["cocina", "kitchen"]):
+            return "modern kitchen"
+        if any(x in d for x in ["mueble", "cabinet", "furniture", "puerta", "puertas"]):
+            return "custom furniture / cabinetry piece"
+        return "custom interior furniture / cabinetry piece"
+
+    def build_render_prompt(
+        self,
+        description: str,
+        style: str = "photorealistic",
+        space_type: str = "custom interior furniture / cabinetry piece",
+    ) -> str:
+        """Prompt GENÉRICO dirigido por la descripción del usuario.
+
+        A diferencia de build_kitchen_prompt (modo formulario de cocina), aquí la
+        descripción del usuario es el contenido principal y NO se fuerza cocina.
+        """
+        style_instructions = {
+            "photorealistic": "Ultra-photorealistic 3D render, 8K resolution, ray-traced lighting, subtle depth of field",
+            "architectural": "Professional architectural visualization, clean lines, accurate proportions, neutral lighting",
+            "magazine": "Interior design magazine cover quality, styled with accessories, warm inviting atmosphere",
+            "minimalist": "Clean minimalist aesthetic, uncluttered surfaces, zen-like simplicity, soft shadows",
+            "warm": "Warm cozy atmosphere, golden hour lighting, lived-in feeling with subtle styling",
+            "industrial": "Industrial loft style, exposed elements, raw materials, dramatic contrast lighting",
+        }
+        style_desc = style_instructions.get(style, style_instructions["photorealistic"])
+
+        parts = [
+            f"{style_desc}.",
+            f"Subject: a {space_type}.",
+            f"Design brief (follow it precisely): {(description or '').strip()}",
+            "Reproduce EXACTLY the elements described in the brief: the requested "
+            "type of piece, exterior doors, finishes and colors, handles/pulls, "
+            "materials, and the interior configuration (shelves, columns, drawers, "
+            "open spaces) as specified.",
+            "Camera angle: eye-level perspective showing the full piece within its space.",
+            "Realistic materials, accurate proportions, professional lighting.",
+            "No text, watermarks, or logos in the image.",
+        ]
+        return " ".join(parts)
+
     async def generate_render(
         self,
         description: str,
@@ -308,24 +367,28 @@ class Render3DService:
         if params_override:
             parsed_params.update(params_override)
 
-        # Construir prompt optimizado
-        prompt = self.build_kitchen_prompt(
-            layout=parsed_params.get("layout", "L-shape"),
-            countertop=parsed_params.get("countertop", "quartz_white"),
-            cabinets=parsed_params.get("cabinets", "white_matte"),
-            handles=parsed_params.get("handles", "bar_black"),
-            floor=parsed_params.get("floor", "wood_oak"),
-            lighting=parsed_params.get("lighting", "natural"),
+        # Detectar el tipo de espacio/mueble para NO forzar "cocina"
+        space_type = self.detect_space_type(description)
+        parsed_params["space_type"] = space_type
+
+        # Construir prompt GENÉRICO guiado por la descripción del usuario
+        prompt = self.build_render_prompt(
+            description=description,
             style=parsed_params.get("style", "photorealistic"),
-            additional_details=parsed_params.get("additional_details"),
+            space_type=space_type,
         )
 
-        # Crear tarea de generación de imagen
+        # Crear tarea de generación de imagen (genérica, dirigida por el brief)
         task_prompt = (
-            f"Generate a high-quality 3D render image based on this description:\n\n"
+            "Generate a single high-quality, photorealistic 3D render image based "
+            "STRICTLY on the following design brief. Reproduce exactly what is "
+            "described (type of furniture or space, exterior doors, finishes, "
+            "colors, handles/pulls, materials and interior layout such as shelves, "
+            "columns or drawers). Do NOT default to a kitchen unless the brief "
+            "explicitly asks for one.\n\n"
             f"{prompt}\n\n"
-            f"Output: A single photorealistic image of the kitchen design. "
-            f"The image should look like a professional interior design visualization."
+            "The result must look like a professional interior design "
+            "visualization. No text, watermarks, or logos in the image."
         )
 
         return await self._render_with_gemini(task_prompt, prompt, parsed_params)
