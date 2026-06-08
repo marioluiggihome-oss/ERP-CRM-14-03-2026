@@ -897,17 +897,22 @@ async def delete_calendar_event(event_id: str):
 @router.put("/crm/calendar/events/{event_id}/complete")
 async def complete_calendar_event(event_id: str):
     """Mark a calendar event as completed"""
+    now_iso = datetime.now(timezone.utc).isoformat()
     result = await db.calendar_events.update_one(
         {"id": event_id},
-        {"$set": {
-            "completed": True,
-            "completedAt": datetime.now(timezone.utc).isoformat(),
-            "updatedAt": datetime.now(timezone.utc).isoformat()
-        }}
+        {"$set": {"completed": True, "completedAt": now_iso, "updatedAt": now_iso}}
     )
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Evento no encontrado")
-    return {"message": "Evento completado", "id": event_id}
+    if result.matched_count:
+        return {"message": "Evento completado", "id": event_id}
+    # Si no es un evento "puro", puede ser una ACTIVIDAD del CRM (también salen
+    # en el calendario): marcarla como completada allí.
+    act = await db.activities.update_one(
+        {"id": event_id},
+        {"$set": {"completed": True, "completedAt": now_iso}}
+    )
+    if act.matched_count:
+        return {"message": "Actividad completada", "id": event_id}
+    raise HTTPException(status_code=404, detail="Evento no encontrado")
 
 
 @router.post("/crm/calendar/create-from-opportunity/{opp_id}")
