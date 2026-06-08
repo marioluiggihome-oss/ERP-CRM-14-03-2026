@@ -4,7 +4,7 @@ import {
   RotateCcw, AlertTriangle, CheckCircle2, Plus, Trash2,
   Settings2, Move, GripVertical, FileSpreadsheet, Printer
 } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 /**
  * BoardOptimizer - Optimización de Corte de Tableros con Vista Previa Interactiva

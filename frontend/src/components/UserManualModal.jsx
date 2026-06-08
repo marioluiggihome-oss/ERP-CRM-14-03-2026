@@ -5,7 +5,7 @@ import {
   Factory, Truck, Store, ShoppingCart, Users, Target,
   FileText, Settings, Package, BarChart3, Calendar
 } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 /**
  * Modal de Ayuda - Manual de Usuario por Rol
