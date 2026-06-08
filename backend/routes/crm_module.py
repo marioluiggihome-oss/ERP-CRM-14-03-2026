@@ -47,6 +47,28 @@ async def _get_user_or_none(credentials=Depends(_optional_bearer)):
         return None
 
 
+_ELEVATED_FLAGS = ("isAdmin", "isGerente", "isDirectorComercial",
+                   "isResponsableDelegacion", "isDirectorFabrica")
+
+
+def _can_modify(current_user, doc) -> bool:
+    """¿Puede el usuario modificar/eliminar este documento?
+
+    - Sin token (legacy) -> True (no romper flujos antiguos).
+    - Admin/dirección -> True.
+    - En otro caso, solo si es el dueño (creador o asignado).
+    """
+    if not current_user:
+        return True
+    if any(current_user.get(f) for f in _ELEVATED_FLAGS):
+        return True
+    uid = current_user.get("id")
+    if not uid:
+        return True
+    owners = {doc.get("createdByUserId"), doc.get("createdBy"), doc.get("assignedTo")}
+    return uid in owners
+
+
 # ============================================
 # CRM API ENDPOINTS - Contactos
 # ============================================
@@ -524,27 +546,33 @@ async def create_opportunity(opp: OpportunityCreate, current_user: Optional[dict
 
 
 @router.put("/crm/opportunities/{opp_id}")
-async def update_opportunity(opp_id: str, update: OpportunityUpdate):
+async def update_opportunity(opp_id: str, update: OpportunityUpdate, current_user: Optional[dict] = Depends(_get_user_or_none)):
     """Update an opportunity"""
     try:
+        existing = await db.opportunities.find_one({"id": opp_id}, {"_id": 0})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+        if not _can_modify(current_user, existing):
+            raise HTTPException(status_code=403, detail="No tienes permiso para modificar esta oportunidad")
+
         update_data = {k: v for k, v in update.model_dump().items() if v is not None}
         if not update_data:
             raise HTTPException(status_code=400, detail="No hay datos para actualizar")
-        
+
         update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
-        
+
         # Handle stage change
         if "stage" in update_data:
             if update_data["stage"] in ["won", "lost"]:
                 update_data["closedAt"] = datetime.now(timezone.utc).isoformat()
-        
+
         result = await db.opportunities.update_one(
             {"id": opp_id},
             {"$set": update_data}
         )
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
-        
+
         updated = await db.opportunities.find_one({"id": opp_id}, {"_id": 0})
         return updated
     except HTTPException:
@@ -555,12 +583,15 @@ async def update_opportunity(opp_id: str, update: OpportunityUpdate):
 
 
 @router.delete("/crm/opportunities/{opp_id}")
-async def delete_opportunity(opp_id: str):
+async def delete_opportunity(opp_id: str, current_user: Optional[dict] = Depends(_get_user_or_none)):
     """Delete an opportunity"""
     try:
-        result = await db.opportunities.delete_one({"id": opp_id})
-        if result.deleted_count == 0:
+        existing = await db.opportunities.find_one({"id": opp_id}, {"_id": 0})
+        if not existing:
             raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+        if not _can_modify(current_user, existing):
+            raise HTTPException(status_code=403, detail="No tienes permiso para eliminar esta oportunidad")
+        await db.opportunities.delete_one({"id": opp_id})
         return {"message": "Oportunidad eliminada", "id": opp_id}
     except HTTPException:
         raise

@@ -1013,7 +1013,7 @@ export const crmOpportunitiesAPI = {
   update: async (id, opportunity) => {
     const response = await fetch(`${API_URL}/api/crm/opportunities/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(opportunity)
     });
     if (!response.ok) throw new Error('Error al actualizar oportunidad');
@@ -1022,7 +1022,8 @@ export const crmOpportunitiesAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/crm/opportunities/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders()
     });
     if (!response.ok) throw new Error('Error al eliminar oportunidad');
     return response.json();
