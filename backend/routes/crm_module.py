@@ -481,8 +481,26 @@ async def get_opportunity(opp_id: str, current_user: Optional[dict] = Depends(_g
     return opp
 
 
+@router.get("/crm/prescriptors")
+async def get_prescriptors():
+    """Lista de colaboradores/prescriptores (usuarios con isPrescriptor=True).
+
+    El frontend (CRMContacts) usa id + clientName para el desplegable de
+    colaboradores. Antes este endpoint no existía y daba 404.
+    """
+    try:
+        users = await db.users.find(
+            {"isPrescriptor": True, "isActive": {"$ne": False}},
+            {"_id": 0, "id": 1, "clientName": 1, "username": 1}
+        ).to_list(500)
+        return users
+    except Exception as e:
+        logger.error(f"Get prescriptors error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/crm/opportunities")
-async def create_opportunity(opp: OpportunityCreate):
+async def create_opportunity(opp: OpportunityCreate, current_user: Optional[dict] = Depends(_get_user_or_none)):
     """Create a new opportunity"""
     try:
         opp_dict = opp.model_dump()
@@ -490,7 +508,13 @@ async def create_opportunity(opp: OpportunityCreate):
         doc = opp_obj.model_dump()
         doc['createdAt'] = doc['createdAt'].isoformat()
         doc['updatedAt'] = doc['updatedAt'].isoformat()
-        
+
+        # Atribuir al creador para que el aislamiento por usuario lo muestre
+        if current_user and current_user.get("id"):
+            doc['createdByUserId'] = current_user["id"]
+            if not doc.get("createdBy"):
+                doc['createdBy'] = current_user["id"]
+
         await db.opportunities.insert_one(doc)
         doc.pop('_id', None)
         return doc

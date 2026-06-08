@@ -960,14 +960,14 @@ export const crmOpportunitiesAPI = {
     if (options.businessType) params.append('businessType', options.businessType);
     if (options.moduleType) params.append('moduleType', options.moduleType);
     if (params.toString()) url += `?${params.toString()}`;
-    
-    const response = await fetch(url);
+
+    const response = await fetch(url, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener oportunidades');
     return response.json();
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_URL}/api/crm/opportunities/${id}`);
+    const response = await fetch(`${API_URL}/api/crm/opportunities/${id}`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Oportunidad no encontrada');
     return response.json();
   },
@@ -975,7 +975,7 @@ export const crmOpportunitiesAPI = {
   create: async (opportunity) => {
     const response = await fetch(`${API_URL}/api/crm/opportunities`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(opportunity)
     });
     if (!response.ok) throw new Error('Error al crear oportunidad');
