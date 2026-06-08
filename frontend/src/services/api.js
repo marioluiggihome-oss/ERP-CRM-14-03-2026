@@ -1052,7 +1052,7 @@ export const crmActivitiesAPI = {
   create: async (activity) => {
     const response = await fetch(`${API_URL}/api/crm/activities`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(activity)
     });
     if (!response.ok) throw new Error('Error al crear actividad');
@@ -1062,7 +1062,7 @@ export const crmActivitiesAPI = {
   update: async (id, activity) => {
     const response = await fetch(`${API_URL}/api/crm/activities/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(activity)
     });
     if (!response.ok) throw new Error('Error al actualizar actividad');
@@ -1071,7 +1071,8 @@ export const crmActivitiesAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/crm/activities/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders()
     });
     if (!response.ok) throw new Error('Error al eliminar actividad');
     return response.json();

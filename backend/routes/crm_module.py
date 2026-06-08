@@ -65,7 +65,8 @@ def _can_modify(current_user, doc) -> bool:
     uid = current_user.get("id")
     if not uid:
         return True
-    owners = {doc.get("createdByUserId"), doc.get("createdBy"), doc.get("assignedTo")}
+    owners = {doc.get("createdByUserId"), doc.get("createdBy"),
+              doc.get("assignedTo"), doc.get("userId")}
     return uid in owners
 
 
@@ -690,7 +691,7 @@ async def get_activities(
 
 
 @router.post("/crm/activities")
-async def create_activity(activity: ActivityCreate):
+async def create_activity(activity: ActivityCreate, current_user: Optional[dict] = Depends(_get_user_or_none)):
     """Create a new activity"""
     try:
         act_dict = activity.model_dump()
@@ -705,7 +706,13 @@ async def create_activity(activity: ActivityCreate):
         doc = act_obj.model_dump()
         doc['createdAt'] = doc['createdAt'].isoformat()
         doc['updatedAt'] = doc['updatedAt'].isoformat()
-        
+
+        # Atribuir la actividad al usuario que la crea
+        if current_user and current_user.get("id"):
+            doc['createdByUserId'] = current_user["id"]
+            if not doc.get("userId"):
+                doc['userId'] = current_user["id"]
+
         await db.activities.insert_one(doc)
         doc.pop('_id', None)
         
@@ -726,19 +733,23 @@ async def create_activity(activity: ActivityCreate):
 
 
 @router.put("/crm/activities/{activity_id}")
-async def update_activity(activity_id: str, updates: dict):
+async def update_activity(activity_id: str, updates: dict, current_user: Optional[dict] = Depends(_get_user_or_none)):
     """Update an existing activity"""
     try:
+        existing = await db.activities.find_one({"id": activity_id}, {"_id": 0})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Actividad no encontrada")
+        if not _can_modify(current_user, existing):
+            raise HTTPException(status_code=403, detail="No tienes permiso para modificar esta actividad")
+
         updates.pop('id', None)
         updates.pop('_id', None)
         updates['updatedAt'] = datetime.now(timezone.utc).isoformat()
 
-        result = await db.activities.update_one(
+        await db.activities.update_one(
             {"id": activity_id},
             {"$set": updates}
         )
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Actividad no encontrada")
 
         doc = await db.activities.find_one({"id": activity_id}, {"_id": 0})
         return doc
@@ -750,12 +761,15 @@ async def update_activity(activity_id: str, updates: dict):
 
 
 @router.delete("/crm/activities/{activity_id}")
-async def delete_activity(activity_id: str):
+async def delete_activity(activity_id: str, current_user: Optional[dict] = Depends(_get_user_or_none)):
     """Delete an activity"""
     try:
-        result = await db.activities.delete_one({"id": activity_id})
-        if result.deleted_count == 0:
+        existing = await db.activities.find_one({"id": activity_id}, {"_id": 0})
+        if not existing:
             raise HTTPException(status_code=404, detail="Actividad no encontrada")
+        if not _can_modify(current_user, existing):
+            raise HTTPException(status_code=403, detail="No tienes permiso para eliminar esta actividad")
+        await db.activities.delete_one({"id": activity_id})
         return {"message": "Actividad eliminada", "id": activity_id}
     except HTTPException:
         raise

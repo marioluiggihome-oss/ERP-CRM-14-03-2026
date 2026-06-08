@@ -63,7 +63,6 @@ from routes import (
     products_router,
     clients_router,
     projects_router,
-    crm_router,
     despiece_budgeter_router,
     libraries_router,
     montajes_router,
