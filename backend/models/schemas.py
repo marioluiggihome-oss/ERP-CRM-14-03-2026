@@ -655,6 +655,8 @@ class CalendarEventModel(BaseModel):
     contactName: str = ""
     opportunityId: Optional[str] = None
     assignedToId: Optional[str] = None
+    assignedTo: Optional[str] = None
+    assignedToName: str = ""
     completed: bool = False
     completedAt: Optional[datetime] = None
     reminderMinutes: int = 30
@@ -675,6 +677,8 @@ class CalendarEventCreate(BaseModel):
     contactName: str = ""
     opportunityId: Optional[str] = None
     assignedToId: Optional[str] = None
+    assignedTo: Optional[str] = None
+    assignedToName: str = ""
     reminderMinutes: int = 30
     color: str = "#3b82f6"
 

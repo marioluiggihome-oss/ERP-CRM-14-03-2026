@@ -741,53 +741,71 @@ async def get_calendar_events(
         events = await db.calendar_events.find(query, {"_id": 0}).sort("startDate", 1).to_list(500)
 
         # Incluir también las ACTIVIDADES del CRM (llamadas, visitas, reuniones...)
-        # como eventos del calendario, para que se vean en él. Se mapean sobre la marcha.
-        act_query = {}
-        if assignedTo:
-            act_query["$or"] = [{"assignedTo": assignedTo}, {"userId": assignedTo}]
-        if contactId:
-            act_query["contactId"] = contactId
-        activities = await db.activities.find(act_query, {"_id": 0}).to_list(500)
+        # como eventos del calendario. Va en su propio try: si algo falla aquí,
+        # los eventos "puros" del calendario deben seguir devolviéndose igualmente.
+        try:
+            act_query = {}
+            if assignedTo:
+                act_query["$or"] = [{"assignedTo": assignedTo}, {"userId": assignedTo}]
+            if contactId:
+                act_query["contactId"] = contactId
+            activities = await db.activities.find(act_query, {"_id": 0}).to_list(500)
 
-        ACT_COLORS = {
-            'call': '#3b82f6', 'llamada': '#3b82f6',
-            'visit': '#f97316', 'visita': '#f97316',
-            'meeting': '#8b5cf6', 'reunion': '#8b5cf6', 'reunión': '#8b5cf6',
-            'video': '#06b6d4', 'email': '#10b981', 'note': '#64748b', 'nota': '#64748b',
-        }
-        for a in activities:
-            # Fecha de la actividad: usa 'date'/'time', con fallbacks a dueDate/createdAt
-            day = a.get('date') or a.get('dueDate')
-            if not day:
-                ca = a.get('createdAt')
-                day = (ca[:10] if isinstance(ca, str) else None)
-            if not day:
-                continue
-            t = a.get('time') or a.get('dueTime') or '09:00'
-            start_iso = f"{day}T{t}:00" if len(str(day)) == 10 else str(day)
-            # Filtrar por rango si se pidió (comparación por prefijo de fecha)
-            if start and day < start[:10]:
-                continue
-            if end and day > end[:10]:
-                continue
-            atype = (a.get('type') or 'note').lower()
-            events.append({
-                "id": a.get('id'),
-                "title": a.get('title') or a.get('subject') or atype.upper(),
-                "description": a.get('description') or a.get('notes') or '',
-                "eventType": atype,
-                "startDate": start_iso,
-                "endDate": start_iso,
-                "allDay": False,
-                "contactId": a.get('contactId'),
-                "contactName": a.get('contactName', ''),
-                "assignedTo": a.get('assignedTo') or a.get('userId', ''),
-                "completed": a.get('completed', False),
-                "color": ACT_COLORS.get(atype, '#64748b'),
-                "isActivity": True,  # marca para distinguirlo de un evento "puro"
-            })
+            ACT_COLORS = {
+                'call': '#3b82f6', 'llamada': '#3b82f6',
+                'visit': '#f97316', 'visita': '#f97316',
+                'meeting': '#8b5cf6', 'reunion': '#8b5cf6', 'reunión': '#8b5cf6',
+                'video': '#06b6d4', 'email': '#10b981', 'note': '#64748b', 'nota': '#64748b',
+            }
+            for a in activities:
+                day = a.get('date') or a.get('dueDate')
+                if not day:
+                    ca = a.get('createdAt')
+                    day = (ca[:10] if isinstance(ca, str) else None)
+                if not day:
+                    continue
+                t = a.get('time') or a.get('dueTime') or '09:00'
+                day_s = str(day)
+                start_iso = f"{day_s}T{t}:00" if len(day_s) == 10 else day_s
+                if start and day_s[:10] < str(start)[:10]:
+                    continue
+                if end and day_s[:10] > str(end)[:10]:
+                    continue
+                atype = (a.get('type') or 'note').lower()
+                events.append({
+                    "id": a.get('id'),
+                    "title": a.get('title') or a.get('subject') or atype.upper(),
+                    "description": a.get('description') or a.get('notes') or '',
+                    "eventType": atype,
+                    "startDate": start_iso,
+                    "endDate": start_iso,
+                    "allDay": False,
+                    "contactId": a.get('contactId'),
+                    "contactName": a.get('contactName', ''),
+                    "assignedTo": a.get('assignedTo') or a.get('userId', ''),
+                    "completed": a.get('completed', False),
+                    "color": ACT_COLORS.get(atype, '#64748b'),
+                    "isActivity": True,
+                })
+        except Exception as act_err:
+            logger.warning(f"No se pudieron incluir actividades en el calendario: {act_err}")
 
-        events.sort(key=lambda e: e.get('startDate') or '')
+        # Normalizar startDate a string para que el frontend no falle al parsear
+        for ev in events:
+            sd = ev.get('startDate')
+            if sd is not None and not isinstance(sd, str):
+                try:
+                    ev['startDate'] = sd.isoformat()
+                except Exception:
+                    ev['startDate'] = str(sd)
+            ed = ev.get('endDate')
+            if ed is not None and not isinstance(ed, str):
+                try:
+                    ev['endDate'] = ed.isoformat()
+                except Exception:
+                    ev['endDate'] = str(ed)
+
+        events.sort(key=lambda e: str(e.get('startDate') or ''))
         return events
     except Exception as e:
         logger.error(f"Get calendar events error: {e}")
@@ -803,9 +821,17 @@ async def create_calendar_event(event: CalendarEventCreate, createdBy: str = "",
         evt_dict["createdByName"] = createdByName
         evt_obj = CalendarEventModel(**evt_dict)
         doc = evt_obj.model_dump()
-        doc['createdAt'] = doc['createdAt'].isoformat()
-        doc['updatedAt'] = doc['updatedAt'].isoformat()
-        
+        # Guardar TODAS las fechas como string ISO (consistencia con consultas y
+        # con las actividades; evita el lio string vs fecha BSON).
+        for k in ('startDate', 'endDate', 'createdAt', 'updatedAt', 'completedAt'):
+            if isinstance(doc.get(k), datetime):
+                doc[k] = doc[k].isoformat()
+        # El usuario asignado puede venir como assignedTo o assignedToId: unificar
+        # ambos para que filtros y recordatorios por email funcionen.
+        owner = doc.get('assignedTo') or doc.get('assignedToId')
+        doc['assignedTo'] = owner
+        doc['assignedToId'] = owner
+
         await db.calendar_events.insert_one(doc)
         doc.pop('_id', None)
         return doc
