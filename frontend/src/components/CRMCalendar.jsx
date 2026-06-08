@@ -282,7 +282,12 @@ const CRMCalendar = ({ currentUser }) => {
     if (!window.confirm('¿Eliminar este evento?')) return;
     
     try {
-      await crmCalendarAPI.delete(editingEvent.id);
+      if (editingEvent.source === 'google') {
+        // Es una copia leída de Google → eliminarla en Google Calendar
+        await googleCalendarAPI.deleteEvent(editingEvent.googleEventId || editingEvent.id);
+      } else {
+        await crmCalendarAPI.delete(editingEvent.id);
+      }
       setShowModal(false);
       loadData();
     } catch (err) {

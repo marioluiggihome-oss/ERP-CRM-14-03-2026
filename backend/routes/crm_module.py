@@ -884,9 +884,13 @@ async def delete_calendar_event(event_id: str):
     """Delete a calendar event"""
     try:
         result = await db.calendar_events.delete_one({"id": event_id})
-        if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Evento no encontrado")
-        return {"message": "Evento eliminado", "id": event_id}
+        if result.deleted_count:
+            return {"message": "Evento eliminado", "id": event_id}
+        # Puede ser una ACTIVIDAD del CRM (también sale en el calendario)
+        act = await db.activities.delete_one({"id": event_id})
+        if act.deleted_count:
+            return {"message": "Actividad eliminada", "id": event_id}
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
     except HTTPException:
         raise
     except Exception as e:
