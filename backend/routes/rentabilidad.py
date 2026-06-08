@@ -96,7 +96,8 @@ async def get_rentabilidad(userId: Optional[str] = None):
         projects = await db.projects.find(
             query,
             {"_id": 0, "id": 1, "budgetNumber": 1, "customerName": 1, "clientCode": 1,
-             "totalPvp": 1, "totalConIVA": 1, "createdAt": 1, "userId": 1, "status": 1}
+             "totalPvp": 1, "totalConIVA": 1, "createdAt": 1, "userId": 1, "status": 1,
+             "orderId": 1, "invoiceId": 1, "invoiceNumber": 1}
         ).sort("createdAt", -1).to_list(3000)
 
         # Agregar costes por projectRef (== budgetNumber)
@@ -122,6 +123,9 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "clientCode": p.get("clientCode", ""),
                 "fecha": p.get("createdAt", ""),
                 "status": p.get("status", ""),
+                "orderId": p.get("orderId", ""),
+                "invoiceId": p.get("invoiceId", ""),
+                "invoiceNumber": p.get("invoiceNumber", ""),
                 "venta": round(venta, 2),
                 "coste": round(coste, 2),
                 "margen": round(margen, 2),
@@ -568,3 +572,87 @@ async def get_ficha_doc(ficha_id: str, doc_id: str):
 async def delete_ficha_doc(ficha_id: str, doc_id: str):
     await db.sale_ficha_docs.delete_one({"id": doc_id, "fichaId": ficha_id})
     return {"success": True}
+
+
+# ============================================================================
+# CONVERSIONES:  presupuesto  ->  pedido  ->  factura
+# Crean el registro real y actualizan el estado del proyecto/pedido.
+# ============================================================================
+
+@router.post("/rentabilidad/presupuesto-to-pedido/{project_id}")
+async def presupuesto_to_pedido(project_id: str):
+    """Convierte un presupuesto (project) en PEDIDO (order) y marca el estado."""
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+    if project.get("orderId"):
+        raise HTTPException(status_code=400, detail="Este presupuesto ya tiene un pedido asociado")
+
+    now = datetime.now(timezone.utc)
+    items = (project.get("itemsMontada") or []) + (project.get("itemsDespiece") or [])
+    order = {
+        "id": f"order-{uuid.uuid4().hex[:8]}",
+        "budgetNumber": project.get("budgetNumber", ""),
+        "projectReference": project.get("internalReference", ""),
+        "customerName": project.get("customerName", ""),
+        "customerAddress": project.get("customerAddress", ""),
+        "totalAmount": float(project.get("totalPvp", 0) or 0),
+        "items": items,
+        "itemsCount": len(items),
+        "status": "confirmed",
+        "userId": project.get("userId", ""),
+        "sourceProjectId": project_id,
+        "origin": "rentabilidad",
+        "confirmedAt": now.isoformat(),
+        "createdAt": now.isoformat(),
+        "specifications": {
+            "doorColorLow": project.get("doorColorLow", ""),
+            "doorColorHigh": project.get("doorColorHigh", ""),
+            "doorColorColumns": project.get("doorColorColumns", ""),
+            "sideColor": project.get("sideColor", ""),
+        },
+    }
+    await db.orders.insert_one(order)
+    await db.projects.update_one(
+        {"id": project_id},
+        {"$set": {
+            "status": "aceptado",
+            "orderId": order["id"],
+            "acceptedAt": now.isoformat(),
+            "updatedAt": now.isoformat(),
+        }},
+    )
+    return {"success": True, "orderId": order["id"], "message": "Presupuesto convertido en pedido"}
+
+
+@router.post("/rentabilidad/pedido-to-factura/{project_id}")
+async def pedido_to_factura(project_id: str):
+    """Convierte el PEDIDO de un proyecto en FACTURA (reutiliza el alta de facturas)."""
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    if project.get("invoiceId"):
+        raise HTTPException(status_code=400, detail="Este pedido ya está facturado")
+    if not project.get("orderId"):
+        raise HTTPException(status_code=400, detail="Primero pasa el presupuesto a pedido")
+
+    # Asegurar un estado válido para emitir factura
+    if project.get("status") not in ["aceptado", "en_fabricacion", "entregado"]:
+        await db.projects.update_one({"id": project_id}, {"$set": {"status": "aceptado"}})
+
+    from routes.invoices import create_invoice_from_project
+    doc = await create_invoice_from_project(project_id)
+
+    now = datetime.now(timezone.utc)
+    await db.projects.update_one(
+        {"id": project_id},
+        {"$set": {"status": "facturado", "updatedAt": now.isoformat()}},
+    )
+    if project.get("orderId"):
+        await db.orders.update_one(
+            {"id": project["orderId"]},
+            {"$set": {"status": "facturado", "invoiceId": doc.get("id"),
+                      "invoiceNumber": doc.get("invoiceNumber")}},
+        )
+    return {"success": True, "invoiceId": doc.get("id"),
+            "invoiceNumber": doc.get("invoiceNumber"), "message": "Pedido facturado"}
