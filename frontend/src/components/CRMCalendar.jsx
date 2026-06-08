@@ -640,7 +640,7 @@ const CRMCalendar = ({ currentUser }) => {
                                 <span className={`font-bold text-sm ${EVENT_TYPES[evt.eventType]?.textColor || 'text-slate-700'} ${evt.completed ? 'line-through' : ''}`}>
                                   {evt.title}
                                 </span>
-                                {!evt.completed && (
+                                {!evt.completed && evt.source !== 'google' && (
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handleComplete(evt); }}
                                     className="p-1 hover:bg-white/50 rounded"

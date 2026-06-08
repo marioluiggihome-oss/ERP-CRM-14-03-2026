@@ -1151,7 +1151,7 @@ export const crmCalendarAPI = {
   
   complete: async (eventId) => {
     const response = await fetch(`${API_URL}/api/crm/calendar/events/${eventId}/complete`, {
-      method: 'POST'
+      method: 'PUT'
     });
     if (!response.ok) throw new Error('Error al completar evento');
     return response.json();
