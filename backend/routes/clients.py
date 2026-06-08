@@ -4,15 +4,33 @@ Router para Clientes
 import logging
 from typing import List, Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from config import db
 from models.schemas import ClientModel, ClientCreate, ClientUpdate
+from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS
 import re as _re
 
 def _escape_regex(s: str) -> str:
     """Escapar caracteres especiales de regex para evitar ReDoS"""
     return _re.escape(str(s)) if s else s
+
+
+def _is_elevated(user) -> bool:
+    """Admin / dirección ven TODOS los clientes; el resto solo los suyos."""
+    return bool(user and any(user.get(flag) for flag in ADMIN_ROLE_FLAGS))
+
+
+def _owner_filter(user):
+    """$or que limita a los clientes del usuario (creador o asignado)."""
+    uid = user.get("id") if user else None
+    if not uid:
+        return None
+    return {"$or": [
+        {"createdByUserId": uid},
+        {"assignedRepresentativeId": uid},
+        {"linkedUserId": uid},
+    ]}
 
 
 logger = logging.getLogger(__name__)
@@ -26,23 +44,34 @@ async def get_clients(
     segment: str = None,
     search: str = None,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
 ):
-    """Obtener clientes con filtros"""
-    query = {}
-    
+    """Obtener clientes con filtros.
+
+    Cada usuario ve SOLO sus clientes (creados o asignados). Admin y roles de
+    dirección (ADMIN_ROLE_FLAGS) ven todos.
+    """
+    filters = []
     if status:
-        query["status"] = status
+        filters.append({"status": status})
     if segment:
-        query["segment"] = segment
+        filters.append({"segment": segment})
     if search:
-        query["$or"] = [
+        filters.append({"$or": [
             {"name": {"$regex": _escape_regex(search), "$options": "i"}},
             {"company": {"$regex": _escape_regex(search), "$options": "i"}},
             {"email": {"$regex": _escape_regex(search), "$options": "i"}},
             {"code": {"$regex": _escape_regex(search), "$options": "i"}}
-        ]
-    
+        ]})
+
+    # Aislamiento por usuario (salvo admin/dirección)
+    if not _is_elevated(current_user):
+        of = _owner_filter(current_user)
+        if of is not None:
+            filters.append(of)
+
+    query = {"$and": filters} if filters else {}
     clients = await db.clients.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     return clients
 
@@ -71,13 +100,20 @@ async def get_client(client_id: str):
 
 
 @router.post("")
-async def create_client(client: ClientCreate):
+async def create_client(client: ClientCreate, current_user: dict = Depends(get_current_user)):
     """Crear un nuevo cliente"""
     client_dict = client.model_dump()
     client_dict["id"] = f"cli-{__import__('uuid').uuid4().hex[:8]}"
     client_dict["createdAt"] = datetime.now(timezone.utc)
     client_dict["updatedAt"] = datetime.now(timezone.utc)
-    
+
+    # Sellar el creador para poder aislar por usuario (cada uno ve los suyos)
+    uid = current_user.get("id") if current_user else None
+    if uid:
+        client_dict["createdByUserId"] = uid
+        if not client_dict.get("assignedRepresentativeId"):
+            client_dict["assignedRepresentativeId"] = uid
+
     # Verificar código único si se proporciona
     if client_dict.get("code"):
         existing = await db.clients.find_one({"code": client_dict["code"]})
