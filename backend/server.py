@@ -46,6 +46,7 @@ from services.jwt_service import (
     get_current_user,
     require_auth,
     require_admin,
+    ADMIN_ROLE_FLAGS,
     JWT_SECRET,
     JWT_ALGORITHM,
     get_token_from_request,
@@ -1066,12 +1067,26 @@ async def update_distributor_request(
 # ============================================
 
 @api_router.get("/clients")
-async def get_clients(activo: Optional[bool] = None, search: Optional[str] = None):
-    """Obtener todos los clientes activos"""
+async def get_clients(activo: Optional[bool] = None, search: Optional[str] = None,
+                      current_user: Optional[dict] = Depends(get_current_user)):
+    """Obtener clientes. AISLAMIENTO por usuario: cada comercial ve SOLO sus
+    clientes (creados o asignados); admin/dirección (ADMIN_ROLE_FLAGS) ven todos.
+    Sin token (sesiones legacy) se mantiene el comportamiento anterior."""
     query = {}
     if activo is not None:
         query["activo"] = activo
-    
+
+    if current_user and current_user.get("id"):
+        elevated = any(current_user.get(f) for f in ADMIN_ROLE_FLAGS)
+        if not elevated:
+            uid = current_user["id"]
+            owner = {"$or": [
+                {"createdByUserId": uid},
+                {"assignedRepresentativeId": uid},
+                {"linkedUserId": uid},
+            ]}
+            query = {"$and": [query, owner]} if query else owner
+
     clients = await db.clients.find(query, {"_id": 0}).to_list(5000)
     
     if search:
@@ -1141,11 +1156,58 @@ async def create_client(client: dict, current_user: dict = Depends(require_auth)
     client_data["createdAt"] = datetime.now(timezone.utc).isoformat()
     client_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
 
+    # Sellar el creador para el aislamiento por usuario (cada uno ve los suyos)
+    _uid = current_user.get("id") if current_user else None
+    if _uid:
+        client_data.setdefault("createdByUserId", _uid)
+        if not client_data.get("assignedRepresentativeId"):
+            client_data["assignedRepresentativeId"] = _uid
+
     await db.clients.insert_one(client_data)
 
     # Return without _id
     client_data.pop("_id", None)
     return client_data
+
+
+@api_router.post("/clients/backfill-owner")
+async def backfill_clients_owner(payload: dict = None, current_user: dict = Depends(require_auth)):
+    """Asigna los clientes SIN dueño a un usuario (por defecto MARIO).
+
+    Para datos antiguos creados antes del aislamiento por usuario. Solo
+    admin/dirección. Body opcional: {"username": "MARIO"}.
+    """
+    if not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
+        raise HTTPException(status_code=403, detail="Solo administración puede reasignar clientes")
+    username = ((payload or {}).get("username") or "MARIO").strip()
+    rx = {"$regex": f"^{re.escape(username)}$", "$options": "i"}
+    target = await db.users.find_one(
+        {"$or": [{"username": rx}, {"clientName": rx}]},
+        {"_id": 0, "id": 1, "username": 1, "clientName": 1},
+    )
+    if not target:
+        raise HTTPException(status_code=404, detail=f"No se encontró el usuario '{username}'")
+    uid = target["id"]
+    sin_dueno = {"$or": [
+        {"createdByUserId": {"$exists": False}},
+        {"createdByUserId": ""},
+        {"createdByUserId": None},
+    ]}
+    res = await db.clients.update_many(sin_dueno, {"$set": {"createdByUserId": uid}})
+    await db.clients.update_many(
+        {"$or": [
+            {"assignedRepresentativeId": {"$exists": False}},
+            {"assignedRepresentativeId": ""},
+            {"assignedRepresentativeId": None},
+        ]},
+        {"$set": {"assignedRepresentativeId": uid}},
+    )
+    return {
+        "success": True,
+        "asignados": res.modified_count,
+        "usuario": target.get("username") or target.get("clientName"),
+        "userId": uid,
+    }
 
 @api_router.put("/clients/{client_id}")
 async def update_client(client_id: str, client: ClientUpdate, current_user: dict = Depends(require_auth)):
