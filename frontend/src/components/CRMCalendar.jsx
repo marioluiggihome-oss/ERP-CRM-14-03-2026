@@ -31,7 +31,7 @@ const VIEWS = {
   lista: { name: 'Lista', icon: List }
 };
 
-const CRMCalendar = ({ currentUser }) => {
+const CRMCalendar = ({ currentUser, focusEvent }) => {
   const [events, setEvents] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
@@ -222,6 +222,21 @@ const CRMCalendar = ({ currentUser }) => {
     });
     setShowModal(true);
   };
+
+  // Abrir directamente una visita cuando se llega desde el recordatorio ("Ir al calendario")
+  const focusedRef = useRef(null);
+  useEffect(() => {
+    if (!focusEvent || !focusEvent.startDate) return;
+    if (focusedRef.current === focusEvent.id) return;
+    focusedRef.current = focusEvent.id;
+    try {
+      const d = parseISO(focusEvent.startDate);
+      setCurrentDate(d);
+      setView('day');
+      openEditModal(focusEvent);
+    } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusEvent]);
 
   const handleSave = async () => {
     if (!formData.title.trim()) {

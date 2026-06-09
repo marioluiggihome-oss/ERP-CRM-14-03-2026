@@ -1062,7 +1062,7 @@ const App = () => {
           {/* Aviso GLOBAL de eventos próximos (aparece en cualquier pantalla) */}
           <GlobalEventReminder
             currentUser={state.currentUser}
-            onOpenCalendar={() => setState(p => ({ ...p, currentTab: 'crm-dashboard' }))}
+            onOpenCalendar={(evt) => setState(p => ({ ...p, currentTab: 'crm-calendar', crmFocusEvent: evt || null }))}
           />
 
           <main className="flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10">
@@ -1129,7 +1129,7 @@ const App = () => {
             )}
             
             {/* CRM - Single Component with internal navigation */}
-            {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} />}
+            {state.currentTab?.startsWith('crm') && <CRMLayout currentUser={state.currentUser} initialTab={(state.currentTab || '').startsWith('crm-') ? state.currentTab.slice(4) : undefined} focusEvent={state.crmFocusEvent} />}
             </Suspense>
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">

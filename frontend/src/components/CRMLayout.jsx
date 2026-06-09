@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Target, Users, CalendarDays, ClipboardList } from 'lucide-react';
 import CRMDashboard from './CRMDashboard';
 import CRMPipeline from './CRMPipeline';
@@ -14,9 +14,14 @@ const CRM_TABS = [
   { id: 'calendar',    name: 'Calendario',    icon: CalendarDays,    color: 'text-orange-600',  activeBg: 'bg-orange-600' },
 ];
 
-const CRMLayout = ({ currentUser }) => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+const CRMLayout = ({ currentUser, initialTab, focusEvent }) => {
+  const [activeTab, setActiveTab] = useState(initialTab && CRM_TABS.some(t => t.id === initialTab) ? initialTab : 'dashboard');
   const activeConfig = CRM_TABS.find(t => t.id === activeTab);
+
+  // Si App pide una pestaña concreta (p. ej. "Ir al calendario"), saltar a ella
+  useEffect(() => {
+    if (initialTab && CRM_TABS.some(t => t.id === initialTab)) setActiveTab(initialTab);
+  }, [initialTab, focusEvent]);
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -49,7 +54,7 @@ const CRMLayout = ({ currentUser }) => {
         {activeTab === 'pipeline'   && <CRMPipeline currentUser={currentUser} />}
         {activeTab === 'contacts'   && <CRMContacts currentUser={currentUser} />}
         {activeTab === 'activities' && <CRMActivities currentUser={currentUser} />}
-        {activeTab === 'calendar'   && <CRMCalendar currentUser={currentUser} />}
+        {activeTab === 'calendar'   && <CRMCalendar currentUser={currentUser} focusEvent={focusEvent} />}
       </div>
     </div>
   );

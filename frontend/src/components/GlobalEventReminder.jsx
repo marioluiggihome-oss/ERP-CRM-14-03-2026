@@ -120,7 +120,7 @@ const GlobalEventReminder = ({ currentUser, onOpenCalendar }) => {
               {detail.description && <p className="flex items-start gap-2 text-sm text-slate-600"><AlignLeft size={15} className="text-slate-400 mt-0.5 shrink-0" /> {detail.description}</p>}
               <div className="flex gap-2 pt-1">
                 <button
-                  onClick={() => { setDetail(null); onOpenCalendar?.(); }}
+                  onClick={() => { const e = detail; setDetail(null); onOpenCalendar?.(e); }}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold"
                 >
                   <CalendarDays size={15} /> Ir al calendario
