@@ -235,7 +235,6 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
       setView('day');
       openEditModal(focusEvent);
     } catch { /* noop */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusEvent]);
 
   const handleSave = async () => {

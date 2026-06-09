@@ -52,7 +52,6 @@ const CRMActivities = ({ currentUser }) => {
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   const fetchActivities = async () => {
