@@ -1,3 +1,4 @@
+import { getToken } from '../services/api';
 import React, { useState, useEffect } from 'react';
 import { 
   Phone, MapPin, Users, Calendar, Clock, Plus, Search, Filter, 
@@ -57,7 +58,7 @@ const CRMActivities = ({ currentUser }) => {
   const fetchActivities = async () => {
     try {
       const response = await fetch(`${API_URL}/api/crm/activities`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}` }
+        headers: { 'Authorization': `Bearer ${getToken()}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -73,7 +74,7 @@ const CRMActivities = ({ currentUser }) => {
   const fetchContacts = async () => {
     try {
       const response = await fetch(`${API_URL}/api/crm/contacts`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}` }
+        headers: { 'Authorization': `Bearer ${getToken()}` }
       });
       if (response.ok) {
         const data = await response.json();
@@ -95,7 +96,7 @@ const CRMActivities = ({ currentUser }) => {
         method: editingId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${getToken()}`
         },
         body: JSON.stringify({
           activityType: formData.type || 'call',
@@ -131,7 +132,7 @@ const CRMActivities = ({ currentUser }) => {
     try {
       await fetch(`${API_URL}/api/crm/activities/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')}` }
+        headers: { 'Authorization': `Bearer ${getToken()}` }
       });
       fetchActivities();
     } catch (error) {

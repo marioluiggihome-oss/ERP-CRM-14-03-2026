@@ -1,3 +1,4 @@
+import { getToken } from '../services/api';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   BarChart2, Users, TrendingUp, Euro, AlertTriangle, CheckCircle,
@@ -9,7 +10,7 @@ import {
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const getHeaders = () => {
-  const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+  const token = getToken();
   return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 };
 

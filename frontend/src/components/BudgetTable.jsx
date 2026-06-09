@@ -1,3 +1,4 @@
+import { getToken } from '../services/api';
 import { ShoppingCart, Printer, Trash2, Save, LayoutPanelTop, Search, Plus, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, PanelBottomClose, PanelBottomOpen, PanelTopClose, PanelTopOpen, FileText, ChevronDown, ChevronUp, Hash, Tag, Info, AlertCircle, Lock, Unlock, Palette, Box, Layers, Filter, PaintBucket, Keyboard, PenTool, Download, Scissors, CheckCircle, Paperclip, Mail, X, Upload, Image, FileImage, LayoutGrid, LayoutList, ArrowRightLeft, LogOut, Package, Factory, Wand2, Library } from 'lucide-react';
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
@@ -892,9 +893,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
 
     // El backend exige JWT (require_auth). Enviar el token en TODAS las
     // peticiones de guardado para no recibir 401 "Autenticación requerida".
-    const _token = localStorage.getItem('luiggi_access_token')
-      || localStorage.getItem('token')
-      || localStorage.getItem('access_token');
+    const _token = getToken();
     const authCfg = _token ? { headers: { Authorization: `Bearer ${_token}` } } : {};
 
     try {

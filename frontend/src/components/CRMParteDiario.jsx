@@ -7,10 +7,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Mic, MicOff, Sparkles, FileDown, Mail, Send, Trash2, RefreshCw, Loader, ClipboardList } from 'lucide-react';
+import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const authHeaders = () => {
-  const t = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+  const t = getToken();
   return { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) };
 };
 

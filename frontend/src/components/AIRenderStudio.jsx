@@ -14,6 +14,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle } from 'lucide-react';
+import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -182,7 +183,7 @@ export default function AIRenderStudio({ state }) {
   }, [transcript]);
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('luiggi_access_token');
+    const token = getToken();
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   };
 
@@ -191,7 +192,7 @@ export default function AIRenderStudio({ state }) {
   const assetSrc = (path) => {
     if (!path) return path;
     if (typeof path === 'string' && path.startsWith('/api/ai-engine/asset')) {
-      const token = localStorage.getItem('luiggi_access_token') || '';
+      const token = getToken() || '';
       return `${API_URL}${path}&t=${encodeURIComponent(token)}`;
     }
     return path;

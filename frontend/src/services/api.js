@@ -2,25 +2,33 @@
 import axios from 'axios';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// ÚNICA fuente de verdad para leer el token JWT (las claves legacy 'token' y
+// 'access_token' se mantienen por compatibilidad con sesiones antiguas).
+export const getToken = () => {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem('luiggi_access_token')
+      || localStorage.getItem('token')
+      || localStorage.getItem('access_token');
+  } catch (_) { return null; }
+};
+
 // Interceptor GLOBAL de axios: añade el token JWT a TODAS las peticiones axios
 // automáticamente. Evita errores 401 "Autenticación requerida" en cualquier
 // llamada (p.ej. guardar presupuesto) por olvidar la cabecera Authorization.
 axios.interceptors.request.use((config) => {
-  try {
-    const t = localStorage.getItem('luiggi_access_token')
-      || localStorage.getItem('token')
-      || localStorage.getItem('access_token');
-    if (t) {
-      config.headers = config.headers || {};
-      if (!config.headers.Authorization) config.headers.Authorization = `Bearer ${t}`;
-    }
-  } catch (_) {}
+  const t = getToken();
+  if (t) {
+    config.headers = config.headers || {};
+    if (!config.headers.Authorization) config.headers.Authorization = `Bearer ${t}`;
+  }
   return config;
 });
 
-// Helper: build Authorization header with JWT from localStorage (if present)
+// Helper: build Authorization header with JWT (única forma recomendada de
+// construir cabeceras para fetch en toda la app).
 export const authHeaders = (extra = {}) => {
-  const token = (typeof localStorage !== 'undefined') ? (localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token')) : null;
+  const token = getToken();
   const h = { ...extra };
   if (token) h['Authorization'] = `Bearer ${token}`;
   return h;
@@ -673,7 +681,7 @@ export const settingsAPI = {
 
 export const projectsAPI = {
   _headers: () => {
-    const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+    const token = getToken();
     return {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -763,7 +771,7 @@ export const projectsAPI = {
 
 export const invoicesAPI = {
   _h: () => {
-    const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+    const token = getToken();
     return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   },
   getAll: async (status = null, search = null) => {
@@ -815,7 +823,7 @@ export const invoicesAPI = {
     return r.json();
   },
   downloadPdf: (id) => {
-    const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || '';
+    const token = getToken() || '';
     window.open(`${API_URL}/api/invoices/${id}/pdf`, '_blank');
   },
   sendEmail: async (id, email = null) => {
@@ -901,7 +909,7 @@ export const backupAPI = {
 
 export const crmContactsAPI = {
   _h: () => {
-    const token = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+    const token = getToken();
     return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   },
 

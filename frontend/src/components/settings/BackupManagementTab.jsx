@@ -4,10 +4,11 @@
  */
 import React, { useState, useEffect } from 'react';
 import { Database, Download, Upload, RefreshCw, Trash2, Clock, HardDrive, Shield, AlertTriangle, CheckCircle } from 'lucide-react';
+import { getToken } from '../../services/api';
 
 // Los endpoints de backup requieren sesión de ADMIN: enviar el token JWT.
 const authHeader = () => {
-  const t = localStorage.getItem('luiggi_access_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+  const t = getToken();
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
 
