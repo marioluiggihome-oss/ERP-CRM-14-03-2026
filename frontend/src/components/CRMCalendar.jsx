@@ -38,7 +38,7 @@ const CRMCalendar = ({ currentUser }) => {
   const [prescriptorNotes, setPrescriptorNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState('month');
+  const [view, setView] = useState('day'); // por defecto DÍA (visitas de hoy)
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);

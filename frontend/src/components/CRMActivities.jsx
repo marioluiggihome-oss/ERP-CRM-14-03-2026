@@ -44,7 +44,16 @@ const CRMActivities = ({ currentUser }) => {
   useEffect(() => {
     fetchActivities();
     fetchContacts();
-  }, []);
+    // Mantener el listado al día: refrescar al volver a la ventana/pestaña
+    const refresh = () => { if (!document.hidden) fetchActivities(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   const fetchActivities = async () => {
     try {
