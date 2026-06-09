@@ -259,3 +259,88 @@ async def get_gasto_doc(doc_id: str):
     if not d:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
     return d
+
+
+# ============================================================================
+# INFORMES / CIERRES DE GASTOS  (marcas tickets y los agrupas en un informe)
+# Colección: gasto_informes { id, userId, userName, nombre, gastoIds, total,
+#                             byType, fechaDesde, fechaHasta, createdAt }
+# ============================================================================
+
+@router.post("/gastos/informes")
+async def create_informe(payload: dict):
+    """Crea un informe de gastos asociando los tickets marcados (cierre mensual)."""
+    nombre = str((payload or {}).get("nombre") or "").strip()
+    gasto_ids = list((payload or {}).get("gastoIds") or [])
+    if not nombre:
+        raise HTTPException(status_code=400, detail="Indica un nombre para el informe")
+    if not gasto_ids:
+        raise HTTPException(status_code=400, detail="Marca al menos un ticket")
+
+    gastos = await db.gastos.find({"id": {"$in": gasto_ids}}, {"_id": 0}).to_list(5000)
+    if not gastos:
+        raise HTTPException(status_code=404, detail="No se encontraron los gastos indicados")
+
+    total = round(sum(float(g.get("importe", 0) or 0) for g in gastos), 2)
+    by_type = {}
+    fechas = []
+    for g in gastos:
+        t = g.get("tipo") or "otros"
+        by_type[t] = round(by_type.get(t, 0) + float(g.get("importe", 0) or 0), 2)
+        if g.get("fecha"):
+            fechas.append(str(g["fecha"])[:10])
+    fechas.sort()
+
+    now = datetime.now(timezone.utc)
+    iid = f"inf-{uuid.uuid4().hex[:8]}"
+    doc = {
+        "id": iid,
+        "userId": str(payload.get("userId") or ""),
+        "userName": str(payload.get("userName") or ""),
+        "nombre": nombre,
+        "gastoIds": [g.get("id") for g in gastos],
+        "total": total,
+        "byType": by_type,
+        "numTickets": len(gastos),
+        "fechaDesde": fechas[0] if fechas else "",
+        "fechaHasta": fechas[-1] if fechas else "",
+        "createdAt": now.isoformat(),
+    }
+    await db.gasto_informes.insert_one(doc)
+    doc.pop("_id", None)
+    # Marcar los gastos como incluidos en este informe (cierre)
+    await db.gastos.update_many(
+        {"id": {"$in": doc["gastoIds"]}},
+        {"$set": {"informeId": iid, "informeNombre": nombre}},
+    )
+    return {"success": True, "informe": doc}
+
+
+@router.get("/gastos/informes")
+async def list_informes(userId: Optional[str] = None):
+    query = {"userId": userId} if userId else {}
+    items = await db.gasto_informes.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+    return {"items": items}
+
+
+@router.get("/gastos/informes/{informe_id}")
+async def get_informe(informe_id: str):
+    inf = await db.gasto_informes.find_one({"id": informe_id}, {"_id": 0})
+    if not inf:
+        raise HTTPException(status_code=404, detail="Informe no encontrado")
+    gastos = await db.gastos.find({"id": {"$in": inf.get("gastoIds", [])}}, {"_id": 0}).sort("fecha", 1).to_list(5000)
+    inf["gastos"] = gastos
+    return inf
+
+
+@router.delete("/gastos/informes/{informe_id}")
+async def delete_informe(informe_id: str):
+    inf = await db.gasto_informes.find_one({"id": informe_id}, {"_id": 0})
+    if inf:
+        # Desmarcar los gastos para que vuelvan a estar disponibles
+        await db.gastos.update_many(
+            {"id": {"$in": inf.get("gastoIds", [])}},
+            {"$unset": {"informeId": "", "informeNombre": ""}},
+        )
+    await db.gasto_informes.delete_one({"id": informe_id})
+    return {"success": True}
