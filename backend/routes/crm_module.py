@@ -1448,3 +1448,159 @@ async def delete_prescriptor_note(note_id: str):
     except Exception as e:
         logger.error(f"Delete prescriptor note error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# PARTE DIARIO POR VOZ (IA) — solo informes relativos al CRM
+# Colección: crm_reports
+# ============================================================================
+
+_REPORT_SYSTEM = (
+    "Eres un asistente que SOLO redacta partes/informes de actividad COMERCIAL del "
+    "CRM: visitas a clientes, llamadas y gestiones comerciales. A partir del dictado "
+    "del comercial, estructura un informe claro y profesional en español. Responde "
+    "SOLO con JSON válido con esta forma:\n"
+    '{ "titulo": "Parte de visitas", '
+    '"visitas": [ {"cliente":"","hora":"","resumen":"","resultado":"","proximaAccion":""} ], '
+    '"resumen": "resumen general de la jornada" }\n'
+    "Extrae una entrada por cada visita/gestión mencionada. Si el dictado NO trata de "
+    "visitas o gestión comercial, devuelve \"visitas\": [] y en \"resumen\" indica "
+    "amablemente que esta herramienta solo genera informes relativos al CRM."
+)
+
+
+@router.post("/crm/voice-report")
+async def crm_voice_report(payload: dict, current_user: Optional[dict] = Depends(_get_user_or_none)):
+    """Genera un parte/informe de visitas a partir del dictado (voz transcrita)."""
+    import json
+    import re as _re2
+    transcript = str((payload or {}).get("transcript") or "").strip()
+    if not transcript:
+        raise HTTPException(status_code=400, detail="Dicta o escribe lo que quieres incluir en el informe")
+    periodo_label = str(payload.get("periodoLabel") or "")
+    try:
+        from services.llm_vision import chat_with_gemini
+        resp = await chat_with_gemini(
+            prompt=f"Periodo del informe: {periodo_label}\n\nDictado del comercial:\n{transcript[:8000]}",
+            system_message=_REPORT_SYSTEM,
+            model="gemini-2.5-flash",
+        )
+        t = (resp or "").strip()
+        if t.startswith("```"):
+            t = t.split("```")[1]
+            if t.startswith("json"):
+                t = t[4:]
+        try:
+            data = json.loads(t.strip())
+        except Exception:
+            m = _re2.search(r'\{[\s\S]*\}', t)
+            data = json.loads(m.group()) if m else {}
+    except Exception as e:
+        logger.error(f"CRM voice report IA error: {e}")
+        raise HTTPException(status_code=502, detail="La IA no pudo generar el informe. Inténtalo de nuevo.")
+
+    visitas = data.get("visitas") or []
+    now = datetime.now(timezone.utc)
+    uid = (current_user.get("id") if current_user else None) or str(payload.get("userId") or "")
+    doc = {
+        "id": f"crmrep-{uuid.uuid4().hex[:8]}",
+        "userId": uid,
+        "userName": str(payload.get("userName") or (current_user.get("username") if current_user else "")),
+        "titulo": str(data.get("titulo") or "Parte de visitas"),
+        "periodo": str(payload.get("periodo") or "hoy"),
+        "periodoLabel": periodo_label,
+        "visitas": visitas,
+        "resumen": str(data.get("resumen") or ""),
+        "totalVisitas": len(visitas),
+        "rawTranscript": transcript,
+        "fecha": now.strftime("%Y-%m-%d"),
+        "createdAt": now.isoformat(),
+    }
+    await db.crm_reports.insert_one(doc)
+    doc.pop("_id", None)
+    return {"success": True, "report": doc}
+
+
+@router.get("/crm/reports")
+async def list_crm_reports(userId: Optional[str] = None):
+    q = {"userId": userId} if userId else {}
+    items = await db.crm_reports.find(q, {"_id": 0, "rawTranscript": 0}).sort("createdAt", -1).to_list(1000)
+    return {"items": items}
+
+
+@router.get("/crm/reports/{report_id}")
+async def get_crm_report(report_id: str):
+    r = await db.crm_reports.find_one({"id": report_id}, {"_id": 0})
+    if not r:
+        raise HTTPException(status_code=404, detail="Informe no encontrado")
+    return r
+
+
+@router.delete("/crm/reports/{report_id}")
+async def delete_crm_report(report_id: str):
+    await db.crm_reports.delete_one({"id": report_id})
+    return {"success": True}
+
+
+def _esc(s):
+    return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _crm_report_html(r: dict) -> str:
+    """Maquetación bonita del informe CRM para email/impresión."""
+    rows = "".join(
+        f"<tr><td style='font-weight:700'>{_esc(v.get('cliente'))}</td>"
+        f"<td>{_esc(v.get('hora'))}</td>"
+        f"<td>{_esc(v.get('resumen'))}</td>"
+        f"<td>{_esc(v.get('resultado'))}</td>"
+        f"<td>{_esc(v.get('proximaAccion'))}</td></tr>"
+        for v in (r.get("visitas") or [])
+    ) or "<tr><td colspan='5' style='color:#94a3b8'>Sin visitas</td></tr>"
+    return f"""<!doctype html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b">
+  <div style="max-width:760px;margin:0 auto;background:#fff">
+    <div style="background:linear-gradient(135deg,#3730a3,#6d28d9);color:#fff;padding:22px 28px">
+      <div style="font-size:12px;letter-spacing:2px;opacity:.85;text-transform:uppercase">Luiggi Home · Informe CRM</div>
+      <h1 style="margin:4px 0 0;font-size:22px">{_esc(r.get('titulo'))}</h1>
+      <div style="font-size:13px;opacity:.9;margin-top:4px">{_esc(r.get('periodoLabel'))} · {_esc(r.get('userName'))} · {r.get('totalVisitas',0)} visita(s)</div>
+    </div>
+    <div style="padding:24px 28px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f1f5f9;text-align:left">
+          <th style="padding:8px;text-transform:uppercase;font-size:10px">Cliente</th>
+          <th style="padding:8px;text-transform:uppercase;font-size:10px">Hora</th>
+          <th style="padding:8px;text-transform:uppercase;font-size:10px">Resumen</th>
+          <th style="padding:8px;text-transform:uppercase;font-size:10px">Resultado</th>
+          <th style="padding:8px;text-transform:uppercase;font-size:10px">Próxima acción</th>
+        </tr></thead>
+        <tbody>{rows}</tbody>
+      </table>
+      <div style="margin-top:18px;padding:14px 16px;background:#f8fafc;border-left:4px solid #6d28d9;border-radius:6px">
+        <div style="font-size:10px;text-transform:uppercase;color:#6d28d9;font-weight:800;margin-bottom:4px">Resumen de la jornada</div>
+        <div style="font-size:13px;color:#334155">{_esc(r.get('resumen'))}</div>
+      </div>
+      <div style="margin-top:18px;color:#94a3b8;font-size:11px;text-align:center">Generado por Luiggi Home ERP · CRM</div>
+    </div>
+  </div>
+</body></html>"""
+
+
+@router.post("/crm/reports/{report_id}/email")
+async def email_crm_report(report_id: str, payload: dict):
+    to = str((payload or {}).get("to") or "").strip()
+    if not to:
+        raise HTTPException(status_code=400, detail="Falta el correo del destinatario")
+    r = await db.crm_reports.find_one({"id": report_id}, {"_id": 0})
+    if not r:
+        raise HTTPException(status_code=404, detail="Informe no encontrado")
+    try:
+        from routes.auth_advanced import send_email_with_resend
+        ok = await send_email_with_resend(
+            to, f"Luiggi Home — Informe CRM: {r.get('titulo', '')}", _crm_report_html(r)
+        )
+    except Exception as e:
+        logger.error(f"Email CRM report error: {e}")
+        ok = False
+    if not ok:
+        raise HTTPException(status_code=502, detail="No se pudo enviar el email (revisa la configuración de correo).")
+    return {"success": True}
