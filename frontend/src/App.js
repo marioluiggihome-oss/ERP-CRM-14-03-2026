@@ -382,7 +382,8 @@ const App = () => {
     try { _w = window.innerWidth || 1920; } catch (e) { /* noop */ }
     const _isMobileTablet = _w < 1024;
     const _canCRM = !!user.canAccessCRM && !user.isTienda;
-    const _landingTab = (_isMobileTablet && _canCRM) ? 'crm-dashboard' : 'budget';
+    // Calendario (vista Día): lo más práctico en la calle = ver las visitas de hoy
+    const _landingTab = (_isMobileTablet && _canCRM) ? 'crm-calendar' : 'budget';
 
     setState(prev => ({
       ...prev,
