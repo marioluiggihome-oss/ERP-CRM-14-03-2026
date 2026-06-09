@@ -40,7 +40,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
     return `${n.toFixed(0)}\u20AC`;
   };
 
-  const stageLabel = (s) => ({ lead: 'Prospecto', contacted: 'Contactado', proposal: 'Propuesta', negotiation: 'Negociaci\u00F3n', won: 'Ganada', lost: 'Perdida' }[s] || s);
+  const stageLabel = (s) => ({ lead: 'Prospecto', contacted: 'Contactado', proposal: 'Propuesta', negotiation: 'Negociación', won: 'Ganada', lost: 'Perdida' }[s] || s);
   const stageColor = (s) => ({ lead: 'bg-blue-100 text-blue-700', contacted: 'bg-cyan-100 text-cyan-700', proposal: 'bg-purple-100 text-purple-700', negotiation: 'bg-orange-100 text-orange-700', won: 'bg-green-100 text-green-700', lost: 'bg-red-100 text-red-700' }[s] || 'bg-slate-100 text-slate-600');
   const stageBgBar = (s) => ({ lead: 'bg-blue-500', contacted: 'bg-cyan-500', proposal: 'bg-purple-500', negotiation: 'bg-orange-500', won: 'bg-green-500', lost: 'bg-red-400' }[s] || 'bg-slate-400');
 
@@ -51,7 +51,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
     if (type === 'visit') return <MapPin className="w-3.5 h-3.5 text-orange-600" />;
     return <Clock className="w-3.5 h-3.5 text-slate-400" />;
   };
-  const actBadge = (type) => ({ call: 'Llamada', meeting: 'Reuni\u00F3n', email: 'Email', visit: 'Visita', task: 'Tarea' }[type] || 'Tarea');
+  const actBadge = (type) => ({ call: 'Llamada', meeting: 'Reunión', email: 'Email', visit: 'Visita', task: 'Tarea' }[type] || 'Tarea');
   const actBadgeColor = (type) => ({ call: 'bg-green-100 text-green-700', meeting: 'bg-blue-100 text-blue-700', email: 'bg-purple-100 text-purple-700', visit: 'bg-orange-100 text-orange-700' }[type] || 'bg-slate-100 text-slate-600');
 
   // KPIs
@@ -77,7 +77,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
   const funnelStages = useMemo(() => {
     const stages = dashboard?.pipelineByStage || {};
     const order = ['lead', 'contacted', 'proposal', 'negotiation', 'won'];
-    const labels = { lead: 'Prospecto', contacted: 'Contactado', proposal: 'Propuesta', negotiation: 'Negociaci\u00F3n', won: 'Ganada' };
+    const labels = { lead: 'Prospecto', contacted: 'Contactado', proposal: 'Propuesta', negotiation: 'Negociación', won: 'Ganada' };
     const colors = { lead: 'bg-blue-500', contacted: 'bg-cyan-500', proposal: 'bg-purple-500', negotiation: 'bg-orange-500', won: 'bg-green-500' };
     const totalValue = order.reduce((s, st) => s + (stages[st]?.value || 0), 0);
     return order.map(s => ({
@@ -134,7 +134,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
           <div>
             <h1 className="text-white text-xl sm:text-2xl font-black">Panel CRM</h1>
             <p className="text-indigo-300 text-xs mt-0.5">
-              Resumen del d\u00EDa \u00B7 {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+              Resumen del día · {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
           <button onClick={exportExcel}
@@ -185,7 +185,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
               <h2 className="font-black text-slate-900 text-sm uppercase">Oportunidades & Pipeline</h2>
             </div>
             <div className="flex gap-1.5 flex-wrap">
-              {[['month','Este mes'],['3m','\u00DAltimos 3m'],['6m','\u00DAltimos 6m'],['year','Este a\u00F1o'],['all','Todo']].map(([id, lbl]) => (
+              {[['month','Este mes'],['3m','Últimos 3m'],['6m','Últimos 6m'],['year','Este año'],['all','Todo']].map(([id, lbl]) => (
                 <button key={id} onClick={() => setTimeFilter(id)}
                   className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase whitespace-nowrap transition-all ${timeFilter === id ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
                   {lbl}
@@ -222,7 +222,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
           <div className="mb-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-black text-slate-800 text-xs uppercase">Embudo de ventas</h3>
-              <span className="text-[10px] text-slate-400">Prospecto \u2192 Negociaci\u00F3n \u2192 Ganada</span>
+              <span className="text-[10px] text-slate-400">Prospecto \u2192 Negociación \u2192 Ganada</span>
             </div>
             <div className="space-y-2">
               {funnelStages.map(stage => (
@@ -232,7 +232,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                     <div className={`h-full ${stage.color} rounded-lg transition-all duration-500 flex items-center px-2 gap-2`}
                       style={{ width: `${stage.width}%` }}>
                       <span className="text-[10px] font-black text-white whitespace-nowrap">{fmtK(stage.value)}</span>
-                      {stage.count > 0 && <span className="text-[9px] text-white/80">\u00B7 {stage.count} op.</span>}
+                      {stage.count > 0 && <span className="text-[9px] text-white/80">· {stage.count} op.</span>}
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400 w-10 shrink-0 text-right">{stage.pct}%</span>
@@ -245,11 +245,11 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
             </div>
           </div>
 
-          {/* Previsi\u00F3n de ventas */}
+          {/* Previsión de ventas */}
           <div className="border-t border-slate-100 pt-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-black text-slate-800 text-xs uppercase">Previsi\u00F3n de ventas</h3>
-              <span className="text-[10px] text-slate-400">Valor esperado = importe \u00D7 probabilidad</span>
+              <h3 className="font-black text-slate-800 text-xs uppercase">Previsión de ventas</h3>
+              <span className="text-[10px] text-slate-400">Valor esperado = importe × probabilidad</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
@@ -351,14 +351,14 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
           </div>
         </div>
 
-        {/* Pr\u00F3ximos eventos + Actividades pendientes */}
+        {/* Próximos eventos + Actividades pendientes */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Pr\u00F3ximos eventos */}
+          {/* Próximos eventos */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-5 bg-blue-500 rounded-full" />
-                <h2 className="font-black text-slate-900 text-sm uppercase">Pr\u00F3ximos eventos</h2>
+                <h2 className="font-black text-slate-900 text-sm uppercase">Próximos eventos</h2>
               </div>
               <button onClick={() => onNavigate?.('calendar')}
                 className="flex items-center gap-1 text-[10px] font-black text-indigo-600 uppercase hover:text-indigo-800">
@@ -377,7 +377,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-slate-900 text-sm truncate">{evt.title}</p>
-                        <p className="text-[10px] text-slate-400 truncate">{evt.dueTime || ''} \u00B7 {evt.contactName}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{evt.dueTime || ''} · {evt.contactName}</p>
                       </div>
                     </div>
                   );
@@ -393,7 +393,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-slate-900 text-sm truncate">{evt.title}</p>
-                          <p className="text-[10px] text-slate-400 truncate">{evt.dueTime || ''} \u00B7 {evt.contactName}</p>
+                          <p className="text-[10px] text-slate-400 truncate">{evt.dueTime || ''} · {evt.contactName}</p>
                         </div>
                       </div>
                     );
@@ -401,7 +401,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                   : (
                     <div className="flex flex-col items-center justify-center py-10 text-slate-300">
                       <Calendar className="w-10 h-10 mb-2" />
-                      <p className="font-black text-sm text-slate-400">Sin eventos pr\u00F3ximos</p>
+                      <p className="font-black text-sm text-slate-400">Sin eventos próximos</p>
                     </div>
                   )
               }
@@ -428,7 +428,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-900 text-xs truncate">{act.title}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{act.dueDate || 'Hoy'} \u00B7 {act.contactName}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{act.dueDate || 'Hoy'} · {act.contactName}</p>
                   </div>
                 </div>
               )) : (
@@ -450,7 +450,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                   <AlertTriangle className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-black text-amber-900 text-xs uppercase">Sin presupuesto +30 d\u00EDas</h3>
+                  <h3 className="font-black text-amber-900 text-xs uppercase">Sin presupuesto +30 días</h3>
                   <p className="text-[10px] text-amber-600 font-bold">
                     {analytics.summary?.totalWithoutOffer30Days || 0} contactos
                   </p>
@@ -473,7 +473,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                 )) : (
                   <div className="flex flex-col items-center py-8 text-amber-300">
                     <CheckCircle2 className="w-8 h-8 mb-1" />
-                    <p className="text-xs font-black text-amber-500">\u00A1Todos al d\u00EDa!</p>
+                    <p className="text-xs font-black text-amber-500">¡Todos al día!</p>
                   </div>
                 )}
               </div>
@@ -485,7 +485,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                   <ShoppingCart className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-black text-red-900 text-xs uppercase">Sin compra +60 d\u00EDas</h3>
+                  <h3 className="font-black text-red-900 text-xs uppercase">Sin compra +60 días</h3>
                   <p className="text-[10px] text-red-600 font-bold">
                     {analytics.summary?.totalWithoutPurchase60Days || 0} contactos
                   </p>
@@ -508,7 +508,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
                 )) : (
                   <div className="flex flex-col items-center py-8 text-red-300">
                     <CheckCircle2 className="w-8 h-8 mb-1" />
-                    <p className="text-xs font-black text-red-500">\u00A1Excelente!</p>
+                    <p className="text-xs font-black text-red-500">¡Excelente!</p>
                   </div>
                 )}
               </div>

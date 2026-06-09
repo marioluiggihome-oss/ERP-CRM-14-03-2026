@@ -372,13 +372,22 @@ const App = () => {
     }
     
     // Usar la biblioteca guardada si el usuario tiene acceso, sino usar la primera permitida
-    const defaultLibrary = (savedLibrary && userLibraries.includes(savedLibrary)) 
-      ? savedLibrary 
+    const defaultLibrary = (savedLibrary && userLibraries.includes(savedLibrary))
+      ? savedLibrary
       : (userLibraries[0] || 'ZC');
-    
-    setState(prev => ({ 
-      ...prev, 
+
+    // En MÓVIL/TABLET (vista responsive), si el usuario tiene el CRM activado,
+    // entrar directamente al CRM al loguearse.
+    let _w = 1920;
+    try { _w = window.innerWidth || 1920; } catch (e) { /* noop */ }
+    const _isMobileTablet = _w < 1024;
+    const _canCRM = !!user.canAccessCRM && !user.isTienda;
+    const _landingTab = (_isMobileTablet && _canCRM) ? 'crm-dashboard' : 'budget';
+
+    setState(prev => ({
+      ...prev,
       currentUser: user,
+      currentTab: _landingTab,
       currentModule: user.allowedModules?.[0] || 'montada',
       currentLibrary: defaultLibrary,
       allowedLibraries: userLibraries,
