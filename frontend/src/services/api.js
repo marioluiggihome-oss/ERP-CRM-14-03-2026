@@ -1861,12 +1861,23 @@ export const googleCalendarAPI = {
   },
   // Push ERP→Google. event: { title, startDate, endDate, description, location, allDay, module, erpId }
   createEvent: async (event) => {
-    const r = await fetch(`${API_URL}/api/google-calendar/events`, {
-      method: 'POST',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify(event),
-    });
-    const data = await r.json();
+    // Timeout para que el botón no se quede "pensativo" si Google tarda/cuelga.
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 25000);
+    let r;
+    try {
+      r = await fetch(`${API_URL}/api/google-calendar/events`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(event),
+        signal: ctrl.signal,
+      });
+    } catch (e) {
+      clearTimeout(t);
+      throw new Error(e.name === 'AbortError' ? 'Google Calendar tardó demasiado en responder. Inténtalo de nuevo.' : 'No se pudo conectar con Google Calendar.');
+    }
+    clearTimeout(t);
+    const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.detail || 'No se pudo guardar en Google Calendar');
     return data;
   },
