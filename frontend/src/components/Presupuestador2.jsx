@@ -4,6 +4,7 @@ import {
   Save, FileDown, Printer, Edit3, Package, CheckCircle2
 } from 'lucide-react';
 import { authHeaders } from '../services/api';
+import { generateBudgetPDF } from '../services/pdfGenerator';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -121,80 +122,86 @@ const Presupuestador2 = ({ currentUser }) => {
 
   const cartTotal = cart.reduce((s, x) => s + x.price * x.qty, 0);
 
-  // Guardar pedido
+  // Genera un n\u00BA de expediente para el presupuesto
+  const newBudgetNumber = () => `MV-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+
+  // Mapea las l\u00EDneas de P2 a items "montada" de P1 (como l\u00EDneas manuales, ya que
+  // el precio sale de la tarifa). As\u00ED reutilizamos el PDF y el guardado de P1.
+  //   precio P1 = manualPoints * pointValueMontada * qty  \u2192  manualPoints = precio/pointValue
+  const buildMontadaItems = useCallback(() => cart.map((it, idx) => {
+    const prod = !it.manual ? products.find(p => p.id === it.id) : null;
+    const pts = pointValue ? (it.price / pointValue) : it.price;
+    return {
+      id: `p2-${idx}-${it.id}`,
+      productId: it.manual ? null : it.id,
+      quantity: it.qty,
+      isManual: true,
+      manualDescription: it.name,
+      customReference: it.code,
+      manualPoints: pts,
+      customWidth: prod?.width || 0,
+      customHeight: prod?.height || 0,
+      customDepth: prod?.depth || 0,
+    };
+  }), [cart, products, pointValue]);
+
+  // Guardar el presupuesto en PROYECTOS (igual que el Presupuestador 1), para que
+  // aparezca en el historial, rentabilidad, etc.
   const saveOrder = async () => {
     if (cart.length === 0) { alert('A\u00F1ade al menos una l\u00EDnea'); return; }
     setSaving(true);
     try {
-      const orderData = {
-        client: clientName || currentUser?.clientName || 'Sin cliente',
-        tariff,
-        lines: cart.map(it => ({
-          code: it.code,
-          name: it.name,
-          price: it.price,
-          qty: it.qty,
-          total: it.price * it.qty,
-          manual: it.manual || false,
-        })),
-        total: cartTotal,
-        notes,
-        createdBy: currentUser?.id,
-        createdByName: currentUser?.clientName || currentUser?.username,
-        createdAt: new Date().toISOString(),
+      const projectData = {
+        budgetNumber: newBudgetNumber(),
+        customerName: clientName || currentUser?.clientName || 'Sin cliente',
+        customerAddress: '',
+        internalReference: notes || `Presupuesto MV (Tarifa ${tariff})`,
+        itemsMontada: buildMontadaItems(),
+        itemsDespiece: [],
+        status: 'activo',
+        totalPvp: cartTotal,
+        ivaRate: 21,
       };
-      const r = await fetch(`${API_URL}/api/pedidos`, {
+      const r = await fetch(`${API_URL}/api/projects?user_id=${encodeURIComponent(currentUser?.id || '')}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify(projectData),
       });
       if (r.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       } else {
-        alert('Error al guardar el pedido');
+        const e = await r.json().catch(() => ({}));
+        alert('Error al guardar el presupuesto: ' + (e.detail || r.status));
       }
     } catch (e) {
       alert('Error de conexi\u00F3n al guardar');
     } finally { setSaving(false); }
   };
 
-  // Exportar PDF (genera un HTML imprimible)
+  // Exportar PDF con el MISMO formato que el Presupuestador 1 (genera y descarga
+  // un PDF real, no un simple HTML de impresi\u00F3n).
   const exportPDF = () => {
-    const win = window.open('', '_blank');
-    if (!win) { alert('Permite ventanas emergentes para exportar'); return; }
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Presupuesto MV - ${tariff}</title>
-    <style>
-      body{font-family:system-ui,-apple-system,sans-serif;padding:40px;color:#1e293b;max-width:800px;margin:0 auto}
-      h1{font-size:20px;margin-bottom:4px}
-      .meta{font-size:12px;color:#64748b;margin-bottom:24px}
-      table{width:100%;border-collapse:collapse;font-size:13px}
-      th{background:#f1f5f9;text-align:left;padding:8px 12px;font-weight:800;text-transform:uppercase;font-size:10px;border-bottom:2px solid #e2e8f0}
-      td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
-      .right{text-align:right}
-      .total-row{font-weight:800;font-size:16px;background:#f0fdf4}
-      .footer{margin-top:32px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:16px}
-      @media print{body{padding:20px}}
-    </style></head><body>
-    <h1>Presupuesto MV \u2014 Tarifa ${tariff}</h1>
-    <div class="meta">
-      <strong>Cliente:</strong> ${clientName || 'Sin especificar'}<br>
-      <strong>Fecha:</strong> ${new Date().toLocaleDateString('es-ES')}<br>
-      <strong>Comercial:</strong> ${currentUser?.clientName || currentUser?.username || ''}<br>
-      ${notes ? `<strong>Notas:</strong> ${notes}` : ''}
-    </div>
-    <table>
-      <thead><tr><th>Ref.</th><th>Descripci\u00F3n</th><th class="right">Ud.</th><th class="right">Precio</th><th class="right">Total</th></tr></thead>
-      <tbody>
-        ${cart.map(it => `<tr><td>${it.code || '-'}</td><td>${it.name}</td><td class="right">${it.qty}</td><td class="right">${eur(it.price)}</td><td class="right">${eur(it.price * it.qty)}</td></tr>`).join('')}
-        <tr class="total-row"><td colspan="4" class="right">TOTAL</td><td class="right">${eur(cartTotal)}</td></tr>
-      </tbody>
-    </table>
-    <div class="footer">Generado por LuiggiHome ERP \u00B7 ${new Date().toLocaleString('es-ES')}</div>
-    </body></html>`;
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => win.print(), 500);
+    if (cart.length === 0) { alert('A\u00F1ade al menos una l\u00EDnea'); return; }
+    try {
+      generateBudgetPDF({
+        budgetNumber: newBudgetNumber(),
+        customerName: clientName || currentUser?.clientName || 'Sin especificar',
+        customerAddress: '',
+        internalReference: notes || '',
+        itemsMontada: buildMontadaItems(),
+        itemsDespiece: [],
+        pointValueMontada: pointValue,
+        pointValueDespiece: 0.88,
+        logo: currentUser?.logo,
+        companyName: 'LUIGGI HOME',
+        ivaRate: 21,
+        allProducts: products,
+        globalFinish: `Tarifa ${tariff}`,
+      });
+    } catch (e) {
+      alert('No se pudo generar el PDF: ' + (e.message || e));
+    }
   };
 
   const handlePrint = () => exportPDF();
