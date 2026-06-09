@@ -671,9 +671,15 @@ async def get_activities(
     contactId: Optional[str] = None,
     opportunityId: Optional[str] = None,
     activityType: Optional[str] = None,
-    limit: int = 100
+    limit: int = 200,
+    current_user: Optional[dict] = Depends(_get_user_or_none)
 ):
-    """Get activities with optional filters"""
+    """Lista de actividades del día a día.
+
+    UNIFICADA: incluye también los EVENTOS del calendario (visitas, reuniones…),
+    para que todo el trabajo diario aparezca en un único listado.
+    Aislada por usuario (admin/dirección ve todo; el resto, lo suyo).
+    """
     try:
         query = {}
         if contactId:
@@ -681,9 +687,50 @@ async def get_activities(
         if opportunityId:
             query["opportunityId"] = opportunityId
         if activityType:
-            query["type"] = activityType
-        
+            query["activityType"] = activityType  # el modelo guarda 'activityType'
+
+        # Aislamiento por usuario
+        elevated = bool(current_user and any(current_user.get(f) for f in _ELEVATED_FLAGS))
+        uid = current_user.get("id") if current_user else None
+        if uid and not elevated:
+            owner = {"$or": [
+                {"createdByUserId": uid}, {"userId": uid}, {"assignedTo": uid},
+            ]}
+            query = {"$and": [query, owner]} if query else owner
+
         activities = await db.activities.find(query, {"_id": 0}).sort("createdAt", -1).limit(limit).to_list(limit)
+
+        # Unificación: añadir los eventos del calendario como actividades
+        try:
+            ev_query = {}
+            if contactId:
+                ev_query["contactId"] = contactId
+            if uid and not elevated:
+                ev_query["$or"] = [{"assignedTo": uid}, {"createdBy": uid}, {"createdByUserId": uid}]
+            events = await db.calendar_events.find(ev_query, {"_id": 0}).sort("startDate", -1).limit(limit).to_list(limit)
+            for e in events:
+                sd = str(e.get("startDate") or "")
+                etype = (e.get("eventType") or "visita")
+                activities.append({
+                    "id": e.get("id"),
+                    "activityType": etype,
+                    "type": etype,
+                    "title": e.get("title") or "Evento",
+                    "subject": e.get("title") or "",
+                    "description": e.get("description", "") or "",
+                    "date": sd[:10],
+                    "time": sd[11:16] if len(sd) >= 16 else "",
+                    "dueDate": sd[:10],
+                    "contactId": e.get("contactId"),
+                    "contactName": e.get("contactName", ""),
+                    "assignedTo": e.get("assignedTo", ""),
+                    "completed": e.get("completed", False),
+                    "createdAt": e.get("createdAt") or sd,
+                    "isCalendarEvent": True,
+                })
+        except Exception as ev_err:
+            logger.warning(f"No se pudieron incluir eventos del calendario en actividades: {ev_err}")
+
         return activities
     except Exception as e:
         logger.error(f"Get activities error: {e}")
@@ -787,11 +834,18 @@ async def get_calendar_events(
     start: Optional[str] = None,
     end: Optional[str] = None,
     assignedTo: Optional[str] = None,
+    userId: Optional[str] = None,
     contactId: Optional[str] = None,
-    completed: Optional[bool] = None
+    completed: Optional[bool] = None,
+    current_user: Optional[dict] = Depends(_get_user_or_none)
 ):
-    """Get calendar events with optional filters"""
+    """Get calendar events with optional filters (aislado por usuario)."""
     try:
+        # Usuario efectivo para aislamiento: admin/dirección ve todo
+        elevated = bool(current_user and any(current_user.get(f) for f in _ELEVATED_FLAGS))
+        scope_uid = (current_user.get("id") if current_user else None) or userId or assignedTo
+        isolate = bool(scope_uid and not elevated)
+
         query = {}
         if start and end:
             query["startDate"] = {"$gte": start, "$lte": end}
@@ -799,14 +853,18 @@ async def get_calendar_events(
             query["startDate"] = {"$gte": start}
         elif end:
             query["startDate"] = {"$lte": end}
-        
+
         if assignedTo:
             query["assignedTo"] = assignedTo
         if contactId:
             query["contactId"] = contactId
         if completed is not None:
             query["completed"] = completed
-        
+        if isolate:
+            query["$or"] = [
+                {"assignedTo": scope_uid}, {"createdBy": scope_uid}, {"createdByUserId": scope_uid},
+            ]
+
         events = await db.calendar_events.find(query, {"_id": 0}).sort("startDate", 1).to_list(500)
 
         # Incluir también las ACTIVIDADES del CRM (llamadas, visitas, reuniones...)
@@ -814,10 +872,12 @@ async def get_calendar_events(
         # los eventos "puros" del calendario deben seguir devolviéndose igualmente.
         try:
             act_query = {}
-            if assignedTo:
-                act_query["$or"] = [{"assignedTo": assignedTo}, {"userId": assignedTo}]
             if contactId:
                 act_query["contactId"] = contactId
+            if isolate:
+                act_query["$or"] = [
+                    {"assignedTo": scope_uid}, {"userId": scope_uid}, {"createdByUserId": scope_uid},
+                ]
             activities = await db.activities.find(act_query, {"_id": 0}).to_list(500)
 
             ACT_COLORS = {
@@ -840,7 +900,7 @@ async def get_calendar_events(
                     continue
                 if end and day_s[:10] > str(end)[:10]:
                     continue
-                atype = (a.get('type') or 'note').lower()
+                atype = (a.get('activityType') or a.get('type') or 'note').lower()
                 events.append({
                     "id": a.get('id'),
                     "title": a.get('title') or a.get('subject') or atype.upper(),

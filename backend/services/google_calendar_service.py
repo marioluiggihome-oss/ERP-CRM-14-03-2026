@@ -272,6 +272,49 @@ def _to_google_time(value: str, all_day: bool) -> Dict[str, str]:
     return {"dateTime": v, "timeZone": DEFAULT_TIMEZONE}
 
 
+def _parse_dt(v):
+    """Parsea 'YYYY-MM-DD[THH:MM[:SS]]' de forma tolerante (acepta hora vacía/mala)."""
+    if not v:
+        return None
+    s = str(v).strip().replace(" ", "T")
+    date_part = s[:10]
+    try:
+        datetime.fromisoformat(date_part + "T00:00:00")
+    except Exception:
+        return None
+    hh = mm = ss = 0
+    if len(s) > 10:
+        bits = s[11:].split(":")
+        if len(bits) >= 2 and bits[0].strip().isdigit() and bits[1].strip().isdigit():
+            hh = int(bits[0]); mm = int(bits[1])
+            ss = int(bits[2]) if len(bits) >= 3 and bits[2].strip().isdigit() else 0
+    try:
+        return datetime.fromisoformat(f"{date_part}T{hh:02d}:{mm:02d}:{ss:02d}")
+    except Exception:
+        return None
+
+
+def _google_times(start_val, end_val, all_day):
+    """Devuelve (start, end) en formato Google garantizando fin > inicio.
+
+    Google rechaza eventos con hora cuyo fin sea <= inicio (error 400). Si el
+    fin falta o es inválido/igual, se usa inicio + 1 hora.
+    """
+    if all_day:
+        s = str(start_val or "")[:10]
+        e = (str(end_val)[:10] if end_val else "") or s
+        return {"date": s}, {"date": e}
+    s_dt = _parse_dt(start_val) or datetime.now()
+    e_dt = _parse_dt(end_val)
+    if e_dt is None or e_dt <= s_dt:
+        e_dt = s_dt + timedelta(hours=1)
+    fmt = "%Y-%m-%dT%H:%M:%S"
+    return (
+        {"dateTime": s_dt.strftime(fmt), "timeZone": DEFAULT_TIMEZONE},
+        {"dateTime": e_dt.strftime(fmt), "timeZone": DEFAULT_TIMEZONE},
+    )
+
+
 def _from_google_event(item: Dict[str, Any]) -> Dict[str, Any]:
     """Normaliza un evento de Google al formato que consume el calendario del ERP."""
     start = item.get("start", {}) or {}
@@ -323,12 +366,13 @@ async def create_event(user_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
     """Crea un evento en el calendario del usuario. Devuelve el evento normalizado."""
     access_token = await _valid_access_token(user_id)
     all_day = bool(event.get("allDay"))
+    start_g, end_g = _google_times(event.get("startDate"), event.get("endDate"), all_day)
     body = {
         "summary": event.get("title", "Evento"),
         "description": event.get("description", "") or "",
         "location": event.get("location", "") or "",
-        "start": _to_google_time(event.get("startDate"), all_day),
-        "end": _to_google_time(event.get("endDate") or event.get("startDate"), all_day),
+        "start": start_g,
+        "end": end_g,
     }
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.post(
@@ -336,6 +380,8 @@ async def create_event(user_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
             headers={"Authorization": f"Bearer {access_token}"},
             json=body,
         )
+    if resp.status_code >= 400:
+        logger.error(f"Google create_event {resp.status_code}: {resp.text[:300]} | body={body}")
     resp.raise_for_status()
     return _from_google_event(resp.json())
 
@@ -343,12 +389,13 @@ async def create_event(user_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
 async def update_event(user_id: str, google_event_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
     access_token = await _valid_access_token(user_id)
     all_day = bool(event.get("allDay"))
+    start_g, end_g = _google_times(event.get("startDate"), event.get("endDate"), all_day)
     body = {
         "summary": event.get("title", "Evento"),
         "description": event.get("description", "") or "",
         "location": event.get("location", "") or "",
-        "start": _to_google_time(event.get("startDate"), all_day),
-        "end": _to_google_time(event.get("endDate") or event.get("startDate"), all_day),
+        "start": start_g,
+        "end": end_g,
     }
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.put(
@@ -356,6 +403,8 @@ async def update_event(user_id: str, google_event_id: str, event: Dict[str, Any]
             headers={"Authorization": f"Bearer {access_token}"},
             json=body,
         )
+    if resp.status_code >= 400:
+        logger.error(f"Google update_event {resp.status_code}: {resp.text[:300]} | body={body}")
     resp.raise_for_status()
     return _from_google_event(resp.json())
 
