@@ -9,11 +9,13 @@ Colección: floor_products
   { id, key, name, dims, swatchFrom, swatchTo, image, pricePerM2, stockPackages,
     m2PerPackage, updatedAt }
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from datetime import datetime, timezone
 from typing import Optional
 import logging
 import os
+import uuid
+import base64
 from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
@@ -107,3 +109,68 @@ async def adjust_floor_stock(product_id: str, payload: dict):
         {"$set": {"stockPackages": nuevo, "updatedAt": datetime.now(timezone.utc).isoformat()}},
     )
     return {"success": True, "stockPackages": nuevo}
+
+
+# ============================================================================
+# CATÁLOGOS / MATERIAL DESCARGABLE (PDFs para compartir con clientes)
+# Colección: floor_docs { id, name, mime, dataBase64, size, createdAt }
+# ============================================================================
+
+@router.post("/floor/docs")
+async def upload_floor_doc(payload: dict):
+    """Sube un catálogo/PDF (base64) para descargar y compartir."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    name = str((payload or {}).get("name") or "Catálogo").strip()
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo")
+    mime = "application/octet-stream"
+    if b64.startswith("data:"):
+        header, b64 = b64.split(",", 1)
+        if ";" in header and ":" in header:
+            mime = header.split(":", 1)[1].split(";", 1)[0] or mime
+    mime = str((payload or {}).get("mime") or mime)
+    try:
+        size = int(len(b64) * 3 / 4)
+    except Exception:
+        size = 0
+    doc = {
+        "id": f"floordoc-{uuid.uuid4().hex[:8]}",
+        "name": name,
+        "mime": mime,
+        "dataBase64": b64,
+        "size": size,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.floor_docs.insert_one(doc)
+    return {"success": True, "id": doc["id"], "name": doc["name"], "mime": mime, "size": size}
+
+
+@router.get("/floor/docs")
+async def list_floor_docs():
+    """Lista de catálogos (solo metadatos, sin el base64)."""
+    items = await db.floor_docs.find({}, {"_id": 0, "dataBase64": 0}).sort("createdAt", -1).to_list(200)
+    return {"items": items}
+
+
+@router.get("/floor/docs/{doc_id}/file")
+async def get_floor_doc_file(doc_id: str, download: bool = False):
+    """Devuelve el archivo (público, para descargar/compartir con clientes)."""
+    d = await db.floor_docs.find_one({"id": doc_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    try:
+        data = base64.b64decode(d.get("dataBase64", ""))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Documento corrupto")
+    name = (d.get("name") or "catalogo").replace('"', '')
+    if not name.lower().endswith(".pdf") and "pdf" in (d.get("mime") or ""):
+        name += ".pdf"
+    disp = "attachment" if download else "inline"
+    return Response(content=data, media_type=d.get("mime") or "application/pdf",
+                    headers={"Content-Disposition": f'{disp}; filename="{name}"'})
+
+
+@router.delete("/floor/docs/{doc_id}")
+async def delete_floor_doc(doc_id: str):
+    await db.floor_docs.delete_one({"id": doc_id})
+    return {"success": True}

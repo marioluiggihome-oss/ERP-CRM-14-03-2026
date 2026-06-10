@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import {
   Layers, Calculator, Package, Boxes, Loader, Printer, Plus, Minus,
-  Save, CheckCircle2, AlertTriangle, Warehouse,
+  Save, CheckCircle2, AlertTriangle, Warehouse, Download, FileText, Trash2, Upload, Share2,
 } from 'lucide-react';
 import { authHeaders } from '../services/api';
 
@@ -27,14 +27,58 @@ const LuiggiFloor = ({ currentUser }) => {
   const [cliente, setCliente] = useState('');
   const [edit, setEdit] = useState({});           // edición admin {id:{pricePerM2,stockPackages}}
   const [savingId, setSavingId] = useState('');
+  const [docs, setDocs] = useState([]);           // catálogos descargables
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const loadDocs = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/floor/docs`, { headers: authHeaders() });
+      if (r.ok) { const j = await r.json(); setDocs(j.items || []); }
+    } catch { /* noop */ }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const r = await fetch(`${API_URL}/api/floor/products`, { headers: authHeaders() });
       if (r.ok) { const j = await r.json(); setItems(j.items || []); setM2pp(j.m2PerPackage || 2.787); }
+      await loadDocs();
     } catch { /* noop */ } finally { setLoading(false); }
-  }, []);
+  }, [loadDocs]);
+
+  const docUrl = (id, dl) => `${API_URL}/api/floor/docs/${id}/file${dl ? '?download=true' : ''}`;
+
+  const uploadDoc = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploadingDoc(true);
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result); fr.onerror = rej;
+        fr.readAsDataURL(file);
+      });
+      const r = await fetch(`${API_URL}/api/floor/docs`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ name: file.name.replace(/\.pdf$/i, ''), fileBase64: b64, mime: file.type || 'application/pdf' }),
+      });
+      if (r.ok) await loadDocs(); else alert('No se pudo subir el catálogo');
+    } catch (err) { alert('Error al subir: ' + err.message); }
+    finally { setUploadingDoc(false); }
+  };
+
+  const delDoc = async (id) => {
+    if (!window.confirm('¿Eliminar este catálogo?')) return;
+    await fetch(`${API_URL}/api/floor/docs/${id}`, { method: 'DELETE', headers: authHeaders() });
+    loadDocs();
+  };
+
+  const shareDocWhatsApp = (d) => {
+    const url = docUrl(d.id, false);
+    const t = `*LUIGGI FLOOR* — Catálogo: ${d.name}\nDescárgalo aquí: ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
+  };
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (!sel && items.length) setSel(items[0]); }, [items, sel]);
@@ -239,6 +283,45 @@ const LuiggiFloor = ({ currentUser }) => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Catálogos y material descargable */}
+            <div className="bg-white rounded-3xl p-5 mt-6 shadow-xl">
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <FileText size={18} className="text-amber-600" />
+                  <h2 className="font-black text-slate-800 uppercase text-sm">Catálogos y material</h2>
+                </div>
+                {isAdmin && (
+                  <label className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer ${uploadingDoc ? 'bg-amber-200 text-amber-500' : 'bg-amber-500 hover:bg-amber-600 text-zinc-900'}`}>
+                    <Upload size={14} className={uploadingDoc ? 'animate-pulse' : ''} />
+                    {uploadingDoc ? 'Subiendo…' : 'Subir catálogo (PDF)'}
+                    <input type="file" accept="application/pdf,image/*" className="hidden" onChange={uploadDoc} disabled={uploadingDoc} />
+                  </label>
+                )}
+              </div>
+              {docs.length === 0 ? (
+                <p className="text-sm text-slate-400 py-4 text-center">
+                  {isAdmin ? 'Sube el catálogo en PDF para poder descargarlo y compartirlo con clientes.' : 'Aún no hay catálogos disponibles.'}
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {docs.map(d => (
+                    <div key={d.id} className="flex items-center gap-3 border border-slate-200 rounded-2xl p-3 hover:border-amber-300 transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center shrink-0"><FileText size={20} /></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-800 text-sm truncate">{d.name}</p>
+                        <p className="text-[11px] text-slate-400">{d.size ? `${(d.size / 1024 / 1024).toFixed(1)} MB · ` : ''}PDF</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <a href={docUrl(d.id, true)} target="_blank" rel="noreferrer" title="Descargar" className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><Download size={15} /></a>
+                        <button onClick={() => shareDocWhatsApp(d)} title="Compartir por WhatsApp" className="w-8 h-8 rounded-lg bg-green-100 hover:bg-green-200 flex items-center justify-center text-green-700"><Share2 size={15} /></button>
+                        {isAdmin && <button onClick={() => delDoc(d.id)} title="Eliminar" className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Gestión de stock (admin) */}
