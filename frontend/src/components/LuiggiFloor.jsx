@@ -291,7 +291,7 @@ const LuiggiFloor = ({ currentUser }) => {
       ['Precio base/m²', eur(calc.precioM2)],
       ['Precio NETO/m²', `${eur(calc.netoM2)}  ·  ${eur(calc.netoPaquete)}/paq`],
     ];
-    if (calc.dto > 0) rows.push(['Ahorro', `−${eur(calc.dto)}`]);
+    if (calc.dto > 0) rows.push(['Ahorro', `- ${eur(calc.dto)}`]);
     rows.push(['Base imponible', eur(calc.base)]);
     rows.push(['IVA 21%', eur(calc.iva)]);
     pdf.setFontSize(11); pdf.setTextColor(40);
@@ -303,7 +303,17 @@ const LuiggiFloor = ({ currentUser }) => {
     pdf.setFillColor(24, 24, 27); pdf.rect(14, y - 5, W - 28, 11, 'F');
     pdf.setFontSize(14); pdf.setTextColor(202, 169, 104);
     pdf.text('TOTAL', 16, y + 1.5); pdf.text(eur(calc.total), W - 16, y + 1.5, { align: 'right' });
-    y += 16;
+    y += 14;
+    // Observaciones al pie del presupuesto
+    pdf.setFontSize(10); pdf.setTextColor(24, 24, 27); pdf.text('Observaciones', 14, y); y += 5;
+    pdf.setFontSize(9); pdf.setTextColor(70);
+    const obs = [
+      '· Instalación NO incluida.',
+      '· Este suelo debe instalarse siempre sobre una superficie bien nivelada.',
+      '  No nos hacemos responsables de instalaciones mal realizadas.',
+    ];
+    obs.forEach(line => { pdf.text(pdf.splitTextToSize(line, W - 28), 14, y); y += 5; });
+    y += 4;
     pdf.setFontSize(8); pdf.setTextColor(150);
     pdf.text('Luiggi Floor · división de suelo SPC porcelánico · oferta orientativa salvo error u omisión.', 14, y);
 
@@ -315,7 +325,8 @@ const LuiggiFloor = ({ currentUser }) => {
     const t = `*LUIGGI FLOOR — Oferta suelo SPC*\n${selected.name} (${selected.dims})\n`
       + `\nPaquetes: ${calc.paquetes} (${m2pp} m²/paq)\nSuperficie: ${m2fmt(calc.m2reales)}\n`
       + `Precio NETO: ${eur(calc.netoM2)}/m² · ${eur(calc.netoPaquete)}/paq\n`
-      + `Base: ${eur(calc.base)}\nIVA 21%: ${eur(calc.iva)}\n*TOTAL: ${eur(calc.total)}*`;
+      + `Base: ${eur(calc.base)}\nIVA 21%: ${eur(calc.iva)}\n*TOTAL: ${eur(calc.total)}*\n`
+      + `\n_Instalación no incluida. El suelo debe instalarse sobre una superficie bien nivelada; no nos hacemos responsables de instalaciones mal realizadas._`;
     window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
   };
 
