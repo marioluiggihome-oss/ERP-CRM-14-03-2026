@@ -5,6 +5,7 @@
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   Layers, Calculator, Package, Boxes, Loader, Printer, Plus, Minus,
   Save, CheckCircle2, AlertTriangle, Warehouse, Download, FileText, Trash2, Upload, Share2,
@@ -24,6 +25,34 @@ const imgFormat = (dataUrl) => {
   if (u.includes('image/webp')) return 'WEBP';
   return 'JPEG';
 };
+
+// Ficha técnica oficial del suelo SPC (Característica / Norma / Resultado)
+const FICHA_TECNICA = [
+  ['Dimensiones de las tablas', 'EN ISO 24342', '1524 × 228 mm'],
+  ['Grosor total', 'EN ISO 24346', '6 mm (5+1)'],
+  ['Grosor de la capa de uso', 'EN ISO 24340', '0,55 mm'],
+  ['Peso', 'EN ISO 23997', '10,34 kg/m²'],
+  ['Escuadría / rectitud de los bordes', 'EN ISO 24342', '< 0,13 %'],
+  ['Número de piezas y m² por caja', '—', '8 / 2,78 m²'],
+  ['Deformación tridimensional', 'EN ISO 23999', '±0,5 mm (80 °C, 6 h)'],
+  ['Resistencia al despegue de capas', 'EN ISO 24345', 'Long/Ancho 106,8 N / 108,9 N'],
+  ['Estabilidad dimensional', 'EN ISO 23999', '≤ 0,1 % (80 °C ± 2 °C, 6 h)'],
+  ['Resistencia a la abrasión', 'EN ISO 660-2', '≤ 0,015 g/1000 turns – Group T'],
+  ['Resistencia al deslizamiento en seco', 'EN 13893', 'Clase DS'],
+  ['Resistencia al deslizamiento en húmedo', 'EN 16165', 'Clase 2'],
+  ['Durabilidad (test de silla de ruedas)', 'EN ISO 4918', 'Sin deslaminación / sin daños visibles'],
+  ['Toxicidad', 'EN 71-3', 'Aprobado'],
+  ['Resistencia química', 'EN 423', 'Nivel (Clase 0)'],
+  ['Solidez del color', 'ISO 105-B02-3', '> 6'],
+  ['Resistencia al fuego', 'EN 13501-1', 'Bfl-S1'],
+  ['Resistencia térmica', 'EN 12667', '0,052 (m²·K)/W'],
+  ['Toxicidad por humos', 'BS 6853', 'R < 1,0'],
+  ['Clasificación uso doméstico / comercial', 'EN 685', '23 / 33'],
+  ['Propensión a la electricidad estática', 'EN 1815', '0,5 kV'],
+  ['Conductividad térmica', 'EN 12667', '0,138 (W/m·K)'],
+  ['Emisión de formaldehído', 'EN 717-2', 'E1'],
+];
+const FICHA_BADGES = 'Uso doméstico (23) · Uso comercial (33) · Antiestático · Ignífugo Bfl-S1 · Apto calefacción radiante/aerotermia · Antideslizante · Tecnología UNICLIC patentada · Certificado CE';
 
 const LuiggiFloor = ({ currentUser }) => {
   const isAdmin = !!currentUser?.isAdmin;
@@ -103,6 +132,48 @@ const LuiggiFloor = ({ currentUser }) => {
     if (!window.confirm('¿Eliminar este catálogo?')) return;
     await fetch(`${API_URL}/api/floor/docs/${id}`, { method: 'DELETE', headers: authHeaders() });
     loadDocs();
+  };
+
+  // Genera la ficha técnica en PDF (con logo) y la sube a la carpeta de catálogos.
+  const [genFicha, setGenFicha] = useState(false);
+  const buildFichaPdf = () => {
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = pdf.internal.pageSize.getWidth();
+    pdf.setFillColor(24, 24, 27); pdf.rect(0, 0, W, 30, 'F');
+    pdf.setTextColor(202, 169, 104); pdf.setFontSize(11); pdf.text('LUIGGI FLOOR', 14, 13);
+    pdf.setTextColor(255); pdf.setFontSize(16); pdf.text('Ficha técnica · Suelo SPC porcelánico', 14, 23);
+    if (floorLogo) { try { pdf.addImage(floorLogo, imgFormat(floorLogo), W - 50, 5, 36, 20); } catch (_) {} }
+    autoTable(pdf, {
+      startY: 38,
+      head: [['Característica', 'Norma', 'Resultado']],
+      body: FICHA_TECNICA,
+      styles: { fontSize: 9, cellPadding: 2.2 },
+      headStyles: { fillColor: [24, 24, 27], textColor: [202, 169, 104], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 244] },
+      columnStyles: { 0: { cellWidth: 78 }, 1: { cellWidth: 42 }, 2: { fontStyle: 'bold' } },
+      margin: { left: 14, right: 14 },
+    });
+    let y = (pdf.lastAutoTable?.finalY || 250) + 8;
+    pdf.setDrawColor(202, 169, 104); pdf.line(14, y, W - 14, y); y += 6;
+    pdf.setFontSize(8); pdf.setTextColor(90);
+    pdf.text(pdf.splitTextToSize(FICHA_BADGES, W - 28), 14, y);
+    return pdf;
+  };
+
+  const generarFichaTecnica = async () => {
+    setGenFicha(true);
+    try {
+      const pdf = buildFichaPdf();
+      const dataUri = pdf.output('datauristring'); // data:application/pdf;base64,...
+      const r = await fetch(`${API_URL}/api/floor/docs`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ name: 'Ficha técnica Luiggi Floor SPC', fileBase64: dataUri, mime: 'application/pdf' }),
+      });
+      if (r.ok) { await loadDocs(); alert('Ficha técnica generada y añadida a los catálogos.'); }
+      else alert('Se generó el PDF pero no se pudo guardar en catálogos.');
+      pdf.save('Ficha_tecnica_Luiggi_Floor_SPC.pdf');
+    } catch (e) { alert('Error al generar la ficha: ' + e.message); }
+    finally { setGenFicha(false); }
   };
 
   const shareDocWhatsApp = (d) => {
@@ -382,11 +453,18 @@ const LuiggiFloor = ({ currentUser }) => {
                   <h2 className="font-black text-slate-800 uppercase text-sm">Catálogos y material</h2>
                 </div>
                 {isAdmin && (
-                  <label className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer ${uploadingDoc ? 'bg-amber-200 text-amber-500' : 'bg-amber-500 hover:bg-amber-600 text-zinc-900'}`}>
-                    <Upload size={14} className={uploadingDoc ? 'animate-pulse' : ''} />
-                    {uploadingDoc ? 'Subiendo…' : 'Subir catálogo (PDF)'}
-                    <input type="file" accept="application/pdf,image/*" className="hidden" onChange={uploadDoc} disabled={uploadingDoc} />
-                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button onClick={generarFichaTecnica} disabled={genFicha}
+                      className="px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 bg-zinc-800 hover:bg-zinc-900 text-amber-300 disabled:opacity-60">
+                      {genFicha ? <Loader size={14} className="animate-spin" /> : <FileText size={14} />}
+                      {genFicha ? 'Generando…' : 'Generar ficha técnica'}
+                    </button>
+                    <label className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer ${uploadingDoc ? 'bg-amber-200 text-amber-500' : 'bg-amber-500 hover:bg-amber-600 text-zinc-900'}`}>
+                      <Upload size={14} className={uploadingDoc ? 'animate-pulse' : ''} />
+                      {uploadingDoc ? 'Subiendo…' : 'Subir catálogo (PDF)'}
+                      <input type="file" accept="application/pdf,image/*" className="hidden" onChange={uploadDoc} disabled={uploadingDoc} />
+                    </label>
+                  </div>
                 )}
               </div>
               {docs.length === 0 ? (
