@@ -427,6 +427,7 @@ const LuiggiFloor = ({ currentUser }) => {
                         <th className="text-left p-2.5 text-xs font-black uppercase">Color</th>
                         <th className="text-right p-2.5 text-xs font-black uppercase">Precio/m² (€)</th>
                         <th className="text-right p-2.5 text-xs font-black uppercase">Stock (paquetes)</th>
+                        <th className="text-right p-2.5 text-xs font-black uppercase">m² stock</th>
                         <th className="text-center p-2.5 text-xs font-black uppercase">Ajuste rápido</th>
                         <th className="p-2.5"></th>
                       </tr>
@@ -448,6 +449,9 @@ const LuiggiFloor = ({ currentUser }) => {
                               <input type="number" step="0.001" defaultValue={it.stockPackages}
                                 onChange={ev => setEdit(p => ({ ...p, [it.id]: { ...p[it.id], stockPackages: parseFloat(ev.target.value) || 0 } }))}
                                 className="w-24 text-right px-2 py-1 border border-slate-200 rounded-lg font-mono" />
+                            </td>
+                            <td className="p-2.5 text-right font-mono font-bold text-slate-600 whitespace-nowrap">
+                              {m2fmt(((edit[it.id]?.stockPackages ?? it.stockPackages) || 0) * m2pp)}
                             </td>
                             <td className="p-2.5">
                               <div className="flex items-center justify-center gap-1">
