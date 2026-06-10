@@ -72,7 +72,8 @@ async def list_floor_products():
 
 @router.put("/floor/products/{product_id}")
 async def update_floor_product(product_id: str, payload: dict):
-    """Actualiza precio/m², stock (paquetes), nombre, imagen o swatch de un color."""
+    """Actualiza SOLO foto, precio/m² y stock. El nombre, medidas y tono del color
+    quedan FIJOS (los 3 colores no se modifican ni se añaden/eliminan)."""
     update = {}
     if "pricePerM2" in payload:
         try: update["pricePerM2"] = round(float(payload["pricePerM2"]), 2)
@@ -80,9 +81,8 @@ async def update_floor_product(product_id: str, payload: dict):
     if "stockPackages" in payload:
         try: update["stockPackages"] = round(float(payload["stockPackages"]), 3)
         except Exception: pass
-    for k in ("name", "dims", "image", "swatchFrom", "swatchTo"):
-        if k in payload:
-            update[k] = str(payload[k] or "")
+    if "image" in payload:
+        update["image"] = str(payload["image"] or "")
     if not update:
         raise HTTPException(status_code=400, detail="Nada que actualizar")
     update["updatedAt"] = datetime.now(timezone.utc).isoformat()
