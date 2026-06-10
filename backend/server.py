@@ -1648,13 +1648,19 @@ def calculate_furniture_despiece(
     num_drawers = 0
     drawer_height_cm = 0
 
-    # Detectar cajones por código/nombre
-    cajon_keywords = ['CAJ', 'CAJON', 'CAJÓN', 'DRAWER', 'BT', 'BCG', 'BCGF', 'BGF', 'BGC']
-    if any(k in code_upper or k in name_upper for k in cajon_keywords):
+    # Conteo EXPLÍCITO de gavetas/cajones en el nombre (MV: "2 GAVETAS 1 CAJON")
+    # o en el código (MV: ".../2G1C"). Es más fiable que estimar por altura.
+    _g = re.search(r'(\d+)\s*GAVETA', name_upper) or re.search(r'(\d+)G(?=\d|C|$|/)', code_upper)
+    _c = re.search(r'(\d+)\s*CAJ', name_upper) or re.search(r'(\d+)C(?=\d|$|/|\b)', code_upper)
+    explicit_drawers = (int(_g.group(1)) if _g else 0) + (int(_c.group(1)) if _c else 0)
+
+    cajon_keywords = ['CAJ', 'CAJON', 'CAJÓN', 'GAVETA', 'DRAWER', 'BT', 'BCG', 'BCGF', 'BGF', 'BGC']
+    if explicit_drawers > 0 or any(k in code_upper or k in name_upper for k in cajon_keywords):
         has_drawers = True
-        # Estimar número de cajones según la altura
-        if h >= 70:
-            num_drawers = 3
+        if explicit_drawers > 0:
+            num_drawers = explicit_drawers           # nº real del nombre/código
+        elif h >= 70:
+            num_drawers = 3                           # fallback por altura
         elif h >= 50:
             num_drawers = 2
         else:
@@ -1748,8 +1754,10 @@ def calculate_furniture_despiece(
     elif is_fregadero or "MICROONDAS" in name_upper or "ESTANTERIA" in name_upper or "HUECO" in name_upper:
         has_doors = False
         num_doors = 0
-    # Muebles que normalmente tienen puertas pero no lo especifican
-    elif is_alto or is_bajo or is_columna:
+    # Muebles que normalmente tienen puertas pero no lo especifican.
+    # OJO: si es un mueble de GAVETAS/CAJONES (sin puerta indicada) NO se le
+    # inventan puertas (antes añadía puertas fantasma a los cajoneras).
+    elif (is_alto or is_bajo or is_columna) and not has_drawers:
         has_doors = True
         # Estimar número de puertas según el ancho
         if w <= 45:
