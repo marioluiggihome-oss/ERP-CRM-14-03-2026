@@ -933,8 +933,8 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Luiggi Floor - división de suelo SPC (admin y comerciales) */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+                    {/* Luiggi Floor - división de suelo SPC (solo con permiso canAccessFloor) */}
+                    {(state.currentUser?.isAdmin || state.currentUser?.canAccessFloor === true) && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'luiggifloor'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'luiggifloor' ? 'bg-amber-500 text-zinc-900 shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}

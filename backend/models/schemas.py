@@ -224,6 +224,7 @@ class UserUpdate(BaseModel):
     canAccessArmarios: Optional[bool] = None
     canAccessMaster: Optional[bool] = None  # Acceso al Panel MASTER (config)
     canAccessGastos: Optional[bool] = None  # Acceso al módulo de Gastos
+    canAccessFloor: Optional[bool] = None   # Acceso a Luiggi Floor (red de distribución)
     canAuthorizePermissions: Optional[bool] = None
     useCustomBranding: Optional[bool] = None
     canChangeLogo: Optional[bool] = None
