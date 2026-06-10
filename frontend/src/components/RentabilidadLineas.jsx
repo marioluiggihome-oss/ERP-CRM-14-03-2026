@@ -646,7 +646,7 @@ const RentabilidadLineas = ({ currentUser }) => {
             >
               <ChevronLeft size={14} />
             </button>
-            <span className="text-xs font-bold text-slate-700">P\u00e1g {safePage}/{totalPages}</span>
+            <span className="text-xs font-bold text-slate-700">Pág {safePage}/{totalPages}</span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={safePage >= totalPages}
