@@ -315,19 +315,19 @@ const LuiggiFloor = ({ currentUser }) => {
 
   return (
     <div className="h-full overflow-auto bg-gradient-to-br from-zinc-900 to-zinc-800">
-      {/* Cabecera con logo de marca */}
-      <div className="px-4 sm:px-6 py-5 flex items-center gap-3 flex-wrap">
+      {/* Cabecera con logo de marca centrado */}
+      <div className="relative px-4 sm:px-6 pt-7 pb-4 flex flex-col items-center text-center">
         {floorLogo ? (
-          <img src={floorLogo} alt="Luiggi Floor" className="h-12 sm:h-16 w-auto max-w-[70vw] object-contain" />
+          <img src={floorLogo} alt="Luiggi Floor" className="h-16 sm:h-24 w-auto max-w-[80vw] object-contain" />
         ) : (
-          <div className="flex items-baseline gap-2 select-none">
-            <span className="italic font-serif text-3xl sm:text-5xl bg-clip-text text-transparent bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 leading-none">luiggi</span>
-            <span className="text-lg sm:text-2xl font-light tracking-[0.35em] text-amber-400">FLOOR</span>
+          <div className="flex items-baseline justify-center gap-2 select-none">
+            <span className="italic font-serif text-4xl sm:text-6xl bg-clip-text text-transparent bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 leading-none">luiggi</span>
+            <span className="text-xl sm:text-3xl font-light tracking-[0.35em] text-amber-400">FLOOR</span>
           </div>
         )}
-        <p className="text-xs text-zinc-400 ml-auto sm:ml-3 w-full sm:w-auto">Suelo SPC porcelánico · 1 paquete = {m2pp} m²</p>
+        <p className="text-xs text-zinc-400 mt-2.5">Suelo SPC porcelánico · 1 paquete = {m2pp} m²</p>
         {isAdmin && (
-          <label className="text-[11px] font-bold text-amber-300/80 hover:text-amber-300 cursor-pointer flex items-center gap-1">
+          <label className="absolute top-3 right-3 sm:top-4 sm:right-5 text-[11px] font-bold text-amber-300/80 hover:text-amber-300 cursor-pointer flex items-center gap-1 bg-white/5 px-2.5 py-1.5 rounded-lg">
             <Upload size={13} /> {floorLogo ? 'Cambiar logo' : 'Subir logo'}
             <input type="file" accept="image/*" className="hidden" onChange={uploadLogo} />
           </label>
