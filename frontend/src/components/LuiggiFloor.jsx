@@ -40,13 +40,33 @@ const LuiggiFloor = ({ currentUser }) => {
   const [savingId, setSavingId] = useState('');
   const [docs, setDocs] = useState([]);           // catálogos descargables
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [floorLogo, setFloorLogo] = useState('');  // logo de marca Luiggi Floor
 
   const loadDocs = useCallback(async () => {
     try {
       const r = await fetch(`${API_URL}/api/floor/docs`, { headers: authHeaders() });
       if (r.ok) { const j = await r.json(); setDocs(j.items || []); }
     } catch { /* noop */ }
+    try {
+      const s = await fetch(`${API_URL}/api/floor/settings`, { headers: authHeaders() });
+      if (s.ok) { const js = await s.json(); setFloorLogo(js.logo || ''); }
+    } catch { /* noop */ }
   }, []);
+
+  const uploadLogo = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+      });
+      const r = await fetch(`${API_URL}/api/floor/settings`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ logo: b64 }),
+      });
+      if (r.ok) setFloorLogo(b64); else alert('No se pudo subir el logo');
+    } catch (err) { alert('Error al subir el logo: ' + err.message); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -165,8 +185,9 @@ const LuiggiFloor = ({ currentUser }) => {
     pdf.setFillColor(24, 24, 27); pdf.rect(0, 0, W, 30, 'F');
     pdf.setTextColor(202, 169, 104); pdf.setFontSize(11); pdf.text('LUIGGI FLOOR', 14, 13);
     pdf.setTextColor(255); pdf.setFontSize(17); pdf.text('Oferta de suelo SPC', 14, 23);
-    if (currentUser?.logo) {
-      try { pdf.addImage(currentUser.logo, imgFormat(currentUser.logo), W - 38, 6, 24, 18); } catch (_) {}
+    const brand = floorLogo || currentUser?.logo;
+    if (brand) {
+      try { pdf.addImage(brand, imgFormat(brand), W - 50, 5, 36, 20); } catch (_) {}
     }
 
     // Showcase del color: foto si existe, si no banda con el tono del swatch
@@ -223,13 +244,23 @@ const LuiggiFloor = ({ currentUser }) => {
 
   return (
     <div className="h-full overflow-auto bg-gradient-to-br from-zinc-900 to-zinc-800">
-      {/* Cabecera */}
+      {/* Cabecera con logo de marca */}
       <div className="px-4 sm:px-6 py-5 flex items-center gap-3 flex-wrap">
-        <div className="w-12 h-12 rounded-2xl bg-amber-500/15 ring-1 ring-amber-400/40 flex items-center justify-center text-amber-300"><Layers size={24} /></div>
-        <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">LUIGGI <span className="text-amber-400">FLOOR</span></h1>
-          <p className="text-xs text-zinc-400">Suelo SPC porcelánico · 1 paquete = {m2pp} m²</p>
-        </div>
+        {floorLogo ? (
+          <img src={floorLogo} alt="Luiggi Floor" className="h-12 sm:h-16 w-auto max-w-[70vw] object-contain" />
+        ) : (
+          <div className="flex items-baseline gap-2 select-none">
+            <span className="italic font-serif text-3xl sm:text-5xl bg-clip-text text-transparent bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 leading-none">luiggi</span>
+            <span className="text-lg sm:text-2xl font-light tracking-[0.35em] text-amber-400">FLOOR</span>
+          </div>
+        )}
+        <p className="text-xs text-zinc-400 ml-auto sm:ml-3 w-full sm:w-auto">Suelo SPC porcelánico · 1 paquete = {m2pp} m²</p>
+        {isAdmin && (
+          <label className="text-[11px] font-bold text-amber-300/80 hover:text-amber-300 cursor-pointer flex items-center gap-1">
+            <Upload size={13} /> {floorLogo ? 'Cambiar logo' : 'Subir logo'}
+            <input type="file" accept="image/*" className="hidden" onChange={uploadLogo} />
+          </label>
+        )}
       </div>
 
       <div className="px-4 sm:px-6 pb-8 max-w-6xl mx-auto">

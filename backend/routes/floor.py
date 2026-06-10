@@ -174,3 +174,28 @@ async def get_floor_doc_file(doc_id: str, download: bool = False):
 async def delete_floor_doc(doc_id: str):
     await db.floor_docs.delete_one({"id": doc_id})
     return {"success": True}
+
+
+# ============================================================================
+# AJUSTES DE LUIGGI FLOOR (logo de marca para cabecera y PDF)
+# Colección: floor_settings  { id:'floor-settings', logo }
+# ============================================================================
+
+@router.get("/floor/settings")
+async def get_floor_settings():
+    s = await db.floor_settings.find_one({"id": "floor-settings"}, {"_id": 0})
+    return s or {"id": "floor-settings", "logo": ""}
+
+
+@router.put("/floor/settings")
+async def update_floor_settings(payload: dict):
+    update = {}
+    if "logo" in payload:
+        update["logo"] = str(payload["logo"] or "")
+    if not update:
+        raise HTTPException(status_code=400, detail="Nada que actualizar")
+    update["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    await db.floor_settings.update_one(
+        {"id": "floor-settings"}, {"$set": {"id": "floor-settings", **update}}, upsert=True
+    )
+    return {"success": True}
