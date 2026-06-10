@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table2, Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
-  Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles
+  Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors
 } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
+import DespieceModal from './DespieceModal';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -30,6 +31,7 @@ const Presupuestador2 = ({ currentUser }) => {
   const [showManual, setShowManual] = useState(false);
   const [clientName, setClientName] = useState('');
   const [notes, setNotes] = useState('');
+  const [showDespiece, setShowDespiece] = useState(false);
 
   useEffect(() => { localStorage.setItem('p2_tariff', tariff); }, [tariff]);
 
@@ -141,6 +143,33 @@ const Presupuestador2 = ({ currentUser }) => {
       customDepth: prod?.depth || 0,
     };
   }), [cart, products, pointValue]);
+
+  // Items para el DESPIECE (reutiliza el motor/modal del Presupuestador 1).
+  // Las medidas salen del catálogo MV; el backend clasifica por nombre/código.
+  const despieceItems = useMemo(() => cart.map((it, idx) => {
+    const prod = !it.manual ? products.find(p => p.id === it.id) : null;
+    return {
+      id: `p2d-${idx}`,
+      productId: it.manual ? `manual-${idx}` : it.id,
+      isManual: !!it.manual,
+      customReference: it.code,
+      manualDescription: it.name,
+      productName: it.name,
+      customWidth: prod?.width || 0,
+      customHeight: prod?.height || 0,
+      customDepth: prod?.depth || 0,
+      quantity: it.qty,
+    };
+  }), [cart, products]);
+
+  const openDespiece = () => {
+    if (cart.length === 0) { alert('Añade al menos una línea'); return; }
+    if (!despieceItems.some(i => i.customWidth && i.customHeight && i.customDepth)) {
+      alert('Los muebles no tienen medidas en el catálogo; no se puede generar el despiece.');
+      return;
+    }
+    setShowDespiece(true);
+  };
 
   const saveOrder = async () => {
     if (cart.length === 0) { alert('Añade al menos una línea'); return; }
@@ -418,10 +447,30 @@ const Presupuestador2 = ({ currentUser }) => {
                 <Printer size={13} /> Imprimir
               </button>
             </div>
+            {currentUser?.canViewTechnicalDespiece && (
+              <button onClick={openDespiece} disabled={cart.length === 0}
+                className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-100 disabled:text-slate-300 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider">
+                <Scissors size={14} /> Generar despiece
+              </button>
+            )}
             <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
           </div>
         </div>
       </div>
+
+      <DespieceModal
+        isOpen={showDespiece}
+        onClose={() => setShowDespiece(false)}
+        items={despieceItems}
+        catalogs={[{ id: 'MV', products }]}
+        carcassMaterialName="Melamina Blanca"
+        carcassBackThickness={8}
+        customerName={clientName}
+        projectReference={`Presupuesto MV (Tarifa ${tariff})`}
+        expedientNumber={newBudgetNumber()}
+        doorToleranceHeight={2}
+        doorToleranceWidth={3}
+      />
     </div>
   );
 };
