@@ -23,6 +23,7 @@ const LuiggiFloor = ({ currentUser }) => {
   const [sel, setSel] = useState(null);          // color seleccionado para presupuestar
   const [mode, setMode] = useState('m2');         // 'm2' | 'paq'
   const [value, setValue] = useState('');
+  const [merma, setMerma] = useState(0);          // % extra para cortes/roturas
   const [descuento, setDescuento] = useState(0);
   const [cliente, setCliente] = useState('');
   const [edit, setEdit] = useState({});           // edición admin {id:{pricePerM2,stockPackages}}
@@ -88,20 +89,22 @@ const LuiggiFloor = ({ currentUser }) => {
   // ── Cálculo del presupuesto ──
   const calc = useMemo(() => {
     const v = parseFloat(value) || 0;
+    const mermaF = 1 + (Number(merma) || 0) / 100;
     let paquetes, m2req;
-    if (mode === 'm2') { m2req = v; paquetes = v > 0 ? Math.ceil(v / m2pp) : 0; }
+    if (mode === 'm2') { m2req = v; paquetes = v > 0 ? Math.ceil((v * mermaF) / m2pp) : 0; }
     else { paquetes = Math.ceil(v); m2req = v * m2pp; }
     const m2reales = +(paquetes * m2pp).toFixed(3);
     const precioM2 = Number(selected?.pricePerM2) || 0;
+    const precioPaquete = +(precioM2 * m2pp).toFixed(2);
     const subtotal = +(m2reales * precioM2).toFixed(2);
     const dto = +(subtotal * (Number(descuento) || 0) / 100).toFixed(2);
     const base = +(subtotal - dto).toFixed(2);
     const iva = +(base * 0.21).toFixed(2);
     const total = +(base + iva).toFixed(2);
     const stock = Number(selected?.stockPackages) || 0;
-    return { paquetes, m2req, m2reales, precioM2, subtotal, dto, base, iva, total, stock,
+    return { paquetes, m2req, m2reales, precioM2, precioPaquete, subtotal, dto, base, iva, total, stock,
              falta: Math.max(0, paquetes - stock) };
-  }, [value, mode, m2pp, selected, descuento]);
+  }, [value, mode, m2pp, selected, descuento, merma]);
 
   // ── Admin: guardar precio/stock ──
   const saveEdit = async (it) => {
@@ -240,10 +243,17 @@ const LuiggiFloor = ({ currentUser }) => {
                     <input value={value} onChange={e => setValue(e.target.value)} type="number" min="0" step={mode === 'm2' ? '0.1' : '1'} placeholder="0"
                       className="w-full px-4 py-3 border border-slate-200 rounded-xl text-2xl font-black text-slate-800 focus:outline-none focus:border-amber-500" />
                   </div>
-                  <div>
-                    <label className="text-[11px] font-black text-slate-400 uppercase">Descuento %</label>
-                    <input value={descuento} onChange={e => setDescuento(parseFloat(e.target.value) || 0)} type="number" min="0" max="100"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-black text-slate-400 uppercase">Merma % (cortes)</label>
+                      <input value={merma} onChange={e => setMerma(parseFloat(e.target.value) || 0)} type="number" min="0" max="30"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-black text-slate-400 uppercase">Descuento %</label>
+                      <input value={descuento} onChange={e => setDescuento(parseFloat(e.target.value) || 0)} type="number" min="0" max="100"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500" />
+                    </div>
                   </div>
                 </div>
 
@@ -263,7 +273,8 @@ const LuiggiFloor = ({ currentUser }) => {
                     <p className="text-[11px] text-amber-300 mb-2">Se sirven {m2fmt(calc.m2reales)} (paquete completo); pediste {m2fmt(calc.m2req)}.</p>
                   )}
                   <div className="space-y-1.5 text-sm border-t border-white/10 pt-3">
-                    <div className="flex justify-between text-zinc-300"><span>Subtotal ({eur(calc.precioM2)}/m²)</span><span className="font-mono">{eur(calc.subtotal)}</span></div>
+                    <div className="flex justify-between text-zinc-400 text-[11px]"><span>{eur(calc.precioM2)}/m² · {eur(calc.precioPaquete)}/paquete{merma > 0 ? ` · +${merma}% merma` : ''}</span></div>
+                    <div className="flex justify-between text-zinc-300"><span>Subtotal ({m2fmt(calc.m2reales)})</span><span className="font-mono">{eur(calc.subtotal)}</span></div>
                     {descuento > 0 && <div className="flex justify-between text-zinc-300"><span>Descuento {descuento}%</span><span className="font-mono">−{eur(calc.dto)}</span></div>}
                     <div className="flex justify-between text-zinc-300"><span>IVA 21%</span><span className="font-mono">{eur(calc.iva)}</span></div>
                     <div className="flex justify-between items-center pt-2 border-t border-white/10">

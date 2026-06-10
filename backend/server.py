@@ -1729,8 +1729,13 @@ def calculate_furniture_despiece(
     # ZC: 1P, 2P, 3P, 4P (ej: 9A1P300, 9B2P600)
     # MV: Similar pero también D/I (derecha/izquierda)
     
+    # Conteo EXPLÍCITO escrito en palabras: "2 PUERTAS", "3 PUERTAS" (típico MV).
+    _p = re.search(r'(\d+)\s*PUERTA', name_upper)
+    if _p:
+        has_doors = True
+        num_doors = int(_p.group(1))
     # 4P = 4 puertas (columnas grandes)
-    if "4P" in name_upper or "4P" in code_upper:
+    elif "4P" in name_upper or "4P" in code_upper:
         has_doors = True
         num_doors = 4
     # 3P = 3 puertas
