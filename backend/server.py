@@ -83,6 +83,7 @@ from routes.backup import scheduler as backup_scheduler, start_backup_scheduler
 from routes.admin import router as admin_router
 from routes.rentabilidad import router as rentabilidad_router
 from routes.gastos import router as gastos_router
+from routes.floor import router as floor_router
 from routes.reports import router as reports_router
 from routes.exports import router as exports_router
 from routes.maintenance import router as maintenance_router
@@ -241,6 +242,7 @@ api_router.include_router(command_center_router)
 api_router.include_router(admin_router)
 api_router.include_router(rentabilidad_router)
 api_router.include_router(gastos_router)
+api_router.include_router(floor_router)
 api_router.include_router(reports_router)
 api_router.include_router(exports_router)
 api_router.include_router(maintenance_router)
