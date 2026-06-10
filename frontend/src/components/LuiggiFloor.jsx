@@ -36,8 +36,8 @@ const FICHA_TECNICA = [
   ['Número de piezas y m² por caja', '—', '8 / 2,78 m²'],
   ['Deformación tridimensional', 'EN ISO 23999', '±0,5 mm (80 °C, 6 h)'],
   ['Resistencia al despegue de capas', 'EN ISO 24345', 'Long/Ancho 106,8 N / 108,9 N'],
-  ['Estabilidad dimensional', 'EN ISO 23999', '≤ 0,1 % (80 °C ± 2 °C, 6 h)'],
-  ['Resistencia a la abrasión', 'EN ISO 660-2', '≤ 0,015 g/1000 turns – Group T'],
+  ['Estabilidad dimensional', 'EN ISO 23999', 'máx. 0,1 % (80 °C ± 2 °C, 6 h)'],
+  ['Resistencia a la abrasión', 'EN ISO 660-2', 'máx. 0,015 g/1000 turns - Group T'],
   ['Resistencia al deslizamiento en seco', 'EN 13893', 'Clase DS'],
   ['Resistencia al deslizamiento en húmedo', 'EN 16165', 'Clase 2'],
   ['Durabilidad (test de silla de ruedas)', 'EN ISO 4918', 'Sin deslaminación / sin daños visibles'],
@@ -148,10 +148,10 @@ const LuiggiFloor = ({ currentUser }) => {
       startY: 38,
       head: [['Característica', 'Norma', 'Resultado']],
       body: FICHA_TECNICA,
-      styles: { fontSize: 9, cellPadding: 2.2 },
+      styles: { fontSize: 9, cellPadding: 2.2, overflow: 'linebreak', valign: 'middle' },
       headStyles: { fillColor: [24, 24, 27], textColor: [202, 169, 104], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [245, 245, 244] },
-      columnStyles: { 0: { cellWidth: 78 }, 1: { cellWidth: 42 }, 2: { fontStyle: 'bold' } },
+      columnStyles: { 0: { cellWidth: 68 }, 1: { cellWidth: 36 }, 2: { fontStyle: 'bold', cellWidth: 78 } },
       margin: { left: 14, right: 14 },
     });
     let y = (pdf.lastAutoTable?.finalY || 250) + 8;
