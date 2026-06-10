@@ -920,8 +920,8 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Gastos de comercial (escaneo de tickets) - comerciales y admin */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+                    {/* Gastos de comercial (escaneo de tickets) - comerciales y admin, con permiso */}
+                    {(state.currentUser?.isAdmin || state.currentUser?.isRepresentative || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.canAccessGastos !== false && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'gastos'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'gastos' ? 'bg-indigo-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}

@@ -223,6 +223,7 @@ class UserUpdate(BaseModel):
     canUseDigitalizador: Optional[bool] = None
     canAccessArmarios: Optional[bool] = None
     canAccessMaster: Optional[bool] = None  # Acceso al Panel MASTER (config)
+    canAccessGastos: Optional[bool] = None  # Acceso al módulo de Gastos
     canAuthorizePermissions: Optional[bool] = None
     useCustomBranding: Optional[bool] = None
     canChangeLogo: Optional[bool] = None
