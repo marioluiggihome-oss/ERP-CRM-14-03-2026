@@ -64,6 +64,7 @@ const LuiggiFloor = ({ currentUser }) => {
   const [value, setValue] = useState('');
   const [merma, setMerma] = useState(0);          // % extra para cortes/roturas
   const [descuento, setDescuento] = useState(0);
+  const [precioNeto, setPrecioNeto] = useState(''); // precio neto €/m² manual (manda si se rellena)
   const [cliente, setCliente] = useState('');
   const [edit, setEdit] = useState({});           // edición admin {id:{pricePerM2,stockPackages}}
   const [savingId, setSavingId] = useState('');
@@ -195,17 +196,23 @@ const LuiggiFloor = ({ currentUser }) => {
     if (mode === 'm2') { m2req = v; paquetes = v > 0 ? Math.ceil((v * mermaF) / m2pp) : 0; }
     else { paquetes = Math.ceil(v); m2req = v * m2pp; }
     const m2reales = +(paquetes * m2pp).toFixed(3);
-    const precioM2 = Number(selected?.pricePerM2) || 0;
+    const precioM2 = Number(selected?.pricePerM2) || 0;       // precio base del color
     const precioPaquete = +(precioM2 * m2pp).toFixed(2);
-    const subtotal = +(m2reales * precioM2).toFixed(2);
-    const dto = +(subtotal * (Number(descuento) || 0) / 100).toFixed(2);
-    const base = +(subtotal - dto).toFixed(2);
+    // Precio NETO aplicado por m²: si se escribe a mano, manda ese; si no, base − descuento%
+    const netoManual = parseFloat(precioNeto);
+    const netoM2 = (Number.isFinite(netoManual) && netoManual > 0)
+      ? +netoManual.toFixed(2)
+      : +(precioM2 * (1 - (Number(descuento) || 0) / 100)).toFixed(2);
+    const netoPaquete = +(netoM2 * m2pp).toFixed(2);
+    const subtotal = +(m2reales * precioM2).toFixed(2);       // a precio base (referencia)
+    const base = +(m2reales * netoM2).toFixed(2);             // a precio neto aplicado
+    const dto = +(subtotal - base).toFixed(2);                // ahorro respecto al base
     const iva = +(base * 0.21).toFixed(2);
     const total = +(base + iva).toFixed(2);
     const stock = Number(selected?.stockPackages) || 0;
-    return { paquetes, m2req, m2reales, precioM2, precioPaquete, subtotal, dto, base, iva, total, stock,
-             falta: Math.max(0, paquetes - stock) };
-  }, [value, mode, m2pp, selected, descuento, merma]);
+    return { paquetes, m2req, m2reales, precioM2, precioPaquete, netoM2, netoPaquete,
+             subtotal, dto, base, iva, total, stock, falta: Math.max(0, paquetes - stock) };
+  }, [value, mode, m2pp, selected, descuento, merma, precioNeto]);
 
   // ── Admin: guardar precio/stock ──
   const saveEdit = async (it) => {
@@ -281,10 +288,10 @@ const LuiggiFloor = ({ currentUser }) => {
     const rows = [
       ['Paquetes', `${calc.paquetes}  ·  ${m2pp} m²/paquete`],
       ['Superficie servida', m2fmt(calc.m2reales)],
-      ['Precio/m²', eur(calc.precioM2)],
-      ['Subtotal', eur(calc.subtotal)],
+      ['Precio base/m²', eur(calc.precioM2)],
+      ['Precio NETO/m²', `${eur(calc.netoM2)}  ·  ${eur(calc.netoPaquete)}/paq`],
     ];
-    if (descuento > 0) rows.push(['Descuento', `${descuento}%  (−${eur(calc.dto)})`]);
+    if (calc.dto > 0) rows.push(['Ahorro', `−${eur(calc.dto)}`]);
     rows.push(['Base imponible', eur(calc.base)]);
     rows.push(['IVA 21%', eur(calc.iva)]);
     pdf.setFontSize(11); pdf.setTextColor(40);
@@ -307,9 +314,8 @@ const LuiggiFloor = ({ currentUser }) => {
     if (!selected || calc.paquetes <= 0) { alert('Indica metros o paquetes'); return; }
     const t = `*LUIGGI FLOOR — Oferta suelo SPC*\n${selected.name} (${selected.dims})\n`
       + `\nPaquetes: ${calc.paquetes} (${m2pp} m²/paq)\nSuperficie: ${m2fmt(calc.m2reales)}\n`
-      + `Precio/m²: ${eur(calc.precioM2)}\nSubtotal: ${eur(calc.subtotal)}\n`
-      + (descuento ? `Descuento ${descuento}%: −${eur(calc.dto)}\n` : '')
-      + `IVA 21%: ${eur(calc.iva)}\n*TOTAL: ${eur(calc.total)}*`;
+      + `Precio NETO: ${eur(calc.netoM2)}/m² · ${eur(calc.netoPaquete)}/paq\n`
+      + `Base: ${eur(calc.base)}\nIVA 21%: ${eur(calc.iva)}\n*TOTAL: ${eur(calc.total)}*`;
     window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
   };
 
@@ -400,9 +406,16 @@ const LuiggiFloor = ({ currentUser }) => {
                     </div>
                     <div>
                       <label className="text-[11px] font-black text-slate-400 uppercase">Descuento %</label>
-                      <input value={descuento} onChange={e => setDescuento(parseFloat(e.target.value) || 0)} type="number" min="0" max="100"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500" />
+                      <input value={descuento} onChange={e => setDescuento(parseFloat(e.target.value) || 0)} type="number" min="0" max="100" disabled={!!precioNeto}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500 disabled:bg-slate-100 disabled:text-slate-400" />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-black text-amber-600 uppercase">Precio neto €/m² (manual)</label>
+                    <input value={precioNeto} onChange={e => setPrecioNeto(e.target.value)} type="number" min="0" step="0.01"
+                      placeholder={`Por defecto ${eur(calc.netoM2)}`}
+                      className="w-full px-3 py-2 border-2 border-amber-300 rounded-xl text-sm font-bold focus:outline-none focus:border-amber-500" />
+                    <p className="text-[10px] text-slate-400 mt-1">Si lo rellenas, manda sobre el descuento. Déjalo vacío para usar base − descuento.</p>
                   </div>
                 </div>
 
@@ -422,9 +435,15 @@ const LuiggiFloor = ({ currentUser }) => {
                     <p className="text-[11px] text-amber-300 mb-2">Se sirven {m2fmt(calc.m2reales)} (paquete completo); pediste {m2fmt(calc.m2req)}.</p>
                   )}
                   <div className="space-y-1.5 text-sm border-t border-white/10 pt-3">
-                    <div className="flex justify-between text-zinc-400 text-[11px]"><span>{eur(calc.precioM2)}/m² · {eur(calc.precioPaquete)}/paquete{merma > 0 ? ` · +${merma}% merma` : ''}</span></div>
-                    <div className="flex justify-between text-zinc-300"><span>Subtotal ({m2fmt(calc.m2reales)})</span><span className="font-mono">{eur(calc.subtotal)}</span></div>
-                    {descuento > 0 && <div className="flex justify-between text-zinc-300"><span>Descuento {descuento}%</span><span className="font-mono">−{eur(calc.dto)}</span></div>}
+                    <div className="flex justify-between text-zinc-400 text-[11px]"><span>Base {eur(calc.precioM2)}/m²{merma > 0 ? ` · +${merma}% merma` : ''}</span></div>
+                    {/* PRECIO NETO UNITARIO (el dato que pides en pantalla) */}
+                    <div className="flex justify-between items-center bg-amber-400/10 border border-amber-400/30 rounded-lg px-2.5 py-1.5">
+                      <span className="text-[11px] font-black uppercase text-amber-300">Neto unitario</span>
+                      <span className="font-mono font-bold text-amber-300">{eur(calc.netoM2)}/m² · {eur(calc.netoPaquete)}/paq</span>
+                    </div>
+                    <div className="flex justify-between text-zinc-300"><span>Subtotal base ({m2fmt(calc.m2reales)})</span><span className="font-mono">{eur(calc.subtotal)}</span></div>
+                    {calc.dto > 0 && <div className="flex justify-between text-zinc-300"><span>Ahorro</span><span className="font-mono">−{eur(calc.dto)}</span></div>}
+                    <div className="flex justify-between text-zinc-300"><span>Base imponible</span><span className="font-mono">{eur(calc.base)}</span></div>
                     <div className="flex justify-between text-zinc-300"><span>IVA 21%</span><span className="font-mono">{eur(calc.iva)}</span></div>
                     <div className="flex justify-between items-center pt-2 border-t border-white/10">
                       <span className="text-xs font-black uppercase text-amber-300">Total</span>
