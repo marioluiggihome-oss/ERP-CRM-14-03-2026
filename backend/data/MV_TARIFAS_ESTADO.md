@@ -34,10 +34,10 @@
 | T11 | 61–66   | ❌ SIN RECIBIR |
 | T12 | 67–72   | ❌ SIN RECIBIR |
 | T13 | 73–78   | ❌ SIN RECIBIR |
-| T14 | 79–84   | ❌ SIN RECIBIR |
-| T15 | 85–90   | ❌ SIN RECIBIR |
-| T16 | 91–96   | ❌ SIN RECIBIR |
-| T17 | 97–102  | ❌ SIN RECIBIR |
+| T14 | 79–84   | ✅ recibida (pendiente) |
+| T15 | 85–90   | ✅ recibida (pendiente) |
+| T16 | 91–96   | ✅ recibida (pendiente) |
+| T17 | 97–102  | ⚠️ FALTAN **99–102** (tengo 97,98) |
 | T18 | 103–108 | ❌ SIN RECIBIR |
 | T19 | 109–114 | ⚠️ FALTAN **109, 111, 112** (tengo 110,113,114) |
 | T20 | 115–120 | ✅ recibida (pendiente) |
@@ -50,14 +50,11 @@
 - **T11:** 61, 62, 63, 64, 65, 66
 - **T12:** 67, 68, 69, 70, 71, 72
 - **T13:** 73, 74, 75, 76, 77, 78
-- **T14:** 79, 80, 81, 82, 83, 84
-- **T15:** 85, 86, 87, 88, 89, 90
-- **T16:** 91, 92, 93, 94, 95, 96
-- **T17:** 97, 98, 99, 100, 101, 102
+- **T17:** 99, 100, 101, 102
 - **T18:** 103, 104, 105, 106, 107, 108
 - **T19:** 109, 111, 112
 
-**Total tarifa: 126 págs · Recibidas: 69 · Faltan: 57.**
+**Total tarifa: 126 págs · Recibidas: 87 · Faltan: 39.**
 
 ## Hallazgos de revisión (confirmados)
 - Las tarifas son columnas independientes y crecientes (T1 < T2 < … < T21).
