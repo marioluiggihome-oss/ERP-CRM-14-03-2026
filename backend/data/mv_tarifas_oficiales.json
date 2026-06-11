@@ -20,7 +20,9 @@
       "T5": "pp.25-30 (COMPLETA; pag.25 leida por OCR propio, verificar puertas/vitrina/rejilla)",
       "T6": "pp.31-36 (COMPLETA recibida; PENDIENTE de volcar)",
       "T7": "pp.37-42 (COMPLETA recibida; PENDIENTE de volcar)",
-      "T8": "pp.43-45 (recibida con puertas/vitrina/rejilla, bajos, altos; PENDIENTE; faltan pp.46-48)"
+      "T8": "pp.43-45 + 48 (recibida parcial; FALTAN pp.46-47 = abatible/combinado/altillo/sobreenc + columnas/mediacolumnas)",
+      "T9": "pp.49-54 (COMPLETA recibida; PENDIENTE de volcar)",
+      "T10": "pp.55-56 (recibida puertas+bajos; FALTAN pp.57-60)"
     },
     "notas_revision": [
       "Las tarifas son columnas independientes y crecientes (T1<T2<T3<T4<T5).",
