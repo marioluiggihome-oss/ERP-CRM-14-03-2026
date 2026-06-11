@@ -24,6 +24,10 @@
       "T9": "pp.49-54 (COMPLETA recibida; PENDIENTE de volcar)",
       "T10": "pp.55-56 (recibida puertas+bajos; FALTAN pp.57-60)"
     },
+    "glosario": {
+      "recibido": "pp.127-138 (seccion descriptiva: cada codigo con su descripcion y dibujo, + accesorios). Util para asociar muebles e iconos en Presupuestador 2.",
+      "nota": "Las tarifas de precio (columnas T) van pp.1-126 (T1..T21). El glosario/dibujos empieza en pag.127."
+    },
     "notas_revision": [
       "Las tarifas son columnas independientes y crecientes (T1<T2<T3<T4<T5).",
       "BALDA AEREA (BAL30..BAL240, cols 35/50/60) aparece desde T4. Tipo h355060.",
