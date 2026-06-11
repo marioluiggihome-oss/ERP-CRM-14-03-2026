@@ -6,6 +6,7 @@ import {
 import { authHeaders } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
+import { MuebleIcon, classifyMueble } from './muebleIcons';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -271,7 +272,10 @@ const Presupuestador2 = ({ currentUser }) => {
                       family === name
                         ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-200'
                         : 'text-slate-600 hover:bg-emerald-50'}`}>
-                    <span className="truncate">{name}</span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <MuebleIcon type={classifyMueble({ category: name })} size={16} className="shrink-0" />
+                      <span className="truncate">{name}</span>
+                    </span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${family === name ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{count}</span>
                   </button>
                 ))}
@@ -302,6 +306,11 @@ const Presupuestador2 = ({ currentUser }) => {
                     <button key={p.id} onClick={() => addToCart(p)}
                       className={`group text-left bg-white border rounded-2xl p-3 flex items-center gap-3 transition-all hover:shadow-md ${
                         added ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200 hover:border-emerald-300'}`}>
+                      {/* Dibujo/icono del mueble según su familia */}
+                      <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center border ${
+                        added ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-500 group-hover:text-emerald-600 group-hover:border-emerald-200'}`}>
+                        <MuebleIcon mueble={p} size={26} />
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{p.reference || p.code || '—'}</span>
@@ -370,6 +379,11 @@ const Presupuestador2 = ({ currentUser }) => {
               {cart.map(it => (
                 <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-emerald-200 transition-colors">
                   <div className="flex items-start gap-2">
+                    {!it.manual && (
+                      <div className="shrink-0 w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center mt-0.5">
+                        <MuebleIcon type={classifyMueble({ code: it.code, name: it.name })} size={17} />
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-slate-800 text-xs leading-tight">{it.name}</p>
                       <p className="text-[9px] text-slate-400 font-mono mt-0.5">{it.code}{it.manual ? ' · manual' : ''}</p>
