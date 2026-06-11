@@ -22,8 +22,13 @@
       "T7": "pp.37-42 (COMPLETA recibida; PENDIENTE de volcar)",
       "T8": "pp.43-45 + 48 (recibida parcial; FALTAN pp.46-47 = abatible/combinado/altillo/sobreenc + columnas/mediacolumnas)",
       "T9": "pp.49-54 (COMPLETA recibida; PENDIENTE de volcar)",
-      "T10": "pp.55-56 (recibida puertas+bajos; FALTAN pp.57-60)"
+      "T10": "pp.55-56 (recibida puertas+bajos; FALTAN pp.57-60)",
+      "T11_a_T18": "pp.61-108 NO recibidas todavia",
+      "T19": "pp.110,113,114 recibidas; FALTAN 109,111,112",
+      "T20": "pp.115-120 recibidas (completa)",
+      "T21": "pp.121-126 recibidas (COMPLETA)"
     },
+    "total_tarifas": "T1..T21 (pp.1-126). Glosario/dibujos pp.127+.",
     "glosario": {
       "recibido": "pp.127-138 (seccion descriptiva: cada codigo con su descripcion y dibujo, + accesorios). Util para asociar muebles e iconos en Presupuestador 2.",
       "nota": "Las tarifas de precio (columnas T) van pp.1-126 (T1..T21). El glosario/dibujos empieza en pag.127."
