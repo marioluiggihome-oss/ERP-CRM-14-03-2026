@@ -149,7 +149,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessFloor: false,  // Luiggi Floor - opt-in por usuario (red de distribución)
     floorOnly: false,  // Usuario SOLO Luiggi Floor (entra directo, sin otros presupuestadores)
     crmOnly: false,    // Usuario SOLO CRM (entra directo, sin barra de navegación)
-    photoUrl: '',      // Foto del usuario para el saludo de bienvenida
     canAuthorizePermissions: false,
     useCustomBranding: false,
     canChangeLogo: false,
@@ -736,7 +735,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessFloor: false,
       floorOnly: false,
       crmOnly: false,
-      photoUrl: '',
       canAuthorizePermissions: false,
       useCustomBranding: false,
       canChangeLogo: false
@@ -1573,32 +1571,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   </div>
 
                   <div className="space-y-6">
-                    {/* Foto del usuario (saludo de bienvenida) */}
-                    <div className="flex items-center gap-4">
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
-                        {userForm.photoUrl
-                          ? <img src={userForm.photoUrl} alt="Foto" className="w-full h-full object-cover" />
-                          : <span className="text-2xl font-black text-slate-400">{(userForm.clientName || userForm.username || '?').trim().charAt(0).toUpperCase()}</span>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer inline-flex items-center gap-2">
-                          Subir foto
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                            const file = e.target.files?.[0]; e.target.value = '';
-                            if (!file) return;
-                            const fr = new FileReader();
-                            fr.onload = () => setUserForm(f => ({ ...f, photoUrl: fr.result }));
-                            fr.readAsDataURL(file);
-                          }} />
-                        </label>
-                        {userForm.photoUrl && (
-                          <button type="button" onClick={() => setUserForm(f => ({ ...f, photoUrl: '' }))}
-                            className="px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50">Quitar</button>
-                        )}
-                        <p className="text-[10px] text-slate-400">Aparecerá en el saludo de bienvenida.</p>
-                      </div>
-                    </div>
-
                     {/* Basic Info */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
