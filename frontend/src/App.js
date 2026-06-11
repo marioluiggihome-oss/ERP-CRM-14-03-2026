@@ -391,7 +391,7 @@ const App = () => {
     const _landingTab = _floorOnly
       ? 'luiggifloor'
       : _crmOnly
-        ? (_isMobileTablet ? 'crm-calendar' : 'crm-dashboard')
+        ? 'crm-calendar'
         : ((_isMobileTablet && _canCRM) ? 'crm-calendar' : 'budget');
 
     setState(prev => ({
