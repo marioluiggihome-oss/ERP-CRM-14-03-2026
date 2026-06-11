@@ -3,6 +3,7 @@
     "fuente": "Tarifas oficiales MV (Muebles Valencia), escaneadas con CamScanner.",
     "importante": "Cada tarifa (T1, T2, ...) es una LISTA DE PRECIOS INDEPENDIENTE en puntos. NO se calcula con multiplicador. Precio EUR = puntos[tarifa] x pointValue.",
     "pointValue": 3.33,
+    "acabados": {"SYNCRO": "T1 +5%", "ECO": "T1", "MOTA": "T1", "TEXTIL": "T1"},
     "estado": "RAW pendiente de verificacion. No conectado todavia al presupuestador.",
     "tipos": {
       "single": "items: codigo -> puntos",
@@ -222,6 +223,59 @@
       "ALTILLOS_DECORATIVOS": {
         "type": "single",
         "items": {"LD30":23,"LD35":24,"LD40":25,"LD45":26,"LD50":27,"LD60":29,"LD70":30,"LD80":33,"LD90":34,"LD100":36}
+      },
+      "LATERALES_COLOR": {
+        "type": "h7090",
+        "items": {"LCA":[10,11],"LCF":[14,16],"LCB":[15,null],"LCS":[15,16],"LCM":[18,22],"LCC":[31,33]}
+      },
+      "COSTADOS_COLOR": {
+        "type": "h7090",
+        "items": {"CCA":[9,10],"CCF":[14,15],"CCB":[12,15],"CCS":[14,16],"CCM":[17,21],"CCC":[33,36]}
+      },
+      "REGLETA_COLOR": {
+        "type": "h7090", "_ancho": 15,
+        "items": {"RA":[4,5],"RM":[5,7],"RS":[7,8],"RC":[11,12]}
+      },
+      "REGLETA_MELAMINA": {
+        "type": "h7090", "_ancho": 10,
+        "items": {"RMA":[1,2],"RMM":[2,3],"RMS":[3,4],"RMC":[4,5]}
+      },
+      "COSTADOS_MELAMINA": {
+        "type": "h7090",
+        "items": {"CMCB":[19,20],"CMCC":[26,27],"CMBB":[7,8],"CMBC":[13,14]}
+      },
+      "TECHO_COLOR": {
+        "type": "h355060", "cols": ["35","50","60"],
+        "_revisar": "Columna 35 con valores dudosos por escaneo: TEC180=19.4, TEC220=25.4, TEC260=38.4 (rompen la progresion). Confirmar.",
+        "items": {
+          "TEC100":[14.4,17,19.4],"TEC120":[15.4,19,22.4],"TEC140":[16.4,22,24.4],"TEC160":[17.4,23,27.4],
+          "TEC180":[19.4,25,29.4],"TEC200":[20.4,30,34.4],"TEC220":[25.4,33,37.4],"TEC240":[27.4,35,39.4],
+          "TEC260":[38.4,37,41.4],"TEC280":[29.4,39,44.4],"TEC300":[31.4,42,47.4],"TEC320":[33.4,43,49.4],
+          "TEC340":[34.4,46,52.4],"TEC360":[35.4,48,54.4]
+        }
+      },
+      "ELEMENTOS_LINEALES": {
+        "type": "ent_med", "cols": ["ent","med"],
+        "items": {
+          "COR":  {"desc":"Cornisa entera/media","ent":21,"med":11},
+          "POR":  {"desc":"Portaluz entera/media","ent":18,"med":10},
+          "ZOC":  {"desc":"Zocalo entero/medio","ent":21,"med":11},
+          "PER":  {"desc":"Perfil plastico entero/medio","ent":3,"med":2},
+          "PIN":  {"desc":"Juego 3 pinzas zocalo","ent":null,"med":2},
+          "ZOCA": {"desc":"Zocalo aluminio entero/medio","ent":28,"med":16},
+          "ZOCAB":{"desc":"Zocalo aluminio blanco entero/medio","ent":34,"med":18},
+          "PINA": {"desc":"Juego 5 pinzas zocalo aluminio","ent":null,"med":2},
+          "ANGZOC":{"desc":"Angulo zocalo aluminio","ent":null,"med":2},
+          "COST": {"desc":"Costadillo campana unidad","ent":null,"med":4},
+          "EMC1M/E":{"desc":"Encimera Med/Ent","ent":85,"med":50},
+          "MOSE": {"desc":"Mostrador solo Entero","ent":129,"med":null},
+          "TANG/TLIN":{"desc":"T union Angulo/Linea","ent":3,"med":3},
+          "UENC": {"desc":"U terminacion encimera","ent":null,"med":3},
+          "COPM/E":{"desc":"Copete Medio/Entero","ent":18,"med":10},
+          "INT/EXT":{"desc":"Interior/Exterior copete","ent":1,"med":1},
+          "TAPAC":{"desc":"Juego tapas copete","ent":null,"med":1},
+          "TCAN": {"desc":"Tira canteo encimera","ent":null,"med":1}
+        }
       }
     },
     "T2": {
