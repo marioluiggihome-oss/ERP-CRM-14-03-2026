@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import UNICLIC_LOGO, { UNICLIC_RATIO } from '../assets/uniclicLogo';
+import FLOOR_FEATURES, { FLOOR_FEATURES_RATIO } from '../assets/floorFeatures';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -390,16 +391,15 @@ const LuiggiFloor = ({ currentUser }) => {
       '  No nos hacemos responsables de instalaciones mal realizadas.',
     ];
     obs.forEach(line => { pdf.text(pdf.splitTextToSize(line, W - 28), 14, y); y += 5; });
-    y += 5;
-    // Sello UNICLIC (tecnología patentada, logo oficial) + CE
-    const sealW = 42, sealH = +(42 * UNICLIC_RATIO).toFixed(2);
-    try { pdf.addImage(UNICLIC_LOGO, 'JPEG', 14, y - 4, sealW, sealH); } catch (_) {
-      pdf.setFontSize(8.5); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
-      pdf.text('UNICLIC®  ·  PATENTED TECHNOLOGY', 14, y + 1); pdf.setFont(undefined, 'normal');
-    }
-    pdf.setFontSize(9); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
-    pdf.text('CE', W - 18, y + sealH / 2); pdf.setFont(undefined, 'normal');
-    y += sealH + 4;
+    y += 6;
+    // Tira de características del producto (incluye UNICLIC patentado y CE)
+    const stripW = W - 28, stripH = +(stripW * FLOOR_FEATURES_RATIO).toFixed(2);
+    const pageH = pdf.internal.pageSize.getHeight();
+    if (y + stripH + 14 > pageH) { pdf.addPage(); y = 20; }
+    pdf.setFontSize(8); pdf.setTextColor(120);
+    pdf.text('Características técnicas del producto', 14, y); y += 3;
+    try { pdf.addImage(FLOOR_FEATURES, 'JPEG', 14, y, stripW, stripH); } catch (_) {}
+    y += stripH + 6;
     pdf.setFontSize(8); pdf.setTextColor(150);
     pdf.text('Luiggi Floor · división de suelo SPC porcelánico · oferta orientativa salvo error u omisión.', 14, y);
 
@@ -562,6 +562,13 @@ const LuiggiFloor = ({ currentUser }) => {
                     {savingOrder ? <Loader size={14} className="animate-spin" /> : <Save size={14} />} Grabar pedido
                   </button>
                 </div>
+              </div>
+
+              {/* Pie: características del producto (logos oficiales) */}
+              <div className="mt-5 pt-4 border-t border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Características del producto</p>
+                <img src={FLOOR_FEATURES} alt="Uso doméstico 23 · Uso comercial 33 · Antiestático · Ignífugo BFL-S1 · Calefacción radiante/aerotermia · Antideslizante · UNICLIC patentado · Certificado CE"
+                  className="w-full h-auto rounded-lg" />
               </div>
             </div>
 
