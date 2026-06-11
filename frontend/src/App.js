@@ -383,8 +383,12 @@ const App = () => {
     try { _w = window.innerWidth || 1920; } catch (e) { /* noop */ }
     const _isMobileTablet = _w < 1024;
     const _canCRM = !!user.canAccessCRM && !user.isTienda;
+    // Usuario SOLO Luiggi Floor: entra directo a esa sección, sin otros presupuestadores
+    const _floorOnly = !user.isAdmin && !!user.floorOnly;
     // Calendario (vista Día): lo más práctico en la calle = ver las visitas de hoy
-    const _landingTab = (_isMobileTablet && _canCRM) ? 'crm-calendar' : 'budget';
+    const _landingTab = _floorOnly
+      ? 'luiggifloor'
+      : ((_isMobileTablet && _canCRM) ? 'crm-calendar' : 'budget');
 
     setState(prev => ({
       ...prev,
@@ -705,6 +709,29 @@ const App = () => {
           currentUser={{...state.currentUser, companyLogo: state.logo}}
           onLogout={() => setState(prev => ({ ...prev, currentUser: null }))}
         />
+      </div>
+    );
+  }
+
+  // Usuario SOLO Luiggi Floor: entra directo a esa sección a pantalla completa,
+  // sin acceso al resto de presupuestadores ni módulos.
+  if (state.currentUser?.floorOnly && !state.currentUser?.isAdmin) {
+    return (
+      <div className="min-h-screen bg-zinc-950">
+        <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
+        <div className="flex items-center justify-end px-4 py-2 bg-zinc-900">
+          <button
+            onClick={() => setState(prev => ({ ...prev, currentUser: null }))}
+            className="text-xs font-bold text-amber-400 hover:text-amber-300 uppercase tracking-widest"
+          >
+            Salir
+          </button>
+        </div>
+        <ErrorBoundary>
+          <Suspense fallback={<div className="p-10 text-center text-amber-400">Cargando Luiggi Floor…</div>}>
+            <LuiggiFloor currentUser={state.currentUser} />
+          </Suspense>
+        </ErrorBoundary>
       </div>
     );
   }

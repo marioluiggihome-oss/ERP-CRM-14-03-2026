@@ -225,6 +225,7 @@ class UserUpdate(BaseModel):
     canAccessMaster: Optional[bool] = None  # Acceso al Panel MASTER (config)
     canAccessGastos: Optional[bool] = None  # Acceso al módulo de Gastos
     canAccessFloor: Optional[bool] = None   # Acceso a Luiggi Floor (red de distribución)
+    floorOnly: Optional[bool] = None        # Usuario SOLO Luiggi Floor (entra directo, sin otros presupuestadores)
     canUsePresupuestador2: Optional[bool] = None  # Acceso al Presupuestador 2 (MV por tarifa)
     canAuthorizePermissions: Optional[bool] = None
     useCustomBranding: Optional[bool] = None

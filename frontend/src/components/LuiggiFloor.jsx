@@ -9,6 +9,7 @@ import autoTable from 'jspdf-autotable';
 import {
   Layers, Calculator, Package, Boxes, Loader, Printer, Plus, Minus,
   Save, CheckCircle2, AlertTriangle, Warehouse, Download, FileText, Trash2, Upload, Share2,
+  ClipboardList,
 } from 'lucide-react';
 import { authHeaders } from '../services/api';
 
@@ -54,6 +55,14 @@ const FICHA_TECNICA = [
 ];
 const FICHA_BADGES = 'Uso doméstico (23) · Uso comercial (33) · Antiestático · Ignífugo Bfl-S1 · Apto calefacción radiante/aerotermia · Antideslizante · Tecnología UNICLIC patentada · Certificado CE';
 
+// Estados de un pedido de Luiggi Floor (reservado/entregado descuentan stock)
+const ORDER_STATES = [
+  { value: 'presupuestado', label: 'Presupuestado', cls: 'bg-slate-200 text-slate-700' },
+  { value: 'reservado', label: 'Reservado', cls: 'bg-amber-200 text-amber-800' },
+  { value: 'entregado', label: 'Entregado', cls: 'bg-emerald-200 text-emerald-800' },
+];
+const orderStateMeta = (v) => ORDER_STATES.find(s => s.value === v) || ORDER_STATES[0];
+
 const LuiggiFloor = ({ currentUser }) => {
   const isAdmin = !!currentUser?.isAdmin;
   const [items, setItems] = useState([]);
@@ -71,6 +80,19 @@ const LuiggiFloor = ({ currentUser }) => {
   const [docs, setDocs] = useState([]);           // catálogos descargables
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [floorLogo, setFloorLogo] = useState('');  // logo de marca Luiggi Floor
+  // Pedidos de Luiggi Floor (historial por usuario; admin ve todos)
+  const [orders, setOrders] = useState([]);
+  const [ordersIsAdmin, setOrdersIsAdmin] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [orderFilter, setOrderFilter] = useState('');   // filtro por estado
+
+  const loadOrders = useCallback(async () => {
+    try {
+      const url = `${API_URL}/api/floor/orders` + (orderFilter ? `?estado=${orderFilter}` : '');
+      const r = await fetch(url, { headers: authHeaders() });
+      if (r.ok) { const d = await r.json(); setOrders(d.items || []); setOrdersIsAdmin(!!d.isAdmin); }
+    } catch { /* noop */ }
+  }, [orderFilter]);
 
   const loadDocs = useCallback(async () => {
     try {
@@ -184,6 +206,7 @@ const LuiggiFloor = ({ currentUser }) => {
   };
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadOrders(); }, [loadOrders]);
   useEffect(() => { if (!sel && items.length) setSel(items[0]); }, [items, sel]);
 
   const selected = useMemo(() => items.find(i => i.id === sel?.id) || sel, [items, sel]);
@@ -251,6 +274,51 @@ const LuiggiFloor = ({ currentUser }) => {
       });
       if (r.ok) await load(); else alert('No se pudo subir la foto');
     } catch (err) { alert('Error al subir la foto: ' + err.message); }
+  };
+
+  // ── Pedidos: grabar / cambiar estado / eliminar ──
+  const saveOrder = async () => {
+    if (!selected || calc.paquetes <= 0) { alert('Selecciona color e indica metros o paquetes'); return; }
+    setSavingOrder(true);
+    try {
+      const payload = {
+        cliente,
+        items: [{
+          productId: selected.id, key: selected.key, name: selected.name, dims: selected.dims,
+          paquetes: calc.paquetes, m2: calc.m2reales, pricePerM2: calc.precioM2,
+          netoM2: calc.netoM2, subtotal: calc.base,
+        }],
+        base: calc.base, iva: calc.iva, total: calc.total, estado: 'presupuestado',
+      };
+      const r = await fetch(`${API_URL}/api/floor/orders`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(payload),
+      });
+      if (r.ok) { await loadOrders(); alert('Pedido grabado en el historial (Presupuestado).'); }
+      else alert('No se pudo grabar el pedido');
+    } catch (e) { alert('Error al grabar: ' + e.message); }
+    finally { setSavingOrder(false); }
+  };
+
+  const changeOrderState = async (o, estado) => {
+    if (o.estado === estado) return;
+    try {
+      const r = await fetch(`${API_URL}/api/floor/orders/${o.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ estado }),
+      });
+      if (r.ok) { await loadOrders(); await load(); }   // recarga stock (reservado/entregado lo descuenta)
+      else { const d = await r.json().catch(() => ({})); alert(d.detail || 'No se pudo cambiar el estado'); }
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  const deleteOrder = async (o) => {
+    if (!window.confirm('¿Eliminar este pedido? Si estaba reservado se devolverá el stock.')) return;
+    try {
+      const r = await fetch(`${API_URL}/api/floor/orders/${o.id}`, { method: 'DELETE', headers: authHeaders() });
+      if (r.ok) { await loadOrders(); await load(); }
+      else { const d = await r.json().catch(() => ({})); alert(d.detail || 'No se pudo eliminar'); }
+    } catch (e) { alert('Error: ' + e.message); }
   };
 
   // ── Imprimir oferta (PDF comercial: logo + foto del color) ──
@@ -484,6 +552,10 @@ const LuiggiFloor = ({ currentUser }) => {
                     <button onClick={printOffer} className="py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-900 rounded-xl text-xs font-black flex items-center justify-center gap-1.5"><Printer size={14} /> Oferta PDF</button>
                     <button onClick={shareWhatsApp} className="py-2.5 bg-green-600 hover:bg-green-700 rounded-xl text-xs font-black flex items-center justify-center gap-1.5">WhatsApp</button>
                   </div>
+                  <button onClick={saveOrder} disabled={savingOrder || calc.paquetes <= 0}
+                    className="w-full mt-2 py-2.5 bg-white/10 hover:bg-white/20 border border-amber-400/40 text-amber-300 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 disabled:opacity-50">
+                    {savingOrder ? <Loader size={14} className="animate-spin" /> : <Save size={14} />} Grabar pedido
+                  </button>
                 </div>
               </div>
             </div>
@@ -530,6 +602,64 @@ const LuiggiFloor = ({ currentUser }) => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pedidos de Luiggi Floor (historial). El usuario ve los suyos; el admin, todos. */}
+            <div className="bg-white rounded-3xl p-5 mt-6 shadow-xl">
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <ClipboardList size={18} className="text-amber-600" />
+                  <h2 className="font-black text-slate-800 uppercase text-sm">
+                    {ordersIsAdmin ? 'Pedidos · todos los usuarios' : 'Mis pedidos'}
+                  </h2>
+                </div>
+                <select value={orderFilter} onChange={e => setOrderFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none">
+                  <option value="">Todos los estados</option>
+                  {ORDER_STATES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+              {orders.length === 0 ? (
+                <p className="text-sm text-slate-400 py-4 text-center">Aún no hay pedidos grabados. Usa «Grabar pedido» en el presupuestador.</p>
+              ) : (
+                <div className="space-y-2">
+                  {orders.map(o => {
+                    const meta = orderStateMeta(o.estado);
+                    const resumen = (o.items || []).map(it => `${it.name} · ${it.paquetes} paq`).join('  +  ');
+                    return (
+                      <div key={o.id} className="border border-slate-200 rounded-2xl p-3 hover:border-amber-300 transition-colors">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-800 text-sm truncate">{o.cliente || 'Sin cliente'}</p>
+                            <p className="text-[11px] text-slate-500 truncate">{resumen}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              {o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-ES') : ''}
+                              {ordersIsAdmin && o.createdByName ? ` · ${o.createdByName}` : ''}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-black text-slate-800">{eur(o.total)}</p>
+                            <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${meta.cls}`}>{meta.label}</span>
+                          </div>
+                        </div>
+                        {/* El administrador cambia el estado (reservado descuenta stock) */}
+                        {ordersIsAdmin && (
+                          <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-100 flex-wrap">
+                            {ORDER_STATES.map(s => (
+                              <button key={s.value} onClick={() => changeOrderState(o, s.value)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition-colors ${o.estado === s.value ? 'bg-zinc-900 text-amber-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                                {s.label}
+                              </button>
+                            ))}
+                            <button onClick={() => deleteOrder(o)} title="Eliminar pedido"
+                              className="ml-auto w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

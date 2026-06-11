@@ -9,7 +9,7 @@ Colección: floor_products
   { id, key, name, dims, swatchFrom, swatchTo, image, pricePerM2, stockPackages,
     m2PerPackage, updatedAt }
 """
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Depends
 from datetime import datetime, timezone
 from typing import Optional
 import logging
@@ -18,8 +18,20 @@ import uuid
 import base64
 from motor.motor_asyncio import AsyncIOMotorClient
 
+try:
+    from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS
+except Exception:  # pragma: no cover - fallback si cambia la ruta
+    async def get_current_user():
+        return None
+    ADMIN_ROLE_FLAGS = ["isAdmin"]
+
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["floor"])
+
+# Estados de un pedido de Luiggi Floor
+FLOOR_ORDER_STATES = ("presupuestado", "reservado", "entregado")
+# Estados que descuentan stock (reservado y entregado retiran material del almacén)
+_DEDUCT_STATES = ("reservado", "entregado")
 
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
@@ -198,4 +210,158 @@ async def update_floor_settings(payload: dict):
     await db.floor_settings.update_one(
         {"id": "floor-settings"}, {"$set": {"id": "floor-settings", **update}}, upsert=True
     )
+    return {"success": True}
+
+
+# ============================================================================
+# PEDIDOS DE LUIGGI FLOOR
+# Colección: floor_orders
+#   { id, cliente, items[], base, iva, total, estado, stockDeducted,
+#     createdByUserId, createdByName, createdAt, updatedAt }
+# Estados: presupuestado (sin stock) | reservado (descuenta stock) | entregado
+# Aislamiento: cada usuario ve SOLO sus pedidos; admin/dirección ven todos y
+# pueden modificar estado (lo reservado descuenta stock).
+# ============================================================================
+
+def _is_elevated(user: Optional[dict]) -> bool:
+    return bool(user and any(user.get(f) for f in ADMIN_ROLE_FLAGS))
+
+
+async def _apply_stock_for_state(order: dict, new_state: str):
+    """Reconcilia el stock según el estado: descuenta paquetes cuando pasa a
+    reservado/entregado y los devuelve si vuelve a presupuestado."""
+    currently_deducted = bool(order.get("stockDeducted"))
+    should_deduct = new_state in _DEDUCT_STATES
+    if should_deduct == currently_deducted:
+        return currently_deducted  # sin cambios
+    # Signo: -1 para descontar, +1 para devolver
+    sign = -1.0 if should_deduct else 1.0
+    for it in (order.get("items") or []):
+        pid = it.get("productId") or it.get("id")
+        try:
+            paquetes = float(it.get("paquetes") or 0)
+        except Exception:
+            paquetes = 0.0
+        if not pid or paquetes <= 0:
+            continue
+        prod = await db.floor_products.find_one({"id": pid}, {"_id": 0})
+        if not prod:
+            continue
+        nuevo = round(max(0.0, float(prod.get("stockPackages", 0) or 0) + sign * paquetes), 3)
+        await db.floor_products.update_one(
+            {"id": pid},
+            {"$set": {"stockPackages": nuevo, "updatedAt": datetime.now(timezone.utc).isoformat()}},
+        )
+    return should_deduct
+
+
+@router.post("/floor/orders")
+async def create_floor_order(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Graba un pedido de Luiggi Floor. Por defecto en estado 'presupuestado'.
+    Si se crea directamente como 'reservado', descuenta stock."""
+    p = payload or {}
+    estado = str(p.get("estado") or "presupuestado").lower()
+    if estado not in FLOOR_ORDER_STATES:
+        estado = "presupuestado"
+    items = p.get("items") or []
+    if not isinstance(items, list) or not items:
+        raise HTTPException(status_code=400, detail="El pedido no tiene líneas")
+    now = datetime.now(timezone.utc).isoformat()
+    order = {
+        "id": f"floorord-{uuid.uuid4().hex[:8]}",
+        "cliente": str(p.get("cliente") or "").strip(),
+        "items": items,
+        "base": round(float(p.get("base") or 0), 2),
+        "iva": round(float(p.get("iva") or 0), 2),
+        "total": round(float(p.get("total") or 0), 2),
+        "notas": str(p.get("notas") or ""),
+        "estado": estado,
+        "stockDeducted": False,
+        "createdByUserId": (current_user or {}).get("id"),
+        "createdByName": (current_user or {}).get("name") or (current_user or {}).get("username") or "—",
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    order["stockDeducted"] = await _apply_stock_for_state(order, estado)
+    await db.floor_orders.insert_one(dict(order))
+    order.pop("_id", None)
+    return {"success": True, "order": order}
+
+
+@router.get("/floor/orders")
+async def list_floor_orders(estado: Optional[str] = None,
+                            current_user: Optional[dict] = Depends(get_current_user)):
+    """Lista pedidos. Aislamiento: cada usuario ve los suyos; admin/dirección ven todos."""
+    query = {}
+    if estado and estado in FLOOR_ORDER_STATES:
+        query["estado"] = estado
+    if not _is_elevated(current_user) and current_user and current_user.get("id"):
+        query["createdByUserId"] = current_user["id"]
+    items = await db.floor_orders.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+    return {"items": items, "isAdmin": _is_elevated(current_user)}
+
+
+@router.put("/floor/orders/{order_id}")
+async def update_floor_order(order_id: str, payload: dict,
+                             current_user: Optional[dict] = Depends(get_current_user)):
+    """Modifica un pedido. Cambiar el estado a 'reservado'/'entregado' descuenta
+    stock; volver a 'presupuestado' lo devuelve. Sólo admin/dirección puede
+    cambiar estado o editar pedidos ajenos; el dueño puede editar los suyos en
+    estado 'presupuestado'."""
+    order = await db.floor_orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    elevated = _is_elevated(current_user)
+    is_owner = current_user and order.get("createdByUserId") == current_user.get("id")
+    if not elevated and not is_owner:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    p = payload or {}
+    update = {}
+    # Cambio de estado: sólo admin/dirección (descuenta o devuelve stock)
+    new_state = str(p.get("estado") or "").lower()
+    if new_state and new_state in FLOOR_ORDER_STATES and new_state != order.get("estado"):
+        if not elevated:
+            raise HTTPException(status_code=403, detail="Sólo el administrador cambia el estado")
+        update["stockDeducted"] = await _apply_stock_for_state(order, new_state)
+        update["estado"] = new_state
+
+    # Edición de campos básicos (el dueño sólo si sigue 'presupuestado')
+    if not order.get("estado") == "presupuestado" and not elevated:
+        # ya reservado/entregado: el dueño no edita líneas
+        pass
+    else:
+        for k in ("cliente", "notas"):
+            if k in p:
+                update[k] = str(p.get(k) or "")
+        for k in ("base", "iva", "total"):
+            if k in p:
+                try: update[k] = round(float(p.get(k) or 0), 2)
+                except Exception: pass
+        if "items" in p and isinstance(p["items"], list):
+            update["items"] = p["items"]
+
+    if not update:
+        raise HTTPException(status_code=400, detail="Nada que actualizar")
+    update["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    await db.floor_orders.update_one({"id": order_id}, {"$set": update})
+    doc = await db.floor_orders.find_one({"id": order_id}, {"_id": 0})
+    return {"success": True, "order": doc}
+
+
+@router.delete("/floor/orders/{order_id}")
+async def delete_floor_order(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """Elimina un pedido (devolviendo stock si estaba reservado). Admin o dueño
+    (si está en 'presupuestado')."""
+    order = await db.floor_orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    elevated = _is_elevated(current_user)
+    is_owner = current_user and order.get("createdByUserId") == current_user.get("id")
+    if not elevated and not (is_owner and order.get("estado") == "presupuestado"):
+        raise HTTPException(status_code=403, detail="No autorizado")
+    # Devolver stock si estaba descontado
+    if order.get("stockDeducted"):
+        await _apply_stock_for_state(order, "presupuestado")
+    await db.floor_orders.delete_one({"id": order_id})
     return {"success": True}

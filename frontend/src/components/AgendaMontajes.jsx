@@ -419,25 +419,34 @@ const AgendaMontajes = ({ currentUser }) => {
               }
             </select>
             
-            {/* Solo admins pueden crear montajes/montadores */}
+            {/* Solo admins pueden crear montajes/montadores.
+                Mostramos AMBOS botones siempre, sin depender de la pestaña activa,
+                para que la opción de "Nuevo Montaje" esté siempre visible. */}
             {(!currentUser?.isMontador || currentUser?.isAdmin) && (
-              <button
-                onClick={() => {
-                  if (activeTab === 'montadores') {
-                    resetMontadorForm();
-                    setEditingMontador(null);
-                    setShowMontadorModal(true);
-                  } else {
+              <>
+                <button
+                  onClick={() => {
                     resetMontajeForm();
                     setEditingMontaje(null);
                     setShowMontajeModal(true);
-                  }
-                }}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all"
-              >
-                <Plus size={18} />
-                {activeTab === 'montadores' ? 'Nuevo Montador' : 'Nuevo Montaje'}
-              </button>
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                >
+                  <Plus size={18} />
+                  Nuevo Montaje
+                </button>
+                <button
+                  onClick={() => {
+                    resetMontadorForm();
+                    setEditingMontador(null);
+                    setShowMontadorModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-orange-300 text-orange-600 rounded-xl font-bold text-sm shadow-sm hover:bg-orange-50 transition-all whitespace-nowrap"
+                >
+                  <Plus size={18} />
+                  Nuevo Montador
+                </button>
+              </>
             )}
           </div>
         </div>

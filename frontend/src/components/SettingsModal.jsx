@@ -147,6 +147,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessMaster: true,  // Acceso al Panel MASTER (config) - visible por defecto
     canAccessGastos: true,  // Acceso al módulo de Gastos - visible por defecto
     canAccessFloor: false,  // Luiggi Floor - opt-in por usuario (red de distribución)
+    floorOnly: false,  // Usuario SOLO Luiggi Floor (entra directo, sin otros presupuestadores)
     canAuthorizePermissions: false,
     useCustomBranding: false,
     canChangeLogo: false,
@@ -731,6 +732,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessMaster: true,
       canAccessGastos: true,
       canAccessFloor: false,
+      floorOnly: false,
       canAuthorizePermissions: false,
       useCustomBranding: false,
       canChangeLogo: false
@@ -2067,6 +2069,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             className="w-4 h-4 rounded accent-amber-600"
                           />
                           <span className="text-xs font-black text-amber-800">Luiggi Floor</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-amber-50 px-2 py-1.5 rounded-lg hover:bg-amber-100 transition-colors border border-amber-200">
+                          <input
+                            type="checkbox"
+                            checked={!!userForm.floorOnly}
+                            onChange={(e) => setUserForm({...userForm, floorOnly: e.target.checked, canAccessFloor: e.target.checked ? true : userForm.canAccessFloor})}
+                            className="w-4 h-4 rounded accent-amber-600"
+                          />
+                          <span className="text-xs font-black text-amber-700">Solo Floor (directo)</span>
                         </label>
                         
                         {/* Columna 3: Otros permisos */}

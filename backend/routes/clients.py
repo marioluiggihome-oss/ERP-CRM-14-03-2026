@@ -71,11 +71,21 @@ async def get_client_segments():
     }
 
 @router.get("/clients/{client_id}")
-async def get_client(client_id: str):
-    """Obtener un cliente por ID"""
+async def get_client(client_id: str,
+                     current_user: Optional[dict] = Depends(get_current_user)):
+    """Obtener un cliente por ID. Aislamiento por usuario: un comercial sólo puede
+    acceder a un cliente propio; admin/dirección acceden a cualquiera."""
     client = await db.clients.find_one({"id": client_id}, {"_id": 0})
     if not client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    if current_user and current_user.get("id"):
+        elevated = any(current_user.get(f) for f in ADMIN_ROLE_FLAGS)
+        if not elevated:
+            uid = current_user["id"]
+            owners = {client.get("createdByUserId"), client.get("assignedRepresentativeId"),
+                      client.get("linkedUserId")}
+            if uid not in owners:
+                raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return client
 
 @router.post("/clients")
