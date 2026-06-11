@@ -148,6 +148,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessGastos: true,  // Acceso al módulo de Gastos - visible por defecto
     canAccessFloor: false,  // Luiggi Floor - opt-in por usuario (red de distribución)
     floorOnly: false,  // Usuario SOLO Luiggi Floor (entra directo, sin otros presupuestadores)
+    crmOnly: false,    // Usuario SOLO CRM (entra directo, sin barra de navegación)
     canAuthorizePermissions: false,
     useCustomBranding: false,
     canChangeLogo: false,
@@ -733,6 +734,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessGastos: true,
       canAccessFloor: false,
       floorOnly: false,
+      crmOnly: false,
       canAuthorizePermissions: false,
       useCustomBranding: false,
       canChangeLogo: false
@@ -2015,6 +2017,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             className="w-4 h-4 rounded accent-blue-600"
                           />
                           <span className="text-xs font-bold text-slate-700">CRM</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-indigo-50 px-2 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">
+                          <input
+                            type="checkbox"
+                            checked={!!userForm.crmOnly}
+                            onChange={(e) => setUserForm({...userForm, crmOnly: e.target.checked, canAccessCRM: e.target.checked ? true : userForm.canAccessCRM})}
+                            className="w-4 h-4 rounded accent-indigo-600"
+                          />
+                          <span className="text-xs font-black text-indigo-700">Solo CRM (directo)</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input

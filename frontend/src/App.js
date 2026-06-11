@@ -385,10 +385,14 @@ const App = () => {
     const _canCRM = !!user.canAccessCRM && !user.isTienda;
     // Usuario SOLO Luiggi Floor: entra directo a esa sección, sin otros presupuestadores
     const _floorOnly = !user.isAdmin && !!user.floorOnly;
+    // Usuario SOLO CRM: entra directo al CRM, sin barra de navegación
+    const _crmOnly = !user.isAdmin && !!user.crmOnly && _canCRM;
     // Calendario (vista Día): lo más práctico en la calle = ver las visitas de hoy
     const _landingTab = _floorOnly
       ? 'luiggifloor'
-      : ((_isMobileTablet && _canCRM) ? 'crm-calendar' : 'budget');
+      : _crmOnly
+        ? (_isMobileTablet ? 'crm-calendar' : 'crm-dashboard')
+        : ((_isMobileTablet && _canCRM) ? 'crm-calendar' : 'budget');
 
     setState(prev => ({
       ...prev,
@@ -714,12 +718,13 @@ const App = () => {
   }
 
   // Usuario SOLO Luiggi Floor: entra directo a esa sección a pantalla completa,
-  // sin acceso al resto de presupuestadores ni módulos.
+  // sin acceso al resto de presupuestadores ni módulos. Cadena de altura correcta
+  // (h-screen + flex-col + flex-1/min-h-0) para que se vea bien en iPhone/iPad.
   if (state.currentUser?.floorOnly && !state.currentUser?.isAdmin) {
     return (
-      <div className="min-h-screen bg-zinc-950">
+      <div className="h-screen flex flex-col bg-zinc-950 overflow-hidden">
         <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
-        <div className="flex items-center justify-end px-4 py-2 bg-zinc-900">
+        <div className="flex items-center justify-end px-4 py-2 bg-zinc-900 shrink-0">
           <button
             onClick={() => setState(prev => ({ ...prev, currentUser: null }))}
             className="text-xs font-bold text-amber-400 hover:text-amber-300 uppercase tracking-widest"
@@ -727,11 +732,40 @@ const App = () => {
             Salir
           </button>
         </div>
-        <ErrorBoundary>
-          <Suspense fallback={<div className="p-10 text-center text-amber-400">Cargando Luiggi Floor…</div>}>
-            <LuiggiFloor currentUser={state.currentUser} />
-          </Suspense>
-        </ErrorBoundary>
+        <div className="flex-1 min-h-0">
+          <ErrorBoundary>
+            <Suspense fallback={<div className="p-10 text-center text-amber-400">Cargando Luiggi Floor…</div>}>
+              <LuiggiFloor currentUser={state.currentUser} />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
+      </div>
+    );
+  }
+
+  // Usuario SOLO CRM: entra directo al CRM a pantalla completa, sin barra lateral
+  // de navegación ni ningún otro módulo. Misma cadena de altura responsive.
+  if (state.currentUser?.crmOnly && !state.currentUser?.isAdmin && state.currentUser?.canAccessCRM && !state.currentUser?.isTienda) {
+    const _crmTab = (state.currentTab || '').startsWith('crm-') ? state.currentTab.slice(4) : undefined;
+    return (
+      <div className="h-screen flex flex-col bg-white overflow-hidden">
+        <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-900 shrink-0">
+          <span className="text-xs font-black text-indigo-300 uppercase tracking-widest">CRM</span>
+          <button
+            onClick={() => setState(prev => ({ ...prev, currentUser: null }))}
+            className="text-xs font-bold text-indigo-300 hover:text-indigo-200 uppercase tracking-widest"
+          >
+            Salir
+          </button>
+        </div>
+        <div className="flex-1 min-h-0">
+          <ErrorBoundary>
+            <Suspense fallback={<div className="p-10 text-center text-indigo-400">Cargando CRM…</div>}>
+              <CRMLayout currentUser={state.currentUser} initialTab={_crmTab} focusEvent={state.crmFocusEvent} />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
       </div>
     );
   }
