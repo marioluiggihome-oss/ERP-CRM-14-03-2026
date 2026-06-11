@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle, Lock, Unlock, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import Logo from './Logo';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -501,100 +501,119 @@ const Digitalizador = ({ state }) => {
     return netPrice * (1 - userDiscount / 100);
   };
 
-  // Export to PDF (generates real PDF file)
+  // Export to PDF — generación directa con jsPDF (sin rasterizar el DOM).
+  // Más fiable que html2canvas (no falla por imágenes/colores/fuentes) y el texto
+  // queda seleccionable. Respeta "valorado" y la visibilidad de totales.
   const handleExportPDF = async () => {
     try {
       setIsLoading(true);
-      
-      // Temporalmente mostrar todas las líneas para el PDF
-      setCurrentPage(-1);
-      
-      // Esperar a que el DOM se actualice
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      const element = document.getElementById('digitalizador-pdf');
-      if (!element) {
-        throw new Error('No se encontró el contenedor del documento');
-      }
-      
-      // Capturar el elemento como imagen
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight
-      });
-      
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      
-      // Crear PDF en formato A4
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const usableWidth = pageWidth - (margin * 2);
-      
-      // Calcular la altura proporcional
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = usableWidth / imgWidth;
-      const scaledHeight = imgHeight * ratio;
-      
-      // Si la imagen es más alta que una página, dividir en páginas
-      const usableHeight = pageHeight - (margin * 2);
-      
-      if (scaledHeight <= usableHeight) {
-        // Cabe en una sola página
-        pdf.addImage(imgData, 'JPEG', margin, margin, usableWidth, scaledHeight);
+      setError(null);
+
+      const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+      const T = (showCostMode ? costTotals : totals) || totals;
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const M = 14;
+      let y = 14;
+
+      // Logo (solo si es un data URL incrustable; si es URL remota se omite sin romper)
+      const logo = state?.logo;
+      if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+        try {
+          const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG');
+          pdf.addImage(logo, fmt, M, y, 32, 16);
+        } catch (_) { /* logo no incrustable: se omite */ }
       } else {
-        // Necesita múltiples páginas
-        let yPosition = 0;
-        let pageNumber = 0;
-        
-        while (yPosition < scaledHeight) {
-          if (pageNumber > 0) {
-            pdf.addPage();
-          }
-          
-          // Calcular qué porción de la imagen mostrar
-          const sourceY = (yPosition / ratio);
-          const sourceHeight = Math.min((usableHeight / ratio), imgHeight - sourceY);
-          const destHeight = sourceHeight * ratio;
-          
-          // Crear un canvas temporal para esta porción
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = imgWidth;
-          tempCanvas.height = sourceHeight;
-          const ctx = tempCanvas.getContext('2d');
-          ctx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
-          
-          const pageImgData = tempCanvas.toDataURL('image/jpeg', 0.95);
-          pdf.addImage(pageImgData, 'JPEG', margin, margin, usableWidth, destHeight);
-          
-          yPosition += usableHeight;
-          pageNumber++;
-        }
+        pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
+        pdf.text('LUIGGI HOME', M, y + 8); pdf.setFont(undefined, 'normal');
       }
-      
-      // Descargar el PDF
-      const fileName = `${documentTitle.replace(/\s+/g, '_')}_${expNumber || 'borrador'}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+      // Cabecera derecha: título, exp, valorado, cliente, fecha
+      pdf.setFontSize(15); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
+      pdf.text((documentTitle || 'Presupuesto Técnico').toUpperCase(), W - M, y + 4, { align: 'right' });
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(9); pdf.setTextColor(120);
+      pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, y + 10, { align: 'right' });
+      pdf.setTextColor(isValorado ? 200 : 150, isValorado ? 90 : 150, 30);
+      pdf.text(isValorado ? 'DOCUMENTO VALORADO' : 'DOCUMENTO SIN VALORACIÓN', W - M, y + 15, { align: 'right' });
+      pdf.setTextColor(120);
+      pdf.text(`${state?.currentUser?.clientName || ''}   ${new Date().toLocaleDateString('es-ES')}`, W - M, y + 20, { align: 'right' });
+      y += 26;
+
+      // Proyecto + configuración
+      if (projectName) {
+        pdf.setFontSize(12); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
+        pdf.text(`Proyecto: ${projectName}`, M, y); pdf.setFont(undefined, 'normal'); y += 6;
+      }
+      const cfg = [];
+      if (acabado) cfg.push(`Acabado: ${acabado}`);
+      if (armazon) cfg.push(`Armazón: ${armazon}`);
+      if (costados) cfg.push(`Costados: ${costados}`);
+      if (cfg.length) {
+        pdf.setFontSize(9); pdf.setTextColor(90);
+        pdf.text(cfg.join('     '), M, y); y += 5;
+      }
+      if (customerName) { pdf.setFontSize(9); pdf.setTextColor(90); pdf.text(`Cliente: ${customerName}`, M, y); y += 5; }
+      y += 2;
+
+      // Tabla de líneas (columnas según "valorado")
+      const head = isValorado
+        ? [['Cant.', 'Ref.', 'Descripción', 'Precio', 'Dto%', 'Importe']]
+        : [['Cant.', 'Ref.', 'Descripción']];
+      const body = (lines || []).map(line => {
+        const cant = line.quantity ?? 1;
+        const ref = line.reference || '';
+        const desc = line.description || '';
+        if (!isValorado) return [String(cant), ref, desc];
+        const lineDiscount = line.isManual ? line.discount : Math.max(line.discount || 0, globalDiscount || 0);
+        return [String(cant), ref, desc, eur(line.price), `${lineDiscount || 0}%`, eur(getLineNet(line))];
+      });
+
+      autoTable(pdf, {
+        startY: y,
+        head, body,
+        styles: { fontSize: 8.5, cellPadding: 1.8, overflow: 'linebreak', valign: 'middle' },
+        headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [245, 245, 250] },
+        columnStyles: isValorado
+          ? { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 22 }, 2: { cellWidth: 'auto' },
+              3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 14, halign: 'right' }, 5: { cellWidth: 24, halign: 'right' } }
+          : { 0: { cellWidth: 16, halign: 'center' }, 1: { cellWidth: 28 }, 2: { cellWidth: 'auto' } },
+        margin: { left: M, right: M },
+      });
+      y = (pdf.lastAutoTable?.finalY || y) + 8;
+
+      // Bloque de totales (solo si está valorado y los totales visibles)
+      if (isValorado && showTotals) {
+        const pageH = pdf.internal.pageSize.getHeight();
+        if (y + 30 > pageH) { pdf.addPage(); y = 18; }
+        const bx = W - M - 78;
+        const rows = [
+          ['Bruto líneas', eur(T.brutoLineas)],
+          ['Base imponible', eur(T.baseImponible)],
+          [`IVA ${ivaRate}%`, eur(T.iva)],
+        ];
+        pdf.setFontSize(10); pdf.setTextColor(40);
+        rows.forEach(([k, v]) => {
+          pdf.text(k, bx, y); pdf.text(v, W - M, y, { align: 'right' }); y += 6;
+        });
+        pdf.setFillColor(49, 46, 129); pdf.rect(bx - 4, y - 4.5, 78 + 4, 10, 'F');
+        pdf.setFontSize(13); pdf.setTextColor(255); pdf.setFont(undefined, 'bold');
+        pdf.text('TOTAL', bx, y + 1.5); pdf.text(eur(T.total), W - M, y + 1.5, { align: 'right' });
+        pdf.setFont(undefined, 'normal');
+        y += 12;
+      }
+
+      const fileName = `${(documentTitle || 'Presupuesto').replace(/\s+/g, '_')}_${expNumber || 'borrador'}_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
-      
+
       setSuccessMessage('PDF generado correctamente');
       setTimeout(() => setSuccessMessage(null), 3000);
-      
     } catch (err) {
       console.error('Error generating PDF:', err);
       setError('Error al generar PDF: ' + err.message);
     } finally {
-      setCurrentPage(0);
       setIsLoading(false);
     }
   };
