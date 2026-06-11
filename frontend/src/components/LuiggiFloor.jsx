@@ -280,10 +280,15 @@ const LuiggiFloor = ({ currentUser }) => {
     y += bandH + 9;
 
     pdf.setFontSize(16); pdf.setTextColor(20); pdf.text(selected.name, 14, y); y += 6;
-    pdf.setFontSize(10); pdf.setTextColor(110); pdf.text(selected.dims, 14, y); y += 9;
-    pdf.setTextColor(70);
-    pdf.text(`Cliente: ${cliente || '—'}`, 14, y);
-    pdf.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, W - 14, y, { align: 'right' }); y += 9;
+    pdf.setFontSize(10); pdf.setTextColor(110); pdf.text(selected.dims, 14, y); y += 10;
+    // Cliente (destacado) + fecha + validez
+    pdf.setFontSize(8); pdf.setTextColor(120); pdf.text('CLIENTE', 14, y);
+    pdf.setFontSize(9); pdf.setTextColor(90);
+    pdf.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, W - 14, y, { align: 'right' });
+    pdf.text('Válida 30 días o hasta fin de existencias', W - 14, y + 5, { align: 'right' });
+    pdf.setFontSize(14); pdf.setTextColor(20); pdf.setFont(undefined, 'bold');
+    pdf.text((cliente || '—').toUpperCase(), 14, y + 6); pdf.setFont(undefined, 'normal');
+    y += 13;
 
     const rows = [
       ['Paquetes', `${calc.paquetes}  ·  ${m2pp} m²/paquete`],
@@ -313,7 +318,15 @@ const LuiggiFloor = ({ currentUser }) => {
       '  No nos hacemos responsables de instalaciones mal realizadas.',
     ];
     obs.forEach(line => { pdf.text(pdf.splitTextToSize(line, W - 28), 14, y); y += 5; });
-    y += 4;
+    y += 5;
+    // Sello UNICLIC (tecnología patentada) + CE
+    pdf.setDrawColor(24, 24, 27); pdf.setLineWidth(0.4);
+    pdf.roundedRect(14, y - 4.5, 74, 8.5, 1.5, 1.5);
+    pdf.setFontSize(8.5); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
+    pdf.text('UNICLIC®  ·  PATENTED TECHNOLOGY', 17, y + 1); pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(8.5); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
+    pdf.text('CE', W - 18, y + 1); pdf.setFont(undefined, 'normal');
+    y += 11;
     pdf.setFontSize(8); pdf.setTextColor(150);
     pdf.text('Luiggi Floor · división de suelo SPC porcelánico · oferta orientativa salvo error u omisión.', 14, y);
 
