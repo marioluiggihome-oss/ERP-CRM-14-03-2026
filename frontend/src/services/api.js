@@ -1429,11 +1429,14 @@ export const librariesAPI = {
 // ============================================
 
 export const montadoresAPI = {
-  getAll: async (status = null) => {
-    const url = status 
-      ? `${API_URL}/api/montadores?status=${status}`
+  getAll: async (status = null, userId = null) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (userId) params.append('user_id', userId);
+    const url = params.toString()
+      ? `${API_URL}/api/montadores?${params.toString()}`
       : `${API_URL}/api/montadores`;
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener montadores');
@@ -1442,7 +1445,7 @@ export const montadoresAPI = {
   },
 
   getOne: async (id) => {
-    const response = await fetch(`${API_URL}/api/montadores/${id}`);
+    const response = await fetch(`${API_URL}/api/montadores/${id}`, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener montador');
@@ -1453,7 +1456,7 @@ export const montadoresAPI = {
   create: async (montador) => {
     const response = await fetch(`${API_URL}/api/montadores`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(montador)
     });
     const data = await response.json();
@@ -1466,7 +1469,7 @@ export const montadoresAPI = {
   update: async (id, montador) => {
     const response = await fetch(`${API_URL}/api/montadores/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(montador)
     });
     const data = await response.json();
@@ -1478,7 +1481,8 @@ export const montadoresAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/montadores/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders()
     });
     const data = await response.json();
     if (!response.ok) {
@@ -1491,7 +1495,7 @@ export const montadoresAPI = {
     const url = status
       ? `${API_URL}/api/montadores/${montadorId}/montajes?status=${status}`
       : `${API_URL}/api/montadores/${montadorId}/montajes`;
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener montajes');
@@ -1511,11 +1515,12 @@ export const montajesAPI = {
     if (filters.montadorId) params.append('montador_id', filters.montadorId);
     if (filters.startDate) params.append('start_date', filters.startDate);
     if (filters.endDate) params.append('end_date', filters.endDate);
-    
+    if (filters.userId) params.append('user_id', filters.userId);
+
     const url = params.toString()
       ? `${API_URL}/api/montajes?${params.toString()}`
       : `${API_URL}/api/montajes`;
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener montajes');
@@ -1524,7 +1529,7 @@ export const montajesAPI = {
   },
 
   getOne: async (id) => {
-    const response = await fetch(`${API_URL}/api/montajes/${id}`);
+    const response = await fetch(`${API_URL}/api/montajes/${id}`, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener montaje');
@@ -1535,7 +1540,7 @@ export const montajesAPI = {
   create: async (montaje) => {
     const response = await fetch(`${API_URL}/api/montajes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(montaje)
     });
     const data = await response.json();
@@ -1548,7 +1553,7 @@ export const montajesAPI = {
   update: async (id, montaje) => {
     const response = await fetch(`${API_URL}/api/montajes/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(montaje)
     });
     const data = await response.json();
@@ -1560,7 +1565,8 @@ export const montajesAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/montajes/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders()
     });
     const data = await response.json();
     if (!response.ok) {

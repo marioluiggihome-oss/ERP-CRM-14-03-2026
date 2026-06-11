@@ -130,7 +130,8 @@ const AgendaMontajes = ({ currentUser }) => {
     return m.name?.toLowerCase().includes(query) ||
            m.company?.toLowerCase().includes(query) ||
            m.zone?.toLowerCase().includes(query) ||
-           m.phone?.includes(query);
+           m.phone?.includes(query) ||
+           m.createdByName?.toLowerCase().includes(query);
   });
 
   // Filter montajes - Si es montador, solo ve los suyos
@@ -149,7 +150,8 @@ const AgendaMontajes = ({ currentUser }) => {
     return m.clientName?.toLowerCase().includes(query) ||
            m.montadorName?.toLowerCase().includes(query) ||
            m.clientAddress?.toLowerCase().includes(query) ||
-           m.budgetRef?.toLowerCase().includes(query);
+           m.budgetRef?.toLowerCase().includes(query) ||
+           m.createdByName?.toLowerCase().includes(query);
   });
 
   // Montador handlers
@@ -400,7 +402,7 @@ const AgendaMontajes = ({ currentUser }) => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
-                placeholder="Buscar..."
+                placeholder={currentUser?.isAdmin ? "Buscar (cliente, montador, usuario...)" : "Buscar..."}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-orange-500"
@@ -476,6 +478,9 @@ const AgendaMontajes = ({ currentUser }) => {
                           <p className="text-xs text-slate-500 flex items-center gap-1">
                             <Building2 size={12} /> {montador.company}
                           </p>
+                        )}
+                        {currentUser?.isAdmin && montador.createdByName && (
+                          <p className="text-[10px] text-indigo-500 font-bold mt-0.5">Creado por: {montador.createdByName}</p>
                         )}
                       </div>
                     </div>
@@ -580,6 +585,9 @@ const AgendaMontajes = ({ currentUser }) => {
                           {montaje.scheduledTime && ` • ${montaje.scheduledTime}`}
                           {montaje.estimatedDuration && ` • ${montaje.estimatedDuration}`}
                         </p>
+                        {currentUser?.isAdmin && montaje.createdByName && (
+                          <p className="text-[10px] text-indigo-500 font-bold mt-0.5">Creado por: {montaje.createdByName}</p>
+                        )}
                       </div>
                     </div>
                     
