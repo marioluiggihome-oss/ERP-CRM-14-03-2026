@@ -8,14 +8,16 @@
       "T2": {"VIGO LAMINADO SU COLOR": "T2 -23%", "AR PLUS SU COLOR": "T2 -10%", "AR PLUS CRISTAL": "T2 -10%", "AR PLUS ALUMINIO": "T2 -4%", "VIGO ALUMINIO": "T2 -6%"},
       "T3": {"FERIA": "T3", "VIGO CTO CRISTAL": "T3", "VIGO CTO SU COLOR": "T3", "REINA": "T3 -5%"},
       "T4": {"POLILAMINADO LISO MATE": "T4", "POLILAMINADO UNERO MATE": "T4", "ZENIT": "T4", "LUXE PVC SU COLOR": "T4", "LUXE CANTO CRISTAL": "T4", "TOKIO": "T4", "_inc": {"CONTRACARA COLOR": "+5%", "DIFUMINADO": "+20%"}},
-      "T5": {"FENIX (COLORES)": "T5", "PALMA TOUCH": "T5", "POLILAMINADO LISO BCO BRILLO": "T5", "POLILAMINADO CON FORMA MATE": "T5", "_inc": {"CONTRACARA COLOR": "+5%", "DIFUMINADO": "+20%"}}
+      "T5": {"FENIX (COLORES)": "T5", "PALMA TOUCH": "T5", "POLILAMINADO LISO BCO BRILLO": "T5", "POLILAMINADO CON FORMA MATE": "T5", "_inc": {"CONTRACARA COLOR": "+5%", "DIFUMINADO": "+20%"}},
+      "T6": {"EBEL TEXT": "T6", "BISEL TEXT": "T6", "VIENA TEXT": "T6", "SIENA TEXT": "T6", "DANUBIO TEXT": "T6", "CACERES TEXT": "T6", "_inc": {"METALIZADO": "+23%"}}
     },
     "recibido": {
       "T1": "pp.1-6 (completa, guardada)",
       "T2": "pp.7-12 (completa, guardada)",
       "T3": "pp.13-18 (recibida, PENDIENTE de transcribir)",
       "T4": "pp.19-24 (recibida, PENDIENTE; incluye BALDA AEREA nueva)",
-      "T5": "pp.26-30 (recibida, PENDIENTE; FALTA pag.25 = puertas/vitrina/rejilla)"
+      "T5": "pp.26-30 (recibida, PENDIENTE; FALTA pag.25 = puertas/vitrina/rejilla)",
+      "T6": "pp.32-36 (recibida, PENDIENTE; FALTA pag.31 = puertas/vitrina/rejilla)"
     },
     "notas_revision": [
       "Las tarifas son columnas independientes y crecientes (T1<T2<T3<T4<T5).",
