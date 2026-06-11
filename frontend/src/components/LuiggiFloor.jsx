@@ -12,6 +12,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { authHeaders } from '../services/api';
+import UNICLIC_LOGO, { UNICLIC_RATIO } from '../assets/uniclicLogo';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -180,6 +181,9 @@ const LuiggiFloor = ({ currentUser }) => {
     pdf.setDrawColor(202, 169, 104); pdf.line(14, y, W - 14, y); y += 6;
     pdf.setFontSize(8); pdf.setTextColor(90);
     pdf.text(pdf.splitTextToSize(FICHA_BADGES, W - 28), 14, y);
+    // Sello UNICLIC (logo oficial de tecnología patentada)
+    const fsW = 44, fsH = +(44 * UNICLIC_RATIO).toFixed(2);
+    try { pdf.addImage(UNICLIC_LOGO, 'JPEG', W - 14 - fsW, y + 6, fsW, fsH); } catch (_) {}
     return pdf;
   };
 
@@ -387,14 +391,15 @@ const LuiggiFloor = ({ currentUser }) => {
     ];
     obs.forEach(line => { pdf.text(pdf.splitTextToSize(line, W - 28), 14, y); y += 5; });
     y += 5;
-    // Sello UNICLIC (tecnología patentada) + CE
-    pdf.setDrawColor(24, 24, 27); pdf.setLineWidth(0.4);
-    pdf.roundedRect(14, y - 4.5, 74, 8.5, 1.5, 1.5);
-    pdf.setFontSize(8.5); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
-    pdf.text('UNICLIC®  ·  PATENTED TECHNOLOGY', 17, y + 1); pdf.setFont(undefined, 'normal');
-    pdf.setFontSize(8.5); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
-    pdf.text('CE', W - 18, y + 1); pdf.setFont(undefined, 'normal');
-    y += 11;
+    // Sello UNICLIC (tecnología patentada, logo oficial) + CE
+    const sealW = 42, sealH = +(42 * UNICLIC_RATIO).toFixed(2);
+    try { pdf.addImage(UNICLIC_LOGO, 'JPEG', 14, y - 4, sealW, sealH); } catch (_) {
+      pdf.setFontSize(8.5); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
+      pdf.text('UNICLIC®  ·  PATENTED TECHNOLOGY', 14, y + 1); pdf.setFont(undefined, 'normal');
+    }
+    pdf.setFontSize(9); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
+    pdf.text('CE', W - 18, y + sealH / 2); pdf.setFont(undefined, 'normal');
+    y += sealH + 4;
     pdf.setFontSize(8); pdf.setTextColor(150);
     pdf.text('Luiggi Floor · división de suelo SPC porcelánico · oferta orientativa salvo error u omisión.', 14, y);
 
