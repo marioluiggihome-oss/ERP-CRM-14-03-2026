@@ -17,7 +17,8 @@
       "T3": "pp.13-18 (recibida, PENDIENTE de transcribir)",
       "T4": "pp.19-24 (recibida, PENDIENTE; incluye BALDA AEREA nueva)",
       "T5": "pp.26-30 (recibida, PENDIENTE; FALTA pag.25 = puertas/vitrina/rejilla)",
-      "T6": "pp.32-36 (recibida, PENDIENTE; FALTA pag.31 = puertas/vitrina/rejilla)"
+      "T6": "pp.32-36 (recibida, PENDIENTE; FALTA pag.31 = puertas/vitrina/rejilla)",
+      "T7": "pp.37-41 (recibida con puertas/vitrina/rejilla; PENDIENTE; falta pag.42 = laterales/costados/techo/lineales)"
     },
     "notas_revision": [
       "Las tarifas son columnas independientes y crecientes (T1<T2<T3<T4<T5).",
