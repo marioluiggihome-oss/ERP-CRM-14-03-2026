@@ -1042,7 +1042,7 @@ const App = () => {
                       </button>
                     )}
                     {/* Kitchen 3D Designer - Panel de proyectos de cocinas */}
-                    {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
+                    {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'kitchenDesigner'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'kitchenDesigner' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1215,7 +1215,7 @@ const App = () => {
               <AIRenderStudio state={state} />
             )}
             {/* Kitchen 3D Designer - Panel de proyectos */}
-            {state.currentTab === 'kitchenDesigner' && state.currentUser?.canUseAIAnalysis && (
+            {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && (
               <KitchenDesigner3D state={state} />
             )}
 

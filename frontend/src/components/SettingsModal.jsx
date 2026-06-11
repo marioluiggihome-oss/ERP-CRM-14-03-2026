@@ -2119,6 +2119,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           />
                           <span className="text-xs font-bold text-slate-700">Montador</span>
                         </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-emerald-100 px-2 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors border border-emerald-300">
+                          <input
+                            type="checkbox"
+                            checked={!!userForm.canUseKitchenDesigner}
+                            onChange={(e) => setUserForm({...userForm, canUseKitchenDesigner: e.target.checked})}
+                            className="w-4 h-4 rounded accent-emerald-600"
+                          />
+                          <span className="text-xs font-black text-emerald-800">Cocinas 3D</span>
+                        </label>
                         
                         {/* Fila extra: Personalización */}
                         <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
