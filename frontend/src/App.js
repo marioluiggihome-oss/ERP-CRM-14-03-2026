@@ -32,6 +32,7 @@ const ReportGenerator = lazy(() => import('./components/ReportGenerator'));
 
 // ─── Carga directa: componentes ligeros necesarios al inicio ────────────────
 import Login from './components/Login';
+import WelcomeScreen from './components/WelcomeScreen';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import MaintenancePanel from './components/MaintenancePanel';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI } from './services/api';
@@ -398,6 +399,9 @@ const App = () => {
       ...prev,
       currentUser: user,
       currentTab: _landingTab,
+      // Pantalla de bienvenida (saludo inicial) solo en escritorio; en móvil/tablet
+      // se entra directo a los menús, como acordamos.
+      showWelcome: !_isMobileTablet,
       currentModule: user.allowedModules?.[0] || 'montada',
       currentLibrary: defaultLibrary,
       allowedLibraries: userLibraries,
@@ -692,6 +696,21 @@ const App = () => {
   // Maintenance screen for non-admin users
   if (isInMaintenance && !state.currentUser?.isAdmin) {
     return <MaintenanceScreen onCheckAgain={checkMaintenanceMode} />;
+  }
+
+  // Pantalla de bienvenida (saludo inicial con nombre y foto) tras iniciar sesión.
+  // Solo en escritorio; tras unos segundos o al pulsar "Entrar", da paso a los menús.
+  if (state.showWelcome) {
+    return (
+      <>
+        <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
+        <WelcomeScreen
+          user={state.currentUser}
+          logo={state.logo}
+          onContinue={() => setState(prev => ({ ...prev, showWelcome: false }))}
+        />
+      </>
+    );
   }
 
   // Agenda de Negocios (Prescriptor): si el usuario SOLO tiene este permiso
