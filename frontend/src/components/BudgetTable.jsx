@@ -502,9 +502,8 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
 
   const filteredCatalog = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    
-    console.log('Search query:', q, '| Length:', q.length);
-    
+    const tokens = q.split(/\s+/).filter(Boolean);
+
     // Orden según el catálogo PDF TARIFA-TECNICA-ZONACOCINAS
     const categoryOrder = {
       'ALTO': 1, 'ALTOS': 1,
@@ -532,48 +531,18 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       'OTRO': 99, 'OTROS': 99
     };
 
-    // Mapeo de términos de búsqueda para herrajes
-    const hardwareSearchTerms = {
-      'hk': 'HK-TOP', 'hk-top': 'HK-TOP', 'hktop': 'HK-TOP', 'aventos hk': 'HK-TOP',
-      'hs': 'HS', 'servo': 'SERVO', 'servo-drive': 'SERVO', 'servodrive': 'SERVO',
-      'hl': 'HL', 'lift': 'LIFT',
-      'hf': 'HF', 'free fold': 'FREE', 'freefold': 'FREE', 'free-fold': 'FREE'
-    };
-
-    // Mapeo de términos de búsqueda para tipos especiales
-    const specialSearchTerms = {
-      'micro': ['AM', 'BM'], 'microondas': ['AM', 'BM'],
-      'horno': ['CH', 'BH', 'CHM'], 'oven': ['CH', 'BH', 'CHM'],
-      'placa': ['BP'], 'vitro': ['BP'], 'vitroceramica': ['BP'],
-      'freg': ['BF'], 'fregadero': ['BF'], 'sink': ['BF'],
-      'termo': ['AT'], 'calentador': ['AT'],
-      'escurre': ['AE'], 'escurreplatos': ['AE']
-    };
-    
     const filtered = allProducts.filter(p => {
-      const codeUpper = p.code?.toUpperCase() || '';
-      const nameUpper = p.name?.toUpperCase() || '';
-      const nameLower = p.name?.toLowerCase() || '';
-      const qUpper = q.toUpperCase().trim();
-      const refUpper = (p.reference || '').toUpperCase();
-      const descUpper = (p.description || '').toUpperCase();
-      
-      let matchesSearch = false;
-      
-      if (q && q.length > 0) {
-        // Búsqueda FLEXIBLE: busca en código, nombre, referencia y descripción
-        matchesSearch = 
-          codeUpper.includes(qUpper) || 
-          nameUpper.includes(qUpper) || 
-          refUpper.includes(qUpper) ||
-          descUpper.includes(qUpper);
-      } else {
-        // Sin búsqueda, mostrar todo
-        matchesSearch = true;
+      // Búsqueda INTUITIVA multi-palabra: cada palabra debe aparecer en alguno de
+      // los campos (código, nombre, referencia, descripción, categoría o medidas).
+      let matchesSearch = true;
+      if (tokens.length > 0) {
+        const dims = [p.width, p.height, p.depth].filter(Boolean).join('x');
+        const hay = `${p.code || ''} ${p.name || ''} ${p.reference || ''} ${p.description || ''} ${p.category || ''} ${dims}`.toLowerCase();
+        matchesSearch = tokens.every(t => hay.includes(t));
       }
-      
+
       const isCorrectModule = catalogs.find(c => c.id === p.catalogId)?.module === state.currentModule;
-      
+
       // Si hay búsqueda activa, ignorar filtros de programa/categoría/serie
       const hasActiveSearch = q && q.length >= 2;
       const matchesPrograma = hasActiveSearch || selectedPrograma === 'TODOS' || (p.programa || 'ESTÁNDAR') === selectedPrograma;
@@ -596,14 +565,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
         matchesMedidas = matchesMedidas && p.depth && Math.abs(Number(p.depth) - depthNum) <= 5;
       }
       
-      const result = matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory && matchesApertura && matchesMedidas;
-      
-      // Log para depuración
-      if (q && q.length > 5 && result) {
-        console.log('MATCH:', codeUpper, '| startsWith:', codeUpper.startsWith(qUpper), '| module:', isCorrectModule);
-      }
-      
-      return result;
+      return matchesSearch && isCorrectModule && matchesPrograma && matchesSeries && matchesCategory && matchesApertura && matchesMedidas;
     });
     
     // Ordenar: primero coincidencias exactas/por inicio, luego por categoría y código
@@ -1331,10 +1293,10 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
       <div className="flex flex-1 overflow-hidden">
         <aside 
           style={{ width: isConfigOpen ? sidebarWidth : 0, minWidth: isConfigOpen ? sidebarWidth : 0 }} 
-          className={`bg-white border-r border-indigo-50 flex flex-col no-print transition-all duration-300 relative shadow-inner h-[calc(100vh-70px)] ${!isConfigOpen ? 'opacity-0 pointer-events-none overflow-hidden' : 'opacity-100'}`}
+          className={`bg-white border-r border-indigo-50 flex flex-col no-print transition-all duration-300 relative shadow-inner h-full min-h-0 ${!isConfigOpen ? 'opacity-0 pointer-events-none overflow-hidden' : 'opacity-100'}`}
         >
            {isConfigOpen && <div onMouseDown={() => { isResizingSidebar.current = true; }} className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-600 z-50"></div>}
-           <div className={`p-3 space-y-2 overflow-y-auto scrollbar-thin flex-1 ${!isConfigOpen ? 'invisible' : 'visible'}`}>
+           <div className={`p-3 pb-28 space-y-2 overflow-y-auto overscroll-contain scrollbar-thin flex-1 min-h-0 ${!isConfigOpen ? 'invisible' : 'visible'}`}>
               <section className="space-y-2">
                  <h4 className="text-[8px] font-black text-indigo-300 uppercase tracking-widest italic flex items-center gap-1">DATOS EXPEDIENTE</h4>
                  <div className="space-y-1.5">
