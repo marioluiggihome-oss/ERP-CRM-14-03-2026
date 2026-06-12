@@ -43,6 +43,7 @@ class UserCreate(BaseModel):
     canSeeCost: bool = False
     canAccessCRM: bool = False
     canUseAIAnalysis: bool = False
+    canUseKitchenDesigner: bool = False
     allowedModules: List[str] = []
     provinciaCode: Optional[str] = None
     accessExpirationDate: Optional[str] = None
@@ -66,6 +67,7 @@ class UserUpdate(BaseModel):
     canSeeCost: Optional[bool] = None
     canAccessCRM: Optional[bool] = None
     canUseAIAnalysis: Optional[bool] = None
+    canUseKitchenDesigner: Optional[bool] = None
     allowedModules: Optional[List[str]] = None
     provinciaCode: Optional[str] = None
     accessExpirationDate: Optional[str] = None
@@ -88,6 +90,7 @@ class UserResponse(BaseModel):
     canSeeCost: bool = False
     canAccessCRM: bool = False
     canUseAIAnalysis: bool = False
+    canUseKitchenDesigner: bool = False
     allowedModules: List[str] = []
     provinciaCode: Optional[str] = None
     accessExpirationDate: Optional[str] = None

@@ -94,6 +94,7 @@ from routes.materials import router as materials_router
 from routes.expedient import router as expedient_router
 from routes.shop_clients import router as shop_clients_router
 from routes.google_calendar import google_calendar_router
+from routes.kitchen_projects import kitchen_projects_router
 
 # Servicios de backup y tracking
 from services.backup_service import init_backup_service
@@ -254,6 +255,7 @@ api_router.include_router(expedient_router)
 api_router.include_router(shop_clients_router)
 api_router.include_router(ai_engine_router)
 api_router.include_router(google_calendar_router)
+api_router.include_router(kitchen_projects_router)
 api_router.include_router(clients_router)
 api_router.include_router(auth_routes_router)
 api_router.include_router(products_router)

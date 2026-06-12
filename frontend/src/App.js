@@ -25,6 +25,7 @@ const UserManualModal = lazy(() => import('./components/UserManualModal'));
 const MisPedidos = lazy(() => import('./components/MisPedidos'));
 const BackupManager = lazy(() => import('./components/BackupManager'));
 const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
+const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
 const GestionGastos = lazy(() => import('./components/GestionGastos'));
 const LuiggiFloor = lazy(() => import('./components/LuiggiFloor'));
@@ -352,7 +353,7 @@ const App = () => {
         crm: 'crm-dashboard', presupuesto: 'budget', presup2: 'presupuestador2',
         presupuestador2: 'presupuestador2', rentabilidad: 'rentabilidad', facturas: 'invoices',
         archivo: 'library', mando: 'command', pedidos: 'misPedidos', digitalizador: 'digitalizador',
-        armarios: 'armarios', montajes: 'montajes', fabrica: 'fabrica', render: 'renderStudio',
+        armarios: 'armarios', montajes: 'montajes', fabrica: 'fabrica', render: 'renderStudio', cocinas3d: 'kitchenDesigner',
       };
       const target = map[tab.toLowerCase()] || tab;
       setState(p => ({ ...p, currentTab: target }));
@@ -1040,6 +1041,17 @@ const App = () => {
                         <span className="text-[7px] font-black uppercase tracking-widest">Render 3D</span>
                       </button>
                     )}
+                    {/* Kitchen 3D Designer - Panel de proyectos de cocinas */}
+                    {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'kitchenDesigner'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'kitchenDesigner' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="kitchen-designer-nav-btn"
+                      >
+                        <Layers size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Cocinas 3D</span>
+                      </button>
+                    )}
                     
                     {/* Informes: ahora vive DENTRO de RENTAB (pestaña "Generador de informes") */}
                     
@@ -1201,6 +1213,10 @@ const App = () => {
             {/* Render 3D Studio */}
             {state.currentTab === 'renderStudio' && state.currentUser?.canUseAIAnalysis && (
               <AIRenderStudio state={state} />
+            )}
+            {/* Kitchen 3D Designer - Panel de proyectos */}
+            {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && (
+              <KitchenDesigner3D state={state} />
             )}
 
             {/* Generador de Informes */}

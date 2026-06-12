@@ -27,6 +27,7 @@ class UserModelInternal(BaseModel):
     canSeeCost: bool = False
     canSeeRetail: bool = True
     canUseAIAnalysis: bool = False
+    canUseKitchenDesigner: bool = False
     canManageArticles: bool = False
     canViewTechnicalDespiece: bool = False
     canAccessCRM: bool = False
@@ -57,6 +58,7 @@ class UserResponse(BaseModel):
     canSeeCost: bool = False
     canSeeRetail: bool = True
     canUseAIAnalysis: bool = False
+    canUseKitchenDesigner: bool = False
     canManageArticles: bool = False
     canViewTechnicalDespiece: bool = False
     canAccessCRM: bool = False
@@ -86,6 +88,7 @@ class UserCreate(BaseModel):
     canSeeCost: bool = False
     canSeeRetail: bool = True
     canUseAIAnalysis: bool = False
+    canUseKitchenDesigner: bool = False
     canManageArticles: bool = False
     canViewTechnicalDespiece: bool = False
     canAccessCRM: bool = False
@@ -115,6 +118,7 @@ class UserUpdate(BaseModel):
     canSeeCost: Optional[bool] = None
     canSeeRetail: Optional[bool] = None
     canUseAIAnalysis: Optional[bool] = None
+    canUseKitchenDesigner: Optional[bool] = None
     canManageArticles: Optional[bool] = None
     canViewTechnicalDespiece: Optional[bool] = None
     canAccessCRM: Optional[bool] = None
