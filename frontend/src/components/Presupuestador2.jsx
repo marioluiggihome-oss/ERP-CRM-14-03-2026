@@ -33,6 +33,42 @@ const Presupuestador2 = ({ currentUser }) => {
   const [clientName, setClientName] = useState('');
   const [notes, setNotes] = useState('');
   const [showDespiece, setShowDespiece] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  // Importar tarifas oficiales a los productos (solo admin). Hace dry-run, muestra
+  // el resumen y, si confirmas, reconstruye el catálogo MV desde las tarifas.
+  const importTariffs = async () => {
+    setImporting(true);
+    try {
+      const dr = await fetch(`${API_URL}/api/libraries/MV/import-tariffs?dry_run=true`,
+        { method: 'POST', headers: authHeaders() });
+      const rep = await dr.json();
+      if (!dr.ok) { alert('Error: ' + (rep.detail || dr.status)); return; }
+      const tarifas = (rep.tarifas_con_datos || []).join(', ');
+      const ok = window.confirm(
+        `SIMULACIÓN del importador:\n\n` +
+        `• ${rep.total_skus} muebles (SKUs)\n` +
+        `• Tarifas con datos: ${tarifas || '—'}\n\n` +
+        `¿APLICAR ahora? Reconstruye el catálogo MV desde las tarifas oficiales y ` +
+        `elimina duplicados. Afecta a Presupuestador 1 y 2.`
+      );
+      if (!ok) return;
+      const ap = await fetch(`${API_URL}/api/libraries/MV/import-tariffs?dry_run=false&wipe=true`,
+        { method: 'POST', headers: authHeaders() });
+      const r2 = await ap.json();
+      if (ap.ok) {
+        alert(`✅ Importado: ${r2.insertados} creados, ${r2.actualizados} actualizados.\n` +
+              `Tarifas: ${(r2.tarifas_con_datos || []).join(', ')}`);
+        await load();
+      } else {
+        alert('Error al aplicar: ' + (r2.detail || ap.status));
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   useEffect(() => { localStorage.setItem('p2_tariff', tariff); }, [tariff]);
 
@@ -245,6 +281,13 @@ const Presupuestador2 = ({ currentUser }) => {
         </div>
 
         <div className="flex items-center gap-3 ml-auto flex-wrap">
+          {currentUser?.isAdmin && (
+            <button onClick={importTariffs} disabled={importing} title="Cargar las tarifas oficiales en el catálogo (admin)"
+              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
+              {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
+              {importing ? 'Importando…' : 'Importar tarifas'}
+            </button>
+          )}
           {/* Total mini en cabecera */}
           {cartTotal > 0 && (
             <div className="hidden sm:flex flex-col items-end leading-none mr-1">
