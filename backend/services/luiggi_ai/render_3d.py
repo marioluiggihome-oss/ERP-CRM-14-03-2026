@@ -140,14 +140,14 @@ class Render3DService:
         floor_desc = FLOOR_MATERIALS.get(floor, floor)
         lighting_desc = LIGHTING_STYLES.get(lighting, lighting)
 
-        # Estilo de renderizado
+        # Estilo de renderizado (con realismo reforzado)
         style_instructions = {
-            "photorealistic": "Ultra-photorealistic 3D render, 8K resolution, ray-traced lighting, subtle depth of field",
-            "architectural": "Professional architectural visualization, clean lines, accurate proportions, neutral lighting",
-            "magazine": "Interior design magazine cover quality, styled with accessories, warm inviting atmosphere",
-            "minimalist": "Clean minimalist aesthetic, uncluttered surfaces, zen-like simplicity, soft shadows",
-            "warm": "Warm cozy atmosphere, golden hour lighting, lived-in feeling with subtle styling",
-            "industrial": "Industrial loft style, exposed elements, raw materials, dramatic contrast lighting",
+            "photorealistic": "Ultra-photorealistic architectural interior photograph, indistinguishable from a real photo, shot on a full-frame DSLR with a 24-35mm lens, physically-based rendering (PBR), realistic global illumination and soft natural daylight from windows, accurate soft shadows, subtle reflections and ambient occlusion, true-to-life material micro-detail (wood grain, brushed metal, matte/satin finishes), neutral white balance, high dynamic range, fine 8K detail, shallow depth of field",
+            "architectural": "Professional architectural visualization, clean lines, accurate proportions, realistic neutral daylight, PBR materials, soft realistic shadows",
+            "magazine": "Interior design magazine photograph quality, professionally styled, warm inviting natural light, photorealistic PBR materials, editorial composition",
+            "minimalist": "Clean minimalist photorealistic interior, uncluttered surfaces, soft natural shadows, realistic matte materials",
+            "warm": "Warm cozy photorealistic interior, golden-hour natural lighting, lived-in feeling, realistic textures and soft shadows",
+            "industrial": "Industrial loft photorealistic interior, exposed materials with realistic texture, dramatic but natural contrast lighting",
         }
         style_desc = style_instructions.get(style, style_instructions["photorealistic"])
 
@@ -175,7 +175,11 @@ class Render3DService:
         # Instrucciones técnicas finales
         prompt_parts.extend([
             "Camera angle: eye-level perspective showing the full kitchen layout.",
-            "The space should feel realistic, livable, and professionally designed.",
+            "Realism: photorealistic PBR materials with accurate roughness and reflectivity, "
+            "realistic global illumination and contact shadows, true-to-scale proportions, "
+            "natural color grading. It must look like a REAL photograph, NOT a 3D cartoon: "
+            "avoid plastic-looking surfaces, flat lighting, oversaturated colors and any "
+            "CGI/videogame look.",
             "No text, watermarks, or logos in the image.",
         ])
 
@@ -322,12 +326,12 @@ class Render3DService:
         descripción del usuario es el contenido principal y NO se fuerza cocina.
         """
         style_instructions = {
-            "photorealistic": "Ultra-photorealistic 3D render, 8K resolution, ray-traced lighting, subtle depth of field",
-            "architectural": "Professional architectural visualization, clean lines, accurate proportions, neutral lighting",
-            "magazine": "Interior design magazine cover quality, styled with accessories, warm inviting atmosphere",
-            "minimalist": "Clean minimalist aesthetic, uncluttered surfaces, zen-like simplicity, soft shadows",
-            "warm": "Warm cozy atmosphere, golden hour lighting, lived-in feeling with subtle styling",
-            "industrial": "Industrial loft style, exposed elements, raw materials, dramatic contrast lighting",
+            "photorealistic": "Ultra-photorealistic architectural interior photograph, indistinguishable from a real photo, shot on a full-frame DSLR with a 24-35mm lens, physically-based rendering (PBR), realistic global illumination and soft natural daylight coming from windows, accurate soft shadows, subtle reflections and ambient occlusion, true-to-life material micro-detail (visible wood grain, brushed metal, matte and satin finishes), neutral white balance, high dynamic range, fine 8K detail, shallow depth of field",
+            "architectural": "Professional architectural visualization, clean lines, accurate proportions, realistic neutral daylight, PBR materials, soft realistic shadows",
+            "magazine": "Interior design magazine photograph quality, professionally styled with tasteful accessories, warm inviting natural light, photorealistic PBR materials, editorial composition",
+            "minimalist": "Clean minimalist photorealistic interior, uncluttered surfaces, zen-like simplicity, soft natural shadows, realistic matte materials",
+            "warm": "Warm cozy photorealistic interior, golden-hour natural lighting, lived-in feeling, realistic textures and soft shadows",
+            "industrial": "Industrial loft photorealistic interior, exposed materials, raw concrete and metal with realistic texture, dramatic but natural contrast lighting",
         }
         style_desc = style_instructions.get(style, style_instructions["photorealistic"])
 
@@ -340,7 +344,11 @@ class Render3DService:
             "materials, and the interior configuration (shelves, columns, drawers, "
             "open spaces) as specified.",
             "Camera angle: eye-level perspective showing the full piece within its space.",
-            "Realistic materials, accurate proportions, professional lighting.",
+            "Realism: photorealistic PBR materials with accurate roughness and reflectivity, "
+            "realistic global illumination and contact shadows, true-to-scale proportions, "
+            "natural color grading. It must look like a real photograph, NOT a 3D cartoon: "
+            "avoid plastic-looking surfaces, flat lighting, oversaturated colors, blurry or "
+            "low-detail textures, and any CGI/videogame look.",
             "No text, watermarks, or logos in the image.",
         ]
         return " ".join(parts)
@@ -406,8 +414,10 @@ class Render3DService:
             + ref_note
             + "\n\n"
             f"{prompt}\n\n"
-            "The result must look like a professional interior design "
-            "visualization. No text, watermarks, or logos in the image."
+            "The result must look like a real professional interior photograph "
+            "(photorealistic, PBR materials, natural light, realistic shadows and "
+            "reflections), NOT a cartoon or videogame-style 3D image. Avoid plastic, "
+            "flat or oversaturated looks. No text, watermarks, or logos in the image."
         )
 
         return await self._render_with_gemini(
@@ -473,8 +483,10 @@ class Render3DService:
         )
 
         task_prompt = (
-            f"Generate a high-quality 3D render image:\n\n{prompt}\n\n"
-            f"Output: A single photorealistic interior design visualization image."
+            f"Generate a single ultra-photorealistic interior photograph (NOT a cartoon "
+            f"or videogame-style 3D image):\n\n{prompt}\n\n"
+            f"Output: one realistic photo with PBR materials, natural light and realistic "
+            f"shadows/reflections. Avoid plastic, flat or oversaturated looks."
         )
 
         return await self._render_with_gemini(task_prompt, prompt)
