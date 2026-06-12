@@ -32,6 +32,20 @@ function assetSrc(url) {
   return `${API_URL}${url}`;
 }
 
+// Extrae la URL/imagen de un render sea cual sea la forma que devuelva el backend.
+// Backend actual: render.result.result.images[0]. Se cubren también formas planas.
+function renderImageSrc(r) {
+  const res = (r && r.result) || {};
+  const inner = res.result || {};
+  const url =
+    res.image_url ||
+    (Array.isArray(res.images) && res.images[0]) ||
+    inner.image_url ||
+    (Array.isArray(inner.images) && inner.images[0]) ||
+    '';
+  return url || '';
+}
+
 async function apiCall(path, options = {}) {
   const token = getToken();
   const headers = { 'Authorization': `Bearer ${token}`, ...(options.headers || {}) };
@@ -721,13 +735,18 @@ function RendersTab({ project, onRefresh }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renders.map(r => (
+          {renders.map(r => {
+            const img = renderImageSrc(r);
+            return (
             <div key={r.id} className="border border-slate-200 rounded-lg overflow-hidden">
-              {r.result?.image_url ? (
-                <img src={assetSrc(r.result.image_url)} alt="Render" className="w-full h-48 object-cover" />
+              {img ? (
+                <a href={assetSrc(img)} target="_blank" rel="noreferrer" title="Ver a tamaño completo">
+                  <img src={assetSrc(img)} alt="Render" className="w-full h-48 object-cover hover:opacity-90 transition-opacity" />
+                </a>
               ) : (
-                <div className="w-full h-48 bg-slate-100 flex items-center justify-center text-slate-400">
+                <div className="w-full h-48 bg-slate-100 flex flex-col items-center justify-center text-slate-400 gap-1">
                   <Image size={32} />
+                  <span className="text-[10px]">{r.status === 'failed' ? 'Render fallido' : 'Sin imagen'}</span>
                 </div>
               )}
               <div className="p-3">
@@ -740,7 +759,8 @@ function RendersTab({ project, onRefresh }) {
                 {r.change_request && <p className="text-xs text-slate-500 mt-1">Cambio: {r.change_request}</p>}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
