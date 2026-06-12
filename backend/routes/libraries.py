@@ -12,6 +12,12 @@ import uuid
 
 router = APIRouter(prefix="/libraries", tags=["libraries"])
 
+try:
+    from services.jwt_service import require_auth
+except Exception:  # pragma: no cover
+    async def require_auth():
+        return {}
+
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL')
 client = AsyncIOMotorClient(mongo_url)
@@ -312,6 +318,51 @@ async def get_library_products(
         "limit": limit,
         "products": products
     }
+
+
+@router.post("/{library_code}/import-tariffs")
+async def import_tariffs(library_code: str, dry_run: bool = True, wipe: bool = False,
+                         current_user: dict = Depends(require_auth)):
+    """Carga las tarifas oficiales (data/mv_tarifas_oficiales.json) en los productos MV.
+
+    - dry_run=true (por defecto): solo SIMULA y devuelve el informe (no escribe nada).
+    - dry_run=false: aplica. Con wipe=true borra antes los productos MV y reconstruye
+      (recomendado para eliminar duplicados fantasma). Solo administradores.
+    """
+    if not (current_user or {}).get("isAdmin"):
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    if library_code.upper() != "MV":
+        raise HTTPException(status_code=400, detail="Solo disponible para la biblioteca MV")
+
+    from services.mv_tariff_importer import load_data, expand_tariffs, build_report
+    try:
+        data = load_data()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo leer el JSON de tarifas: {e}")
+
+    products = expand_tariffs(data)
+    report = build_report(products)
+
+    if dry_run:
+        report["dry_run"] = True
+        report["mensaje"] = "Simulación: no se ha escrito nada. Usa dry_run=false para aplicar."
+        return report
+
+    now = datetime.now(timezone.utc).isoformat()
+    if wipe:
+        await db.products.delete_many({"library": "MV"})
+    inserted, updated = 0, 0
+    for p in products:
+        p["updatedAt"] = now
+        res = await db.products.update_one(
+            {"library": "MV", "code": p["code"]}, {"$set": p}, upsert=True
+        )
+        if res.upserted_id:
+            inserted += 1
+        else:
+            updated += 1
+    report.update({"dry_run": False, "wipe": wipe, "insertados": inserted, "actualizados": updated})
+    return report
 
 
 @router.get("/{library_code}/stats")
