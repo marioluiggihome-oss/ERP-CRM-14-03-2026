@@ -73,6 +73,24 @@ export default function KitchenDesigner3D({ state }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [diag, setDiag] = useState(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+
+  const runDiagnostics = useCallback(async () => {
+    setDiagLoading(true);
+    setDiag(null);
+    try {
+      const res = await fetch(`${API_URL}/api/ai-engine/diagnostics`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      setDiag(data);
+    } catch (e) {
+      setDiag({ error: 'No se pudo conectar con el backend.' });
+    } finally {
+      setDiagLoading(false);
+    }
+  }, []);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -97,16 +115,50 @@ export default function KitchenDesigner3D({ state }) {
             <h1 className="text-2xl font-black text-slate-800">Diseñador de Cocinas 3D</h1>
             <p className="text-sm text-slate-500 mt-1">Gestiona tus proyectos y genera renders fotorrealistas</p>
           </div>
-          <button
-            onClick={() => setView('new')}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-          >
-            <Plus size={18} /> Nuevo Proyecto
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={runDiagnostics}
+              disabled={diagLoading}
+              title="Comprueba si el motor de render (Manus/Gemini) está configurado"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
+            >
+              {diagLoading ? <Loader size={16} className="animate-spin" /> : <Wand2 size={16} />} Diagnóstico IA
+            </button>
+            <button
+              onClick={() => setView('new')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+            >
+              <Plus size={18} /> Nuevo Proyecto
+            </button>
+          </div>
         </div>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
+        )}
+
+        {diag && (
+          <div className="mb-4 p-4 bg-white border border-slate-200 rounded-xl text-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-black text-slate-700">Diagnóstico del motor de render</span>
+              <button onClick={() => setDiag(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            {diag.error ? (
+              <p className="text-red-600">{diag.error}</p>
+            ) : (
+              <div className="space-y-1.5">
+                <p className="font-bold text-slate-800">
+                  {diag.effective_engine === 'manus' && <span className="text-green-600">✅ Usará MANUS</span>}
+                  {diag.effective_engine === 'gemini' && <span className="text-amber-600">🟡 Usará GEMINI (respaldo)</span>}
+                  {diag.effective_engine === 'ninguno' && <span className="text-red-600">❌ Sin motor: faltan claves</span>}
+                </p>
+                <p><b>Manus:</b> {diag.manus?.key_present ? `clave puesta (${diag.manus.key_length} car.)` : 'sin clave'}
+                  {diag.manus?.key_present && (diag.manus.reachable ? ` · conecta (HTTP ${diag.manus.http_status})` : ` · NO conecta (${diag.manus.error || 'error'})`)}</p>
+                <p><b>Gemini:</b> {diag.gemini?.key_present ? 'clave puesta' : 'sin clave'} · SDK {diag.gemini?.sdk_available ? 'ok' : 'no'}</p>
+                <p className="text-slate-500">{diag.hint}</p>
+              </div>
+            )}
+          </div>
         )}
 
         {isLoading ? (

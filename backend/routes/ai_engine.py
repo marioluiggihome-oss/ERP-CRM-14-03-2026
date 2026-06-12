@@ -81,6 +81,62 @@ async def get_engine_status(user=Depends(require_auth)):
     return status
 
 
+@ai_engine_router.get("/diagnostics")
+async def engine_diagnostics(user=Depends(require_auth)):
+    """Diagnóstico del motor de render: ¿ve las claves (Manus/Gemini)? ¿conecta con
+    el proveedor? No crea tareas ni gasta créditos: solo comprueba configuración y
+    una conexión ligera."""
+    import os
+    config = get_ai_config()
+    manus_key = getattr(config, "provider_api_key", "") or ""
+    manus_present = bool(manus_key)
+
+    try:
+        from services.llm_vision import get_gemini_key, GOOGLE_GENAI_AVAILABLE
+        gemini_present = bool(get_gemini_key())
+        gemini_sdk = bool(GOOGLE_GENAI_AVAILABLE)
+    except Exception:
+        gemini_present, gemini_sdk = False, False
+
+    provider = (os.environ.get("KITCHEN_RENDER_PROVIDER") or "manus").lower()
+
+    # Conectividad con Manus (sin crear tareas): un GET ligero al proveedor.
+    manus_reachable, manus_http_status, manus_error = None, None, None
+    if manus_present:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                r = await c.get(config.provider_base_url,
+                                headers={"Authorization": f"Bearer {manus_key}"})
+                manus_reachable, manus_http_status = True, r.status_code
+        except Exception as e:
+            manus_reachable, manus_error = False, type(e).__name__
+
+    if provider == "manus" and manus_present:
+        effective = "manus"
+    elif gemini_present and gemini_sdk:
+        effective = "gemini"
+    else:
+        effective = "ninguno"
+
+    return {
+        "render_provider_config": provider,
+        "effective_engine": effective,
+        "manus": {
+            "key_present": manus_present,
+            "key_length": len(manus_key) if manus_present else 0,
+            "reachable": manus_reachable,
+            "http_status": manus_http_status,
+            "error": manus_error,
+        },
+        "gemini": {"key_present": gemini_present, "sdk_available": gemini_sdk},
+        "hint": (
+            "El render usará MANUS." if effective == "manus"
+            else "El render usará GEMINI (respaldo)." if effective == "gemini"
+            else "Falta configurar MANUS_API_KEY (o GEMINI_API_KEY) en Railway."
+        ),
+    }
+
+
 @ai_engine_router.get("/materials")
 async def get_materials_catalog(user=Depends(require_auth)):
     """Devuelve el catálogo completo de materiales disponibles para renders."""
