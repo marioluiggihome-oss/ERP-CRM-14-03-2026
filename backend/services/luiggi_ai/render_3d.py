@@ -420,7 +420,7 @@ class Render3DService:
             "flat or oversaturated looks. No text, watermarks, or logos in the image."
         )
 
-        return await self._render_with_gemini(
+        return await self._render_dispatch(
             task_prompt, prompt, parsed_params,
             reference_image_base64=ref_b64, reference_mime=ref_mime,
         )
@@ -489,7 +489,7 @@ class Render3DService:
             f"shadows/reflections. Avoid plastic, flat or oversaturated looks."
         )
 
-        return await self._render_with_gemini(task_prompt, prompt)
+        return await self._render_dispatch(task_prompt, prompt)
 
     async def _render_with_gemini(self, task_prompt: str, prompt: str,
                                   parsed_params: Optional[Dict[str, Any]] = None,
@@ -523,6 +523,98 @@ class Render3DService:
         if parsed_params is not None:
             out["parsed_params"] = parsed_params
         return out
+
+    async def _render_with_manus(self, task_prompt: str, prompt: str,
+                                 parsed_params: Optional[Dict[str, Any]] = None,
+                                 reference_image_base64: Optional[str] = None,
+                                 reference_mime: str = "image/png") -> Dict[str, Any]:
+        """Genera el render usando el motor Manus (LuiggiAICore): crea una tarea,
+        espera a que termine y devuelve la(s) imagen(es) ya servidas por el proxy
+        white-label. Las URLs vienen como rutas internas /api/ai-engine/asset."""
+        from .engine_core import get_engine
+        engine = get_engine()
+        start = time.time()
+        try:
+            files = None
+            if reference_image_base64:
+                try:
+                    import base64 as _b64
+                    raw = _b64.b64decode(reference_image_base64)
+                    ext = "png" if "png" in (reference_mime or "") else "jpg"
+                    up = await engine.upload_file(raw, f"reference.{ext}")
+                    if up.get("success") and up.get("file_id"):
+                        files = [{"file_id": up["file_id"]}]
+                except Exception as e:
+                    logger.warning(f"Manus: no se pudo subir la referencia: {e}")
+
+            created = await engine.create_task(prompt=task_prompt, files=files)
+            if not created.get("success"):
+                return {
+                    "success": False, "status": "failed",
+                    "error": created.get("error", "No se pudo iniciar el render."),
+                    "engine": self.config.brand_name,
+                }
+            task_id = created.get("task_id")
+            done = await engine.wait_for_completion(task_id, timeout=300, poll_interval=5)
+            if not done.get("success"):
+                return {
+                    "success": False, "status": done.get("status", "failed"),
+                    "error": done.get("error", "El render no se completó."),
+                    "engine": self.config.brand_name,
+                }
+            # Las imágenes (proxy URLs) están en result.images (o anidado)
+            msgs = done.get("result", {}) or {}
+            images = msgs.get("images") or []
+            if not images and isinstance(msgs.get("result"), dict):
+                images = msgs["result"].get("images") or []
+            if not images:
+                return {
+                    "success": False, "status": "failed",
+                    "error": "El motor no devolvió ninguna imagen.",
+                    "engine": self.config.brand_name,
+                }
+            out = {
+                "success": True, "status": "completed",
+                "result": {"images": images},
+                "engine": self.config.brand_name,
+                "duration_seconds": round(time.time() - start, 1),
+                "prompt_used": prompt,
+            }
+            if parsed_params is not None:
+                out["parsed_params"] = parsed_params
+            return out
+        except Exception as e:
+            logger.error(f"Render (Manus) error: {e}")
+            return {
+                "success": False, "status": "failed",
+                "error": "No se pudo generar el render con el motor.",
+                "engine": self.config.brand_name,
+            }
+
+    async def _render_dispatch(self, task_prompt: str, prompt: str,
+                               parsed_params: Optional[Dict[str, Any]] = None,
+                               reference_image_base64: Optional[str] = None,
+                               reference_mime: str = "image/png") -> Dict[str, Any]:
+        """Elige el motor de render. Por defecto MANUS (preferencia del usuario);
+        si no está configurado o falla, usa Gemini como respaldo.
+        Configurable con la variable de entorno KITCHEN_RENDER_PROVIDER=manus|gemini."""
+        import os
+        provider = (os.environ.get("KITCHEN_RENDER_PROVIDER") or "manus").lower()
+        manus_ready = bool(getattr(self.config, "provider_api_key", ""))
+
+        if provider == "manus" and manus_ready:
+            res = await self._render_with_manus(
+                task_prompt, prompt, parsed_params,
+                reference_image_base64=reference_image_base64, reference_mime=reference_mime,
+            )
+            if res.get("success"):
+                return res
+            logger.warning("Render con Manus falló; usando Gemini como respaldo.")
+
+        return await self._render_with_gemini(
+            task_prompt, prompt, parsed_params,
+            reference_image_base64=reference_image_base64, reference_mime=reference_mime,
+        )
 
     def get_materials_catalog(self) -> Dict[str, Any]:
         """Devuelve el catálogo completo de materiales disponibles."""

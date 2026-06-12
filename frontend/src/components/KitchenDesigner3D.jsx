@@ -28,8 +28,14 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 function assetSrc(url) {
   if (!url) return '';
   if (url.startsWith('data:')) return url;
-  if (url.startsWith('http')) return url;
-  return `${API_URL}${url}`;
+  let full = url.startsWith('http') ? url : `${API_URL}${url}`;
+  // El proxy de assets (imágenes de Manus) exige el JWT por query param,
+  // porque las etiquetas <img> del navegador no pueden enviar cabeceras.
+  if (full.includes('/api/ai-engine/asset') && !/[?&]t=/.test(full)) {
+    const tok = getToken();
+    if (tok) full += (full.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(tok);
+  }
+  return full;
 }
 
 // Extrae la URL/imagen de un render sea cual sea la forma que devuelva el backend.
