@@ -64,8 +64,62 @@
 - Acabados por tarifa registrados (SYNCRO, VIGO, AR PLUS, FERIA, REINA, POLILAMINADO, ZENIT, LUXE, TOKIO, FENIX, TEXT…) e incrementos (CONTRACARA +5%, DIFUMINADO +20%, METALIZADO +23%).
 - Acabados con **puntos por tirador**: EDER TEXT = T7 +8 ptos/tirador, ZELAN TEXT = T7 +7 ptos/tirador.
 
+## T3 — Avance de transcripción (sesión en curso)
+
+**Estado: T3 NO está aún en el JSON.** Se extrajeron datos de las páginas 13-18 en una sesión anterior
+mostrándolos al usuario tabla por tabla, pero ese resultado se perdió al resumirse el contexto (nunca
+se escribió en `mv_tarifas_oficiales.json`). **Hay que repetir la extracción de páginas 13-17** con el
+mismo método (recortes en alta resolución, tabla por tabla, confirmar con el usuario antes de volcar).
+
+### Página 18 (CONFIRMADO, listo para volcar cuando se complete T3)
+Imágenes usadas: `IMG_20251101_091418.jpg` (índice 18). Crops en `/tmp/mvrot/p18_*.jpg`.
+
+- **LATERALES_COLOR** (h7090): LCA=[17,20], LCF=[26,30], LCB=[26,null], LCS=[26,30], LCM=[34,42], LCC=[62,67]
+- **REGLETA_COLOR** (h7090, ancho 15): RA=[8,9], RM=[10,12], RS=[12,13], RC=[19,20]
+- **COSTADOS_COLOR** (h7090): CCA=[17.4,19.4], CCF=[26.8,30.8], CCB=[26.4,31.4], CCS=[26.4,31.4], CCM=[34.4,43.4], CCC=[69.4,74.4]
+- **REGLETA_MELAMINA** (h7090, ancho 10): RMA=[1,2], RMM=[2,3], RMS=[3,4], RMC=[4,5] — **idéntico a T1/T2** (constante)
+- **COSTADOS_MELAMINA**: no aparece impreso en la página 18 de T3 (a diferencia de T1/T2 que sí lo listan).
+  Dado que en T1/T2 es idéntico ([19,20],[26,27],[7,8],[13,14]) y constante, se propone usar el mismo
+  valor constante para T3 — **a confirmar con el usuario o buscando si aparece en otra página de T3**.
+- **TECHO_COLOR** (h355060, cols 35/50/60) — **a diferencia de T1 (TEC260-360 en blanco), en T3 está
+  TODO relleno hasta TEC360**:
+  TEC100=[23.4,31,35.4], TEC120=[26.4,35,41.4], TEC140=[28.4,40,46.4], TEC160=[31.4,44,51.4],
+  TEC180=[34.4,48,56.4], TEC200=[37.4,56,65.4], TEC220=[45.4,61,71.4], TEC240=[48.4,66,77.4],
+  TEC260=[51.4,71,81.4], TEC280=[54.4,75,87.4], TEC300=[58.4,80,93.4], TEC320=[60.4,85,98.4],
+  TEC340=[64.4,89,103.4], TEC360=[67.4,93,109.4]
+- **ELEMENTOS_LINEALES** (ent_med): COR=[32,17], POR=[25,13], ZOC=[42,23], PER=[3,2] (=T1/T2),
+  PIN=[null,2] (=T1/T2), ZOCA=[28,16] (=T1/T2), ZOCAB=[34,18] (=T1/T2), PINA=[null,2] (=T1/T2),
+  ANGZOC=[null,2] (=T1/T2), **COST=[null,6]** (T1=4, T2=11 — valor distinto, posible lectura "6" a
+  confirmar contra papel), EMC1M/E=[85,50] (=T1/T2). MOSE=[129,null], TANG/TLIN=[3,3],
+  UENC=[null,3], COPM/E=[18,10], INT/EXT=[1,1], TAPAC=[null,1], TCAN=[null,1] — todos estos últimos
+  **idénticos a T1/T2** (constantes).
+  - Nota: la tabla de T3 imprime una fila extra "ENCM/E — Encimera Med/Ent" sin valores visibles,
+    además de "EMC1M/E" con [85,50]. Probable duplicado/variante del mismo ítem en el catálogo;
+    se usa solo `EMC1M/E` (como en T1) y se ignora `ENCM/E` salvo que el usuario indique lo contrario.
+
+### Acabados T3 (de pág. 18, pie de página)
+- FERIA = T3
+- VIGO CTO CRISTAL = T3
+- VIGO CTO SU COLOR = T3
+- REINA = T3 -5%
+
+### Anomalías a registrar en `_meta.notas_revision` cuando se vuelque T3
+1. Los valores de T3 en PUERTAS/VITRINA/REJILLA (pág. 13) están cerca de T1 (algunos incluso por
+   debajo), no por encima de T2 — rompe la suposición simple "T1<T2<T3<...". Confirmar que no es
+   error de lectura antes de cerrar T3.
+2. TECHO_COLOR en T3 llega hasta TEC360 (relleno completo), mientras que T1 solo llega a TEC240
+   (TEC260-360 en blanco).
+3. Algunos códigos de familia ALTO en el catálogo de T3 llevan sufijo "*" (p.ej. "A25D/I*") que no
+   aparece en T1/T2 — decidir si afecta al nombrado de los items o es solo notación de "ver leyenda".
+
 ## Pendientes de trabajo (para continuar)
 1. **Volcar T3–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1).
+   - **T3 página 18 ya está extraída y lista** (ver sección "T3 — Avance de transcripción" arriba).
+   - **T3 páginas 13-17 hay que re-extraerlas** (tabla por tabla, con confirmación del usuario) — el
+     trabajo previo no llegó a guardarse. Una vez completas las 6 páginas, volcar `tariffs.T3`
+     entero al JSON, actualizar `_meta.recibido.T3`/`_meta.estado`, ejecutar el importador
+     (`import-tariffs` dry-run y luego aplicar) para regenerar `zonePoints` y así el selector de
+     tarifa MV en el Presupuestador muestre precios distintos para T3.
 2. **PDF de verificación** por tarifa para cotejar contra el papel antes de tocar precios.
 3. **Corregir el catálogo MV** en BD (afecta a Presupuestador 1 y 2 a la vez) + quitar duplicados fantasma (p.ej. "A100" con precio de otra tarifa).
 4. **Arreglar Presupuestador 1** (parcial, hecho hoy):
