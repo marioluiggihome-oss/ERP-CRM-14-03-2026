@@ -267,16 +267,16 @@ const Presupuestador2 = ({ currentUser }) => {
   const inCart = (id) => cart.some(x => x.id === id && !x.manual);
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-emerald-50/40">
+    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-orange-50/40">
       {/* ── Cabecera ── */}
-      <div className="shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 text-white px-4 sm:px-6 py-3.5 flex items-center gap-3 flex-wrap shadow-lg">
+      <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white px-4 sm:px-6 py-3.5 flex items-center gap-3 flex-wrap shadow-lg">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center ring-1 ring-white/30">
             <Table2 size={22} />
           </div>
           <div>
             <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador MV</h1>
-            <p className="text-[11px] text-emerald-100/90 flex items-center gap-1.5 mt-0.5">
+            <p className="text-[11px] text-orange-100/90 flex items-center gap-1.5 mt-0.5">
               <Boxes size={12} /> {products.length} muebles · tarifa por grupo
             </p>
           </div>
@@ -297,14 +297,14 @@ const Presupuestador2 = ({ currentUser }) => {
           {/* Total mini en cabecera */}
           {cartTotal > 0 && (
             <div className="hidden sm:flex flex-col items-end leading-none mr-1">
-              <span className="text-[10px] uppercase text-emerald-100/80 font-bold">Total presupuesto</span>
+              <span className="text-[10px] uppercase text-orange-100/80 font-bold">Total presupuesto</span>
               <span className="text-xl font-black">{eur(totalConIva)}</span>
             </div>
           )}
           <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl pl-3 pr-1.5 py-1.5 ring-1 ring-white/25">
             <span className="text-xs font-black uppercase flex items-center gap-1"><Tag size={14} /> Tarifa</span>
             <select value={tariff} onChange={e => setTariff(e.target.value)}
-              className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-emerald-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
+              className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
               {priceLevels.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
@@ -323,8 +323,8 @@ const Presupuestador2 = ({ currentUser }) => {
                   <button key={name} onClick={() => { setFamily(name); setSearch(''); }}
                     className={`text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
                       family === name
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-200'
-                        : 'text-slate-600 hover:bg-emerald-50'}`}>
+                        ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-200'
+                        : 'text-slate-600 hover:bg-orange-50'}`}>
                     <span className="flex items-center gap-1.5 min-w-0">
                       <MuebleIcon type={classifyMueble({ category: name })} size={16} className="shrink-0" />
                       <span className="truncate">{name}</span>
@@ -341,10 +341,10 @@ const Presupuestador2 = ({ currentUser }) => {
           <div className="flex-1 overflow-y-auto p-3 sm:p-5">
             <div className="mb-4 max-w-2xl">
               <div className="relative">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" />
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500" />
                 <input value={search} onChange={e => setSearch(e.target.value)} autoFocus
                   placeholder="Buscar en TODO el catálogo: código, nombre o medida (p. ej. «bajo 60» o «B60»)…"
-                  className="w-full pl-11 pr-24 py-3 bg-white border-2 border-slate-200 rounded-2xl text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 shadow-sm transition-all" />
+                  className="w-full pl-11 pr-24 py-3 bg-white border-2 border-slate-200 rounded-2xl text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 shadow-sm transition-all" />
                 {search && (
                   <button onClick={() => setSearch('')} title="Limpiar"
                     className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs font-bold transition-colors">
@@ -356,7 +356,7 @@ const Presupuestador2 = ({ currentUser }) => {
               {!loading && (
                 <div className="flex items-center gap-2 mt-2 px-1 text-[11px]">
                   {searching ? (
-                    <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700">
+                    <span className="inline-flex items-center gap-1.5 font-bold text-orange-700">
                       <Search size={12} />
                       {shown.length} resultado{shown.length === 1 ? '' : 's'} en todo el catálogo
                     </span>
@@ -382,26 +382,26 @@ const Presupuestador2 = ({ currentUser }) => {
                   return (
                     <button key={p.id} onClick={() => addToCart(p)}
                       className={`group text-left bg-white border rounded-2xl p-3 flex items-center gap-3 transition-all hover:shadow-md ${
-                        added ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200 hover:border-emerald-300'}`}>
+                        added ? 'border-orange-300 ring-1 ring-orange-200' : 'border-slate-200 hover:border-orange-300'}`}>
                       {/* Dibujo/icono del mueble según su familia */}
                       <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center border ${
-                        added ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-500 group-hover:text-emerald-600 group-hover:border-emerald-200'}`}>
+                        added ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-slate-50 border-slate-200 text-slate-500 group-hover:text-orange-600 group-hover:border-orange-200'}`}>
                         <MuebleIcon mueble={p} size={26} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{p.reference || p.code || '—'}</span>
                           {searching && p.category && (
-                            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded uppercase tracking-wide">{p.category}</span>
+                            <span className="text-[9px] font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded uppercase tracking-wide">{p.category}</span>
                           )}
-                          {added && <span className="text-[9px] font-black text-emerald-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> añadido</span>}
+                          {added && <span className="text-[9px] font-black text-orange-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> añadido</span>}
                         </div>
                         <p className="text-sm font-bold text-slate-800 truncate mt-1">{p.name}</p>
                         {med && <p className="text-[11px] text-slate-400">{med} cm</p>}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="font-mono font-black text-emerald-700 text-sm whitespace-nowrap">{eur(priceOf(p))}</p>
-                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-emerald-600 group-hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold">
+                        <p className="font-mono font-black text-orange-700 text-sm whitespace-nowrap">{eur(priceOf(p))}</p>
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-orange-600 group-hover:bg-orange-700 text-white rounded-lg text-[11px] font-bold">
                           <Plus size={12} /> Añadir
                         </span>
                       </div>
@@ -425,7 +425,7 @@ const Presupuestador2 = ({ currentUser }) => {
         {/* ── Presupuesto / Carrito ── */}
         <div className="w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)]">
           <div className="px-4 py-3.5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center"><ShoppingCart size={16} className="text-emerald-600" /></div>
+            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center"><ShoppingCart size={16} className="text-orange-600" /></div>
             <div>
               <h3 className="font-black text-slate-800 text-sm uppercase leading-none">Presupuesto</h3>
               <p className="text-[10px] text-slate-400 mt-0.5">{cart.length} líneas · {totalUds} ud.</p>
@@ -441,9 +441,9 @@ const Presupuestador2 = ({ currentUser }) => {
           {/* Cliente y notas */}
           <div className="px-4 py-3 border-b border-slate-100 space-y-2 bg-slate-50/30">
             <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Nombre del cliente…"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100" />
             <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="📝 Notas / observaciones…"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100" />
           </div>
 
           {/* Líneas */}
@@ -457,10 +457,10 @@ const Presupuestador2 = ({ currentUser }) => {
             )}
             <div className="space-y-2">
               {cart.map(it => (
-                <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-emerald-200 transition-colors">
+                <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-orange-200 transition-colors">
                   <div className="flex items-start gap-2">
                     {!it.manual && (
-                      <div className="shrink-0 w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center mt-0.5">
+                      <div className="shrink-0 w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 text-orange-600 flex items-center justify-center mt-0.5">
                         <MuebleIcon type={classifyMueble({ code: it.code, name: it.name })} size={17} />
                       </div>
                     )}
@@ -483,7 +483,7 @@ const Presupuestador2 = ({ currentUser }) => {
                       ) : (
                         <span className="font-mono text-[11px] text-slate-400">{eur(it.price)}/ud</span>
                       )}
-                      <span className="font-mono font-black text-emerald-700 text-sm w-20 text-right">{eur(it.price * it.qty)}</span>
+                      <span className="font-mono font-black text-orange-700 text-sm w-20 text-right">{eur(it.price * it.qty)}</span>
                     </div>
                   </div>
                 </div>
@@ -517,8 +517,8 @@ const Presupuestador2 = ({ currentUser }) => {
                 <span>IVA ({ivaRate}%)</span><span className="font-mono">{eur(ivaAmount)}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                <span className="text-xs font-black uppercase text-emerald-300 flex items-center gap-1"><Sparkles size={13} /> Total</span>
-                <span className="text-2xl font-black text-emerald-400">{eur(totalConIva)}</span>
+                <span className="text-xs font-black uppercase text-orange-300 flex items-center gap-1"><Sparkles size={13} /> Total</span>
+                <span className="text-2xl font-black text-orange-400">{eur(totalConIva)}</span>
               </div>
             </div>
 
@@ -555,7 +555,7 @@ const Presupuestador2 = ({ currentUser }) => {
       {showNomenclatura && (
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowNomenclatura(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 bg-gradient-to-r from-emerald-700 to-teal-600 text-white flex items-center gap-2 shrink-0">
+            <div className="px-5 py-3.5 bg-gradient-to-r from-orange-700 to-amber-600 text-white flex items-center gap-2 shrink-0">
               <BookOpen size={18} />
               <h3 className="font-black uppercase text-sm tracking-tight">Nomenclatura de muebles MV</h3>
               <button onClick={() => setShowNomenclatura(false)} className="ml-auto hover:bg-white/15 rounded-lg p-1"><X size={18} /></button>
@@ -563,10 +563,10 @@ const Presupuestador2 = ({ currentUser }) => {
             <div className="overflow-y-auto p-5 space-y-5">
               {NOMENCLATURA.map(g => (
                 <div key={g.grupo}>
-                  <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-2 border-b border-emerald-100 pb-1">{g.grupo}</p>
+                  <p className="text-[11px] font-black text-orange-700 uppercase tracking-widest mb-2 border-b border-orange-100 pb-1">{g.grupo}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {g.items.map(it => (
-                      <div key={it.code} className="flex items-center gap-3 p-2 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40">
+                      <div key={it.code} className="flex items-center gap-3 p-2 rounded-xl border border-slate-100 hover:border-orange-200 hover:bg-orange-50/40">
                         <div className="shrink-0 w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 flex items-center justify-center">
                           <MuebleIcon type={it.type} size={22} />
                         </div>
