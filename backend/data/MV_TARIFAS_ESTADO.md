@@ -23,7 +23,7 @@
 |--------|---------|--------|
 | T1  | 1–6     | ✅ COMPLETA y **volcada al JSON** |
 | T2  | 7–12    | ✅ COMPLETA y **volcada al JSON** |
-| T3  | 13–18   | ✅ recibida (pendiente de volcar) |
+| T3  | 13–18   | ✅ COMPLETA y **volcada al JSON** |
 | T4  | 19–24   | ✅ recibida (pendiente) |
 | T5  | 25–30   | ✅ recibida (pág. 25 leída por OCR; verificar puertas/vitrina/rejilla) |
 | T6  | 31–36   | ✅ recibida (pendiente) |
@@ -64,12 +64,17 @@
 - Acabados por tarifa registrados (SYNCRO, VIGO, AR PLUS, FERIA, REINA, POLILAMINADO, ZENIT, LUXE, TOKIO, FENIX, TEXT…) e incrementos (CONTRACARA +5%, DIFUMINADO +20%, METALIZADO +23%).
 - Acabados con **puntos por tirador**: EDER TEXT = T7 +8 ptos/tirador, ZELAN TEXT = T7 +7 ptos/tirador.
 
-## T3 — Avance de transcripción (sesión en curso)
+## T3 — ✅ COMPLETA y volcada al JSON
 
-**Estado: T3 NO está aún en el JSON.** Se extrajeron datos de las páginas 13-18 en una sesión anterior
-mostrándolos al usuario tabla por tabla, pero ese resultado se perdió al resumirse el contexto (nunca
-se escribió en `mv_tarifas_oficiales.json`). **Hay que repetir la extracción de páginas 13-17** con el
-mismo método (recortes en alta resolución, tabla por tabla, confirmar con el usuario antes de volcar).
+Las 56 familias de T3 (páginas 13-18) están en `mv_tarifas_oficiales.json` (`tariffs.T3`), con el mismo
+esquema que T1/T2. Verificado con `mv_tariff_importer.expand_tariffs`: los 715 productos generan
+`zonePoints.T3` (antes 713, se completó `ENCM/E` en ELEMENTOS_LINEALES para igualar a `EMC1M/E`).
+
+Pendiente: ejecutar `POST /libraries/MV/import-tariffs` (dry_run=false, wipe=true, admin) contra Mongo
+para regenerar los `zonePoints` de los productos MV y que el selector de tarifa T1-T21 del Presupuestador
+muestre precios distintos para T3.
+
+Detalle de extracción (para referencia/auditoría):
 
 ### Página 18 (CONFIRMADO, listo para volcar cuando se complete T3)
 Imágenes usadas: `IMG_20251101_091418.jpg` (índice 18). Crops en `/tmp/mvrot/p18_*.jpg`.
@@ -113,13 +118,10 @@ Imágenes usadas: `IMG_20251101_091418.jpg` (índice 18). Crops en `/tmp/mvrot/p
    aparece en T1/T2 — decidir si afecta al nombrado de los items o es solo notación de "ver leyenda".
 
 ## Pendientes de trabajo (para continuar)
-1. **Volcar T3–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1).
-   - **T3 página 18 ya está extraída y lista** (ver sección "T3 — Avance de transcripción" arriba).
-   - **T3 páginas 13-17 hay que re-extraerlas** (tabla por tabla, con confirmación del usuario) — el
-     trabajo previo no llegó a guardarse. Una vez completas las 6 páginas, volcar `tariffs.T3`
-     entero al JSON, actualizar `_meta.recibido.T3`/`_meta.estado`, ejecutar el importador
-     (`import-tariffs` dry-run y luego aplicar) para regenerar `zonePoints` y así el selector de
-     tarifa MV en el Presupuestador muestre precios distintos para T3.
+1. **Volcar T4–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1), siguiendo el mismo
+   método usado para T3 (tabla por tabla, alta resolución, cruzando con T1/T2/T3 para detectar shifts
+   de fila por el desenfoque/perspectiva de las fotos). **T3 ya está completa** (ver sección arriba).
+   Tras completar cada Tn, ejecutar `import-tariffs` (dry-run y luego aplicar) para regenerar `zonePoints`.
 2. **PDF de verificación** por tarifa para cotejar contra el papel antes de tocar precios.
 3. **Corregir el catálogo MV** en BD (afecta a Presupuestador 1 y 2 a la vez) + quitar duplicados fantasma (p.ej. "A100" con precio de otra tarifa).
 4. **Arreglar Presupuestador 1** (parcial, hecho hoy):
