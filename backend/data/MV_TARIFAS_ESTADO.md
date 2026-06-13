@@ -1,72 +1,29 @@
-# Tarifas MV — Estado del proyecto (resumen de páginas)
+# Tarifas MV + Presupuestadores — Estado / Traspaso
 
-> Última actualización: cierre de jornada. Continúa mañana.
-> Fuente: escaneos CamScanner del catálogo MV (Muebles Valencia). Cada tarifa = 6 páginas.
-> Datos crudos en `mv_tarifas_oficiales.json`. **Nada conectado aún al presupuestador.**
+> Para retomar en una sesión nueva. Todo el código está en `main` (desplegado).
+> Datos de tarifas en `backend/data/mv_tarifas_oficiales.json`.
 
-## Mapa del catálogo
-- **Tarifas de precio (columnas de puntos T1…T21): páginas 1–126** (cada tarifa, 6 páginas).
-- **Glosario / dibujos de cada mueble + accesorios: páginas 127 en adelante.**
-- Valor del punto MV ≈ **3,33 €/punto**. Cada tarifa es **independiente** (no multiplicador).
+## 📸 Catálogo MV (escaneos)
+- **Las 21 tarifas (T1–T21) + glosario (pp.127–138) están RECIBIDAS como archivo** en las subidas.
+- El **visor de imágenes funciona** (se pueden leer las páginas para transcribir).
 
-## Estructura de cada tarifa (6 páginas)
-1. Puertas / Vitrina / Vitrina inglesa / Rejilla
-2. Bajos (todas las familias de bajo)
-3. Altos (todas las familias de alto)
-4. Alto abatible / combinado / combinado plus / altillo / sobreencimera
-5. Columnas / mediacolumnas / botelleros / altillos decorativos
-6. Laterales/Costados color / regletas / balda aérea / techo color / elementos lineales (+ acabados de esa tarifa)
+## ✅ Hecho
+- **Importador** `services/mv_tariff_importer.py` + endpoint **`POST /api/libraries/MV/import-tariffs`** (admin):
+  - `dry_run=true` → informe; `dry_run=false&wipe=true` → reconstruye productos MV desde el JSON (arregla P1 y P2, quita duplicados). Probado: T1+T2 → 715 SKUs correctos.
+  - Botón **"Importar tarifas"** en cabecera de Presupuestador 2 (admin).
+- **Presupuestador 2**: búsqueda global multi-palabra, iconos por mueble, **tema naranja**, botón **"Nomenclatura"** (modal código→descripción→icono).
+- **Presupuestador 1**: scroll del panel de config arreglado, búsqueda multi-palabra; iconos propios se mantienen.
+- **Cocinas 3D**: bug de imagen arreglado (rutas + token proxy); **render por Manus** (motor principal) con Gemini de respaldo (`KITCHEN_RENDER_PROVIDER`); prompts reforzados para fotorrealismo; endpoint+botón **Diagnóstico IA**.
+- **muebleIcons.jsx**: iconos + `NOMENCLATURA` + `NOMENCLATURA_NOTAS`.
 
-## Estado por tarifa
+## ⏳ PENDIENTE (lo que falta por hacer)
+1. **VOLCAR T3–T21 al JSON** (solo están T1 y T2). Hay que leer las imágenes página a página y rellenar `tariffs.Tn` en `mv_tarifas_oficiales.json` con la misma estructura que T1/T2. Truco: como las tarifas suben (T1<…<T21), verificar que cada valor encaje entre la anterior y la siguiente.
+   - Mapa de páginas: cada tarifa = 6 págs. T3=13–18, T4=19–24, T5=25–30, T6=31–36, T7=37–42, … T21=121–126.
+2. **PDF de la Nomenclatura** ("Módulos Técnicos 2026") con portada chula tipo página de entrada del ERP, descargable, como consulta de iconos. (PEDIDO, no hecho.)
+3. **Comodidad Presupuestador 2** (auditoría): botones de cantidad más grandes y **cantidad editable** (ahora +/- de 24px). (PEDIDO, no hecho.)
+4. **Duplicados en la barra lateral**: el usuario vio partes duplicadas en "esta barra lateral" (¿nav principal o lista de familias de P2?). PENDIENTE de localizar/arreglar.
+5. Tras volcar todo → el admin pulsa **"Importar tarifas"** (dry-run y luego aplicar con wipe) para dejar P1 y P2 con precios reales.
+6. Verificar en Railway: **`MANUS_API_KEY`** (render) y, si se usa, **`GEMINI_API_KEY`**.
 
-| Tarifa | Páginas | Estado |
-|--------|---------|--------|
-| T1  | 1–6     | ✅ COMPLETA y **volcada al JSON** |
-| T2  | 7–12    | ✅ COMPLETA y **volcada al JSON** |
-| T3  | 13–18   | ✅ recibida (pendiente de volcar) |
-| T4  | 19–24   | ✅ recibida (pendiente) |
-| T5  | 25–30   | ✅ recibida (pág. 25 leída por OCR; verificar puertas/vitrina/rejilla) |
-| T6  | 31–36   | ✅ recibida (pendiente) |
-| T7  | 37–42   | ✅ recibida (pendiente) |
-| T8  | 43–48   | ⚠️ FALTAN **46, 47** (tengo 43,44,45,48) |
-| T9  | 49–54   | ✅ recibida (pendiente) |
-| T10 | 55–60   | ⚠️ FALTAN **57,58,59,60** (tengo 55,56) |
-| T11 | 61–66   | ❌ SIN RECIBIR |
-| T12 | 67–72   | ❌ SIN RECIBIR |
-| T13 | 73–78   | ❌ SIN RECIBIR |
-| T14 | 79–84   | ✅ recibida (pendiente) |
-| T15 | 85–90   | ✅ recibida (pendiente) |
-| T16 | 91–96   | ✅ recibida (pendiente) |
-| T17 | 97–102  | ⚠️ FALTAN **99–102** (tengo 97,98) |
-| T18 | 103–108 | ❌ SIN RECIBIR |
-| T19 | 109–114 | ⚠️ FALTAN **109, 111, 112** (tengo 110,113,114) |
-| T20 | 115–120 | ✅ recibida (pendiente) |
-| T21 | 121–126 | ✅ recibida (pendiente) |
-| Glosario | 127–138 | ✅ recibido (descripciones + dibujos + accesorios) |
-
-## Páginas que faltan (lista para reenviar)
-- **T8:** 46, 47
-- **T10:** 57, 58, 59, 60
-- **T11:** 61, 62, 63, 64, 65, 66
-- **T12:** 67, 68, 69, 70, 71, 72
-- **T13:** 73, 74, 75, 76, 77, 78
-- **T17:** 99, 100, 101, 102
-- **T18:** 103, 104, 105, 106, 107, 108
-- **T19:** 109, 111, 112
-
-**Total tarifa: 126 págs · Recibidas: 87 · Faltan: 39.**
-
-## Hallazgos de revisión (confirmados)
-- Las tarifas son columnas independientes y crecientes (T1 < T2 < … < T21).
-- TECHO COLOR sólo llega a TEC240 (TEC260–360 en blanco) y se repite en varias tarifas.
-- REGLETA MELAMINA es constante en todas las tarifas.
-- BALDA AÉREA aparece desde la T4.
-- Acabados por tarifa registrados (SYNCRO, VIGO, AR PLUS, FERIA, REINA, POLILAMINADO, ZENIT, LUXE, TOKIO, FENIX, TEXT…) e incrementos (CONTRACARA +5%, DIFUMINADO +20%, METALIZADO +23%).
-- Acabados con **puntos por tirador**: EDER TEXT = T7 +8 ptos/tirador, ZELAN TEXT = T7 +7 ptos/tirador.
-
-## Pendientes de trabajo (para continuar)
-1. **Volcar T3–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1).
-2. **PDF de verificación** por tarifa para cotejar contra el papel antes de tocar precios.
-3. **Corregir el catálogo MV** en BD (afecta a Presupuestador 1 y 2 a la vez) + quitar duplicados fantasma (p.ej. "A100" con precio de otra tarifa).
-4. **Arreglar Presupuestador 1**: selector de tarifa, fallback silencioso a T1, nombres "TARIFA n" vs "Tn", pointValue por defecto, código muerto `tariffPrices`.
-5. **Presupuestador 2 — iconos/dibujos por mueble** (encargo del usuario): asociar cada familia/código a su icono. Decidir: dibujos recortados del catálogo vs iconos de línea limpios.
+## Nota sobre el error "solicitud demasiado grande"
+La conversación acumuló >100 imágenes; el request supera el límite. Solución: **sesión nueva** (el repo conserva todo).
