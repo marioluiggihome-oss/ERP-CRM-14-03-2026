@@ -107,7 +107,7 @@ async def get_libraries():
                 "name": "Muebles Valencia",
                 "description": "Catálogo Muebles Valencia - Sistema de TARIFAS (T1-T21)",
                 "currency": "points",
-                "pointValue": 1.0,
+                "pointValue": 3.33,
                 "isActive": False,
                 "productCount": 0,
                 "pricingSystem": "tariffs",

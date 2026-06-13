@@ -68,5 +68,9 @@
 1. **Volcar T3–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1).
 2. **PDF de verificación** por tarifa para cotejar contra el papel antes de tocar precios.
 3. **Corregir el catálogo MV** en BD (afecta a Presupuestador 1 y 2 a la vez) + quitar duplicados fantasma (p.ej. "A100" con precio de otra tarifa).
-4. **Arreglar Presupuestador 1**: selector de tarifa, fallback silencioso a T1, nombres "TARIFA n" vs "Tn", pointValue por defecto, código muerto `tariffPrices`.
+4. **Arreglar Presupuestador 1** (parcial, hecho hoy):
+   - ✅ Selector de tarifa MV ampliado de T1-T15 a T1-T21 (`BudgetTable.jsx`, `MV_TARIFFS` en `constants.js`).
+   - ✅ `pointValue` por defecto de la biblioteca MV corregido de 1.0 a 3.33 €/punto (`backend/routes/libraries.py`). Si la biblioteca MV ya existe en Mongo con `pointValue=1.0`, ejecutar `backend/scripts/fix_mv_point_value.py` para corregirla.
+   - ✅ Código muerto `tariffPrices` eliminado de `BudgetTable.jsx` (siempre usa `zonePoints`).
+   - Pendiente: nombres "TARIFA n" vs "Tn" siguen conviviendo (constants.js usa "TARIFA n" como label visible, "Tn" como clave interna — es el diseño actual, no se ha tocado); revisar scripts de import antiguos (`import_mv_catalog.py`, `mv_products_data.py`, `mv_products_v2.py`) que aún generan/usan `tariffPrices` y `TARIFA_1` — parecen código muerto/no usado por el flujo activo, pendiente de confirmar y eliminar.
 5. **Presupuestador 2 — iconos/dibujos por mueble** (encargo del usuario): asociar cada familia/código a su icono. Decidir: dibujos recortados del catálogo vs iconos de línea limpios.
