@@ -153,4 +153,88 @@ export function MuebleIcon({ mueble, type, size = 24, className = '' }) {
   );
 }
 
+// ── Nomenclatura de códigos MV (Muebles Valencia) ──────────────────────────────
+// Referencia rápida: qué significa cada código y su dibujo/icono. Agrupada por zona.
+export const NOMENCLATURA = [
+  { grupo: 'BAJOS', items: [
+    { code: 'B', type: 'bajo', desc: 'Bajo (1 balda). Ej. B25D/I…B100' },
+    { code: 'BF', type: 'fregadero', desc: 'Bajo fregadero (opción chapa antihumedad = BFC)' },
+    { code: 'BPC', type: 'bajo', desc: 'Bajo puerta y cajón' },
+    { code: 'BC', type: 'cajones', desc: 'Bajo 5 cajones' },
+    { code: 'BCG', type: 'cajones', desc: 'Bajo 3 cajones + 1 gaveta' },
+    { code: 'BGC', type: 'cajones', desc: 'Bajo 2 gavetas + 1 cajón' },
+    { code: 'BCGF', type: 'cajones', desc: 'Bajo 2 cajones + 1 gaveta + 1 frente' },
+    { code: 'BGF', type: 'cajones', desc: 'Bajo 2 gavetas + 1 frente' },
+    { code: 'BRI', type: 'rincon', desc: 'Bajo rincón escuadra, puertas independientes (93×95)' },
+    { code: 'BRU', type: 'rincon', desc: 'Bajo rincón escuadra, puertas unidas (95×95)' },
+    { code: 'BR', type: 'rincon', desc: 'Bajo rincón ciego (indicar situación de la puerta)' },
+    { code: 'BH', type: 'horno', desc: 'Bajo horno (frente fijo inferior 9,5 cm)' },
+    { code: 'BHC', type: 'horno', desc: 'Bajo horno con cajón' },
+    { code: 'BHZ', type: 'horno', desc: 'Bajo horno con cajón en zócalo' },
+    { code: 'BHG', type: 'horno', desc: 'Bajo horno con gaveta' },
+    { code: 'BT', type: 'bajo', desc: 'Bajo terminal (BTS lats. al suelo, BTZ con zócalo, BTP en chaflán)' },
+  ]},
+  { grupo: 'ALTOS', items: [
+    { code: 'A', type: 'alto', desc: 'Alto (alturas 70 y 90). Ej. A25D/I…A100' },
+    { code: 'AV', type: 'vitrina', desc: 'Alto vitrina' },
+    { code: 'AE', type: 'escurreplatos', desc: 'Alto escurreplatos' },
+    { code: 'AM / AMF', type: 'horno', desc: 'Alto microondas (AMF con frente, A=90 y 110 F=45)' },
+    { code: 'ACA', type: 'horno', desc: 'Alto calentador' },
+    { code: 'ACC', type: 'horno', desc: 'Alto caldera (A=90·110 F=45)' },
+    { code: 'ASF', type: 'horno', desc: 'Alto sobre-frigo (ASF60A abat. salvacorte, ASF60F abat. free)' },
+    { code: 'ASCE / ASC', type: 'campana', desc: 'Alto campana (ASCE extraplana, ASC clásica)' },
+    { code: 'AR', type: 'rincon', desc: 'Alto rincón ciego' },
+    { code: 'ARI / ARU', type: 'rincon', desc: 'Alto rincón escuadra (ARI indep., ARU unidas)' },
+    { code: 'ARC / ARCV', type: 'rincon', desc: 'Alto rincón chaflán' },
+    { code: 'AD', type: 'box', desc: 'Alto decorativo (sin puerta)' },
+    { code: 'AT', type: 'alto', desc: 'Alto terminal' },
+    { code: 'AA', type: 'alto', desc: 'Alto abatible (2 ptas. abat. free)' },
+    { code: 'AC / ACP / ACPJ', type: 'alto', desc: 'Alto combinado / combinado plus / plus J' },
+  ]},
+  { grupo: 'ALTILLOS / SOBREENCIMERA', items: [
+    { code: 'L', type: 'altillo', desc: 'Altillo (abatible free)' },
+    { code: 'LV', type: 'vitrina', desc: 'Altillo vitrina' },
+    { code: 'LD', type: 'altillo', desc: 'Altillo decorativo' },
+    { code: 'S', type: 'altillo', desc: 'Sobreencimera (alturas 127 y 147)' },
+    { code: 'SV', type: 'vitrina', desc: 'Sobreencimera vitrina' },
+    { code: 'SC', type: 'cajones', desc: 'Sobreencimera cajón' },
+    { code: 'SVC', type: 'vitrina', desc: 'Sobreencimera vitrina cajón' },
+  ]},
+  { grupo: 'COLUMNAS / MEDIACOLUMNAS', items: [
+    { code: 'CD', type: 'columna', desc: 'Columna despensero / escobero (alturas 200 y 220)' },
+    { code: 'CF', type: 'columna', desc: 'Columna frigo' },
+    { code: 'CH', type: 'horno', desc: 'Columna horno (CHPC puerta+cajón, CHGC gaveta, CHC cajones)' },
+    { code: 'CHM', type: 'horno', desc: 'Columna horno+microondas' },
+    { code: 'M', type: 'mediacolumna', desc: 'Mediacolumna (altura 130)' },
+    { code: 'MPG', type: 'mediacolumna', desc: 'Media puerta gaveta' },
+    { code: 'MPH / MPM', type: 'horno', desc: 'Mediacolumna horno / microondas' },
+    { code: 'MV', type: 'vitrina', desc: 'Mediacolumna vitrina' },
+    { code: 'MVG', type: 'vitrina', desc: 'Mediacolumna vitrina gaveta' },
+  ]},
+  { grupo: 'PUERTAS', items: [
+    { code: 'P', type: 'puerta', desc: 'Puerta (matriz alto × ancho: P25…P60)' },
+    { code: 'PV', type: 'vitrina', desc: 'Puerta vitrina' },
+    { code: 'PVI', type: 'vitrina', desc: 'Puerta vitrina inglesa' },
+    { code: 'PR', type: 'vitrina', desc: 'Rejilla confesionario (gris o blanca)' },
+  ]},
+  { grupo: 'COMPLEMENTOS / LINEALES', items: [
+    { code: 'BOA/BOS/BOC', type: 'botellero', desc: 'Botelleros (anchos 7 y 9)' },
+    { code: 'BAL', type: 'altillo', desc: 'Balda aérea (fondos 35/50/60)' },
+    { code: 'TEC', type: 'lineal', desc: 'Techo color (fondos 35/50/60)' },
+    { code: 'LC / CC', type: 'lineal', desc: 'Laterales / costados color' },
+    { code: 'RA / RM', type: 'lineal', desc: 'Regletas (color / melamina)' },
+    { code: 'COR / ZOC / POR', type: 'lineal', desc: 'Cornisa / zócalo / portaluz (enteros o medios)' },
+    { code: 'ENC / MOSE / COPM', type: 'lineal', desc: 'Encimera / mostrador / copete' },
+  ]},
+];
+
+// Aclaraciones de sufijos comunes en los códigos.
+export const NOMENCLATURA_NOTAS = [
+  'D/I = versión Derecha o Izquierda (indicar al pedir).',
+  '* = variante (p. ej. 2 puertas) según el catálogo.',
+  '-70 / -90 = altura del módulo en cm (altos, altillos…).',
+  '-200 / -220 = altura de columnas; -127 / -147 = sobreencimera.',
+  'Nº del código = ancho en cm (B60 = 60 cm de ancho).',
+];
+
 export default MuebleIcon;

@@ -6,7 +6,8 @@ import {
 import { authHeaders } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
-import { MuebleIcon, classifyMueble } from './muebleIcons';
+import { MuebleIcon, classifyMueble, NOMENCLATURA, NOMENCLATURA_NOTAS } from './muebleIcons';
+import { BookOpen } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -34,6 +35,7 @@ const Presupuestador2 = ({ currentUser }) => {
   const [notes, setNotes] = useState('');
   const [showDespiece, setShowDespiece] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [showNomenclatura, setShowNomenclatura] = useState(false);
 
   // Importar tarifas oficiales a los productos (solo admin). Hace dry-run, muestra
   // el resumen y, si confirmas, reconstruye el catálogo MV desde las tarifas.
@@ -281,6 +283,10 @@ const Presupuestador2 = ({ currentUser }) => {
         </div>
 
         <div className="flex items-center gap-3 ml-auto flex-wrap">
+          <button onClick={() => setShowNomenclatura(true)} title="Ver nomenclatura de tipos de mueble"
+            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
+            <BookOpen size={14} /> Nomenclatura
+          </button>
           {currentUser?.isAdmin && (
             <button onClick={importTariffs} disabled={importing} title="Cargar las tarifas oficiales en el catálogo (admin)"
               className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
@@ -545,6 +551,44 @@ const Presupuestador2 = ({ currentUser }) => {
           </div>
         </div>
       </div>
+
+      {showNomenclatura && (
+        <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowNomenclatura(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 bg-gradient-to-r from-emerald-700 to-teal-600 text-white flex items-center gap-2 shrink-0">
+              <BookOpen size={18} />
+              <h3 className="font-black uppercase text-sm tracking-tight">Nomenclatura de muebles MV</h3>
+              <button onClick={() => setShowNomenclatura(false)} className="ml-auto hover:bg-white/15 rounded-lg p-1"><X size={18} /></button>
+            </div>
+            <div className="overflow-y-auto p-5 space-y-5">
+              {NOMENCLATURA.map(g => (
+                <div key={g.grupo}>
+                  <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-2 border-b border-emerald-100 pb-1">{g.grupo}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {g.items.map(it => (
+                      <div key={it.code} className="flex items-center gap-3 p-2 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40">
+                        <div className="shrink-0 w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 flex items-center justify-center">
+                          <MuebleIcon type={it.type} size={22} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-mono font-bold text-indigo-600 text-xs">{it.code}</p>
+                          <p className="text-[11px] text-slate-600 leading-tight">{it.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                <p className="text-[11px] font-black text-slate-500 uppercase mb-1.5">Sufijos</p>
+                <ul className="text-[11px] text-slate-600 space-y-0.5 list-disc pl-4">
+                  {NOMENCLATURA_NOTAS.map((n, i) => <li key={i}>{n}</li>)}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DespieceModal
         isOpen={showDespiece}
