@@ -38,16 +38,22 @@
 | T15 | 85–90   | ✅ recibida (pendiente) |
 | T16 | 91–96   | ✅ recibida (pendiente) |
 | T17 | 97–102  | ✅ recibida COMPLETA (pendiente de volcar) |
-| T18 | 103–108 | ⚠️ FALTA **103** (tengo 104,105,106,107,108) |
+| T18 | 103–108 | ✅ recibida COMPLETA (pendiente de volcar) |
 | T19 | 109–114 | ✅ recibida COMPLETA (pendiente de volcar) |
 | T20 | 115–120 | ✅ recibida (pendiente) |
 | T21 | 121–126 | ✅ recibida (pendiente) |
 | Glosario | 127–138 | ✅ recibido (descripciones + dibujos + accesorios) |
 
 ## Páginas que faltan (lista para reenviar)
-- **T18:** 103
+- Ninguna — **¡las 126 páginas de tarifas están recibidas!** 🎉
 
-**Total tarifa: 126 págs · Recibidas: 125 · Faltan: 1.**
+**Total tarifa: 126 págs · Recibidas: 126 · Faltan: 0.**
+
+## Próximo paso
+Volcar al JSON (`mv_tarifas_oficiales.json`) las tarifas recibidas pero aún no volcadas:
+T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21
+(T1-T4 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4, empezando por
+las que ya se han revisado en detalle esta sesión (T11, T12, T13, T17, T18, T19).
 
 ## Hallazgos de revisión (confirmados)
 - Las tarifas son columnas independientes y crecientes (T1 < T2 < … < T21).
