@@ -33,7 +33,7 @@
 | T10 | 55–60   | ✅ recibida COMPLETA (pendiente de volcar) |
 | T11 | 61–66   | ✅ COMPLETA y **volcada al JSON** |
 | T12 | 67–72   | ✅ COMPLETA y **volcada al JSON** |
-| T13 | 73–78   | ✅ recibida COMPLETA (pendiente de volcar) |
+| T13 | 73–78   | ✅ COMPLETA y **volcada al JSON** |
 | T14 | 79–84   | ✅ recibida (pendiente) |
 | T15 | 85–90   | ✅ recibida (pendiente) |
 | T16 | 91–96   | ✅ recibida (pendiente) |
@@ -51,9 +51,9 @@
 
 ## Próximo paso
 Volcar al JSON (`mv_tarifas_oficiales.json`) las tarifas recibidas pero aún no volcadas:
-T5, T6, T7, T8, T9, T10, T13, T14, T15, T16, T17, T18, T19, T20, T21
-(T1-T4, T11 y T12 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4/T11/T12, continuando
-con T13, T17, T18, T19 (ya revisadas en detalle esta sesión). T8 y T10 tienen páginas
+T5, T6, T7, T8, T9, T10, T14, T15, T16, T17, T18, T19, T20, T21
+(T1-T4, T11, T12 y T13 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4/T11/T12/T13,
+continuando con T17, T18, T19 (ya revisadas en detalle esta sesión). T8 y T10 tienen páginas
 sin imagen disponible (43,44,45,48 de T8; 55,56 de T10) — pendiente de reenvío del usuario.
 
 ## Hallazgos de revisión (confirmados)
@@ -175,11 +175,36 @@ Notas de extracción:
 - Acabados registrados en `_meta.acabados.T12`: DERBI HAYA=T12, DERBI CEREZO=T12+5%, DERBI MAPLE=T12+5%,
   DERBI ROBLE=T12; TABLERO PRECOMPUESTO +12%, TABLERO MARINO +20%.
 
+## T13 — ✅ COMPLETA y volcada al JSON
+
+Las 57 familias de T13 (páginas 73-78) están en `mv_tarifas_oficiales.json` (`tariffs.T13`), con el mismo
+esquema que T1/T3/T4/T11/T12. Verificado con `mv_tariff_importer.expand_tariffs`: 782 productos totales,
+732 con `zonePoints.T13` (50 sin valor — mismos huecos estructurales que T11/T12).
+
+Notas de extracción:
+- VITRINA_INGLESA en blanco (igual que T1-T4/T11/T12) → se omite.
+- TECHO_COLOR solo llega a TEC240 (TEC260-360 en blanco).
+- ELEMENTOS_LINEALES repite la fila "ENCM/E" duplicada con "EMC1M/E" ([85,50]); se usa solo EMC1M/E.
+- Página 78 (LATERALES_COLOR, REGLETA_COLOR/MELAMINA, BALDA_AEREA, TECHO_COLOR, COSTADO_MELAMINA,
+  ELEMENTOS_LINEALES, ALTILLOS_DECORATIVOS, BOTELLEROS) es **idéntica a T12**, salvo COSTADOS_COLOR
+  (T13: CCA=[18,22], CCF=[30,35], CCB=[29,32], CCS=[31,35], CCM=[41,52], CCC=[85,93] vs T12: [18,24],
+  [30,37],[29,36],[31,36],[41,54],[85,88]).
+- Acabados: BOREAL HAYA=T13, BOREAL CEREZO=T13+5%, BOREAL MAPLE=T13+5%.
+
+### Anomalías a registrar (confirmadas por zoom)
+1. **BTP33D/I** (BAJO_TERMINAL) = 181, muy por encima de BT30D/I=96/BTZ30D/I=118 (en T12, BTP33D/I=119
+   era similar a BT30D/I=96). Salto fuerte respecto a T12.
+2. **ATP33D/I** (ALTO_TERMINAL) = [173,211], muy por encima de AT30D/I=[79,86] (en T12, ATP33D/I=[112,137]
+   era similar a AT30D/I=[79,86]). Mismo patrón que BTP33D/I — posible cambio de precio real o error de
+   imprenta, pendiente de cotejar contra el catálogo físico.
+3. **AC45** (ALTO_COMBINADO) = [158,156], leve inversión (90 < 70 por 2 puntos), confirmado por zoom.
+
 ## Pendientes de trabajo (para continuar)
-1. **Volcar T5–T10, T13–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1), siguiendo el
-   mismo método usado para T3/T4/T11/T12 (tabla por tabla, alta resolución, cruzando con tarifas vecinas
+1. **Volcar T5–T10, T14–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1), siguiendo el
+   mismo método usado para T3/T4/T11/T12/T13 (tabla por tabla, alta resolución, cruzando con tarifas vecinas
    para detectar shifts de fila por el desenfoque/perspectiva de las fotos, y zoom para confirmar anomalías).
-   **T3, T4, T11 y T12 ya están completas** (ver secciones arriba). Siguiente en cola: **T13** (páginas 73-78).
+   **T3, T4, T11, T12 y T13 ya están completas** (ver secciones arriba). Siguiente en cola: **T17**
+   (páginas 97-102).
    Tras completar cada Tn, ejecutar `import-tariffs` (dry-run y luego aplicar) para regenerar `zonePoints`.
 2. **PDF de verificación** por tarifa para cotejar contra el papel antes de tocar precios.
 3. **Corregir el catálogo MV** en BD (afecta a Presupuestador 1 y 2 a la vez) + quitar duplicados fantasma (p.ej. "A100" con precio de otra tarifa).
