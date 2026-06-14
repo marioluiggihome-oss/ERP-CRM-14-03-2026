@@ -736,6 +736,32 @@ async def fix_product_names(current_user: dict = Depends(require_admin)):
         "message": f"Se corrigieron {fixed_count} nombres de productos"
     }
 
+@router.post("/products/fix-costados-depth")
+async def fix_costados_depth(current_user: dict = Depends(require_admin)):
+    """
+    Corregir el grosor (depth/fondo) de los costados.
+    Los costados son paneles laterales de 18mm/cm de grueso, no 33.
+    El valor de 33 corresponde al fondo de los muebles ALTOS y se copió por error.
+    """
+    categories = ["COSTADOS", "COSTADO", "COSTADOS_COLOR", "COSTADOS_MELAMINA", "LATERALES", "LATERALES_COLOR"]
+
+    result_depth = await db.products.update_many(
+        {"category": {"$in": categories}, "depth": 33},
+        {"$set": {"depth": 18}}
+    )
+    result_fondo = await db.products.update_many(
+        {"category": {"$in": categories}, "fondo": 33},
+        {"$set": {"fondo": 18}}
+    )
+
+    fixed_count = max(result_depth.modified_count, result_fondo.modified_count)
+
+    return {
+        "success": True,
+        "fixed_count": fixed_count,
+        "message": f"Se corrigió el grueso de {fixed_count} costados (33 -> 18)"
+    }
+
 @router.delete("/products/bulk/delete")
 async def delete_products_bulk(product_ids: List[str], current_user: dict = Depends(require_admin)):
     """Eliminar múltiples productos"""

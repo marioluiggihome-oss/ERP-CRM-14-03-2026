@@ -57,7 +57,17 @@ const Presupuestador2 = ({ currentUser }) => {
   const [manualLine, setManualLine] = useState({ name: '', price: '', qty: 1 });
   const [showManual, setShowManual] = useState(false);
   const [clientName, setClientName] = useState('');
+  const [budgetReference, setBudgetReference] = useState('');
   const [notes, setNotes] = useState('');
+  const [doorColorLow, setDoorColorLow] = useState('');
+  const [doorColorHigh, setDoorColorHigh] = useState('');
+  const [doorColorColumns, setDoorColorColumns] = useState('');
+  const [sideColor, setSideColor] = useState('');
+  const [doorHasVeta, setDoorHasVeta] = useState(false);
+  const [golaAlto, setGolaAlto] = useState(false);
+  const [golaAltoColor, setGolaAltoColor] = useState('');
+  const [golaBajo, setGolaBajo] = useState(false);
+  const [golaBajoColor, setGolaBajoColor] = useState('');
   const [showDespiece, setShowDespiece] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showNomenclatura, setShowNomenclatura] = useState(false);
@@ -89,6 +99,26 @@ const Presupuestador2 = ({ currentUser }) => {
         await load();
       } else {
         alert('Error al aplicar: ' + (r2.detail || ap.status));
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const fixCostadosDepth = async () => {
+    if (!window.confirm('Corregir el grueso de los costados (33 -> 18cm)?')) return;
+    setImporting(true);
+    try {
+      const r = await fetch(`${API_URL}/api/products/fix-costados-depth`,
+        { method: 'POST', headers: authHeaders() });
+      const rep = await r.json();
+      if (r.ok) {
+        alert(`✅ ${rep.message}`);
+        await load();
+      } else {
+        alert('Error: ' + (rep.detail || r.status));
       }
     } catch (e) {
       alert('Error: ' + e.message);
@@ -143,7 +173,7 @@ const Presupuestador2 = ({ currentUser }) => {
     ? library.priceLevels
     : Array.from({ length: 21 }, (_, i) => `T${i + 1}`);
   const pointValue = library?.pointValue || 1.0;
-  const levelLabel = library?.pricingSystem === 'zones' ? 'Zona' : 'Tarifa';
+  const levelLabel = library?.pricingSystem === 'zones' ? 'Grupo' : 'Tarifa';
 
   // Si la tarifa/zona guardada no existe en esta biblioteca, usamos la primera
   // disponible (p.ej. al cambiar de MV (T1-T21) a ZC (Z1-Z12)).
@@ -349,7 +379,7 @@ const Presupuestador2 = ({ currentUser }) => {
         budgetNumber: newBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin cliente',
         customerAddress: '',
-        internalReference: notes || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`,
+        internalReference: budgetReference || notes || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`,
         itemsMontada: buildMontadaItems(),
         itemsDespiece: [],
         status: 'activo',
@@ -375,7 +405,7 @@ const Presupuestador2 = ({ currentUser }) => {
         budgetNumber: newBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin especificar',
         customerAddress: '',
-        internalReference: notes || '',
+        internalReference: budgetReference || notes || '',
         itemsMontada: buildMontadaItems(),
         itemsDespiece: [],
         pointValueMontada: pointValue,
@@ -385,6 +415,14 @@ const Presupuestador2 = ({ currentUser }) => {
         ivaRate,
         allProducts: products,
         globalFinish: `${levelLabel} ${tariff}`,
+        doorColorLow,
+        doorColorHigh,
+        doorColorColumns,
+        sideColor,
+        golaAlto,
+        golaAltoColor,
+        golaBajo,
+        golaBajoColor,
       });
     } catch (e) { alert('No se pudo generar el PDF: ' + (e.message || e)); }
   };
@@ -404,9 +442,17 @@ const Presupuestador2 = ({ currentUser }) => {
           <div>
             <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador {libraryCode}</h1>
             <p className="text-[11px] text-orange-100/90 flex items-center gap-1.5 mt-0.5">
-              <Boxes size={12} /> {products.length} muebles · {levelLabel.toLowerCase()} por grupo
+              <Boxes size={12} /> {products.length} muebles · agrupados por familia
             </p>
           </div>
+        </div>
+
+        {/* Cliente y referencia de presupuesto */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Nombre del cliente…"
+            className="w-40 sm:w-48 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
+          <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Referencia de presupuesto…"
+            className="w-40 sm:w-52 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
         </div>
 
         <div className="flex items-center gap-3 ml-auto flex-wrap">
@@ -419,6 +465,13 @@ const Presupuestador2 = ({ currentUser }) => {
               className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
               {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
               {importing ? 'Importando…' : 'Importar tarifas'}
+            </button>
+          )}
+          {currentUser?.isAdmin && libraryCode === 'ZC' && (
+            <button onClick={fixCostadosDepth} disabled={importing} title="Corregir el grueso de los costados (33 -> 18cm) (admin)"
+              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
+              {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
+              {importing ? 'Corrigiendo…' : 'Corregir costados'}
             </button>
           )}
           <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad de medida (cm/mm)"
@@ -721,12 +774,51 @@ const Presupuestador2 = ({ currentUser }) => {
               </div>
             </div>
 
-            {/* Cliente y notas */}
+            {/* Notas */}
             <div className="px-4 py-3 border-b border-slate-100 space-y-2 bg-slate-50/30">
-              <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Nombre del cliente…"
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100" />
               <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="📝 Notas / observaciones…"
                 className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100" />
+            </div>
+
+            {/* Colores */}
+            <div className="px-4 py-3 border-b border-slate-100 space-y-1.5 bg-slate-50/30">
+              <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Colores</h4>
+              <div className="grid grid-cols-2 gap-1.5">
+                <input type="text" value={doorColorLow} onChange={e => setDoorColorLow(e.target.value)}
+                  className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Color puertas bajas" />
+                <input type="text" value={doorColorHigh} onChange={e => setDoorColorHigh(e.target.value)}
+                  className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Color puertas altas" />
+                <input type="text" value={doorColorColumns} onChange={e => setDoorColorColumns(e.target.value)}
+                  className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Color columnas" />
+                <input type="text" value={sideColor} onChange={e => setSideColor(e.target.value)}
+                  className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Color costados" />
+              </div>
+              <div className="flex items-center gap-2 mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                <input type="checkbox" checked={doorHasVeta === true} onChange={e => setDoorHasVeta(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-amber-600" id="p2-doorHasVeta" />
+                <label htmlFor="p2-doorHasVeta" className="text-[10px] font-bold text-amber-800 cursor-pointer select-none">
+                  Puerta con veta (dirección de la fibra)
+                </label>
+              </div>
+            </div>
+
+            {/* Gola */}
+            <div className="px-4 py-3 border-b border-slate-100 space-y-1.5 bg-slate-50/30">
+              <h4 className="text-[9px] font-black text-purple-600 uppercase tracking-widest">🔲 Gola</h4>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="flex items-center gap-1">
+                  <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }}
+                    className="w-3.5 h-3.5 accent-purple-600" />
+                  <input type="text" value={golaAltoColor} onChange={e => { setGolaAltoColor(e.target.value); setGolaAlto(true); }}
+                    className="flex-1 bg-purple-50 border border-purple-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-purple-500 text-purple-900 disabled:opacity-50" placeholder="Color gola alto" disabled={!golaAlto} />
+                </div>
+                <div className="flex items-center gap-1">
+                  <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }}
+                    className="w-3.5 h-3.5 accent-purple-600" />
+                  <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
+                    className="flex-1 bg-purple-50 border border-purple-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-purple-500 text-purple-900 disabled:opacity-50" placeholder="Color gola bajo" disabled={!golaBajo} />
+                </div>
+              </div>
             </div>
 
             {/* Líneas */}
@@ -882,8 +974,13 @@ const Presupuestador2 = ({ currentUser }) => {
         carcassMaterialName="Melamina Blanca"
         carcassBackThickness={8}
         customerName={clientName}
-        projectReference={`Presupuesto ${libraryCode} (${levelLabel} ${tariff})`}
+        projectReference={budgetReference || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`}
         expedientNumber={newBudgetNumber()}
+        doorColorLow={doorColorLow}
+        doorColorHigh={doorColorHigh}
+        doorColorColumns={doorColorColumns}
+        sideColor={sideColor}
+        doorHasVeta={doorHasVeta}
         doorToleranceHeight={2}
         doorToleranceWidth={3}
       />
