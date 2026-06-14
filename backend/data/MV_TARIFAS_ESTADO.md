@@ -24,7 +24,7 @@
 | T1  | 1–6     | ✅ COMPLETA y **volcada al JSON** |
 | T2  | 7–12    | ✅ COMPLETA y **volcada al JSON** |
 | T3  | 13–18   | ✅ COMPLETA y **volcada al JSON** |
-| T4  | 19–24   | ✅ recibida (pendiente) |
+| T4  | 19–24   | ✅ COMPLETA y **volcada al JSON** |
 | T5  | 25–30   | ✅ recibida (pág. 25 leída por OCR; verificar puertas/vitrina/rejilla) |
 | T6  | 31–36   | ✅ recibida (pendiente) |
 | T7  | 37–42   | ✅ recibida (pendiente) |
@@ -117,10 +117,35 @@ Imágenes usadas: `IMG_20251101_091418.jpg` (índice 18). Crops en `/tmp/mvrot/p
 3. Algunos códigos de familia ALTO en el catálogo de T3 llevan sufijo "*" (p.ej. "A25D/I*") que no
    aparece en T1/T2 — decidir si afecta al nombrado de los items o es solo notación de "ver leyenda".
 
+## T4 — ✅ COMPLETA y volcada al JSON
+
+Las 57 familias de T4 (páginas 19-24, incluye `BALDA_AEREA` nueva desde T4) están en
+`mv_tarifas_oficiales.json` (`tariffs.T4`). Verificado con `mv_tariff_importer.expand_tariffs`:
+754 productos totales, solo 20 sin `zonePoints.T4` (CMBB-70/CMBC-70 + TEC260-360 x3 cols, igual
+o mejor que T1/T2/T3 que tienen 39-41 huecos por las mismas razones — TECHO_COLOR de T4 solo llega
+a TEC240, igual que T1).
+
+T4 tiene **muchas más anomalías que T3** respecto al patrón "T3 < T4 < T2": quedaron registradas
+en `_meta.notas_revision` (entrada `"tarifa": "T4"`), entre ellas:
+- **REJILLA_CONFESIONARIO**: TODOS los valores de T4 son menores que T1 (la tarifa más barata) —
+  anomalía fuerte, confirmada por zoom, pendiente de cotejar contra el papel.
+- **ALTO_TERMINAL AT30D/I\*** = [42,47], muy por debajo de T1/T3/T2.
+- **ALTILLO L50\*/L60\***: valores 70cm aparentemente intercambiados (L50=86 > L60=80).
+- **SOBREENC_VITRINA SV30D/I y SV60**, **BAJO_TERMINAL BT30D/I y BTS30D/I**, **BAJO_5_CAJONES BC70**:
+  por debajo de lo esperado (T3 o incluso T1).
+- **LATERALES_COLOR/COSTADOS_COLOR**: LCM/CCM y LCC superan a T2 (T4>T2, invierte el orden esperado).
+- **Patrón sistemático "T1 < T4 < T3"** (en vez de "T3 < T4 < T2") en familias completas:
+  ALTO_DECORATIVO, BOTELLEROS, ALTILLOS_DECORATIVOS, y parcialmente MEDIACOLUMNA_VITRINA,
+  ELEMENTOS_LINEALES (COR, ZOC, COST).
+
+Pendiente: ejecutar `POST /libraries/MV/import-tariffs` (dry_run=false, wipe=true, admin) contra Mongo
+para regenerar los `zonePoints` de los productos MV con T3 **y** T4 ya incluidos.
+
 ## Pendientes de trabajo (para continuar)
-1. **Volcar T4–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1), siguiendo el mismo
-   método usado para T3 (tabla por tabla, alta resolución, cruzando con T1/T2/T3 para detectar shifts
-   de fila por el desenfoque/perspectiva de las fotos). **T3 ya está completa** (ver sección arriba).
+1. **Volcar T5–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1), siguiendo el mismo
+   método usado para T3/T4 (tabla por tabla, alta resolución, cruzando con tarifas vecinas para detectar
+   shifts de fila por el desenfoque/perspectiva de las fotos, y zoom para confirmar anomalías). **T3 y T4
+   ya están completas** (ver secciones arriba).
    Tras completar cada Tn, ejecutar `import-tariffs` (dry-run y luego aplicar) para regenerar `zonePoints`.
 2. **PDF de verificación** por tarifa para cotejar contra el papel antes de tocar precios.
 3. **Corregir el catálogo MV** en BD (afecta a Presupuestador 1 y 2 a la vez) + quitar duplicados fantasma (p.ej. "A100" con precio de otra tarifa).
