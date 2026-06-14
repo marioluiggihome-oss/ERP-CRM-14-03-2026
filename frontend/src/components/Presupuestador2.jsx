@@ -115,7 +115,6 @@ const Presupuestador2 = ({ currentUser }) => {
         }
       })
       .catch(() => setAvailableLibraries([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   const load = useCallback(async () => {
@@ -151,7 +150,6 @@ const Presupuestador2 = ({ currentUser }) => {
   useEffect(() => {
     if (!priceLevels.length) return;
     if (!priceLevels.includes(tariff)) setTariff(priceLevels[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [libraryCode, library]);
 
   // Descuento comercial del usuario, para el modo "COSTO fábrica".
