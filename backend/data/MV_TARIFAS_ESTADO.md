@@ -33,24 +33,21 @@
 | T10 | 55–60   | ✅ recibida COMPLETA (pendiente de volcar) |
 | T11 | 61–66   | ✅ recibida COMPLETA (pendiente de volcar) |
 | T12 | 67–72   | ✅ recibida COMPLETA (pendiente de volcar) |
-| T13 | 73–78   | ⚠️ FALTA **74** (tengo 73,75,76,77,78) |
+| T13 | 73–78   | ✅ recibida COMPLETA (pendiente de volcar) |
 | T14 | 79–84   | ✅ recibida (pendiente) |
 | T15 | 85–90   | ✅ recibida (pendiente) |
 | T16 | 91–96   | ✅ recibida (pendiente) |
-| T17 | 97–102  | ⚠️ FALTA **100** (tengo 97,98,99,101,102) |
-| T18 | 103–108 | ❌ SIN RECIBIR |
-| T19 | 109–114 | ⚠️ FALTAN **109, 111, 112** (tengo 110,113,114) |
+| T17 | 97–102  | ✅ recibida COMPLETA (pendiente de volcar) |
+| T18 | 103–108 | ⚠️ FALTA **103** (tengo 104,105,106,107,108) |
+| T19 | 109–114 | ✅ recibida COMPLETA (pendiente de volcar) |
 | T20 | 115–120 | ✅ recibida (pendiente) |
 | T21 | 121–126 | ✅ recibida (pendiente) |
 | Glosario | 127–138 | ✅ recibido (descripciones + dibujos + accesorios) |
 
 ## Páginas que faltan (lista para reenviar)
-- **T13:** 74
-- **T17:** 100
-- **T18:** 103, 104, 105, 106, 107, 108
-- **T19:** 109, 111, 112
+- **T18:** 103
 
-**Total tarifa: 126 págs · Recibidas: 115 · Faltan: 11.**
+**Total tarifa: 126 págs · Recibidas: 125 · Faltan: 1.**
 
 ## Hallazgos de revisión (confirmados)
 - Las tarifas son columnas independientes y crecientes (T1 < T2 < … < T21).
