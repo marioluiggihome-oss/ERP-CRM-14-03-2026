@@ -3,9 +3,9 @@ import {
   Table2, Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
   Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
-  Globe, Ruler
+  Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown
 } from 'lucide-react';
-import { authHeaders } from '../services/api';
+import { authHeaders, librariesAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
 import { MuebleIcon, classifyMueble, NOMENCLATURA, NOMENCLATURA_NOTAS } from './muebleIcons';
@@ -32,10 +32,12 @@ const groupKeyOf = (name) => {
  * en proyectos.
  */
 const Presupuestador2 = ({ currentUser }) => {
+  const [libraryCode, setLibraryCode] = useState(() => localStorage.getItem('p2_library') || 'MV');
+  const [availableLibraries, setAvailableLibraries] = useState([]);
   const [library, setLibrary] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tariff, setTariff] = useState(() => localStorage.getItem('p2_tariff') || 'T1');
+  const [tariff, setTariff] = useState(() => localStorage.getItem(`p2_tariff_${localStorage.getItem('p2_library') || 'MV'}`) || 'T1');
   const [family, setFamily] = useState('');
   const [search, setSearch] = useState('');
   const [searchScope, setSearchScope] = useState(() => localStorage.getItem('p2_search_scope') || 'all'); // 'all' | 'family'
@@ -45,6 +47,10 @@ const Presupuestador2 = ({ currentUser }) => {
   const [familiesCollapsed, setFamiliesCollapsed] = useState(false);
   const [cartCollapsed, setCartCollapsed] = useState(false);
   const [mobileTab, setMobileTab] = useState('catalog'); // 'catalog' | 'cart'
+  const [useMillimeters, setUseMillimeters] = useState(() => localStorage.getItem('p2_use_mm') === 'true');
+  const [showDistributorPrice, setShowDistributorPrice] = useState(false);
+  const [sortBy, setSortBy] = useState('default'); // 'default' | 'code' | 'name' | 'width' | 'height' | 'price'
+  const [sortDir, setSortDir] = useState('asc');
   const [cart, setCart] = useState([]);          // [{id, code, name, price, qty, manual}]
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -91,15 +97,33 @@ const Presupuestador2 = ({ currentUser }) => {
     }
   };
 
-  useEffect(() => { localStorage.setItem('p2_tariff', tariff); }, [tariff]);
+  useEffect(() => { localStorage.setItem('p2_library', libraryCode); }, [libraryCode]);
+  useEffect(() => { if (tariff) localStorage.setItem(`p2_tariff_${libraryCode}`, tariff); }, [tariff, libraryCode]);
   useEffect(() => { localStorage.setItem('p2_search_scope', searchScope); }, [searchScope]);
+  useEffect(() => { localStorage.setItem('p2_use_mm', useMillimeters ? 'true' : 'false'); }, [useMillimeters]);
+
+  // Bibliotecas disponibles para el usuario (ZC, MV, …) — solo se muestra el
+  // selector si hay más de una permitida.
+  useEffect(() => {
+    librariesAPI.getAll()
+      .then(data => {
+        const allowed = currentUser?.allowedLibraries || ['MV'];
+        const filtered = (Array.isArray(data) ? data : []).filter(l => l.isActive !== false && allowed.includes(l.code));
+        setAvailableLibraries(filtered);
+        if (filtered.length && !filtered.some(l => l.code === libraryCode)) {
+          setLibraryCode(filtered[0].code);
+        }
+      })
+      .catch(() => setAvailableLibraries([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [libR, prodR] = await Promise.all([
-        fetch(`${API_URL}/api/libraries/MV`, { headers: authHeaders() }),
-        fetch(`${API_URL}/api/libraries/MV/products?limit=5000`, { headers: authHeaders() }),
+        fetch(`${API_URL}/api/libraries/${libraryCode}`, { headers: authHeaders() }),
+        fetch(`${API_URL}/api/libraries/${libraryCode}/products?limit=5000`, { headers: authHeaders() }),
       ]);
       const lib = await libR.json().catch(() => null);
       const prod = await prodR.json().catch(() => ({}));
@@ -108,20 +132,47 @@ const Presupuestador2 = ({ currentUser }) => {
     } catch (e) {
       setProducts([]);
     } finally { setLoading(false); }
-  }, []);
+  }, [libraryCode]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Al cambiar de biblioteca, soltamos la familia/búsqueda activas para que se
+  // recalculen con el catálogo nuevo.
+  useEffect(() => { setFamily(''); setSearch(''); }, [libraryCode]);
 
   const priceLevels = (library?.priceLevels && library.priceLevels.length)
     ? library.priceLevels
     : Array.from({ length: 21 }, (_, i) => `T${i + 1}`);
   const pointValue = library?.pointValue || 1.0;
+  const levelLabel = library?.pricingSystem === 'zones' ? 'Zona' : 'Tarifa';
+
+  // Si la tarifa/zona guardada no existe en esta biblioteca, usamos la primera
+  // disponible (p.ej. al cambiar de MV (T1-T21) a ZC (Z1-Z12)).
+  useEffect(() => {
+    if (!priceLevels.length) return;
+    if (!priceLevels.includes(tariff)) setTariff(priceLevels[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libraryCode, library]);
+
+  // Descuento comercial del usuario, para el modo "COSTO fábrica".
+  const discountPct = currentUser?.discountMontada ?? currentUser?.commercialDiscount ?? 0;
+  const discountFactor = showDistributorPrice ? (1 - discountPct / 100) : 1;
+
+  const measureUnit = useMillimeters ? 'mm' : 'cm';
+  const formatMeasure = useCallback((v) => {
+    const n = parseFloat(v);
+    if (!v || Number.isNaN(n)) return null;
+    return useMillimeters ? Math.round(n * 10) : n;
+  }, [useMillimeters]);
 
   const priceOf = useCallback((p) => {
     const zp = p.zonePoints || {};
-    const base = zp[tariff] ?? zp.T1 ?? (typeof p.points === 'number' ? p.points : 0) ?? 0;
+    const base = zp[tariff] ?? zp[priceLevels[0]] ?? (typeof p.points === 'number' ? p.points : 0) ?? 0;
     return (Number(base) || 0) * pointValue;
-  }, [tariff, pointValue]);
+  }, [tariff, pointValue, priceLevels]);
+
+  // Precio a mostrar según el modo PVP / COSTO fábrica (con descuento comercial).
+  const displayPrice = useCallback((base) => base * discountFactor, [discountFactor]);
 
   const families = useMemo(() => {
     const m = {};
@@ -188,6 +239,25 @@ const Presupuestador2 = ({ currentUser }) => {
     });
   }, [products, family, search, searchScope, sizeFilter]);
 
+  // Orden de los resultados (código, nombre, ancho, alto o precio).
+  const sortedShown = useMemo(() => {
+    if (sortBy === 'default') return shown;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...shown].sort((a, b) => {
+      let va, vb;
+      switch (sortBy) {
+        case 'code': va = a.code || a.reference || ''; vb = b.code || b.reference || ''; break;
+        case 'name': va = a.name || ''; vb = b.name || ''; break;
+        case 'width': va = Number(a.width) || 0; vb = Number(b.width) || 0; break;
+        case 'height': va = Number(a.height) || 0; vb = Number(b.height) || 0; break;
+        case 'price': va = priceOf(a); vb = priceOf(b); break;
+        default: va = 0; vb = 0;
+      }
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+      return String(va).localeCompare(String(vb)) * dir;
+    });
+  }, [shown, sortBy, sortDir, priceOf]);
+
   const addToCart = (p) => {
     const price = priceOf(p);
     setCart(prev => {
@@ -216,13 +286,16 @@ const Presupuestador2 = ({ currentUser }) => {
   const updateItemPrice = (id, newPrice) => setCart(prev => prev
     .map(x => x.id === id ? { ...x, price: parseFloat(newPrice) || 0 } : x));
 
-  const cartTotal = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  // Las líneas manuales nunca llevan descuento; el resto sí, si está activo el modo COSTO.
+  const lineTotal = (x) => x.price * x.qty * (x.manual ? 1 : discountFactor);
+  const cartTotal = cart.reduce((s, x) => s + lineTotal(x), 0);
+  const cartTotalPvp = cart.reduce((s, x) => s + x.price * x.qty, 0);
   const ivaRate = 21;
   const ivaAmount = cartTotal * (ivaRate / 100);
   const totalConIva = cartTotal + ivaAmount;
   const totalUds = cart.reduce((s, x) => s + (x.qty || 0), 0);
 
-  const newBudgetNumber = () => `MV-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+  const newBudgetNumber = () => `${libraryCode}-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
 
   // Mapea las líneas de P2 a items "montada" de P1 (líneas manuales: el precio sale
   // de la tarifa). precio P1 = manualPoints * pointValue * qty → manualPoints = precio/pointValue
@@ -278,11 +351,11 @@ const Presupuestador2 = ({ currentUser }) => {
         budgetNumber: newBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin cliente',
         customerAddress: '',
-        internalReference: notes || `Presupuesto MV (Tarifa ${tariff})`,
+        internalReference: notes || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`,
         itemsMontada: buildMontadaItems(),
         itemsDespiece: [],
         status: 'activo',
-        totalPvp: cartTotal,
+        totalPvp: cartTotalPvp,
         ivaRate,
       };
       const r = await fetch(`${API_URL}/api/projects?user_id=${encodeURIComponent(currentUser?.id || '')}`, {
@@ -313,7 +386,7 @@ const Presupuestador2 = ({ currentUser }) => {
         companyName: 'LUIGGI HOME',
         ivaRate,
         allProducts: products,
-        globalFinish: `Tarifa ${tariff}`,
+        globalFinish: `${levelLabel} ${tariff}`,
       });
     } catch (e) { alert('No se pudo generar el PDF: ' + (e.message || e)); }
   };
@@ -331,9 +404,9 @@ const Presupuestador2 = ({ currentUser }) => {
             <Table2 size={22} />
           </div>
           <div>
-            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador MV</h1>
+            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador {libraryCode}</h1>
             <p className="text-[11px] text-emerald-100/90 flex items-center gap-1.5 mt-0.5">
-              <Boxes size={12} /> {products.length} muebles · tarifa por grupo
+              <Boxes size={12} /> {products.length} muebles · {levelLabel.toLowerCase()} por grupo
             </p>
           </div>
         </div>
@@ -343,11 +416,24 @@ const Presupuestador2 = ({ currentUser }) => {
             className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
             <BookOpen size={14} /> Nomenclatura
           </button>
-          {currentUser?.isAdmin && (
+          {currentUser?.isAdmin && libraryCode === 'MV' && (
             <button onClick={importTariffs} disabled={importing} title="Cargar las tarifas oficiales en el catálogo (admin)"
               className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
               {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
               {importing ? 'Importando…' : 'Importar tarifas'}
+            </button>
+          )}
+          <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad de medida (cm/mm)"
+            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
+            <Ruler size={14} /> {measureUnit.toUpperCase()}
+          </button>
+          {discountPct > 0 && (
+            <button onClick={() => setShowDistributorPrice(v => !v)}
+              title={showDistributorPrice ? 'Volver a mostrar PVP al cliente' : `Ver precio de fábrica (con tu descuento del ${discountPct}%)`}
+              className={`flex items-center gap-1.5 backdrop-blur rounded-xl px-3 py-1.5 ring-1 text-xs font-bold transition-colors ${
+                showDistributorPrice ? 'bg-orange-500 ring-orange-300 text-white' : 'bg-white/15 hover:bg-white/25 ring-white/25'}`}>
+              {showDistributorPrice ? <Unlock size={14} /> : <Lock size={14} />}
+              {showDistributorPrice ? `COSTO -${discountPct}%` : 'PVP'}
             </button>
           )}
           {/* Total mini en cabecera */}
@@ -357,8 +443,17 @@ const Presupuestador2 = ({ currentUser }) => {
               <span className="text-xl font-black">{eur(totalConIva)}</span>
             </div>
           )}
+          {availableLibraries.length > 1 && (
+            <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl pl-3 pr-1.5 py-1.5 ring-1 ring-white/25">
+              <span className="text-xs font-black uppercase flex items-center gap-1"><LibraryIcon size={14} /> Catálogo</span>
+              <select value={libraryCode} onChange={e => setLibraryCode(e.target.value)}
+                className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-emerald-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
+                {availableLibraries.map(l => <option key={l.code} value={l.code}>{l.name || l.code}</option>)}
+              </select>
+            </div>
+          )}
           <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl pl-3 pr-1.5 py-1.5 ring-1 ring-white/25">
-            <span className="text-xs font-black uppercase flex items-center gap-1"><Tag size={14} /> Tarifa</span>
+            <span className="text-xs font-black uppercase flex items-center gap-1"><Tag size={14} /> {levelLabel}</span>
             <select value={tariff} onChange={e => setTariff(e.target.value)}
               className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-emerald-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
               {priceLevels.map(t => <option key={t} value={t}>{t}</option>)}
@@ -488,7 +583,7 @@ const Presupuestador2 = ({ currentUser }) => {
                 <div className="relative">
                   <Ruler size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input value={sizeFilter} onChange={e => setSizeFilter(e.target.value)} type="number" min="0"
-                    placeholder="Medida ±5cm"
+                    placeholder={`Medida (${measureUnit})`}
                     className="w-28 pl-7 pr-2 py-1.5 text-[11px] border border-slate-200 rounded-lg outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
                 </div>
                 {sizeFilter && (
@@ -497,6 +592,26 @@ const Presupuestador2 = ({ currentUser }) => {
                     <X size={11} /> quitar medida
                   </button>
                 )}
+
+                {/* Orden de resultados */}
+                <div className="flex items-center gap-1 ml-auto">
+                  <ArrowUpDown size={13} className="text-slate-400" />
+                  <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                    className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400 bg-white">
+                    <option value="default">Orden por defecto</option>
+                    <option value="code">Código</option>
+                    <option value="name">Nombre</option>
+                    <option value="width">Ancho</option>
+                    <option value="height">Alto</option>
+                    <option value="price">Precio</option>
+                  </select>
+                  {sortBy !== 'default' && (
+                    <button onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')} title="Invertir orden"
+                      className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white hover:bg-slate-50 font-bold text-slate-500">
+                      {sortDir === 'asc' ? '↑' : '↓'}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Estado de la búsqueda */}
@@ -505,7 +620,7 @@ const Presupuestador2 = ({ currentUser }) => {
                   {searching ? (
                     <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700">
                       <Search size={12} />
-                      {shown.length} resultado{shown.length === 1 ? '' : 's'}
+                      {sortedShown.length} resultado{sortedShown.length === 1 ? '' : 's'}
                       {searchScope === 'family' && family ? ` en ${family}` : ' en todo el catálogo'}
                     </span>
                   ) : (
@@ -520,13 +635,13 @@ const Presupuestador2 = ({ currentUser }) => {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-3">
                 <Loader className="animate-spin" size={30} />
-                <span className="text-sm">Cargando catálogo MV…</span>
+                <span className="text-sm">Cargando catálogo {libraryCode}…</span>
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-                {shown.slice(0, 120).map(p => {
+                {sortedShown.slice(0, 120).map(p => {
                   const added = inCart(p.id);
-                  const med = [p.width, p.height, p.depth].filter(Boolean).join('×');
+                  const med = [p.width, p.height, p.depth].filter(Boolean).map(formatMeasure).join('×');
                   return (
                     <button key={p.id} onClick={() => addToCart(p)}
                       className={`group text-left bg-white border rounded-2xl p-3 flex items-center gap-3 transition-all hover:shadow-md ${
@@ -545,10 +660,13 @@ const Presupuestador2 = ({ currentUser }) => {
                           {added && <span className="text-[9px] font-black text-emerald-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> añadido</span>}
                         </div>
                         <p className="text-sm font-bold text-slate-800 truncate mt-1">{p.name}</p>
-                        {med && <p className="text-[11px] text-slate-400">{med} cm</p>}
+                        {med && <p className="text-[11px] text-slate-400">{med} {measureUnit}</p>}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="font-mono font-black text-emerald-700 text-sm whitespace-nowrap">{eur(priceOf(p))}</p>
+                        <p className="font-mono font-black text-emerald-700 text-sm whitespace-nowrap">{eur(displayPrice(priceOf(p)))}</p>
+                        {showDistributorPrice && discountPct > 0 && (
+                          <p className="text-[9px] text-slate-400 line-through">{eur(priceOf(p))}</p>
+                        )}
                         <span className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-emerald-600 group-hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold">
                           <Plus size={12} /> Añadir
                         </span>
@@ -556,14 +674,14 @@ const Presupuestador2 = ({ currentUser }) => {
                     </button>
                   );
                 })}
-                {shown.length === 0 && (
+                {sortedShown.length === 0 && (
                   <div className="col-span-full py-16 text-center text-slate-400">
                     <Boxes size={40} className="mx-auto mb-2 opacity-40" />
                     <p className="text-sm">Sin muebles en esta familia</p>
                   </div>
                 )}
-                {shown.length > 120 && (
-                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {shown.length} — usa el buscador para filtrar</p>
+                {sortedShown.length > 120 && (
+                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {sortedShown.length} — usa el buscador para filtrar</p>
                 )}
               </div>
             )}
@@ -647,9 +765,9 @@ const Presupuestador2 = ({ currentUser }) => {
                           <input value={it.price} onChange={e => updateItemPrice(it.id, e.target.value)} type="number" step="0.01"
                             className="w-16 text-right text-[11px] px-1.5 py-1 border border-amber-200 bg-amber-50 rounded-md font-mono" />
                         ) : (
-                          <span className="font-mono text-[11px] text-slate-400">{eur(it.price)}/ud</span>
+                          <span className="font-mono text-[11px] text-slate-400">{eur(displayPrice(it.price))}/ud</span>
                         )}
-                        <span className="font-mono font-black text-emerald-700 text-sm w-20 text-right">{eur(it.price * it.qty)}</span>
+                        <span className="font-mono font-black text-emerald-700 text-sm w-20 text-right">{eur(lineTotal(it))}</span>
                       </div>
                     </div>
                   </div>
@@ -761,11 +879,11 @@ const Presupuestador2 = ({ currentUser }) => {
         isOpen={showDespiece}
         onClose={() => setShowDespiece(false)}
         items={despieceItems}
-        catalogs={[{ id: 'MV', products }]}
+        catalogs={[{ id: libraryCode, products }]}
         carcassMaterialName="Melamina Blanca"
         carcassBackThickness={8}
         customerName={clientName}
-        projectReference={`Presupuesto MV (Tarifa ${tariff})`}
+        projectReference={`Presupuesto ${libraryCode} (${levelLabel} ${tariff})`}
         expedientNumber={newBudgetNumber()}
         doorToleranceHeight={2}
         doorToleranceWidth={3}
