@@ -91,8 +91,8 @@ async def get_libraries():
             {
                 "id": "lib-zc",
                 "code": "ZC",
-                "name": "Zona Cocinas",
-                "description": "Catálogo de muebles de cocina Zona Cocinas - Sistema de ZONAS",
+                "name": "ZC",
+                "description": "Catálogo de muebles de cocina ZC - Sistema de ZONAS",
                 "currency": "points",
                 "pointValue": 1.0,
                 "isActive": True,
@@ -104,8 +104,8 @@ async def get_libraries():
             {
                 "id": "lib-mv",
                 "code": "MV",
-                "name": "Muebles Valencia",
-                "description": "Catálogo Muebles Valencia - Sistema de TARIFAS (T1-T21)",
+                "name": "MV",
+                "description": "Catálogo MV - Sistema de TARIFAS (T1-T21)",
                 "currency": "points",
                 "pointValue": 3.33,
                 "isActive": False,
@@ -117,7 +117,15 @@ async def get_libraries():
         ]
         await db.libraries.insert_many(default_libraries)
         libraries = default_libraries
-    
+
+    # Normalizar nombres antiguos ("Zona Cocinas" / "Muebles Valencia") a "ZC" / "MV"
+    rename_map = {"Zona Cocinas": "ZC", "Muebles Valencia": "MV"}
+    for lib in libraries:
+        new_name = rename_map.get(lib.get("name"))
+        if new_name:
+            lib["name"] = new_name
+            await db.libraries.update_one({"code": lib.get("code")}, {"$set": {"name": new_name}})
+
     # Actualizar conteo de productos para cada biblioteca
     for lib in libraries:
         lib["productCount"] = await db.products.count_documents({"library": lib.get("code", "")})

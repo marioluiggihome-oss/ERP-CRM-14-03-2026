@@ -401,7 +401,7 @@ Responde SOLO con JSON válido, sin texto adicional."""
                     prod['category'] = category
                     
                     prod['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
-                    prod['manufacturer'] = 'MV' if library == 'MV' else 'Zona Cocinas'
+                    prod['manufacturer'] = 'MV' if library == 'MV' else 'ZC'
                     prod['module'] = module
                     prod['library'] = library
                     prod['importedAt'] = datetime.now(timezone.utc).isoformat()

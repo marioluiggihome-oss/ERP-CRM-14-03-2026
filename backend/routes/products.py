@@ -363,7 +363,7 @@ async def create_products_bulk(products: List[dict], current_user: dict = Depend
                 "width": float(product_data.get("width", 0) or 0),
                 "height": float(product_data.get("height", 0) or 0),
                 "depth": float(product_data.get("depth", 0) or 0),
-                "manufacturer": str(product_data.get("manufacturer", "Zona Cocinas")),
+                "manufacturer": str(product_data.get("manufacturer", "ZC")),
                 "points": float(product_data.get("points", 0) or 0),
                 "module": str(product_data.get("module", "montada"))
             }
@@ -473,7 +473,7 @@ async def bulk_upsert_products(data: dict, current_user: dict = Depends(require_
                     "width": float(product_data.get("width", 0) or 0),
                     "height": float(product_data.get("height", 0) or 0),
                     "depth": float(product_data.get("depth", 0) or 0),
-                    "manufacturer": str(product_data.get("manufacturer", "MV" if library == "MV" else "Zona Cocinas")),
+                    "manufacturer": str(product_data.get("manufacturer", "MV" if library == "MV" else "ZC")),
                     "module": str(product_data.get("module", "montada")),
                     "library": library,
                     "points": points,

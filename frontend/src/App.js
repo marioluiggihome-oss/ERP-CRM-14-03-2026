@@ -220,8 +220,8 @@ const App = () => {
           libraryPointValues, // Valores de punto por biblioteca
           currentLibrary: 'ZC', // Biblioteca por defecto
           catalogs: [
-            { id: 'cat-m-base', name: 'Zona Cocinas - Montada', manufacturer: 'Zona Cocinas', products: productsMontada, module: 'montada', library: 'ZC' },
-            { id: 'cat-d-base', name: 'Zona Cocinas - Despiece', manufacturer: 'Zona Cocinas', products: productsDespiece, module: 'despiece', library: 'ZC' }
+            { id: 'cat-m-base', name: 'ZC - Montada', manufacturer: 'ZC', products: productsMontada, module: 'montada', library: 'ZC' },
+            { id: 'cat-d-base', name: 'ZC - Despiece', manufacturer: 'ZC', products: productsDespiece, module: 'despiece', library: 'ZC' }
           ],
           // Catálogo de inventario con TODOS los productos de todas las bibliotecas
           inventoryCatalogs: [

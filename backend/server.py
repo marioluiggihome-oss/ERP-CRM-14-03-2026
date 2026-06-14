@@ -737,7 +737,7 @@ Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones."""
                 for product_data in product_list:
                     # Add metadata
                     product_data['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
-                    product_data['manufacturer'] = 'Zona Cocinas'
+                    product_data['manufacturer'] = 'ZC'
                     product_data['module'] = module
                     product_data['library'] = library  # Usar la biblioteca seleccionada (MV o ZC)
                     product_data['importedAt'] = datetime.now(timezone.utc).isoformat()
@@ -772,7 +772,7 @@ Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones."""
                             try:
                                 prod = json.loads(prod_json)
                                 prod['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
-                                prod['manufacturer'] = 'Zona Cocinas'
+                                prod['manufacturer'] = 'ZC'
                                 prod['module'] = module
                                 prod['library'] = library  # Usar la biblioteca seleccionada (MV o ZC)
                                 prod['importedAt'] = datetime.now(timezone.utc).isoformat()
