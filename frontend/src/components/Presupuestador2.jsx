@@ -479,19 +479,20 @@ const Presupuestador2 = ({ currentUser }) => {
         <div className={`flex-1 flex flex-col md:flex-row overflow-hidden ${mobileTab === 'cart' ? 'hidden md:flex' : 'flex'}`}>
           {/* Familias */}
           {familiesCollapsed ? (
-            <div className="hidden md:flex w-10 shrink-0 bg-white/70 backdrop-blur border-r border-slate-200 flex-col items-center py-3">
+            <div className="flex w-full md:w-10 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 md:flex-col items-center py-2 md:py-3 px-2 md:px-0 justify-between md:justify-center">
+              <p className="md:hidden text-[10px] font-black text-slate-400 uppercase flex items-center gap-1.5"><Layers size={12} /> Familias</p>
               <button onClick={() => setFamiliesCollapsed(false)} title="Mostrar familias"
                 className="p-2 rounded-lg hover:bg-orange-50 text-orange-600">
                 <PanelLeftOpen size={18} />
               </button>
             </div>
           ) : (
-            <div className="w-full md:w-56 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-48 md:max-h-none">
+            <div className="w-full md:w-56 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-[40vh] md:max-h-none">
               <div className="p-2.5">
                 <div className="flex items-center justify-between px-2 py-1.5">
                   <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1.5"><Layers size={12} /> Familias</p>
                   <button onClick={() => setFamiliesCollapsed(true)} title="Ocultar familias"
-                    className="hidden md:block text-slate-300 hover:text-orange-600">
+                    className="text-slate-300 hover:text-orange-600">
                     <PanelLeftClose size={14} />
                   </button>
                 </div>
