@@ -31,7 +31,7 @@
 | T8  | 43–48   | ✅ recibida COMPLETA (pendiente de volcar) |
 | T9  | 49–54   | ✅ recibida (pendiente) |
 | T10 | 55–60   | ✅ recibida COMPLETA (pendiente de volcar) |
-| T11 | 61–66   | ✅ recibida COMPLETA (pendiente de volcar) |
+| T11 | 61–66   | ✅ COMPLETA y **volcada al JSON** |
 | T12 | 67–72   | ✅ recibida COMPLETA (pendiente de volcar) |
 | T13 | 73–78   | ✅ recibida COMPLETA (pendiente de volcar) |
 | T14 | 79–84   | ✅ recibida (pendiente) |
@@ -51,9 +51,10 @@
 
 ## Próximo paso
 Volcar al JSON (`mv_tarifas_oficiales.json`) las tarifas recibidas pero aún no volcadas:
-T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21
-(T1-T4 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4, empezando por
-las que ya se han revisado en detalle esta sesión (T11, T12, T13, T17, T18, T19).
+T5, T6, T7, T8, T9, T10, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21
+(T1-T4 y T11 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4/T11, continuando
+con T12, T13, T17, T18, T19 (ya revisadas en detalle esta sesión). T8 y T10 tienen páginas
+sin imagen disponible (43,44,45,48 de T8; 55,56 de T10) — pendiente de reenvío del usuario.
 
 ## Hallazgos de revisión (confirmados)
 - Las tarifas son columnas independientes y crecientes (T1 < T2 < … < T21).
@@ -140,11 +141,30 @@ en `_meta.notas_revision` (entrada `"tarifa": "T4"`), entre ellas:
 Pendiente: ejecutar `POST /libraries/MV/import-tariffs` (dry_run=false, wipe=true, admin) contra Mongo
 para regenerar los `zonePoints` de los productos MV con T3 **y** T4 ya incluidos.
 
+## T11 — ✅ COMPLETA y volcada al JSON
+
+Las 57 familias de T11 (páginas 61-66) están en `mv_tarifas_oficiales.json` (`tariffs.T11`), con el mismo
+esquema que T1/T3/T4. Verificado con `mv_tariff_importer.expand_tariffs`: 782 productos totales, 732 con
+`zonePoints.T11` (50 sin valor — mismo patrón estructural que T1/T4: SOBREENCIMERA/SOBREENC_VITRINA/
+SOBREENC_CAJON/SOBREENC_VIT_CAJON variantes H127, COSTADOS_MELAMINA-90, TECHO_COLOR TEC260-360, y
+ENCM/E entero/medio — huecos ya presentes en T1/T3/T4 por las mismas familias).
+
+Notas de extracción:
+- VITRINA_INGLESA aparece en blanco en T11 (sin valores), igual que en T1-T4 → se omite.
+- TECHO_COLOR de T11 solo llega a TEC240 (TEC260-360 en blanco), igual que T1.
+- Páginas 62 (BAJOS) y 63 (ALTOS) requirieron recortes con zoom (PIL) para confirmar valores en el borde
+  derecho de las tablas.
+- No se ha hecho cruce numérico con T5-T10 todavía porque aún no están en el JSON.
+
+Acabados T11 registrados en `_meta.acabados.T11`: ORLY/CADO/IBIZA BCO BRILLO/PALMA BCO BRILLO = T11;
+TURIN RANURADO/ALAVA RANURADO/BURDEOS/MENDI/PARIS/IBIZA BCO SEDA MATE/PALMA BCO SEDA MATE = T11 -10%;
+LACADO EFECTO GOMA = mismo precio; LACADO BRILLO COLOR = +12%.
+
 ## Pendientes de trabajo (para continuar)
-1. **Volcar T5–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1), siguiendo el mismo
-   método usado para T3/T4 (tabla por tabla, alta resolución, cruzando con tarifas vecinas para detectar
-   shifts de fila por el desenfoque/perspectiva de las fotos, y zoom para confirmar anomalías). **T3 y T4
-   ya están completas** (ver secciones arriba).
+1. **Volcar T5–T10, T12–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1), siguiendo el
+   mismo método usado para T3/T4/T11 (tabla por tabla, alta resolución, cruzando con tarifas vecinas para
+   detectar shifts de fila por el desenfoque/perspectiva de las fotos, y zoom para confirmar anomalías).
+   **T3, T4 y T11 ya están completas** (ver secciones arriba). Siguiente en cola: **T12** (páginas 67-72).
    Tras completar cada Tn, ejecutar `import-tariffs` (dry-run y luego aplicar) para regenerar `zonePoints`.
 2. **PDF de verificación** por tarifa para cotejar contra el papel antes de tocar precios.
 3. **Corregir el catálogo MV** en BD (afecta a Presupuestador 1 y 2 a la vez) + quitar duplicados fantasma (p.ej. "A100" con precio de otra tarifa).
