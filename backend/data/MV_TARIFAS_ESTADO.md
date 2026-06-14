@@ -39,7 +39,7 @@
 | T16 | 91–96   | ✅ recibida (pendiente) |
 | T17 | 97–102  | ⚠️ recibida INCOMPLETA — faltan páginas 97 y 98 (Puertas/Vitrina y Bajos) |
 | T18 | 103–108 | ✅ COMPLETA y **volcada al JSON** |
-| T19 | 109–114 | ✅ recibida COMPLETA (pendiente de volcar) |
+| T19 | 109–114 | ⚠️ recibida INCOMPLETA — faltan páginas 110, 113 y 114 (Bajos, Alto abatible/combinado/etc y Columnas/mediacolumnas/etc) |
 | T20 | 115–120 | ✅ recibida (pendiente) |
 | T21 | 121–126 | ✅ recibida (pendiente) |
 | Glosario | 127–138 | ✅ recibido (descripciones + dibujos + accesorios) |
@@ -51,10 +51,12 @@
 
 ## Próximo paso
 Volcar al JSON (`mv_tarifas_oficiales.json`) las tarifas recibidas pero aún no volcadas:
-T5, T6, T7, T8, T9, T10, T14, T15, T16, T17 (parcial), T19, T20, T21
-(T1-T4, T11, T12, T13 y T18 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4/T11/T12/T13/T18,
-continuando con T19 (ya revisada en detalle esta sesión). T8, T10 y T17 tienen páginas sin imagen
-disponible (43,44,45,48 de T8; 55,56 de T10; 97,98 de T17) — pendiente de reenvío del usuario.
+T5, T6, T7, T8, T9, T10, T14, T15, T16, T17 (parcial), T19 (parcial), T20, T21
+(T1-T4, T11, T12, T13 y T18 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4/T11/T12/T13/T18.
+T17 y T19 están bloqueadas por páginas faltantes (ver secciones dedicadas más abajo); pendiente decidir con
+el usuario si se espera al reenvío o se continúa con otra tarifa de la cola (T5, T6, T7, T9, T14, T15, T16,
+T20, T21). T8, T10, T17 y T19 tienen páginas sin imagen disponible (43,44,45,48 de T8; 55,56 de T10;
+97,98 de T17; 110,113,114 de T19) — pendiente de reenvío del usuario.
 
 ## Hallazgos de revisión (confirmados)
 - Las tarifas son columnas independientes y crecientes (T1 < T2 < … < T21).
@@ -228,16 +230,26 @@ Notas de extracción:
 Faltan las páginas 97 (Puertas/Vitrina/Vitrina inglesa/Rejilla) y 98 (Bajos) de T17. El resto (99-102) sí
 se recibió esta sesión. **No se puede volcar al JSON hasta recibir esas 2 páginas.**
 
+## T19 — ⚠️ INCOMPLETA, bloqueada
+Solo se han localizado las páginas 109 (Puertas/Vitrina/Vitrina inglesa/Rejilla), 111 (Altos, recibida por
+duplicado) y 112 (Alto abatible/combinado/altillo/sobreencimera) de T19. Faltan las páginas 110 (Bajos),
+113 (Columnas/mediacolumnas/botelleros/altillos decorativos) y 114 (Laterales/costados color/regletas/
+balda aérea/techo color/elementos lineales + acabados). Se revisaron las 44 imágenes disponibles en la
+sesión y ninguna corresponde a estas 3 páginas. **No se puede volcar al JSON hasta recibir esas 3 páginas.**
+
 ## Pendientes de trabajo (para continuar)
-1. **Volcar T5–T10, T14–T17 (parcial), T19–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y
-   Tn+1), siguiendo el mismo método usado para T3/T4/T11/T12/T13/T18 (tabla por tabla, alta resolución,
-   cruzando con tarifas vecinas para detectar shifts de fila por el desenfoque/perspectiva de las fotos, y
-   zoom para confirmar anomalías). **T3, T4, T11, T12, T13 y T18 ya están completas** (ver secciones
-   arriba). Siguiente en cola: **T19** (páginas 109-114, faltan localizar imágenes de 110/113/114).
+1. **Volcar T5–T10, T14–T17 (parcial), T19 (parcial), T20–T21** al JSON (vía OCR + verificación cruzada Tn
+   entre Tn-1 y Tn+1), siguiendo el mismo método usado para T3/T4/T11/T12/T13/T18 (tabla por tabla, alta
+   resolución, cruzando con tarifas vecinas para detectar shifts de fila por el desenfoque/perspectiva de
+   las fotos, y zoom para confirmar anomalías). **T3, T4, T11, T12, T13 y T18 ya están completas** (ver
+   secciones arriba). **T17 y T19 están bloqueadas** (ver secciones arriba) — siguiente disponible en la
+   cola: alguna de T5, T6, T7, T9, T14, T15, T16, T20, T21 (pendiente confirmar cuáles tienen las 6
+   páginas completas).
 2. **Páginas pendientes de reenvío del usuario**:
    - T8: páginas 43, 44, 45, 48 (1, 2, 3 y 6 de la tarifa; ya se tienen 46 y 47).
    - T10: páginas 55, 56 (1 y 2 de la tarifa; ya se tienen 57, 58, 59, 60).
    - T17: páginas 97, 98 (1 y 2 de la tarifa; ya se tienen 99-102).
+   - T19: páginas 110, 113, 114 (2, 5 y 6 de la tarifa; ya se tienen 109, 111, 112).
 3. **VITRINA_INGLESA**: ahora que se sabe que algunas tarifas (T14, T18) tienen valores reales para esta
    familia, revisar T1-T4/T11-T13/T17 contra el papel para confirmar si realmente están en blanco o si
    se trata de páginas no enviadas/mal leídas.
