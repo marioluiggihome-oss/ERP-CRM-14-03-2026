@@ -37,8 +37,8 @@
 | T14 | 79–84   | ✅ recibida (pendiente) |
 | T15 | 85–90   | ✅ recibida (pendiente) |
 | T16 | 91–96   | ✅ recibida (pendiente) |
-| T17 | 97–102  | ✅ recibida COMPLETA (pendiente de volcar) |
-| T18 | 103–108 | ✅ recibida COMPLETA (pendiente de volcar) |
+| T17 | 97–102  | ⚠️ recibida INCOMPLETA — faltan páginas 97 y 98 (Puertas/Vitrina y Bajos) |
+| T18 | 103–108 | ✅ COMPLETA y **volcada al JSON** |
 | T19 | 109–114 | ✅ recibida COMPLETA (pendiente de volcar) |
 | T20 | 115–120 | ✅ recibida (pendiente) |
 | T21 | 121–126 | ✅ recibida (pendiente) |
@@ -51,10 +51,10 @@
 
 ## Próximo paso
 Volcar al JSON (`mv_tarifas_oficiales.json`) las tarifas recibidas pero aún no volcadas:
-T5, T6, T7, T8, T9, T10, T14, T15, T16, T17, T18, T19, T20, T21
-(T1-T4, T11, T12 y T13 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4/T11/T12/T13,
-continuando con T17, T18, T19 (ya revisadas en detalle esta sesión). T8 y T10 tienen páginas
-sin imagen disponible (43,44,45,48 de T8; 55,56 de T10) — pendiente de reenvío del usuario.
+T5, T6, T7, T8, T9, T10, T14, T15, T16, T17 (parcial), T19, T20, T21
+(T1-T4, T11, T12, T13 y T18 ya están volcadas). Se hará tarifa por tarifa, igual que T3/T4/T11/T12/T13/T18,
+continuando con T19 (ya revisada en detalle esta sesión). T8, T10 y T17 tienen páginas sin imagen
+disponible (43,44,45,48 de T8; 55,56 de T10; 97,98 de T17) — pendiente de reenvío del usuario.
 
 ## Hallazgos de revisión (confirmados)
 - Las tarifas son columnas independientes y crecientes (T1 < T2 < … < T21).
@@ -199,12 +199,48 @@ Notas de extracción:
    imprenta, pendiente de cotejar contra el catálogo físico.
 3. **AC45** (ALTO_COMBINADO) = [158,156], leve inversión (90 < 70 por 2 puntos), confirmado por zoom.
 
+## T18 — ✅ COMPLETA y volcada al JSON
+
+Las 58 familias de T18 (páginas 103-108) están en `mv_tarifas_oficiales.json` (`tariffs.T18`). Verificado
+con `mv_tariff_importer.expand_tariffs`: 806 productos totales (subió de 782 porque se añadió
+`VITRINA_INGLESA` como familia nueva, +24 productos), 756 con `zonePoints.T18` (50 sin valor — mismos
+huecos estructurales que T11/T12/T13).
+
+Notas de extracción:
+- **Novedad**: T18 es la primera tarifa transcrita con **VITRINA_INGLESA con valores reales** (en
+  T1-T4/T11-T13 aparece en blanco y se omite). Se añadió como familia `matrix` nueva con cols
+  PVI30-PVI60 y filas 70/90/127/147. Esto añade 24 productos nuevos al catálogo total (de 782 a 806),
+  que no tienen `zonePoints` para T1-T13/T17 (no se ha vuelto a esas tarifas para rellenar este hueco).
+- TECHO_COLOR solo llega a TEC240 (TEC260-360 en blanco).
+- ELEMENTOS_LINEALES repite la fila "ENCM/E" duplicada con "EMC1M/E" ([85,50]); se usa solo EMC1M/E.
+- COST=[null,10] (en T11-T13 era [null,6]).
+- Acabados: PIRINEO CASTAÑO=T18, CELTA CASTAÑO=T18, AROSA CASTAÑO=T18; TUDOR BLANCO +7%, PATINADO +3%,
+  ACABADO ANTICUARIO +12%.
+
+### Anomalía (patrón recurrente)
+- **BTP33D/I** (BAJO_TERMINAL) = 154, por encima de BT30D/I=100/BTZ30D/I=124 — mismo patrón que la
+  anomalía detectada en T13 (BTP33D/I=181, mucho más extrema).
+- **ATP33D/I** (ALTO_TERMINAL) = [142,161], por encima de AT30D/I=[83,90] — mismo patrón que T13
+  ([173,211], más extremo). Parece un patrón sistemático en estas dos referencias "P33" en varias
+  tarifas; pendiente de cotejar contra el catálogo físico.
+
+## T17 — ⚠️ INCOMPLETA, bloqueada
+Faltan las páginas 97 (Puertas/Vitrina/Vitrina inglesa/Rejilla) y 98 (Bajos) de T17. El resto (99-102) sí
+se recibió esta sesión. **No se puede volcar al JSON hasta recibir esas 2 páginas.**
+
 ## Pendientes de trabajo (para continuar)
-1. **Volcar T5–T10, T14–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y Tn+1), siguiendo el
-   mismo método usado para T3/T4/T11/T12/T13 (tabla por tabla, alta resolución, cruzando con tarifas vecinas
-   para detectar shifts de fila por el desenfoque/perspectiva de las fotos, y zoom para confirmar anomalías).
-   **T3, T4, T11, T12 y T13 ya están completas** (ver secciones arriba). Siguiente en cola: **T17**
-   (páginas 97-102).
+1. **Volcar T5–T10, T14–T17 (parcial), T19–T21** al JSON (vía OCR + verificación cruzada Tn entre Tn-1 y
+   Tn+1), siguiendo el mismo método usado para T3/T4/T11/T12/T13/T18 (tabla por tabla, alta resolución,
+   cruzando con tarifas vecinas para detectar shifts de fila por el desenfoque/perspectiva de las fotos, y
+   zoom para confirmar anomalías). **T3, T4, T11, T12, T13 y T18 ya están completas** (ver secciones
+   arriba). Siguiente en cola: **T19** (páginas 109-114, faltan localizar imágenes de 110/113/114).
+2. **Páginas pendientes de reenvío del usuario**:
+   - T8: páginas 43, 44, 45, 48 (1, 2, 3 y 6 de la tarifa; ya se tienen 46 y 47).
+   - T10: páginas 55, 56 (1 y 2 de la tarifa; ya se tienen 57, 58, 59, 60).
+   - T17: páginas 97, 98 (1 y 2 de la tarifa; ya se tienen 99-102).
+3. **VITRINA_INGLESA**: ahora que se sabe que algunas tarifas (T14, T18) tienen valores reales para esta
+   familia, revisar T1-T4/T11-T13/T17 contra el papel para confirmar si realmente están en blanco o si
+   se trata de páginas no enviadas/mal leídas.
    Tras completar cada Tn, ejecutar `import-tariffs` (dry-run y luego aplicar) para regenerar `zonePoints`.
 2. **PDF de verificación** por tarifa para cotejar contra el papel antes de tocar precios.
 3. **Corregir el catálogo MV** en BD (afecta a Presupuestador 1 y 2 a la vez) + quitar duplicados fantasma (p.ej. "A100" con precio de otra tarifa).
