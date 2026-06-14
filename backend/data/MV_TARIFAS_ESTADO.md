@@ -28,16 +28,16 @@
 | T5  | 25–30   | ✅ recibida (pág. 25 leída por OCR; verificar puertas/vitrina/rejilla) |
 | T6  | 31–36   | ✅ recibida (pendiente) |
 | T7  | 37–42   | ✅ recibida (pendiente) |
-| T8  | 43–48   | ⚠️ FALTAN **46, 47** (tengo 43,44,45,48) |
+| T8  | 43–48   | ✅ recibida COMPLETA (pendiente de volcar) |
 | T9  | 49–54   | ✅ recibida (pendiente) |
-| T10 | 55–60   | ⚠️ FALTAN **57,58,59,60** (tengo 55,56) |
-| T11 | 61–66   | ❌ SIN RECIBIR |
-| T12 | 67–72   | ❌ SIN RECIBIR |
-| T13 | 73–78   | ❌ SIN RECIBIR |
+| T10 | 55–60   | ✅ recibida COMPLETA (pendiente de volcar) |
+| T11 | 61–66   | ✅ recibida COMPLETA (pendiente de volcar) |
+| T12 | 67–72   | ✅ recibida COMPLETA (pendiente de volcar) |
+| T13 | 73–78   | ⚠️ FALTA **74** (tengo 73,75,76,77,78) |
 | T14 | 79–84   | ✅ recibida (pendiente) |
 | T15 | 85–90   | ✅ recibida (pendiente) |
 | T16 | 91–96   | ✅ recibida (pendiente) |
-| T17 | 97–102  | ⚠️ FALTAN **99–102** (tengo 97,98) |
+| T17 | 97–102  | ⚠️ FALTA **100** (tengo 97,98,99,101,102) |
 | T18 | 103–108 | ❌ SIN RECIBIR |
 | T19 | 109–114 | ⚠️ FALTAN **109, 111, 112** (tengo 110,113,114) |
 | T20 | 115–120 | ✅ recibida (pendiente) |
@@ -45,16 +45,12 @@
 | Glosario | 127–138 | ✅ recibido (descripciones + dibujos + accesorios) |
 
 ## Páginas que faltan (lista para reenviar)
-- **T8:** 46, 47
-- **T10:** 57, 58, 59, 60
-- **T11:** 61, 62, 63, 64, 65, 66
-- **T12:** 67, 68, 69, 70, 71, 72
-- **T13:** 73, 74, 75, 76, 77, 78
-- **T17:** 99, 100, 101, 102
+- **T13:** 74
+- **T17:** 100
 - **T18:** 103, 104, 105, 106, 107, 108
 - **T19:** 109, 111, 112
 
-**Total tarifa: 126 págs · Recibidas: 87 · Faltan: 39.**
+**Total tarifa: 126 págs · Recibidas: 115 · Faltan: 11.**
 
 ## Hallazgos de revisión (confirmados)
 - Las tarifas son columnas independientes y crecientes (T1 < T2 < … < T21).
