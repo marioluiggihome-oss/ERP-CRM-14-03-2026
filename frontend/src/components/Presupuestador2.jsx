@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table2, Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
-  Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors
+  Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
+  PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
+  Globe, Ruler
 } from 'lucide-react';
 import { authHeaders } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
@@ -12,6 +14,16 @@ import { BookOpen } from 'lucide-react';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+
+// Agrupa nombres de familia muy parecidos (p.ej. "PUERTA"/"PUERTAS",
+// "LATERAL"/"LATERALES"/"LATERALES COLOR") bajo una misma cabecera para
+// compactar la lista de categorías sin tocar los datos del catálogo.
+const groupKeyOf = (name) => {
+  const first = (name || '').split(' ')[0];
+  if (first.endsWith('ES')) return first.slice(0, -2);
+  if (first.endsWith('S')) return first.slice(0, -1);
+  return first;
+};
 
 /**
  * Presupuestador 2 — navegación por familias del catálogo MV (Muebles Valencia)
@@ -26,6 +38,13 @@ const Presupuestador2 = ({ currentUser }) => {
   const [tariff, setTariff] = useState(() => localStorage.getItem('p2_tariff') || 'T1');
   const [family, setFamily] = useState('');
   const [search, setSearch] = useState('');
+  const [searchScope, setSearchScope] = useState(() => localStorage.getItem('p2_search_scope') || 'all'); // 'all' | 'family'
+  const [sizeFilter, setSizeFilter] = useState('');
+  const [familyFilter, setFamilyFilter] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [familiesCollapsed, setFamiliesCollapsed] = useState(false);
+  const [cartCollapsed, setCartCollapsed] = useState(false);
+  const [mobileTab, setMobileTab] = useState('catalog'); // 'catalog' | 'cart'
   const [cart, setCart] = useState([]);          // [{id, code, name, price, qty, manual}]
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -73,6 +92,7 @@ const Presupuestador2 = ({ currentUser }) => {
   };
 
   useEffect(() => { localStorage.setItem('p2_tariff', tariff); }, [tariff]);
+  useEffect(() => { localStorage.setItem('p2_search_scope', searchScope); }, [searchScope]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,21 +136,57 @@ const Presupuestador2 = ({ currentUser }) => {
     if (!family && families.length) setFamily(families[0][0]);
   }, [families, family]);
 
-  // Búsqueda GLOBAL e intuitiva: si hay texto, busca en TODO el catálogo (ignora la
-  // familia) por código, nombre, familia y medidas; admite varias palabras (todas
-  // deben coincidir, en cualquier orden). Sin texto, filtra por la familia activa.
+  // Agrupa familias muy parecidas (singular/plural, variantes "color"/"melamina"…)
+  // bajo una cabecera común, para que la barra de categorías no sea interminable.
+  const familyGroups = useMemo(() => {
+    const groups = {};
+    families.forEach(([name, count]) => {
+      const key = groupKeyOf(name);
+      if (!groups[key]) groups[key] = { key, total: 0, members: [] };
+      groups[key].total += count;
+      groups[key].members.push([name, count]);
+    });
+    let list = Object.values(groups);
+    const q = familyFilter.trim().toLowerCase();
+    if (q) {
+      list = list.filter(g => g.key.toLowerCase().includes(q) || g.members.some(([n]) => n.toLowerCase().includes(q)));
+    }
+    return list.sort((a, b) => a.key.localeCompare(b.key));
+  }, [families, familyFilter]);
+
+  // Si la familia activa pertenece a un grupo con varios miembros, lo dejamos
+  // expandido automáticamente para que se vea seleccionado.
+  useEffect(() => {
+    if (!family) return;
+    const key = groupKeyOf(family);
+    setExpandedGroups(prev => (prev[key] ? prev : { ...prev, [key]: true }));
+  }, [family]);
+
+  // Búsqueda GLOBAL e intuitiva: si hay texto, busca en TODO el catálogo (o solo en
+  // la familia activa, según el modo elegido) por código, nombre, familia y medidas;
+  // admite varias palabras (todas deben coincidir, en cualquier orden). Sin texto,
+  // filtra por la familia activa. También admite un filtro opcional de medida (±5cm).
   const searching = search.trim().length > 0;
   const shown = useMemo(() => {
     const tokens = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const sizeQ = parseFloat(sizeFilter);
+    const hasSize = !Number.isNaN(sizeQ) && sizeQ > 0;
     return products.filter(p => {
       if (tokens.length === 0) {
-        return !family || (p.category || 'OTROS') === family;
+        if (family && (p.category || 'OTROS') !== family) return false;
+      } else {
+        const dims = [p.width, p.height, p.depth].filter(Boolean).join('x');
+        const hay = `${p.code || ''} ${p.reference || ''} ${p.name || ''} ${p.category || ''} ${dims}`.toLowerCase();
+        if (!tokens.every(t => hay.includes(t))) return false;
+        if (searchScope === 'family' && family && (p.category || 'OTROS') !== family) return false;
       }
-      const dims = [p.width, p.height, p.depth].filter(Boolean).join('x');
-      const hay = `${p.code || ''} ${p.reference || ''} ${p.name || ''} ${p.category || ''} ${dims}`.toLowerCase();
-      return tokens.every(t => hay.includes(t));
+      if (hasSize) {
+        const dims = [p.width, p.height, p.depth].filter(Boolean);
+        if (!dims.some(d => Math.abs(d - sizeQ) <= 5)) return false;
+      }
+      return true;
     });
-  }, [products, family, search]);
+  }, [products, family, search, searchScope, sizeFilter]);
 
   const addToCart = (p) => {
     const price = priceOf(p);
@@ -269,7 +325,7 @@ const Presupuestador2 = ({ currentUser }) => {
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-emerald-50/40">
       {/* ── Cabecera ── */}
-      <div className="shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 text-white px-4 sm:px-6 py-3.5 flex items-center gap-3 flex-wrap shadow-lg">
+      <div className="shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 text-white px-4 sm:px-6 py-3.5 flex items-center gap-3 flex-wrap shadow-lg sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center ring-1 ring-white/30">
             <Table2 size={22} />
@@ -311,39 +367,101 @@ const Presupuestador2 = ({ currentUser }) => {
         </div>
       </div>
 
+      {/* ── Pestañas móviles: Catálogo / Presupuesto ── */}
+      <div className="md:hidden shrink-0 flex border-b border-slate-200 bg-white sticky top-[64px] z-20">
+        <button onClick={() => setMobileTab('catalog')}
+          className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
+            mobileTab === 'catalog' ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/60' : 'text-slate-400'}`}>
+          <Boxes size={14} /> Catálogo
+        </button>
+        <button onClick={() => setMobileTab('cart')}
+          className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
+            mobileTab === 'cart' ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/60' : 'text-slate-400'}`}>
+          <ShoppingCart size={14} /> Presupuesto {cart.length > 0 && `(${cart.length})`}
+        </button>
+      </div>
+
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* ── Catálogo ── */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className={`flex-1 flex flex-col md:flex-row overflow-hidden ${mobileTab === 'cart' ? 'hidden md:flex' : 'flex'}`}>
           {/* Familias */}
-          <div className="w-full md:w-52 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-32 md:max-h-none">
-            <div className="p-2.5">
-              <p className="text-[10px] font-black text-slate-400 uppercase px-2 py-1.5 flex items-center gap-1.5"><Layers size={12} /> Familias</p>
-              <div className="flex md:flex-col gap-1.5 flex-wrap">
-                {families.map(([name, count]) => (
-                  <button key={name} onClick={() => { setFamily(name); setSearch(''); }}
-                    className={`text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
-                      family === name
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-200'
-                        : 'text-slate-600 hover:bg-emerald-50'}`}>
-                    <span className="flex items-center gap-1.5 min-w-0">
-                      <MuebleIcon type={classifyMueble({ category: name })} size={16} className="shrink-0" />
-                      <span className="truncate">{name}</span>
-                    </span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${family === name ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{count}</span>
-                  </button>
-                ))}
-              </div>
-              {families.length === 0 && !loading && <p className="text-xs text-slate-400 px-3 py-2">Sin productos MV</p>}
+          {familiesCollapsed ? (
+            <div className="hidden md:flex w-10 shrink-0 bg-white/70 backdrop-blur border-r border-slate-200 flex-col items-center py-3">
+              <button onClick={() => setFamiliesCollapsed(false)} title="Mostrar familias"
+                className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600">
+                <PanelLeftOpen size={18} />
+              </button>
             </div>
-          </div>
+          ) : (
+            <div className="w-full md:w-56 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-48 md:max-h-none">
+              <div className="p-2.5">
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1.5"><Layers size={12} /> Familias</p>
+                  <button onClick={() => setFamiliesCollapsed(true)} title="Ocultar familias"
+                    className="hidden md:block text-slate-300 hover:text-emerald-600">
+                    <PanelLeftClose size={14} />
+                  </button>
+                </div>
+                <div className="px-2 pb-2">
+                  <input value={familyFilter} onChange={e => setFamilyFilter(e.target.value)}
+                    placeholder="Filtrar categorías…"
+                    className="w-full px-2.5 py-1.5 text-[11px] border border-slate-200 rounded-lg outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
+                </div>
+                <div className="flex md:flex-col gap-1.5 flex-wrap">
+                  {familyGroups.map(g => {
+                    const single = g.members.length === 1;
+                    const isActiveGroup = g.members.some(([n]) => n === family);
+                    const expanded = single || !!expandedGroups[g.key];
+                    return (
+                      <div key={g.key} className="md:w-full">
+                        <button
+                          onClick={() => {
+                            if (single) { setFamily(g.members[0][0]); setSearch(''); }
+                            else setExpandedGroups(p => ({ ...p, [g.key]: !p[g.key] }));
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
+                            single && family === g.members[0][0]
+                              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-200'
+                              : isActiveGroup ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-emerald-50'}`}>
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <MuebleIcon type={classifyMueble({ category: g.key })} size={16} className="shrink-0" />
+                            <span className="truncate">{single ? g.members[0][0] : g.key}</span>
+                          </span>
+                          <span className="flex items-center gap-1 shrink-0">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                              single && family === g.members[0][0] ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{g.total}</span>
+                            {!single && (expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
+                          </span>
+                        </button>
+                        {!single && expanded && (
+                          <div className="ml-3 mt-1 mb-1 flex md:flex-col gap-1 flex-wrap border-l-2 border-emerald-100 pl-2">
+                            {g.members.map(([name, count]) => (
+                              <button key={name} onClick={() => { setFamily(name); setSearch(''); }}
+                                className={`text-left px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
+                                  family === name ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-emerald-50'}`}>
+                                <span className="truncate">{name}</span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                                  family === name ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{count}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {familyGroups.length === 0 && !loading && <p className="text-xs text-slate-400 px-3 py-2">Sin categorías</p>}
+              </div>
+            </div>
+          )}
 
           {/* Listado de muebles */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-5">
-            <div className="mb-4 max-w-2xl">
+            <div className="mb-4 max-w-3xl">
               <div className="relative">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" />
                 <input value={search} onChange={e => setSearch(e.target.value)} autoFocus
-                  placeholder="Buscar en TODO el catálogo: código, nombre o medida (p. ej. «bajo 60» o «B60»)…"
+                  placeholder="Buscar: código, nombre o medida (p. ej. «bajo 60» o «B60»)…"
                   className="w-full pl-11 pr-24 py-3 bg-white border-2 border-slate-200 rounded-2xl text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 shadow-sm transition-all" />
                 {search && (
                   <button onClick={() => setSearch('')} title="Limpiar"
@@ -352,17 +470,47 @@ const Presupuestador2 = ({ currentUser }) => {
                   </button>
                 )}
               </div>
+
+              {/* Modo de búsqueda + filtro de medida */}
+              <div className="flex flex-wrap items-center gap-2 mt-2 px-1">
+                <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 text-[11px] font-bold">
+                  <button onClick={() => setSearchScope('all')}
+                    className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors ${
+                      searchScope === 'all' ? 'bg-white shadow text-emerald-700' : 'text-slate-500 hover:text-slate-700'}`}>
+                    <Globe size={12} /> Todo el catálogo
+                  </button>
+                  <button onClick={() => setSearchScope('family')}
+                    className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors ${
+                      searchScope === 'family' ? 'bg-white shadow text-emerald-700' : 'text-slate-500 hover:text-slate-700'}`}>
+                    <Layers size={12} /> Solo esta familia
+                  </button>
+                </div>
+                <div className="relative">
+                  <Ruler size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input value={sizeFilter} onChange={e => setSizeFilter(e.target.value)} type="number" min="0"
+                    placeholder="Medida ±5cm"
+                    className="w-28 pl-7 pr-2 py-1.5 text-[11px] border border-slate-200 rounded-lg outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
+                </div>
+                {sizeFilter && (
+                  <button onClick={() => setSizeFilter('')}
+                    className="text-[11px] text-slate-400 hover:text-red-500 flex items-center gap-0.5 font-bold">
+                    <X size={11} /> quitar medida
+                  </button>
+                )}
+              </div>
+
               {/* Estado de la búsqueda */}
               {!loading && (
                 <div className="flex items-center gap-2 mt-2 px-1 text-[11px]">
                   {searching ? (
                     <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700">
                       <Search size={12} />
-                      {shown.length} resultado{shown.length === 1 ? '' : 's'} en todo el catálogo
+                      {shown.length} resultado{shown.length === 1 ? '' : 's'}
+                      {searchScope === 'family' && family ? ` en ${family}` : ' en todo el catálogo'}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-slate-400 font-medium">
-                      <Layers size={12} /> Mostrando familia <b className="text-slate-600 ml-0.5">{family || '—'}</b> · o escribe para buscar en todo
+                      <Layers size={12} /> Mostrando familia <b className="text-slate-600 ml-0.5">{family || '—'}</b> · o escribe para buscar
                     </span>
                   )}
                 </div>
@@ -391,7 +539,7 @@ const Presupuestador2 = ({ currentUser }) => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{p.reference || p.code || '—'}</span>
-                          {searching && p.category && (
+                          {(searching || familiesCollapsed) && p.category && (
                             <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded uppercase tracking-wide">{p.category}</span>
                           )}
                           {added && <span className="text-[9px] font-black text-emerald-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> añadido</span>}
@@ -423,133 +571,152 @@ const Presupuestador2 = ({ currentUser }) => {
         </div>
 
         {/* ── Presupuesto / Carrito ── */}
-        <div className="w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)]">
-          <div className="px-4 py-3.5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center"><ShoppingCart size={16} className="text-emerald-600" /></div>
-            <div>
-              <h3 className="font-black text-slate-800 text-sm uppercase leading-none">Presupuesto</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">{cart.length} líneas · {totalUds} ud.</p>
-            </div>
+        {cartCollapsed ? (
+          <div className="hidden md:flex w-10 shrink-0 border-l border-slate-200 bg-white flex-col items-center py-3 gap-2">
+            <button onClick={() => setCartCollapsed(false)} title="Mostrar presupuesto"
+              className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600">
+              <PanelRightOpen size={18} />
+            </button>
             {cart.length > 0 && (
-              <button onClick={() => { if (window.confirm('¿Vaciar todo el presupuesto?')) setCart([]); }}
-                className="ml-auto text-[11px] font-bold text-slate-400 hover:text-red-500 flex items-center gap-1">
-                <X size={13} /> Vaciar
-              </button>
+              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 rounded-full px-1.5 py-0.5">{cart.length}</span>
             )}
           </div>
-
-          {/* Cliente y notas */}
-          <div className="px-4 py-3 border-b border-slate-100 space-y-2 bg-slate-50/30">
-            <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Nombre del cliente…"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
-            <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="📝 Notas / observaciones…"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
-          </div>
-
-          {/* Líneas */}
-          <div className="flex-1 overflow-y-auto px-3 py-2">
-            {cart.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center text-slate-300 py-10">
-                <Receipt size={44} className="mb-2 opacity-50" />
-                <p className="text-sm font-bold text-slate-400">El presupuesto está vacío</p>
-                <p className="text-xs text-slate-300 mt-1">Pulsa un mueble del catálogo para añadirlo</p>
+        ) : (
+          <div className={`w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] ${
+            mobileTab === 'catalog' ? 'hidden md:flex' : 'flex'}`}>
+            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
+              <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center"><ShoppingCart size={16} className="text-emerald-600" /></div>
+              <div>
+                <h3 className="font-black text-slate-800 text-sm uppercase leading-none">Presupuesto</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">{cart.length} líneas · {totalUds} ud.</p>
               </div>
-            )}
-            <div className="space-y-2">
-              {cart.map(it => (
-                <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-emerald-200 transition-colors">
-                  <div className="flex items-start gap-2">
-                    {!it.manual && (
-                      <div className="shrink-0 w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center mt-0.5">
-                        <MuebleIcon type={classifyMueble({ code: it.code, name: it.name })} size={17} />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-slate-800 text-xs leading-tight">{it.name}</p>
-                      <p className="text-[9px] text-slate-400 font-mono mt-0.5">{it.code}{it.manual ? ' · manual' : ''}</p>
-                    </div>
-                    <button onClick={() => removeItem(it.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={13} /></button>
-                  </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-                      <button onClick={() => setQty(it.id, -1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Minus size={11} /></button>
-                      <span className="w-6 text-center font-black text-xs">{it.qty}</span>
-                      <button onClick={() => setQty(it.id, 1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Plus size={11} /></button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {it.manual ? (
-                        <input value={it.price} onChange={e => updateItemPrice(it.id, e.target.value)} type="number" step="0.01"
-                          className="w-16 text-right text-[11px] px-1.5 py-1 border border-amber-200 bg-amber-50 rounded-md font-mono" />
-                      ) : (
-                        <span className="font-mono text-[11px] text-slate-400">{eur(it.price)}/ud</span>
-                      )}
-                      <span className="font-mono font-black text-emerald-700 text-sm w-20 text-right">{eur(it.price * it.qty)}</span>
-                    </div>
-                  </div>
+              <div className="ml-auto flex items-center gap-2">
+                {cart.length > 0 && (
+                  <button onClick={() => { if (window.confirm('¿Vaciar todo el presupuesto?')) setCart([]); }}
+                    className="text-[11px] font-bold text-slate-400 hover:text-red-500 flex items-center gap-1">
+                    <X size={13} /> Vaciar
+                  </button>
+                )}
+                <button onClick={() => setCartCollapsed(true)} title="Ocultar presupuesto"
+                  className="hidden md:block text-slate-300 hover:text-emerald-600">
+                  <PanelRightClose size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Cliente y notas */}
+            <div className="px-4 py-3 border-b border-slate-100 space-y-2 bg-slate-50/30">
+              <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Nombre del cliente…"
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+              <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="📝 Notas / observaciones…"
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+            </div>
+
+            {/* Líneas */}
+            <div className="flex-1 overflow-y-auto px-3 py-2">
+              {cart.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-center text-slate-300 py-10">
+                  <Receipt size={44} className="mb-2 opacity-50" />
+                  <p className="text-sm font-bold text-slate-400">El presupuesto está vacío</p>
+                  <p className="text-xs text-slate-300 mt-1">Pulsa un mueble del catálogo para añadirlo</p>
                 </div>
-              ))}
+              )}
+              <div className="space-y-2">
+                {cart.map(it => (
+                  <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-emerald-200 transition-colors">
+                    <div className="flex items-start gap-2">
+                      {!it.manual && (
+                        <div className="shrink-0 w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center mt-0.5">
+                          <MuebleIcon type={classifyMueble({ code: it.code, name: it.name })} size={17} />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-800 text-xs leading-tight">{it.name}</p>
+                        <p className="text-[9px] text-slate-400 font-mono mt-0.5">{it.code}{it.manual ? ' · manual' : ''}</p>
+                      </div>
+                      <button onClick={() => removeItem(it.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={13} /></button>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                        <button onClick={() => setQty(it.id, -1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Minus size={11} /></button>
+                        <span className="w-6 text-center font-black text-xs">{it.qty}</span>
+                        <button onClick={() => setQty(it.id, 1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Plus size={11} /></button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {it.manual ? (
+                          <input value={it.price} onChange={e => updateItemPrice(it.id, e.target.value)} type="number" step="0.01"
+                            className="w-16 text-right text-[11px] px-1.5 py-1 border border-amber-200 bg-amber-50 rounded-md font-mono" />
+                        ) : (
+                          <span className="font-mono text-[11px] text-slate-400">{eur(it.price)}/ud</span>
+                        )}
+                        <span className="font-mono font-black text-emerald-700 text-sm w-20 text-right">{eur(it.price * it.qty)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Línea manual */}
-          {showManual && (
-            <div className="px-4 py-2.5 border-t border-amber-100 bg-amber-50">
-              <p className="text-[10px] font-black text-amber-700 uppercase mb-1.5 flex items-center gap-1"><Edit3 size={11} /> Añadir línea manual</p>
-              <div className="flex gap-1.5 items-end">
-                <input value={manualLine.name} onChange={e => setManualLine(p => ({ ...p, name: e.target.value }))} placeholder="Concepto…"
-                  className="flex-1 px-2 py-1.5 border border-amber-200 rounded-lg text-xs" />
-                <input value={manualLine.price} onChange={e => setManualLine(p => ({ ...p, price: e.target.value }))} placeholder="€" type="number" step="0.01"
-                  className="w-20 px-2 py-1.5 border border-amber-200 rounded-lg text-xs text-right" />
-                <input value={manualLine.qty} onChange={e => setManualLine(p => ({ ...p, qty: e.target.value }))} placeholder="Ud" type="number" min="1"
-                  className="w-12 px-2 py-1.5 border border-amber-200 rounded-lg text-xs text-center" />
-                <button onClick={addManualLine} className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold"><Plus size={12} /></button>
+            {/* Línea manual */}
+            {showManual && (
+              <div className="px-4 py-2.5 border-t border-amber-100 bg-amber-50">
+                <p className="text-[10px] font-black text-amber-700 uppercase mb-1.5 flex items-center gap-1"><Edit3 size={11} /> Añadir línea manual</p>
+                <div className="flex gap-1.5 items-end">
+                  <input value={manualLine.name} onChange={e => setManualLine(p => ({ ...p, name: e.target.value }))} placeholder="Concepto…"
+                    className="flex-1 px-2 py-1.5 border border-amber-200 rounded-lg text-xs" />
+                  <input value={manualLine.price} onChange={e => setManualLine(p => ({ ...p, price: e.target.value }))} placeholder="€" type="number" step="0.01"
+                    className="w-20 px-2 py-1.5 border border-amber-200 rounded-lg text-xs text-right" />
+                  <input value={manualLine.qty} onChange={e => setManualLine(p => ({ ...p, qty: e.target.value }))} placeholder="Ud" type="number" min="1"
+                    className="w-12 px-2 py-1.5 border border-amber-200 rounded-lg text-xs text-center" />
+                  <button onClick={addManualLine} className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold"><Plus size={12} /></button>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Totales + acciones */}
-          <div className="border-t border-slate-200 p-4 bg-gradient-to-b from-white to-slate-50 space-y-3">
-            <div className="rounded-2xl bg-slate-900 text-white p-4">
-              <div className="flex justify-between text-xs text-slate-300 mb-1">
-                <span>Base imponible</span><span className="font-mono">{eur(cartTotal)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-slate-300 mb-2">
-                <span>IVA ({ivaRate}%)</span><span className="font-mono">{eur(ivaAmount)}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                <span className="text-xs font-black uppercase text-emerald-300 flex items-center gap-1"><Sparkles size={13} /> Total</span>
-                <span className="text-2xl font-black text-emerald-400">{eur(totalConIva)}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setShowManual(!showManual)}
-                className="py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-xs font-bold text-amber-700 flex items-center justify-center gap-1.5 transition-colors">
-                <Edit3 size={13} /> Línea manual
-              </button>
-              <button onClick={saveOrder} disabled={saving || cart.length === 0}
-                className="py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
-                {saving ? <Loader size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
-                {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar'}
-              </button>
-              <button onClick={exportPDF} disabled={cart.length === 0}
-                className="py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
-                <FileDown size={13} /> Exportar PDF
-              </button>
-              <button onClick={handlePrint} disabled={cart.length === 0}
-                className="py-2.5 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
-                <Printer size={13} /> Imprimir
-              </button>
-            </div>
-            {currentUser?.canViewTechnicalDespiece && (
-              <button onClick={openDespiece} disabled={cart.length === 0}
-                className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-100 disabled:text-slate-300 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider">
-                <Scissors size={14} /> Generar despiece
-              </button>
             )}
-            <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
+
+            {/* Totales + acciones */}
+            <div className="border-t border-slate-200 p-4 bg-gradient-to-b from-white to-slate-50 space-y-3">
+              <div className="rounded-2xl bg-slate-900 text-white p-4">
+                <div className="flex justify-between text-xs text-slate-300 mb-1">
+                  <span>Base imponible</span><span className="font-mono">{eur(cartTotal)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300 mb-2">
+                  <span>IVA ({ivaRate}%)</span><span className="font-mono">{eur(ivaAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                  <span className="text-xs font-black uppercase text-emerald-300 flex items-center gap-1"><Sparkles size={13} /> Total</span>
+                  <span className="text-2xl font-black text-emerald-400">{eur(totalConIva)}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setShowManual(!showManual)}
+                  className="py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-xs font-bold text-amber-700 flex items-center justify-center gap-1.5 transition-colors">
+                  <Edit3 size={13} /> Línea manual
+                </button>
+                <button onClick={saveOrder} disabled={saving || cart.length === 0}
+                  className="py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                  {saving ? <Loader size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
+                  {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar'}
+                </button>
+                <button onClick={exportPDF} disabled={cart.length === 0}
+                  className="py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                  <FileDown size={13} /> Exportar PDF
+                </button>
+                <button onClick={handlePrint} disabled={cart.length === 0}
+                  className="py-2.5 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+                  <Printer size={13} /> Imprimir
+                </button>
+              </div>
+              {currentUser?.canViewTechnicalDespiece && (
+                <button onClick={openDespiece} disabled={cart.length === 0}
+                  className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-100 disabled:text-slate-300 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider">
+                  <Scissors size={14} /> Generar despiece
+                </button>
+              )}
+              <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {showNomenclatura && (
