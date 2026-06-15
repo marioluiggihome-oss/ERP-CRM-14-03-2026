@@ -165,7 +165,6 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       }
     }).catch(() => {});
     return () => { active = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [libraryCode]);
 
   useEffect(() => { if (selectedCarcassMaterialId) localStorage.setItem(`p2_carcass_${libraryCode}`, selectedCarcassMaterialId); }, [selectedCarcassMaterialId, libraryCode]);
