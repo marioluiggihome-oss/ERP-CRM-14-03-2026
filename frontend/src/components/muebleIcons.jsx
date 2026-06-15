@@ -23,7 +23,8 @@ export function classifyMueble(p) {
   if (/MEDIACOLUMNA|MEDIA COLUMNA|MEDIA PUERTA|MEDIACOL/.test(hay) || /^M[0-9MVPGH]/.test(code)) return 'mediacolumna';
   if (/COLUMNA/.test(hay) || /^C[DHF]/.test(code)) return 'columna';
   if (/ALTILLO|BALDA|SOBREENCIMERA|SOBREENC/.test(hay) || /^L[DV0-9]/.test(code) || /^BAL/.test(code) || /^S[CV0-9]/.test(code)) return 'altillo';
-  if (/REGLETA|LATERAL|COSTADO|TECHO|ZOCALO|CORNISA|PORTALUZ|ENCIMERA|COPETE|PERFIL/.test(hay)) return 'lineal';
+  if (/SOBREM[OÓ]DULO/.test(hay)) return 'altillo';
+  if (/REGLETA|LATERAL|COSTADO|TECHO|Z[OÓ]CALO|ZOC|ESTANTE|MOSTRADOR|CORNISA|PORTALUZ|ENCIMERA|COPETE|PERFIL|LINEAL/.test(hay)) return 'lineal';
   if (/PUERTA|^P[VR]?\d/.test(hay) || /^P[VR]?\d/.test(code)) return 'puerta';
   if (/^A/.test(code) || /\bALTO\b/.test(hay)) return 'alto';
   if (/^B/.test(code) || /\bBAJO\b/.test(hay)) return 'bajo';

@@ -739,18 +739,30 @@ async def fix_product_names(current_user: dict = Depends(require_admin)):
 @router.post("/products/fix-costados-depth")
 async def fix_costados_depth(current_user: dict = Depends(require_admin)):
     """
-    Corregir el grosor (depth/fondo) de los costados.
-    Los costados son paneles laterales de 18mm/cm de grueso, no 33.
-    El valor de 33 corresponde al fondo de los muebles ALTOS y se copió por error.
+    Corregir el grosor (depth/fondo) de paneles planos (costados, regletas,
+    zócalos, techos, laterales, cornisas, estantes, etc.).
+    Estos elementos son paneles de 18mm/cm de grueso, no 33 ni 58.
+    Esos valores corresponden al fondo de los muebles ALTOS/BAJOS y se
+    copiaron por error al importar el catálogo.
     """
-    categories = ["COSTADOS", "COSTADO", "COSTADOS_COLOR", "COSTADOS_MELAMINA", "LATERALES", "LATERALES_COLOR"]
+    categories = [
+        "COSTADOS", "COSTADO", "COSTADOS COLOR", "COSTADOS_COLOR", "COSTADOS MELAMINA", "COSTADOS_MELAMINA",
+        "LATERAL", "LATERALES", "LATERAL COLOR", "LATERALES COLOR", "LATERALES_COLOR",
+        "REGLETA", "REGLETAS", "REGLETA COLOR", "REGLETA MELAMINA",
+        "ZOCALOS", "ZOCALO",
+        "TECHO", "TECHO COLOR",
+        "CORNISAS", "CORNISA",
+        "ESTANTES", "ESTANTE",
+        "BALDA AEREA", "BALDA",
+        "ELEMENTOS", "ELEMENTOS LINEALES",
+    ]
 
     result_depth = await db.products.update_many(
-        {"category": {"$in": categories}, "depth": 33},
+        {"category": {"$in": categories}, "depth": {"$in": [33, 33.0, 58, 58.0]}},
         {"$set": {"depth": 18}}
     )
     result_fondo = await db.products.update_many(
-        {"category": {"$in": categories}, "fondo": 33},
+        {"category": {"$in": categories}, "fondo": {"$in": [33, 33.0, 58, 58.0]}},
         {"$set": {"fondo": 18}}
     )
 
@@ -759,7 +771,7 @@ async def fix_costados_depth(current_user: dict = Depends(require_admin)):
     return {
         "success": True,
         "fixed_count": fixed_count,
-        "message": f"Se corrigió el grueso de {fixed_count} costados (33 -> 18)"
+        "message": f"Se corrigió el grueso de {fixed_count} paneles (costados, regletas, zócalos, etc.) a 18cm"
     }
 
 @router.delete("/products/bulk/delete")

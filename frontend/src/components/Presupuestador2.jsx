@@ -109,7 +109,7 @@ const Presupuestador2 = ({ currentUser }) => {
   };
 
   const fixCostadosDepth = async () => {
-    if (!window.confirm('Corregir el grueso de los costados (33 -> 18cm)?')) return;
+    if (!window.confirm('Corregir el grueso de costados, regletas, zócalos, techos, etc. (33/58 -> 18cm)?')) return;
     setImporting(true);
     try {
       const r = await fetch(`${API_URL}/api/products/fix-costados-depth`,
@@ -470,10 +470,10 @@ const Presupuestador2 = ({ currentUser }) => {
             </button>
           )}
           {currentUser?.isAdmin && libraryCode === 'ZC' && (
-            <button onClick={fixCostadosDepth} disabled={importing} title="Corregir el grueso de los costados (33 -> 18cm) (admin)"
+            <button onClick={fixCostadosDepth} disabled={importing} title="Corregir el grueso de paneles: costados, regletas, zócalos, techos... (33/58 -> 18cm) (admin)"
               className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
               {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
-              {importing ? 'Corrigiendo…' : 'Corregir costados'}
+              {importing ? 'Corrigiendo…' : 'Corregir paneles'}
             </button>
           )}
           <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad de medida (cm/mm)"
