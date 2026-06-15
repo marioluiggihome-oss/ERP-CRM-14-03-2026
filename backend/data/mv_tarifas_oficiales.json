@@ -18685,15 +18685,8 @@
         }
       },
       "ALTO_CAMPANA": {
-        "type": "single_extraplana_clasica",
+        "type": "h7090",
         "items": {
-          "ASCE60D/I": 94,
-          "ASCE60": 113,
-          "ASCE90": 137,
-          "ASC60D/I": 78,
-          "ASC60": 102
-        },
-        "_detail": {
           "ASCE60D/I": [
             94,
             113
@@ -20339,15 +20332,8 @@
         }
       },
       "ALTO_CAMPANA": {
-        "type": "single_extraplana_clasica",
+        "type": "h7090",
         "items": {
-          "ASCE60D/I": 71,
-          "ASCE60": 88,
-          "ASCE90": 104,
-          "ASC60D/I": 62,
-          "ASC60": 78
-        },
-        "_detail": {
           "ASCE60D/I": [
             71,
             82
@@ -21992,15 +21978,8 @@
         }
       },
       "ALTO_CAMPANA": {
-        "type": "single_extraplana_clasica",
+        "type": "h7090",
         "items": {
-          "ASCE60D/I": 77,
-          "ASCE60": 98,
-          "ASCE90": 117,
-          "ASC60D/I": 68,
-          "ASC60": 87
-        },
-        "_detail": {
           "ASCE60D/I": [
             77,
             89
