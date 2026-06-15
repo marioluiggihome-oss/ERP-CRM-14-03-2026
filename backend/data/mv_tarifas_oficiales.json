@@ -67,8 +67,8 @@
         }
       },
       "T11": {
-        "ORLY_BCO_SEDA_MATE": "=T11",
-        "CADO_BCO_SEDA_MATE": "=T11",
+        "ORLY_BCO_SEDA_MATE": "=T11 -10%",
+        "CADO_BCO_SEDA_MATE": "=T11 -10%",
         "IBIZA_BCO_BRILLO": "=T11",
         "PALMA_BCO_BRILLO": "=T11",
         "TURIN_RANURADO_BCO_SEDA_MATE": "=T11 -10%",
@@ -156,7 +156,7 @@
       "T8": "COMPLETA, volcada",
       "T9": "pp.49-54 (COMPLETA, volcada)",
       "T10": "pp.55-60 (COMPLETA, volcada)",
-      "T11": "pp.61-66 (COMPLETA recibida; PENDIENTE de volcar)",
+      "T11": "pp.61-66 (COMPLETA, volcada)",
       "T12": "pp.67-72 (COMPLETA recibida; PENDIENTE de volcar)",
       "T13": "pp.73-78 (COMPLETA recibida; PENDIENTE de volcar)",
       "T14": "pp.79-84 recibidas (COMPLETA)",
@@ -9963,7 +9963,7 @@
             "P35": 49,
             "P40": 52,
             "P45": 56,
-            "P50": 59,
+            "P50": 58,
             "P60": 66
           },
           "90": {
@@ -9972,7 +9972,7 @@
             "P35": 57,
             "P40": 62,
             "P45": 65,
-            "P50": 69,
+            "P50": 59,
             "P60": 77
           },
           "127": {
@@ -10054,6 +10054,23 @@
           }
         }
       },
+      "VITRINA_INGLESA": {
+        "type": "matrix",
+        "cols": [
+          "PVI30",
+          "PVI35",
+          "PVI40",
+          "PVI45",
+          "PVI50",
+          "PVI60"
+        ],
+        "rows": {
+          "70": {},
+          "90": {},
+          "127": {},
+          "147": {}
+        }
+      },
       "REJILLA_CONFESIONARIO": {
         "type": "matrix",
         "cols": [
@@ -10117,11 +10134,7 @@
         }
       },
       "BAJO_FREGADERO": {
-        "type": "dual",
-        "cols": [
-          "normal",
-          "chapa"
-        ],
+        "type": "single_chapa",
         "items": {
           "BF45D/I": [
             82,
@@ -10326,107 +10339,6 @@
           ]
         }
       },
-      "ALTO_CAMPANA": {
-        "type": "h7090",
-        "items": {
-          "ASCE60D/I": [
-            82,
-            94
-          ],
-          "ASCE60": [
-            103,
-            118
-          ],
-          "ASCE90": [
-            125,
-            140
-          ],
-          "ASC60D/I": [
-            72,
-            90
-          ],
-          "ASC60": [
-            93,
-            114
-          ]
-        }
-      },
-      "ALTO_RINCON_CIEGO": {
-        "type": "h7090",
-        "items": {
-          "AR60D/I": [
-            120,
-            137
-          ],
-          "AR65D/I": [
-            126,
-            142
-          ]
-        }
-      },
-      "ALTO_RINCON_ESCUADRA": {
-        "type": "h7090",
-        "items": {
-          "ARI65D/I": [
-            149,
-            165
-          ],
-          "ARU65D/I": [
-            147,
-            163
-          ]
-        }
-      },
-      "ALTO_RINCON_CHAFLAN": {
-        "type": "h7090",
-        "items": {
-          "ARC63D/I": [
-            91,
-            103
-          ],
-          "ARCV63D/I": [
-            124,
-            142
-          ]
-        }
-      },
-      "ALTO_DECORATIVO": {
-        "type": "h7090",
-        "items": {
-          "AD40": [
-            99,
-            125
-          ],
-          "AD45": [
-            106,
-            137
-          ],
-          "AD50": [
-            112,
-            142
-          ],
-          "AD60": [
-            125,
-            158
-          ],
-          "AD70": [
-            138,
-            176
-          ],
-          "AD80": [
-            150,
-            196
-          ],
-          "AD90": [
-            164,
-            212
-          ],
-          "AD100": [
-            176,
-            226
-          ]
-        }
-      },
       "ALTO_VITRINA": {
         "type": "h7090",
         "items": {
@@ -10476,6 +10388,31 @@
           ]
         }
       },
+      "ALTO_CAMPANA": {
+        "type": "h7090",
+        "items": {
+          "ASCE60D/I": [
+            82,
+            94
+          ],
+          "ASCE60": [
+            103,
+            118
+          ],
+          "ASCE90": [
+            125,
+            140
+          ],
+          "ASC60D/I": [
+            72,
+            90
+          ],
+          "ASC60": [
+            93,
+            114
+          ]
+        }
+      },
       "ALTO_ESCURREPLATOS": {
         "type": "h7090",
         "items": {
@@ -10513,6 +10450,19 @@
           ]
         }
       },
+      "ALTO_RINCON_CIEGO": {
+        "type": "h7090",
+        "items": {
+          "AR60D/I": [
+            120,
+            137
+          ],
+          "AR65D/I": [
+            126,
+            142
+          ]
+        }
+      },
       "ALTO_MICROONDAS": {
         "type": "h7090",
         "items": {
@@ -10531,6 +10481,19 @@
           "AMF60": [
             110,
             124
+          ]
+        }
+      },
+      "ALTO_RINCON_ESCUADRA": {
+        "type": "h7090",
+        "items": {
+          "ARI65D/I": [
+            149,
+            165
+          ],
+          "ARU65D/I": [
+            147,
+            163
           ]
         }
       },
@@ -10555,6 +10518,19 @@
           ]
         }
       },
+      "ALTO_RINCON_CHAFLAN": {
+        "type": "h7090",
+        "items": {
+          "ARC63D/I": [
+            91,
+            103
+          ],
+          "ARCV63D/I": [
+            124,
+            142
+          ]
+        }
+      },
       "ALTO_CALDERA": {
         "type": "h7090",
         "items": {
@@ -10565,6 +10541,43 @@
           "ACC60": [
             143,
             159
+          ]
+        }
+      },
+      "ALTO_DECORATIVO": {
+        "type": "h7090",
+        "items": {
+          "AD40": [
+            99,
+            125
+          ],
+          "AD45": [
+            106,
+            137
+          ],
+          "AD50": [
+            112,
+            142
+          ],
+          "AD60": [
+            125,
+            158
+          ],
+          "AD70": [
+            138,
+            176
+          ],
+          "AD80": [
+            150,
+            196
+          ],
+          "AD90": [
+            164,
+            212
+          ],
+          "AD100": [
+            176,
+            226
           ]
         }
       },
@@ -10825,11 +10838,7 @@
         }
       },
       "SOBREENCIMERA": {
-        "type": "dual",
-        "cols": [
-          "127",
-          "147"
-        ],
+        "type": "h127147",
         "items": {
           "S30D/I": [
             99,
@@ -10861,49 +10870,8 @@
           ]
         }
       },
-      "SOBREENC_VITRINA": {
-        "type": "dual",
-        "cols": [
-          "127",
-          "147"
-        ],
-        "items": {
-          "SV30D/I": [
-            142,
-            163
-          ],
-          "SV35D/I": [
-            153,
-            175
-          ],
-          "SV40D/I": [
-            163,
-            187
-          ],
-          "SV45D/I": [
-            174,
-            200
-          ],
-          "SV50D/I": [
-            186,
-            214
-          ],
-          "SV60D/I": [
-            205,
-            236
-          ],
-          "SV60": [
-            253,
-            293
-          ]
-        }
-      },
       "SOBREENC_CAJON": {
-        "type": "dual",
-        "cols": [
-          "127",
-          "147"
-        ],
+        "type": "h127147",
         "items": {
           "SC30D/I": [
             136,
@@ -10935,12 +10903,41 @@
           ]
         }
       },
+      "SOBREENC_VITRINA": {
+        "type": "h127147",
+        "items": {
+          "SV30D/I": [
+            142,
+            163
+          ],
+          "SV35D/I": [
+            153,
+            175
+          ],
+          "SV40D/I": [
+            163,
+            187
+          ],
+          "SV45D/I": [
+            174,
+            200
+          ],
+          "SV50D/I": [
+            186,
+            214
+          ],
+          "SV60D/I": [
+            205,
+            236
+          ],
+          "SV60": [
+            253,
+            293
+          ]
+        }
+      },
       "SOBREENC_VIT_CAJON": {
-        "type": "dual",
-        "cols": [
-          "127",
-          "147"
-        ],
+        "type": "h127147",
         "items": {
           "SVC30D/I": [
             179,
@@ -11017,27 +11014,6 @@
           ]
         }
       },
-      "COLUMNA_FRIGO": {
-        "type": "h200220",
-        "items": {
-          "CF60D/I": [
-            106,
-            117
-          ],
-          "CF60": [
-            127,
-            140
-          ],
-          "CF60A": [
-            116,
-            127
-          ],
-          "CF60F": [
-            136,
-            147
-          ]
-        }
-      },
       "COLUMNA_HORNO": {
         "type": "h200220",
         "items": {
@@ -11073,6 +11049,39 @@
             412,
             427
           ]
+        }
+      },
+      "COLUMNA_FRIGO": {
+        "type": "h200220",
+        "items": {
+          "CF60D/I": [
+            106,
+            117
+          ],
+          "CF60": [
+            127,
+            140
+          ],
+          "CF60A": [
+            116,
+            127
+          ],
+          "CF60F": [
+            136,
+            147
+          ]
+        }
+      },
+      "MEDIACOLUMNA": {
+        "type": "single",
+        "items": {
+          "M30D/I": 106,
+          "M35D/I": 113,
+          "M40D/I": 119,
+          "M45D/I": 126,
+          "M50D/I": 133,
+          "M60D/I": 146,
+          "M60": 175
         }
       },
       "COLUMNA_HORNO_MICRO": {
@@ -11112,16 +11121,16 @@
           ]
         }
       },
-      "MEDIACOLUMNA": {
+      "MEDIACOLUMNA_VITRINA": {
         "type": "single",
         "items": {
-          "M30D/I": 106,
-          "M35D/I": 113,
-          "M40D/I": 119,
-          "M45D/I": 126,
-          "M50D/I": 133,
-          "M60D/I": 146,
-          "M60": 175
+          "MV30D/I": 149,
+          "MV35D/I": 160,
+          "MV40D/I": 170,
+          "MV45D/I": 182,
+          "MV50D/I": 194,
+          "MV60D/I": 213,
+          "MV60": 261
         }
       },
       "MEDIA_PUERTA_GAVETA": {
@@ -11136,6 +11145,18 @@
           "MPG60": 234
         }
       },
+      "MEDIACOL_VITRINA_GAVETA": {
+        "type": "single",
+        "items": {
+          "MVG30D/I": 195,
+          "MVG35D/I": 205,
+          "MVG40D/I": 215,
+          "MVG45D/I": 228,
+          "MVG50D/I": 241,
+          "MVG60D/I": 264,
+          "MVG60": 308
+        }
+      },
       "MEDIACOLUMNA_HORNO": {
         "type": "single",
         "items": {
@@ -11147,28 +11168,19 @@
           "MCHM60": 158
         }
       },
-      "MEDIACOLUMNA_VITRINA": {
+      "ALTILLOS_DECORATIVOS": {
         "type": "single",
         "items": {
-          "MV30D/I": 149,
-          "MV35D/I": 160,
-          "MV40D/I": 170,
-          "MV45D/I": 182,
-          "MV50D/I": 194,
-          "MV60D/I": 213,
-          "MV60": 261
-        }
-      },
-      "MEDIACOL_VITRINA_GAVETA": {
-        "type": "single",
-        "items": {
-          "MVG30D/I": 195,
-          "MVG35D/I": 205,
-          "MVG40D/I": 215,
-          "MVG45D/I": 228,
-          "MVG50D/I": 241,
-          "MVG60D/I": 264,
-          "MVG60": 308
+          "LD30": 54,
+          "LD35": 58,
+          "LD40": 62,
+          "LD45": 66,
+          "LD50": 70,
+          "LD60": 77,
+          "LD70": 86,
+          "LD80": 94,
+          "LD90": 102,
+          "LD100": 110
         }
       },
       "BOTELLEROS": {
@@ -11190,21 +11202,6 @@
             213,
             232
           ]
-        }
-      },
-      "ALTILLOS_DECORATIVOS": {
-        "type": "single",
-        "items": {
-          "LD30": 54,
-          "LD35": 58,
-          "LD40": 62,
-          "LD45": 66,
-          "LD50": 70,
-          "LD60": 77,
-          "LD70": 86,
-          "LD80": 94,
-          "LD90": 102,
-          "LD100": 110
         }
       },
       "LATERALES_COLOR": {
@@ -11267,6 +11264,7 @@
       },
       "REGLETA_COLOR": {
         "type": "h7090",
+        "_ancho": 15,
         "items": {
           "RA": [
             9,
@@ -11288,6 +11286,7 @@
       },
       "REGLETA_MELAMINA": {
         "type": "h7090",
+        "_ancho": 10,
         "items": {
           "RMA": [
             1,
@@ -11304,27 +11303,6 @@
           "RMC": [
             4,
             5
-          ]
-        }
-      },
-      "COSTADOS_MELAMINA": {
-        "type": "h7090",
-        "items": {
-          "CMCB": [
-            19,
-            20
-          ],
-          "CMCC": [
-            27,
-            28
-          ],
-          "CMBB": [
-            8,
-            null
-          ],
-          "CMBC": [
-            15,
-            null
           ]
         }
       },
@@ -11450,35 +11428,27 @@
             78,
             113,
             134
+          ]
+        },
+        "_nota": "TEC260-360 en blanco, igual que T1/T4/T5/T8."
+      },
+      "COSTADOS_MELAMINA": {
+        "type": "h7090",
+        "items": {
+          "CMCB": [
+            19,
+            20
           ],
-          "TEC260": [
-            null,
-            null,
+          "CMCC": [
+            27,
+            28
+          ],
+          "CMBB": [
+            8,
             null
           ],
-          "TEC280": [
-            null,
-            null,
-            null
-          ],
-          "TEC300": [
-            null,
-            null,
-            null
-          ],
-          "TEC320": [
-            null,
-            null,
-            null
-          ],
-          "TEC340": [
-            null,
-            null,
-            null
-          ],
-          "TEC360": [
-            null,
-            null,
+          "CMBC": [
+            15,
             null
           ]
         }
@@ -11496,7 +11466,7 @@
             "med": 28
           },
           "POR": {
-            "desc": "Portaluz entera/ media",
+            "desc": "Portaluz entera/media",
             "ent": 44,
             "med": 23
           },
@@ -11541,6 +11511,11 @@
             "med": 7
           },
           "EMC1M/E": {
+            "desc": "Encimera Med/Ent",
+            "ent": 85,
+            "med": 50
+          },
+          "ENCM/E": {
             "desc": "Encimera Med/Ent",
             "ent": 85,
             "med": 50
