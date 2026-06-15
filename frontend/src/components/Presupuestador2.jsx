@@ -19,7 +19,7 @@ const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFraction
 // "LATERAL"/"LATERALES"/"LATERALES COLOR") bajo una misma cabecera para
 // compactar la lista de categorías sin tocar los datos del catálogo.
 const groupKeyOf = (name) => {
-  const first = (name || '').split(' ')[0];
+  const first = (name || '').split(' ')[0].split('_')[0];
   if (first.endsWith('ES')) return first.slice(0, -2);
   if (first.endsWith('S')) return first.slice(0, -1);
   return first;
