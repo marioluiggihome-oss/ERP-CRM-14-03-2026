@@ -939,9 +939,19 @@ class ExpedienteRequest(BaseModel):
 
 
 class DigitalizadorToProjectRequest(BaseModel):
-    """Request to convert digitalizador item to project"""
-    historyItemId: str
-    userId: str
+    """Request to save a digitalizador budget as a main project/presupuesto"""
+    projectName: str = ""
+    customerName: str = ""
+    acabado: str = ""
+    armazon: str = ""
+    costados: str = ""
+    lines: List[DigitalizadorLine] = []
+    globalDiscount: float = 0
+    globalMarkup: float = 0
+    ivaRate: float = 21
+    userId: str = "anonymous"
+    expNumber: str = ""
+    totalPvp: float = 0
 
 
 # ============================================
