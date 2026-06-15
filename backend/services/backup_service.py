@@ -110,74 +110,74 @@ class BackupService:
             return False
         
     async def create_backup(self) -> dict:
-        """Crear un backup completo de la base de datos"""
+        """Crear un backup completo de la base de datos.
+
+        Volcado nativo con pymongo/bson (no requiere el binario `mongodump`,
+        que no está instalado en el contenedor de Railway). Cada colección se
+        serializa a JSON con `bson.json_util` (preserva ObjectId, fechas, etc.)
+        y el conjunto se comprime en un .tar.gz.
+        """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_name = f"luiggi_backup_{timestamp}"
         backup_path = self.backup_dir / backup_name
-        
+
         try:
-            # Crear directorio para este backup
+            from motor.motor_asyncio import AsyncIOMotorClient
+            from bson import json_util
+
             backup_path.mkdir(parents=True, exist_ok=True)
-            
-            # Ejecutar mongodump
-            cmd = [
-                "mongodump",
-                f"--uri={self.mongo_url}",
-                f"--db={self.db_name}",
-                f"--out={backup_path}"
-            ]
-            
-            logger.info(f"Iniciando backup: {backup_name}")
-            
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode == 0:
-                # Comprimir el backup
-                archive_path = f"{backup_path}.tar.gz"
-                shutil.make_archive(str(backup_path), 'gztar', backup_path)
-                
-                # Eliminar directorio sin comprimir
-                shutil.rmtree(backup_path)
-                
-                # Obtener tamaño del archivo
-                size_bytes = os.path.getsize(archive_path)
-                size_mb = round(size_bytes / (1024 * 1024), 2)
-                
-                result = {
-                    "success": True,
-                    "backup_name": f"{backup_name}.tar.gz",
-                    "path": archive_path,
-                    "size_mb": size_mb,
-                    "timestamp": datetime.now().isoformat(),
-                    "message": f"Backup creado exitosamente: {size_mb} MB"
-                }
-                
-                logger.info(f"Backup completado: {archive_path} ({size_mb} MB)")
-                
-                # Enviar email con el backup
-                await self.send_backup_email(result, archive_path)
-                
-                # Limpiar backups antiguos
-                await self.cleanup_old_backups()
-                
-                return result
-            else:
-                error_msg = stderr.decode() if stderr else "Error desconocido"
-                logger.error(f"Error en mongodump: {error_msg}")
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "timestamp": datetime.now().isoformat()
-                }
-                
+            db_dir = backup_path / self.db_name
+            db_dir.mkdir(parents=True, exist_ok=True)
+
+            logger.info(f"Iniciando backup (nativo): {backup_name}")
+
+            client = AsyncIOMotorClient(self.mongo_url)
+            db = client[self.db_name]
+            collections = await db.list_collection_names()
+
+            total_docs = 0
+            for coll_name in collections:
+                docs = await db[coll_name].find({}).to_list(length=None)
+                total_docs += len(docs)
+                out_file = db_dir / f"{coll_name}.json"
+                with open(out_file, "w", encoding="utf-8") as f:
+                    f.write(json_util.dumps(docs, ensure_ascii=False))
+            client.close()
+
+            # Comprimir el backup y eliminar el directorio sin comprimir
+            archive_path = f"{backup_path}.tar.gz"
+            shutil.make_archive(str(backup_path), 'gztar', backup_path)
+            shutil.rmtree(backup_path)
+
+            size_bytes = os.path.getsize(archive_path)
+            size_mb = round(size_bytes / (1024 * 1024), 2)
+
+            result = {
+                "success": True,
+                "backup_name": f"{backup_name}.tar.gz",
+                "path": archive_path,
+                "size_mb": size_mb,
+                "collections": len(collections),
+                "documents": total_docs,
+                "timestamp": datetime.now().isoformat(),
+                "message": f"Backup creado exitosamente: {size_mb} MB ({len(collections)} colecciones, {total_docs} documentos)"
+            }
+
+            logger.info(f"Backup completado: {archive_path} ({size_mb} MB, {total_docs} docs)")
+
+            await self.send_backup_email(result, archive_path)
+            await self.cleanup_old_backups()
+
+            return result
+
         except Exception as e:
             logger.error(f"Error creando backup: {str(e)}")
+            # Limpieza parcial si quedó el directorio a medias
+            try:
+                if backup_path.exists():
+                    shutil.rmtree(backup_path)
+            except Exception:
+                pass
             return {
                 "success": False,
                 "error": str(e),
@@ -236,53 +236,57 @@ class BackupService:
         if not backup_path.exists():
             return {"success": False, "error": "Backup no encontrado"}
         
+        extract_dir = self.backup_dir / "restore_temp"
         try:
+            from motor.motor_asyncio import AsyncIOMotorClient
+            from bson import json_util
+
             # Extraer el archivo
-            extract_dir = self.backup_dir / "restore_temp"
-            shutil.unpack_archive(backup_path, extract_dir)
-            
-            # Encontrar el directorio de la base de datos
-            db_dir = extract_dir / f"luiggi_backup_{backup_name.replace('.tar.gz', '').replace('luiggi_backup_', '')}" / self.db_name
-            
-            if not db_dir.exists():
-                # Buscar en subdirectorios
-                for d in extract_dir.rglob(self.db_name):
-                    if d.is_dir():
+            if extract_dir.exists():
+                shutil.rmtree(extract_dir)
+            shutil.unpack_archive(str(backup_path), extract_dir)
+
+            # Encontrar el directorio de la base de datos (contiene los .json)
+            db_dir = None
+            for d in extract_dir.rglob(self.db_name):
+                if d.is_dir() and any(d.glob("*.json")):
+                    db_dir = d
+                    break
+            if db_dir is None:
+                # Compatibilidad: buscar cualquier carpeta con .json
+                for d in extract_dir.rglob("*"):
+                    if d.is_dir() and any(d.glob("*.json")):
                         db_dir = d
                         break
-            
-            # Ejecutar mongorestore
-            cmd = [
-                "mongorestore",
-                f"--uri={self.mongo_url}",
-                f"--db={self.db_name}",
-                "--drop",  # Eliminar colecciones existentes antes de restaurar
-                str(db_dir)
-            ]
-            
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            # Limpiar directorio temporal
+            if db_dir is None:
+                return {"success": False, "error": "El backup no contiene datos restaurables (.json)"}
+
+            client = AsyncIOMotorClient(self.mongo_url)
+            db = client[self.db_name]
+
+            restored = 0
+            for json_file in db_dir.glob("*.json"):
+                coll_name = json_file.stem
+                with open(json_file, "r", encoding="utf-8") as f:
+                    docs = json_util.loads(f.read())
+                await db[coll_name].drop()
+                if docs:
+                    await db[coll_name].insert_many(docs)
+                    restored += len(docs)
+            client.close()
             shutil.rmtree(extract_dir)
-            
-            if process.returncode == 0:
-                return {
-                    "success": True,
-                    "message": f"Backup {backup_name} restaurado exitosamente"
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": stderr.decode() if stderr else "Error desconocido"
-                }
-                
+
+            return {
+                "success": True,
+                "message": f"Backup {backup_name} restaurado exitosamente ({restored} documentos)"
+            }
+
         except Exception as e:
+            try:
+                if extract_dir.exists():
+                    shutil.rmtree(extract_dir)
+            except Exception:
+                pass
             return {"success": False, "error": str(e)}
     
     async def start_scheduler(self, hour: int = 3):
