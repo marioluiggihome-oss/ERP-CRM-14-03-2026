@@ -521,29 +521,68 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-orange-50/40">
       {/* ── Cabecera ── */}
-      <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white px-4 sm:px-6 py-3 flex flex-col gap-2.5 shadow-lg sticky top-0 z-30">
-        <div className="flex items-center gap-3 flex-wrap w-full">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-white rounded-2xl flex items-center justify-center ring-1 ring-white/30 p-1.5 overflow-hidden">
+      <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-2 shadow-lg sticky top-0 z-30">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 p-1 overflow-hidden shrink-0">
             <Logo className="h-full w-full object-contain" customLogo={logo} showSlogan={false} />
           </div>
           <div>
-            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador</h1>
-            <p className="text-[11px] text-orange-100/90 flex items-center gap-1.5 mt-0.5">
-              <Boxes size={12} /> {products.length} muebles · agrupados por familia
+            <h1 className="text-base font-black uppercase leading-none tracking-tight">Presupuestador</h1>
+            <p className="text-[10px] text-orange-100/80 flex items-center gap-1 mt-0.5 whitespace-nowrap">
+              <Boxes size={10} /> {products.length} muebles
             </p>
           </div>
         </div>
 
         {/* Cliente y referencia de presupuesto */}
         <div className="flex items-center gap-2 flex-wrap">
-          <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Nombre del cliente…"
-            className="w-40 sm:w-48 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
-          <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Referencia de presupuesto…"
-            className="w-40 sm:w-52 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
+          <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Cliente…"
+            className="w-32 sm:w-40 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
+          <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Referencia…"
+            className="w-32 sm:w-40 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
         </div>
 
-        <div className="flex items-center gap-3 ml-auto flex-wrap">
+        {/* Colores y gola */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
+            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Bajas</span>
+            <input type="text" value={doorColorLow} onChange={e => setDoorColorLow(e.target.value)}
+              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
+            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Altas</span>
+            <input type="text" value={doorColorHigh} onChange={e => setDoorColorHigh(e.target.value)}
+              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
+            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Columnas</span>
+            <input type="text" value={doorColorColumns} onChange={e => setDoorColorColumns(e.target.value)}
+              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
+            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Costados</span>
+            <input type="text" value={sideColor} onChange={e => setSideColor(e.target.value)}
+              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl px-2.5 py-1.5 ring-1 ring-white/25 text-[10px] font-bold cursor-pointer select-none whitespace-nowrap">
+            <input type="checkbox" checked={doorHasVeta === true} onChange={e => setDoorHasVeta(e.target.checked)} className="w-3.5 h-3.5 accent-white" />
+            Veta
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl pl-2.5 pr-1 py-1 ring-1 ring-white/25">
+            <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }} className="w-3.5 h-3.5 accent-white" />
+            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Gola Alto</span>
+            <input type="text" value={golaAltoColor} onChange={e => { setGolaAltoColor(e.target.value); setGolaAlto(true); }}
+              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaAlto} />
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl pl-2.5 pr-1 py-1 ring-1 ring-white/25">
+            <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }} className="w-3.5 h-3.5 accent-white" />
+            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Gola Bajo</span>
+            <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
+              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
+          </label>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
           <button onClick={() => setShowNomenclatura(true)} title="Ver nomenclatura de tipos de mueble"
             className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
             <BookOpen size={14} /> Nomenclatura
@@ -603,57 +642,6 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
               {priceLevels.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
-          </div>
-        </div>
-        </div>
-
-        {/* ── Colores y gola (en el encabezado, junto al cliente) ── */}
-        <div className="flex items-end gap-x-5 gap-y-2 flex-wrap w-full border-t border-white/15 pt-2.5">
-          <div className="flex flex-col gap-1">
-            <span className="text-[9px] font-black text-orange-100/80 uppercase tracking-widest">Colores</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-                <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Bajas</span>
-                <input type="text" value={doorColorLow} onChange={e => setDoorColorLow(e.target.value)}
-                  className="w-24 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
-              </label>
-              <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-                <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Altas</span>
-                <input type="text" value={doorColorHigh} onChange={e => setDoorColorHigh(e.target.value)}
-                  className="w-24 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
-              </label>
-              <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-                <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Columnas</span>
-                <input type="text" value={doorColorColumns} onChange={e => setDoorColorColumns(e.target.value)}
-                  className="w-24 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
-              </label>
-              <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-                <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Costados</span>
-                <input type="text" value={sideColor} onChange={e => setSideColor(e.target.value)}
-                  className="w-24 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
-              </label>
-              <label className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl px-2.5 py-1.5 ring-1 ring-white/25 text-xs font-bold cursor-pointer select-none">
-                <input type="checkbox" checked={doorHasVeta === true} onChange={e => setDoorHasVeta(e.target.checked)} className="w-3.5 h-3.5 accent-white" />
-                Puerta con veta
-              </label>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-[9px] font-black text-orange-100/80 uppercase tracking-widest">Gola</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <label className="flex items-center gap-1.5 bg-white/10 rounded-xl pl-2.5 pr-1 py-1 ring-1 ring-white/25">
-                <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }} className="w-3.5 h-3.5 accent-white" />
-                <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Alto</span>
-                <input type="text" value={golaAltoColor} onChange={e => { setGolaAltoColor(e.target.value); setGolaAlto(true); }}
-                  className="w-24 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaAlto} />
-              </label>
-              <label className="flex items-center gap-1.5 bg-white/10 rounded-xl pl-2.5 pr-1 py-1 ring-1 ring-white/25">
-                <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }} className="w-3.5 h-3.5 accent-white" />
-                <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Bajo</span>
-                <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
-                  className="w-24 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
-              </label>
-            </div>
           </div>
         </div>
       </div>
