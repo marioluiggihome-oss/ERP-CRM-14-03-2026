@@ -3,7 +3,7 @@ import {
   Table2, Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
   Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
-  Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown
+  Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List
 } from 'lucide-react';
 import { authHeaders, librariesAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
@@ -48,6 +48,7 @@ const Presupuestador2 = ({ currentUser }) => {
   const [cartCollapsed, setCartCollapsed] = useState(false);
   const [mobileTab, setMobileTab] = useState('catalog'); // 'catalog' | 'cart'
   const [useMillimeters, setUseMillimeters] = useState(() => localStorage.getItem('p2_use_mm') === 'true');
+  const [catalogView, setCatalogView] = useState(() => localStorage.getItem('p2_catalog_view') || 'list');
   const [showDistributorPrice, setShowDistributorPrice] = useState(false);
   const [sortBy, setSortBy] = useState('default'); // 'default' | 'code' | 'name' | 'width' | 'height' | 'price'
   const [sortDir, setSortDir] = useState('asc');
@@ -131,6 +132,7 @@ const Presupuestador2 = ({ currentUser }) => {
   useEffect(() => { if (tariff) localStorage.setItem(`p2_tariff_${libraryCode}`, tariff); }, [tariff, libraryCode]);
   useEffect(() => { localStorage.setItem('p2_search_scope', searchScope); }, [searchScope]);
   useEffect(() => { localStorage.setItem('p2_use_mm', useMillimeters ? 'true' : 'false'); }, [useMillimeters]);
+  useEffect(() => { localStorage.setItem('p2_catalog_view', catalogView); }, [catalogView]);
 
   // Bibliotecas disponibles para el usuario (ZC, MV, …) — solo se muestra el
   // selector si hay más de una permitida.
@@ -478,6 +480,12 @@ const Presupuestador2 = ({ currentUser }) => {
             className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
             <Ruler size={14} /> {measureUnit.toUpperCase()}
           </button>
+          <button onClick={() => setCatalogView(v => v === 'list' ? 'icons' : 'list')}
+            title={catalogView === 'list' ? 'Ver catálogo como iconos' : 'Ver catálogo como lista'}
+            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
+            {catalogView === 'list' ? <LayoutGrid size={14} /> : <List size={14} />}
+            {catalogView === 'list' ? 'Iconos' : 'Lista'}
+          </button>
           {discountPct > 0 && (
             <button onClick={() => setShowDistributorPrice(v => !v)}
               title={showDistributorPrice ? 'Volver a mostrar PVP al cliente' : `Ver precio de fábrica (con tu descuento del ${discountPct}%)`}
@@ -688,6 +696,37 @@ const Presupuestador2 = ({ currentUser }) => {
               <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-3">
                 <Loader className="animate-spin" size={30} />
                 <span className="text-sm">Cargando catálogo {libraryCode}…</span>
+              </div>
+            ) : catalogView === 'icons' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+                {sortedShown.slice(0, 120).map(p => {
+                  const added = inCart(p.id);
+                  const med = [p.width, p.height, p.depth].filter(Boolean).map(formatMeasure).join('×');
+                  return (
+                    <button key={p.id} onClick={() => addToCart(p)}
+                      className={`group text-center bg-white border rounded-2xl p-3 flex flex-col items-center gap-1.5 transition-all hover:shadow-md ${
+                        added ? 'border-orange-300 ring-1 ring-orange-200' : 'border-slate-200 hover:border-orange-300'}`}>
+                      <div className={`shrink-0 w-16 h-16 rounded-xl flex items-center justify-center border ${
+                        added ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-slate-50 border-slate-200 text-slate-500 group-hover:text-orange-600 group-hover:border-orange-200'}`}>
+                        <MuebleIcon mueble={p} size={36} />
+                      </div>
+                      <span className="font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded truncate max-w-full">{p.reference || p.code || '—'}</span>
+                      <p className="text-[11px] font-bold text-slate-700 leading-tight line-clamp-2">{p.name}</p>
+                      {med && <p className="text-[10px] text-slate-400">{med} {measureUnit}</p>}
+                      <p className="font-mono font-black text-orange-700 text-sm">{eur(displayPrice(priceOf(p)))}</p>
+                      {added && <span className="text-[9px] font-black text-orange-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> añadido</span>}
+                    </button>
+                  );
+                })}
+                {sortedShown.length === 0 && (
+                  <div className="col-span-full py-16 text-center text-slate-400">
+                    <Boxes size={40} className="mx-auto mb-2 opacity-40" />
+                    <p className="text-sm">Sin muebles en esta familia</p>
+                  </div>
+                )}
+                {sortedShown.length > 120 && (
+                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {sortedShown.length} — usa el buscador para filtrar</p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
