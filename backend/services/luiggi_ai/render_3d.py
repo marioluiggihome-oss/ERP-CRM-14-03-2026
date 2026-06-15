@@ -180,7 +180,10 @@ class Render3DService:
             "natural color grading. It must look like a REAL photograph, NOT a 3D cartoon: "
             "avoid plastic-looking surfaces, flat lighting, oversaturated colors and any "
             "CGI/videogame look.",
-            "No text, watermarks, or logos in the image.",
+            "Consistency: keep cabinet doors, drawers and handles straight, evenly spaced "
+            "and aligned; do not duplicate, merge, warp or omit cabinet modules; walls, "
+            "floor lines and countertop edges must stay straight and in correct perspective.",
+            "No text, watermarks, logos, people, or distorted/extra objects in the image.",
         ])
 
         return " ".join(prompt_parts)
@@ -349,7 +352,10 @@ class Render3DService:
             "natural color grading. It must look like a real photograph, NOT a 3D cartoon: "
             "avoid plastic-looking surfaces, flat lighting, oversaturated colors, blurry or "
             "low-detail textures, and any CGI/videogame look.",
-            "No text, watermarks, or logos in the image.",
+            "Consistency: keep doors, drawers, shelves and handles straight, evenly spaced "
+            "and aligned with the described layout; do not duplicate, merge, warp or omit "
+            "modules; edges and lines must stay straight and in correct perspective.",
+            "No text, watermarks, logos, people, or distorted/extra objects in the image.",
         ]
         return " ".join(parts)
 
