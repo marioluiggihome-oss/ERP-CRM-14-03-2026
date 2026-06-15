@@ -1186,6 +1186,7 @@ const App = () => {
             {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin) && (
               <ErrorBoundary><Presupuestador2
                 currentUser={state.currentUser}
+                logo={state.logo}
                 incomingProject={state.p2IncomingProject}
                 onProjectConsumed={() => setState(p => ({ ...p, p2IncomingProject: null }))}
               /></ErrorBoundary>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Table2, Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
   Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
@@ -31,7 +31,7 @@ const groupKeyOf = (name) => {
  * product.zonePoints[tarifa]. PDF con formato del Presupuestador 1 y guardado
  * en proyectos.
  */
-const Presupuestador2 = ({ currentUser, incomingProject, onProjectConsumed }) => {
+const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed }) => {
   const [libraryCode, setLibraryCode] = useState(() => localStorage.getItem('p2_library') || 'MV');
   const [availableLibraries, setAvailableLibraries] = useState([]);
   const [library, setLibrary] = useState(null);
@@ -46,6 +46,21 @@ const Presupuestador2 = ({ currentUser, incomingProject, onProjectConsumed }) =>
   const [expandedGroups, setExpandedGroups] = useState({});
   const [familiesCollapsed, setFamiliesCollapsed] = useState(false);
   const [cartCollapsed, setCartCollapsed] = useState(false);
+  const [familiesWidth, setFamiliesWidth] = useState(224);
+  const [cartWidth, setCartWidth] = useState(416);
+  const isResizingFamilies = useRef(false);
+  const isResizingCart = useRef(false);
+
+  useEffect(() => {
+    const onMouseMove = (e) => {
+      if (isResizingFamilies.current) setFamiliesWidth(Math.max(160, Math.min(500, e.clientX)));
+      if (isResizingCart.current) setCartWidth(Math.max(280, Math.min(700, window.innerWidth - e.clientX)));
+    };
+    const onMouseUp = () => { isResizingFamilies.current = false; isResizingCart.current = false; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
+  }, []);
   const [mobileTab, setMobileTab] = useState('catalog'); // 'catalog' | 'cart'
   const [useMillimeters, setUseMillimeters] = useState(() => localStorage.getItem('p2_use_mm') === 'true');
   const [catalogView, setCatalogView] = useState(() => localStorage.getItem('p2_catalog_view') || 'list');
@@ -472,7 +487,8 @@ const Presupuestador2 = ({ currentUser, incomingProject, onProjectConsumed }) =>
         itemsDespiece: [],
         pointValueMontada: pointValue,
         pointValueDespiece: 0.88,
-        logo: currentUser?.logo,
+        logo: logo || currentUser?.logo,
+        brandColor: '#ea580c',
         companyName: 'LUIGGI HOME',
         ivaRate,
         allProducts: products,
@@ -553,7 +569,7 @@ const Presupuestador2 = ({ currentUser, incomingProject, onProjectConsumed }) =>
               className={`flex items-center gap-1.5 backdrop-blur rounded-xl px-3 py-1.5 ring-1 text-xs font-bold transition-colors ${
                 showDistributorPrice ? 'bg-orange-500 ring-orange-300 text-white' : 'bg-white/15 hover:bg-white/25 ring-white/25'}`}>
               {showDistributorPrice ? <Unlock size={14} /> : <Lock size={14} />}
-              {showDistributorPrice ? `COSTO -${discountPct}%` : 'PVP'}
+              {showDistributorPrice ? `COSTO (PVP-${discountPct}%)` : 'PVP'}
             </button>
           )}
           {/* Total mini en cabecera */}
@@ -660,7 +676,11 @@ const Presupuestador2 = ({ currentUser, incomingProject, onProjectConsumed }) =>
               </button>
             </div>
           ) : (
-            <div className="w-full md:w-56 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-[40vh] md:max-h-none">
+            <div className="w-full md:w-56 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-[40vh] md:max-h-none relative"
+              style={typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: familiesWidth, maxWidth: familiesWidth } : undefined}
+            >
+              <div className="hidden md:block absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-500/40 z-20"
+                onMouseDown={() => { isResizingFamilies.current = true; }} />
               <div className="p-2.5">
                 <div className="flex items-center justify-between px-2 py-1.5">
                   <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1.5"><Layers size={12} /> Familias</p>
@@ -903,8 +923,12 @@ const Presupuestador2 = ({ currentUser, incomingProject, onProjectConsumed }) =>
             )}
           </div>
         ) : (
-          <div className={`w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] ${
-            mobileTab === 'catalog' ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] relative ${
+            mobileTab === 'catalog' ? 'hidden md:flex' : 'flex'}`}
+            style={typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: cartWidth, maxWidth: cartWidth } : undefined}
+          >
+            <div className="hidden md:block absolute top-0 left-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-500/40 z-20"
+              onMouseDown={() => { isResizingCart.current = true; }} />
             <div className="px-4 py-3.5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
               <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center"><ShoppingCart size={16} className="text-orange-600" /></div>
               <div>
