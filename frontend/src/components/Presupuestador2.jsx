@@ -275,7 +275,7 @@ const Presupuestador2 = ({ currentUser }) => {
             <Table2 size={22} />
           </div>
           <div>
-            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador MV</h1>
+            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador{((currentUser?.allowedLibraries?.length || 0) > 1) ? ' MV' : ''}</h1>
             <p className="text-[11px] text-orange-100/90 flex items-center gap-1.5 mt-0.5">
               <Boxes size={12} /> {products.length} muebles · tarifa por grupo
             </p>
