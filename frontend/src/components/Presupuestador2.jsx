@@ -5,11 +5,12 @@ import {
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
   Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List
 } from 'lucide-react';
-import { authHeaders, librariesAPI } from '../services/api';
+import { authHeaders, librariesAPI, materialsAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
 import Logo from './Logo';
 import { MuebleIcon, classifyMueble, NOMENCLATURA, NOMENCLATURA_NOTAS } from './muebleIcons';
+import { INITIAL_CARCASS_MATERIALS } from '../constants';
 import { BookOpen } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -80,6 +81,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [doorColorHigh, setDoorColorHigh] = useState('');
   const [doorColorColumns, setDoorColorColumns] = useState('');
   const [sideColor, setSideColor] = useState('');
+  const [carcassMaterials, setCarcassMaterials] = useState(INITIAL_CARCASS_MATERIALS);
+  const [selectedCarcassMaterialId, setSelectedCarcassMaterialId] = useState(INITIAL_CARCASS_MATERIALS[0]?.id || '');
   const [doorHasVeta, setDoorHasVeta] = useState(false);
   const [golaAlto, setGolaAlto] = useState(false);
   const [golaAltoColor, setGolaAltoColor] = useState('');
@@ -145,6 +148,27 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   };
 
   useEffect(() => { localStorage.setItem('p2_library', libraryCode); }, [libraryCode]);
+
+  // Cargar materiales de armazón (cascos) disponibles
+  useEffect(() => {
+    let active = true;
+    materialsAPI.getAll(libraryCode).then(materials => {
+      if (!active) return;
+      const list = Array.isArray(materials) && materials.length > 0 ? materials : INITIAL_CARCASS_MATERIALS;
+      setCarcassMaterials(list);
+      const forLib = list.filter(m => !m.library || m.library === libraryCode);
+      const saved = localStorage.getItem(`p2_carcass_${libraryCode}`);
+      if (saved && forLib.some(m => m.id === saved)) {
+        setSelectedCarcassMaterialId(saved);
+      } else if (forLib.length > 0 && !forLib.some(m => m.id === selectedCarcassMaterialId)) {
+        setSelectedCarcassMaterialId(forLib[0].id);
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libraryCode]);
+
+  useEffect(() => { if (selectedCarcassMaterialId) localStorage.setItem(`p2_carcass_${libraryCode}`, selectedCarcassMaterialId); }, [selectedCarcassMaterialId, libraryCode]);
   useEffect(() => { if (tariff) localStorage.setItem(`p2_tariff_${libraryCode}`, tariff); }, [tariff, libraryCode]);
   useEffect(() => { localStorage.setItem('p2_search_scope', searchScope); }, [searchScope]);
   useEffect(() => { localStorage.setItem('p2_use_mm', useMillimeters ? 'true' : 'false'); }, [useMillimeters]);
@@ -235,6 +259,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     setGolaAltoColor(proj.golaAltoColor || '');
     setGolaBajo(!!proj.golaBajo);
     setGolaBajoColor(proj.golaBajoColor || '');
+    if (proj.selectedCarcassMaterialId) setSelectedCarcassMaterialId(proj.selectedCarcassMaterialId);
     if (onProjectConsumed) onProjectConsumed();
   }, [incomingProject]);
 
@@ -459,6 +484,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         doorColorHigh,
         doorColorColumns,
         sideColor,
+        selectedCarcassMaterialId,
+        carcassMaterialName: carcassMaterials.find(m => m.id === selectedCarcassMaterialId)?.name || '',
         golaAlto,
         golaAltoColor,
         golaBajo,
@@ -506,6 +533,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         doorColorHigh,
         doorColorColumns,
         sideColor,
+        selectedCarcassMaterialId,
+        carcassMaterialName: carcassMaterials.find(m => m.id === selectedCarcassMaterialId)?.name || '',
         golaAlto,
         golaAltoColor,
         golaBajo,
@@ -563,6 +592,15 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Costados</span>
             <input type="text" value={sideColor} onChange={e => setSideColor(e.target.value)}
               className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+          </label>
+          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
+            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Armazón</span>
+            <select value={selectedCarcassMaterialId} onChange={e => setSelectedCarcassMaterialId(e.target.value)}
+              className="px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-white">
+              {carcassMaterials.filter(m => !m.library || m.library === libraryCode).map(m => (
+                <option key={m.id} value={m.id} className="text-gray-900">{m.name}</option>
+              ))}
+            </select>
           </label>
           <label className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl px-2.5 py-1.5 ring-1 ring-white/25 text-[10px] font-bold cursor-pointer select-none whitespace-nowrap">
             <input type="checkbox" checked={doorHasVeta === true} onChange={e => setDoorHasVeta(e.target.checked)} className="w-3.5 h-3.5 accent-white" />
