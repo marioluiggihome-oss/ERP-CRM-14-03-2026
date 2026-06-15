@@ -118,6 +118,25 @@ async def get_libraries():
         await db.libraries.insert_many(default_libraries)
         libraries = default_libraries
 
+    # Asegurar que la biblioteca ALV existe (se añade sin muebles, a la espera
+    # de su catálogo).
+    if not any(lib.get("code") == "ALV" for lib in libraries):
+        alv = {
+            "id": "lib-alv",
+            "code": "ALV",
+            "name": "ALV",
+            "description": "Catálogo ALV",
+            "currency": "points",
+            "pointValue": 1.0,
+            "isActive": True,
+            "productCount": 0,
+            "pricingSystem": "zones",
+            "priceLevels": ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7", "Z8", "Z9", "Z10", "Z11", "Z12"],
+            "createdAt": datetime.now(timezone.utc).isoformat()
+        }
+        await db.libraries.insert_one(alv)
+        libraries.append(alv)
+
     # Normalizar nombres antiguos ("Zona Cocinas" / "Muebles Valencia") a "ZC" / "MV"
     rename_map = {"Zona Cocinas": "ZC", "Muebles Valencia": "MV"}
     for lib in libraries:

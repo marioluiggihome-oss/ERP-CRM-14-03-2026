@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Table2, Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
+  Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
   Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
   Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List
@@ -8,6 +8,7 @@ import {
 import { authHeaders, librariesAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
+import Logo from './Logo';
 import { MuebleIcon, classifyMueble, NOMENCLATURA, NOMENCLATURA_NOTAS } from './muebleIcons';
 import { BookOpen } from 'lucide-react';
 
@@ -523,11 +524,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white px-4 sm:px-6 py-3 flex flex-col gap-2.5 shadow-lg sticky top-0 z-30">
         <div className="flex items-center gap-3 flex-wrap w-full">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center ring-1 ring-white/30">
-            <Table2 size={22} />
+          <div className="w-11 h-11 bg-white rounded-2xl flex items-center justify-center ring-1 ring-white/30 p-1.5 overflow-hidden">
+            <Logo className="h-full w-full object-contain" customLogo={logo} showSlogan={false} />
           </div>
           <div>
-            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador{availableLibraries.length > 1 ? ` ${libraryCode || 'MV'}` : ''}</h1>
+            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador</h1>
             <p className="text-[11px] text-orange-100/90 flex items-center gap-1.5 mt-0.5">
               <Boxes size={12} /> {products.length} muebles · agrupados por familia
             </p>
