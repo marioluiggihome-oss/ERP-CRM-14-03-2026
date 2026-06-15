@@ -231,6 +231,7 @@ class UserUpdate(BaseModel):
     canAccessFloor: Optional[bool] = None   # Acceso a Luiggi Floor (red de distribución)
     floorOnly: Optional[bool] = None        # Usuario SOLO Luiggi Floor (entra directo, sin otros presupuestadores)
     crmOnly: Optional[bool] = None          # Usuario SOLO CRM (entra directo, sin barra de navegación)
+    canUsePresupuestador1: Optional[bool] = None  # Acceso al Presupuestador 1 (independiente del 2)
     canUsePresupuestador2: Optional[bool] = None  # Acceso al Presupuestador 2 (MV por tarifa)
     canAuthorizePermissions: Optional[bool] = None
     useCustomBranding: Optional[bool] = None

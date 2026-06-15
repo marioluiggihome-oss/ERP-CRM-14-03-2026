@@ -218,7 +218,6 @@ const Presupuestador2 = ({ currentUser, incomingProject, onProjectConsumed }) =>
     setGolaBajo(!!proj.golaBajo);
     setGolaBajoColor(proj.golaBajoColor || '');
     if (onProjectConsumed) onProjectConsumed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingProject]);
 
   // Descuento comercial del usuario, para el modo "COSTO fábrica".
