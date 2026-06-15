@@ -5,7 +5,7 @@ import {
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
   Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List
 } from 'lucide-react';
-import { authHeaders, librariesAPI, materialsAPI } from '../services/api';
+import { authHeaders, librariesAPI, materialsAPI, settingsAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
 import Logo from './Logo';
@@ -83,6 +83,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [sideColor, setSideColor] = useState('');
   const [carcassMaterials, setCarcassMaterials] = useState(INITIAL_CARCASS_MATERIALS);
   const [selectedCarcassMaterialId, setSelectedCarcassMaterialId] = useState(INITIAL_CARCASS_MATERIALS[0]?.id || '');
+  // Incrementos por biblioteca (medidas especiales y corte de viga), cargados de ajustes.
+  const [librarySpecialIncrements, setLibrarySpecialIncrements] = useState({
+    ZC: { width: 45, height: 45, depth: 45 }, MV: { width: 45, height: 45, depth: 45 },
+  });
+  const [libraryVigaCutIncrements, setLibraryVigaCutIncrements] = useState({ ZC: 0, MV: 0 });
   const [doorHasVeta, setDoorHasVeta] = useState(false);
   const [golaAlto, setGolaAlto] = useState(false);
   const [golaAltoColor, setGolaAltoColor] = useState('');
@@ -168,6 +173,15 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   }, [libraryCode]);
 
   useEffect(() => { if (selectedCarcassMaterialId) localStorage.setItem(`p2_carcass_${libraryCode}`, selectedCarcassMaterialId); }, [selectedCarcassMaterialId, libraryCode]);
+
+  // Cargar incrementos por medidas especiales y corte de viga (ajustes globales).
+  useEffect(() => {
+    settingsAPI.get().then(s => {
+      if (!s) return;
+      if (s.librarySpecialIncrements) setLibrarySpecialIncrements(s.librarySpecialIncrements);
+      if (s.libraryVigaCutIncrements) setLibraryVigaCutIncrements(s.libraryVigaCutIncrements);
+    }).catch(() => {});
+  }, []);
   useEffect(() => { if (tariff) localStorage.setItem(`p2_tariff_${libraryCode}`, tariff); }, [tariff, libraryCode]);
   useEffect(() => { localStorage.setItem('p2_search_scope', searchScope); }, [searchScope]);
   useEffect(() => { localStorage.setItem('p2_use_mm', useMillimeters ? 'true' : 'false'); }, [useMillimeters]);
@@ -245,6 +259,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         manual: isManual,
         hand: it.openingDirection === 'Derecha' ? 'D' : it.openingDirection === 'Izquierda' ? 'I' : null,
         notes: it.notes || '',
+        customWidth: it.customWidth != null ? Number(it.customWidth) : '',
+        customHeight: it.customHeight != null ? Number(it.customHeight) : '',
+        customDepth: it.customDepth != null ? Number(it.customDepth) : '',
+        hasVigaCut: !!it.hasVigaCut,
       };
     }));
     setClientName(proj.customerName || '');
@@ -383,7 +401,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       if (i >= 0) {
         const cp = [...prev]; cp[i] = { ...cp[i], qty: cp[i].qty + 1 }; return cp;
       }
-      return [...prev, { id: p.id, code: p.code || p.reference, name: p.name, price, qty: 1, manual: false }];
+      return [...prev, {
+        id: p.id, code: p.code || p.reference, name: p.name, price, qty: 1, manual: false,
+        customWidth: Number(p.width) || 0, customHeight: Number(p.height) || 0, customDepth: Number(p.depth) || 0,
+        hasVigaCut: false,
+      }];
     });
   };
 
@@ -407,11 +429,39 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     .map(x => x.id === id ? { ...x, hand: x.hand === hand ? null : hand } : x));
   const setItemNotes = (id, notes) => setCart(prev => prev
     .map(x => x.id === id ? { ...x, notes } : x));
+  const setItemDim = (id, field, value) => setCart(prev => prev
+    .map(x => x.id === id ? { ...x, [field]: value === '' ? '' : Number(value) } : x));
+  const toggleViga = (id) => setCart(prev => prev
+    .map(x => x.id === id ? { ...x, hasVigaCut: !x.hasVigaCut } : x));
+
+  // Extras de precio por línea (medidas especiales + corte de viga + armazón),
+  // replicando el Presupuestador 1. No aplica a COSTADOS/REGLETAS ni a manuales.
+  const extrasOf = useCallback((it) => {
+    if (it.manual) return 0;
+    const prod = products.find(p => p.id === it.id);
+    if (!prod) return 0;
+    const cat = (prod.category || '').toUpperCase();
+    const excluded = cat.includes('COSTADO') || cat.includes('REGLETA');
+    const inc = librarySpecialIncrements?.[libraryCode] || { width: 0, height: 0, depth: 0 };
+    let extra = 0;
+    if (!excluded) {
+      if (it.customWidth !== '' && Number(it.customWidth) !== Number(prod.width)) extra += Number(inc.width) || 0;
+      if (it.customHeight !== '' && Number(it.customHeight) !== Number(prod.height)) extra += Number(inc.height) || 0;
+      if (it.customDepth !== '' && Number(it.customDepth) !== Number(prod.depth)) extra += Number(inc.depth) || 0;
+    }
+    if (it.hasVigaCut) extra += Number(libraryVigaCutIncrements?.[libraryCode]) || 0;
+    const mat = carcassMaterials.find(m => m.id === selectedCarcassMaterialId);
+    extra += Number(mat?.fixedIncrement) || 0;
+    return extra;
+  }, [products, librarySpecialIncrements, libraryVigaCutIncrements, libraryCode, carcassMaterials, selectedCarcassMaterialId]);
+
+  // Precio unitario COMPLETO: catálogo + extras (medidas, viga, armazón).
+  const unitFull = useCallback((it) => unitPriceOf(it) + extrasOf(it), [unitPriceOf, extrasOf]);
 
   // Las líneas manuales nunca llevan descuento; el resto sí, si está activo el modo COSTO.
-  const lineTotal = (x) => unitPriceOf(x) * x.qty * (x.manual ? 1 : discountFactor);
+  const lineTotal = (x) => unitFull(x) * x.qty * (x.manual ? 1 : discountFactor);
   const cartTotal = cart.reduce((s, x) => s + lineTotal(x), 0);
-  const cartTotalPvp = cart.reduce((s, x) => s + unitPriceOf(x) * x.qty, 0);
+  const cartTotalPvp = cart.reduce((s, x) => s + unitFull(x) * x.qty, 0);
   const ivaRate = 21;
   const ivaAmount = cartTotal * (ivaRate / 100);
   const totalConIva = cartTotal + ivaAmount;
@@ -423,7 +473,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   // de la tarifa). precio P1 = manualPoints * pointValue * qty → manualPoints = precio/pointValue
   const buildMontadaItems = useCallback(() => cart.map((it, idx) => {
     const prod = !it.manual ? products.find(p => p.id === it.id) : null;
-    const unit = unitPriceOf(it);
+    const unit = unitFull(it);
     const pts = pointValue ? (unit / pointValue) : unit;
     return {
       id: `p2-${idx}-${it.id}`,
@@ -433,13 +483,14 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       manualDescription: it.name,
       customReference: it.code,
       manualPoints: pts,
-      customWidth: prod?.width || 0,
-      customHeight: prod?.height || 0,
-      customDepth: prod?.depth || 0,
+      customWidth: it.manual ? 0 : (it.customWidth !== '' ? Number(it.customWidth) : (prod?.width || 0)),
+      customHeight: it.manual ? 0 : (it.customHeight !== '' ? Number(it.customHeight) : (prod?.height || 0)),
+      customDepth: it.manual ? 0 : (it.customDepth !== '' ? Number(it.customDepth) : (prod?.depth || 0)),
+      hasVigaCut: !!it.hasVigaCut,
       openingDirection: it.hand === 'D' ? 'Derecha' : it.hand === 'I' ? 'Izquierda' : '',
       notes: it.notes || '',
     };
-  }), [cart, products, pointValue, unitPriceOf]);
+  }), [cart, products, pointValue, unitFull]);
 
   // Items para el DESPIECE (reutiliza el motor/modal del Presupuestador 1).
   // Las medidas salen del catálogo MV; el backend clasifica por nombre/código.
@@ -452,9 +503,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       customReference: it.code,
       manualDescription: it.name,
       productName: it.name,
-      customWidth: prod?.width || 0,
-      customHeight: prod?.height || 0,
-      customDepth: prod?.depth || 0,
+      customWidth: it.customWidth !== '' && it.customWidth != null ? Number(it.customWidth) : (prod?.width || 0),
+      customHeight: it.customHeight !== '' && it.customHeight != null ? Number(it.customHeight) : (prod?.height || 0),
+      customDepth: it.customDepth !== '' && it.customDepth != null ? Number(it.customDepth) : (prod?.depth || 0),
+      hasVigaCut: !!it.hasVigaCut,
       quantity: it.qty,
     };
   }), [cart, products]);
@@ -1024,11 +1076,42 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                           <input value={it.price} onChange={e => updateItemPrice(it.id, e.target.value)} type="number" step="0.01"
                             className="w-16 text-right text-[11px] px-1.5 py-1 border border-amber-200 bg-amber-50 rounded-md font-mono" />
                         ) : (
-                          <span className="font-mono text-[11px] text-slate-400">{eur(displayPrice(unitPriceOf(it)))}/ud</span>
+                          <span className="font-mono text-[11px] text-slate-400">{eur(displayPrice(unitFull(it)))}/ud</span>
                         )}
                         <span className="font-mono font-black text-orange-700 text-sm w-20 text-right">{eur(lineTotal(it))}</span>
                       </div>
                     </div>
+                    {!it.manual && (() => {
+                      const prod = products.find(p => p.id === it.id);
+                      const ow = prod?.width, oh = prod?.height, od = prod?.depth;
+                      const dims = [
+                        { lbl: 'An', field: 'customWidth', val: it.customWidth, orig: ow },
+                        { lbl: 'Al', field: 'customHeight', val: it.customHeight, orig: oh },
+                        { lbl: 'Fo', field: 'customDepth', val: it.customDepth, orig: od },
+                      ];
+                      const vigaInc = Number(libraryVigaCutIncrements?.[libraryCode]) || 0;
+                      return (
+                        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100 flex-wrap">
+                          {dims.map(d => {
+                            const changed = d.val !== '' && d.val != null && Number(d.val) !== Number(d.orig);
+                            return (
+                              <label key={d.field} className="flex items-center gap-0.5" title={`Original: ${d.orig ?? '–'} cm`}>
+                                <span className="text-[9px] font-black text-slate-400 uppercase">{d.lbl}</span>
+                                <input type="number" step="0.1" value={d.val ?? ''}
+                                  onChange={e => setItemDim(it.id, d.field, e.target.value)}
+                                  className={`w-11 px-1 py-0.5 text-[10px] font-bold text-center rounded-md border outline-none ${
+                                    changed ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-slate-200 text-slate-600'}`} />
+                              </label>
+                            );
+                          })}
+                          <button onClick={() => toggleViga(it.id)} title={`Corte de viga${vigaInc ? ` (+${vigaInc}€)` : ''}`}
+                            className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border transition-colors ${
+                              it.hasVigaCut ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                            Viga
+                          </button>
+                        </div>
+                      );
+                    })()}
                     {(
                       <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
                         {String(it.code || '').includes('D/I') && (
