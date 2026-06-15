@@ -273,8 +273,8 @@ async def chat_with_gemini(
 
 # Modelos de imagen candidatos (cascada ante retirada/renombrado de modelos)
 GEMINI_IMAGE_MODELS = [
-    "gemini-2.5-flash-image",
     "gemini-3-pro-image-preview",
+    "gemini-2.5-flash-image",
     "gemini-2.5-flash-image-preview",
 ]
 

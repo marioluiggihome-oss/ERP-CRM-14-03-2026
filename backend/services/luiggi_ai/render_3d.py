@@ -183,6 +183,8 @@ class Render3DService:
             "Consistency: keep cabinet doors, drawers and handles straight, evenly spaced "
             "and aligned; do not duplicate, merge, warp or omit cabinet modules; walls, "
             "floor lines and countertop edges must stay straight and in correct perspective.",
+            "Composition: wide-angle shot in 16:9 landscape orientation, framing the full "
+            "kitchen run from a corner so all cabinetry is visible.",
             "No text, watermarks, logos, people, or distorted/extra objects in the image.",
         ])
 
@@ -355,6 +357,8 @@ class Render3DService:
             "Consistency: keep doors, drawers, shelves and handles straight, evenly spaced "
             "and aligned with the described layout; do not duplicate, merge, warp or omit "
             "modules; edges and lines must stay straight and in correct perspective.",
+            "Composition: wide-angle shot in 16:9 landscape orientation, framing the full "
+            "piece and its surrounding space from a corner.",
             "No text, watermarks, logos, people, or distorted/extra objects in the image.",
         ]
         return " ".join(parts)
