@@ -566,9 +566,9 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         {/* Cliente y referencia de presupuesto */}
         <div className="flex items-center gap-2 flex-wrap">
           <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Cliente…"
-            className="w-32 sm:w-40 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
+            className="w-32 sm:w-40 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
           <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Referencia…"
-            className="w-32 sm:w-40 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
+            className="w-32 sm:w-40 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
         </div>
 
         {/* Colores y gola */}
@@ -576,27 +576,27 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
           <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
             <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Bajas</span>
             <input type="text" value={doorColorLow} onChange={e => setDoorColorLow(e.target.value)}
-              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
           </label>
           <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
             <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Altas</span>
             <input type="text" value={doorColorHigh} onChange={e => setDoorColorHigh(e.target.value)}
-              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
           </label>
           <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
             <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Columnas</span>
             <input type="text" value={doorColorColumns} onChange={e => setDoorColorColumns(e.target.value)}
-              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
           </label>
           <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
             <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Costados</span>
             <input type="text" value={sideColor} onChange={e => setSideColor(e.target.value)}
-              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
+              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
           </label>
           <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
             <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Armazón</span>
             <select value={selectedCarcassMaterialId} onChange={e => setSelectedCarcassMaterialId(e.target.value)}
-              className="px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-white">
+              className="px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-white">
               {carcassMaterials.filter(m => !m.library || m.library === libraryCode).map(m => (
                 <option key={m.id} value={m.id} className="text-gray-900">{m.name}</option>
               ))}
@@ -610,13 +610,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }} className="w-3.5 h-3.5 accent-white" />
             <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Gola Alto</span>
             <input type="text" value={golaAltoColor} onChange={e => { setGolaAltoColor(e.target.value); setGolaAlto(true); }}
-              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaAlto} />
+              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaAlto} />
           </label>
           <label className="flex items-center gap-1.5 bg-white/10 rounded-xl pl-2.5 pr-1 py-1 ring-1 ring-white/25">
             <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }} className="w-3.5 h-3.5 accent-white" />
             <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Gola Bajo</span>
             <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
-              className="w-16 px-2 py-1 bg-white/15 rounded-lg ring-1 ring-white/20 text-xs font-bold text-white placeholder-orange-100/60 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
+              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
           </label>
         </div>
 
