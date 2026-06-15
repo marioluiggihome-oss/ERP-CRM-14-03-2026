@@ -31,7 +31,7 @@ const groupKeyOf = (name) => {
  * product.zonePoints[tarifa]. PDF con formato del Presupuestador 1 y guardado
  * en proyectos.
  */
-const Presupuestador2 = ({ currentUser }) => {
+const Presupuestador2 = ({ currentUser, incomingProject, onProjectConsumed }) => {
   const [libraryCode, setLibraryCode] = useState(() => localStorage.getItem('p2_library') || 'MV');
   const [availableLibraries, setAvailableLibraries] = useState([]);
   const [library, setLibrary] = useState(null);
@@ -184,6 +184,43 @@ const Presupuestador2 = ({ currentUser }) => {
     if (!priceLevels.includes(tariff)) setTariff(priceLevels[0]);
   }, [libraryCode, library]);
 
+  // Reabrir un presupuesto creado en el Presupuestador 2: rehidrata el carrito,
+  // la biblioteca, la tarifa, el cliente y los colores a partir del expediente
+  // guardado (los items vienen en el formato "montada" de buildMontadaItems).
+  useEffect(() => {
+    if (!incomingProject) return;
+    const proj = incomingProject;
+    if (proj.libraryCode && proj.libraryCode !== libraryCode) setLibraryCode(proj.libraryCode);
+    if (proj.tariff) setTariff(proj.tariff);
+    const pv = library?.pointValue || pointValue || 1.0;
+    const items = Array.isArray(proj.itemsMontada) ? proj.itemsMontada : [];
+    setCart(items.map((it, idx) => {
+      const isManual = !it.productId;
+      const pts = Number(it.manualPoints) || 0;
+      return {
+        id: it.productId || `manual-${Date.now()}-${idx}`,
+        code: it.customReference || it.productCode || 'MANUAL',
+        name: it.manualDescription || it.productName || it.name || '',
+        price: pts * pv,
+        qty: it.quantity || 1,
+        manual: isManual,
+      };
+    }));
+    setClientName(proj.customerName || '');
+    setBudgetReference(proj.internalReference || '');
+    setNotes('');
+    setDoorColorLow(proj.doorColorLow || '');
+    setDoorColorHigh(proj.doorColorHigh || '');
+    setDoorColorColumns(proj.doorColorColumns || '');
+    setSideColor(proj.sideColor || '');
+    setGolaAlto(!!proj.golaAlto);
+    setGolaAltoColor(proj.golaAltoColor || '');
+    setGolaBajo(!!proj.golaBajo);
+    setGolaBajoColor(proj.golaBajoColor || '');
+    if (onProjectConsumed) onProjectConsumed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingProject]);
+
   // Descuento comercial del usuario, para el modo "COSTO fábrica".
   const discountPct = currentUser?.discountMontada ?? currentUser?.commercialDiscount ?? 0;
   const discountFactor = showDistributorPrice ? (1 - discountPct / 100) : 1;
@@ -203,6 +240,16 @@ const Presupuestador2 = ({ currentUser }) => {
 
   // Precio a mostrar según el modo PVP / COSTO fábrica (con descuento comercial).
   const displayPrice = useCallback((base) => base * discountFactor, [discountFactor]);
+
+  // Precio unitario VIVO de una línea del presupuesto. Para los muebles del
+  // catálogo se recalcula SIEMPRE con la tarifa activa (así, al cambiar T1→T2,
+  // cambian el precio de cada mueble y el total). Las líneas manuales conservan
+  // el precio tecleado.
+  const unitPriceOf = useCallback((it) => {
+    if (it.manual) return Number(it.price) || 0;
+    const prod = products.find(p => p.id === it.id);
+    return prod ? priceOf(prod) : (Number(it.price) || 0);
+  }, [products, priceOf]);
 
   const families = useMemo(() => {
     const m = {};
@@ -317,9 +364,9 @@ const Presupuestador2 = ({ currentUser }) => {
     .map(x => x.id === id ? { ...x, price: parseFloat(newPrice) || 0 } : x));
 
   // Las líneas manuales nunca llevan descuento; el resto sí, si está activo el modo COSTO.
-  const lineTotal = (x) => x.price * x.qty * (x.manual ? 1 : discountFactor);
+  const lineTotal = (x) => unitPriceOf(x) * x.qty * (x.manual ? 1 : discountFactor);
   const cartTotal = cart.reduce((s, x) => s + lineTotal(x), 0);
-  const cartTotalPvp = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  const cartTotalPvp = cart.reduce((s, x) => s + unitPriceOf(x) * x.qty, 0);
   const ivaRate = 21;
   const ivaAmount = cartTotal * (ivaRate / 100);
   const totalConIva = cartTotal + ivaAmount;
@@ -331,7 +378,8 @@ const Presupuestador2 = ({ currentUser }) => {
   // de la tarifa). precio P1 = manualPoints * pointValue * qty → manualPoints = precio/pointValue
   const buildMontadaItems = useCallback(() => cart.map((it, idx) => {
     const prod = !it.manual ? products.find(p => p.id === it.id) : null;
-    const pts = pointValue ? (it.price / pointValue) : it.price;
+    const unit = unitPriceOf(it);
+    const pts = pointValue ? (unit / pointValue) : unit;
     return {
       id: `p2-${idx}-${it.id}`,
       productId: it.manual ? null : it.id,
@@ -344,7 +392,7 @@ const Presupuestador2 = ({ currentUser }) => {
       customHeight: prod?.height || 0,
       customDepth: prod?.depth || 0,
     };
-  }), [cart, products, pointValue]);
+  }), [cart, products, pointValue, unitPriceOf]);
 
   // Items para el DESPIECE (reutiliza el motor/modal del Presupuestador 1).
   // Las medidas salen del catálogo MV; el backend clasifica por nombre/código.
@@ -384,9 +432,22 @@ const Presupuestador2 = ({ currentUser }) => {
         internalReference: budgetReference || notes || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`,
         itemsMontada: buildMontadaItems(),
         itemsDespiece: [],
+        doorColorLow,
+        doorColorHigh,
+        doorColorColumns,
+        sideColor,
+        golaAlto,
+        golaAltoColor,
+        golaBajo,
+        golaBajoColor,
         status: 'activo',
         totalPvp: cartTotalPvp,
         ivaRate,
+        // Marca de origen para reabrirlo en el Presupuestador 2 (con su tarifa
+        // y biblioteca) y mostrarlo en naranja en el Archivo de Proyectos.
+        source: 'presupuestador2',
+        libraryCode,
+        tariff,
       };
       const r = await fetch(`${API_URL}/api/projects?user_id=${encodeURIComponent(currentUser?.id || '')}`, {
         method: 'POST',
@@ -895,7 +956,7 @@ const Presupuestador2 = ({ currentUser }) => {
                           <input value={it.price} onChange={e => updateItemPrice(it.id, e.target.value)} type="number" step="0.01"
                             className="w-16 text-right text-[11px] px-1.5 py-1 border border-amber-200 bg-amber-50 rounded-md font-mono" />
                         ) : (
-                          <span className="font-mono text-[11px] text-slate-400">{eur(displayPrice(it.price))}/ud</span>
+                          <span className="font-mono text-[11px] text-slate-400">{eur(displayPrice(unitPriceOf(it)))}/ud</span>
                         )}
                         <span className="font-mono font-black text-orange-700 text-sm w-20 text-right">{eur(lineTotal(it))}</span>
                       </div>

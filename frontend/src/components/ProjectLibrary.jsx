@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle, Copy, Receipt } from 'lucide-react';
+import { FolderOpen, Trash2, Eye, Search, FileText, Save, Loader, RefreshCw, Archive, ArchiveRestore, Target, ChevronDown, Clock, CheckCircle, XCircle, Truck, Factory, Send, RotateCcw, AlertTriangle, Copy, Receipt, Table2 } from 'lucide-react';
 import { projectsAPI, crmOpportunitiesAPI, invoicesAPI } from '../services/api';
 
 
@@ -90,6 +90,13 @@ const StatusDropdown = ({ project, onStatusChange }) => {
     </div>
   );
 };
+
+// Detecta si un expediente se creó con el Presupuestador 2. Los nuevos llevan
+// `source: 'presupuestador2'`; los antiguos (sin marca) se reconocen porque sus
+// items "montada" tienen un id con prefijo "p2-" (generado por buildMontadaItems).
+const isPresupuestador2 = (project) =>
+  project?.source === 'presupuestador2' ||
+  (!project?.source && (project?.itemsMontada || []).some(i => String(i?.id || '').startsWith('p2-')));
 
 // ─── Componente principal ────────────────────────────────────────────────────
 const ProjectLibrary = ({ state, setState }) => {
@@ -192,6 +199,7 @@ const ProjectLibrary = ({ state, setState }) => {
         ivaRate: ivaRate,
         descuentoAplicado: descuento,
         status: 'borrador',
+        source: 'presupuestador1',
         // Caducidad por defecto: 30 días
         validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       };
@@ -207,23 +215,38 @@ const ProjectLibrary = ({ state, setState }) => {
   };
 
   const loadProject = async (project) => {
-    if (window.confirm(`¿Cargar proyecto "${project.customerName || project.budgetNumber}" en la mesa de trabajo?`)) {
+    // Reabrir en el presupuestador con el que se creó el expediente.
+    const isP2 = isPresupuestador2(project);
+    const canP2 = state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin;
+    const dest = isP2 && canP2 ? 'Presupuestador 2' : 'mesa de trabajo';
+    if (!window.confirm(`¿Cargar proyecto "${project.customerName || project.budgetNumber}" en ${dest}?`)) return;
+
+    if (isP2 && canP2) {
+      // El Presupuestador 2 es autónomo: le pasamos el expediente para que
+      // rehidrate su carrito, tarifa, biblioteca y colores.
       setState(prev => ({
         ...prev,
-        budgetItemsMontada: project.itemsMontada || [],
-        budgetItemsDespiece: project.itemsDespiece || [],
-        customerName: project.customerName || '',
-        customerAddress: project.customerAddress || '',
-        budgetNumber: project.budgetNumber || '',
-        internalReference: project.internalReference || '',
-        doorColorLow: project.doorColorLow || '',
-        doorColorHigh: project.doorColorHigh || '',
-        doorColorColumns: project.doorColorColumns || '',
-        sideColor: project.sideColor || '',
-        selectedCarcassMaterialId: project.selectedCarcassMaterialId || prev.selectedCarcassMaterialId,
-        currentTab: 'budget'
+        p2IncomingProject: project,
+        currentTab: 'presupuestador2',
       }));
+      return;
     }
+
+    setState(prev => ({
+      ...prev,
+      budgetItemsMontada: project.itemsMontada || [],
+      budgetItemsDespiece: project.itemsDespiece || [],
+      customerName: project.customerName || '',
+      customerAddress: project.customerAddress || '',
+      budgetNumber: project.budgetNumber || '',
+      internalReference: project.internalReference || '',
+      doorColorLow: project.doorColorLow || '',
+      doorColorHigh: project.doorColorHigh || '',
+      doorColorColumns: project.doorColorColumns || '',
+      sideColor: project.sideColor || '',
+      selectedCarcassMaterialId: project.selectedCarcassMaterialId || prev.selectedCarcassMaterialId,
+      currentTab: 'budget'
+    }));
   };
 
   const deleteProject = async (projectId) => {
@@ -392,9 +415,10 @@ const ProjectLibrary = ({ state, setState }) => {
             {filteredProjects.map(project => {
               const expiring = isExpiringSoon(project);
               const expired = isExpired(project);
+              const isP2 = isPresupuestador2(project);
               return (
                 <div key={project.id}
-                  className={`bg-white rounded-2xl p-5 shadow-lg border transition-all hover:shadow-xl ${expiring ? 'border-amber-300' : expired ? 'border-red-200' : 'border-indigo-100'}`}>
+                  className={`bg-white rounded-2xl p-5 shadow-lg border transition-all hover:shadow-xl ${isP2 ? 'border-l-4 border-l-orange-500' : ''} ${expiring ? 'border-amber-300' : expired ? 'border-red-200' : isP2 ? 'border-orange-200' : 'border-indigo-100'}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
@@ -402,6 +426,11 @@ const ProjectLibrary = ({ state, setState }) => {
                           {project.customerName || 'Sin nombre'}
                         </h3>
                         <StatusDropdown project={project} onStatusChange={handleStatusChange} />
+                        {isP2 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-[9px] font-black uppercase">
+                            <Table2 size={10} /> Presup. 2
+                          </span>
+                        )}
                         {expiring && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[9px] font-black uppercase">
                             <AlertTriangle size={10} /> Caduca pronto
@@ -439,7 +468,7 @@ const ProjectLibrary = ({ state, setState }) => {
                         </div>
                         <div>
                           <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Total PVP</p>
-                          <p className="text-lg font-black text-orange-600">
+                          <p className={`text-lg font-black ${isP2 ? 'text-orange-600' : 'text-indigo-700'}`}>
                             {(project.totalPvp || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                           </p>
                         </div>
@@ -505,7 +534,8 @@ const ProjectLibrary = ({ state, setState }) => {
 
                     <div className="flex gap-2 ml-4">
                       <button onClick={() => loadProject(project)}
-                        className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md" title="Cargar proyecto">
+                        className={`p-3 text-white rounded-xl transition-all shadow-md ${isP2 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                        title={isP2 ? 'Abrir en Presupuestador 2' : 'Cargar proyecto'}>
                         <Eye size={18} />
                       </button>
                       <button onClick={() => cloneProject(project)}

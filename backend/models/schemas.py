@@ -353,12 +353,21 @@ class ProjectModel(BaseModel):
     doorColorColumns: str = ""
     sideColor: str = ""
     selectedCarcassMaterialId: Optional[str] = None
+    golaAlto: bool = False
+    golaAltoColor: str = ""
+    golaBajo: bool = False
+    golaBajoColor: str = ""
     totalPvp: float = 0.0
     totalCoste: float = 0.0
     margen: float = 0.0
     descuentoAplicado: float = 0.0
     totalConIVA: float = 0.0
     ivaRate: float = 21.0
+    # Presupuestador que creó el expediente ("presupuestador1" | "presupuestador2"),
+    # con biblioteca y tarifa usadas, para reabrirlo en el mismo presupuestador.
+    source: str = ""
+    libraryCode: str = ""
+    tariff: str = ""
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updatedAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: str = "borrador"
@@ -384,12 +393,19 @@ class ProjectCreate(BaseModel):
     doorColorColumns: str = ""
     sideColor: str = ""
     selectedCarcassMaterialId: Optional[str] = None
+    golaAlto: bool = False
+    golaAltoColor: str = ""
+    golaBajo: bool = False
+    golaBajoColor: str = ""
     totalPvp: float = 0.0
     totalCoste: float = 0.0
     margen: float = 0.0
     descuentoAplicado: float = 0.0
     totalConIVA: float = 0.0
     ivaRate: float = 21.0
+    source: str = ""
+    libraryCode: str = ""
+    tariff: str = ""
     status: str = "borrador"
     validUntil: Optional[datetime] = None
 
@@ -407,6 +423,13 @@ class ProjectUpdate(BaseModel):
     doorColorColumns: Optional[str] = None
     sideColor: Optional[str] = None
     selectedCarcassMaterialId: Optional[str] = None
+    golaAlto: Optional[bool] = None
+    golaAltoColor: Optional[str] = None
+    golaBajo: Optional[bool] = None
+    golaBajoColor: Optional[str] = None
+    source: Optional[str] = None
+    libraryCode: Optional[str] = None
+    tariff: Optional[str] = None
     totalPvp: Optional[float] = None
     totalCoste: Optional[float] = None
     margen: Optional[float] = None
