@@ -115,6 +115,20 @@
         "_inc": {
           "METALIZADO": "+23%"
         }
+      },
+      "T9": {
+        "ALAVA TEXT": "T9",
+        "SOFIA TEXT": "T9",
+        "MONZA TEXT": "T9",
+        "TURIN TEXT": "T9",
+        "NOJA TEXT": "T9",
+        "HERA TEXT": "T9",
+        "ALASKA TEXT": "T9",
+        "EDER TEXT": "T9 +8 puntos por tirador",
+        "ZELAN TEXT": "T9 +7 puntos por tirador",
+        "_inc": {
+          "METALIZADO": "+23%"
+        }
       }
     },
     "recibido": {
@@ -126,7 +140,7 @@
       "T6": "pp.31-36 (COMPLETA, volcada). ELEMENTOS_LINEALES pendiente de verificacion visual.",
       "T7": "pp.37-42 (COMPLETA, volcada). Todas las familias de T6 presentes.",
       "T8": "COMPLETA, volcada",
-      "T9": "pp.49-54 (COMPLETA recibida; PENDIENTE de volcar)",
+      "T9": "pp.49-54 (COMPLETA, volcada)",
       "T10": "pp.55-60 (COMPLETA recibida; PENDIENTE de volcar)",
       "T11": "pp.61-66 (COMPLETA recibida; PENDIENTE de volcar)",
       "T12": "pp.67-72 (COMPLETA recibida; PENDIENTE de volcar)",
@@ -19857,6 +19871,1659 @@
           }
         },
         "_nota": "Pendiente de verificar contra imagen pagina 36 (valores copiados de T5 provisionalmente)."
+      }
+    },
+    "T9": {
+      "PUERTAS": {
+        "type": "matrix",
+        "cols": [
+          "P25",
+          "P30",
+          "P35",
+          "P40",
+          "P45",
+          "P50",
+          "P60"
+        ],
+        "rows": {
+          "14": {
+            "P30": 17,
+            "P35": 19,
+            "P40": 20,
+            "P45": 21,
+            "P50": 22,
+            "P60": 23
+          },
+          "28": {
+            "P30": 25,
+            "P35": 25,
+            "P40": 25,
+            "P45": 26,
+            "P50": 26,
+            "P60": 29
+          },
+          "40": {
+            "P30": 27,
+            "P35": 29,
+            "P40": 30,
+            "P45": 32,
+            "P50": 32,
+            "P60": 38
+          },
+          "56": {
+            "P30": 31,
+            "P35": 32,
+            "P40": 35,
+            "P45": 38,
+            "P50": 42,
+            "P60": 45
+          },
+          "70": {
+            "P25": 35,
+            "P30": 35,
+            "P35": 38,
+            "P40": 41,
+            "P45": 44,
+            "P50": 46,
+            "P60": 53
+          },
+          "90": {
+            "P25": 41,
+            "P30": 41,
+            "P35": 45,
+            "P40": 48,
+            "P45": 51,
+            "P50": 54,
+            "P60": 61
+          },
+          "127": {
+            "P30": 53,
+            "P35": 58,
+            "P40": 62,
+            "P45": 67,
+            "P50": 69,
+            "P60": 81
+          },
+          "147": {
+            "P30": 63,
+            "P35": 70,
+            "P40": 75,
+            "P45": 80,
+            "P50": 89,
+            "P60": 97
+          }
+        }
+      },
+      "VITRINA": {
+        "type": "matrix",
+        "cols": [
+          "PV30",
+          "PV35",
+          "PV40",
+          "PV45",
+          "PV50",
+          "PV60"
+        ],
+        "rows": {
+          "28": {
+            "PV30": 42,
+            "PV35": 43,
+            "PV40": 44,
+            "PV45": 45,
+            "PV50": 46,
+            "PV60": 52
+          },
+          "40": {
+            "PV30": 48,
+            "PV35": 52,
+            "PV40": 52,
+            "PV45": 56,
+            "PV50": 57,
+            "PV60": 67
+          },
+          "70": {
+            "PV30": 61,
+            "PV35": 66,
+            "PV40": 72,
+            "PV45": 78,
+            "PV50": 83,
+            "PV60": 95
+          },
+          "90": {
+            "PV30": 72,
+            "PV35": 79,
+            "PV40": 86,
+            "PV45": 92,
+            "PV50": 99,
+            "PV60": 110
+          },
+          "127": {
+            "PV30": 94,
+            "PV35": 104,
+            "PV40": 112,
+            "PV45": 121,
+            "PV50": 133,
+            "PV60": 145
+          },
+          "147": {
+            "PV30": 112,
+            "PV35": 123,
+            "PV40": 132,
+            "PV45": 143,
+            "PV50": 157,
+            "PV60": 171
+          }
+        }
+      },
+      "VITRINA_INGLESA": {
+        "type": "matrix",
+        "cols": [
+          "PVI30",
+          "PVI35",
+          "PVI40",
+          "PVI45",
+          "PVI50",
+          "PVI60"
+        ],
+        "rows": {
+          "70": {},
+          "90": {},
+          "127": {},
+          "147": {}
+        }
+      },
+      "REJILLA_CONFESIONARIO": {
+        "type": "matrix",
+        "cols": [
+          "PR30",
+          "PR35",
+          "PR40",
+          "PR45",
+          "PR50",
+          "PR60"
+        ],
+        "rows": {
+          "70": {
+            "PR30": 51,
+            "PR35": 58,
+            "PR40": 62,
+            "PR45": 68,
+            "PR50": 74,
+            "PR60": 86
+          },
+          "90": {
+            "PR30": 61,
+            "PR35": 69,
+            "PR40": 76,
+            "PR45": 83,
+            "PR50": 89,
+            "PR60": 103
+          },
+          "127": {
+            "PR30": 82,
+            "PR35": 91,
+            "PR40": 101,
+            "PR45": 111,
+            "PR50": 124,
+            "PR60": 140
+          },
+          "147": {
+            "PR30": 96,
+            "PR35": 109,
+            "PR40": 119,
+            "PR45": 131,
+            "PR50": 148,
+            "PR60": 167
+          }
+        }
+      },
+      "BAJO": {
+        "type": "single",
+        "items": {
+          "B25D/I": 64,
+          "B30D/I": 65,
+          "B35D/I": 67,
+          "B40D/I": 70,
+          "B45D/I": 74,
+          "B50D/I": 77,
+          "B60D/I": 84,
+          "B60": 102,
+          "B70": 108,
+          "B80": 114,
+          "B90": 122,
+          "B100": 127
+        }
+      },
+      "BAJO_FREGADERO": {
+        "type": "single_chapa",
+        "items": {
+          "BF45D/I": [
+            71,
+            76
+          ],
+          "BF50D/I": [
+            74,
+            79
+          ],
+          "BF60D/I": [
+            81,
+            88
+          ],
+          "BF60": [
+            99,
+            106
+          ],
+          "BF70": [
+            105,
+            111
+          ],
+          "BF80": [
+            110,
+            117
+          ],
+          "BF90": [
+            117,
+            124
+          ],
+          "BF100": [
+            122,
+            130
+          ],
+          "BF120": [
+            139,
+            152
+          ]
+        }
+      },
+      "BAJO_RINCON_ESCUADRA": {
+        "type": "single",
+        "items": {
+          "BRI95D/I": 136,
+          "BRU95D/I": 133
+        }
+      },
+      "BAJO_RINCON_CIEGO": {
+        "type": "single",
+        "items": {
+          "BR90D/I": 109,
+          "BR95D/I": 113,
+          "BR100D/I": 115,
+          "BR105D/I": 122,
+          "BR110D/I": 126
+        }
+      },
+      "BAJO_HORNO": {
+        "type": "single",
+        "items": {
+          "BH60": 55,
+          "BHC60": 63,
+          "BHZ60": 95,
+          "BHG60": 99
+        }
+      },
+      "BAJO_TERMINAL": {
+        "type": "single",
+        "items": {
+          "BT30D/I": 167,
+          "BTS30D/I": 177,
+          "BTZ30D/I": 197,
+          "BTP33D/I": 138
+        }
+      },
+      "BAJO_PUERTA_CAJON": {
+        "type": "single",
+        "items": {
+          "BPC30D/I": 104,
+          "BPC35D/I": 108,
+          "BPC40D/I": 113,
+          "BPC45D/I": 118,
+          "BPC50D/I": 123,
+          "BPC60D/I": 129,
+          "BPC60": 186,
+          "BPC70": 192,
+          "BPC80": 202,
+          "BPC90": 212,
+          "BPC100": 222
+        }
+      },
+      "BAJO_5_CAJONES": {
+        "type": "single",
+        "items": {
+          "BC30": 233,
+          "BC35": 241,
+          "BC40": 247,
+          "BC45": 256,
+          "BC50": 263,
+          "BC60": 274,
+          "BC70": 332,
+          "BC80": 350,
+          "BC90": 364
+        }
+      },
+      "BAJO_3CAJ_1GAV": {
+        "type": "single",
+        "items": {
+          "BCG30": 197,
+          "BCG35": 202,
+          "BCG40": 206,
+          "BCG45": 212,
+          "BCG50": 218,
+          "BCG60": 228,
+          "BCG70": 275,
+          "BCG80": 279,
+          "BCG90": 284
+        }
+      },
+      "BAJO_2GAV_1CAJ": {
+        "type": "single",
+        "items": {
+          "BGC30": 191,
+          "BGC35": 194,
+          "BGC40": 196,
+          "BGC45": 201,
+          "BGC50": 206,
+          "BGC60": 217,
+          "BGC70": 239,
+          "BGC80": 243,
+          "BGC90": 248
+        }
+      },
+      "BAJO_2CAJ_1GAV_1FRENTE": {
+        "type": "single",
+        "items": {
+          "BCGF60": 204,
+          "BCGF70": 267,
+          "BCGF80": 277,
+          "BCGF90": 289
+        }
+      },
+      "BAJO_2GAV_1FRENTE": {
+        "type": "single",
+        "items": {
+          "BGF60": 155,
+          "BGF70": 197,
+          "BGF80": 201,
+          "BGF90": 214,
+          "BGF120": 238
+        }
+      },
+      "ALTO": {
+        "type": "h7090",
+        "items": {
+          "A25D/I": [
+            62,
+            69
+          ],
+          "A30D/I": [
+            63,
+            71
+          ],
+          "A35D/I": [
+            66,
+            74
+          ],
+          "A40D/I": [
+            69,
+            77
+          ],
+          "A45D/I": [
+            72,
+            81
+          ],
+          "A50D/I": [
+            75,
+            84
+          ],
+          "A60D/I": [
+            83,
+            91
+          ],
+          "A60": [
+            100,
+            113
+          ],
+          "A70": [
+            106,
+            121
+          ],
+          "A80": [
+            112,
+            129
+          ],
+          "A90": [
+            119,
+            135
+          ],
+          "A100": [
+            125,
+            142
+          ]
+        }
+      },
+      "ALTO_VITRINA": {
+        "type": "h7090",
+        "items": {
+          "AV30D/I": [
+            87,
+            99
+          ],
+          "AV35D/I": [
+            93,
+            106
+          ],
+          "AV40D/I": [
+            99,
+            114
+          ],
+          "AV45D/I": [
+            105,
+            120
+          ],
+          "AV50D/I": [
+            111,
+            126
+          ],
+          "AV60D/I": [
+            124,
+            139
+          ],
+          "AV60": [
+            150,
+            172
+          ],
+          "AV70": [
+            161,
+            187
+          ],
+          "AV80": [
+            173,
+            202
+          ],
+          "AV90": [
+            186,
+            215
+          ],
+          "AV100": [
+            197,
+            228
+          ]
+        }
+      },
+      "ALTO_CAMPANA": {
+        "type": "single_extraplana_clasica",
+        "items": {
+          "ASCE60D/I": 71,
+          "ASCE60": 88,
+          "ASCE90": 104,
+          "ASC60D/I": 62,
+          "ASC60": 78
+        },
+        "_detail": {
+          "ASCE60D/I": [
+            71,
+            82
+          ],
+          "ASCE60": [
+            88,
+            100
+          ],
+          "ASCE90": [
+            104,
+            118
+          ],
+          "ASC60D/I": [
+            62,
+            78
+          ],
+          "ASC60": [
+            78,
+            95
+          ]
+        }
+      },
+      "ALTO_ESCURREPLATOS": {
+        "type": "h7090",
+        "items": {
+          "AE45D/I": [
+            80,
+            91
+          ],
+          "AE50D/I": [
+            84,
+            96
+          ],
+          "AE60D/I": [
+            93,
+            104
+          ],
+          "AE60": [
+            111,
+            126
+          ],
+          "AE70": [
+            118,
+            135
+          ],
+          "AE80": [
+            124,
+            144
+          ],
+          "AE90": [
+            132,
+            151
+          ],
+          "AE100": [
+            139,
+            160
+          ]
+        }
+      },
+      "ALTO_RINCON_CIEGO": {
+        "type": "h7090",
+        "items": {
+          "AR60D/I": [
+            102,
+            114
+          ],
+          "AR65D/I": [
+            108,
+            120
+          ]
+        }
+      },
+      "ALTO_MICROONDAS": {
+        "type": "h7090",
+        "items": {
+          "AM60D/I": [
+            61,
+            75
+          ],
+          "AM60": [
+            83,
+            93
+          ],
+          "AMF60D/I": [
+            77,
+            88
+          ],
+          "AMF60": [
+            95,
+            106
+          ]
+        }
+      },
+      "ALTO_RINCON_ESCUADRA": {
+        "type": "h7090",
+        "items": {
+          "ARI65D/I": [
+            131,
+            143
+          ],
+          "ARU65D/I": [
+            129,
+            141
+          ]
+        }
+      },
+      "ALTO_CALENTADOR": {
+        "type": "h7090",
+        "items": {
+          "ACA45D/I": [
+            66,
+            74
+          ],
+          "ACA50D/I": [
+            69,
+            77
+          ],
+          "ACA60D/I": [
+            75,
+            83
+          ],
+          "ACA60": [
+            93,
+            105
+          ]
+        }
+      },
+      "ALTO_RINCON_CHAFLAN": {
+        "type": "h7090",
+        "items": {
+          "ARC63D/I": [
+            81,
+            90
+          ],
+          "ARCV63D/I": [
+            111,
+            126
+          ]
+        }
+      },
+      "ALTO_CALDERA": {
+        "type": "h7090",
+        "items": {
+          "ACC60D/I": [
+            98,
+            108
+          ],
+          "ACC60": [
+            116,
+            132
+          ]
+        }
+      },
+      "ALTO_DECORATIVO": {
+        "type": "h7090",
+        "items": {
+          "AD40": [
+            99,
+            125
+          ],
+          "AD45": [
+            106,
+            133
+          ],
+          "AD50": [
+            112,
+            142
+          ],
+          "AD60": [
+            125,
+            158
+          ],
+          "AD70": [
+            138,
+            176
+          ],
+          "AD80": [
+            150,
+            193
+          ],
+          "AD90": [
+            163,
+            210
+          ],
+          "AD100": [
+            176,
+            226
+          ]
+        }
+      },
+      "ALTO_SOBREFRIGO": {
+        "type": "h7090",
+        "items": {
+          "ASF60D/I": [
+            65,
+            80
+          ],
+          "ASF60": [
+            81,
+            98
+          ],
+          "ASF60A": [
+            75,
+            90
+          ],
+          "ASF60F": [
+            95,
+            110
+          ]
+        }
+      },
+      "ALTO_TERMINAL": {
+        "type": "h7090",
+        "items": {
+          "AT30D/I": [
+            121,
+            131
+          ],
+          "ATP33D/I": [
+            134,
+            152
+          ]
+        }
+      },
+      "ALTO_ABATIBLE": {
+        "type": "h7090",
+        "items": {
+          "AA45": [
+            135,
+            148
+          ],
+          "AA50": [
+            140,
+            153
+          ],
+          "AA60": [
+            169,
+            186
+          ],
+          "AA70": [
+            177,
+            196
+          ],
+          "AA80": [
+            184,
+            206
+          ],
+          "AA90": [
+            192,
+            216
+          ],
+          "AA100": [
+            201,
+            226
+          ]
+        }
+      },
+      "ALTO_COMBINADO": {
+        "type": "h7090",
+        "items": {
+          "AC45": [
+            146,
+            168
+          ],
+          "AC50": [
+            149,
+            173
+          ],
+          "AC60": [
+            182,
+            212
+          ],
+          "AC70": [
+            198,
+            222
+          ],
+          "AC80": [
+            209,
+            235
+          ],
+          "AC90": [
+            217,
+            245
+          ],
+          "AC100": [
+            231,
+            262
+          ]
+        }
+      },
+      "ALTO_COMBINADO_PLUS": {
+        "type": "h7090",
+        "items": {
+          "ACP45": [
+            133,
+            154
+          ],
+          "ACP50": [
+            137,
+            162
+          ],
+          "ACP60": [
+            160,
+            188
+          ],
+          "ACP70": [
+            177,
+            197
+          ],
+          "ACP80": [
+            184,
+            199
+          ],
+          "ACP90": [
+            192,
+            213
+          ],
+          "ACP100": [
+            197,
+            219
+          ]
+        }
+      },
+      "ALTO_COMBINADO_PLUS_J": {
+        "type": "h7090",
+        "items": {
+          "ACPJ45": [
+            140,
+            161
+          ],
+          "ACPJ50": [
+            142,
+            169
+          ],
+          "ACPJ60": [
+            165,
+            202
+          ],
+          "ACPJ70": [
+            182,
+            204
+          ],
+          "ACPJ80": [
+            193,
+            206
+          ],
+          "ACPJ90": [
+            201,
+            220
+          ],
+          "ACPJ100": [
+            212,
+            232
+          ]
+        }
+      },
+      "ALTILLO": {
+        "type": "h7090",
+        "items": {
+          "L30": [
+            82,
+            89
+          ],
+          "L35": [
+            84,
+            93
+          ],
+          "L40": [
+            85,
+            96
+          ],
+          "L45": [
+            87,
+            99
+          ],
+          "L50": [
+            88,
+            101
+          ],
+          "L60": [
+            94,
+            119
+          ],
+          "L70": [
+            101,
+            126
+          ],
+          "L80": [
+            108,
+            133
+          ],
+          "L90": [
+            115,
+            140
+          ],
+          "L100": [
+            122,
+            147
+          ]
+        }
+      },
+      "ALTILLO_VITRINA": {
+        "type": "h7090",
+        "items": {
+          "LV30": [
+            104,
+            115
+          ],
+          "LV35": [
+            107,
+            121
+          ],
+          "LV40": [
+            108,
+            127
+          ],
+          "LV45": [
+            111,
+            133
+          ],
+          "LV50": [
+            113,
+            138
+          ],
+          "LV60": [
+            123,
+            161
+          ],
+          "LV70": [
+            132,
+            168
+          ],
+          "LV80": [
+            146,
+            182
+          ],
+          "LV90": [
+            153,
+            189
+          ],
+          "LV100": [
+            172,
+            211
+          ]
+        }
+      },
+      "SOBREENCIMERA": {
+        "type": "h127147",
+        "items": {
+          "S30D/I": [
+            86,
+            97
+          ],
+          "S35D/I": [
+            91,
+            103
+          ],
+          "S40D/I": [
+            96,
+            109
+          ],
+          "S45D/I": [
+            101,
+            115
+          ],
+          "S50D/I": [
+            109,
+            125
+          ],
+          "S60D/I": [
+            117,
+            133
+          ],
+          "S60": [
+            140,
+            162
+          ]
+        }
+      },
+      "SOBREENC_CAJON": {
+        "type": "h127147",
+        "items": {
+          "SC30D/I": [
+            119,
+            130
+          ],
+          "SC35D/I": [
+            127,
+            138
+          ],
+          "SC40D/I": [
+            132,
+            145
+          ],
+          "SC45D/I": [
+            138,
+            152
+          ],
+          "SC50D/I": [
+            148,
+            163
+          ],
+          "SC60D/I": [
+            156,
+            173
+          ],
+          "SC60": [
+            191,
+            212
+          ]
+        }
+      },
+      "SOBREENC_VITRINA": {
+        "type": "h127147",
+        "items": {
+          "SV30D/I": [
+            126,
+            144
+          ],
+          "SV35D/I": [
+            136,
+            155
+          ],
+          "SV40D/I": [
+            145,
+            167
+          ],
+          "SV45D/I": [
+            154,
+            175
+          ],
+          "SV50D/I": [
+            167,
+            191
+          ],
+          "SV60D/I": [
+            179,
+            205
+          ],
+          "SV60": [
+            222,
+            255
+          ]
+        }
+      },
+      "SOBREENC_VIT_CAJON": {
+        "type": "h127147",
+        "items": {
+          "SVC30D/I": [
+            160,
+            177
+          ],
+          "SVC35D/I": [
+            171,
+            190
+          ],
+          "SVC40D/I": [
+            181,
+            201
+          ],
+          "SVC45D/I": [
+            191,
+            213
+          ],
+          "SVC50D/I": [
+            205,
+            229
+          ],
+          "SVC60D/I": [
+            220,
+            245
+          ],
+          "SVC60": [
+            272,
+            305
+          ]
+        }
+      },
+      "COLUMNA_DESPENSERO": {
+        "type": "h200220",
+        "items": {
+          "CD30D/I": [
+            149,
+            156
+          ],
+          "CD35D/I": [
+            158,
+            166
+          ],
+          "CD40D/I": [
+            166,
+            176
+          ],
+          "CD45D/I": [
+            175,
+            183
+          ],
+          "CD50D/I": [
+            186,
+            195
+          ],
+          "CD60D/I": [
+            200,
+            209
+          ],
+          "CD60": [
+            242,
+            254
+          ],
+          "CD70": [
+            262,
+            271
+          ],
+          "CD80": [
+            280,
+            292
+          ],
+          "CD90": [
+            303,
+            314
+          ]
+        }
+      },
+      "COLUMNA_HORNO": {
+        "type": "h200220",
+        "items": {
+          "CH60D/I": [
+            168,
+            178
+          ],
+          "CH60": [
+            204,
+            217
+          ],
+          "CHPC60D/I": [
+            213,
+            223
+          ],
+          "CHPC60": [
+            247,
+            263
+          ],
+          "CHGC60D/I": [
+            263,
+            272
+          ],
+          "CHGC60": [
+            281,
+            294
+          ],
+          "CHC60D/I": [
+            359,
+            368
+          ],
+          "CHC60": [
+            377,
+            389
+          ]
+        }
+      },
+      "COLUMNA_FRIGO": {
+        "type": "h200220",
+        "items": {
+          "CF60D/I": [
+            95,
+            105
+          ],
+          "CF60": [
+            112,
+            122
+          ],
+          "CF60A": [
+            105,
+            115
+          ],
+          "CF60F": [
+            125,
+            135
+          ]
+        }
+      },
+      "MEDIACOLUMNA": {
+        "type": "single",
+        "items": {
+          "M30D/I": 93,
+          "M35D/I": 99,
+          "M40D/I": 103,
+          "M45D/I": 109,
+          "M50D/I": 117,
+          "M60D/I": 125,
+          "M60": 149
+        }
+      },
+      "COLUMNA_HORNO_MICRO": {
+        "type": "h200220",
+        "items": {
+          "CHM60D/I": [
+            164,
+            176
+          ],
+          "CHM60": [
+            203,
+            216
+          ],
+          "CHMG60D/I": [
+            209,
+            221
+          ],
+          "CHMG60": [
+            231,
+            244
+          ],
+          "CHMC60D/I": [
+            310,
+            322
+          ],
+          "CHMC60": [
+            333,
+            346
+          ],
+          "CHMCG60D/I": [
+            274,
+            286
+          ],
+          "CHMCG60": [
+            296,
+            309
+          ]
+        }
+      },
+      "MEDIACOLUMNA_VITRINA": {
+        "type": "single",
+        "items": {
+          "MV30D/I": 133,
+          "MV35D/I": 143,
+          "MV40D/I": 152,
+          "MV45D/I": 174,
+          "MV50D/I": 188,
+          "MV60D/I": 230,
+          "MV60": null
+        }
+      },
+      "MEDIA_PUERTA_GAVETA": {
+        "type": "single",
+        "items": {
+          "MPG30D/I": 137,
+          "MPG35D/I": 143,
+          "MPG40D/I": 148,
+          "MPG45D/I": 154,
+          "MPG50D/I": 164,
+          "MPG60D/I": 174,
+          "MPG60": 199
+        }
+      },
+      "MEDIACOL_VITRINA_GAVETA": {
+        "type": "single",
+        "items": {
+          "MVG30D/I": 171,
+          "MVG35D/I": 181,
+          "MVG40D/I": 190,
+          "MVG45D/I": 206,
+          "MVG50D/I": 214,
+          "MVG60D/I": 230,
+          "MVG60": 268
+        }
+      },
+      "MEDIACOLUMNA_HORNO": {
+        "type": "single",
+        "items": {
+          "MPH60D/I": 97,
+          "MPH60": 114,
+          "MPM60D/I": 105,
+          "MPM60": 126,
+          "MGHM60": 105,
+          "MCHM60": 138
+        }
+      },
+      "ALTILLOS_DECORATIVOS": {
+        "type": "single",
+        "items": {
+          "LD30": 54,
+          "LD35": 58,
+          "LD40": 62,
+          "LD45": 66,
+          "LD50": 70,
+          "LD60": 78,
+          "LD70": 86,
+          "LD80": 94,
+          "LD90": 102,
+          "LD100": 110
+        }
+      },
+      "BOTELLEROS": {
+        "type": "dual",
+        "cols": [
+          "7",
+          "9"
+        ],
+        "items": {
+          "BOA": [
+            86,
+            105
+          ],
+          "BOS": [
+            143,
+            162
+          ],
+          "BOC": [
+            213,
+            232
+          ]
+        }
+      },
+      "LATERALES_COLOR": {
+        "type": "h7090",
+        "items": {
+          "LCA": [
+            26,
+            32
+          ],
+          "LCF": [
+            41,
+            50
+          ],
+          "LCB": [
+            43,
+            49
+          ],
+          "LCS": [
+            43,
+            49
+          ],
+          "LCM": [
+            58,
+            74
+          ],
+          "LCC": [
+            112,
+            122
+          ]
+        }
+      },
+      "COSTADOS_COLOR": {
+        "type": "h7090",
+        "items": {
+          "CCA": [
+            24,
+            29
+          ],
+          "CCF": [
+            40,
+            48
+          ],
+          "CCB": [
+            40,
+            50
+          ],
+          "CCS": [
+            40,
+            47
+          ],
+          "CCM": [
+            56,
+            72
+          ],
+          "CCC": [
+            119,
+            129
+          ]
+        }
+      },
+      "REGLETA_COLOR": {
+        "type": "h7090",
+        "_ancho": 15,
+        "items": {
+          "RA": [
+            9,
+            11
+          ],
+          "RM": [
+            11,
+            15
+          ],
+          "RS": [
+            15,
+            17
+          ],
+          "RC": [
+            25,
+            27
+          ]
+        }
+      },
+      "REGLETA_MELAMINA": {
+        "type": "h7090",
+        "_ancho": 10,
+        "items": {
+          "RMA": [
+            1,
+            2
+          ],
+          "RMM": [
+            2,
+            3
+          ],
+          "RMS": [
+            3,
+            4
+          ],
+          "RMC": [
+            4,
+            5
+          ]
+        }
+      },
+      "BALDA_AEREA": {
+        "type": "h355060",
+        "cols": [
+          "35",
+          "50",
+          "60"
+        ],
+        "items": {
+          "BAL30": [
+            26,
+            34,
+            38
+          ],
+          "BAL40": [
+            34,
+            45,
+            51
+          ],
+          "BAL50": [
+            36,
+            48,
+            56
+          ],
+          "BAL60": [
+            41,
+            56,
+            65
+          ],
+          "BAL90": [
+            56,
+            79,
+            93
+          ],
+          "BAL100": [
+            60,
+            86,
+            101
+          ],
+          "BAL120": [
+            71,
+            101,
+            119
+          ],
+          "BAL140": [
+            81,
+            117,
+            138
+          ],
+          "BAL160": [
+            91,
+            132,
+            156
+          ],
+          "BAL180": [
+            101,
+            147,
+            174
+          ],
+          "BAL200": [
+            112,
+            167,
+            197
+          ],
+          "BAL220": [
+            128,
+            183,
+            217
+          ],
+          "BAL240": [
+            134,
+            199,
+            235
+          ]
+        }
+      },
+      "TECHO_COLOR": {
+        "type": "h355060",
+        "cols": [
+          "35",
+          "50",
+          "60"
+        ],
+        "items": {
+          "TEC100": [
+            34,
+            49,
+            58
+          ],
+          "TEC120": [
+            40,
+            58,
+            68
+          ],
+          "TEC140": [
+            46,
+            66,
+            78
+          ],
+          "TEC160": [
+            52,
+            75,
+            89
+          ],
+          "TEC180": [
+            58,
+            84,
+            99
+          ],
+          "TEC200": [
+            64,
+            95,
+            112
+          ],
+          "TEC220": [
+            73,
+            105,
+            124
+          ],
+          "TEC240": [
+            78,
+            113,
+            134
+          ]
+        },
+        "_nota": "TEC260-360 en blanco, igual que T1/T4/T5/T8."
+      },
+      "COSTADOS_MELAMINA": {
+        "type": "h7090",
+        "items": {
+          "CMCB": [
+            19,
+            20
+          ],
+          "CMCC": [
+            27,
+            28
+          ],
+          "CMBB": [
+            null,
+            8
+          ],
+          "CMBC": [
+            null,
+            15
+          ]
+        }
+      },
+      "ELEMENTOS_LINEALES": {
+        "type": "ent_med",
+        "cols": [
+          "ent",
+          "med"
+        ],
+        "items": {
+          "COR": {
+            "desc": "Cornisa entera/media",
+            "ent": 54,
+            "med": 28
+          },
+          "POR": {
+            "desc": "Portaluz entera/media",
+            "ent": 44,
+            "med": 23
+          },
+          "ZOC": {
+            "desc": "Zocalo entero/medio",
+            "ent": 35,
+            "med": 19
+          },
+          "PER": {
+            "desc": "Perfil plastico entero/medio",
+            "ent": 3,
+            "med": 2
+          },
+          "PIN": {
+            "desc": "Juego 3 pinzas zocalo",
+            "ent": null,
+            "med": 2
+          },
+          "ZOCA": {
+            "desc": "Zocalo aluminio entero/medio",
+            "ent": 28,
+            "med": 16
+          },
+          "ZOCAB": {
+            "desc": "Zocalo aluminio blanco entero/medio",
+            "ent": 34,
+            "med": 18
+          },
+          "PINA": {
+            "desc": "Juego 5 pinzas zocalo aluminio",
+            "ent": null,
+            "med": 2
+          },
+          "ANGZOC": {
+            "desc": "Angulo zocalo aluminio",
+            "ent": null,
+            "med": 2
+          },
+          "COST": {
+            "desc": "Costadillo campana unidad",
+            "ent": null,
+            "med": 7
+          },
+          "EMC1M/E": {
+            "desc": "Encimera Med/Ent",
+            "ent": 85,
+            "med": 50
+          },
+          "ENCM/E": {
+            "desc": "Encimera Med/Ent",
+            "ent": 85,
+            "med": 50
+          },
+          "MOSE": {
+            "desc": "Mostrador solo Entero",
+            "ent": 129,
+            "med": null
+          },
+          "TANG/TLIN": {
+            "desc": "T union Angulo/Linea",
+            "ent": 3,
+            "med": 3
+          },
+          "UENC": {
+            "desc": "U terminacion encimera",
+            "ent": null,
+            "med": 3
+          },
+          "COPM/E": {
+            "desc": "Copete Medio/Entero",
+            "ent": 18,
+            "med": 10
+          },
+          "INT/EXT": {
+            "desc": "Interior/Exterior copete",
+            "ent": 1,
+            "med": 1
+          },
+          "TAPAC": {
+            "desc": "Juego tapas copete",
+            "ent": null,
+            "med": 1
+          },
+          "TCAN": {
+            "desc": "Tira canteo encimera",
+            "ent": null,
+            "med": 1
+          }
+        }
       }
     }
   }
