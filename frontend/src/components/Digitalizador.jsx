@@ -38,7 +38,7 @@ const Digitalizador = ({ state }) => {
   const [crmContactPhone, setCrmContactPhone] = useState('');
   const [crmCompany, setCrmCompany] = useState('');
   const [opportunityCreated, setOpportunityCreated] = useState(null);
-  const [currentPage, setCurrentPage] = useState(0);  // Página actual para navegación
+  const [currentPage, setCurrentPage] = useState(-1);  // -1 = Ver Todo (scroll), por defecto
   const [isLocked, setIsLocked] = useState(true);  // Modo bloqueado/desbloqueado
   const [expNumber, setExpNumber] = useState('');  // Número de expediente único
   const [isGeneratingExp, setIsGeneratingExp] = useState(false);  // Loading state para generar exp
@@ -517,28 +517,32 @@ const Digitalizador = ({ state }) => {
       const M = 14;
       let y = 14;
 
-      // Logo (solo si es un data URL incrustable; si es URL remota se omite sin romper)
+      // Cabecera de marca (logo + título/exp/valorado/fecha). Se redibuja en cada página.
       const logo = state?.logo;
-      if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
-        try {
-          const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG');
-          pdf.addImage(logo, fmt, M, y, 32, 16);
-        } catch (_) { /* logo no incrustable: se omite */ }
-      } else {
-        pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
-        pdf.text('LUIGGI HOME', M, y + 8); pdf.setFont(undefined, 'normal');
-      }
+      const drawHeader = () => {
+        let hy = 14;
+        if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+          try {
+            const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG');
+            pdf.addImage(logo, fmt, M, hy, 32, 16);
+          } catch (_) { /* logo no incrustable: se omite */ }
+        } else {
+          pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
+          pdf.text('LUIGGI HOME', M, hy + 8); pdf.setFont(undefined, 'normal');
+        }
 
-      // Cabecera derecha: título, exp, valorado, cliente, fecha
-      pdf.setFontSize(15); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
-      pdf.text((documentTitle || 'Presupuesto Técnico').toUpperCase(), W - M, y + 4, { align: 'right' });
-      pdf.setFont(undefined, 'normal');
-      pdf.setFontSize(9); pdf.setTextColor(120);
-      pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, y + 10, { align: 'right' });
-      pdf.setTextColor(isValorado ? 200 : 150, isValorado ? 90 : 150, 30);
-      pdf.text(isValorado ? 'DOCUMENTO VALORADO' : 'DOCUMENTO SIN VALORACIÓN', W - M, y + 15, { align: 'right' });
-      pdf.setTextColor(120);
-      pdf.text(`${state?.currentUser?.clientName || ''}   ${new Date().toLocaleDateString('es-ES')}`, W - M, y + 20, { align: 'right' });
+        pdf.setFontSize(15); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
+        pdf.text((documentTitle || 'Presupuesto Técnico').toUpperCase(), W - M, hy + 4, { align: 'right' });
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(9); pdf.setTextColor(120);
+        pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, hy + 10, { align: 'right' });
+        pdf.setTextColor(isValorado ? 200 : 150, isValorado ? 90 : 150, 30);
+        pdf.text(isValorado ? 'DOCUMENTO VALORADO' : 'DOCUMENTO SIN VALORACIÓN', W - M, hy + 15, { align: 'right' });
+        pdf.setTextColor(120);
+        pdf.text(`${state?.currentUser?.clientName || ''}   ${new Date().toLocaleDateString('es-ES')}`, W - M, hy + 20, { align: 'right' });
+      };
+
+      drawHeader();
       y += 26;
 
       // Proyecto + configuración
@@ -580,14 +584,17 @@ const Digitalizador = ({ state }) => {
           ? { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 22 }, 2: { cellWidth: 'auto' },
               3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 14, halign: 'right' }, 5: { cellWidth: 24, halign: 'right' } }
           : { 0: { cellWidth: 16, halign: 'center' }, 1: { cellWidth: 28 }, 2: { cellWidth: 'auto' } },
-        margin: { left: M, right: M },
+        margin: { top: 32, left: M, right: M },
+        didDrawPage: (data) => {
+          if (data.pageNumber > 1) drawHeader();
+        },
       });
       y = (pdf.lastAutoTable?.finalY || y) + 8;
 
       // Bloque de totales (solo si está valorado y los totales visibles)
       if (isValorado && showTotals) {
         const pageH = pdf.internal.pageSize.getHeight();
-        if (y + 30 > pageH) { pdf.addPage(); y = 18; }
+        if (y + 30 > pageH) { pdf.addPage(); drawHeader(); y = 38; }
         const bx = W - M - 78;
         const rows = [
           ['Bruto líneas', eur(T.brutoLineas)],
@@ -657,7 +664,7 @@ const Digitalizador = ({ state }) => {
     setCostados('');
     setError(null);
     setOpportunityCreated(null);
-    setCurrentPage(0);
+    setCurrentPage(-1);
     setIsLocked(true);
     setShowCostMode(false);
     setGlobalMarkup(0);
