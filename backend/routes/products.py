@@ -363,7 +363,7 @@ async def create_products_bulk(products: List[dict], current_user: dict = Depend
                 "width": float(product_data.get("width", 0) or 0),
                 "height": float(product_data.get("height", 0) or 0),
                 "depth": float(product_data.get("depth", 0) or 0),
-                "manufacturer": str(product_data.get("manufacturer", "Zona Cocinas")),
+                "manufacturer": str(product_data.get("manufacturer", "ZC")),
                 "points": float(product_data.get("points", 0) or 0),
                 "module": str(product_data.get("module", "montada"))
             }
@@ -473,7 +473,7 @@ async def bulk_upsert_products(data: dict, current_user: dict = Depends(require_
                     "width": float(product_data.get("width", 0) or 0),
                     "height": float(product_data.get("height", 0) or 0),
                     "depth": float(product_data.get("depth", 0) or 0),
-                    "manufacturer": str(product_data.get("manufacturer", "MV" if library == "MV" else "Zona Cocinas")),
+                    "manufacturer": str(product_data.get("manufacturer", "MV" if library == "MV" else "ZC")),
                     "module": str(product_data.get("module", "montada")),
                     "library": library,
                     "points": points,
@@ -734,6 +734,44 @@ async def fix_product_names(current_user: dict = Depends(require_admin)):
         "success": True,
         "fixed_count": fixed_count,
         "message": f"Se corrigieron {fixed_count} nombres de productos"
+    }
+
+@router.post("/products/fix-costados-depth")
+async def fix_costados_depth(current_user: dict = Depends(require_admin)):
+    """
+    Corregir el grosor (depth/fondo) de paneles planos (costados, regletas,
+    zócalos, techos, laterales, cornisas, estantes, etc.).
+    Estos elementos son paneles de 18mm/cm de grueso, no 33 ni 58.
+    Esos valores corresponden al fondo de los muebles ALTOS/BAJOS y se
+    copiaron por error al importar el catálogo.
+    """
+    categories = [
+        "COSTADOS", "COSTADO", "COSTADOS COLOR", "COSTADOS_COLOR", "COSTADOS MELAMINA", "COSTADOS_MELAMINA",
+        "LATERAL", "LATERALES", "LATERAL COLOR", "LATERALES COLOR", "LATERALES_COLOR",
+        "REGLETA", "REGLETAS", "REGLETA COLOR", "REGLETA MELAMINA",
+        "ZOCALOS", "ZOCALO",
+        "TECHO", "TECHO COLOR",
+        "CORNISAS", "CORNISA",
+        "ESTANTES", "ESTANTE",
+        "BALDA AEREA", "BALDA",
+        "ELEMENTOS", "ELEMENTOS LINEALES",
+    ]
+
+    result_depth = await db.products.update_many(
+        {"category": {"$in": categories}, "depth": {"$in": [33, 33.0, 58, 58.0]}},
+        {"$set": {"depth": 18}}
+    )
+    result_fondo = await db.products.update_many(
+        {"category": {"$in": categories}, "fondo": {"$in": [33, 33.0, 58, 58.0]}},
+        {"$set": {"fondo": 18}}
+    )
+
+    fixed_count = max(result_depth.modified_count, result_fondo.modified_count)
+
+    return {
+        "success": True,
+        "fixed_count": fixed_count,
+        "message": f"Se corrigió el grueso de {fixed_count} paneles (costados, regletas, zócalos, etc.) a 18cm"
     }
 
 @router.delete("/products/bulk/delete")

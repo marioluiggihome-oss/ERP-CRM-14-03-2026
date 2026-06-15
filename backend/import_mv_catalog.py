@@ -157,7 +157,7 @@ def consolidate_products(raw_products):
                 'name': p['name'],
                 'category': p['category'],
                 'library': 'MV',
-                'manufacturer': 'Muebles Valencia',
+                'manufacturer': 'MV',
                 'tariffPrices': {},  # T1, T2, ... T21
                 'module': 'montada'
             }
@@ -189,7 +189,7 @@ def save_to_mongodb(products):
             'name': prod['name'],
             'category': prod['category'],
             'library': 'MV',
-            'manufacturer': 'Muebles Valencia',
+            'manufacturer': 'MV',
             'module': 'montada',
             'tariffPrices': prod.get('tariffPrices', {}),
             # Precio por defecto es T1

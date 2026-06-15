@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table2, Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
-  Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors
+  Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
+  PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
+  Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List
 } from 'lucide-react';
-import { authHeaders } from '../services/api';
+import { authHeaders, librariesAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
 import { MuebleIcon, classifyMueble, NOMENCLATURA, NOMENCLATURA_NOTAS } from './muebleIcons';
@@ -13,6 +15,16 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 
+// Agrupa nombres de familia muy parecidos (p.ej. "PUERTA"/"PUERTAS",
+// "LATERAL"/"LATERALES"/"LATERALES COLOR") bajo una misma cabecera para
+// compactar la lista de categorías sin tocar los datos del catálogo.
+const groupKeyOf = (name) => {
+  const first = (name || '').split(' ')[0];
+  if (first.endsWith('ES')) return first.slice(0, -2);
+  if (first.endsWith('S')) return first.slice(0, -1);
+  return first;
+};
+
 /**
  * Presupuestador 2 — navegación por familias del catálogo MV (Muebles Valencia)
  * con selector de GRUPO DE TARIFA (T1…T21). El precio de cada mueble sale de
@@ -20,19 +32,43 @@ const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFraction
  * en proyectos.
  */
 const Presupuestador2 = ({ currentUser }) => {
+  const [libraryCode, setLibraryCode] = useState(() => localStorage.getItem('p2_library') || 'MV');
+  const [availableLibraries, setAvailableLibraries] = useState([]);
   const [library, setLibrary] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tariff, setTariff] = useState(() => localStorage.getItem('p2_tariff') || 'T1');
+  const [tariff, setTariff] = useState(() => localStorage.getItem(`p2_tariff_${localStorage.getItem('p2_library') || 'MV'}`) || 'T1');
   const [family, setFamily] = useState('');
   const [search, setSearch] = useState('');
+  const [searchScope, setSearchScope] = useState(() => localStorage.getItem('p2_search_scope') || 'all'); // 'all' | 'family'
+  const [sizeFilter, setSizeFilter] = useState('');
+  const [familyFilter, setFamilyFilter] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [familiesCollapsed, setFamiliesCollapsed] = useState(false);
+  const [cartCollapsed, setCartCollapsed] = useState(false);
+  const [mobileTab, setMobileTab] = useState('catalog'); // 'catalog' | 'cart'
+  const [useMillimeters, setUseMillimeters] = useState(() => localStorage.getItem('p2_use_mm') === 'true');
+  const [catalogView, setCatalogView] = useState(() => localStorage.getItem('p2_catalog_view') || 'list');
+  const [showDistributorPrice, setShowDistributorPrice] = useState(false);
+  const [sortBy, setSortBy] = useState('default'); // 'default' | 'code' | 'name' | 'width' | 'height' | 'price'
+  const [sortDir, setSortDir] = useState('asc');
   const [cart, setCart] = useState([]);          // [{id, code, name, price, qty, manual}]
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [manualLine, setManualLine] = useState({ name: '', price: '', qty: 1 });
   const [showManual, setShowManual] = useState(false);
   const [clientName, setClientName] = useState('');
+  const [budgetReference, setBudgetReference] = useState('');
   const [notes, setNotes] = useState('');
+  const [doorColorLow, setDoorColorLow] = useState('');
+  const [doorColorHigh, setDoorColorHigh] = useState('');
+  const [doorColorColumns, setDoorColorColumns] = useState('');
+  const [sideColor, setSideColor] = useState('');
+  const [doorHasVeta, setDoorHasVeta] = useState(false);
+  const [golaAlto, setGolaAlto] = useState(false);
+  const [golaAltoColor, setGolaAltoColor] = useState('');
+  const [golaBajo, setGolaBajo] = useState(false);
+  const [golaBajoColor, setGolaBajoColor] = useState('');
   const [showDespiece, setShowDespiece] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showNomenclatura, setShowNomenclatura] = useState(false);
@@ -72,14 +108,53 @@ const Presupuestador2 = ({ currentUser }) => {
     }
   };
 
-  useEffect(() => { localStorage.setItem('p2_tariff', tariff); }, [tariff]);
+  const fixCostadosDepth = async () => {
+    if (!window.confirm('Corregir el grueso de costados, regletas, zócalos, techos, etc. (33/58 -> 18cm)?')) return;
+    setImporting(true);
+    try {
+      const r = await fetch(`${API_URL}/api/products/fix-costados-depth`,
+        { method: 'POST', headers: authHeaders() });
+      const rep = await r.json();
+      if (r.ok) {
+        alert(`✅ ${rep.message}`);
+        await load();
+      } else {
+        alert('Error: ' + (rep.detail || r.status));
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  useEffect(() => { localStorage.setItem('p2_library', libraryCode); }, [libraryCode]);
+  useEffect(() => { if (tariff) localStorage.setItem(`p2_tariff_${libraryCode}`, tariff); }, [tariff, libraryCode]);
+  useEffect(() => { localStorage.setItem('p2_search_scope', searchScope); }, [searchScope]);
+  useEffect(() => { localStorage.setItem('p2_use_mm', useMillimeters ? 'true' : 'false'); }, [useMillimeters]);
+  useEffect(() => { localStorage.setItem('p2_catalog_view', catalogView); }, [catalogView]);
+
+  // Bibliotecas disponibles para el usuario (ZC, MV, …) — solo se muestra el
+  // selector si hay más de una permitida.
+  useEffect(() => {
+    librariesAPI.getAll()
+      .then(data => {
+        const allowed = currentUser?.allowedLibraries || ['MV'];
+        const filtered = (Array.isArray(data) ? data : []).filter(l => l.isActive !== false && allowed.includes(l.code));
+        setAvailableLibraries(filtered);
+        if (filtered.length && !filtered.some(l => l.code === libraryCode)) {
+          setLibraryCode(filtered[0].code);
+        }
+      })
+      .catch(() => setAvailableLibraries([]));
+  }, [currentUser]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [libR, prodR] = await Promise.all([
-        fetch(`${API_URL}/api/libraries/MV`, { headers: authHeaders() }),
-        fetch(`${API_URL}/api/libraries/MV/products?limit=5000`, { headers: authHeaders() }),
+        fetch(`${API_URL}/api/libraries/${libraryCode}`, { headers: authHeaders() }),
+        fetch(`${API_URL}/api/libraries/${libraryCode}/products?limit=5000`, { headers: authHeaders() }),
       ]);
       const lib = await libR.json().catch(() => null);
       const prod = await prodR.json().catch(() => ({}));
@@ -88,20 +163,46 @@ const Presupuestador2 = ({ currentUser }) => {
     } catch (e) {
       setProducts([]);
     } finally { setLoading(false); }
-  }, []);
+  }, [libraryCode]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Al cambiar de biblioteca, soltamos la familia/búsqueda activas para que se
+  // recalculen con el catálogo nuevo.
+  useEffect(() => { setFamily(''); setSearch(''); }, [libraryCode]);
 
   const priceLevels = (library?.priceLevels && library.priceLevels.length)
     ? library.priceLevels
     : Array.from({ length: 21 }, (_, i) => `T${i + 1}`);
   const pointValue = library?.pointValue || 1.0;
+  const levelLabel = library?.pricingSystem === 'zones' ? 'Grupo' : 'Tarifa';
+
+  // Si la tarifa/zona guardada no existe en esta biblioteca, usamos la primera
+  // disponible (p.ej. al cambiar de MV (T1-T21) a ZC (Z1-Z12)).
+  useEffect(() => {
+    if (!priceLevels.length) return;
+    if (!priceLevels.includes(tariff)) setTariff(priceLevels[0]);
+  }, [libraryCode, library]);
+
+  // Descuento comercial del usuario, para el modo "COSTO fábrica".
+  const discountPct = currentUser?.discountMontada ?? currentUser?.commercialDiscount ?? 0;
+  const discountFactor = showDistributorPrice ? (1 - discountPct / 100) : 1;
+
+  const measureUnit = useMillimeters ? 'mm' : 'cm';
+  const formatMeasure = useCallback((v) => {
+    const n = parseFloat(v);
+    if (!v || Number.isNaN(n)) return null;
+    return useMillimeters ? Math.round(n * 10) : n;
+  }, [useMillimeters]);
 
   const priceOf = useCallback((p) => {
     const zp = p.zonePoints || {};
-    const base = zp[tariff] ?? zp.T1 ?? (typeof p.points === 'number' ? p.points : 0) ?? 0;
+    const base = zp[tariff] ?? zp[priceLevels[0]] ?? (typeof p.points === 'number' ? p.points : 0) ?? 0;
     return (Number(base) || 0) * pointValue;
-  }, [tariff, pointValue]);
+  }, [tariff, pointValue, priceLevels]);
+
+  // Precio a mostrar según el modo PVP / COSTO fábrica (con descuento comercial).
+  const displayPrice = useCallback((base) => base * discountFactor, [discountFactor]);
 
   const families = useMemo(() => {
     const m = {};
@@ -116,21 +217,76 @@ const Presupuestador2 = ({ currentUser }) => {
     if (!family && families.length) setFamily(families[0][0]);
   }, [families, family]);
 
-  // Búsqueda GLOBAL e intuitiva: si hay texto, busca en TODO el catálogo (ignora la
-  // familia) por código, nombre, familia y medidas; admite varias palabras (todas
-  // deben coincidir, en cualquier orden). Sin texto, filtra por la familia activa.
+  // Agrupa familias muy parecidas (singular/plural, variantes "color"/"melamina"…)
+  // bajo una cabecera común, para que la barra de categorías no sea interminable.
+  const familyGroups = useMemo(() => {
+    const groups = {};
+    families.forEach(([name, count]) => {
+      const key = groupKeyOf(name);
+      if (!groups[key]) groups[key] = { key, total: 0, members: [] };
+      groups[key].total += count;
+      groups[key].members.push([name, count]);
+    });
+    let list = Object.values(groups);
+    const q = familyFilter.trim().toLowerCase();
+    if (q) {
+      list = list.filter(g => g.key.toLowerCase().includes(q) || g.members.some(([n]) => n.toLowerCase().includes(q)));
+    }
+    return list.sort((a, b) => a.key.localeCompare(b.key));
+  }, [families, familyFilter]);
+
+  // Si la familia activa pertenece a un grupo con varios miembros, lo dejamos
+  // expandido automáticamente para que se vea seleccionado.
+  useEffect(() => {
+    if (!family) return;
+    const key = groupKeyOf(family);
+    setExpandedGroups(prev => (prev[key] ? prev : { ...prev, [key]: true }));
+  }, [family]);
+
+  // Búsqueda GLOBAL e intuitiva: si hay texto, busca en TODO el catálogo (o solo en
+  // la familia activa, según el modo elegido) por código, nombre, familia y medidas;
+  // admite varias palabras (todas deben coincidir, en cualquier orden). Sin texto,
+  // filtra por la familia activa. También admite un filtro opcional de medida (±5cm).
   const searching = search.trim().length > 0;
   const shown = useMemo(() => {
     const tokens = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const sizeQ = parseFloat(sizeFilter);
+    const hasSize = !Number.isNaN(sizeQ) && sizeQ > 0;
     return products.filter(p => {
       if (tokens.length === 0) {
-        return !family || (p.category || 'OTROS') === family;
+        if (family && (p.category || 'OTROS') !== family) return false;
+      } else {
+        const dims = [p.width, p.height, p.depth].filter(Boolean).join('x');
+        const hay = `${p.code || ''} ${p.reference || ''} ${p.name || ''} ${p.category || ''} ${dims}`.toLowerCase();
+        if (!tokens.every(t => hay.includes(t))) return false;
+        if (searchScope === 'family' && family && (p.category || 'OTROS') !== family) return false;
       }
-      const dims = [p.width, p.height, p.depth].filter(Boolean).join('x');
-      const hay = `${p.code || ''} ${p.reference || ''} ${p.name || ''} ${p.category || ''} ${dims}`.toLowerCase();
-      return tokens.every(t => hay.includes(t));
+      if (hasSize) {
+        const dims = [p.width, p.height, p.depth].filter(Boolean);
+        if (!dims.some(d => Math.abs(d - sizeQ) <= 5)) return false;
+      }
+      return true;
     });
-  }, [products, family, search]);
+  }, [products, family, search, searchScope, sizeFilter]);
+
+  // Orden de los resultados (código, nombre, ancho, alto o precio).
+  const sortedShown = useMemo(() => {
+    if (sortBy === 'default') return shown;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...shown].sort((a, b) => {
+      let va, vb;
+      switch (sortBy) {
+        case 'code': va = a.code || a.reference || ''; vb = b.code || b.reference || ''; break;
+        case 'name': va = a.name || ''; vb = b.name || ''; break;
+        case 'width': va = Number(a.width) || 0; vb = Number(b.width) || 0; break;
+        case 'height': va = Number(a.height) || 0; vb = Number(b.height) || 0; break;
+        case 'price': va = priceOf(a); vb = priceOf(b); break;
+        default: va = 0; vb = 0;
+      }
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+      return String(va).localeCompare(String(vb)) * dir;
+    });
+  }, [shown, sortBy, sortDir, priceOf]);
 
   const addToCart = (p) => {
     const price = priceOf(p);
@@ -160,13 +316,16 @@ const Presupuestador2 = ({ currentUser }) => {
   const updateItemPrice = (id, newPrice) => setCart(prev => prev
     .map(x => x.id === id ? { ...x, price: parseFloat(newPrice) || 0 } : x));
 
-  const cartTotal = cart.reduce((s, x) => s + x.price * x.qty, 0);
+  // Las líneas manuales nunca llevan descuento; el resto sí, si está activo el modo COSTO.
+  const lineTotal = (x) => x.price * x.qty * (x.manual ? 1 : discountFactor);
+  const cartTotal = cart.reduce((s, x) => s + lineTotal(x), 0);
+  const cartTotalPvp = cart.reduce((s, x) => s + x.price * x.qty, 0);
   const ivaRate = 21;
   const ivaAmount = cartTotal * (ivaRate / 100);
   const totalConIva = cartTotal + ivaAmount;
   const totalUds = cart.reduce((s, x) => s + (x.qty || 0), 0);
 
-  const newBudgetNumber = () => `MV-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+  const newBudgetNumber = () => `${libraryCode}-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
 
   // Mapea las líneas de P2 a items "montada" de P1 (líneas manuales: el precio sale
   // de la tarifa). precio P1 = manualPoints * pointValue * qty → manualPoints = precio/pointValue
@@ -222,11 +381,11 @@ const Presupuestador2 = ({ currentUser }) => {
         budgetNumber: newBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin cliente',
         customerAddress: '',
-        internalReference: notes || `Presupuesto MV (Tarifa ${tariff})`,
+        internalReference: budgetReference || notes || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`,
         itemsMontada: buildMontadaItems(),
         itemsDespiece: [],
         status: 'activo',
-        totalPvp: cartTotal,
+        totalPvp: cartTotalPvp,
         ivaRate,
       };
       const r = await fetch(`${API_URL}/api/projects?user_id=${encodeURIComponent(currentUser?.id || '')}`, {
@@ -248,7 +407,7 @@ const Presupuestador2 = ({ currentUser }) => {
         budgetNumber: newBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin especificar',
         customerAddress: '',
-        internalReference: notes || '',
+        internalReference: budgetReference || notes || '',
         itemsMontada: buildMontadaItems(),
         itemsDespiece: [],
         pointValueMontada: pointValue,
@@ -257,7 +416,15 @@ const Presupuestador2 = ({ currentUser }) => {
         companyName: 'LUIGGI HOME',
         ivaRate,
         allProducts: products,
-        globalFinish: `Tarifa ${tariff}`,
+        globalFinish: `${levelLabel} ${tariff}`,
+        doorColorLow,
+        doorColorHigh,
+        doorColorColumns,
+        sideColor,
+        golaAlto,
+        golaAltoColor,
+        golaBajo,
+        golaBajoColor,
       });
     } catch (e) { alert('No se pudo generar el PDF: ' + (e.message || e)); }
   };
@@ -269,17 +436,25 @@ const Presupuestador2 = ({ currentUser }) => {
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-orange-50/40">
       {/* ── Cabecera ── */}
-      <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white px-4 sm:px-6 py-3.5 flex items-center gap-3 flex-wrap shadow-lg">
+      <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white px-4 sm:px-6 py-3.5 flex items-center gap-3 flex-wrap shadow-lg sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center ring-1 ring-white/30">
             <Table2 size={22} />
           </div>
           <div>
-            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador{((currentUser?.allowedLibraries?.length || 0) > 1) ? ' MV' : ''}</h1>
+            <h1 className="text-lg font-black uppercase leading-none tracking-tight">Presupuestador{((currentUser?.allowedLibraries?.length || 0) > 1) ? ` ${libraryCode || 'MV'}` : ''}</h1>
             <p className="text-[11px] text-orange-100/90 flex items-center gap-1.5 mt-0.5">
-              <Boxes size={12} /> {products.length} muebles · tarifa por grupo
+              <Boxes size={12} /> {products.length} muebles · agrupados por familia
             </p>
           </div>
+        </div>
+
+        {/* Cliente y referencia de presupuesto */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Nombre del cliente…"
+            className="w-40 sm:w-48 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
+          <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Referencia de presupuesto…"
+            className="w-40 sm:w-52 px-3 py-1.5 bg-white/15 backdrop-blur rounded-xl ring-1 ring-white/25 text-xs font-bold text-white placeholder-orange-100/70 focus:outline-none focus:ring-2 focus:ring-white" />
         </div>
 
         <div className="flex items-center gap-3 ml-auto flex-wrap">
@@ -287,11 +462,37 @@ const Presupuestador2 = ({ currentUser }) => {
             className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
             <BookOpen size={14} /> Nomenclatura
           </button>
-          {currentUser?.isAdmin && (
+          {currentUser?.isAdmin && libraryCode === 'MV' && (
             <button onClick={importTariffs} disabled={importing} title="Cargar las tarifas oficiales en el catálogo (admin)"
               className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
               {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
               {importing ? 'Importando…' : 'Importar tarifas'}
+            </button>
+          )}
+          {currentUser?.isAdmin && libraryCode === 'ZC' && (
+            <button onClick={fixCostadosDepth} disabled={importing} title="Corregir el grueso de paneles: costados, regletas, zócalos, techos... (33/58 -> 18cm) (admin)"
+              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
+              {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
+              {importing ? 'Corrigiendo…' : 'Corregir paneles'}
+            </button>
+          )}
+          <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad de medida (cm/mm)"
+            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
+            <Ruler size={14} /> {measureUnit.toUpperCase()}
+          </button>
+          <button onClick={() => setCatalogView(v => v === 'list' ? 'icons' : 'list')}
+            title={catalogView === 'list' ? 'Ver catálogo como iconos' : 'Ver catálogo como lista'}
+            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
+            {catalogView === 'list' ? <LayoutGrid size={14} /> : <List size={14} />}
+            {catalogView === 'list' ? 'Iconos' : 'Lista'}
+          </button>
+          {discountPct > 0 && (
+            <button onClick={() => setShowDistributorPrice(v => !v)}
+              title={showDistributorPrice ? 'Volver a mostrar PVP al cliente' : `Ver precio de fábrica (con tu descuento del ${discountPct}%)`}
+              className={`flex items-center gap-1.5 backdrop-blur rounded-xl px-3 py-1.5 ring-1 text-xs font-bold transition-colors ${
+                showDistributorPrice ? 'bg-orange-500 ring-orange-300 text-white' : 'bg-white/15 hover:bg-white/25 ring-white/25'}`}>
+              {showDistributorPrice ? <Unlock size={14} /> : <Lock size={14} />}
+              {showDistributorPrice ? `COSTO -${discountPct}%` : 'PVP'}
             </button>
           )}
           {/* Total mini en cabecera */}
@@ -301,8 +502,17 @@ const Presupuestador2 = ({ currentUser }) => {
               <span className="text-xl font-black">{eur(totalConIva)}</span>
             </div>
           )}
+          {availableLibraries.length > 1 && (
+            <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl pl-3 pr-1.5 py-1.5 ring-1 ring-white/25">
+              <span className="text-xs font-black uppercase flex items-center gap-1"><LibraryIcon size={14} /> Catálogo</span>
+              <select value={libraryCode} onChange={e => setLibraryCode(e.target.value)}
+                className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
+                {availableLibraries.map(l => <option key={l.code} value={l.code}>{l.name || l.code}</option>)}
+              </select>
+            </div>
+          )}
           <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl pl-3 pr-1.5 py-1.5 ring-1 ring-white/25">
-            <span className="text-xs font-black uppercase flex items-center gap-1"><Tag size={14} /> Tarifa</span>
+            <span className="text-xs font-black uppercase flex items-center gap-1"><Tag size={14} /> {levelLabel}</span>
             <select value={tariff} onChange={e => setTariff(e.target.value)}
               className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
               {priceLevels.map(t => <option key={t} value={t}>{t}</option>)}
@@ -311,35 +521,98 @@ const Presupuestador2 = ({ currentUser }) => {
         </div>
       </div>
 
+      {/* ── Pestañas móviles: Catálogo / Presupuesto ── */}
+      <div className="md:hidden shrink-0 flex border-b border-slate-200 bg-white sticky top-[64px] z-20">
+        <button onClick={() => setMobileTab('catalog')}
+          className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
+            mobileTab === 'catalog' ? 'text-orange-700 border-b-2 border-orange-600 bg-orange-50/60' : 'text-slate-400'}`}>
+          <Boxes size={14} /> Catálogo
+        </button>
+        <button onClick={() => setMobileTab('cart')}
+          className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
+            mobileTab === 'cart' ? 'text-orange-700 border-b-2 border-orange-600 bg-orange-50/60' : 'text-slate-400'}`}>
+          <ShoppingCart size={14} /> Presupuesto {cart.length > 0 && `(${cart.length})`}
+        </button>
+      </div>
+
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* ── Catálogo ── */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className={`flex-1 flex flex-col md:flex-row overflow-hidden ${mobileTab === 'cart' ? 'hidden md:flex' : 'flex'}`}>
           {/* Familias */}
-          <div className="w-full md:w-52 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-32 md:max-h-none">
-            <div className="p-2.5">
-              <p className="text-[10px] font-black text-slate-400 uppercase px-2 py-1.5 flex items-center gap-1.5"><Layers size={12} /> Familias</p>
-              <div className="flex md:flex-col gap-1.5 flex-wrap">
-                {families.map(([name, count]) => (
-                  <button key={name} onClick={() => { setFamily(name); setSearch(''); }}
-                    className={`text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
-                      family === name
-                        ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-200'
-                        : 'text-slate-600 hover:bg-orange-50'}`}>
-                    <span className="flex items-center gap-1.5 min-w-0">
-                      <MuebleIcon type={classifyMueble({ category: name })} size={16} className="shrink-0" />
-                      <span className="truncate">{name}</span>
-                    </span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${family === name ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{count}</span>
-                  </button>
-                ))}
-              </div>
-              {families.length === 0 && !loading && <p className="text-xs text-slate-400 px-3 py-2">Sin productos MV</p>}
+          {familiesCollapsed ? (
+            <div className="flex w-full md:w-10 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 md:flex-col items-center py-2 md:py-3 px-2 md:px-0 justify-between md:justify-center">
+              <p className="md:hidden text-[10px] font-black text-slate-400 uppercase flex items-center gap-1.5"><Layers size={12} /> Familias</p>
+              <button onClick={() => setFamiliesCollapsed(false)} title="Mostrar familias"
+                className="p-2 rounded-lg hover:bg-orange-50 text-orange-600">
+                <PanelLeftOpen size={18} />
+              </button>
             </div>
-          </div>
+          ) : (
+            <div className="w-full md:w-56 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 overflow-y-auto max-h-[40vh] md:max-h-none">
+              <div className="p-2.5">
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1.5"><Layers size={12} /> Familias</p>
+                  <button onClick={() => setFamiliesCollapsed(true)} title="Ocultar familias"
+                    className="text-slate-300 hover:text-orange-600">
+                    <PanelLeftClose size={14} />
+                  </button>
+                </div>
+                <div className="px-2 pb-2">
+                  <input value={familyFilter} onChange={e => setFamilyFilter(e.target.value)}
+                    placeholder="Filtrar categorías…"
+                    className="w-full px-2.5 py-1.5 text-[11px] border border-slate-200 rounded-lg outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                </div>
+                <div className="flex md:flex-col gap-1.5 flex-wrap">
+                  {familyGroups.map(g => {
+                    const single = g.members.length === 1;
+                    const isActiveGroup = g.members.some(([n]) => n === family);
+                    const expanded = single || !!expandedGroups[g.key];
+                    return (
+                      <div key={g.key} className="md:w-full">
+                        <button
+                          onClick={() => {
+                            if (single) { setFamily(g.members[0][0]); setSearch(''); }
+                            else setExpandedGroups(p => ({ ...p, [g.key]: !p[g.key] }));
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
+                            single && family === g.members[0][0]
+                              ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-200'
+                              : isActiveGroup ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-orange-50'}`}>
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <MuebleIcon type={classifyMueble({ category: g.key })} size={16} className="shrink-0" />
+                            <span className="truncate">{single ? g.members[0][0] : g.key}</span>
+                          </span>
+                          <span className="flex items-center gap-1 shrink-0">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                              single && family === g.members[0][0] ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{g.total}</span>
+                            {!single && (expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
+                          </span>
+                        </button>
+                        {!single && expanded && (
+                          <div className="ml-3 mt-1 mb-1 flex md:flex-col gap-1 flex-wrap border-l-2 border-orange-100 pl-2">
+                            {g.members.map(([name, count]) => (
+                              <button key={name} onClick={() => { setFamily(name); setSearch(''); }}
+                                className={`text-left px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
+                                  family === name ? 'bg-orange-600 text-white' : 'text-slate-500 hover:bg-orange-50'}`}>
+                                <span className="truncate">{name}</span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                                  family === name ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{count}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {familyGroups.length === 0 && !loading && <p className="text-xs text-slate-400 px-3 py-2">Sin categorías</p>}
+              </div>
+            </div>
+          )}
 
           {/* Listado de muebles */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-5">
-            <div className="mb-4 max-w-2xl">
+            <div className="mb-4 max-w-3xl">
               <div className="relative">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500" />
                 <input value={search} onChange={e => setSearch(e.target.value)} autoFocus
@@ -352,17 +625,67 @@ const Presupuestador2 = ({ currentUser }) => {
                   </button>
                 )}
               </div>
+
+              {/* Modo de búsqueda + filtro de medida */}
+              <div className="flex flex-wrap items-center gap-2 mt-2 px-1">
+                <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 text-[11px] font-bold">
+                  <button onClick={() => setSearchScope('all')}
+                    className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors ${
+                      searchScope === 'all' ? 'bg-white shadow text-orange-700' : 'text-slate-500 hover:text-slate-700'}`}>
+                    <Globe size={12} /> Todo el catálogo
+                  </button>
+                  <button onClick={() => setSearchScope('family')}
+                    className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-colors ${
+                      searchScope === 'family' ? 'bg-white shadow text-orange-700' : 'text-slate-500 hover:text-slate-700'}`}>
+                    <Layers size={12} /> Solo esta familia
+                  </button>
+                </div>
+                <div className="relative">
+                  <Ruler size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input value={sizeFilter} onChange={e => setSizeFilter(e.target.value)} type="number" min="0"
+                    placeholder={`Medida (${measureUnit})`}
+                    className="w-28 pl-7 pr-2 py-1.5 text-[11px] border border-slate-200 rounded-lg outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                </div>
+                {sizeFilter && (
+                  <button onClick={() => setSizeFilter('')}
+                    className="text-[11px] text-slate-400 hover:text-red-500 flex items-center gap-0.5 font-bold">
+                    <X size={11} /> quitar medida
+                  </button>
+                )}
+
+                {/* Orden de resultados */}
+                <div className="flex items-center gap-1 ml-auto">
+                  <ArrowUpDown size={13} className="text-slate-400" />
+                  <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                    className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-orange-400 bg-white">
+                    <option value="default">Orden por defecto</option>
+                    <option value="code">Código</option>
+                    <option value="name">Nombre</option>
+                    <option value="width">Ancho</option>
+                    <option value="height">Alto</option>
+                    <option value="price">Precio</option>
+                  </select>
+                  {sortBy !== 'default' && (
+                    <button onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')} title="Invertir orden"
+                      className="text-[11px] border border-slate-200 rounded-lg px-2 py-1.5 bg-white hover:bg-slate-50 font-bold text-slate-500">
+                      {sortDir === 'asc' ? '↑' : '↓'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Estado de la búsqueda */}
               {!loading && (
                 <div className="flex items-center gap-2 mt-2 px-1 text-[11px]">
                   {searching ? (
                     <span className="inline-flex items-center gap-1.5 font-bold text-orange-700">
                       <Search size={12} />
-                      {shown.length} resultado{shown.length === 1 ? '' : 's'} en todo el catálogo
+                      {sortedShown.length} resultado{sortedShown.length === 1 ? '' : 's'}
+                      {searchScope === 'family' && family ? ` en ${family}` : ' en todo el catálogo'}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-slate-400 font-medium">
-                      <Layers size={12} /> Mostrando familia <b className="text-slate-600 ml-0.5">{family || '—'}</b> · o escribe para buscar en todo
+                      <Layers size={12} /> Mostrando familia <b className="text-slate-600 ml-0.5">{family || '—'}</b> · o escribe para buscar
                     </span>
                   )}
                 </div>
@@ -372,13 +695,44 @@ const Presupuestador2 = ({ currentUser }) => {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-3">
                 <Loader className="animate-spin" size={30} />
-                <span className="text-sm">Cargando catálogo MV…</span>
+                <span className="text-sm">Cargando catálogo {libraryCode}…</span>
+              </div>
+            ) : catalogView === 'icons' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+                {sortedShown.slice(0, 120).map(p => {
+                  const added = inCart(p.id);
+                  const med = [p.width, p.height, p.depth].filter(Boolean).map(formatMeasure).join('×');
+                  return (
+                    <button key={p.id} onClick={() => addToCart(p)}
+                      className={`group text-center bg-white border rounded-2xl p-3 flex flex-col items-center gap-1.5 transition-all hover:shadow-md ${
+                        added ? 'border-orange-300 ring-1 ring-orange-200' : 'border-slate-200 hover:border-orange-300'}`}>
+                      <div className={`shrink-0 w-16 h-16 rounded-xl flex items-center justify-center border ${
+                        added ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-slate-50 border-slate-200 text-slate-500 group-hover:text-orange-600 group-hover:border-orange-200'}`}>
+                        <MuebleIcon mueble={p} size={36} />
+                      </div>
+                      <span className="font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded truncate max-w-full">{p.reference || p.code || '—'}</span>
+                      <p className="text-[11px] font-bold text-slate-700 leading-tight line-clamp-2">{p.name}</p>
+                      {med && <p className="text-[10px] text-slate-400">{med} {measureUnit}</p>}
+                      <p className="font-mono font-black text-orange-700 text-sm">{eur(displayPrice(priceOf(p)))}</p>
+                      {added && <span className="text-[9px] font-black text-orange-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> añadido</span>}
+                    </button>
+                  );
+                })}
+                {sortedShown.length === 0 && (
+                  <div className="col-span-full py-16 text-center text-slate-400">
+                    <Boxes size={40} className="mx-auto mb-2 opacity-40" />
+                    <p className="text-sm">Sin muebles en esta familia</p>
+                  </div>
+                )}
+                {sortedShown.length > 120 && (
+                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {sortedShown.length} — usa el buscador para filtrar</p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-                {shown.slice(0, 120).map(p => {
+                {sortedShown.slice(0, 120).map(p => {
                   const added = inCart(p.id);
-                  const med = [p.width, p.height, p.depth].filter(Boolean).join('×');
+                  const med = [p.width, p.height, p.depth].filter(Boolean).map(formatMeasure).join('×');
                   return (
                     <button key={p.id} onClick={() => addToCart(p)}
                       className={`group text-left bg-white border rounded-2xl p-3 flex items-center gap-3 transition-all hover:shadow-md ${
@@ -391,16 +745,19 @@ const Presupuestador2 = ({ currentUser }) => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{p.reference || p.code || '—'}</span>
-                          {searching && p.category && (
+                          {(searching || familiesCollapsed) && p.category && (
                             <span className="text-[9px] font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded uppercase tracking-wide">{p.category}</span>
                           )}
                           {added && <span className="text-[9px] font-black text-orange-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> añadido</span>}
                         </div>
                         <p className="text-sm font-bold text-slate-800 truncate mt-1">{p.name}</p>
-                        {med && <p className="text-[11px] text-slate-400">{med} cm</p>}
+                        {med && <p className="text-[11px] text-slate-400">{med} {measureUnit}</p>}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="font-mono font-black text-orange-700 text-sm whitespace-nowrap">{eur(priceOf(p))}</p>
+                        <p className="font-mono font-black text-orange-700 text-sm whitespace-nowrap">{eur(displayPrice(priceOf(p)))}</p>
+                        {showDistributorPrice && discountPct > 0 && (
+                          <p className="text-[9px] text-slate-400 line-through">{eur(priceOf(p))}</p>
+                        )}
                         <span className="inline-flex items-center gap-1 mt-1 px-2 py-1 bg-orange-600 group-hover:bg-orange-700 text-white rounded-lg text-[11px] font-bold">
                           <Plus size={12} /> Añadir
                         </span>
@@ -408,14 +765,14 @@ const Presupuestador2 = ({ currentUser }) => {
                     </button>
                   );
                 })}
-                {shown.length === 0 && (
+                {sortedShown.length === 0 && (
                   <div className="col-span-full py-16 text-center text-slate-400">
                     <Boxes size={40} className="mx-auto mb-2 opacity-40" />
                     <p className="text-sm">Sin muebles en esta familia</p>
                   </div>
                 )}
-                {shown.length > 120 && (
-                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {shown.length} — usa el buscador para filtrar</p>
+                {sortedShown.length > 120 && (
+                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {sortedShown.length} — usa el buscador para filtrar</p>
                 )}
               </div>
             )}
@@ -423,133 +780,191 @@ const Presupuestador2 = ({ currentUser }) => {
         </div>
 
         {/* ── Presupuesto / Carrito ── */}
-        <div className="w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)]">
-          <div className="px-4 py-3.5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
-            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center"><ShoppingCart size={16} className="text-orange-600" /></div>
-            <div>
-              <h3 className="font-black text-slate-800 text-sm uppercase leading-none">Presupuesto</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">{cart.length} líneas · {totalUds} ud.</p>
-            </div>
+        {cartCollapsed ? (
+          <div className="hidden md:flex w-10 shrink-0 border-l border-slate-200 bg-white flex-col items-center py-3 gap-2">
+            <button onClick={() => setCartCollapsed(false)} title="Mostrar presupuesto"
+              className="p-2 rounded-lg hover:bg-orange-50 text-orange-600">
+              <PanelRightOpen size={18} />
+            </button>
             {cart.length > 0 && (
-              <button onClick={() => { if (window.confirm('¿Vaciar todo el presupuesto?')) setCart([]); }}
-                className="ml-auto text-[11px] font-bold text-slate-400 hover:text-red-500 flex items-center gap-1">
-                <X size={13} /> Vaciar
-              </button>
+              <span className="text-[10px] font-black text-orange-600 bg-orange-50 rounded-full px-1.5 py-0.5">{cart.length}</span>
             )}
           </div>
-
-          {/* Cliente y notas */}
-          <div className="px-4 py-3 border-b border-slate-100 space-y-2 bg-slate-50/30">
-            <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Nombre del cliente…"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100" />
-            <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="📝 Notas / observaciones…"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100" />
-          </div>
-
-          {/* Líneas */}
-          <div className="flex-1 overflow-y-auto px-3 py-2">
-            {cart.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center text-slate-300 py-10">
-                <Receipt size={44} className="mb-2 opacity-50" />
-                <p className="text-sm font-bold text-slate-400">El presupuesto está vacío</p>
-                <p className="text-xs text-slate-300 mt-1">Pulsa un mueble del catálogo para añadirlo</p>
+        ) : (
+          <div className={`w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] ${
+            mobileTab === 'catalog' ? 'hidden md:flex' : 'flex'}`}>
+            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center"><ShoppingCart size={16} className="text-orange-600" /></div>
+              <div>
+                <h3 className="font-black text-slate-800 text-sm uppercase leading-none">Presupuesto</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">{cart.length} líneas · {totalUds} ud.</p>
               </div>
-            )}
-            <div className="space-y-2">
-              {cart.map(it => (
-                <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-orange-200 transition-colors">
-                  <div className="flex items-start gap-2">
-                    {!it.manual && (
-                      <div className="shrink-0 w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 text-orange-600 flex items-center justify-center mt-0.5">
-                        <MuebleIcon type={classifyMueble({ code: it.code, name: it.name })} size={17} />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-slate-800 text-xs leading-tight">{it.name}</p>
-                      <p className="text-[9px] text-slate-400 font-mono mt-0.5">{it.code}{it.manual ? ' · manual' : ''}</p>
-                    </div>
-                    <button onClick={() => removeItem(it.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={13} /></button>
-                  </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-                      <button onClick={() => setQty(it.id, -1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Minus size={11} /></button>
-                      <span className="w-6 text-center font-black text-xs">{it.qty}</span>
-                      <button onClick={() => setQty(it.id, 1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Plus size={11} /></button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {it.manual ? (
-                        <input value={it.price} onChange={e => updateItemPrice(it.id, e.target.value)} type="number" step="0.01"
-                          className="w-16 text-right text-[11px] px-1.5 py-1 border border-amber-200 bg-amber-50 rounded-md font-mono" />
-                      ) : (
-                        <span className="font-mono text-[11px] text-slate-400">{eur(it.price)}/ud</span>
-                      )}
-                      <span className="font-mono font-black text-orange-700 text-sm w-20 text-right">{eur(it.price * it.qty)}</span>
-                    </div>
-                  </div>
+              <div className="ml-auto flex items-center gap-2">
+                {cart.length > 0 && (
+                  <button onClick={() => { if (window.confirm('¿Vaciar todo el presupuesto?')) setCart([]); }}
+                    className="text-[11px] font-bold text-slate-400 hover:text-red-500 flex items-center gap-1">
+                    <X size={13} /> Vaciar
+                  </button>
+                )}
+                <button onClick={() => setCartCollapsed(true)} title="Ocultar presupuesto"
+                  className="hidden md:block text-slate-300 hover:text-orange-600">
+                  <PanelRightClose size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Notas */}
+            <div className="px-4 py-3 border-b border-slate-100 space-y-2 bg-slate-50/30">
+              <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="📝 Notas / observaciones…"
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100" />
+            </div>
+
+            {/* Colores */}
+            <div className="px-4 py-3 border-b border-slate-100 space-y-1.5 bg-slate-50/30">
+              <h4 className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Colores</h4>
+              <div className="grid grid-cols-2 gap-1.5">
+                <input type="text" value={doorColorLow} onChange={e => setDoorColorLow(e.target.value)}
+                  className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Color puertas bajas" />
+                <input type="text" value={doorColorHigh} onChange={e => setDoorColorHigh(e.target.value)}
+                  className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Color puertas altas" />
+                <input type="text" value={doorColorColumns} onChange={e => setDoorColorColumns(e.target.value)}
+                  className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Color columnas" />
+                <input type="text" value={sideColor} onChange={e => setSideColor(e.target.value)}
+                  className="bg-orange-50 border border-orange-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-orange-500 text-orange-900" placeholder="Color costados" />
+              </div>
+              <div className="flex items-center gap-2 mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                <input type="checkbox" checked={doorHasVeta === true} onChange={e => setDoorHasVeta(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-amber-600" id="p2-doorHasVeta" />
+                <label htmlFor="p2-doorHasVeta" className="text-[10px] font-bold text-amber-800 cursor-pointer select-none">
+                  Puerta con veta (dirección de la fibra)
+                </label>
+              </div>
+            </div>
+
+            {/* Gola */}
+            <div className="px-4 py-3 border-b border-slate-100 space-y-1.5 bg-slate-50/30">
+              <h4 className="text-[9px] font-black text-purple-600 uppercase tracking-widest">🔲 Gola</h4>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="flex items-center gap-1">
+                  <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }}
+                    className="w-3.5 h-3.5 accent-purple-600" />
+                  <input type="text" value={golaAltoColor} onChange={e => { setGolaAltoColor(e.target.value); setGolaAlto(true); }}
+                    className="flex-1 bg-purple-50 border border-purple-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-purple-500 text-purple-900 disabled:opacity-50" placeholder="Color gola alto" disabled={!golaAlto} />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Línea manual */}
-          {showManual && (
-            <div className="px-4 py-2.5 border-t border-amber-100 bg-amber-50">
-              <p className="text-[10px] font-black text-amber-700 uppercase mb-1.5 flex items-center gap-1"><Edit3 size={11} /> Añadir línea manual</p>
-              <div className="flex gap-1.5 items-end">
-                <input value={manualLine.name} onChange={e => setManualLine(p => ({ ...p, name: e.target.value }))} placeholder="Concepto…"
-                  className="flex-1 px-2 py-1.5 border border-amber-200 rounded-lg text-xs" />
-                <input value={manualLine.price} onChange={e => setManualLine(p => ({ ...p, price: e.target.value }))} placeholder="€" type="number" step="0.01"
-                  className="w-20 px-2 py-1.5 border border-amber-200 rounded-lg text-xs text-right" />
-                <input value={manualLine.qty} onChange={e => setManualLine(p => ({ ...p, qty: e.target.value }))} placeholder="Ud" type="number" min="1"
-                  className="w-12 px-2 py-1.5 border border-amber-200 rounded-lg text-xs text-center" />
-                <button onClick={addManualLine} className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold"><Plus size={12} /></button>
-              </div>
-            </div>
-          )}
-
-          {/* Totales + acciones */}
-          <div className="border-t border-slate-200 p-4 bg-gradient-to-b from-white to-slate-50 space-y-3">
-            <div className="rounded-2xl bg-slate-900 text-white p-4">
-              <div className="flex justify-between text-xs text-slate-300 mb-1">
-                <span>Base imponible</span><span className="font-mono">{eur(cartTotal)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-slate-300 mb-2">
-                <span>IVA ({ivaRate}%)</span><span className="font-mono">{eur(ivaAmount)}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                <span className="text-xs font-black uppercase text-orange-300 flex items-center gap-1"><Sparkles size={13} /> Total</span>
-                <span className="text-2xl font-black text-orange-400">{eur(totalConIva)}</span>
+                <div className="flex items-center gap-1">
+                  <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }}
+                    className="w-3.5 h-3.5 accent-purple-600" />
+                  <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
+                    className="flex-1 bg-purple-50 border border-purple-200 rounded-lg p-1.5 text-[11px] font-bold outline-none focus:border-purple-500 text-purple-900 disabled:opacity-50" placeholder="Color gola bajo" disabled={!golaBajo} />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setShowManual(!showManual)}
-                className="py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-xs font-bold text-amber-700 flex items-center justify-center gap-1.5 transition-colors">
-                <Edit3 size={13} /> Línea manual
-              </button>
-              <button onClick={saveOrder} disabled={saving || cart.length === 0}
-                className="py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
-                {saving ? <Loader size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
-                {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar'}
-              </button>
-              <button onClick={exportPDF} disabled={cart.length === 0}
-                className="py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
-                <FileDown size={13} /> Exportar PDF
-              </button>
-              <button onClick={handlePrint} disabled={cart.length === 0}
-                className="py-2.5 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
-                <Printer size={13} /> Imprimir
-              </button>
+            {/* Líneas */}
+            <div className="flex-1 overflow-y-auto px-3 py-2">
+              {cart.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-center text-slate-300 py-10">
+                  <Receipt size={44} className="mb-2 opacity-50" />
+                  <p className="text-sm font-bold text-slate-400">El presupuesto está vacío</p>
+                  <p className="text-xs text-slate-300 mt-1">Pulsa un mueble del catálogo para añadirlo</p>
+                </div>
+              )}
+              <div className="space-y-2">
+                {cart.map(it => (
+                  <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-orange-200 transition-colors">
+                    <div className="flex items-start gap-2">
+                      {!it.manual && (
+                        <div className="shrink-0 w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 text-orange-600 flex items-center justify-center mt-0.5">
+                          <MuebleIcon type={classifyMueble({ code: it.code, name: it.name })} size={17} />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-800 text-xs leading-tight">{it.name}</p>
+                        <p className="text-[9px] text-slate-400 font-mono mt-0.5">{it.code}{it.manual ? ' · manual' : ''}</p>
+                      </div>
+                      <button onClick={() => removeItem(it.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={13} /></button>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                        <button onClick={() => setQty(it.id, -1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Minus size={11} /></button>
+                        <span className="w-6 text-center font-black text-xs">{it.qty}</span>
+                        <button onClick={() => setQty(it.id, 1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Plus size={11} /></button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {it.manual ? (
+                          <input value={it.price} onChange={e => updateItemPrice(it.id, e.target.value)} type="number" step="0.01"
+                            className="w-16 text-right text-[11px] px-1.5 py-1 border border-amber-200 bg-amber-50 rounded-md font-mono" />
+                        ) : (
+                          <span className="font-mono text-[11px] text-slate-400">{eur(displayPrice(it.price))}/ud</span>
+                        )}
+                        <span className="font-mono font-black text-orange-700 text-sm w-20 text-right">{eur(lineTotal(it))}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            {currentUser?.canViewTechnicalDespiece && (
-              <button onClick={openDespiece} disabled={cart.length === 0}
-                className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-100 disabled:text-slate-300 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider">
-                <Scissors size={14} /> Generar despiece
-              </button>
+
+            {/* Línea manual */}
+            {showManual && (
+              <div className="px-4 py-2.5 border-t border-amber-100 bg-amber-50">
+                <p className="text-[10px] font-black text-amber-700 uppercase mb-1.5 flex items-center gap-1"><Edit3 size={11} /> Añadir línea manual</p>
+                <div className="flex gap-1.5 items-end">
+                  <input value={manualLine.name} onChange={e => setManualLine(p => ({ ...p, name: e.target.value }))} placeholder="Concepto…"
+                    className="flex-1 px-2 py-1.5 border border-amber-200 rounded-lg text-xs" />
+                  <input value={manualLine.price} onChange={e => setManualLine(p => ({ ...p, price: e.target.value }))} placeholder="€" type="number" step="0.01"
+                    className="w-20 px-2 py-1.5 border border-amber-200 rounded-lg text-xs text-right" />
+                  <input value={manualLine.qty} onChange={e => setManualLine(p => ({ ...p, qty: e.target.value }))} placeholder="Ud" type="number" min="1"
+                    className="w-12 px-2 py-1.5 border border-amber-200 rounded-lg text-xs text-center" />
+                  <button onClick={addManualLine} className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold"><Plus size={12} /></button>
+                </div>
+              </div>
             )}
-            <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
+
+            {/* Totales + acciones */}
+            <div className="border-t border-slate-200 p-4 bg-gradient-to-b from-white to-slate-50 space-y-3">
+              <div className="rounded-2xl bg-slate-900 text-white p-4">
+                <div className="flex justify-between text-xs text-slate-300 mb-1">
+                  <span>Base imponible</span><span className="font-mono">{eur(cartTotal)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300 mb-2">
+                  <span>IVA ({ivaRate}%)</span><span className="font-mono">{eur(ivaAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                  <span className="text-xs font-black uppercase text-orange-300 flex items-center gap-1"><Sparkles size={13} /> Total</span>
+                  <span className="text-2xl font-black text-orange-400">{eur(totalConIva)}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setShowManual(!showManual)}
+                  className="py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-xs font-bold text-amber-700 flex items-center justify-center gap-1.5 transition-colors">
+                  <Edit3 size={13} /> Línea manual
+                </button>
+                <button onClick={saveOrder} disabled={saving || cart.length === 0}
+                  className="py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                  {saving ? <Loader size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
+                  {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar'}
+                </button>
+                <button onClick={exportPDF} disabled={cart.length === 0}
+                  className="py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                  <FileDown size={13} /> Exportar PDF
+                </button>
+                <button onClick={handlePrint} disabled={cart.length === 0}
+                  className="py-2.5 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+                  <Printer size={13} /> Imprimir
+                </button>
+              </div>
+              {currentUser?.canViewTechnicalDespiece && (
+                <button onClick={openDespiece} disabled={cart.length === 0}
+                  className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-100 disabled:text-slate-300 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider">
+                  <Scissors size={14} /> Generar despiece
+                </button>
+              )}
+              <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {showNomenclatura && (
@@ -594,12 +1009,17 @@ const Presupuestador2 = ({ currentUser }) => {
         isOpen={showDespiece}
         onClose={() => setShowDespiece(false)}
         items={despieceItems}
-        catalogs={[{ id: 'MV', products }]}
+        catalogs={[{ id: libraryCode, products }]}
         carcassMaterialName="Melamina Blanca"
         carcassBackThickness={8}
         customerName={clientName}
-        projectReference={`Presupuesto MV (Tarifa ${tariff})`}
+        projectReference={budgetReference || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`}
         expedientNumber={newBudgetNumber()}
+        doorColorLow={doorColorLow}
+        doorColorHigh={doorColorHigh}
+        doorColorColumns={doorColorColumns}
+        sideColor={sideColor}
+        doorHasVeta={doorHasVeta}
         doorToleranceHeight={2}
         doorToleranceWidth={3}
       />

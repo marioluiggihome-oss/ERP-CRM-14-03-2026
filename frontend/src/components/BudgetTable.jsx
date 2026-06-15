@@ -765,12 +765,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
              : (product.points.Z1 || 100);
          }
          
-         // Para MV, usar tariffPrices; para ZC, usar zonePoints
-         if (isMV && product.tariffPrices) {
-           usedPoints = product.tariffPrices[finishObj.group] ?? productBasePoints;
-         } else {
-           usedPoints = product.zonePoints?.[finishObj.group] ?? productBasePoints;
-         }
+         usedPoints = product.zonePoints?.[finishObj.group] ?? productBasePoints;
          finalProductName = product.name;
 
          // NO aplicar incrementos por medidas en COSTADOS y REGLETAS
@@ -1442,7 +1437,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                    }}
                    data-testid="tariff-selector-mv"
                  >
-                   {[...Array(15)].map((_, i) => (
+                   {[...Array(21)].map((_, i) => (
                      <option key={`T${i+1}`} value={`T${i+1}`}>
                        Tarifa T{i+1}
                      </option>

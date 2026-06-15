@@ -23,11 +23,19 @@ export function classifyMueble(p) {
   if (/MEDIACOLUMNA|MEDIA COLUMNA|MEDIA PUERTA|MEDIACOL/.test(hay) || /^M[0-9MVPGH]/.test(code)) return 'mediacolumna';
   if (/COLUMNA/.test(hay) || /^C[DHF]/.test(code)) return 'columna';
   if (/ALTILLO|BALDA|SOBREENCIMERA|SOBREENC/.test(hay) || /^L[DV0-9]/.test(code) || /^BAL/.test(code) || /^S[CV0-9]/.test(code)) return 'altillo';
-  if (/REGLETA|LATERAL|COSTADO|TECHO|ZOCALO|CORNISA|PORTALUZ|ENCIMERA|COPETE|PERFIL/.test(hay)) return 'lineal';
+  if (/SOBREM[OÓ]DULO/.test(hay)) return 'altillo';
+  if (/REGLETA|LATERAL|COSTADO|TECHO|Z[OÓ]CALO|ZOC|ESTANTE|MOSTRADOR|CORNISA|PORTALUZ|ENCIMERA|COPETE|PERFIL|LINEAL/.test(hay)) return 'lineal';
   if (/PUERTA|^P[VR]?\d/.test(hay) || /^P[VR]?\d/.test(code)) return 'puerta';
   if (/^A/.test(code) || /\bALTO\b/.test(hay)) return 'alto';
   if (/^B/.test(code) || /\bBAJO\b/.test(hay)) return 'bajo';
   return 'box';
+}
+
+// Nº de puertas según el código: los códigos con sufijo "D/I" (derecha/izquierda)
+// son de 1 puerta; el resto (p.ej. A60, B60 sin D/I) son de 2 puertas.
+export function doorCount(p) {
+  const code = `${p?.code || p?.reference || ''}`.toUpperCase();
+  return /D\/I/.test(code) ? 1 : 2;
 }
 
 const S = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' };
@@ -41,11 +49,25 @@ const ICONS = {
       <circle cx="10.3" cy="13.5" r="0.6" /><circle cx="13.7" cy="13.5" r="0.6" />
     </>
   ),
+  // 1 puerta (códigos D/I): sin división central, tirador a un lado
+  bajo1: (
+    <>
+      <rect x="3.5" y="7" width="17" height="13" rx="1" />
+      <circle cx="18.2" cy="13.5" r="0.6" />
+    </>
+  ),
   alto: (
     <>
       <rect x="4" y="4" width="16" height="11" rx="1" />
       <line x1="12" y1="4" x2="12" y2="15" />
       <circle cx="10.5" cy="12.5" r="0.6" /><circle cx="13.5" cy="12.5" r="0.6" />
+    </>
+  ),
+  // 1 puerta (códigos D/I): sin división central, tirador a un lado
+  alto1: (
+    <>
+      <rect x="4" y="4" width="16" height="11" rx="1" />
+      <circle cx="18.5" cy="12.5" r="0.6" />
     </>
   ),
   cajones: (
@@ -144,7 +166,9 @@ const ICONS = {
 };
 
 export function MuebleIcon({ mueble, type, size = 24, className = '' }) {
-  const t = type || classifyMueble(mueble);
+  let t = type || classifyMueble(mueble);
+  // Para alto/bajo: 1 puerta (código D/I) usa la variante sin división central
+  if ((t === 'alto' || t === 'bajo') && doorCount(mueble) === 1) t = `${t}1`;
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className}
       {...S} aria-hidden="true">

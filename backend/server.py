@@ -737,7 +737,7 @@ Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones."""
                 for product_data in product_list:
                     # Add metadata
                     product_data['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
-                    product_data['manufacturer'] = 'Zona Cocinas'
+                    product_data['manufacturer'] = 'ZC'
                     product_data['module'] = module
                     product_data['library'] = library  # Usar la biblioteca seleccionada (MV o ZC)
                     product_data['importedAt'] = datetime.now(timezone.utc).isoformat()
@@ -772,7 +772,7 @@ Responde ÚNICAMENTE con el JSON estructurado. No añadas explicaciones."""
                             try:
                                 prod = json.loads(prod_json)
                                 prod['id'] = f"AI-{module.upper()}-{uuid.uuid4().hex[:8]}"
-                                prod['manufacturer'] = 'Zona Cocinas'
+                                prod['manufacturer'] = 'ZC'
                                 prod['module'] = module
                                 prod['library'] = library  # Usar la biblioteca seleccionada (MV o ZC)
                                 prod['importedAt'] = datetime.now(timezone.utc).isoformat()
@@ -1455,11 +1455,53 @@ def calculate_furniture_despiece(
     
     # Todas las dimensiones en cm
     w = float(item.width)   # Ancho en cm
-    h = float(item.height)  # Alto en cm  
+    h = float(item.height)  # Alto en cm
     d = float(item.depth)   # Fondo en cm
     g = grosor / 10  # Grosor viene en mm, convertir a cm (18mm = 1.8cm)
     back_g = back_thickness / 10  # Grosor trasera en cm (8mm = 0.8cm)
-    
+
+    # =============================================
+    # ELEMENTOS PLANOS (no son cascos volumétricos)
+    # Costados, regletas, zócalos, techos, cornisas, estantes, laterales...
+    # Son un único panel (ancho x alto), no llevan tapas, traseras ni puertas.
+    # =============================================
+    panel_categories = (
+        "COSTADO", "LATERAL", "REGLETA", "ZOCALO", "ZÓCALO", "TECHO",
+        "CORNISA", "ESTANTE", "BALDA", "ELEMENTO", "PORTALUZ", "MOSTRADOR"
+    )
+    category_upper_check = item.category.upper()
+    name_upper_check = item.productName.upper()
+    is_panel = any(k in category_upper_check or k in name_upper_check for k in panel_categories)
+    if is_panel:
+        panel_components = [
+            ComponentPiece(
+                id=f"CMP-{item.productId[:8]}-001",
+                name=item.productName,
+                nameShort="PANEL",
+                material=carcass_material,
+                length=round(max(w, h), 1),
+                width=round(min(w, h) if min(w, h) > 0 else d, 1),
+                thickness=g * 10,
+                quantity=1,
+                area=round((max(w, h) * (min(w, h) if min(w, h) > 0 else d)) / 10_000, 4),
+                notes="Panel plano (sin casco)"
+            )
+        ]
+        total_area_panel = sum(c.area for c in panel_components)
+        return FurnitureDespiece(
+            productId=item.productId,
+            productCode=item.productCode,
+            productName=item.productName,
+            category=item.category,
+            originalWidth=item.width,
+            originalHeight=item.height,
+            originalDepth=item.depth,
+            itemQuantity=item.quantity,
+            components=panel_components,
+            totalPanels=sum(c.quantity for c in panel_components),
+            totalArea=round(total_area_panel * item.quantity, 4)
+        )
+
     # =============================================
     # REGLAS DE CÁLCULO SEGÚN DOCUMENTO:
     # =============================================

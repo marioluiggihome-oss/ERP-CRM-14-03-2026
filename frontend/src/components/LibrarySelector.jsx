@@ -30,7 +30,7 @@ const LibrarySelector = ({
         console.error('Error loading libraries:', error);
         // Bibliotecas por defecto si falla la carga
         setLibraries([
-          { code: 'ZC', name: 'Zona Cocinas', pricingSystem: 'zones' }
+          { code: 'ZC', name: 'ZC', pricingSystem: 'zones' }
         ]);
       } finally {
         setLoading(false);
