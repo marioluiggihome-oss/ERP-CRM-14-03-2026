@@ -219,6 +219,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         price: pts * pv,
         qty: it.quantity || 1,
         manual: isManual,
+        hand: it.openingDirection === 'Derecha' ? 'D' : it.openingDirection === 'Izquierda' ? 'I' : null,
+        notes: it.notes || '',
       };
     }));
     setClientName(proj.customerName || '');
@@ -376,6 +378,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const removeItem = (id) => setCart(prev => prev.filter(x => x.id !== id));
   const updateItemPrice = (id, newPrice) => setCart(prev => prev
     .map(x => x.id === id ? { ...x, price: parseFloat(newPrice) || 0 } : x));
+  const setItemHand = (id, hand) => setCart(prev => prev
+    .map(x => x.id === id ? { ...x, hand: x.hand === hand ? null : hand } : x));
+  const setItemNotes = (id, notes) => setCart(prev => prev
+    .map(x => x.id === id ? { ...x, notes } : x));
 
   // Las líneas manuales nunca llevan descuento; el resto sí, si está activo el modo COSTO.
   const lineTotal = (x) => unitPriceOf(x) * x.qty * (x.manual ? 1 : discountFactor);
@@ -405,6 +411,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       customWidth: prod?.width || 0,
       customHeight: prod?.height || 0,
       customDepth: prod?.depth || 0,
+      openingDirection: it.hand === 'D' ? 'Derecha' : it.hand === 'I' ? 'Izquierda' : '',
+      notes: it.notes || '',
     };
   }), [cart, products, pointValue, unitPriceOf]);
 
@@ -833,7 +841,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
                 {sortedShown.slice(0, 120).map(p => {
                   const added = inCart(p.id);
-                  const med = [p.width, p.height, p.depth].filter(Boolean).map(formatMeasure).join('×');
+                  const med = [p.width && formatMeasure(p.width), p.heightLabel || (p.height && formatMeasure(p.height)), p.depth && formatMeasure(p.depth)].filter(Boolean).join('×');
                   return (
                     <button key={p.id} onClick={() => addToCart(p)}
                       className={`group text-center bg-white border rounded-2xl p-3 flex flex-col items-center gap-1.5 transition-all hover:shadow-md ${
@@ -864,7 +872,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                 {sortedShown.slice(0, 120).map(p => {
                   const added = inCart(p.id);
-                  const med = [p.width, p.height, p.depth].filter(Boolean).map(formatMeasure).join('×');
+                  const med = [p.width && formatMeasure(p.width), p.heightLabel || (p.height && formatMeasure(p.height)), p.depth && formatMeasure(p.depth)].filter(Boolean).join('×');
                   return (
                     <button key={p.id} onClick={() => addToCart(p)}
                       className={`group text-left bg-white border rounded-2xl p-3 flex items-center gap-3 transition-all hover:shadow-md ${
@@ -995,6 +1003,25 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                         <span className="font-mono font-black text-orange-700 text-sm w-20 text-right">{eur(lineTotal(it))}</span>
                       </div>
                     </div>
+                    {(
+                      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                        {String(it.code || '').includes('D/I') && (
+                          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                            {['D', 'I'].map(h => (
+                              <button key={h} onClick={() => setItemHand(it.id, h)}
+                                title={h === 'D' ? 'Apertura Derecha' : 'Apertura Izquierda'}
+                                className={`w-6 h-6 rounded-md text-[11px] font-black transition-colors ${
+                                  it.hand === h ? 'bg-orange-600 text-white shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-500'}`}>
+                                {h}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <input value={it.notes || ''} onChange={e => setItemNotes(it.id, e.target.value)}
+                          placeholder="Observación (p.ej. pendiente confirmar apertura)…"
+                          className="flex-1 min-w-0 px-2 py-1 text-[10px] border border-slate-200 rounded-lg outline-none focus:border-orange-400" />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

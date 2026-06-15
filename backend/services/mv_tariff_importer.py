@@ -18,10 +18,10 @@ DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "mv
 
 # Profundidad (fondo) orientativa por familia, en cm. Best-effort para el despiece.
 _DEPTH_BY_PREFIX = {
-    "BAJO": 56, "BAJO_FREGADERO": 56, "BAJO_PUERTA_CAJON": 56, "BAJO_5_CAJONES": 56,
-    "BAJO_3CAJ_1GAV": 56, "BAJO_2GAV_1CAJ": 56, "BAJO_2CAJ_1GAV_1FRENTE": 56,
-    "BAJO_2GAV_1FRENTE": 56, "BAJO_RINCON_ESCUADRA": 56, "BAJO_RINCON_CIEGO": 56,
-    "BAJO_HORNO": 56, "BAJO_TERMINAL": 35,
+    "BAJO": 58, "BAJO_FREGADERO": 58, "BAJO_PUERTA_CAJON": 58, "BAJO_5_CAJONES": 58,
+    "BAJO_3CAJ_1GAV": 58, "BAJO_2GAV_1CAJ": 58, "BAJO_2CAJ_1GAV_1FRENTE": 58,
+    "BAJO_2GAV_1FRENTE": 58, "BAJO_RINCON_ESCUADRA": 58, "BAJO_RINCON_CIEGO": 58,
+    "BAJO_HORNO": 58, "BAJO_TERMINAL": 58,
     "ALTO": 33, "ALTO_VITRINA": 33, "ALTO_CAMPANA": 33, "ALTO_ESCURREPLATOS": 33,
     "ALTO_MICROONDAS": 33, "ALTO_CALENTADOR": 33, "ALTO_CALDERA": 33, "ALTO_SOBREFRIGO": 33,
     "ALTO_DECORATIVO": 33, "ALTO_RINCON_CIEGO": 33, "ALTO_RINCON_ESCUADRA": 33,
@@ -62,6 +62,7 @@ def expand_tariffs(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             return
         p = products.get(sku)
         if not p:
+            is_bajo = family.startswith("BAJO")
             p = {
                 "code": sku,
                 "reference": sku,
@@ -70,7 +71,8 @@ def expand_tariffs(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "library": "MV",
                 "module": "montada",
                 "width": width or 0,
-                "height": height or 0,
+                "height": 70 if (is_bajo and not height) else (height or 0),
+                "heightLabel": "70/80" if is_bajo else None,
                 "depth": _DEPTH_BY_PREFIX.get(family, 0),
                 "zonePoints": {},
             }
