@@ -1,8 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Trash2, Plus, Download, FileText, Loader, History, Percent, Edit3, X, Camera, AlertCircle, Save, Search, FolderOpen, Target, UserPlus, Briefcase, CheckCircle, Lock, Unlock, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import Logo from './Logo';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -508,6 +506,9 @@ const Digitalizador = ({ state }) => {
     try {
       setIsLoading(true);
       setError(null);
+
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
 
       const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
       const T = (showCostMode ? costTotals : totals) || totals;
