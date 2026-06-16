@@ -376,8 +376,9 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         if (searchScope === 'family' && family && (p.category || 'OTROS') !== family) return false;
       }
       if (hasSize) {
+        const sizeInCm = useMillimeters ? sizeQ / 10 : sizeQ;
         const dims = [p.width, p.height, p.depth].filter(Boolean);
-        if (!dims.some(d => Math.abs(d - sizeQ) <= 5)) return false;
+        if (!dims.some(d => Math.abs(d - sizeInCm) <= (useMillimeters ? 0.5 : 5))) return false;
       }
       return true;
     });
@@ -608,7 +609,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     } catch (e) { alert('No se pudo generar el PDF: ' + (e.message || e)); }
   };
 
-  const handlePrint = () => exportPDF();
+  const handlePrint = () => window.print();
 
   const handleConfirmOrder = async () => {
     if (!orderEmail.trim()) { alert('Introduce el email del destinatario'); return; }
@@ -641,9 +642,15 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       });
       if (r.ok) {
         setOrderSent(true);
-        setTimeout(() => { setOrderSent(false); setShowConfirmOrder(false); setOrderEmail(''); setOrderNotes(''); setOrderAttachments([]); }, 3000);
-        // Save the project as well
         await saveOrder();
+        setTimeout(() => {
+          setOrderSent(false);
+          setShowConfirmOrder(false);
+          setOrderNotes('');
+          setOrderAttachments([]);
+          setCart([]);
+          budgetNumberRef.current = null;
+        }, 2500);
       } else {
         const e = await r.json().catch(() => ({}));
         alert('Error al enviar pedido: ' + (e.detail || r.status));
@@ -792,7 +799,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         <button onClick={() => setMobileTab('cart')}
           className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
             mobileTab === 'cart' ? 'text-orange-700 border-b-2 border-orange-600 bg-orange-50/60' : 'text-slate-400'}`}>
-          <ShoppingCart size={14} /> Presupuesto {cart.length > 0 && `(${cart.length})`}
+          <ShoppingCart size={14} /> Presupuesto {cart.length > 0 && <span className="bg-orange-600 text-white rounded-full px-1.5 py-0.5 text-[9px] ml-1">{cart.length}</span>}
         </button>
       </div>
 
@@ -964,7 +971,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               </div>
             ) : catalogView === 'icons' ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
-                {sortedShown.slice(0, 120).map(p => {
+                {sortedShown.slice(0, 200).map(p => {
                   const added = inCart(p.id);
                   const med = [p.width && formatMeasure(p.width), p.heightLabel || (p.height && formatMeasure(p.height)), p.depth && formatMeasure(p.depth)].filter(Boolean).join('×');
                   return (
@@ -990,12 +997,12 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                   </div>
                 )}
                 {sortedShown.length > 120 && (
-                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {sortedShown.length} — usa el buscador para filtrar</p>
+                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 200 de {sortedShown.length} — usa el buscador para filtrar</p>
                 )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-                {sortedShown.slice(0, 120).map(p => {
+                {sortedShown.slice(0, 200).map(p => {
                   const added = inCart(p.id);
                   const med = [p.width && formatMeasure(p.width), p.heightLabel || (p.height && formatMeasure(p.height)), p.depth && formatMeasure(p.depth)].filter(Boolean).join('×');
                   return (
@@ -1037,7 +1044,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                   </div>
                 )}
                 {sortedShown.length > 120 && (
-                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {sortedShown.length} — usa el buscador para filtrar</p>
+                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 200 de {sortedShown.length} — usa el buscador para filtrar</p>
                 )}
               </div>
             )}
@@ -1156,7 +1163,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                           {dims.map(d => {
                             const changed = d.val !== '' && d.val != null && Number(d.val) !== Number(d.orig);
                             return (
-                              <label key={d.field} className="flex items-center gap-0.5" title={`Original: ${d.orig ?? '–'} cm`}>
+                              <label key={d.field} className="flex items-center gap-0.5" title={`Original: ${d.orig ?? '–'} ${measureUnit}`}>
                                 <span className="text-[9px] font-black text-slate-400 uppercase">{d.lbl}</span>
                                 <input type="number" step="0.1" value={d.val ?? ''}
                                   onChange={e => setItemDim(it.id, d.field, e.target.value)}
@@ -1326,7 +1333,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         onClose={() => setShowDespiece(false)}
         items={despieceItems}
         catalogs={[{ id: libraryCode, products }]}
-        carcassMaterialName="Melamina Blanca"
+        carcassMaterialName={carcassMaterials.find(m => m.id === selectedCarcassMaterialId)?.name || 'Melamina Blanca'}
         carcassBackThickness={8}
         customerName={clientName}
         projectReference={budgetReference || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`}
