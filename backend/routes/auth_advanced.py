@@ -106,7 +106,7 @@ def verify_password(password: str, hashed: str) -> bool:
     """Verify a password against its hash"""
     try:
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-    except:
+    except Exception:
         return password == hashed
 
 
@@ -592,7 +592,7 @@ async def enable_2fa(data: Enable2FARequest, credentials: HTTPAuthorizationCrede
     try:
         payload = verify_access_token(credentials.credentials)
         token_user_id = payload.get("sub")
-    except:
+    except Exception:
         raise HTTPException(status_code=401, detail="Token inválido")
     
     # Verificar que el usuario existe
@@ -667,7 +667,7 @@ async def verify_2fa_setup(data: Verify2FARequest, credentials: HTTPAuthorizatio
     try:
         payload = verify_access_token(credentials.credentials)
         token_user_id = payload.get("sub")
-    except:
+    except Exception:
         raise HTTPException(status_code=401, detail="Token inválido")
     
     if token_user_id != data.userId:
@@ -714,7 +714,7 @@ async def disable_2fa(data: Verify2FARequest, credentials: HTTPAuthorizationCred
     try:
         payload = verify_access_token(credentials.credentials)
         token_user_id = payload.get("sub")
-    except:
+    except Exception:
         raise HTTPException(status_code=401, detail="Token inválido")
     
     if token_user_id != data.userId:
@@ -765,7 +765,7 @@ async def regenerate_backup_codes(data: dict, credentials: HTTPAuthorizationCred
     try:
         payload = verify_access_token(credentials.credentials)
         token_user_id = payload.get("sub")
-    except:
+    except Exception:
         raise HTTPException(status_code=401, detail="Token inválido")
     
     user_id = data.get("userId")
@@ -808,7 +808,7 @@ async def disable_2fa_simple(data: dict, credentials: HTTPAuthorizationCredentia
     try:
         payload = verify_access_token(credentials.credentials)
         token_user_id = payload.get("sub")
-    except:
+    except Exception:
         raise HTTPException(status_code=401, detail="Token inválido")
     
     user_id = data.get("userId")
@@ -850,7 +850,7 @@ async def get_2fa_status(user_id: str, credentials: HTTPAuthorizationCredentials
     try:
         payload = verify_access_token(credentials.credentials)
         token_user_id = payload.get("sub")
-    except:
+    except Exception:
         raise HTTPException(status_code=401, detail="Token inválido")
     
     if token_user_id != user_id:

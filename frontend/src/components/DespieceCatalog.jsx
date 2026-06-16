@@ -84,6 +84,7 @@ const DespieceCatalog = ({
   const loadFilterOptions = async () => {
     try {
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products/filters`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setFilterOptions(data);
     } catch (error) {
@@ -100,6 +101,7 @@ const DespieceCatalog = ({
       });
       
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products?${params.toString()}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setProducts(data);
     } catch (error) {

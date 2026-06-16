@@ -122,7 +122,7 @@ async def get_dashboard_metrics(
                 try:
                     month_key = confirmed_at[:7]  # "2026-03"
                     orders_by_month[month_key] = orders_by_month.get(month_key, 0) + 1
-                except:
+                except Exception:
                     pass
         
         # ============================================
@@ -159,7 +159,7 @@ async def get_dashboard_metrics(
                 try:
                     month_key = created_at[:7]
                     budgets_by_month[month_key] = budgets_by_month.get(month_key, 0) + 1
-                except:
+                except Exception:
                     pass
         
         # ============================================

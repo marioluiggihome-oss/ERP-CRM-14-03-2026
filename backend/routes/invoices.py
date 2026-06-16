@@ -87,7 +87,7 @@ async def next_invoice_number() -> str:
     if last:
         try:
             last_num = int(last["invoiceNumber"].split("-")[-1])
-        except:
+        except Exception:
             last_num = 0
     else:
         last_num = 0
@@ -131,7 +131,7 @@ def get_logo_img(logo_b64: str, w=50*mm, h=18*mm):
     try:
         data = logo_b64.split(",")[1] if "," in logo_b64 else logo_b64
         return Image(BytesIO(base64.b64decode(data)), width=w, height=h)
-    except:
+    except Exception:
         return None
 
 
@@ -145,7 +145,7 @@ def generate_invoice_pdf(invoice: dict, settings: dict) -> bytes:
     brand = settings.get("brandColor", "#ea580c")
     try:
         brand_color = colors.HexColor(brand)
-    except:
+    except Exception:
         brand_color = colors.HexColor("#ea580c")
 
     styles = getSampleStyleSheet()
@@ -805,7 +805,7 @@ async def get_next_number_by_series(series: str = "FAC"):
     if last:
         try:
             last_num = int(last["invoiceNumber"].split("-")[-1])
-        except:
+        except Exception:
             last_num = 0
     else:
         last_num = 0

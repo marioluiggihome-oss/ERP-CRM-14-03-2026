@@ -382,7 +382,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       }
       return true;
     });
-  }, [products, family, search, searchScope, sizeFilter]);
+  }, [products, family, search, searchScope, sizeFilter, useMillimeters]);
 
   // Orden de los resultados (código, nombre, ancho, alto o precio).
   const sortedShown = useMemo(() => {
@@ -609,7 +609,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     } catch (e) { alert('No se pudo generar el PDF: ' + (e.message || e)); }
   };
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => exportPDF();
 
   const handleConfirmOrder = async () => {
     if (!orderEmail.trim()) { alert('Introduce el email del destinatario'); return; }
