@@ -115,6 +115,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileBase64: b64 }),
       });
+      if (!r.ok) { alert(`Error del servidor (${r.status}): ${r.statusText}`); return; }
       const data = await r.json();
       if (!data.success) { alert(data.error || 'No se pudo leer el documento'); return; }
       setEditor({
@@ -127,7 +128,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         costDocs: [],
         existingDocs: [],
       });
-    } catch { alert('Error al subir el documento'); }
+    } catch (err) { alert(`Error al subir el documento: ${err?.message || err}`); }
     finally { setParsing(false); }
   };
 
