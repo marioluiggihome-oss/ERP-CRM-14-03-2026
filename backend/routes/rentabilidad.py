@@ -10,7 +10,7 @@ Modelo de datos:
     { id, projectRef, proveedor, concepto, categoria, importe, fecha,
       createdAt, source }  (source: 'manual' | 'ia' | 'factura')
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
@@ -580,19 +580,38 @@ async def delete_ficha_doc(ficha_id: str, doc_id: str):
 # ============================================================================
 
 @router.post("/rentabilidad/presupuesto-to-pedido/{project_id}")
-async def presupuesto_to_pedido(project_id: str):
-    """Convierte un presupuesto (project) en PEDIDO (order) y marca el estado."""
+async def presupuesto_to_pedido(project_id: str, request: Request):
+    """Convierte un presupuesto (project) en PEDIDO (order). Acepta body JSON opcional
+    con {orderSerie, orderNumber} para personalizar el número de pedido."""
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+
     project = await db.projects.find_one({"id": project_id}, {"_id": 0})
     if not project:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
     if project.get("orderId"):
         raise HTTPException(status_code=400, detail="Este presupuesto ya tiene un pedido asociado")
 
+    # Número de pedido: serie + número indicados por el usuario, o el del presupuesto
+    order_serie = str(body.get("orderSerie") or "").strip()
+    order_number = str(body.get("orderNumber") or "").strip()
+    if order_serie and order_number:
+        pedido_ref = f"{order_serie}/{order_number}"
+    elif order_number:
+        pedido_ref = order_number
+    else:
+        pedido_ref = project.get("budgetNumber", "")
+
     now = datetime.now(timezone.utc)
     items = (project.get("itemsMontada") or []) + (project.get("itemsDespiece") or [])
     order = {
         "id": f"order-{uuid.uuid4().hex[:8]}",
-        "budgetNumber": project.get("budgetNumber", ""),
+        "budgetNumber": pedido_ref,
+        "orderSerie": order_serie,
+        "orderNumber": order_number,
         "projectReference": project.get("internalReference", ""),
         "customerName": project.get("customerName", ""),
         "customerAddress": project.get("customerAddress", ""),
@@ -618,16 +637,24 @@ async def presupuesto_to_pedido(project_id: str):
         {"$set": {
             "status": "aceptado",
             "orderId": order["id"],
+            "orderRef": pedido_ref,
             "acceptedAt": now.isoformat(),
             "updatedAt": now.isoformat(),
         }},
     )
-    return {"success": True, "orderId": order["id"], "message": "Presupuesto convertido en pedido"}
+    return {"success": True, "orderId": order["id"], "orderRef": pedido_ref, "message": f"Presupuesto convertido en pedido {pedido_ref}"}
 
 
 @router.post("/rentabilidad/pedido-to-factura/{project_id}")
-async def pedido_to_factura(project_id: str):
-    """Convierte el PEDIDO de un proyecto en FACTURA (reutiliza el alta de facturas)."""
+async def pedido_to_factura(project_id: str, request: Request):
+    """Convierte el PEDIDO de un proyecto en FACTURA. Acepta body JSON opcional
+    con {invoiceSerie, invoiceNumber} para personalizar el número de factura."""
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+
     project = await db.projects.find_one({"id": project_id}, {"_id": 0})
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
@@ -636,12 +663,20 @@ async def pedido_to_factura(project_id: str):
     if not project.get("orderId"):
         raise HTTPException(status_code=400, detail="Primero pasa el presupuesto a pedido")
 
+    invoice_serie = str(body.get("invoiceSerie") or "").strip()
+    invoice_number = str(body.get("invoiceNumber") or "").strip()
+    custom_inv_number = None
+    if invoice_serie and invoice_number:
+        custom_inv_number = f"{invoice_serie}/{invoice_number}"
+    elif invoice_number:
+        custom_inv_number = invoice_number
+
     # Asegurar un estado válido para emitir factura
     if project.get("status") not in ["aceptado", "en_fabricacion", "entregado"]:
         await db.projects.update_one({"id": project_id}, {"$set": {"status": "aceptado"}})
 
     from routes.invoices import create_invoice_from_project
-    doc = await create_invoice_from_project(project_id)
+    doc = await create_invoice_from_project(project_id, inv_number_override=custom_inv_number)
 
     now = datetime.now(timezone.utc)
     await db.projects.update_one(
@@ -757,15 +792,41 @@ async def list_ingresos(userId: Optional[str] = None):
 
 @router.get("/rentabilidad/asignables")
 async def list_asignables(userId: Optional[str] = None):
-    """Documentos a los que asignar un ingreso a cuenta: PEDIDOS y FACTURAS
-    (fichas de rentabilidad por líneas). Cada usuario los suyos si se pasa userId."""
-    q = {"docType": {"$in": ["pedido", "factura"]}}
+    """Documentos a los que asignar un ingreso a cuenta: PRESUPUESTOS, PEDIDOS y FACTURAS.
+    Combina sale_fichas (documentos IA) + projects (presupuestos normales)."""
+    q_fichas = {"docType": {"$in": ["presupuesto", "pedido", "factura"]}}
     if userId:
-        q["createdBy"] = userId
-    items = await db.sale_fichas.find(
-        q, {"_id": 0, "id": 1, "docType": 1, "ref": 1, "cliente": 1}
+        q_fichas["createdBy"] = userId
+    fichas = await db.sale_fichas.find(
+        q_fichas, {"_id": 0, "id": 1, "docType": 1, "ref": 1, "cliente": 1}
     ).sort("createdAt", -1).to_list(3000)
-    return items
+
+    # También incluir presupuestos de la colección projects
+    q_proj = {}
+    if userId:
+        q_proj["userId"] = userId
+    projects = await db.projects.find(
+        q_proj, {"_id": 0, "id": 1, "budgetNumber": 1, "customerName": 1, "internalReference": 1, "orderRef": 1}
+    ).sort("createdAt", -1).to_list(3000)
+
+    presupuestos = []
+    for p in projects:
+        ref = p.get("orderRef") or p.get("budgetNumber") or p.get("internalReference") or p.get("id")
+        presupuestos.append({
+            "id": p["id"],
+            "docType": "pedido" if p.get("orderRef") else "presupuesto",
+            "ref": ref,
+            "cliente": p.get("customerName", ""),
+        })
+
+    # Combinar: fichas primero, luego proyectos (deduplicar por ref)
+    seen_refs = {f.get("ref") for f in fichas if f.get("ref")}
+    for p in presupuestos:
+        if p.get("ref") not in seen_refs:
+            fichas.append(p)
+            seen_refs.add(p.get("ref"))
+
+    return fichas
 
 
 @router.post("/rentabilidad/ingresos")

@@ -3,7 +3,7 @@
  * Cruza Ventas (presupuestos) con Costes (facturas/gastos) -> Margen.
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter } from 'lucide-react';
+import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter, PackageCheck, Receipt } from 'lucide-react';
 import RentabilidadLineas from './RentabilidadLineas';
 import ReportGenerator from './ReportGenerator';
 import IngresosACuenta from './IngresosACuenta';
@@ -85,29 +85,32 @@ const RentabilidadPanel = ({ currentUser }) => {
 
   // ---- Conversiones: presupuesto -> pedido -> factura ----
   const [converting, setConverting] = useState('');
+  // Modal de conversión (pedido o factura) con campos serie + número
+  const [convModal, setConvModal] = useState(null); // { row, tipo: 'pedido'|'factura', serie: '', numero: '' }
 
-  const toPedido = async (r) => {
-    if (!window.confirm(`¿Pasar el presupuesto ${r.ref || ''} a PEDIDO?`)) return;
-    setConverting(r.projectId);
+  const openConvModal = (row, tipo) => setConvModal({ row, tipo, serie: '', numero: '' });
+
+  const doConversion = async () => {
+    const { row, tipo, serie, numero } = convModal;
+    setConvModal(null);
+    setConverting(row.projectId);
     try {
-      const res = await fetch(`${API_URL}/api/rentabilidad/presupuesto-to-pedido/${r.projectId}`, { method: 'POST' });
+      const endpoint = tipo === 'pedido'
+        ? `presupuesto-to-pedido/${row.projectId}`
+        : `pedido-to-factura/${row.projectId}`;
+      const body = tipo === 'pedido'
+        ? { orderSerie: serie, orderNumber: numero }
+        : { invoiceSerie: serie, invoiceNumber: numero };
+      const res = await fetch(`${API_URL}/api/rentabilidad/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
       const j = await res.json();
       if (!res.ok) throw new Error(j.detail || 'Error');
+      if (tipo === 'factura') alert('Factura creada: ' + (j.invoiceNumber || ''));
       await load();
-    } catch (e) { alert('No se pudo convertir a pedido: ' + e.message); }
-    finally { setConverting(''); }
-  };
-
-  const toFactura = async (r) => {
-    if (!window.confirm(`¿Facturar el pedido ${r.ref || ''}? Se generará una factura.`)) return;
-    setConverting(r.projectId);
-    try {
-      const res = await fetch(`${API_URL}/api/rentabilidad/pedido-to-factura/${r.projectId}`, { method: 'POST' });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.detail || 'Error');
-      alert('Factura creada: ' + (j.invoiceNumber || ''));
-      await load();
-    } catch (e) { alert('No se pudo facturar: ' + e.message); }
+    } catch (e) { alert(`No se pudo convertir a ${tipo}: ` + e.message); }
     finally { setConverting(''); }
   };
 
@@ -478,15 +481,15 @@ const RentabilidadPanel = ({ currentUser }) => {
                 </td>
                 <td className="p-3 text-center">
                   {r.invoiceId ? (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[11px] font-black">FACTURA {r.invoiceNumber || ''}</span>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[11px] font-black flex items-center gap-1 mx-auto w-fit"><Receipt size={11} /> FACTURA {r.invoiceNumber || ''}</span>
                   ) : r.orderId ? (
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[11px] font-black">PEDIDO</span>
-                      <button onClick={() => toFactura(r)} disabled={converting === r.projectId}
+                      <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[11px] font-black flex items-center gap-1"><PackageCheck size={11} /> PEDIDO {r.orderRef || ''}</span>
+                      <button onClick={() => openConvModal(r, 'factura')} disabled={converting === r.projectId}
                         className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-bold hover:bg-blue-700 disabled:opacity-50">→ Factura</button>
                     </div>
                   ) : (
-                    <button onClick={() => toPedido(r)} disabled={converting === r.projectId}
+                    <button onClick={() => openConvModal(r, 'pedido')} disabled={converting === r.projectId}
                       className="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50">→ Pedido</button>
                   )}
                 </td>
@@ -584,6 +587,52 @@ const RentabilidadPanel = ({ currentUser }) => {
                   </span>
                 </span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de conversión: presupuesto → pedido / pedido → factura */}
+      {convModal && (
+        <div className="fixed inset-0 bg-black/60 z-[140] flex items-center justify-center p-4" onClick={() => setConvModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className={`px-6 py-4 text-white flex items-center gap-3 ${convModal.tipo === 'pedido' ? 'bg-indigo-700' : 'bg-blue-700'}`}>
+              {convModal.tipo === 'pedido' ? <PackageCheck size={20} /> : <Receipt size={20} />}
+              <div>
+                <h3 className="font-black uppercase text-sm">
+                  {convModal.tipo === 'pedido' ? 'Convertir a Pedido' : 'Convertir a Factura'}
+                </h3>
+                <p className="text-[11px] opacity-80">{convModal.row.ref} · {convModal.row.cliente}</p>
+              </div>
+              <button onClick={() => setConvModal(null)} className="ml-auto hover:bg-white/20 rounded-lg p-1"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-500">
+                Indica la serie y el número del {convModal.tipo === 'pedido' ? 'pedido' : 'factura'}.
+                Si los dejas en blanco, se generará automáticamente.
+              </p>
+              <div className="flex gap-3">
+                <div className="w-24">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Serie</label>
+                  <input value={convModal.serie} onChange={e => setConvModal(p => ({ ...p, serie: e.target.value }))}
+                    placeholder="LG" className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-indigo-400" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Número</label>
+                  <input value={convModal.numero} onChange={e => setConvModal(p => ({ ...p, numero: e.target.value }))}
+                    placeholder="2026/001" className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-indigo-400" />
+                </div>
+              </div>
+              {convModal.serie && convModal.numero && (
+                <p className="text-xs font-black text-indigo-700 text-center">
+                  Referencia: {convModal.serie}/{convModal.numero}
+                </p>
+              )}
+              <button onClick={doConversion}
+                className={`w-full py-3 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 ${convModal.tipo === 'pedido' ? 'bg-indigo-700 hover:bg-indigo-800' : 'bg-blue-700 hover:bg-blue-800'}`}>
+                {convModal.tipo === 'pedido' ? <PackageCheck size={16} /> : <Receipt size={16} />}
+                Confirmar
+              </button>
             </div>
           </div>
         </div>

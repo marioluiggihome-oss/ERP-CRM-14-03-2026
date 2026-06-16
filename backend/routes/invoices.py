@@ -437,7 +437,7 @@ async def create_invoice(invoice: InvoiceCreate):
 
 
 @router.post("/from-project/{project_id}")
-async def create_invoice_from_project(project_id: str):
+async def create_invoice_from_project(project_id: str, inv_number_override: Optional[str] = None):
     """Crear factura automáticamente desde un presupuesto aceptado"""
     project = await db.projects.find_one({"id": project_id}, {"_id": 0})
     if not project:
@@ -459,7 +459,7 @@ async def create_invoice_from_project(project_id: str):
             "vatRate": 21,
         })
 
-    inv_number = await next_invoice_number()
+    inv_number = inv_number_override or await next_invoice_number()
     now = datetime.now(timezone.utc)
     totals = calc_totals(lines)
 
