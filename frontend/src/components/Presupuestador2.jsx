@@ -1050,7 +1050,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             )}
           </div>
         ) : (
-          <div className={`w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] relative ${
+          <div className={`w-full md:w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] relative ${
             mobileTab === 'catalog' ? 'hidden md:flex' : 'flex'}`}
             style={typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: cartWidth, maxWidth: cartWidth } : undefined}
           >

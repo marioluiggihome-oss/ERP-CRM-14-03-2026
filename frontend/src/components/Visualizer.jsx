@@ -335,7 +335,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                       </span>
                     </div>
                   )}
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                     <div className="bg-indigo-50 rounded-lg p-2 text-center">
                       <p className="text-xl font-black text-indigo-600">{analysisResult.resumen.total_altos || 0}</p>
                       <p className="text-[10px] font-bold text-indigo-400 uppercase">Altos</p>

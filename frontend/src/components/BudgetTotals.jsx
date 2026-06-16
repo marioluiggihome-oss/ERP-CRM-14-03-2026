@@ -79,7 +79,7 @@ const BudgetHeader = ({
 }) => {
   return (
     <div className="bg-indigo-50/30 p-2 rounded-xl border border-indigo-100 mb-2 space-y-2">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <div className="flex items-center gap-1.5">
           <div className="p-1 bg-indigo-950 text-white rounded-md"><Palette size={12}/></div>
           <div>
@@ -104,7 +104,7 @@ const BudgetHeader = ({
       </div>
 
       {(doorColorLow || doorColorHigh || doorColorColumns) && (
-        <div className="grid grid-cols-4 gap-2 pt-2 border-t border-indigo-100">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 pt-2 border-t border-indigo-100">
           {doorColorLow && (
             <DoorColorItem label="P. BAJOS" value={doorColorLow} />
           )}

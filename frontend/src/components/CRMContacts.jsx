@@ -461,7 +461,7 @@ const CRMContacts = ({ currentUser }) => {
             </div>
             
             {/* Desktop Table View */}
-            <table className="w-full hidden md:table">
+            <div className="overflow-x-auto w-full"><table className="w-full hidden md:table">
               <thead className="bg-slate-50 sticky top-0">
                 <tr>
                   <th className="text-left py-4 px-4 text-xs font-black text-slate-500 uppercase">Contacto</th>
@@ -576,7 +576,7 @@ const CRMContacts = ({ currentUser }) => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         )}
       </div>

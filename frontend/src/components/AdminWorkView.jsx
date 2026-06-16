@@ -412,7 +412,7 @@ const AdminWorkView = ({ isOpen, onClose, currentUser }) => {
           <>
         {/* Summary Cards */}
         {data?.summary && (
-          <div className="p-4 bg-slate-50 border-b grid grid-cols-4 gap-4">
+          <div className="p-4 bg-slate-50 border-b grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl p-4 border border-slate-200">
               <div className="flex items-center gap-2 text-indigo-600 mb-1">
                 <Users size={16} />

@@ -660,7 +660,7 @@ const AgendaMontajes = ({ currentUser }) => {
             </div>
             
             {/* Días de la semana */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
+            <div className="grid grid-cols-7 gap-1 mb-2 min-w-[400px]">
               {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
                 <div key={day} className="text-center text-xs font-bold text-slate-500 uppercase py-2">
                   {day}
@@ -669,7 +669,7 @@ const AgendaMontajes = ({ currentUser }) => {
             </div>
             
             {/* Días del mes */}
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-1 min-w-[400px]">
               {(() => {
                 const year = currentMonth.getFullYear();
                 const month = currentMonth.getMonth();

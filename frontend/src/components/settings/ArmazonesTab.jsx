@@ -121,7 +121,7 @@ const ArmazonesTab = ({
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="bg-amber-50 rounded-lg p-3 text-center">
                   <p className="text-[9px] font-black text-amber-400 uppercase">Incremento</p>
                   <p className="text-xl font-black text-orange-600">+{material.fixedIncrement}€</p>
@@ -218,7 +218,7 @@ const ArmazonesTab = ({
                 className="w-full bg-white border border-amber-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="text-xs font-black text-amber-600 uppercase mb-2 block">Incremento Fijo (€)</label>
                 <input

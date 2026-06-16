@@ -2675,7 +2675,7 @@ const Armarios = ({ state, setState }) => {
 
             {/* Info Bar */}
             <div className="bg-orange-50 px-8 py-4 border-b border-orange-100 shrink-0">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 <div className="flex items-center gap-2">
                   <Hash size={16} className="text-orange-400" />
                   <div>

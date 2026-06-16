@@ -731,7 +731,7 @@ const DespieceCatalog = ({
                 <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">
                   Cantos (opcional)
                 </label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {[
                     { key: 'cantoL1', label: 'Largo 1' },
                     { key: 'cantoL2', label: 'Largo 2' },

@@ -99,7 +99,7 @@ const UsageReportTab = () => {
       </div>
 
       {/* Resumen en tarjetas */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between">
             <div>

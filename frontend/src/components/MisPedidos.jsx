@@ -247,7 +247,7 @@ const MisPedidos = ({ currentUser }) => {
                 <td class="text-right" style="color: #f97316;">${formatCurrency(order.totalAmount)}</td>
               </tr>
             </tbody>
-          </table>
+          </table></div>
         </div>
 
         ${order.notes ? `
@@ -525,7 +525,7 @@ const MisPedidos = ({ currentUser }) => {
                       <div className="bg-slate-100 px-4 py-2 font-bold text-slate-700">
                         Artículos del Pedido
                       </div>
-                      <table className="w-full">
+                      <div className="overflow-x-auto w-full"><table className="w-full">
                         <thead className="bg-slate-50">
                           <tr className="text-xs font-bold text-slate-500 uppercase">
                             <th className="px-4 py-2 text-left">Código</th>
@@ -544,7 +544,7 @@ const MisPedidos = ({ currentUser }) => {
                             </tr>
                           ))}
                         </tbody>
-                      </table>
+                      </table></div>
                     </div>
                   )}
 

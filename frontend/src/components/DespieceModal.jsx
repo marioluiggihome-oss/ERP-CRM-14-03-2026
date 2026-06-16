@@ -1476,7 +1476,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
 
         {/* Project Info Bar - Cliente, Referencia, Fecha, Expediente */}
         <div className="bg-white px-8 py-4 border-b border-indigo-100 shrink-0">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <div className="flex items-center gap-2">
               <User size={16} className="text-indigo-400" />
               <div className="flex-1">
@@ -1621,7 +1621,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <>
               {/* Summary Banner */}
               <div className="bg-gradient-to-r from-indigo-950 to-indigo-800 rounded-2xl p-6 mb-6 text-white">
-                <div className="grid grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
                   <div className="text-center">
                     <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest mb-1">Muebles</p>
                     <p className="text-3xl font-black">{despieceData.summary.totalFurniture}</p>
@@ -1945,7 +1945,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
               {activeView === 'herrajes' && calculateHerrajes && (
                 <div className="space-y-6">
                   {/* Resumen Herrajes */}
-                  <div className="grid grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                     <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white">
                       <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2">Bisagras</p>
                       <p className="text-4xl font-black">{calculateHerrajes.bisagras}</p>

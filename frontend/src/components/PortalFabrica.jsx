@@ -1229,7 +1229,7 @@ const PortalFabrica = ({ currentUser }) => {
 
                 <p className="text-[10px] text-indigo-400 mb-2">— o introduce los datos manualmente —</p>
 
-                <div className="grid grid-cols-6 gap-2 mb-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-2">
                   <input
                     type="text"
                     value={newItem.productCode}
@@ -1899,7 +1899,7 @@ const PortalFabrica = ({ currentUser }) => {
         <>
           {/* Stats Dashboard - Solo en pestaña órdenes */}
           {stats && (
-            <div className="grid grid-cols-5 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
               <StatCard 
                 title="Activas" 
                 value={stats.totalActive || 0} 

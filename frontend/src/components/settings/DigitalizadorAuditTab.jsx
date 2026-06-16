@@ -109,7 +109,7 @@ const DigitalizadorAuditTab = ({ state }) => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-100">
           <div className="flex items-center gap-2 mb-1">
             <FileText size={14} className="text-orange-600" />
