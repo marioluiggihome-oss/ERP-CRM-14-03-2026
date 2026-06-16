@@ -387,6 +387,7 @@ const LuiggiFloor = ({ currentUser }) => {
     pdf.setFontSize(9); pdf.setTextColor(70);
     const obs = [
       '· Instalación NO incluida.',
+      '· Transporte no incluido.',
       '· Este suelo debe instalarse siempre sobre una superficie bien nivelada.',
       '  No nos hacemos responsables de instalaciones mal realizadas.',
     ];
