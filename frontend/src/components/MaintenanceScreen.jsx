@@ -13,6 +13,7 @@ const MaintenanceScreen = ({ onCheckAgain }) => {
     setChecking(true);
     try {
       const response = await fetch(`${API_URL}/api/maintenance/status`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setStatus(data);
       

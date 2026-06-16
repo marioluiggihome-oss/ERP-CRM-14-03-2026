@@ -2,7 +2,7 @@
 Dashboard de Métricas - LUIGGI HOME
 Métricas de producción y ventas para el Panel Maestro
 """
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 import os
@@ -17,6 +17,13 @@ db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard Métricas"])
+
+try:
+    from services.jwt_service import require_auth
+except Exception:  # pragma: no cover
+    from fastapi import HTTPException
+    async def require_auth():
+        raise HTTPException(status_code=503, detail="Auth service unavailable")
 
 
 def get_date_range(period: str):
@@ -41,7 +48,8 @@ def get_date_range(period: str):
 
 @router.get("/metrics")
 async def get_dashboard_metrics(
-    period: str = Query("month", description="Período: week, month, quarter, year, all")
+    period: str = Query("month", description="Período: week, month, quarter, year, all"),
+    current_user: dict = Depends(require_auth)
 ):
     """
     Obtiene todas las métricas del dashboard para el período seleccionado.
@@ -302,7 +310,7 @@ async def get_dashboard_metrics(
 
 
 @router.get("/production-summary")
-async def get_production_summary():
+async def get_production_summary(current_user: dict = Depends(require_auth)):
     """Resumen rápido de producción para widgets"""
     try:
         # Pedidos pendientes de producción
