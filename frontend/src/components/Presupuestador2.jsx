@@ -181,12 +181,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
 
   useEffect(() => { if (selectedCarcassMaterialId) localStorage.setItem(`p2_carcass_${libraryCode}`, selectedCarcassMaterialId); }, [selectedCarcassMaterialId, libraryCode]);
 
-  // Cargar incrementos por medidas especiales y corte de viga (ajustes globales).
+  // Cargar incrementos por medidas especiales, corte de viga y email de pedidos.
   useEffect(() => {
     settingsAPI.get().then(s => {
       if (!s) return;
       if (s.librarySpecialIncrements) setLibrarySpecialIncrements(s.librarySpecialIncrements);
       if (s.libraryVigaCutIncrements) setLibraryVigaCutIncrements(s.libraryVigaCutIncrements);
+      if (s.emailSender && !orderEmail) setOrderEmail(s.emailSender);
     }).catch(() => {});
   }, []);
   useEffect(() => { if (tariff) localStorage.setItem(`p2_tariff_${libraryCode}`, tariff); }, [tariff, libraryCode]);
@@ -1227,11 +1228,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                 </div>
               </div>
 
-              {/* Pedir — acción principal */}
+              {/* Confirmar Pedido — acción principal */}
               <button onClick={() => { if (cart.length === 0) { alert('Añade al menos una línea'); return; } setShowConfirmOrder(true); }}
                 disabled={cart.length === 0}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-all shadow-sm uppercase tracking-wider">
-                <PackageCheck size={15} /> Pedir
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-black text-white flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-200 uppercase tracking-wider border-2 border-emerald-400 disabled:border-slate-200">
+                <PackageCheck size={16} /> Confirmar Pedido
               </button>
 
               <div className="grid grid-cols-2 gap-2">
@@ -1264,6 +1265,23 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
           </div>
         )}
       </div>
+
+      {/* Botón flotante móvil: Confirmar Pedido (solo visible en pestaña Catálogo con items) */}
+      {mobileTab === 'catalog' && cart.length > 0 && (
+        <div className="md:hidden fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
+          <button
+            onClick={() => setShowConfirmOrder(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-xl border-2 border-emerald-400">
+            <PackageCheck size={16} /> Confirmar Pedido
+            <span className="bg-white/25 rounded-full px-2 py-0.5 text-[10px]">{eur(totalConIva)}</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('cart')}
+            className="flex items-center gap-2 px-3 py-2 bg-slate-800/90 text-white rounded-xl font-bold text-xs shadow-lg">
+            <ShoppingCart size={13} /> Ver presupuesto ({cart.length})
+          </button>
+        </div>
+      )}
 
       {showNomenclatura && (
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowNomenclatura(false)}>
