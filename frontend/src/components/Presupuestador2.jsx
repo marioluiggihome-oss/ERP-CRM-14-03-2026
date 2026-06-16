@@ -3,15 +3,15 @@ import {
   Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
   Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
-  Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List
+  Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List,
+  BookOpen, PackageCheck, Home
 } from 'lucide-react';
 import { authHeaders, librariesAPI, materialsAPI, settingsAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
-import Logo from './Logo';
+import ConfirmOrderModal from './ConfirmOrderModal';
 import { MuebleIcon, classifyMueble, NOMENCLATURA, NOMENCLATURA_NOTAS } from './muebleIcons';
 import { INITIAL_CARCASS_MATERIALS } from '../constants';
-import { BookOpen } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -96,6 +96,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [showDespiece, setShowDespiece] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showNomenclatura, setShowNomenclatura] = useState(false);
+  const [activeModule, setActiveModule] = useState('montada'); // 'montada' | 'despiece'
+  const [showConfirmOrder, setShowConfirmOrder] = useState(false);
+  const [orderEmail, setOrderEmail] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [orderAttachments, setOrderAttachments] = useState([]);
+  const [isSendingOrder, setIsSendingOrder] = useState(false);
+  const [orderSent, setOrderSent] = useState(false);
 
   // Importar tarifas oficiales a los productos (solo admin). Hace dry-run, muestra
   // el resumen y, si confirmas, reconstruye el catálogo MV desde las tarifas.
@@ -596,142 +603,176 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
 
   const handlePrint = () => exportPDF();
 
+  const handleConfirmOrder = async () => {
+    if (!orderEmail.trim()) { alert('Introduce el email del destinatario'); return; }
+    setIsSendingOrder(true);
+    try {
+      const formData = new FormData();
+      const budNum = newBudgetNumber();
+      formData.append('budgetNumber', budNum);
+      formData.append('customerName', clientName || currentUser?.clientName || 'Sin cliente');
+      formData.append('customerAddress', '');
+      formData.append('totalAmount', String(totalConIva.toFixed(2)));
+      formData.append('email', orderEmail);
+      formData.append('notes', orderNotes || notes || '');
+      formData.append('items', JSON.stringify(buildMontadaItems().map(it => ({
+        name: it.manualDescription, code: it.customReference, qty: it.quantity,
+        price: (it.manualPoints || 0) * pointValue,
+      }))));
+      formData.append('doorColorLow', doorColorLow);
+      formData.append('doorColorHigh', doorColorHigh);
+      formData.append('doorColorColumns', doorColorColumns);
+      formData.append('sideColor', sideColor);
+      formData.append('carcassColor', carcassMaterials.find(m => m.id === selectedCarcassMaterialId)?.name || '');
+      formData.append('globalFinish', `${levelLabel} ${tariff}`);
+      formData.append('distributorName', currentUser?.name || '');
+      formData.append('userId', currentUser?.id || '');
+      formData.append('projectReference', budgetReference || budNum);
+      orderAttachments.slice(0, 5).forEach((f, i) => formData.append(`attachment_${i}`, f));
+      const r = await fetch(`${API_URL}/api/orders/confirm`, {
+        method: 'POST', headers: authHeaders(), body: formData,
+      });
+      if (r.ok) {
+        setOrderSent(true);
+        setTimeout(() => { setOrderSent(false); setShowConfirmOrder(false); setOrderEmail(''); setOrderNotes(''); setOrderAttachments([]); }, 3000);
+        // Save the project as well
+        await saveOrder();
+      } else {
+        const e = await r.json().catch(() => ({}));
+        alert('Error al enviar pedido: ' + (e.detail || r.status));
+      }
+    } catch (e) { alert('Error: ' + e.message); }
+    finally { setIsSendingOrder(false); }
+  };
+
   const inCart = (id) => cart.some(x => x.id === id && !x.manual);
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-orange-50/40">
       {/* ── Cabecera ── */}
-      <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-2 shadow-lg sticky top-0 z-30">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 p-1 overflow-hidden shrink-0">
-            <Logo className="h-full w-full object-contain" customLogo={logo} showSlogan={false} />
+      <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white shadow-lg sticky top-0 z-30">
+        {/* Fila principal */}
+        <div className="px-3 sm:px-4 py-2 flex items-center gap-2 flex-wrap">
+          {/* Logo */}
+          <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
+            {logo
+              ? <img src={logo} alt="Logo" className="h-full w-full object-contain p-0.5" />
+              : <span className="text-orange-600 font-black italic text-sm leading-none select-none">L</span>
+            }
           </div>
-          <div>
-            <h1 className="text-base font-black uppercase leading-none tracking-tight">Presupuestador</h1>
-            <p className="text-[10px] text-orange-100/80 flex items-center gap-1 mt-0.5 whitespace-nowrap">
-              <Boxes size={10} /> {products.length} muebles
+          <div className="shrink-0">
+            <h1 className="text-sm font-black uppercase leading-none tracking-tight">Presupuestador 2</h1>
+            <p className="text-[9px] text-orange-100/80 flex items-center gap-0.5 mt-0.5 whitespace-nowrap">
+              <Boxes size={9} /> {products.length} muebles
             </p>
           </div>
-        </div>
 
-        {/* Cliente y referencia de presupuesto */}
-        <div className="flex items-center gap-2 flex-wrap ml-4">
+          {/* Cliente (crece para usar el espacio disponible) */}
           <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Cliente…"
-            className="w-32 sm:w-40 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-bold text-black font-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
-          <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Referencia…"
-            className="w-32 sm:w-40 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-bold text-black font-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
-        </div>
+            className="flex-1 min-w-[9rem] max-w-[18rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
+          <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Ref…"
+            className="w-24 sm:w-32 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
 
-        {/* Colores y gola */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Bajas</span>
-            <input type="text" value={doorColorLow} onChange={e => setDoorColorLow(e.target.value)}
-              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-black font-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
-          </label>
-          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Altas</span>
-            <input type="text" value={doorColorHigh} onChange={e => setDoorColorHigh(e.target.value)}
-              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-black font-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
-          </label>
-          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Columnas</span>
-            <input type="text" value={doorColorColumns} onChange={e => setDoorColorColumns(e.target.value)}
-              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-black font-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
-          </label>
-          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Costados</span>
-            <input type="text" value={sideColor} onChange={e => setSideColor(e.target.value)}
-              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-black font-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" placeholder="color…" />
-          </label>
-          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl ring-1 ring-white/25 pl-2.5 pr-1 py-1">
-            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Armazón</span>
-            <select value={selectedCarcassMaterialId} onChange={e => setSelectedCarcassMaterialId(e.target.value)}
-              className="px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-white">
-              {carcassMaterials.filter(m => !m.library || m.library === libraryCode).map(m => (
-                <option key={m.id} value={m.id} className="text-gray-900">{m.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl px-2.5 py-1.5 ring-1 ring-white/25 text-[10px] font-bold cursor-pointer select-none whitespace-nowrap">
-            <input type="checkbox" checked={doorHasVeta === true} onChange={e => setDoorHasVeta(e.target.checked)} className="w-3.5 h-3.5 accent-white" />
-            Veta
-          </label>
-          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl pl-2.5 pr-1 py-1 ring-1 ring-white/25">
-            <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }} className="w-3.5 h-3.5 accent-white" />
-            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Gola Alto</span>
-            <input type="text" value={golaAltoColor} onChange={e => { setGolaAltoColor(e.target.value); setGolaAlto(true); }}
-              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-black font-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaAlto} />
-          </label>
-          <label className="flex items-center gap-1.5 bg-white/10 rounded-xl pl-2.5 pr-1 py-1 ring-1 ring-white/25">
-            <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }} className="w-3.5 h-3.5 accent-white" />
-            <span className="text-[10px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Gola Bajo</span>
-            <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
-              className="w-16 px-2 py-1 bg-white rounded-lg ring-1 ring-white/20 text-xs font-bold text-black font-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
-          </label>
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto flex-wrap">
-          <button onClick={() => setShowNomenclatura(true)} title="Ver nomenclatura de tipos de mueble"
-            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
-            <BookOpen size={14} /> Nomenclatura
-          </button>
-          {currentUser?.isAdmin && libraryCode === 'MV' && (
-            <button onClick={importTariffs} disabled={importing} title="Cargar las tarifas oficiales en el catálogo (admin)"
-              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
-              {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
-              {importing ? 'Importando…' : 'Importar tarifas'}
-            </button>
-          )}
-          {currentUser?.isAdmin && libraryCode === 'ZC' && (
-            <button onClick={fixCostadosDepth} disabled={importing} title="Corregir el grueso de paneles: costados, regletas, zócalos, techos... (33/58 -> 18cm) (admin)"
-              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold disabled:opacity-60">
-              {importing ? <Loader size={14} className="animate-spin" /> : <Boxes size={14} />}
-              {importing ? 'Corrigiendo…' : 'Corregir paneles'}
-            </button>
-          )}
-          <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad de medida (cm/mm)"
-            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
-            <Ruler size={14} /> {measureUnit.toUpperCase()}
-          </button>
-          <button onClick={() => setCatalogView(v => v === 'list' ? 'icons' : 'list')}
-            title={catalogView === 'list' ? 'Ver catálogo como iconos' : 'Ver catálogo como lista'}
-            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur rounded-xl px-3 py-1.5 ring-1 ring-white/25 text-xs font-bold">
-            {catalogView === 'list' ? <LayoutGrid size={14} /> : <List size={14} />}
-            {catalogView === 'list' ? 'Iconos' : 'Lista'}
-          </button>
-          {discountPct > 0 && (
-            <button onClick={() => setShowDistributorPrice(v => !v)}
-              title={showDistributorPrice ? 'Volver a mostrar PVP al cliente' : `Ver precio de fábrica (con tu descuento del ${discountPct}%)`}
-              className={`flex items-center gap-1.5 backdrop-blur rounded-xl px-3 py-1.5 ring-1 text-xs font-bold transition-colors ${
-                showDistributorPrice ? 'bg-orange-500 ring-orange-300 text-white' : 'bg-white/15 hover:bg-white/25 ring-white/25'}`}>
-              {showDistributorPrice ? <Unlock size={14} /> : <Lock size={14} />}
-              {showDistributorPrice ? `COSTO (PVP-${discountPct}%)` : 'PVP'}
-            </button>
-          )}
-          {/* Total mini en cabecera */}
-          {cartTotal > 0 && (
-            <div className="hidden sm:flex flex-col items-end leading-none mr-1">
-              <span className="text-[10px] uppercase text-orange-100/80 font-bold">Total presupuesto</span>
-              <span className="text-xl font-black">{eur(totalConIva)}</span>
-            </div>
-          )}
+          {/* Biblioteca + Tarifa */}
           {availableLibraries.length > 1 && (
-            <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl pl-3 pr-1.5 py-1.5 ring-1 ring-white/25">
-              <span className="text-xs font-black uppercase flex items-center gap-1"><LibraryIcon size={14} /> Catálogo</span>
+            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25">
+              <LibraryIcon size={12} className="shrink-0" />
               <select value={libraryCode} onChange={e => setLibraryCode(e.target.value)}
-                className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
+                className="px-1.5 py-0.5 bg-white rounded-lg text-xs font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
                 {availableLibraries.map(l => <option key={l.code} value={l.code}>{l.name || l.code}</option>)}
               </select>
             </div>
           )}
-          <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-xl pl-3 pr-1.5 py-1.5 ring-1 ring-white/25">
-            <span className="text-xs font-black uppercase flex items-center gap-1"><Tag size={14} /> {levelLabel}</span>
+          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25">
+            <Tag size={12} className="shrink-0" />
             <select value={tariff} onChange={e => setTariff(e.target.value)}
-              className="px-2.5 py-1 bg-white rounded-lg text-sm font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
+              className="px-1.5 py-0.5 bg-white rounded-lg text-xs font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
               {priceLevels.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
+
+          {/* Total mini */}
+          {cartTotal > 0 && (
+            <div className="hidden sm:flex flex-col items-end leading-none ml-auto">
+              <span className="text-[9px] uppercase text-orange-100/80 font-bold">Total</span>
+              <span className="text-lg font-black">{eur(totalConIva)}</span>
+            </div>
+          )}
+
+          {/* Botones utilitarios */}
+          <div className={`flex items-center gap-1.5 ${cartTotal > 0 ? '' : 'ml-auto'}`}>
+            <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad (cm/mm)"
+              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">
+              <Ruler size={13} />
+            </button>
+            <button onClick={() => setCatalogView(v => v === 'list' ? 'icons' : 'list')} title={catalogView === 'list' ? 'Vista iconos' : 'Vista lista'}
+              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">
+              {catalogView === 'list' ? <LayoutGrid size={13} /> : <List size={13} />}
+            </button>
+            {discountPct > 0 && (
+              <button onClick={() => setShowDistributorPrice(v => !v)}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-colors ${showDistributorPrice ? 'bg-orange-500' : 'bg-white/15 hover:bg-white/25'}`}>
+                {showDistributorPrice ? <Unlock size={13} /> : <Lock size={13} />}
+              </button>
+            )}
+            <button onClick={() => setShowNomenclatura(true)} title="Nomenclatura"
+              className="hidden sm:flex p-1.5 bg-white/15 hover:bg-white/25 rounded-lg">
+              <BookOpen size={13} />
+            </button>
+            {currentUser?.isAdmin && libraryCode === 'MV' && (
+              <button onClick={importTariffs} disabled={importing} title="Importar tarifas MV (admin)"
+                className="hidden sm:flex p-1.5 bg-white/15 hover:bg-white/25 rounded-lg disabled:opacity-60">
+                {importing ? <Loader size={13} className="animate-spin" /> : <Boxes size={13} />}
+              </button>
+            )}
+            {currentUser?.isAdmin && libraryCode === 'ZC' && (
+              <button onClick={fixCostadosDepth} disabled={importing} title="Corregir paneles ZC (admin)"
+                className="hidden sm:flex p-1.5 bg-white/15 hover:bg-white/25 rounded-lg disabled:opacity-60">
+                {importing ? <Loader size={13} className="animate-spin" /> : <Boxes size={13} />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Fila de colores/acabados — compacta, scrollable en móvil */}
+        <div className="px-3 sm:px-4 pb-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {[
+            ['Bajas', doorColorLow, setDoorColorLow],
+            ['Altas', doorColorHigh, setDoorColorHigh],
+            ['Col.', doorColorColumns, setDoorColorColumns],
+            ['Cost.', sideColor, setSideColor],
+          ].map(([label, val, setter]) => (
+            <label key={label} className="flex items-center gap-1 bg-white/10 rounded-lg ring-1 ring-white/25 pl-2 pr-1 py-0.5 shrink-0">
+              <span className="text-[9px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">{label}</span>
+              <input type="text" value={val} onChange={e => setter(e.target.value)}
+                className="w-14 px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300" placeholder="color…" />
+            </label>
+          ))}
+          <label className="flex items-center gap-1 bg-white/10 rounded-lg ring-1 ring-white/25 pl-2 pr-1 py-0.5 shrink-0">
+            <span className="text-[9px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">Armazón</span>
+            <select value={selectedCarcassMaterialId} onChange={e => setSelectedCarcassMaterialId(e.target.value)}
+              className="px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-orange-300">
+              {carcassMaterials.filter(m => !m.library || m.library === libraryCode).map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1 bg-white/15 rounded-lg px-2 py-0.5 ring-1 ring-white/25 text-[9px] font-bold cursor-pointer select-none whitespace-nowrap shrink-0">
+            <input type="checkbox" checked={doorHasVeta === true} onChange={e => setDoorHasVeta(e.target.checked)} className="w-3 h-3 accent-white" />
+            Veta
+          </label>
+          <label className="flex items-center gap-1 bg-white/10 rounded-lg pl-2 pr-1 py-0.5 ring-1 ring-white/25 shrink-0">
+            <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }} className="w-3 h-3 accent-white" />
+            <span className="text-[9px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">G.Alto</span>
+            <input type="text" value={golaAltoColor} onChange={e => { setGolaAltoColor(e.target.value); setGolaAlto(true); }}
+              className="w-14 px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-50" placeholder="color…" disabled={!golaAlto} />
+          </label>
+          <label className="flex items-center gap-1 bg-white/10 rounded-lg pl-2 pr-1 py-0.5 ring-1 ring-white/25 shrink-0">
+            <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }} className="w-3 h-3 accent-white" />
+            <span className="text-[9px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">G.Bajo</span>
+            <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
+              className="w-14 px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
+          </label>
         </div>
       </div>
 
@@ -1015,11 +1056,29 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
           >
             <div className="hidden md:block absolute top-0 left-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-500/40 z-20"
               onMouseDown={() => { isResizingCart.current = true; }} />
-            <div className="px-4 py-3.5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
-              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center"><ShoppingCart size={16} className="text-orange-600" /></div>
+            {/* Module tabs */}
+            <div className="flex bg-slate-100 shrink-0">
+              <button onClick={() => setActiveModule('montada')}
+                className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wide flex items-center justify-center gap-1 transition-all ${
+                  activeModule === 'montada' ? 'bg-orange-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/60'}`}>
+                <Home size={11} /> Cocina Montada
+              </button>
+              <button onClick={() => { setActiveModule('despiece'); if (cart.length > 0) openDespiece(); }}
+                className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wide flex items-center justify-center gap-1 transition-all ${
+                  activeModule === 'despiece' ? 'bg-indigo-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/60'}`}>
+                <Scissors size={11} /> Despiece
+              </button>
+              <button onClick={() => setCartCollapsed(true)} title="Ocultar presupuesto"
+                className="hidden md:flex items-center px-2 text-slate-400 hover:text-orange-600">
+                <PanelRightClose size={15} />
+              </button>
+            </div>
+
+            <div className="px-3 py-2 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
+              <div className="w-7 h-7 bg-orange-100 rounded-lg flex items-center justify-center"><ShoppingCart size={14} className="text-orange-600" /></div>
               <div>
-                <h3 className="font-black text-slate-800 text-sm uppercase leading-none">Presupuesto</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">{cart.length} líneas · {totalUds} ud.</p>
+                <h3 className="font-black text-slate-800 text-xs uppercase leading-none">Presupuesto</h3>
+                <p className="text-[9px] text-slate-400 mt-0.5">{cart.length} líneas · {totalUds} ud.</p>
               </div>
               <div className="ml-auto flex items-center gap-2">
                 {cart.length > 0 && (
@@ -1028,10 +1087,6 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                     <X size={13} /> Vaciar
                   </button>
                 )}
-                <button onClick={() => setCartCollapsed(true)} title="Ocultar presupuesto"
-                  className="hidden md:block text-slate-300 hover:text-orange-600">
-                  <PanelRightClose size={16} />
-                </button>
               </div>
             </div>
 
@@ -1167,6 +1222,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                 </div>
               </div>
 
+              {/* Pedir — acción principal */}
+              <button onClick={() => { if (cart.length === 0) { alert('Añade al menos una línea'); return; } setShowConfirmOrder(true); }}
+                disabled={cart.length === 0}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-all shadow-sm uppercase tracking-wider">
+                <PackageCheck size={15} /> Pedir
+              </button>
+
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => setShowManual(!showManual)}
                   className="py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-xs font-bold text-amber-700 flex items-center justify-center gap-1.5 transition-colors">
@@ -1253,6 +1315,23 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         doorHasVeta={doorHasVeta}
         doorToleranceHeight={2}
         doorToleranceWidth={3}
+      />
+
+      <ConfirmOrderModal
+        isOpen={showConfirmOrder}
+        onClose={() => setShowConfirmOrder(false)}
+        budgetNumber={newBudgetNumber()}
+        customerName={clientName || currentUser?.clientName || 'Sin cliente'}
+        total={totalConIva}
+        orderEmail={orderEmail}
+        setOrderEmail={setOrderEmail}
+        orderNotes={orderNotes}
+        setOrderNotes={setOrderNotes}
+        orderAttachments={orderAttachments}
+        setOrderAttachments={setOrderAttachments}
+        isSendingOrder={isSendingOrder}
+        orderSent={orderSent}
+        onConfirm={handleConfirmOrder}
       />
     </div>
   );
