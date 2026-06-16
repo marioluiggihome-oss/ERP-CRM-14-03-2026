@@ -345,15 +345,19 @@ async def parse_sale_doc(payload: dict):
 
         parsed = None
         is_pdf = ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped)
+        logger.info(f"parse_sale_doc: is_pdf={is_pdf}, b64_len={len(b64)}")
         if is_pdf:
             text = pdf_base64_to_text(stripped) or ""
+            logger.info(f"parse_sale_doc: text extracted, len={len(text.strip())}")
             if len(text.strip()) >= 50:
                 resp = await chat_with_gemini(
                     prompt=_SALE_LINES_PROMPT + "\n\nTEXTO DEL DOCUMENTO:\n\n" + text[:30000],
                     system_message="Extraes lineas de documentos de venta.",
                 )
+                logger.info(f"parse_sale_doc: gemini text resp len={len(resp or '')}")
                 parsed = _parse_json_loose(_clean_json(resp))
         if parsed is None:
+            logger.info("parse_sale_doc: falling back to vision")
             img = stripped
             if is_pdf:
                 pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
@@ -363,9 +367,11 @@ async def parse_sale_doc(payload: dict):
                 image_base64=img, prompt=_SALE_LINES_PROMPT,
                 session_id=f"saledoc-{uuid.uuid4().hex[:8]}",
             )
+            logger.info(f"parse_sale_doc: vision resp len={len(resp or '')}")
             parsed = _parse_json_loose(_clean_json(resp))
 
         if not parsed or not isinstance(parsed.get("lineas"), list):
+            logger.warning(f"parse_sale_doc: parsed={parsed}")
             return {"success": False, "error": "No se pudieron extraer las lineas del documento"}
 
         lines = []
@@ -378,6 +384,7 @@ async def parse_sale_doc(payload: dict):
                 "venta": round(float(l.get("venta") or 0), 2),
                 "coste": 0.0,
             })
+        logger.info(f"parse_sale_doc: success, {len(lines)} lineas")
         return {
             "success": True,
             "data": {
@@ -389,8 +396,8 @@ async def parse_sale_doc(payload: dict):
             },
         }
     except Exception as e:
-        logger.error(f"Parse sale doc error: {e}")
-        return {"success": False, "error": "No se pudo leer el documento. Intentalo de nuevo."}
+        logger.error(f"Parse sale doc error: {e}", exc_info=True)
+        return {"success": False, "error": f"Error procesando el documento: {str(e)[:200]}"}
 
 
 @router.post("/rentabilidad/match-line-costs")

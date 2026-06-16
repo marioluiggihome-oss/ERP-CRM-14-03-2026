@@ -10,6 +10,7 @@ De esta manera la app funciona tanto en preview (Emergent) como en producción (
 import os
 import base64
 import logging
+import asyncio
 from typing import Optional, List
 
 logger = logging.getLogger(__name__)
@@ -236,10 +237,9 @@ async def chat_with_gemini(
         last_err = None
         for model_name in candidates:
             try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=contents,
-                )
+                def _sync_call(_m=model_name, _c=contents):
+                    return client.models.generate_content(model=_m, contents=_c)
+                response = await asyncio.to_thread(_sync_call)
                 return response.text or ""
             except Exception as e:
                 msg = str(e)
