@@ -180,7 +180,7 @@ const BudgetItemRow = ({
             <input type="number" value={item.customHeight || ''} onChange={e => updateItem(item.id, 'customHeight', parseInt(e.target.value) || 0)} className={`w-12 bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customHeight) !== Number(product?.height) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
             <span className="print-only font-bold text-[9px]">{item.customHeight || '-'}</span>
           </div>
-          <div className="w-14 shrink-0 text-center">
+          <div className="w-14 shrink-0 text-center hidden sm:block">
             <input type="number" value={item.customDepth || ''} onChange={e => updateItem(item.id, 'customDepth', parseInt(e.target.value) || 0)} className={`w-12 bg-indigo-50/50 rounded p-0.5 text-[9px] font-black text-center outline-none border ${Number(item.customDepth) !== Number(product?.depth) ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-indigo-100'} no-print`} />
             <span className="print-only font-bold text-[9px]">{item.customDepth || '-'}</span>
           </div>
@@ -201,7 +201,7 @@ const BudgetItemRow = ({
               </>
             )}
           </div>
-          <div className="w-20 shrink-0 pr-1">
+          <div className="w-20 shrink-0 pr-1 hidden sm:block">
             <input type="text" placeholder="Notas..." value={item.notes || ''} onChange={e => updateItem(item.id, 'notes', e.target.value)} className="w-full bg-indigo-50/50 border border-indigo-100 rounded px-1 py-0.5 text-[7px] font-bold text-indigo-400 outline-none focus:border-orange-300 no-print" />
             <p className="print-only text-[7px] font-bold text-indigo-400 italic truncate">{item.notes}</p>
           </div>
