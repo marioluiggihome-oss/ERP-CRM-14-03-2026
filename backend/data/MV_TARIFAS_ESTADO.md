@@ -243,7 +243,20 @@ duplicado) y 112 (Alto abatible/combinado/altillo/sobreencimera) de T19. Faltan 
 balda aérea/techo color/elementos lineales + acabados). Se revisaron las 44 imágenes disponibles en la
 sesión y ninguna corresponde a estas 3 páginas. **No se puede volcar al JSON hasta recibir esas 3 páginas.**
 
-## T14, T15, T16, T17 — ✅ TRANSCRITAS de imagen en esta sesión (PENDIENTE de volcar al JSON)
+## T14, T15, T17 — ✅ VOLCADAS al JSON (esta sesión). T16 — ⚠️ VOLCADA PARCIAL (16/58 familias)
+
+Verificado con `mv_tariff_importer.expand_tariffs`: T14=756, T15=756, T17=756 productos con `zonePoints`
+(igual que T18, incluye VITRINA_INGLESA real). **T16 solo tiene 226/756** — faltan las familias ALTO*,
+SOBREENC*, COLUMNA*, MEDIACOLUMNA*, BOTELLEROS, ALTILLOS_DECORATIVOS, LATERALES/COSTADOS_COLOR,
+REGLETA*, BALDA_AEREA, TECHO_COLOR, COSTADOS_MELAMINA, ELEMENTOS_LINEALES — **pendiente releer las
+imágenes de T16 págs. 93-96 (4 imágenes) en una sesión nueva** para completarlas (los datos de la
+sesión anterior al compactado no se confirmaron con re-lectura fresca, así que no se volcaron para
+evitar transcribir errores al JSON).
+
+Pendiente tras completar T16: ejecutar `POST /libraries/MV/import-tariffs` (dry_run=true primero,
+luego `dry_run=false&wipe=true`, admin) para regenerar `zonePoints` en Mongo.
+
+### Detalle de extracción T14/T15/T16(parcial)/T17 (referencia/auditoría)
 
 **IMPORTANTE para la próxima sesión**: estos datos ya están transcritos de las fotos del catálogo
 (páginas 79-102) y NO requieren volver a leer imágenes. Solo falta darles el mismo formato JSON que
