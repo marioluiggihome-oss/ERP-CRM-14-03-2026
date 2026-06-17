@@ -75,8 +75,8 @@ const RentabilidadLineas = ({ currentUser }) => {
   });
 
   // Ordenacion
-  const [sortColumn, setSortColumn] = useState('ref');
-  const [sortDirection, setSortDirection] = useState('asc');
+  const [sortColumn, setSortColumn] = useState('fecha');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Paginacion
   const [pageSize, setPageSize] = useState(25);
@@ -122,7 +122,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         ref: data.data.ref || '',
         cliente: data.data.cliente || '',
         fecha: data.data.fecha || '',
-        docType,
+        docType: data.data.docType || docType,
         lines: data.data.lines || [],
         saleDoc: { b64, name: file.name },
         costDocs: [],
@@ -160,7 +160,7 @@ const RentabilidadLineas = ({ currentUser }) => {
           ref: data.data.ref || '',
           cliente: data.data.cliente || '',
           fecha: data.data.fecha || '',
-          docType,
+          docType: data.data.docType || docType,
           lines: data.data.lines || [],
           createdBy: currentUser?.id,
           createdByName: currentUser?.clientName || currentUser?.username,
