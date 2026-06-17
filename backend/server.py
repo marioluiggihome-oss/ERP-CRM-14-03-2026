@@ -1457,8 +1457,18 @@ def calculate_furniture_despiece(
     w = float(item.width)   # Ancho en cm
     h = float(item.height)  # Alto en cm
     d = float(item.depth)   # Fondo en cm
+    qty = int(item.quantity or 0)
     g = grosor / 10  # Grosor viene en mm, convertir a cm (18mm = 1.8cm)
     back_g = back_thickness / 10  # Grosor trasera en cm (8mm = 0.8cm)
+
+    if w <= 0 or h <= 0 or d <= 0:
+        raise ValueError(f"Medidas no validas para {item.productName}: {w}x{h}x{d} cm")
+    if qty <= 0:
+        raise ValueError(f"Cantidad no valida para {item.productName}: {item.quantity}")
+    if g <= 0 or back_g <= 0:
+        raise ValueError("Los grosores de tablero y trasera deben ser mayores que cero")
+    if w <= (2 * g) or h <= 0.6 or d <= 2:
+        raise ValueError(f"Medidas insuficientes para despiezar {item.productName}: {w}x{h}x{d} cm")
 
     # =============================================
     # ELEMENTOS PLANOS (no son cascos volumétricos)
@@ -2041,6 +2051,9 @@ async def calculate_despiece(request: DespieceRequest):
             },
             generatedAt=datetime.now(timezone.utc).isoformat()
         )
+    except ValueError as e:
+        logger.warning(f"Calculate despiece validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Calculate despiece error: {e}")
         raise HTTPException(status_code=500, detail=f"Error calculando despiece: {str(e)}")
