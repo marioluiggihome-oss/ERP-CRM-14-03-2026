@@ -3,6 +3,7 @@ Servicio de exportación de catálogo a Excel y PDF con imágenes SVG
 """
 import io
 import base64
+from xml.sax.saxutils import escape as _xml_escape
 from typing import List, Dict, Optional
 import xlsxwriter
 from reportlab.lib import colors
@@ -441,6 +442,234 @@ async def generate_catalog_pdf_with_images(
         elements.append(Spacer(1, 5*mm))
         elements.append(Paragraph(f"* Mostrando primeros 500 de {len(products)} productos. Usar Excel para catálogo completo.", note_style))
     
+    doc.build(elements)
+    output.seek(0)
+    return output
+
+
+SLATE_900 = colors.HexColor('#0f172a')
+SLATE_800 = colors.HexColor('#1e293b')
+SLATE_400 = colors.HexColor('#94a3b8')
+ORANGE_500 = colors.HexColor('#f97316')
+ORANGE_400 = colors.HexColor('#fb923c')
+
+
+def _draw_mv_cover(canvas, doc):
+    """Dibuja el fondo de la portada estilo Login (slate oscuro + acento naranja)."""
+    width, height = A4
+    canvas.saveState()
+    # Fondo slate-900 a pantalla completa
+    canvas.setFillColor(SLATE_900)
+    canvas.rect(0, 0, width, height, fill=1, stroke=0)
+    # Banda inferior slate-800 (simula el degradado del login)
+    canvas.setFillColor(SLATE_800)
+    canvas.rect(0, 0, width, height * 0.32, fill=1, stroke=0)
+    # Línea de acento naranja
+    canvas.setFillColor(ORANGE_500)
+    canvas.rect(0, height * 0.32, width, 2.2 * mm, fill=1, stroke=0)
+    canvas.setStrokeColor(ORANGE_500)
+    canvas.setLineWidth(0.8)
+    canvas.line(20 * mm, height * 0.32 - 4 * mm, width - 20 * mm, height * 0.32 - 4 * mm)
+    # Footer
+    canvas.setFillColor(SLATE_400)
+    canvas.setFont('Helvetica', 8)
+    canvas.drawCentredString(width / 2, 12 * mm, "© 2026 LUIGGI HOME · Sistema Profesional de Presupuestos")
+    canvas.restoreState()
+
+
+def _draw_mv_header_footer(canvas, doc):
+    """Cabecera/pie para las páginas de contenido del catálogo MV."""
+    width, height = landscape(A4)
+    canvas.saveState()
+    canvas.setFillColor(SLATE_800)
+    canvas.rect(0, height - 12 * mm, width, 12 * mm, fill=1, stroke=0)
+    canvas.setFillColor(colors.white)
+    canvas.setFont('Helvetica-Bold', 9)
+    canvas.drawString(10 * mm, height - 8 * mm, "CATÁLOGO TÉCNICO 2026 · LUIGGI HOME · Tarifas MV")
+    canvas.setFillColor(ORANGE_400)
+    canvas.setFont('Helvetica', 8)
+    canvas.drawRightString(width - 10 * mm, 8 * mm, f"Página {doc.page}")
+    canvas.restoreState()
+
+
+async def generate_mv_catalog_pdf(products: List[Dict], meta: Optional[Dict] = None) -> io.BytesIO:
+    """
+    Genera el "Catálogo técnico 2026" de tarifas MV (T1-T21) en PDF, con:
+    - Portada estilo Login (fondo slate + acento naranja + logo + título)
+    - Página de notas/auditoría de precios
+    - Tablas de precios por categoría con todas las tarifas T1-T21
+    """
+    output = io.BytesIO()
+    meta = meta or {}
+    point_value = meta.get('pointValue', 3.33)
+
+    styles = getSampleStyleSheet()
+
+    # --- Estilos portada ---
+    cover_brand_style = ParagraphStyle(
+        'CoverBrand', fontName='Helvetica-BoldOblique', fontSize=34,
+        textColor=colors.white, alignment=TA_CENTER, leading=38
+    )
+    cover_brand_sub_style = ParagraphStyle(
+        'CoverBrandSub', fontName='Helvetica-Bold', fontSize=11,
+        textColor=ORANGE_500, alignment=TA_CENTER, leading=14, spaceAfter=10 * mm
+    )
+    cover_title_style = ParagraphStyle(
+        'CoverTitle', fontName='Helvetica-Bold', fontSize=30,
+        textColor=colors.white, alignment=TA_CENTER, leading=34, spaceAfter=4 * mm
+    )
+    cover_subtitle_style = ParagraphStyle(
+        'CoverSubtitle', fontName='Helvetica', fontSize=13,
+        textColor=ORANGE_400, alignment=TA_CENTER, leading=18, spaceAfter=14 * mm
+    )
+    cover_meta_style = ParagraphStyle(
+        'CoverMeta', fontName='Helvetica', fontSize=9,
+        textColor=SLATE_400, alignment=TA_CENTER, leading=13
+    )
+
+    cover_elements = [
+        Spacer(1, 55 * mm),
+        Paragraph("LUIGGI", cover_brand_style),
+        Paragraph("HOME MASTER", cover_brand_sub_style),
+        Spacer(1, 18 * mm),
+        Paragraph("CATÁLOGO TÉCNICO 2026", cover_title_style),
+        Paragraph("Tarifas MV · T1 — T21", cover_subtitle_style),
+        Paragraph(
+            f"Generado el {_xml_escape(str(meta.get('fecha', '')))} &nbsp;·&nbsp; {len(products)} referencias &nbsp;·&nbsp; "
+            f"Valor punto: {point_value} €",
+            cover_meta_style
+        ),
+        PageBreak(),
+    ]
+
+    # --- Página de auditoría / notas de revisión ---
+    note_title_style = ParagraphStyle(
+        'NoteTitle', parent=styles['Heading1'], fontSize=16,
+        textColor=SLATE_800, spaceAfter=6 * mm
+    )
+    note_section_style = ParagraphStyle(
+        'NoteSection', parent=styles['Heading3'], fontSize=11,
+        textColor=ORANGE_500 if False else colors.HexColor('#c2410c'), spaceAfter=2 * mm, spaceBefore=4 * mm
+    )
+    note_body_style = ParagraphStyle(
+        'NoteBody', fontName='Helvetica', fontSize=9, leading=13,
+        textColor=colors.HexColor('#334155')
+    )
+
+    audit_elements = [
+        Paragraph("Auditoría de precios y notas de revisión", note_title_style),
+        Paragraph(
+            "Cada tarifa (T1...T21) es una lista de precios INDEPENDIENTE expresada en puntos. "
+            f"El precio en EUR se calcula como: puntos × {point_value}. Las tarifas no son "
+            "necesariamente crecientes entre sí: cada una refleja un acabado/serie distinto.",
+            note_body_style
+        ),
+        Spacer(1, 4 * mm),
+    ]
+    estado = meta.get('estado')
+    if estado:
+        audit_elements.append(Paragraph("Estado de la transcripción", note_section_style))
+        audit_elements.append(Paragraph(_xml_escape(str(estado)), note_body_style))
+
+    notas_revision = meta.get('notas_revision') or []
+    if notas_revision:
+        audit_elements.append(Paragraph("Anomalías detectadas en la revisión", note_section_style))
+        for nota in notas_revision:
+            if isinstance(nota, dict):
+                texto = nota.get('nota') or nota.get('detalle') or str(nota)
+            else:
+                texto = str(nota)
+            audit_elements.append(Paragraph(f"⚠ {_xml_escape(str(texto))}", note_body_style))
+            audit_elements.append(Spacer(1, 1.5 * mm))
+
+    notas_tarifas = meta.get('notas_tarifas') or []
+    if notas_tarifas:
+        audit_elements.append(Paragraph("Notas específicas por tarifa", note_section_style))
+        for nt in notas_tarifas:
+            tarifa = _xml_escape(str(nt.get('tarifa', '')))
+            notas = nt.get('notas', {}) or {}
+            for clave, texto in notas.items():
+                audit_elements.append(Paragraph(
+                    f"<b>{tarifa}</b> ({_xml_escape(str(clave))}): {_xml_escape(str(texto))}",
+                    note_body_style
+                ))
+                audit_elements.append(Spacer(1, 1.5 * mm))
+
+    audit_elements.append(PageBreak())
+
+    # --- Tablas de precios por categoría, T1-T21 ---
+    table_title_style = ParagraphStyle(
+        'TableTitle', parent=styles['Heading2'], fontSize=13,
+        textColor=SLATE_800, spaceAfter=3 * mm, spaceBefore=2 * mm
+    )
+    tariff_keys = [f'T{i}' for i in range(1, 22)]
+
+    by_category = {}
+    for p in products:
+        cat = p.get('category') or 'SIN CATEGORÍA'
+        by_category.setdefault(cat, []).append(p)
+
+    catalog_elements = []
+    for cat in sorted(by_category.keys()):
+        items = sorted(by_category[cat], key=lambda p: (p.get('series') or '', p.get('code') or ''))
+        catalog_elements.append(Paragraph(cat, table_title_style))
+
+        header = ['REF', 'DESCRIPCIÓN'] + tariff_keys
+        table_data = [header]
+        for p in items:
+            zone_points = p.get('zonePoints', {}) or {}
+            row = [p.get('code', ''), (p.get('name', '') or '')[:42]]
+            for tk in tariff_keys:
+                val = zone_points.get(tk)
+                row.append(str(val) if val not in (None, '') else '—')
+            table_data.append(row)
+
+        col_widths = [22 * mm, 58 * mm] + [9.2 * mm] * len(tariff_keys)
+        table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), SLATE_800),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 6.5),
+            ('FONTSIZE', (0, 1), (-1, -1), 6),
+            ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 0), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#cbd5e1')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+            ('BACKGROUND', (0, 1), (0, -1), colors.HexColor('#fff7ed')),
+            ('TOPPADDING', (0, 0), (-1, -1), 1.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 1.5),
+        ]))
+        catalog_elements.append(table)
+        catalog_elements.append(Spacer(1, 6 * mm))
+
+    # --- Construcción del documento con plantillas distintas para portada y contenido ---
+    from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame
+    from reportlab.lib.pagesizes import A4 as A4_PORTRAIT
+
+    doc = BaseDocTemplate(output, pagesize=A4_PORTRAIT)
+    cover_frame = Frame(0, 0, A4_PORTRAIT[0], A4_PORTRAIT[1], id='cover', leftPadding=20 * mm, rightPadding=20 * mm)
+    notes_frame = Frame(15 * mm, 15 * mm, A4_PORTRAIT[0] - 30 * mm, A4_PORTRAIT[1] - 30 * mm, id='notes')
+    content_frame = Frame(
+        10 * mm, 12 * mm, landscape(A4)[0] - 20 * mm, landscape(A4)[1] - 26 * mm, id='content'
+    )
+
+    doc.addPageTemplates([
+        PageTemplate(id='Cover', frames=[cover_frame], onPage=_draw_mv_cover, pagesize=A4_PORTRAIT),
+        PageTemplate(id='Notes', frames=[notes_frame], pagesize=A4_PORTRAIT),
+        PageTemplate(id='Content', frames=[content_frame], onPage=_draw_mv_header_footer, pagesize=landscape(A4)),
+    ])
+
+    from reportlab.platypus import NextPageTemplate
+
+    elements = []
+    elements.append(NextPageTemplate('Notes'))
+    elements.extend(cover_elements)
+    elements.append(NextPageTemplate('Content'))
+    elements.extend(audit_elements)
+    elements.extend(catalog_elements)
+
     doc.build(elements)
     output.seek(0)
     return output
