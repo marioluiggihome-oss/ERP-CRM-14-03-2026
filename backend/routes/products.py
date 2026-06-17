@@ -69,7 +69,7 @@ async def get_products(module: Optional[str] = None, library: Optional[str] = No
 
 
 # Importar servicio de exportación de catálogo
-from services.catalog_export import generate_catalog_excel_with_images, generate_catalog_pdf_with_images
+from services.catalog_export import generate_catalog_excel_with_images, generate_catalog_pdf_with_images, generate_mv_catalog_pdf
 
 @router.get("/products/export/excel")
 async def export_products_to_excel(
@@ -203,6 +203,42 @@ async def export_products_to_pdf(
     
     filename = f"catalogo_luiggi_{module or 'completo'}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
     
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/products/export/mv-catalog-pdf")
+async def export_mv_catalog_pdf():
+    """
+    Genera el "Catálogo técnico 2026" de tarifas MV (T1-T21) en PDF:
+    portada estilo login + página de auditoría/notas de revisión + tablas
+    de precios por categoría con todas las tarifas.
+    """
+    products = await db.products.find({"library": "MV"}, {"_id": 0}).sort([
+        ("category", 1), ("series", 1), ("code", 1)
+    ]).to_list(10000)
+
+    if not products:
+        raise HTTPException(status_code=404, detail="No se encontraron productos de la biblioteca MV. Ejecute primero la importación de tarifas.")
+
+    meta = {}
+    try:
+        json_path = os.path.join(os.path.dirname(__file__), "..", "data", "mv_tarifas_oficiales.json")
+        with open(json_path, "r", encoding="utf-8") as f:
+            tariff_data = json.load(f)
+        meta = tariff_data.get("_meta", {})
+    except Exception as e:
+        logger.warning(f"No se pudo leer mv_tarifas_oficiales.json para el catálogo PDF: {e}")
+
+    meta["fecha"] = datetime.now().strftime("%d/%m/%Y")
+
+    output = await generate_mv_catalog_pdf(products, meta)
+
+    filename = f"Catalogo_Tecnico_2026_MV_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+
     return StreamingResponse(
         output,
         media_type="application/pdf",

@@ -133,6 +133,16 @@ const InventoryTab = ({
                 <Download size={16} />
                 MV
               </a>
+              <a
+                href={`${process.env.REACT_APP_BACKEND_URL}/api/products/export/mv-catalog-pdf`}
+                download="Catalogo_Tecnico_2026_MV.pdf"
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-xl font-black uppercase text-xs hover:bg-orange-700 transition-all shadow-lg whitespace-nowrap"
+                data-testid="download-catalog-mv-pdf-btn"
+                title="Descargar Catálogo Técnico 2026 (PDF, tarifas MV T1-T21)"
+              >
+                <Download size={16} />
+                Catálogo PDF 2026
+              </a>
             </div>
           </div>
 
