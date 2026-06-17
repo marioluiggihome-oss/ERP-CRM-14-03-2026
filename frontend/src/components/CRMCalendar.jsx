@@ -551,6 +551,8 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
                 </div>
                 </div>
               </div>
+              </div>
+              </div>
             )}
 
             {/* Week View */}

@@ -25,7 +25,7 @@ client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
 
 # Authentication dependency
-from services.jwt_service import get_current_user as _get_current_user
+from services.jwt_service import get_current_user as _get_current_user, require_admin
 
 async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     """JWT opcional: si hay token lo valida, si no devuelve dict vacío (modo compatibilidad)."""
@@ -109,7 +109,7 @@ async def get_settings(current_user: dict = Depends(get_current_user)):
 
 
 @router.put("")
-async def update_settings(settings: SettingsUpdate, current_user: dict = Depends(get_current_user)):
+async def update_settings(settings: SettingsUpdate, current_user: dict = Depends(require_admin)):
     """Actualizar configuración global"""
     update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
     
