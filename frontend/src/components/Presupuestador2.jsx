@@ -181,12 +181,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
 
   useEffect(() => { if (selectedCarcassMaterialId) localStorage.setItem(`p2_carcass_${libraryCode}`, selectedCarcassMaterialId); }, [selectedCarcassMaterialId, libraryCode]);
 
-  // Cargar incrementos por medidas especiales y corte de viga (ajustes globales).
+  // Cargar incrementos por medidas especiales, corte de viga y email de pedidos.
   useEffect(() => {
     settingsAPI.get().then(s => {
       if (!s) return;
       if (s.librarySpecialIncrements) setLibrarySpecialIncrements(s.librarySpecialIncrements);
       if (s.libraryVigaCutIncrements) setLibraryVigaCutIncrements(s.libraryVigaCutIncrements);
+      if (s.emailSender && !orderEmail) setOrderEmail(s.emailSender);
     }).catch(() => {});
   }, []);
   useEffect(() => { if (tariff) localStorage.setItem(`p2_tariff_${libraryCode}`, tariff); }, [tariff, libraryCode]);
@@ -375,12 +376,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         if (searchScope === 'family' && family && (p.category || 'OTROS') !== family) return false;
       }
       if (hasSize) {
+        const sizeInCm = useMillimeters ? sizeQ / 10 : sizeQ;
         const dims = [p.width, p.height, p.depth].filter(Boolean);
-        if (!dims.some(d => Math.abs(d - sizeQ) <= 5)) return false;
+        if (!dims.some(d => Math.abs(d - sizeInCm) <= (useMillimeters ? 0.5 : 5))) return false;
       }
       return true;
     });
-  }, [products, family, search, searchScope, sizeFilter]);
+  }, [products, family, search, searchScope, sizeFilter, useMillimeters]);
 
   // Orden de los resultados (código, nombre, ancho, alto o precio).
   const sortedShown = useMemo(() => {
@@ -474,7 +476,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const totalConIva = cartTotal + ivaAmount;
   const totalUds = cart.reduce((s, x) => s + (x.qty || 0), 0);
 
-  const newBudgetNumber = () => `${libraryCode}-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+  const budgetNumberRef = useRef(null);
+  const getBudgetNumber = useCallback(() => {
+    if (!budgetNumberRef.current) budgetNumberRef.current = `${libraryCode}-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+    return budgetNumberRef.current;
+  }, [libraryCode]);
+  // Reset when library changes so a new reference is generated
+  useEffect(() => { budgetNumberRef.current = null; }, [libraryCode]);
 
   // Mapea las líneas de P2 a items "montada" de P1 (líneas manuales: el precio sale
   // de la tarifa). precio P1 = manualPoints * pointValue * qty → manualPoints = precio/pointValue
@@ -486,7 +494,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       id: `p2-${idx}-${it.id}`,
       productId: it.manual ? null : it.id,
       quantity: it.qty,
-      isManual: true,
+      isManual: it.manual,
       manualDescription: it.name,
       customReference: it.code,
       manualPoints: pts,
@@ -532,7 +540,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     setSaving(true);
     try {
       const projectData = {
-        budgetNumber: newBudgetNumber(),
+        budgetNumber: getBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin cliente',
         customerAddress: '',
         internalReference: budgetReference || notes || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`,
@@ -573,7 +581,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     if (cart.length === 0) { alert('Añade al menos una línea'); return; }
     try {
       generateBudgetPDF({
-        budgetNumber: newBudgetNumber(),
+        budgetNumber: getBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin especificar',
         customerAddress: '',
         internalReference: budgetReference || notes || '',
@@ -608,7 +616,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     setIsSendingOrder(true);
     try {
       const formData = new FormData();
-      const budNum = newBudgetNumber();
+      const budNum = getBudgetNumber();
       formData.append('budgetNumber', budNum);
       formData.append('customerName', clientName || currentUser?.clientName || 'Sin cliente');
       formData.append('customerAddress', '');
@@ -634,9 +642,15 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       });
       if (r.ok) {
         setOrderSent(true);
-        setTimeout(() => { setOrderSent(false); setShowConfirmOrder(false); setOrderEmail(''); setOrderNotes(''); setOrderAttachments([]); }, 3000);
-        // Save the project as well
         await saveOrder();
+        setTimeout(() => {
+          setOrderSent(false);
+          setShowConfirmOrder(false);
+          setOrderNotes('');
+          setOrderAttachments([]);
+          setCart([]);
+          budgetNumberRef.current = null;
+        }, 2500);
       } else {
         const e = await r.json().catch(() => ({}));
         alert('Error al enviar pedido: ' + (e.detail || r.status));
@@ -652,7 +666,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       {/* ── Cabecera ── */}
       <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white shadow-lg sticky top-0 z-30">
         {/* Fila principal */}
-        <div className="px-3 sm:px-4 py-2 flex items-center gap-2 flex-wrap">
+        <div className="px-3 sm:px-4 py-2 flex items-center gap-2">
           {/* Logo */}
           <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
             {logo
@@ -660,47 +674,21 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               : <span className="text-orange-600 font-black italic text-sm leading-none select-none">L</span>
             }
           </div>
-          <div className="shrink-0">
+          <div className="shrink-0 hidden sm:block">
             <h1 className="text-sm font-black uppercase leading-none tracking-tight">Presupuestador 2</h1>
             <p className="text-[9px] text-orange-100/80 flex items-center gap-0.5 mt-0.5 whitespace-nowrap">
               <Boxes size={9} /> {products.length} muebles
             </p>
           </div>
 
-          {/* Cliente (crece para usar el espacio disponible) */}
+          {/* Cliente + Ref en fila, crecen */}
           <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Cliente…"
-            className="flex-1 min-w-[9rem] max-w-[18rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
+            className="flex-1 min-w-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
           <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Ref…"
-            className="w-24 sm:w-32 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
-
-          {/* Biblioteca + Tarifa */}
-          {availableLibraries.length > 1 && (
-            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25">
-              <LibraryIcon size={12} className="shrink-0" />
-              <select value={libraryCode} onChange={e => setLibraryCode(e.target.value)}
-                className="px-1.5 py-0.5 bg-white rounded-lg text-xs font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
-                {availableLibraries.map(l => <option key={l.code} value={l.code}>{l.name || l.code}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25">
-            <Tag size={12} className="shrink-0" />
-            <select value={tariff} onChange={e => setTariff(e.target.value)}
-              className="px-1.5 py-0.5 bg-white rounded-lg text-xs font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
-              {priceLevels.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-
-          {/* Total mini */}
-          {cartTotal > 0 && (
-            <div className="hidden sm:flex flex-col items-end leading-none ml-auto">
-              <span className="text-[9px] uppercase text-orange-100/80 font-bold">Total</span>
-              <span className="text-lg font-black">{eur(totalConIva)}</span>
-            </div>
-          )}
+            className="w-20 sm:w-28 shrink-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
 
           {/* Botones utilitarios */}
-          <div className={`flex items-center gap-1.5 ${cartTotal > 0 ? '' : 'ml-auto'}`}>
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
             <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad (cm/mm)"
               className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">
               <Ruler size={13} />
@@ -732,6 +720,31 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               </button>
             )}
           </div>
+        </div>
+        {/* Segunda fila: biblioteca, tarifa y total */}
+        <div className="px-3 sm:px-4 pb-1.5 flex items-center gap-2">
+          {availableLibraries.length > 1 && (
+            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25">
+              <LibraryIcon size={12} className="shrink-0" />
+              <select value={libraryCode} onChange={e => setLibraryCode(e.target.value)}
+                className="px-1.5 py-0.5 bg-white rounded-lg text-xs font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
+                {availableLibraries.map(l => <option key={l.code} value={l.code}>{l.name || l.code}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25">
+            <Tag size={12} className="shrink-0" />
+            <select value={tariff} onChange={e => setTariff(e.target.value)}
+              className="px-1.5 py-0.5 bg-white rounded-lg text-xs font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
+              {priceLevels.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          {cartTotal > 0 && (
+            <div className="flex flex-col items-end leading-none ml-auto">
+              <span className="text-[9px] uppercase text-orange-100/80 font-bold">Total c/IVA</span>
+              <span className="text-base font-black">{eur(totalConIva)}</span>
+            </div>
+          )}
         </div>
 
         {/* Fila de colores/acabados — compacta, scrollable en móvil */}
@@ -777,7 +790,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       </div>
 
       {/* ── Pestañas móviles: Catálogo / Presupuesto ── */}
-      <div className="md:hidden shrink-0 flex border-b border-slate-200 bg-white sticky top-[64px] z-20">
+      <div className="md:hidden shrink-0 flex border-b border-slate-200 bg-white sticky top-[108px] z-20">
         <button onClick={() => setMobileTab('catalog')}
           className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
             mobileTab === 'catalog' ? 'text-orange-700 border-b-2 border-orange-600 bg-orange-50/60' : 'text-slate-400'}`}>
@@ -786,7 +799,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         <button onClick={() => setMobileTab('cart')}
           className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
             mobileTab === 'cart' ? 'text-orange-700 border-b-2 border-orange-600 bg-orange-50/60' : 'text-slate-400'}`}>
-          <ShoppingCart size={14} /> Presupuesto {cart.length > 0 && `(${cart.length})`}
+          <ShoppingCart size={14} /> Presupuesto {cart.length > 0 && <span className="bg-orange-600 text-white rounded-full px-1.5 py-0.5 text-[9px] ml-1">{cart.length}</span>}
         </button>
       </div>
 
@@ -958,7 +971,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               </div>
             ) : catalogView === 'icons' ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
-                {sortedShown.slice(0, 120).map(p => {
+                {sortedShown.slice(0, 200).map(p => {
                   const added = inCart(p.id);
                   const med = [p.width && formatMeasure(p.width), p.heightLabel || (p.height && formatMeasure(p.height)), p.depth && formatMeasure(p.depth)].filter(Boolean).join('×');
                   return (
@@ -984,12 +997,12 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                   </div>
                 )}
                 {sortedShown.length > 120 && (
-                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {sortedShown.length} — usa el buscador para filtrar</p>
+                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 200 de {sortedShown.length} — usa el buscador para filtrar</p>
                 )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-                {sortedShown.slice(0, 120).map(p => {
+                {sortedShown.slice(0, 200).map(p => {
                   const added = inCart(p.id);
                   const med = [p.width && formatMeasure(p.width), p.heightLabel || (p.height && formatMeasure(p.height)), p.depth && formatMeasure(p.depth)].filter(Boolean).join('×');
                   return (
@@ -1031,7 +1044,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                   </div>
                 )}
                 {sortedShown.length > 120 && (
-                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 120 de {sortedShown.length} — usa el buscador para filtrar</p>
+                  <p className="col-span-full text-center text-xs text-slate-400 py-2">Mostrando 200 de {sortedShown.length} — usa el buscador para filtrar</p>
                 )}
               </div>
             )}
@@ -1150,7 +1163,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                           {dims.map(d => {
                             const changed = d.val !== '' && d.val != null && Number(d.val) !== Number(d.orig);
                             return (
-                              <label key={d.field} className="flex items-center gap-0.5" title={`Original: ${d.orig ?? '–'} cm`}>
+                              <label key={d.field} className="flex items-center gap-0.5" title={`Original: ${d.orig ?? '–'} ${measureUnit}`}>
                                 <span className="text-[9px] font-black text-slate-400 uppercase">{d.lbl}</span>
                                 <input type="number" step="0.1" value={d.val ?? ''}
                                   onChange={e => setItemDim(it.id, d.field, e.target.value)}
@@ -1222,11 +1235,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                 </div>
               </div>
 
-              {/* Pedir — acción principal */}
+              {/* Confirmar Pedido — acción principal */}
               <button onClick={() => { if (cart.length === 0) { alert('Añade al menos una línea'); return; } setShowConfirmOrder(true); }}
                 disabled={cart.length === 0}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-all shadow-sm uppercase tracking-wider">
-                <PackageCheck size={15} /> Pedir
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-black text-white flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-200 uppercase tracking-wider border-2 border-emerald-400 disabled:border-slate-200">
+                <PackageCheck size={16} /> Confirmar Pedido
               </button>
 
               <div className="grid grid-cols-2 gap-2">
@@ -1259,6 +1272,23 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
           </div>
         )}
       </div>
+
+      {/* Botón flotante móvil: Confirmar Pedido (solo visible en pestaña Catálogo con items) */}
+      {mobileTab === 'catalog' && cart.length > 0 && (
+        <div className="md:hidden fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
+          <button
+            onClick={() => setShowConfirmOrder(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-xl border-2 border-emerald-400">
+            <PackageCheck size={16} /> Confirmar Pedido
+            <span className="bg-white/25 rounded-full px-2 py-0.5 text-[10px]">{eur(totalConIva)}</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('cart')}
+            className="flex items-center gap-2 px-3 py-2 bg-slate-800/90 text-white rounded-xl font-bold text-xs shadow-lg">
+            <ShoppingCart size={13} /> Ver presupuesto ({cart.length})
+          </button>
+        </div>
+      )}
 
       {showNomenclatura && (
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowNomenclatura(false)}>
@@ -1303,11 +1333,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         onClose={() => setShowDespiece(false)}
         items={despieceItems}
         catalogs={[{ id: libraryCode, products }]}
-        carcassMaterialName="Melamina Blanca"
+        carcassMaterialName={carcassMaterials.find(m => m.id === selectedCarcassMaterialId)?.name || 'Melamina Blanca'}
         carcassBackThickness={8}
         customerName={clientName}
         projectReference={budgetReference || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`}
-        expedientNumber={newBudgetNumber()}
+        expedientNumber={getBudgetNumber()}
         doorColorLow={doorColorLow}
         doorColorHigh={doorColorHigh}
         doorColorColumns={doorColorColumns}
@@ -1320,7 +1350,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       <ConfirmOrderModal
         isOpen={showConfirmOrder}
         onClose={() => setShowConfirmOrder(false)}
-        budgetNumber={newBudgetNumber()}
+        budgetNumber={getBudgetNumber()}
         customerName={clientName || currentUser?.clientName || 'Sin cliente'}
         total={totalConIva}
         orderEmail={orderEmail}

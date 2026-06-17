@@ -211,7 +211,7 @@ const ShopClientsTab = ({ currentUser }) => {
         </div>
         
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
             <p className="text-3xl font-black">{stats.total}</p>
             <p className="text-xs font-bold text-emerald-100 uppercase">Total</p>
@@ -466,7 +466,7 @@ const ShopClientsTab = ({ currentUser }) => {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4 mt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
                     {client.email && (
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Mail size={14} className="text-slate-400" />

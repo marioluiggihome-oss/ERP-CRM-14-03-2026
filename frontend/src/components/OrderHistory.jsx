@@ -323,7 +323,7 @@ const OrderHistory = ({ orders = [], currentUser, factories = [] }) => {
       </div>
 
       {/* Estadísticas rápidas */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-4 border border-slate-200">
           <p className="text-xs text-slate-500 uppercase tracking-widest">Total Eventos</p>
           <p className="text-2xl font-black text-slate-800">{history.length}</p>

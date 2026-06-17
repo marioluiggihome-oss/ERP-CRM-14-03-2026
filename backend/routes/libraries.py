@@ -16,7 +16,7 @@ try:
     from services.jwt_service import require_auth
 except Exception:  # pragma: no cover
     async def require_auth():
-        return {}
+        raise HTTPException(status_code=503, detail="Auth service unavailable")
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL')

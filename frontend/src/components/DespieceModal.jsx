@@ -340,7 +340,12 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <div class="info-value">${fechaHoy}</div>
           </div>
         </div>
-        
+
+        <div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;padding:10px 14px;margin-bottom:15px;font-size:10px;">
+          <strong>Tolerancia Puerta (mm):</strong> Alto -${doorToleranceHeight} · Ancho -${doorToleranceWidth}
+          <span style="color:#6b7280;font-style:italic;"> — las medidas de la tabla ya tienen la tolerancia descontada</span>
+        </div>
+
         <table>
           <thead>
             <tr>
@@ -913,6 +918,11 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <div class="summary-label">Área (m²)</div>
           </div>
         </div>
+        ${despieceData?.items?.some(f => f.components?.some(c => c.name?.toLowerCase().includes('puerta') || c.type?.toUpperCase() === 'PUERTA')) ? `
+        <div style="background:#f1f5f9;border:2px solid #cbd5e1;border-radius:8px;padding:10px 14px;margin:10px 0;font-size:11px;">
+          <strong>Tolerancia Puerta (mm):</strong> Alto -${doorToleranceHeight} · Ancho -${doorToleranceWidth}
+          <span style="color:#64748b;font-style:italic;"> — ya descontada en las medidas de corte de las piezas PUERTA</span>
+        </div>` : ''}
         <div class="section-title">PIEZAS AGRUPADAS POR MATERIAL</div>
       `;
       
@@ -1476,7 +1486,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
 
         {/* Project Info Bar - Cliente, Referencia, Fecha, Expediente */}
         <div className="bg-white px-8 py-4 border-b border-indigo-100 shrink-0">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <div className="flex items-center gap-2">
               <User size={16} className="text-indigo-400" />
               <div className="flex-1">
@@ -1621,7 +1631,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <>
               {/* Summary Banner */}
               <div className="bg-gradient-to-r from-indigo-950 to-indigo-800 rounded-2xl p-6 mb-6 text-white">
-                <div className="grid grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
                   <div className="text-center">
                     <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest mb-1">Muebles</p>
                     <p className="text-3xl font-black">{despieceData.summary.totalFurniture}</p>
@@ -1797,6 +1807,15 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
 
               {/* Lista de Corte View */}
               {activeView === 'corte' && (
+                <div className="space-y-3">
+                  {despieceData.items.some(f => f.components?.some(c => c.name?.toLowerCase().includes('puerta') || c.type?.toUpperCase() === 'PUERTA')) && (
+                    <div className="bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 flex items-center gap-4 text-xs">
+                      <span className="font-black text-slate-600 uppercase tracking-widest">Tolerancia Puerta (mm):</span>
+                      <span className="bg-white border border-slate-300 rounded-lg px-3 py-1 font-black text-slate-800">Alto -{doorToleranceHeight}</span>
+                      <span className="bg-white border border-slate-300 rounded-lg px-3 py-1 font-black text-slate-800">Ancho -{doorToleranceWidth}</span>
+                      <span className="text-slate-400 italic">Ya descontada en las medidas de corte de las piezas marcadas como PUERTA</span>
+                    </div>
+                  )}
                 <div className="bg-white border border-indigo-100 rounded-xl overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-orange-600 text-white text-xs font-black uppercase tracking-widest">
@@ -1858,6 +1877,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       )}
                     </tbody>
                   </table>
+                </div>
                 </div>
               )}
 
@@ -1945,7 +1965,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
               {activeView === 'herrajes' && calculateHerrajes && (
                 <div className="space-y-6">
                   {/* Resumen Herrajes */}
-                  <div className="grid grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                     <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white">
                       <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2">Bisagras</p>
                       <p className="text-4xl font-black">{calculateHerrajes.bisagras}</p>
@@ -2301,13 +2321,21 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                     </div>
                   </div>
 
+                  {/* Tolerancias de Puertas — siempre visibles en esta vista */}
+                  <div className="bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 flex items-center gap-4 text-xs flex-wrap">
+                    <span className="font-black text-slate-600 uppercase tracking-widest">Tolerancia Puerta (mm):</span>
+                    <span className="bg-white border border-slate-300 rounded-lg px-3 py-1 font-black text-slate-800">Alto -{doorToleranceHeight}</span>
+                    <span className="bg-white border border-slate-300 rounded-lg px-3 py-1 font-black text-slate-800">Ancho -{doorToleranceWidth}</span>
+                    <span className="text-slate-400 italic">Las medidas de la tabla ya tienen la tolerancia descontada</span>
+                  </div>
+
                   {/* Resumen por tipo */}
                   <div className="grid grid-cols-3 gap-4">
                     {['ALTOS', 'BAJOS', 'COLUMNAS'].map(tipo => {
                       const count = supplierDoors.filter(d => d.tipoMueble === tipo).reduce((sum, d) => sum + (parseInt(d.unidades) || 1), 0);
                       const color = tipo === 'ALTOS' ? doorColorHigh : tipo === 'BAJOS' ? doorColorLow : doorColorColumns;
                       const bgColor = tipo === 'ALTOS' ? 'from-blue-500 to-indigo-600' : tipo === 'BAJOS' ? 'from-orange-500 to-amber-600' : 'from-purple-500 to-violet-600';
-                      
+
                       return (
                         <div key={tipo} className={`bg-gradient-to-br ${bgColor} rounded-xl p-4 text-white`}>
                           <p className="text-xs font-bold uppercase tracking-widest opacity-80">P. {tipo}</p>

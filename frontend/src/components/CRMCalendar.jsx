@@ -479,7 +479,7 @@ const CRMCalendar = ({ currentUser, focusEvent }) => {
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
                 <div className="min-w-[640px]">
                 {/* Weekday Headers */}
-                <div className="grid grid-cols-7 border-b border-slate-200">
+                <div className="overflow-x-auto"><div className="min-w-[600px]"><div className="grid grid-cols-7 border-b border-slate-200">
                   {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
                     <div key={day} className="p-2 text-center text-xs font-black text-slate-500 uppercase bg-slate-50">
                       {day}

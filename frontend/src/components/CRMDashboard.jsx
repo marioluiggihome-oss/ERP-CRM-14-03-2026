@@ -144,7 +144,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
         </div>
 
         {/* KPIs superiores */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+        <div className="grid grid-cols-2 sm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-5">
           <div className="bg-white/10 backdrop-blur rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-1">
               <Users className="w-4 h-4 text-indigo-300" />
@@ -195,7 +195,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
           </div>
 
           {/* 4 KPIs de pipeline */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-5">
             <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
               <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Pipeline activo</p>
               <p className="text-xl font-black text-slate-900">{fmtK(dashboard?.pipelineValue)}</p>
@@ -251,7 +251,7 @@ const CRMDashboard = ({ onNavigate, currentUser }) => {
               <h3 className="font-black text-slate-800 text-xs uppercase">Previsión de ventas</h3>
               <span className="text-[10px] text-slate-400">Valor esperado = importe × probabilidad</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
               <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
                 <p className="text-[9px] font-black text-indigo-500 uppercase">Valor esperado</p>
                 <p className="text-lg font-black text-indigo-700">{fmtK(previsionPonderada)}</p>

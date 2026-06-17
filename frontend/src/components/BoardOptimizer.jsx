@@ -754,7 +754,7 @@ const BoardOptimizer = ({ isOpen, onClose, despiecePieces = [], material = 'Mela
           {/* Panel central - Canvas interactivo */}
           <div className="flex-1 flex flex-col bg-slate-50">
             {showSettings && (
-              <div className="p-4 bg-white border-b border-emerald-100 grid grid-cols-4 gap-4">
+              <div className="p-4 bg-white border-b border-emerald-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="text-xs font-bold text-emerald-700 mb-1 block">Tablero</label>
                   <select value={selectedBoard.name}
@@ -837,7 +837,7 @@ const BoardOptimizer = ({ isOpen, onClose, despiecePieces = [], material = 'Mela
             {/* Resultados */}
             {optimizationResult && (
               <div className="p-4 bg-white border-t border-emerald-100">
-                <div className="grid grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                   <div className="bg-emerald-50 rounded-xl p-3 text-center">
                     <div className="text-2xl font-black text-emerald-700">{optimizationResult.totalBoards}</div>
                     <div className="text-xs text-emerald-600 font-bold">Tableros</div>

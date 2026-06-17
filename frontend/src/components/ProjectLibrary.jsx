@@ -443,7 +443,7 @@ const ProjectLibrary = ({ state, setState }) => {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                         <div>
                           <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Nº Expediente</p>
                           <p className="text-sm font-black text-indigo-900">{project.budgetNumber}</p>

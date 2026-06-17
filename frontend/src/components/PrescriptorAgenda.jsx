@@ -433,7 +433,7 @@ const PrescriptorAgenda = ({ currentUser, onLogout }) => {
         {activeTab === 'contacts' && (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
               <div className="bg-white rounded-xl p-4 border border-amber-200 shadow-sm">
                 <p className="text-3xl font-black text-amber-600">{totalContacts}</p>
                 <p className="text-xs font-bold text-slate-500 uppercase">Total Contactos</p>

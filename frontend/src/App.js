@@ -561,7 +561,6 @@ const App = () => {
 
   // Function to add furniture from Visualizer (IA Lab) to budget
   const handleAddFromVisualizer = (furniture, showAlert = true) => {
-    console.log('Datos recibidos de IA:', furniture);
     
     const tipo = (furniture.tipo || 'MUEBLE').toUpperCase();
     const subtipo = furniture.subtipo ? furniture.subtipo.replace(/_/g, ' ') : '';
@@ -578,7 +577,6 @@ const App = () => {
     if (furniture.codigo_sugerido) possibleCodes.unshift(furniture.codigo_sugerido);
     if (matchedCode) possibleCodes.unshift(matchedCode);
 
-    console.log('Códigos posibles:', possibleCodes);
 
     const foundProduct = findProductInCatalog(possibleCodes, iaCode);
     
@@ -586,7 +584,6 @@ const App = () => {
     
     if (foundProduct) {
       // Producto encontrado en catálogo - usar sus datos reales
-      console.log('✅ Producto encontrado:', foundProduct.code, foundProduct.name);
       newItem = {
         id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         productId: foundProduct.id,
@@ -608,7 +605,6 @@ const App = () => {
     } else if (furniture.producto_encontrado && matchedCode) {
       // El backend YA encontró el producto en su catálogo (aunque el catálogo del
       // frontend no lo tenga cargado): usar SUS datos -> código, nombre, medidas y puntos.
-      console.log('✅ Usando match del backend:', matchedCode);
       const puntos = furniture.points ?? furniture.puntos ?? 0;
       newItem = {
         id: `ia-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -630,7 +626,6 @@ const App = () => {
       };
     } else {
       // Producto NO encontrado - crear con referencia desconocida
-      console.log('⚠️ Producto NO encontrado, códigos probados:', possibleCodes);
       const productName = `${tipo} ${subtipo} ${ancho}x${alto}x${fondo}mm [REF. NO ENCONTRADA]`.toUpperCase().trim();
       const productCode = iaCode || possibleCodes[0] || `IA-${tipo.substring(0,3)}-${ancho}`;
       
@@ -654,7 +649,6 @@ const App = () => {
       };
     }
 
-    console.log('Item para presupuesto:', newItem);
 
     // Add to the current module's budget items
     if (state.currentModule === 'montada') {

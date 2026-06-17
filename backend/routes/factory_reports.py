@@ -151,7 +151,7 @@ def create_factory_report_pdf(
         try:
             date_obj = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
             formatted_date = date_obj.strftime('%d/%m/%Y %H:%M')
-        except:
+        except Exception:
             formatted_date = created_at[:10] if len(created_at) > 10 else created_at
     else:
         formatted_date = datetime.now().strftime('%d/%m/%Y %H:%M')

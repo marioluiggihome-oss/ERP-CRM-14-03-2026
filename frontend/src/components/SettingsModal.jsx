@@ -1094,7 +1094,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
       <div className={`bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
         isFullScreen 
           ? 'w-full h-full max-w-none max-h-none rounded-none' 
@@ -2624,7 +2624,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   {/* Modal Activar Cliente */}
                   {showActivateModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 sm:mx-auto p-4 sm:p-6">
                         <h3 className="text-lg font-black text-emerald-700 uppercase mb-4">Activar Cliente</h3>
                         <p className="text-sm text-slate-600 mb-4">
                           Asigna un código del programa de gestión para activar a <strong>{showActivateModal.nombre}</strong>
@@ -2673,7 +2673,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   {/* Modal Vincular Usuario */}
                   {showLinkUserModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 sm:mx-auto p-4 sm:p-6">
                         <h3 className="text-lg font-black text-indigo-700 uppercase mb-4">Vincular Usuario</h3>
                         <p className="text-sm text-slate-600 mb-4">
                           Vincula un usuario del sistema a <strong>{showLinkUserModal.nombre}</strong>

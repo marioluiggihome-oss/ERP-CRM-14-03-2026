@@ -1304,7 +1304,7 @@ const Digitalizador = ({ state }) => {
                     </span>
                   </div>
                 )}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-indigo-900/50 rounded-xl">
                     <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">Bruto Líneas</p>
                     <p className="text-xl font-black">{(showCostMode ? costTotals : totals).brutoLineas.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>

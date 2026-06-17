@@ -317,7 +317,7 @@ const DashboardTab = () => {
               <FolderOpen size={18} className="text-purple-500" />
               Presupuestos por Estado
             </h3>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {[
                 { key: 'draft', label: 'Borrador', color: 'bg-slate-100 text-slate-600', icon: '📝' },
                 { key: 'sent', label: 'Enviado', color: 'bg-blue-100 text-blue-600', icon: '📤' },

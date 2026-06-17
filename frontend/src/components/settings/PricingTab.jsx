@@ -119,7 +119,7 @@ const PricingTab = ({ state, setState }) => {
             <span className="w-3 h-3 rounded-full bg-blue-500"></span>
             TARIFA ZC
           </label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
               <label className="text-[10px] font-black text-blue-400 uppercase mb-1 block">Ancho (€)</label>
               <input
@@ -174,7 +174,7 @@ const PricingTab = ({ state, setState }) => {
             <span className="w-3 h-3 rounded-full bg-amber-500"></span>
             TARIFA MV
           </label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
               <label className="text-[10px] font-black text-amber-400 uppercase mb-1 block">Ancho (€)</label>
               <input

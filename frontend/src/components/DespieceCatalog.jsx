@@ -84,6 +84,7 @@ const DespieceCatalog = ({
   const loadFilterOptions = async () => {
     try {
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products/filters`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setFilterOptions(data);
     } catch (error) {
@@ -100,6 +101,7 @@ const DespieceCatalog = ({
       });
       
       const response = await fetch(`${API_URL}/api/despiece-budgeter/products?${params.toString()}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setProducts(data);
     } catch (error) {
@@ -731,7 +733,7 @@ const DespieceCatalog = ({
                 <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">
                   Cantos (opcional)
                 </label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {[
                     { key: 'cantoL1', label: 'Largo 1' },
                     { key: 'cantoL2', label: 'Largo 2' },

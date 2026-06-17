@@ -195,7 +195,7 @@ async def logout(request: Request, credentials: HTTPAuthorizationCredentials = D
         try:
             payload = verify_access_token(credentials.credentials)
             user = {"id": payload.get("sub"), "username": payload.get("username")}
-        except:
+        except Exception:
             pass
     
     if user:

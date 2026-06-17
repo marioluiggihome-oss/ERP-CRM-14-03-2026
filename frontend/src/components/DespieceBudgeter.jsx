@@ -303,7 +303,7 @@ const DespieceBudgeter = ({ isOpen, onClose, currentUser, onBudgetSaved }) => {
         
         {/* Datos del presupuesto */}
         <div className="bg-purple-50 px-8 py-4 border-b border-purple-100 shrink-0">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <div className="flex items-center gap-2">
               <Hash size={16} className="text-purple-400" />
               <div className="flex-1">
@@ -713,7 +713,7 @@ const DespieceBudgeter = ({ isOpen, onClose, currentUser, onBudgetSaved }) => {
               {/* Cantos */}
               <div>
                 <label className="text-[10px] font-black text-slate-500 uppercase">Cantos</label>
-                <div className="grid grid-cols-4 gap-2 mt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mt-2">
                   {[
                     { key: 'cantoL1', label: 'Largo 1' },
                     { key: 'cantoL2', label: 'Largo 2' },

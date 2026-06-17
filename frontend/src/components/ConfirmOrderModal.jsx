@@ -33,7 +33,7 @@ const ConfirmOrderModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg w-full mx-4 sm:mx-auto overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-6 text-white">
           <div className="flex items-center justify-between">

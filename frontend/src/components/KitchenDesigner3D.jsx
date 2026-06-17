@@ -507,7 +507,7 @@ function MeasurementsTab({ project, onRefresh }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           <div>
             <label className="text-xs font-bold text-slate-600">Ventana ancho</label>
             <input type="number" value={form.window_width} onChange={e => setForm({...form, window_width: e.target.value})}

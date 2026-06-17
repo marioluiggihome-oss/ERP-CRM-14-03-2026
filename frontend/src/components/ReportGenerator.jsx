@@ -192,7 +192,7 @@ const ReportGenerator = () => {
               </button>
             </div>
             
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {/* Fecha desde */}
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
@@ -327,7 +327,7 @@ const ReportGenerator = () => {
         ) : report ? (
           <div className="space-y-6">
             {/* KPIs principales */}
-            <div className="grid grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Facturación</p>
                 <p className="text-lg font-black text-slate-800">{eur(report.summary.totalVenta)}</p>

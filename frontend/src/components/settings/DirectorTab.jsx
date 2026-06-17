@@ -190,7 +190,7 @@ const DirectorTab = () => {
       {directorTab === 'metrics' && directorMetrics && (
         <div className="space-y-6">
           {/* Global Summary Cards */}
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
               <div className="flex items-center gap-2 mb-2">
                 <Euro size={20} />
@@ -242,7 +242,7 @@ const DirectorTab = () => {
                 <Award className="text-orange-500" size={20} />
                 Top Performers
               </h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {directorMetrics.topPerformers.slice(0, 6).map((user, index) => (
                   <div key={user.userId} className={`bg-white rounded-xl p-4 border-2 ${index === 0 ? 'border-yellow-400' : index === 1 ? 'border-slate-300' : index === 2 ? 'border-orange-400' : 'border-slate-100'}`}>
                     <div className="flex items-center gap-3 mb-3">
@@ -408,7 +408,7 @@ const DirectorTab = () => {
         <div className="space-y-4">
           {/* Summary Cards */}
           {directorData?.summary && (
-            <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
               <div className="bg-white rounded-xl p-4 border border-slate-200">
                 <div className="flex items-center gap-2 text-indigo-600 mb-1">
                   <Users size={16} />
