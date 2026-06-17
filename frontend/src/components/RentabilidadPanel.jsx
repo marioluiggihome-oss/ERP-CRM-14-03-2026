@@ -11,6 +11,11 @@ import IngresosACuenta from './IngresosACuenta';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+const normRef = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const projectLabel = (r) => {
+  const aliases = [r.orderRef && `Pedido ${r.orderRef}`, r.invoiceNumber && `Factura ${r.invoiceNumber}`, r.internalReference && `Int. ${r.internalReference}`].filter(Boolean).join(' · ');
+  return `${r.ref || '-'} - ${r.cliente || 'Sin cliente'}${aliases ? ` (${aliases})` : ''}`;
+};
 
 const RentabilidadPanel = ({ currentUser }) => {
   const [view, setView] = useState('lineas'); // 'lineas' (por líneas/documentos) por defecto | 'proyecto' | 'informes'
@@ -132,11 +137,19 @@ const RentabilidadPanel = ({ currentUser }) => {
         body: JSON.stringify({ fileBase64: b64 }),
       });
       const j = await r.json();
-      if (!j.success) { alert('No se pudo leer la factura: ' + (j.error || '')); return; }
+      if (!r.ok || !j.success) { alert('No se pudo leer la factura: ' + (j.error || j.detail || '')); return; }
       const detected = (j.data.proyecto || '').trim();
-      const match = data.rows.find(row => row.ref && detected &&
-        row.ref.toLowerCase() === detected.toLowerCase());
-      setInvoice({ ...j.data, projectRef: match ? match.ref : '' });
+      const backendRef = j.data.projectRef || '';
+      const detectedNorm = normRef(detected);
+      const match = data.rows.find(row => {
+        const aliases = [row.ref, row.orderRef, row.invoiceNumber, row.internalReference, row.projectId].filter(Boolean).map(normRef);
+        return detectedNorm && aliases.some(a => a && (a === detectedNorm || a.includes(detectedNorm) || detectedNorm.includes(a)));
+      });
+      setInvoice({
+        ...j.data,
+        projectRef: backendRef || (match ? match.ref : ''),
+        projectMatches: j.data.projectMatches || [],
+      });
     } catch (err) {
       alert('Error al importar la factura: ' + err.message);
     } finally {
@@ -309,10 +322,23 @@ const RentabilidadPanel = ({ currentUser }) => {
                 <select value={invoice.projectRef} onChange={e => setInvoice({ ...invoice, projectRef: e.target.value })}
                   className={`w-full px-3 py-2 border rounded-lg text-sm font-bold ${invoice.projectRef ? 'border-emerald-300' : 'border-red-300'}`}>
                   <option value="">- Selecciona proyecto -</option>
-                  {data.rows.map(r => <option key={r.projectId} value={r.ref}>{r.ref} - {r.cliente}</option>)}
+                  {data.rows.map(r => <option key={r.projectId} value={r.ref}>{projectLabel(r)}</option>)}
                 </select>
                 {invoice.proyecto && !invoice.projectRef && (
-                  <p className="text-[11px] text-amber-600 mt-1">La IA detecto "{invoice.proyecto}" pero no coincide con ningun proyecto. Seleccionalo a mano.</p>
+                  <p className="text-[11px] text-amber-600 mt-1">La IA detecto "{invoice.proyecto}" pero no coincide de forma segura con ningun proyecto. Seleccionalo a mano.</p>
+                )}
+                {Array.isArray(invoice.projectMatches) && invoice.projectMatches.length > 0 && (
+                  <div className="mt-2 rounded-xl border border-purple-100 bg-purple-50 p-2">
+                    <p className="text-[10px] font-black text-purple-700 uppercase mb-1">Sugerencias detectadas</p>
+                    <div className="space-y-1">
+                      {invoice.projectMatches.slice(0, 3).map(m => (
+                        <button key={`${m.projectId}-${m.projectRef}`} type="button" onClick={() => setInvoice({ ...invoice, projectRef: m.projectRef })}
+                          className={`w-full text-left px-2 py-1.5 rounded-lg text-[11px] font-bold border ${invoice.projectRef === m.projectRef ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-white border-purple-100 text-slate-700 hover:border-purple-300'}`}>
+                          {m.projectRef} · {m.cliente || 'Sin cliente'} <span className="font-normal text-slate-400">({m.score}% por {m.matchedBy || 'referencia'})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">

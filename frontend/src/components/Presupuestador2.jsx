@@ -509,8 +509,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
 
   // Items para el DESPIECE (reutiliza el motor/modal del Presupuestador 1).
   // Las medidas salen del catálogo MV; el backend clasifica por nombre/código.
-  const despieceItems = useMemo(() => cart.map((it, idx) => {
+  const rawDespieceItems = useMemo(() => cart.map((it, idx) => {
     const prod = !it.manual ? products.find(p => p.id === it.id) : null;
+    const width = it.customWidth !== '' && it.customWidth != null ? Number(it.customWidth) : (prod?.width || 0);
+    const height = it.customHeight !== '' && it.customHeight != null ? Number(it.customHeight) : (prod?.height || 0);
+    const depth = it.customDepth !== '' && it.customDepth != null ? Number(it.customDepth) : (prod?.depth || 0);
     return {
       id: `p2d-${idx}`,
       productId: it.manual ? `manual-${idx}` : it.id,
@@ -518,20 +521,25 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       customReference: it.code,
       manualDescription: it.name,
       productName: it.name,
-      customWidth: it.customWidth !== '' && it.customWidth != null ? Number(it.customWidth) : (prod?.width || 0),
-      customHeight: it.customHeight !== '' && it.customHeight != null ? Number(it.customHeight) : (prod?.height || 0),
-      customDepth: it.customDepth !== '' && it.customDepth != null ? Number(it.customDepth) : (prod?.depth || 0),
+      customWidth: width,
+      customHeight: height,
+      customDepth: depth,
       hasVigaCut: !!it.hasVigaCut,
-      quantity: it.qty,
+      quantity: Number(it.qty) || 0,
+      _canDespiece: width > 0 && height > 0 && depth > 0 && (Number(it.qty) || 0) > 0,
     };
   }), [cart, products]);
 
+  const despieceItems = useMemo(() => rawDespieceItems.filter(i => i._canDespiece), [rawDespieceItems]);
+
   const openDespiece = () => {
     if (cart.length === 0) { alert('Añade al menos una línea'); return; }
-    if (!despieceItems.some(i => i.customWidth && i.customHeight && i.customDepth)) {
-      alert('Los muebles no tienen medidas en el catálogo; no se puede generar el despiece.');
+    if (despieceItems.length === 0) {
+      alert('No hay líneas con ancho, alto, fondo y cantidad válidos para generar el despiece. Revisa las medidas del catálogo o de la línea manual.');
       return;
     }
+    const ignored = rawDespieceItems.length - despieceItems.length;
+    if (ignored > 0 && !window.confirm(`${ignored} línea(s) no tienen medidas/cantidad válidas y se excluirán del despiece. ¿Continuar?`)) return;
     setShowDespiece(true);
   };
 
