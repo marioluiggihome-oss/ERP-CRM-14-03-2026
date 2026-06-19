@@ -12,7 +12,7 @@ Modelo de datos:
 """
 from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import uuid
 import logging
 import os
@@ -38,6 +38,7 @@ async def add_project_cost(cost: dict):
         ref = (cost.get("projectRef") or "").strip()
         if not ref:
             raise HTTPException(status_code=400, detail="Falta projectRef")
+        ref = await _resolve_project_cost_ref(ref)
         doc = {
             "id": f"cost-{uuid.uuid4().hex[:8]}",
             "projectRef": ref,
@@ -97,7 +98,7 @@ async def get_rentabilidad(userId: Optional[str] = None):
             query,
             {"_id": 0, "id": 1, "budgetNumber": 1, "customerName": 1, "clientCode": 1,
              "totalPvp": 1, "totalConIVA": 1, "createdAt": 1, "userId": 1, "status": 1,
-             "orderId": 1, "invoiceId": 1, "invoiceNumber": 1}
+             "orderId": 1, "orderRef": 1, "invoiceId": 1, "invoiceNumber": 1, "internalReference": 1}
         ).sort("createdAt", -1).to_list(3000)
 
         # Agregar costes por projectRef (== budgetNumber)
@@ -124,8 +125,10 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "fecha": p.get("createdAt", ""),
                 "status": p.get("status", ""),
                 "orderId": p.get("orderId", ""),
+                "orderRef": p.get("orderRef", ""),
                 "invoiceId": p.get("invoiceId", ""),
                 "invoiceNumber": p.get("invoiceNumber", ""),
+                "internalReference": p.get("internalReference", ""),
                 "venta": round(venta, 2),
                 "coste": round(coste, 2),
                 "margen": round(margen, 2),
@@ -185,6 +188,137 @@ def _parse_json_loose(text):
             return None
 
 
+def _data_url_mime(data_url: str) -> str:
+    """Devuelve el MIME real de un data URL, si viene informado."""
+    if not data_url or not data_url.startswith("data:"):
+        return ""
+    try:
+        return data_url.split(";", 1)[0].split(":", 1)[1].lower()
+    except Exception:
+        return ""
+
+
+def _safe_float(value: Any) -> float:
+    """Convierte importes de factura escritos como 1.234,56 / 1234.56 / 1,234.56."""
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    s = str(value).strip()
+    if not s:
+        return 0.0
+    s = re.sub(r"[^0-9,.-]", "", s)
+    if not s or s in {"-", ",", "."}:
+        return 0.0
+    if "," in s and "." in s:
+        # Formato europeo habitual: 1.234,56; si la coma va despues del punto, es decimal.
+        if s.rfind(",") > s.rfind("."):
+            s = s.replace(".", "").replace(",", ".")
+        else:
+            s = s.replace(",", "")
+    elif "," in s:
+        s = s.replace(",", ".")
+    try:
+        return float(s)
+    except Exception:
+        return 0.0
+
+
+def _normalize_date(value: Any) -> str:
+    """Normaliza fechas frecuentes de factura a YYYY-MM-DD, manteniendo fecha actual como fallback."""
+    fallback = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    s = str(value or "").strip()
+    if not s:
+        return fallback
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", s):
+        return s
+    m = re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$", s)
+    if m:
+        d, mo, y = m.groups()
+        if len(y) == 2:
+            y = "20" + y
+        try:
+            return datetime(int(y), int(mo), int(d)).strftime("%Y-%m-%d")
+        except Exception:
+            return fallback
+    return fallback
+
+
+def _normalize_ref(value: Any) -> str:
+    """Normaliza referencias para comparar sin guiones, espacios ni mayusculas."""
+    return re.sub(r"[^A-Z0-9]", "", str(value or "").upper())
+
+
+def _invoice_category(value: Any) -> str:
+    allowed = {"MOBILIARIO", "ELECTRODOMESTICOS", "ENCIMERA", "TRANSPORTE", "MONTAJE", "SUBCONTRATA", "OTROS"}
+    cat = str(value or "OTROS").upper().replace("É", "E").strip()
+    return cat if cat in allowed else "OTROS"
+
+
+async def _resolve_project_cost_ref(ref: str) -> str:
+    """Convierte alias de pedido/factura/referencia interna a budgetNumber cuando existe."""
+    norm = _normalize_ref(ref)
+    if not norm:
+        return ref
+    projection = {"_id": 0, "id": 1, "budgetNumber": 1, "orderRef": 1, "internalReference": 1, "invoiceNumber": 1}
+    async for p in db.projects.find({}, projection):
+        aliases = [p.get("budgetNumber"), p.get("orderRef"), p.get("internalReference"), p.get("invoiceNumber"), p.get("id")]
+        if any(_normalize_ref(a) == norm for a in aliases if a):
+            return p.get("budgetNumber") or p.get("orderRef") or p.get("internalReference") or p.get("id") or ref
+    return ref
+
+
+async def _find_project_matches(detected_ref: str, limit: int = 6) -> List[Dict[str, Any]]:
+    """Busca coincidencias de proyecto usando presupuesto, pedido, factura e ids internos.
+
+    Devuelve siempre `projectRef` como budgetNumber porque project_costs se agregan contra
+    esa referencia. Esto evita que una factura detectada por orderRef/invoiceNumber quede
+    registrada contra una clave que luego RENTAB no suma.
+    """
+    needle = _normalize_ref(detected_ref)
+    if not needle:
+        return []
+
+    projection = {"_id": 0, "id": 1, "budgetNumber": 1, "customerName": 1, "internalReference": 1,
+                  "orderRef": 1, "invoiceNumber": 1, "createdAt": 1}
+    projects = await db.projects.find({}, projection).sort("createdAt", -1).to_list(3000)
+    scored = []
+    for p in projects:
+        aliases = [p.get("budgetNumber"), p.get("orderRef"), p.get("internalReference"), p.get("invoiceNumber"), p.get("id")]
+        norm_aliases = [_normalize_ref(a) for a in aliases if a]
+        if not norm_aliases:
+            continue
+        score = 0
+        matched_by = ""
+        for alias, norm in zip([a for a in aliases if a], norm_aliases):
+            if not norm:
+                continue
+            if needle == norm:
+                score = max(score, 100)
+                matched_by = str(alias)
+            elif needle in norm or norm in needle:
+                local = 80 if min(len(needle), len(norm)) >= 5 else 60
+                if local > score:
+                    score = local
+                    matched_by = str(alias)
+        if score > 0:
+            project_ref = p.get("budgetNumber") or p.get("orderRef") or p.get("internalReference") or p.get("id") or ""
+            scored.append({
+                "projectId": p.get("id"),
+                "projectRef": project_ref,
+                "ref": project_ref,
+                "budgetNumber": p.get("budgetNumber") or "",
+                "orderRef": p.get("orderRef") or "",
+                "invoiceNumber": p.get("invoiceNumber") or "",
+                "internalReference": p.get("internalReference") or "",
+                "cliente": p.get("customerName") or "",
+                "score": score,
+                "matchedBy": matched_by,
+            })
+    scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+    return scored[:limit]
+
+
 @router.post("/rentabilidad/parse-invoice")
 async def parse_invoice(payload: dict):
     """Lee una factura de proveedor (PDF/imagen en base64) con IA y devuelve los
@@ -193,15 +327,18 @@ async def parse_invoice(payload: dict):
     b64 = (payload or {}).get("fileBase64") or ""
     if not b64:
         raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    mime = _data_url_mime(b64)
     stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
     try:
         from services.pdf_utils import is_pdf_base64, pdf_base64_to_text, pdf_base64_to_png_base64
         from services.llm_vision import chat_with_gemini, analyze_image_with_gemini
 
         parsed = None
-        is_pdf = ("pdf" in b64[:40].lower()) or is_pdf_base64(stripped)
+        is_pdf = (mime == "application/pdf") or ("pdf" in b64[:60].lower()) or is_pdf_base64(stripped)
+        logger.info(f"parse_invoice: is_pdf={is_pdf}, mime={mime or 'desconocido'}, b64_len={len(stripped)}")
         if is_pdf:
             text = pdf_base64_to_text(stripped) or ""
+            logger.info(f"parse_invoice: text extracted len={len(text.strip())}")
             if len(text.strip()) >= 50:
                 resp = await chat_with_gemini(
                     prompt=_INVOICE_PROMPT + "\n\nTEXTO DE LA FACTURA:\n\n" + text[:30000],
@@ -212,33 +349,43 @@ async def parse_invoice(payload: dict):
         if parsed is None:
             # Escaneada o imagen: usar vision sobre la primera pagina/imagen.
             img = stripped
+            image_mime = mime if mime and mime.startswith("image/") else "image/jpeg"
             if is_pdf:
-                pages = pdf_base64_to_png_base64(stripped, dpi=150, max_pages=1) or []
+                pages = pdf_base64_to_png_base64(stripped, dpi=180, max_pages=1) or []
                 if pages:
                     img = pages[0]
+                    image_mime = "image/png"
             resp = await analyze_image_with_gemini(
                 image_base64=img, prompt=_INVOICE_PROMPT,
                 session_id=f"invoice-{uuid.uuid4().hex[:8]}", model="gemini-2.5-flash",
+                image_mime=image_mime,
             )
             parsed = _parse_json_loose(_clean_json(resp))
 
         if not parsed:
             return {"success": False, "error": "No se pudieron extraer datos de la factura"}
 
+        detected_project = str(parsed.get("proyecto") or "").strip()
+        project_matches = await _find_project_matches(detected_project)
+        selected_project_ref = project_matches[0]["projectRef"] if project_matches and project_matches[0].get("score", 0) >= 80 else ""
+        importe = _safe_float(parsed.get("importe")) or _safe_float(parsed.get("total")) or _safe_float(parsed.get("base"))
+
         return {
             "success": True,
             "data": {
                 "proveedor": str(parsed.get("proveedor") or ""),
-                "fecha": str(parsed.get("fecha") or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
-                "importe": float(parsed.get("importe") or parsed.get("base") or 0),
+                "fecha": _normalize_date(parsed.get("fecha")),
+                "importe": round(float(importe or 0), 2),
                 "concepto": str(parsed.get("concepto") or ""),
-                "categoria": str(parsed.get("categoria") or "OTROS").upper(),
-                "proyecto": str(parsed.get("proyecto") or ""),
+                "categoria": _invoice_category(parsed.get("categoria")),
+                "proyecto": detected_project,
+                "projectRef": selected_project_ref,
+                "projectMatches": project_matches,
             },
         }
     except Exception as e:
-        logger.error(f"Parse invoice error: {e}")
-        return {"success": False, "error": str(e)}
+        logger.error(f"Parse invoice error: {e}", exc_info=True)
+        return {"success": False, "error": f"Error procesando la factura: {str(e)[:200]}"}
 
 
 # ----------------------------- ANALITICA DE RENTABILIDAD -----------------------------

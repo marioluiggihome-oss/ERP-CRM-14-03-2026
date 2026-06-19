@@ -30,7 +30,7 @@ _db = _admin_client[_DB_NAME]
 # ==================== DIAGNÓSTICO DE BASE DE DATOS ====================
 
 @router.get("/db-health")
-async def db_health():
+async def db_health(user=Depends(require_admin)):
     """Diagnóstico de la base de datos: tamaño, límite y test de ESCRITURA real.
 
     Sirve para confirmar si los fallos al guardar (contactos, visitas,
@@ -90,7 +90,7 @@ async def db_health():
 
 
 @router.get("/recent-errors")
-async def recent_errors(limit: int = 20):
+async def recent_errors(limit: int = 20, user=Depends(require_admin)):
     """Últimos errores de guardado (422/500) capturados por el servidor.
 
     Permite ver el error EXACTO de un fallo al crear contacto/visita/
@@ -105,7 +105,7 @@ async def recent_errors(limit: int = 20):
 
 
 @router.post("/cleanup-telemetry")
-async def cleanup_telemetry(days: int = 90):
+async def cleanup_telemetry(days: int = 90, user=Depends(require_admin)):
     """Purga telemetría/actividad antigua para liberar espacio en la BD.
 
     Borra documentos de las colecciones de telemetría con más de `days` días.
@@ -172,7 +172,7 @@ async def restore_backup(backup_name: str, user=Depends(require_admin)):
 # ==================== USAGE REPORTS ENDPOINTS ====================
 
 @router.get("/usage/report")
-async def get_usage_report(days: int = 30):
+async def get_usage_report(days: int = 30, user=Depends(require_admin)):
     """Obtener informe completo de uso de la plataforma"""
     tracker = get_tracker()
     if not tracker:
@@ -182,7 +182,7 @@ async def get_usage_report(days: int = 30):
 
 
 @router.get("/usage/users")
-async def get_user_stats(user_id: Optional[str] = None, days: int = 30):
+async def get_user_stats(user_id: Optional[str] = None, days: int = 30, user=Depends(require_admin)):
     """Obtener estadísticas de uso por usuario"""
     tracker = get_tracker()
     if not tracker:
@@ -200,7 +200,8 @@ async def get_user_stats(user_id: Optional[str] = None, days: int = 30):
 async def get_activity_timeline(
     user_id: Optional[str] = None,
     days: int = 30,
-    limit: int = 100
+    limit: int = 100,
+    user=Depends(require_admin)
 ):
     """Obtener timeline de actividades recientes"""
     tracker = get_tracker()
@@ -216,7 +217,7 @@ async def get_activity_timeline(
 
 
 @router.get("/usage/daily")
-async def get_daily_activity(days: int = 30):
+async def get_daily_activity(days: int = 30, user=Depends(require_admin)):
     """Obtener actividad diaria agregada"""
     tracker = get_tracker()
     if not tracker:
@@ -231,7 +232,7 @@ async def get_daily_activity(days: int = 30):
 
 
 @router.get("/usage/by-type")
-async def get_activity_by_type(days: int = 30):
+async def get_activity_by_type(days: int = 30, user=Depends(require_admin)):
     """Obtener actividad agrupada por tipo"""
     tracker = get_tracker()
     if not tracker:
