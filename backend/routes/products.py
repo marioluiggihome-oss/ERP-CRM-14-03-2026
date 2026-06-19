@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Request, Response, File, UploadFile, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 
 from config import db
 from services.jwt_service import (
@@ -69,8 +69,7 @@ async def get_products(module: Optional[str] = None, library: Optional[str] = No
 
 
 # Importar servicio de exportación de catálogo
-from services.catalog_export import generate_catalog_excel_with_images, generate_catalog_pdf_with_images, generate_mv_catalog_pdf
-from services.mv_tariff_importer import expand_tariffs
+from services.catalog_export import generate_catalog_excel_with_images, generate_catalog_pdf_with_images
 
 @router.get("/products/export/excel")
 async def export_products_to_excel(
@@ -214,40 +213,17 @@ async def export_products_to_pdf(
 @router.get("/products/export/mv-catalog-pdf")
 async def export_mv_catalog_pdf():
     """
-    Genera el "Catálogo técnico 2026" de tarifas MV (T1-T21) en PDF:
-    portada estilo login + página de auditoría/notas de revisión + tablas
-    de precios por categoría con todas las tarifas.
-
-    Los productos se generan SIEMPRE a partir del JSON oficial de tarifas MV
-    (data/mv_tarifas_oficiales.json), no de la colección `products` de la base
-    de datos: así se evita que productos de otras bibliotecas (p.ej. ZC) puedan
-    filtrarse en el catálogo por una etiqueta `library` incorrecta en algún
-    documento de la BD.
+    Sirve el "Catálogo Técnico 2026" de tarifas MV (T1-T21) en PDF: las páginas
+    originales de la tarifa física (escaneadas), tal cual, con portada Luiggi Home.
     """
-    json_path = os.path.join(os.path.dirname(__file__), "..", "data", "mv_tarifas_oficiales.json")
-    try:
-        with open(json_path, "r", encoding="utf-8") as f:
-            tariff_data = json.load(f)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"No se pudo leer mv_tarifas_oficiales.json: {e}")
+    pdf_path = os.path.join(os.path.dirname(__file__), "..", "data", "Tarifa_Tecnica_MV_2026.pdf")
+    if not os.path.isfile(pdf_path):
+        raise HTTPException(status_code=404, detail="No se encontró el PDF de la tarifa MV.")
 
-    products = expand_tariffs(tariff_data)
-    if not products:
-        raise HTTPException(status_code=404, detail="El JSON de tarifas MV no contiene productos.")
-
-    products.sort(key=lambda p: (p.get("category") or "", p.get("series") or "", p.get("code") or ""))
-
-    meta = dict(tariff_data.get("_meta", {}))
-    meta["fecha"] = datetime.now().strftime("%d/%m/%Y")
-
-    output = await generate_mv_catalog_pdf(products, meta)
-
-    filename = f"Catalogo_Tecnico_2026_MV_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-
-    return StreamingResponse(
-        output,
+    return FileResponse(
+        pdf_path,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        filename="Catalogo_Tecnico_2026_MV.pdf",
     )
 
 
