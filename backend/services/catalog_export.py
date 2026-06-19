@@ -2,6 +2,7 @@
 Servicio de exportación de catálogo a Excel y PDF con imágenes SVG
 """
 import io
+import os
 import base64
 from xml.sax.saxutils import escape as _xml_escape
 from typing import List, Dict, Optional
@@ -21,6 +22,17 @@ try:
 except (ImportError, OSError):
     CAIROSVG_AVAILABLE = False
     cairosvg = None
+
+
+# Dibujos técnicos originales de la tarifa MV (escaneados de la tarifa en papel),
+# uno por familia/categoría. Se reutilizan en todas las tarifas (T1-T21), ya que
+# el mueble es el mismo objeto físico independientemente del acabado/tarifa.
+MV_DRAWINGS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "mv_drawings")
+
+
+def _mv_drawing_path(category: str) -> Optional[str]:
+    path = os.path.join(MV_DRAWINGS_DIR, f"{category}.png")
+    return path if os.path.isfile(path) else None
 
 
 def get_cabinet_svg(code: str, name: str, category: str) -> str:
@@ -612,7 +624,28 @@ async def generate_mv_catalog_pdf(products: List[Dict], meta: Optional[Dict] = N
     catalog_elements = []
     for cat in sorted(by_category.keys()):
         items = sorted(by_category[cat], key=lambda p: (p.get('series') or '', p.get('code') or ''))
-        catalog_elements.append(Paragraph(cat, table_title_style))
+
+        drawing_path = _mv_drawing_path(cat)
+        if drawing_path:
+            with Image.open(drawing_path) as _im:
+                iw, ih = _im.size
+            draw_h = 22 * mm
+            draw_w = draw_h * iw / ih
+            header_table = Table(
+                [[RLImage(drawing_path, width=draw_w, height=draw_h), Paragraph(cat, table_title_style)]],
+                colWidths=[draw_w + 4 * mm, None],
+            )
+            header_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 4 * mm),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            catalog_elements.append(header_table)
+        else:
+            catalog_elements.append(Paragraph(cat, table_title_style))
 
         header = ['REF', 'DESCRIPCIÓN'] + tariff_keys
         table_data = [header]
