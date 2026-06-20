@@ -1255,6 +1255,11 @@ const Armarios = ({ state, setState }) => {
     };
   }, [wardrobeConfig, moduleConfigs, extras, ivaRate, state?.settings]);
 
+  // El despiece de armarios (lista de tableros/accesorios para fábrica) solo se
+  // muestra a quien tenga activada la función de Fábrica (o admin). En el
+  // presupuestador, sin ese permiso, no aparece.
+  const canDespiece = state?.currentUser?.isAdmin === true || state?.currentUser?.canAccessFabrica === true;
+
   // Handlers
   const updateConfig = (key, value) => {
     setWardrobeConfig(prev => ({ ...prev, [key]: value }));
@@ -2052,14 +2057,17 @@ const Armarios = ({ state, setState }) => {
             <FolderOpen size={16} />
             PROYECTOS
           </button>
-          <button 
-            onClick={() => setShowDespieceModal(true)}
-            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
-            data-testid="armarios-despiece-btn"
-          >
-            <Scissors size={16} />
-            DESPIECE
-          </button>
+          {canDespiece && (
+            <button
+              onClick={() => setShowDespieceModal(true)}
+              className="flex items-center gap-2 bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+              data-testid="armarios-despiece-btn"
+              title="Despiece de tableros (solo Fábrica)"
+            >
+              <Scissors size={16} />
+              DESPIECE
+            </button>
+          )}
           <button 
             onClick={saveProject}
             disabled={saving}
@@ -2668,7 +2676,8 @@ const Armarios = ({ state, setState }) => {
             </div>
           </div>
 
-          {/* Resumen Tableros */}
+          {/* Resumen Tableros + despiece: solo para Fábrica (canDespiece) */}
+          {canDespiece && (<>
           <div className="mt-4 pt-4 border-t border-purple-700">
             <h4 className="text-[10px] font-bold text-purple-300 uppercase tracking-widest mb-2 flex items-center gap-1">
               <Layers size={12} />
@@ -2710,6 +2719,7 @@ const Armarios = ({ state, setState }) => {
             VER DESPIECE PRIVADO
           </button>
           <p className="text-[9px] text-purple-400 text-center mt-2">{despieceTotals.totalItems} accesorios numerados</p>
+          </>)}
         </div>
       </div>
 
