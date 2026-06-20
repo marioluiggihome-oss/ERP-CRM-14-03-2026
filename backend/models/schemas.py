@@ -1037,6 +1037,10 @@ class IARenderRequest(BaseModel):
     interiorColorName: str = "Blanco"
     handleColorName: str = "Plata"
     roomStyle: str = "Moderno"
+    # Esquema/plano del configurador (data URL o base64) que el modelo debe
+    # respetar EXACTAMENTE como plano estructural. Opcional.
+    referenceImage: Optional[str] = None
+    referenceMime: str = "image/png"
 
 
 class IALayoutRequest(BaseModel):

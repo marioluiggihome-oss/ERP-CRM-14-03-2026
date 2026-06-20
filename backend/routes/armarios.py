@@ -457,11 +457,31 @@ async def ia_render_armario(request: IARenderRequest):
         # Usar el numero de puertas de la configuracion del usuario
         doors_count = request.numDoors
         door_width = request.width / doors_count
-        
+
+        # Si el frontend manda el esquema/plano del configurador, es el plano
+        # AUTORITATIVO: el modelo debe reproducirlo tal cual (puertas, divisiones,
+        # baldas, cajones, barras, maletero y proporciones).
+        has_blueprint = bool(getattr(request, "referenceImage", None))
+        blueprint_block = ""
+        if has_blueprint:
+            blueprint_block = """
+BLUEPRINT (FIRST IMAGE) - THIS IS MANDATORY:
+- The FIRST image provided is a SCHEMATIC ELEVATION of THIS EXACT wardrobe.
+- It is the AUTHORITATIVE BLUEPRINT. Reproduce it EXACTLY in photorealistic form.
+- Same number of doors and same door widths.
+- Same vertical module divisions (in the same positions).
+- Same count, order and vertical position of every shelf, drawer, hanging rod,
+  top "maletero" storage box and accessory, module by module.
+- Same width:height proportions. DO NOT add, remove, move or resize anything.
+- The photo must match the blueprint 1:1; only add realistic materials, light
+  and textures. NEVER invent a different interior.
+"""
+
         prompt = f"""Create a PHOTOREALISTIC interior design photograph of a BUILT-IN WARDROBE/CLOSET.
 
-CRITICAL - FOLLOW THESE SPECIFICATIONS EXACTLY:
-
+CRITICAL - FOLLOW THESE SPECIFICATIONS EXACTLY. This is a technical product
+render: accuracy to the specification matters more than artistic freedom.
+{blueprint_block}
 DIMENSIONS:
 - Total width: {request.width}mm ({request.width/10}cm / {round(request.width/25.4, 1)} inches)
 - Total height: {request.height}mm ({request.height/10}cm)
@@ -496,14 +516,20 @@ IMAGE REQUIREMENTS:
 - Camera angle: 3/4 view from front-left to show interior through open doors
 - High-end quality materials: melamine, chrome hardware, soft-close systems
 - Realistic shadows and reflections
-- Some clothing items neatly organized inside
-- 4K quality, magazine-worthy composition
+- A few neatly folded clothing items are allowed but MUST NOT hide or change the
+  interior structure (shelves, drawers, rods, maletero) defined above
+- 4K quality, clean professional composition
 
-IMPORTANT: The wardrobe MUST have EXACTLY {doors_count} {request.doorType} doors. DO NOT add more or fewer doors.
+IMPORTANT: The wardrobe MUST have EXACTLY {doors_count} {request.doorType} doors and the
+EXACT interior layout described{' and shown in the blueprint' if has_blueprint else ''}. DO NOT add, remove or rearrange anything.
 Generate ONE high-quality photorealistic image."""
 
         try:
-            data_url = await generate_image_with_gemini(prompt)
+            data_url = await generate_image_with_gemini(
+                prompt,
+                reference_image_base64=getattr(request, "referenceImage", None),
+                reference_mime=getattr(request, "referenceMime", None) or "image/png",
+            )
         except Exception as e:
             logger.error(f"Error generando render de armario: {e}")
             return {"success": False, "error": "No se pudo generar la imagen. Inténtalo de nuevo."}
