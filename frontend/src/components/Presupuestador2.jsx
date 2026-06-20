@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, Loader, Tag, Layers, X,
   Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
-  PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight,
+  PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, ChevronUp,
   Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List,
   BookOpen, PackageCheck, Home
 } from 'lucide-react';
@@ -48,6 +48,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [expandedGroups, setExpandedGroups] = useState({});
   const [familiesCollapsed, setFamiliesCollapsed] = useState(false);
   const [cartCollapsed, setCartCollapsed] = useState(false);
+  const [configCollapsed, setConfigCollapsed] = useState(false); // ocultar fila de tarifa/acabados
   const [familiesWidth, setFamiliesWidth] = useState(224);
   const [cartWidth, setCartWidth] = useState(416);
   const isResizingFamilies = useRef(false);
@@ -431,6 +432,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
 
   const setQty = (id, delta) => setCart(prev => prev
     .map(x => x.id === id ? { ...x, qty: Math.max(1, x.qty + delta) } : x));
+  const setQtyValue = (id, value) => setCart(prev => prev
+    .map(x => x.id === id ? { ...x, qty: Math.max(1, parseInt(value, 10) || 1) } : x));
   const removeItem = (id) => setCart(prev => prev.filter(x => x.id !== id));
   const updateItemPrice = (id, newPrice) => setCart(prev => prev
     .map(x => x.id === id ? { ...x, price: parseFloat(newPrice) || 0 } : x));
@@ -697,6 +700,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
 
           {/* Botones utilitarios */}
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            <button onClick={() => setConfigCollapsed(v => !v)} title={configCollapsed ? 'Mostrar tarifa y acabados' : 'Ocultar tarifa y acabados'}
+              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">
+              {configCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            </button>
             <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad (cm/mm)"
               className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">
               <Ruler size={13} />
@@ -729,7 +736,9 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             )}
           </div>
         </div>
-        {/* Fila única: biblioteca, tarifa, colores/acabados y total — una sola línea a todo el ancho */}
+        {/* Fila única: biblioteca, tarifa, colores/acabados y total — una sola línea a todo el ancho.
+            Ocultable con el botón (chevron) de la cabecera. */}
+        {!configCollapsed && (
         <div className="px-3 sm:px-4 pb-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {availableLibraries.length > 1 && (
             <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25 shrink-0">
@@ -791,10 +800,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* ── Pestañas móviles: Catálogo / Presupuesto ── */}
-      <div className="md:hidden shrink-0 flex border-b border-slate-200 bg-white sticky top-[84px] z-20">
+      <div className="md:hidden shrink-0 flex border-b border-slate-200 bg-white sticky z-20" style={{ top: configCollapsed ? '52px' : '84px' }}>
         <button onClick={() => setMobileTab('catalog')}
           className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
             mobileTab === 'catalog' ? 'text-orange-700 border-b-2 border-orange-600 bg-orange-50/60' : 'text-slate-400'}`}>
@@ -1139,9 +1149,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-                        <button onClick={() => setQty(it.id, -1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Minus size={11} /></button>
-                        <span className="w-6 text-center font-black text-xs">{it.qty}</span>
-                        <button onClick={() => setQty(it.id, 1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm"><Plus size={11} /></button>
+                        <button onClick={() => setQty(it.id, -1)} className="w-8 h-8 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm active:scale-95 transition"><Minus size={15} /></button>
+                        <input type="number" min="1" value={it.qty} onChange={e => setQtyValue(it.id, e.target.value)} onFocus={e => e.target.select()}
+                          className="w-11 h-8 text-center font-black text-sm bg-white rounded-md shadow-sm border-0 focus:outline-none focus:ring-1 focus:ring-orange-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                        <button onClick={() => setQty(it.id, 1)} className="w-8 h-8 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm active:scale-95 transition"><Plus size={15} /></button>
                       </div>
                       <div className="flex items-center gap-2">
                         {it.manual ? (
