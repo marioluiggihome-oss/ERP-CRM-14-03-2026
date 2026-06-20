@@ -729,10 +729,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             )}
           </div>
         </div>
-        {/* Segunda fila: biblioteca, tarifa y total */}
-        <div className="px-3 sm:px-4 pb-1.5 flex items-center gap-2">
+        {/* Fila única: biblioteca, tarifa, colores/acabados y total — una sola línea a todo el ancho */}
+        <div className="px-3 sm:px-4 pb-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {availableLibraries.length > 1 && (
-            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25">
+            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25 shrink-0">
               <LibraryIcon size={12} className="shrink-0" />
               <select value={libraryCode} onChange={e => setLibraryCode(e.target.value)}
                 className="px-1.5 py-0.5 bg-white rounded-lg text-xs font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
@@ -740,33 +740,23 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               </select>
             </div>
           )}
-          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25">
+          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-xl pl-2 pr-1 py-1 ring-1 ring-white/25 shrink-0">
             <Tag size={12} className="shrink-0" />
             <select value={tariff} onChange={e => setTariff(e.target.value)}
               className="px-1.5 py-0.5 bg-white rounded-lg text-xs font-black text-orange-700 focus:ring-2 focus:ring-white outline-none cursor-pointer">
               {priceLevels.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          {cartTotal > 0 && (
-            <div className="flex flex-col items-end leading-none ml-auto">
-              <span className="text-[9px] uppercase text-orange-100/80 font-bold">Total c/IVA</span>
-              <span className="text-base font-black">{eur(totalConIva)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Fila de colores/acabados — compacta, scrollable en móvil */}
-        <div className="px-3 sm:px-4 pb-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
             ['Bajas', doorColorLow, setDoorColorLow],
             ['Altas', doorColorHigh, setDoorColorHigh],
             ['Col.', doorColorColumns, setDoorColorColumns],
             ['Cost.', sideColor, setSideColor],
           ].map(([label, val, setter]) => (
-            <label key={label} className="flex items-center gap-1 bg-white/10 rounded-lg ring-1 ring-white/25 pl-2 pr-1 py-0.5 shrink-0">
+            <label key={label} className="flex items-center gap-1 bg-white/10 rounded-lg ring-1 ring-white/25 pl-2 pr-1 py-0.5 flex-1 min-w-[5rem]">
               <span className="text-[9px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">{label}</span>
               <input type="text" value={val} onChange={e => setter(e.target.value)}
-                className="w-14 px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300" placeholder="color…" />
+                className="flex-1 min-w-0 w-full px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300" placeholder="color…" />
             </label>
           ))}
           <label className="flex items-center gap-1 bg-white/10 rounded-lg ring-1 ring-white/25 pl-2 pr-1 py-0.5 shrink-0">
@@ -782,23 +772,29 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             <input type="checkbox" checked={doorHasVeta === true} onChange={e => setDoorHasVeta(e.target.checked)} className="w-3 h-3 accent-white" />
             Veta
           </label>
-          <label className="flex items-center gap-1 bg-white/10 rounded-lg pl-2 pr-1 py-0.5 ring-1 ring-white/25 shrink-0">
-            <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }} className="w-3 h-3 accent-white" />
+          <label className="flex items-center gap-1 bg-white/10 rounded-lg pl-2 pr-1 py-0.5 ring-1 ring-white/25 flex-1 min-w-[7rem]">
+            <input type="checkbox" checked={golaAlto} onChange={e => { setGolaAlto(e.target.checked); if (!e.target.checked) setGolaAltoColor(''); }} className="w-3 h-3 accent-white shrink-0" />
             <span className="text-[9px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">G.Alto</span>
             <input type="text" value={golaAltoColor} onChange={e => { setGolaAltoColor(e.target.value); setGolaAlto(true); }}
-              className="w-14 px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-50" placeholder="color…" disabled={!golaAlto} />
+              className="flex-1 min-w-0 w-full px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-50" placeholder="color…" disabled={!golaAlto} />
           </label>
-          <label className="flex items-center gap-1 bg-white/10 rounded-lg pl-2 pr-1 py-0.5 ring-1 ring-white/25 shrink-0">
-            <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }} className="w-3 h-3 accent-white" />
+          <label className="flex items-center gap-1 bg-white/10 rounded-lg pl-2 pr-1 py-0.5 ring-1 ring-white/25 flex-1 min-w-[7rem]">
+            <input type="checkbox" checked={golaBajo} onChange={e => { setGolaBajo(e.target.checked); if (!e.target.checked) setGolaBajoColor(''); }} className="w-3 h-3 accent-white shrink-0" />
             <span className="text-[9px] font-black text-orange-50 uppercase tracking-wide whitespace-nowrap">G.Bajo</span>
             <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
-              className="w-14 px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
+              className="flex-1 min-w-0 w-full px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
           </label>
+          {cartTotal > 0 && (
+            <div className="flex flex-col items-end leading-none ml-1 shrink-0 pl-1">
+              <span className="text-[9px] uppercase text-orange-100/80 font-bold whitespace-nowrap">Total c/IVA</span>
+              <span className="text-base font-black">{eur(totalConIva)}</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Pestañas móviles: Catálogo / Presupuesto ── */}
-      <div className="md:hidden shrink-0 flex border-b border-slate-200 bg-white sticky top-[108px] z-20">
+      <div className="md:hidden shrink-0 flex border-b border-slate-200 bg-white sticky top-[84px] z-20">
         <button onClick={() => setMobileTab('catalog')}
           className={`flex-1 py-2.5 text-xs font-black uppercase flex items-center justify-center gap-1.5 transition-colors ${
             mobileTab === 'catalog' ? 'text-orange-700 border-b-2 border-orange-600 bg-orange-50/60' : 'text-slate-400'}`}>
