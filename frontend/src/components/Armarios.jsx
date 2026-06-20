@@ -418,6 +418,25 @@ const DEFAULT_INTERIOR_COMPONENTS = {
   led: { name: 'LED Interior', price: 180, icon: '💡' },
 };
 
+// Precios por defecto del configurador (modelo por m²). Configurables en MASTER
+// (claves planas armPrice_*). Si en ajustes está vacío, se usa este valor.
+const DEFAULT_ARMARIOS_PRICING = {
+  basePerM2: 450,
+  depthSuppPerMm: 0.5,
+  doorSlidingPerM2: 180,
+  doorFoldingPerM2: 250,
+  endStandard: 85,
+  endPremium: 150,
+  endColumn: 280,
+  shelf: 25,
+  drawer: 85,
+  hangingRod: 35,
+  softClosePerModule: 45,
+  antiFingerprintPerM2: 80,
+  ledPerModule: 120,
+  mirror: 200,
+};
+
 // ========== COMPONENTE PRINCIPAL ==========
 
 const Armarios = ({ state, setState }) => {
@@ -1171,53 +1190,59 @@ const Armarios = ({ state, setState }) => {
 
   // Calcular precios
   const pricing = useMemo(() => {
+    // Precios configurables (MASTER, claves armPrice_*); si faltan, valor por defecto.
+    const sv = state?.settings || {};
+    const P = (k) => {
+      const v = sv['armPrice_' + k];
+      return (v === undefined || v === null || v === '') ? DEFAULT_ARMARIOS_PRICING[k] : Number(v);
+    };
     const { width, height, depth, modules, doorType, endLeft, endRight } = wardrobeConfig;
-    
+
     // Precio base por m²
     const surfaceM2 = (width / 1000) * (height / 1000);
-    let basePrice = surfaceM2 * 450; // 450€/m² base
-    
+    let basePrice = surfaceM2 * P('basePerM2');
+
     // Suplemento por profundidad extra
     if (depth > 600) {
-      basePrice += (depth - 600) * 0.5;
+      basePrice += (depth - 600) * P('depthSuppPerMm');
     }
-    
+
     // Tipo de puerta
     const doorPrices = {
       [DoorType.HINGED]: 0,
-      [DoorType.SLIDING]: surfaceM2 * 180,
-      [DoorType.FOLDING]: surfaceM2 * 250,
+      [DoorType.SLIDING]: surfaceM2 * P('doorSlidingPerM2'),
+      [DoorType.FOLDING]: surfaceM2 * P('doorFoldingPerM2'),
     };
     const doorPrice = doorPrices[doorType] || 0;
-    
+
     // Terminaciones
     const endPrices = {
       [EndType.NONE]: 0,
-      [EndType.STANDARD]: 85,
-      [EndType.PREMIUM]: 150,
-      [EndType.COLUMN]: 280,
+      [EndType.STANDARD]: P('endStandard'),
+      [EndType.PREMIUM]: P('endPremium'),
+      [EndType.COLUMN]: P('endColumn'),
     };
     const endPrice = (endPrices[endLeft] || 0) + (endPrices[endRight] || 0);
-    
+
     // Componentes interiores
     let interiorPrice = 0;
     moduleConfigs.forEach(mod => {
-      interiorPrice += mod.shelves * DEFAULT_INTERIOR_COMPONENTS.shelves.price;
-      interiorPrice += mod.drawers * DEFAULT_INTERIOR_COMPONENTS.drawers.price;
-      interiorPrice += mod.hangingRods * DEFAULT_INTERIOR_COMPONENTS.hangingRods.price;
+      interiorPrice += mod.shelves * P('shelf');
+      interiorPrice += mod.drawers * P('drawer');
+      interiorPrice += mod.hangingRods * P('hangingRod');
     });
-    
+
     // Extras
     let extrasPrice = 0;
-    if (extras.softClose) extrasPrice += modules * 45;
-    if (extras.antiFingerprint) extrasPrice += surfaceM2 * 80;
-    if (extras.led) extrasPrice += modules * 120;
-    if (extras.mirror) extrasPrice += 200;
-    
+    if (extras.softClose) extrasPrice += modules * P('softClosePerModule');
+    if (extras.antiFingerprint) extrasPrice += surfaceM2 * P('antiFingerprintPerM2');
+    if (extras.led) extrasPrice += modules * P('ledPerModule');
+    if (extras.mirror) extrasPrice += P('mirror');
+
     const subtotal = basePrice + doorPrice + endPrice + interiorPrice + extrasPrice;
     const iva = subtotal * (ivaRate / 100);
     const total = subtotal + iva;
-    
+
     return {
       base: basePrice,
       doors: doorPrice,
@@ -1228,7 +1253,7 @@ const Armarios = ({ state, setState }) => {
       iva,
       total
     };
-  }, [wardrobeConfig, moduleConfigs, extras, ivaRate]);
+  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, state?.settings]);
 
   // Handlers
   const updateConfig = (key, value) => {

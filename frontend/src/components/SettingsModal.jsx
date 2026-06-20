@@ -3094,6 +3094,36 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   </div>
                 </div>
               </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Armarios — precios</h3>
+                <p className="text-xs text-slate-500 mb-4">Precios base del configurador de armarios (modelo por m²). Vacío = valor por defecto.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { k: 'basePerM2', label: 'Base €/m²', def: 450 },
+                    { k: 'depthSuppPerMm', label: 'Fondo €/mm (>600)', def: 0.5 },
+                    { k: 'doorSlidingPerM2', label: 'P. corredera €/m²', def: 180 },
+                    { k: 'doorFoldingPerM2', label: 'P. plegable €/m²', def: 250 },
+                    { k: 'endStandard', label: 'Term. estándar €', def: 85 },
+                    { k: 'endPremium', label: 'Term. premium €', def: 150 },
+                    { k: 'endColumn', label: 'Term. columna €', def: 280 },
+                    { k: 'shelf', label: 'Balda €', def: 25 },
+                    { k: 'drawer', label: 'Cajón €', def: 85 },
+                    { k: 'hangingRod', label: 'Barra €', def: 35 },
+                    { k: 'softClosePerModule', label: 'Cierre suave €/mód.', def: 45 },
+                    { k: 'antiFingerprintPerM2', label: 'Anti-huellas €/m²', def: 80 },
+                    { k: 'ledPerModule', label: 'LED €/mód.', def: 120 },
+                    { k: 'mirror', label: 'Espejo €', def: 200 },
+                  ].map(f => (
+                    <div key={f.k}>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{f.label}</label>
+                      <input type="number" step="0.01" placeholder={String(f.def)}
+                        defaultValue={state.settings?.['armPrice_' + f.k] ?? ''}
+                        onChange={async (e) => { try { await settingsAPI.update({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) }); } catch (err) { console.error(err); } }}
+                        className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-mono" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
