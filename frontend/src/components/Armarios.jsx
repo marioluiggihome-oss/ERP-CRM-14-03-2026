@@ -1470,6 +1470,18 @@ const Armarios = ({ state, setState }) => {
     });
   };
 
+  // Enviar el armario como línea al Presupuestador principal (sin borrar su carrito).
+  const sendToBudget = () => {
+    const wc = wardrobeConfig;
+    const doorLbl = wc.doorType === DoorType.SLIDING ? 'correderas' : wc.doorType === DoorType.FOLDING ? 'plegables' : 'abatibles';
+    const name = `Armario a medida ${wc.width}×${wc.height}×${wc.depth}mm · ${wc.modules} mód. · ${wc.numDoors} ${doorLbl}`;
+    setState(p => ({
+      ...p,
+      currentTab: 'presupuestador2',
+      p2PendingLines: [{ code: 'ARMARIO', name, price: Number(pricing.subtotal) || 0, qty: 1 }],
+    }));
+  };
+
   // Exportar despiece a PDF
   const exportDespiecePDF = () => {
     generateArmariosDespiecePDF({
@@ -2023,13 +2035,25 @@ const Armarios = ({ state, setState }) => {
             {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
             {currentProjectId ? 'ACTUALIZAR' : 'GUARDAR'}
           </button>
-          <button 
+          <button
             onClick={exportToPDF}
             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
           >
             <Download size={16} />
             PDF
           </button>
+          {(state?.currentUser?.canUsePresupuestador2 !== false) && (
+            <button
+              onClick={sendToBudget}
+              disabled={!(pricing?.subtotal > 0)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+              data-testid="armarios-enviar-presupuesto-btn"
+              title="Añadir este armario como línea en el Presupuestador"
+            >
+              <Calculator size={16} />
+              ENVIAR AL PRESUPUESTO
+            </button>
+          )}
           
           {/* Mensaje de guardado */}
           {saveMessage && (

@@ -1195,6 +1195,8 @@ const App = () => {
                 logo={state.logo}
                 incomingProject={state.p2IncomingProject}
                 onProjectConsumed={() => setState(p => ({ ...p, p2IncomingProject: null }))}
+                incomingLines={state.p2PendingLines}
+                onLinesConsumed={() => setState(p => ({ ...p, p2PendingLines: null }))}
               /></ErrorBoundary>
             )}
             {state.currentTab === 'visualizer' && state.currentUser?.canUseAIAnalysis && (

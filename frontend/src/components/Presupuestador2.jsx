@@ -41,7 +41,7 @@ const isFlatPanel = (category) => FLAT_PANEL_RE.test(String(category || '').toUp
  * product.zonePoints[tarifa]. PDF con formato del Presupuestador 1 y guardado
  * en proyectos.
  */
-const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed }) => {
+const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed, incomingLines, onLinesConsumed }) => {
   const [libraryCode, setLibraryCode] = useState(() => localStorage.getItem('p2_library') || 'MV');
   const [availableLibraries, setAvailableLibraries] = useState([]);
   const [library, setLibrary] = useState(null);
@@ -299,6 +299,21 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     if (proj.selectedCarcassMaterialId) setSelectedCarcassMaterialId(proj.selectedCarcassMaterialId);
     if (onProjectConsumed) onProjectConsumed();
   }, [incomingProject]);
+
+  // Añadir líneas que llegan de otros módulos (p.ej. un armario) SIN borrar el carrito.
+  useEffect(() => {
+    if (!incomingLines || !incomingLines.length) return;
+    setCart(prev => [...prev, ...incomingLines.map((l, idx) => ({
+      id: `ext-${Date.now()}-${idx}`,
+      code: l.code || 'MANUAL',
+      name: l.name || 'Línea',
+      price: Number(l.price) || 0,
+      qty: Number(l.qty) || 1,
+      manual: true,
+    }))]);
+    if (onLinesConsumed) onLinesConsumed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingLines]);
 
   // Descuento comercial del usuario, para el modo "COSTO fábrica".
   const discountPct = currentUser?.discountMontada ?? currentUser?.commercialDiscount ?? 0;
