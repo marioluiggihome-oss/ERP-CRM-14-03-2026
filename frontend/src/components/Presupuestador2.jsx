@@ -355,6 +355,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   useEffect(() => {
     if (!family) return;
     const key = groupKeyOf(family);
+    if (family === key) return; // la familia base no auto-despliega sus sub-familias
     setExpandedGroups(prev => (prev[key] ? prev : { ...prev, [key]: true }));
   }, [family]);
 
@@ -851,17 +852,26 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                 <div className="flex md:flex-col gap-1.5 flex-wrap">
                   {familyGroups.map(g => {
                     const single = g.members.length === 1;
+                    // Sub-familias = miembros del grupo distintos de la familia base (cuyo
+                    // nombre coincide con la cabecera). Así "BAJO" no se repite dentro de "BAJO".
+                    const hasBase = g.members.some(([n]) => n === g.key);
+                    const subs = g.members.filter(([n]) => n !== g.key);
+                    const expandable = !single && subs.length > 0;
+                    const expanded = !!expandedGroups[g.key];
+                    // Familia que selecciona la cabecera: el único miembro (single) o la base.
+                    const headerFamily = single ? g.members[0][0] : (hasBase ? g.key : null);
+                    const isHeaderActive = !!headerFamily && family === headerFamily;
                     const isActiveGroup = g.members.some(([n]) => n === family);
-                    const expanded = single || !!expandedGroups[g.key];
+                    const toggleExpand = () => setExpandedGroups(p => ({ ...p, [g.key]: !p[g.key] }));
                     return (
                       <div key={g.key} className="md:w-full">
                         <button
                           onClick={() => {
-                            if (single) { setFamily(g.members[0][0]); setSearch(''); }
-                            else setExpandedGroups(p => ({ ...p, [g.key]: !p[g.key] }));
+                            if (headerFamily) { setFamily(headerFamily); setSearch(''); }
+                            else if (expandable) toggleExpand();
                           }}
                           className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
-                            single && family === g.members[0][0]
+                            isHeaderActive
                               ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-200'
                               : isActiveGroup ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-orange-50'}`}>
                           <span className="flex items-center gap-1.5 min-w-0">
@@ -870,13 +880,19 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                           </span>
                           <span className="flex items-center gap-1 shrink-0">
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                              single && family === g.members[0][0] ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{g.total}</span>
-                            {!single && (expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
+                              isHeaderActive ? 'bg-white/25' : 'bg-slate-100 text-slate-400'}`}>{g.total}</span>
+                            {expandable && (
+                              <span role="button" tabIndex={0} title={expanded ? 'Contraer' : 'Desplegar sub-familias'}
+                                onClick={(e) => { e.stopPropagation(); toggleExpand(); }}
+                                className="p-0.5 -m-0.5 rounded hover:bg-black/10 cursor-pointer">
+                                {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                              </span>
+                            )}
                           </span>
                         </button>
-                        {!single && expanded && (
+                        {expandable && expanded && (
                           <div className="ml-3 mt-1 mb-1 flex md:flex-col gap-1 flex-wrap border-l-2 border-orange-100 pl-2">
-                            {g.members.map(([name, count]) => (
+                            {subs.map(([name, count]) => (
                               <button key={name} onClick={() => { setFamily(name); setSearch(''); }}
                                 className={`text-left px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
                                   family === name ? 'bg-orange-600 text-white' : 'text-slate-500 hover:bg-orange-50'}`}>
