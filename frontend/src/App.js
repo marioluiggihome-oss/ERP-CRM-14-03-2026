@@ -939,7 +939,7 @@ const App = () => {
                     )}
 
                     {/* Mis Pedidos - Visible para todos los usuarios NO tienda - DEBAJO DE PRESUPUESTOS */}
-                    {!state.currentUser?.isTienda && (
+                    {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos !== false && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -951,7 +951,7 @@ const App = () => {
                     )}
 
                     {/* Archivo - NO visible para Tienda/Punto de Venta */}
-                    {!state.currentUser?.isTienda && (
+                    {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo !== false && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -962,7 +962,7 @@ const App = () => {
                     )}
 
                     {/* Facturación - Solo admin, gerente y director comercial */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.canAccessInvoices !== false && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'invoices'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'invoices' ? 'bg-orange-500 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -974,7 +974,7 @@ const App = () => {
                     )}
 
                     {/* Rentabilidad por proyecto - admin/gerente/director comercial */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
+                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.canAccessRentabilidad !== false && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'rentabilidad'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'rentabilidad' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1010,7 +1010,7 @@ const App = () => {
                     )}
 
                     {/* Panel de Mando - Solo admin y gerente */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && (
+                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && state.currentUser?.canAccessMando !== false && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'command'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'command' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}

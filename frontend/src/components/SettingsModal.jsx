@@ -2199,8 +2199,45 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             </label>
                           </div>
                         </div>
+
+                        {/* ── Grupo: Otros módulos ── */}
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">📂 Otros módulos</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessPedidos !== false}
+                                onChange={(e) => setUserForm({...userForm, canAccessPedidos: e.target.checked})}
+                                className="w-4 h-4 rounded accent-orange-600" />
+                              <span className="text-xs font-bold text-slate-700">Pedidos</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessArchivo !== false}
+                                onChange={(e) => setUserForm({...userForm, canAccessArchivo: e.target.checked})}
+                                className="w-4 h-4 rounded accent-blue-600" />
+                              <span className="text-xs font-bold text-slate-700">Archivo</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessInvoices !== false}
+                                onChange={(e) => setUserForm({...userForm, canAccessInvoices: e.target.checked})}
+                                className="w-4 h-4 rounded accent-orange-600" />
+                              <span className="text-xs font-bold text-slate-700">G. Comercial</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessRentabilidad !== false}
+                                onChange={(e) => setUserForm({...userForm, canAccessRentabilidad: e.target.checked})}
+                                className="w-4 h-4 rounded accent-emerald-600" />
+                              <span className="text-xs font-bold text-slate-700">Rentabilidad</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input type="checkbox" checked={userForm.canAccessMando !== false}
+                                onChange={(e) => setUserForm({...userForm, canAccessMando: e.target.checked})}
+                                className="w-4 h-4 rounded accent-slate-600" />
+                              <span className="text-xs font-bold text-slate-700">Panel Mando</span>
+                            </label>
+                          </div>
+                        </div>
                       </div>
-                      
+
                       {/* Checkbox especial para usuario SOLO fábrica */}
                       <div className="mt-3 pt-3 border-t border-purple-200">
                         <label className="flex items-center gap-3 cursor-pointer bg-emerald-50 px-3 py-2 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200">
