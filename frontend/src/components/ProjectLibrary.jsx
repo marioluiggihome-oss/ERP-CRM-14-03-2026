@@ -152,7 +152,7 @@ const ProjectLibrary = ({ state, setState }) => {
       (p.customerName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
       (p.budgetNumber?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     return statusMatch && searchMatch;
-  });
+  }).sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
 
   // Contar por estado
   const counts = {
