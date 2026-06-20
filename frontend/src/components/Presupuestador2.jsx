@@ -31,7 +31,8 @@ const groupKeyOf = (name) => {
 // corte: ni de viga ni de medidas (ancho/alto/fondo). Se detectan por el INICIO
 // del nombre de familia para no confundir con muebles que contienen la palabra
 // (p.ej. BAJO_PUERTA_CAJON o MEDIA_PUERTA_GAVETA sí son muebles con corte).
-const FLAT_PANEL_RE = /^(COSTADO|LATERAL|REGLETA|BALDA|PUERTA|VITRINA|REJILLA|TECHO|ALTILLOS_DECORATIVOS|ELEMENTOS_LINEALES)/;
+// NOTA: los ALTILLOS_DECORATIVOS NO van aquí: sí llevan incremento por corte de viga.
+const FLAT_PANEL_RE = /^(COSTADO|LATERAL|REGLETA|BALDA|PUERTA|VITRINA|REJILLA|TECHO|ELEMENTOS_LINEALES)/;
 const isFlatPanel = (category) => FLAT_PANEL_RE.test(String(category || '').toUpperCase());
 
 /**
