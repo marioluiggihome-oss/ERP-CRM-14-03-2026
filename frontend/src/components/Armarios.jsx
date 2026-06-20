@@ -1756,7 +1756,13 @@ const Armarios = ({ state, setState }) => {
     const exteriorColor = getColorByName(wardrobeConfig.exteriorColor);
     const numDoors = wardrobeConfig.numDoors || modules;
     const doorWidth = 100 / numDoors; // Porcentaje de ancho por puerta
-    
+    // Proporciones reales: el armario se dibuja a escala (ancho:alto reales)
+    // dentro del lienzo (aspect 4/3), en vez de un 80%×85% fijo.
+    const ar = (width || 1) / (height || 1);
+    let wardrobeW = 88 * 0.75 * ar; // % del ancho del contenedor con alto 88%
+    let wardrobeH = 88;
+    if (wardrobeW > 92) { wardrobeW = 92; wardrobeH = 92 / (0.75 * ar); }
+
     return (
       <div className="relative w-full aspect-[4/3] bg-gradient-to-b from-slate-100 to-slate-200 rounded-xl overflow-hidden border border-slate-300 shadow-inner">
         {/* Pared de fondo */}
@@ -1772,9 +1778,9 @@ const Armarios = ({ state, setState }) => {
         {/* Armario */}
         <div 
           className="absolute left-1/2 bottom-4 -translate-x-1/2 rounded-t-lg shadow-2xl border border-slate-400 overflow-hidden"
-          style={{ 
-            width: '80%', 
-            height: '85%',
+          style={{
+            width: `${wardrobeW}%`,
+            height: `${wardrobeH}%`,
             backgroundColor: getColorByName(wardrobeConfig.interiorColor).hex,
             boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
           }}
@@ -1832,7 +1838,7 @@ const Armarios = ({ state, setState }) => {
                   
                   {/* Baldas */}
                   <div className="flex-1 flex flex-col justify-evenly py-8">
-                    {[...Array(Math.min(mod.shelves, 6))].map((_, j) => (
+                    {[...Array(Math.max(0, mod.shelves || 0))].map((_, j) => (
                       <div key={j} className="h-0.5 bg-slate-400/60 mx-0.5" />
                     ))}
                   </div>
@@ -1840,7 +1846,7 @@ const Armarios = ({ state, setState }) => {
                   {/* Cajones en la parte inferior */}
                   {mod.drawers > 0 && (
                     <div className="absolute bottom-1 left-0.5 right-0.5 space-y-0.5">
-                      {[...Array(Math.min(mod.drawers, 4))].map((_, j) => (
+                      {[...Array(Math.max(0, mod.drawers || 0))].map((_, j) => (
                         <div key={j} className="h-2 bg-slate-300 rounded-sm border border-slate-400/50 flex items-center justify-center shadow-sm">
                           <div className="w-3 h-0.5 bg-slate-500 rounded" />
                         </div>
