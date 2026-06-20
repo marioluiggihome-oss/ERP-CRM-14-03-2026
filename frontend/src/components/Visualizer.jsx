@@ -206,14 +206,35 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 {selectedImages.length} {selectedImages.length === 1 ? 'pared' : 'paredes'}
               </span>
             )}
-            {/* Indicador de biblioteca activa */}
-            <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-black ${
-              state?.currentLibrary === 'MV' 
-                ? 'bg-emerald-100 text-emerald-700' 
-                : 'bg-blue-100 text-blue-700'
-            }`}>
-              Catálogo: {state?.currentLibrary || 'ZC'}
-            </span>
+            {/* Catálogo: selector ZC/MV si el usuario tiene ambas activas; si no, indicador */}
+            {(() => {
+              const allowed = state?.allowedLibraries || [];
+              const hasBoth = allowed.includes('ZC') && allowed.includes('MV');
+              const current = state?.currentLibrary || allowed[0] || 'ZC';
+              if (hasBoth) {
+                return (
+                  <span className="ml-auto flex items-center gap-1 bg-slate-100 rounded-full p-0.5" title="Catálogo con el que se leerán los muebles del plano">
+                    <span className="text-[9px] font-black text-slate-400 uppercase pl-2">Catálogo</span>
+                    {['ZC', 'MV'].map(lib => (
+                      <button key={lib} type="button" onClick={() => setState(p => ({ ...p, currentLibrary: lib }))}
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-black transition-colors ${
+                          current === lib
+                            ? (lib === 'MV' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white')
+                            : 'text-slate-500 hover:bg-white'}`}>
+                        {lib}
+                      </button>
+                    ))}
+                  </span>
+                );
+              }
+              return (
+                <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-black ${
+                  current === 'MV' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                }`}>
+                  Catálogo: {current}
+                </span>
+              );
+            })()}
           </h3>
           
           {selectedImages.length === 0 ? (
