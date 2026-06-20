@@ -1525,8 +1525,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.canManageArticles && <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[9px] font-black">INVENTARIO</span>}
                               {user.canAccessCRM && <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-[9px] font-black">CRM</span>}
                               {user.canUseDigitalizador && <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-[9px] font-black">DIGITALIZADOR</span>}
-                              {user.canUsePresupuestador1 === false && <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-[9px] font-black">SIN PRESUP. 1</span>}
-                              {user.canUsePresupuestador2 && <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black">PRESUP. 2</span>}
+                              {user.canUsePresupuestador1 === false && <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-[9px] font-black">SIN PRESUP. 2</span>}
+                              {user.canUsePresupuestador2 && <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black">PRESUP. 1</span>}
                               {user.canAccessFabrica && (
                                 <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black">
                                   FÁBRICA{user.factoryId && factories.find(f => f.id === user.factoryId) ? ` (${factories.find(f => f.id === user.factoryId).code})` : ''}
@@ -2045,18 +2045,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
-                            checked={userForm.canUsePresupuestador1 !== false}
-                            onChange={(e) => setUserForm({...userForm, canUsePresupuestador1: e.target.checked})}
-                            className="w-4 h-4 rounded accent-brand"
+                            checked={!!userForm.canUsePresupuestador2}
+                            onChange={(e) => setUserForm({...userForm, canUsePresupuestador2: e.target.checked})}
+                            className="w-4 h-4 rounded accent-emerald-600"
                           />
                           <span className="text-xs font-bold text-slate-700">Presupuestador 1</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                           <input
                             type="checkbox"
-                            checked={!!userForm.canUsePresupuestador2}
-                            onChange={(e) => setUserForm({...userForm, canUsePresupuestador2: e.target.checked})}
-                            className="w-4 h-4 rounded accent-emerald-600"
+                            checked={userForm.canUsePresupuestador1 !== false}
+                            onChange={(e) => setUserForm({...userForm, canUsePresupuestador1: e.target.checked})}
+                            className="w-4 h-4 rounded accent-brand"
                           />
                           <span className="text-xs font-bold text-slate-700">Presupuestador 2</span>
                         </label>

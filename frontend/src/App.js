@@ -392,7 +392,7 @@ const App = () => {
     // (compatibilidad con usuarios antiguos); P2 requiere autorización explícita.
     const _canP1 = user.isAdmin || user.canUsePresupuestador1 !== false;
     const _canP2 = user.isAdmin || !!user.canUsePresupuestador2;
-    const _defaultBudgetTab = _canP1 ? 'budget' : (_canP2 ? 'presupuestador2' : 'budget');
+    const _defaultBudgetTab = _canP2 ? 'presupuestador2' : 'budget';
     // Calendario (vista Día): lo más práctico en la calle = ver las visitas de hoy
     const _landingTab = _floorOnly
       ? 'luiggifloor'
@@ -916,26 +916,26 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Presupuestador 1 - requiere autorización por usuario (independiente del 2) */}
-                    {(state.currentUser?.canUsePresupuestador1 !== false || state.currentUser?.isAdmin) && (
-                    <button
-                      onClick={() => setState(p => ({...p, currentTab: 'budget'}))}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                    >
-                      <FileText size={18}/>
-                      <span className="text-[7px] font-black uppercase tracking-widest">Presupuesto</span>
-                    </button>
-                    )}
-
-                    {/* Presupuestador 2 (MV por tarifa) - requiere autorización por usuario */}
+                    {/* Presupuestador 1 (MV por tarifa) - principal, abre por defecto */}
                     {(state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin) && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'presupuestador2'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador2' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <Receipt size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Presup. 2</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Presup. 1</span>
                       </button>
+                    )}
+
+                    {/* Presupuestador 2 (el anterior) - requiere autorización por usuario */}
+                    {(state.currentUser?.canUsePresupuestador1 !== false || state.currentUser?.isAdmin) && (
+                    <button
+                      onClick={() => setState(p => ({...p, currentTab: 'budget'}))}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                    >
+                      <FileText size={18}/>
+                      <span className="text-[7px] font-black uppercase tracking-widest">Presup. 2</span>
+                    </button>
                     )}
 
                     {/* Mis Pedidos - Visible para todos los usuarios NO tienda - DEBAJO DE PRESUPUESTOS */}

@@ -218,7 +218,7 @@ const ProjectLibrary = ({ state, setState }) => {
     // Reabrir en el presupuestador con el que se creó el expediente.
     const isP2 = isPresupuestador2(project);
     const canP2 = state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin;
-    const dest = isP2 && canP2 ? 'Presupuestador 2' : 'mesa de trabajo';
+    const dest = isP2 && canP2 ? 'Presupuestador 1' : 'mesa de trabajo';
     if (!window.confirm(`¿Cargar proyecto "${project.customerName || project.budgetNumber}" en ${dest}?`)) return;
 
     if (isP2 && canP2) {
@@ -535,7 +535,7 @@ const ProjectLibrary = ({ state, setState }) => {
                     <div className="flex gap-2 ml-4">
                       <button onClick={() => loadProject(project)}
                         className={`p-3 text-white rounded-xl transition-all shadow-md ${isP2 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-                        title={isP2 ? 'Abrir en Presupuestador 2' : 'Cargar proyecto'}>
+                        title={isP2 ? 'Abrir en Presupuestador 1' : 'Cargar proyecto'}>
                         <Eye size={18} />
                       </button>
                       <button onClick={() => cloneProject(project)}

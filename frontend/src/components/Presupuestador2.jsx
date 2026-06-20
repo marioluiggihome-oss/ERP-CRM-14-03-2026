@@ -687,7 +687,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             }
           </div>
           <div className="shrink-0 hidden sm:block">
-            <h1 className="text-sm font-black uppercase leading-none tracking-tight">Presupuestador 2</h1>
+            <h1 className="text-sm font-black uppercase leading-none tracking-tight">Presupuestador 1</h1>
             <p className="text-[9px] text-orange-100/80 flex items-center gap-0.5 mt-0.5 whitespace-nowrap">
               <Boxes size={9} /> {products.length} muebles
             </p>
