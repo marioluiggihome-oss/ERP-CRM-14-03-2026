@@ -27,6 +27,13 @@ const groupKeyOf = (name) => {
   return first;
 };
 
+// Familias "planas" (frentes/paneles/accesorios) que NO llevan incremento por
+// corte: ni de viga ni de medidas (ancho/alto/fondo). Se detectan por el INICIO
+// del nombre de familia para no confundir con muebles que contienen la palabra
+// (p.ej. BAJO_PUERTA_CAJON o MEDIA_PUERTA_GAVETA sí son muebles con corte).
+const FLAT_PANEL_RE = /^(COSTADO|LATERAL|REGLETA|BALDA|PUERTA|VITRINA|REJILLA|TECHO|ALTILLOS_DECORATIVOS|ELEMENTOS_LINEALES)/;
+const isFlatPanel = (category) => FLAT_PANEL_RE.test(String(category || '').toUpperCase());
+
 /**
  * Presupuestador 2 — navegación por familias del catálogo MV (Muebles Valencia)
  * con selector de GRUPO DE TARIFA (T1…T21). El precio de cada mueble sale de
@@ -459,21 +466,22 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     .map(x => x.id === id ? { ...x, hasVigaCut: !x.hasVigaCut } : x));
 
   // Extras de precio por línea (medidas especiales + corte de viga + armazón),
-  // replicando el Presupuestador 1. No aplica a COSTADOS/REGLETAS ni a manuales.
+  // replicando el Presupuestador 1. Los paneles planos (costados, baldas, puertas,
+  // vitrinas, regletas, techos, elementos lineales…) NO llevan incremento por corte
+  // (ni de viga ni de medidas). Las líneas manuales tampoco.
   const extrasOf = useCallback((it) => {
     if (it.manual) return 0;
     const prod = products.find(p => p.id === it.id);
     if (!prod) return 0;
-    const cat = (prod.category || '').toUpperCase();
-    const excluded = cat.includes('COSTADO') || cat.includes('REGLETA');
+    const flat = isFlatPanel(prod.category);
     const inc = librarySpecialIncrements?.[libraryCode] || { width: 0, height: 0, depth: 0 };
     let extra = 0;
-    if (!excluded) {
+    if (!flat) {
       if (it.customWidth !== '' && Number(it.customWidth) !== Number(prod.width)) extra += Number(inc.width) || 0;
       if (it.customHeight !== '' && Number(it.customHeight) !== Number(prod.height)) extra += Number(inc.height) || 0;
       if (it.customDepth !== '' && Number(it.customDepth) !== Number(prod.depth)) extra += Number(inc.depth) || 0;
+      if (it.hasVigaCut) extra += Number(libraryVigaCutIncrements?.[libraryCode]) || 0;
     }
-    if (it.hasVigaCut) extra += Number(libraryVigaCutIncrements?.[libraryCode]) || 0;
     const mat = carcassMaterials.find(m => m.id === selectedCarcassMaterialId);
     extra += Number(mat?.fixedIncrement) || 0;
     return extra;
@@ -1207,6 +1215,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                         { lbl: 'Fo', field: 'customDepth', val: it.customDepth, orig: od },
                       ];
                       const vigaInc = Number(libraryVigaCutIncrements?.[libraryCode]) || 0;
+                      const flat = isFlatPanel(prod?.category);
                       return (
                         <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100 flex-wrap">
                           {dims.map(d => {
@@ -1221,11 +1230,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                               </label>
                             );
                           })}
-                          <button onClick={() => toggleViga(it.id)} title={`Corte de viga${vigaInc ? ` (+${vigaInc}€)` : ''}`}
-                            className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border transition-colors ${
-                              it.hasVigaCut ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
-                            Viga
-                          </button>
+                          {!flat && (
+                            <button onClick={() => toggleViga(it.id)} title={`Corte de viga${vigaInc ? ` (+${vigaInc}€)` : ''}`}
+                              className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border transition-colors ${
+                                it.hasVigaCut ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                              Viga
+                            </button>
+                          )}
                         </div>
                       );
                     })()}
