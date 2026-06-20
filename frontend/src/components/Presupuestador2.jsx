@@ -50,6 +50,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [cartCollapsed, setCartCollapsed] = useState(false);
   const [configCollapsed, setConfigCollapsed] = useState(false); // ocultar fila de tarifa/acabados
   const [actionsCollapsed, setActionsCollapsed] = useState(false); // barra inferior plegable (totales + acciones)
+  const cartListRef = useRef(null);   // auto-scroll al último mueble añadido
+  const prevCartLen = useRef(0);
   const [familiesWidth, setFamiliesWidth] = useState(224);
   const [cartWidth, setCartWidth] = useState(416);
   const isResizingFamilies = useRef(false);
@@ -420,6 +422,14 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       }];
     });
   };
+
+  // Auto-scroll: al añadir un mueble, baja la lista del presupuesto para verlo.
+  useEffect(() => {
+    if (cart.length > prevCartLen.current && cartListRef.current) {
+      cartListRef.current.scrollTop = cartListRef.current.scrollHeight;
+    }
+    prevCartLen.current = cart.length;
+  }, [cart.length]);
 
   const addManualLine = () => {
     if (!manualLine.name.trim()) return;
@@ -1148,7 +1158,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             </div>
 
             {/* Líneas */}
-            <div className="flex-1 overflow-y-auto px-3 py-2">
+            <div ref={cartListRef} className="flex-1 overflow-y-auto px-3 py-2">
               {cart.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center text-slate-300 py-10">
                   <Receipt size={44} className="mb-2 opacity-50" />
@@ -1158,7 +1168,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               )}
               <div className="space-y-2">
                 {cart.map(it => (
-                  <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-orange-200 transition-colors">
+                  <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2 hover:border-orange-200 transition-colors">
                     <div className="flex items-start gap-2">
                       {!it.manual && (
                         <div className="shrink-0 w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 text-orange-600 flex items-center justify-center mt-0.5">
@@ -1173,10 +1183,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
-                        <button onClick={() => setQty(it.id, -1)} className="w-8 h-8 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm active:scale-95 transition"><Minus size={15} /></button>
+                        <button onClick={() => setQty(it.id, -1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm active:scale-95 transition"><Minus size={12} /></button>
                         <input type="number" min="1" value={it.qty} onChange={e => setQtyValue(it.id, e.target.value)} onFocus={e => e.target.select()}
-                          className="w-11 h-8 text-center font-black text-sm bg-white rounded-md shadow-sm border-0 focus:outline-none focus:ring-1 focus:ring-orange-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                        <button onClick={() => setQty(it.id, 1)} className="w-8 h-8 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm active:scale-95 transition"><Plus size={15} /></button>
+                          className="w-9 h-6 text-center font-black text-sm bg-white rounded-md shadow-sm border-0 focus:outline-none focus:ring-1 focus:ring-orange-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                        <button onClick={() => setQty(it.id, 1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm active:scale-95 transition"><Plus size={12} /></button>
                       </div>
                       <div className="flex items-center gap-2">
                         {it.manual ? (
@@ -1198,15 +1208,15 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                       ];
                       const vigaInc = Number(libraryVigaCutIncrements?.[libraryCode]) || 0;
                       return (
-                        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100 flex-wrap">
                           {dims.map(d => {
                             const changed = d.val !== '' && d.val != null && Number(d.val) !== Number(d.orig);
                             return (
-                              <label key={d.field} className="flex items-center gap-0.5" title={`Original: ${d.orig ?? '–'} ${measureUnit}`}>
-                                <span className="text-[9px] font-black text-slate-400 uppercase">{d.lbl}</span>
+                              <label key={d.field} className="flex items-center gap-1" title={`Original: ${d.orig ?? '–'} ${measureUnit}`}>
+                                <span className="text-[10px] font-black text-slate-400 uppercase">{d.lbl}</span>
                                 <input type="number" step="0.1" value={d.val ?? ''}
                                   onChange={e => setItemDim(it.id, d.field, e.target.value)}
-                                  className={`w-11 px-1 py-0.5 text-[10px] font-bold text-center rounded-md border outline-none ${
+                                  className={`w-12 px-1 py-1 text-xs font-bold text-center rounded-md border outline-none ${
                                     changed ? 'border-orange-500 text-orange-600 bg-orange-50' : 'border-slate-200 text-slate-600'}`} />
                               </label>
                             );
@@ -1220,7 +1230,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                       );
                     })()}
                     {(
-                      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100">
                         {String(it.code || '').includes('D/I') && (
                           <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
                             {['D', 'I'].map(h => (
