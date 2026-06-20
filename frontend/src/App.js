@@ -1055,6 +1055,18 @@ const App = () => {
                       </button>
                     )}
                     
+                    {/* Diseñador de Armarios */}
+                    {state.currentUser?.canAccessArmarios && !state.currentUser?.isTienda && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'armarios'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'armarios' ? 'bg-cyan-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="armarios-nav-btn"
+                      >
+                        <Box size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Armarios</span>
+                      </button>
+                    )}
+
                     {/* Informes: ahora vive DENTRO de RENTAB (pestaña "Generador de informes") */}
                     
                     {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
