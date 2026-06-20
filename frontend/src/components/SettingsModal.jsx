@@ -3048,6 +3048,25 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   ))}
                 </div>
               </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Email (envío de pedidos)</h3>
+                <p className="text-xs text-slate-500 mb-4">Para que los pedidos confirmados se envíen por email. Si se deja vacío, el pedido se confirma igual pero sin email.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email remitente</label>
+                    <input type="text" placeholder="no-reply@luiggihome.es" defaultValue={state.settings?.emailSender || ''}
+                      onChange={async (e) => { try { await settingsAPI.update({ emailSender: e.target.value }); } catch (err) { console.error(err); } }}
+                      className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-medium" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SendGrid API Key</label>
+                    <input type="password" autoComplete="new-password"
+                      placeholder={state.settings?.sendgridConfigured ? '•••••••• (ya configurada)' : 'SG.xxxxx'}
+                      onChange={async (e) => { if (!e.target.value) return; try { await settingsAPI.update({ sendgridApiKey: e.target.value }); } catch (err) { console.error(err); } }}
+                      className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-mono" />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

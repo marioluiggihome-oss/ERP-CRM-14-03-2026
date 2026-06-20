@@ -93,6 +93,8 @@ class SettingsUpdate(BaseModel):
     emailNotifications: Optional[bool] = None
     emailSender: Optional[str] = None
     emailSenderName: Optional[str] = None
+    sendgridApiKey: Optional[str] = None
+    resendApiKey: Optional[str] = None
     backupRetentionDays: Optional[int] = None
 
     class Config:
@@ -105,6 +107,11 @@ async def get_settings(current_user: dict = Depends(get_current_user)):
     settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
     if not settings:
         return {}
+    # No exponer secretos al frontend: solo indicar si están configurados.
+    settings["sendgridConfigured"] = bool(settings.get("sendgridApiKey"))
+    settings["resendConfigured"] = bool(settings.get("resendApiKey"))
+    settings.pop("sendgridApiKey", None)
+    settings.pop("resendApiKey", None)
     return settings
 
 

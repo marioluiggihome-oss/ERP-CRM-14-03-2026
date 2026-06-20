@@ -60,7 +60,9 @@ async def confirm_order(
     Crea automaticamente una orden de fabricacion.
     """
     try:
-        sendgrid_key = os.environ.get('SENDGRID_API_KEY')
+        # Clave de SendGrid: primero de los ajustes (MASTER > Settings), luego del entorno.
+        _email_settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+        sendgrid_key = _email_settings.get('sendgridApiKey') or os.environ.get('SENDGRID_API_KEY')
         # No cortar aquí si falta SendGrid: el pedido DEBE guardarse igualmente.
         # El envío de email es best-effort (SendGrid -> Resend) más abajo; si no hay
         # ninguno configurado, el pedido se confirma igual y se avisa de que no se envió.
@@ -169,9 +171,8 @@ async def confirm_order(
         </html>
         """
         
-        # Get sender email from settings
-        settings = await db.settings.find_one({"id": "global_settings"}, {"_id": 0})
-        sender_email = settings.get("senderEmail", "no-reply@luiggihome.com") if settings else "no-reply@luiggihome.com"
+        # Email remitente desde ajustes (reutiliza el doc ya leído arriba)
+        sender_email = _email_settings.get("emailSender") or _email_settings.get("senderEmail") or "no-reply@luiggihome.com"
         
         # Create SendGrid message
         message = Mail(
@@ -592,8 +593,8 @@ async def send_order_copy(order_id: str, request: SendCopyRequest):
         """
         
         # Obtener email del remitente desde configuración
-        settings = await db.settings.find_one({"id": "global_settings"}, {"_id": 0})
-        sender_email = settings.get("senderEmail", "no-reply@luiggihome.com") if settings else "no-reply@luiggihome.com"
+        settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
+        sender_email = settings.get("emailSender") or settings.get("senderEmail") or "no-reply@luiggihome.com"
         
         # Crear mensaje
         message = Mail(
