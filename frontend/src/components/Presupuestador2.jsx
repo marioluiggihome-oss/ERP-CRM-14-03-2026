@@ -712,7 +712,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       {/* ── Cabecera ── */}
       <div className="shrink-0 bg-gradient-to-r from-orange-700 via-orange-600 to-amber-600 text-white shadow-lg sticky top-0 z-30">
         {/* Fila principal */}
-        <div className="px-3 sm:px-4 py-2 flex items-center gap-2">
+        <div className="pl-5 sm:pl-7 pr-3 sm:pr-4 py-2 flex items-center gap-2">
           {/* Logo */}
           <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
             {logo
@@ -729,9 +729,9 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
 
           {/* Cliente + Ref — Cliente con ancho acotado para que no ocupe toda la barra */}
           <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Cliente…"
-            className="flex-1 min-w-0 max-w-[16rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
+            className="flex-1 min-w-0 max-w-[22rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
           <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Ref…"
-            className="w-20 sm:w-28 shrink-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
+            className="w-24 sm:w-40 shrink-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
 
           {/* Botones utilitarios — con etiqueta (en pantallas grandes) para que se entienda su función */}
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
@@ -1191,7 +1191,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               )}
               <div className="space-y-2">
                 {cart.map(it => (
-                  <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-2 hover:border-orange-200 transition-colors">
+                  <div key={it.id} className="bg-white border border-slate-200 rounded-xl p-1.5 hover:border-orange-200 transition-colors">
                     <div className="flex items-start gap-2">
                       {!it.manual && (
                         <div className="shrink-0 w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 text-orange-600 flex items-center justify-center mt-0.5">
@@ -1204,7 +1204,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                       </div>
                       <button onClick={() => removeItem(it.id)} className="text-slate-300 hover:text-red-500 shrink-0"><Trash2 size={13} /></button>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mt-1.5">
                       <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
                         <button onClick={() => setQty(it.id, -1)} className="w-6 h-6 rounded-md bg-white hover:bg-slate-50 flex items-center justify-center shadow-sm active:scale-95 transition"><Minus size={12} /></button>
                         <input type="number" min="1" value={it.qty} onChange={e => setQtyValue(it.id, e.target.value)} onFocus={e => e.target.select()}
@@ -1232,7 +1232,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                       const vigaInc = Number(libraryVigaCutIncrements?.[libraryCode]) || 0;
                       const flat = isFlatPanel(prod?.category);
                       return (
-                        <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100 flex-wrap">
                           {dims.map(d => {
                             const changed = d.val !== '' && d.val != null && Number(d.val) !== Number(d.orig);
                             return (
@@ -1256,7 +1256,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                       );
                     })()}
                     {(
-                      <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100">
                         {String(it.code || '').includes('D/I') && (
                           <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
                             {['D', 'I'].map(h => (
