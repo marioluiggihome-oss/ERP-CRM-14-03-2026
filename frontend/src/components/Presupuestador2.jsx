@@ -312,7 +312,6 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       manual: true,
     }))]);
     if (onLinesConsumed) onLinesConsumed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingLines]);
 
   // Descuento comercial del usuario, para el modo "COSTO fábrica".
