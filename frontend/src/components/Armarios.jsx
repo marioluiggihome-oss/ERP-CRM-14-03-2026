@@ -431,6 +431,7 @@ const DEFAULT_ARMARIOS_PRICING = {
   shelf: 25,
   drawer: 85,
   hangingRod: 35,
+  maletero: 55,
   softClosePerModule: 45,
   antiFingerprintPerM2: 80,
   ledPerModule: 120,
@@ -1089,6 +1090,20 @@ const Armarios = ({ state, setState }) => {
       });
     }
     
+    // Maletero: tapa horizontal superior en cada módulo que lo lleve
+    const totalMaleteros = moduleConfigs.filter(m => m.maletero).length;
+    if (totalMaleteros > 0) {
+      const malWidth = (moduleWidth - 4) / 1000;
+      const malDepth = (depth - 20) / 1000;
+      boards.tablero18mm.pieces.push({
+        name: 'Maletero (tapa)',
+        dimensions: `${Math.round(moduleWidth - 4)} x ${depth - 20}`,
+        quantity: totalMaleteros,
+        areaUnit: malWidth * malDepth,
+        totalArea: malWidth * malDepth * totalMaleteros
+      });
+    }
+
     boards.tablero18mm.totalArea = boards.tablero18mm.pieces.reduce((sum, p) => sum + p.totalArea, 0);
     boards.tablero18mm.boardsNeeded = Math.ceil((boards.tablero18mm.totalArea * 1.15) / BOARD_AREA); // 15% desperdicio
     
@@ -1227,9 +1242,10 @@ const Armarios = ({ state, setState }) => {
     // Componentes interiores
     let interiorPrice = 0;
     moduleConfigs.forEach(mod => {
-      interiorPrice += mod.shelves * P('shelf');
-      interiorPrice += mod.drawers * P('drawer');
-      interiorPrice += mod.hangingRods * P('hangingRod');
+      interiorPrice += (mod.shelves || 0) * P('shelf');
+      interiorPrice += (mod.drawers || 0) * P('drawer');
+      interiorPrice += (mod.hangingRods || 0) * P('hangingRod');
+      if (mod.maletero) interiorPrice += P('maletero');
     });
 
     // Extras
@@ -1269,6 +1285,11 @@ const Armarios = ({ state, setState }) => {
     setModuleConfigs(prev => {
       const updated = [...prev];
       updated[moduleIndex] = { ...updated[moduleIndex], [key]: value };
+      // Si se cambia un contador estructural, se descarta el orden manual para
+      // que la distribución se reconstruya a partir de los contadores.
+      if (['shelves', 'drawers', 'hangingRods', 'maletero'].includes(key)) {
+        delete updated[moduleIndex].layout;
+      }
       return updated;
     });
   };
@@ -1276,12 +1297,62 @@ const Armarios = ({ state, setState }) => {
   const updateModuleExtra = (moduleIndex, extraKey, value) => {
     setModuleConfigs(prev => {
       const updated = [...prev];
-      updated[moduleIndex] = { 
-        ...updated[moduleIndex], 
+      updated[moduleIndex] = {
+        ...updated[moduleIndex],
         extras: { ...updated[moduleIndex].extras, [extraKey]: value }
       };
       return updated;
     });
+  };
+
+  // ===== Distribución de elementos por módulo (orden de arriba a abajo) =====
+  // Tokens estructurales: 'maletero' | 'rod' (barra) | 'shelf' (balda) | 'drawer' (cajón).
+  // Mantiene sincronizados los contadores (para precio/despiece/render).
+  const ELEMENT_META = {
+    maletero: { label: 'Maletero', icon: '🧳' },
+    rod:      { label: 'Barra',    icon: '👔' },
+    shelf:    { label: 'Balda',    icon: '📏' },
+    drawer:   { label: 'Cajón',    icon: '🗄️' },
+  };
+  const getModuleLayout = (mod) => {
+    if (Array.isArray(mod?.layout) && mod.layout.length) return mod.layout;
+    const l = [];
+    if (mod?.maletero) l.push('maletero');
+    for (let i = 0; i < (mod?.hangingRods || 0); i++) l.push('rod');
+    for (let i = 0; i < (mod?.shelves || 0); i++) l.push('shelf');
+    for (let i = 0; i < (mod?.drawers || 0); i++) l.push('drawer');
+    return l;
+  };
+  const countsFromLayout = (layout) => ({
+    maletero: layout.includes('maletero'),
+    hangingRods: layout.filter(t => t === 'rod').length,
+    shelves: layout.filter(t => t === 'shelf').length,
+    drawers: layout.filter(t => t === 'drawer').length,
+  });
+  const applyLayout = (moduleIndex, newLayout) => {
+    setModuleConfigs(prev => prev.map((m, i) => i === moduleIndex
+      ? { ...m, layout: newLayout, ...countsFromLayout(newLayout) }
+      : m));
+  };
+  const addElement = (moduleIndex, token) => {
+    const cur = getModuleLayout(moduleConfigs[moduleIndex]);
+    if (token === 'maletero') {
+      if (cur.includes('maletero')) return;
+      applyLayout(moduleIndex, ['maletero', ...cur]);
+    } else {
+      applyLayout(moduleIndex, [...cur, token]);
+    }
+  };
+  const removeElement = (moduleIndex, pos) => {
+    const cur = getModuleLayout(moduleConfigs[moduleIndex]);
+    applyLayout(moduleIndex, cur.filter((_, i) => i !== pos));
+  };
+  const moveElement = (moduleIndex, pos, dir) => {
+    const cur = [...getModuleLayout(moduleConfigs[moduleIndex])];
+    const j = pos + dir;
+    if (j < 0 || j >= cur.length) return;
+    [cur[pos], cur[j]] = [cur[j], cur[pos]];
+    applyLayout(moduleIndex, cur);
   };
 
   const getColorByIdFn = (colorId) => {
@@ -1686,6 +1757,9 @@ const Armarios = ({ state, setState }) => {
           drawers: m.drawers || 0,
           hangingRods: m.hangingRods || 0,
           hangingHeight: m.hangingHeight || 0,
+          maletero: !!m.maletero,
+          // Orden real de las piezas (de arriba a abajo) para un render fiel.
+          layout: getModuleLayout(m),
           shoesRack: m.extras?.shoesRack || false,
           trousersRack: m.extras?.trousersRack || false,
           mirrorDoor: m.extras?.mirror || false
@@ -1872,42 +1946,41 @@ const Armarios = ({ state, setState }) => {
                   </div>
                 )}
                 
-                {/* Representación interior */}
-                <div className="h-full p-0.5 flex flex-col justify-between relative">
-                  {/* Barra de colgar doble altura */}
-                  {mod.hangingRods >= 2 && (
-                    <>
-                      <div className="absolute left-1 right-1 top-3 h-0.5 bg-gray-500 rounded-full shadow" />
-                      <div className="absolute left-1 right-1 top-1/2 h-0.5 bg-gray-500 rounded-full shadow" />
-                    </>
-                  )}
-                  
-                  {/* Barra de colgar simple */}
-                  {mod.hangingRods === 1 && (
-                    <div className="absolute left-1 right-1 top-3 h-0.5 bg-gray-500 rounded-full shadow" />
-                  )}
-                  
-                  {/* Baldas */}
-                  <div className="flex-1 flex flex-col justify-evenly py-8">
-                    {[...Array(Math.max(0, mod.shelves || 0))].map((_, j) => (
-                      <div key={j} className="h-0.5 bg-slate-400/60 mx-0.5" />
-                    ))}
+                {/* Representación interior por ORDEN (getModuleLayout): de arriba
+                    a abajo, refleja el orden real de las piezas y el maletero. */}
+                <div className="h-full p-0.5 flex flex-col gap-px relative">
+                  {/* Indicador de módulo */}
+                  <div className="absolute top-0.5 left-0.5 z-10 text-[7px] font-black text-slate-400 bg-white/60 px-0.5 rounded pointer-events-none">
+                    M{i + 1}
                   </div>
-                  
-                  {/* Cajones en la parte inferior */}
-                  {mod.drawers > 0 && (
-                    <div className="absolute bottom-1 left-0.5 right-0.5 space-y-0.5">
-                      {[...Array(Math.max(0, mod.drawers || 0))].map((_, j) => (
-                        <div key={j} className="h-2 bg-slate-300 rounded-sm border border-slate-400/50 flex items-center justify-center shadow-sm">
-                          <div className="w-3 h-0.5 bg-slate-500 rounded" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Extras icons */}
+
+                  {getModuleLayout(mod).map((tok, j) => {
+                    if (tok === 'maletero') return (
+                      <div key={j} className="h-3 bg-amber-200/70 border-y border-amber-500/60 flex items-center justify-center shrink-0" title="Maletero">
+                        <span className="text-[6px] leading-none">🧳</span>
+                      </div>
+                    );
+                    if (tok === 'rod') return (
+                      <div key={j} className="relative h-4 shrink-0" title="Barra de colgar">
+                        <div className="absolute left-1 right-1 top-1 h-0.5 bg-gray-500 rounded-full shadow" />
+                      </div>
+                    );
+                    if (tok === 'drawer') return (
+                      <div key={j} className="h-2 bg-slate-300 rounded-sm border border-slate-400/50 flex items-center justify-center shadow-sm shrink-0" title="Cajón">
+                        <div className="w-3 h-0.5 bg-slate-500 rounded" />
+                      </div>
+                    );
+                    // balda
+                    return (
+                      <div key={j} className="flex-1 min-h-[5px] flex items-end" title="Balda">
+                        <div className="w-full h-0.5 bg-slate-400/70 mx-0.5" />
+                      </div>
+                    );
+                  })}
+
+                  {/* Extras icons (accesorios) */}
                   {mod.extras && Object.keys(mod.extras).filter(k => mod.extras[k]).length > 0 && (
-                    <div className="absolute bottom-1 right-0.5 flex flex-wrap gap-0.5 justify-end">
+                    <div className="flex flex-wrap gap-0.5 justify-end pr-0.5 shrink-0">
                       {mod.extras.shoesRack && <span className="text-[6px]">👟</span>}
                       {mod.extras.trousersRack && <span className="text-[6px]">👖</span>}
                       {mod.extras.jewelryTray && <span className="text-[6px]">💎</span>}
@@ -1915,11 +1988,6 @@ const Armarios = ({ state, setState }) => {
                       {mod.extras.pulloutBasket && <span className="text-[6px]">🧺</span>}
                     </div>
                   )}
-                  
-                  {/* Indicador de módulo */}
-                  <div className="absolute top-0.5 left-0.5 text-[7px] font-black text-slate-400 bg-white/50 px-0.5 rounded">
-                    M{i + 1}
-                  </div>
                 </div>
               </div>
             ))}
@@ -2415,6 +2483,46 @@ const Armarios = ({ state, setState }) => {
                   >+</button>
                 </div>
               </div>
+            </div>
+
+            {/* Distribución del módulo: maletero + orden de piezas (mover arriba/abajo) */}
+            <div className="mt-4 pt-3 border-t border-purple-200">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Distribución (de arriba a abajo)</h4>
+                <label className="flex items-center gap-1 cursor-pointer text-[10px] font-bold text-slate-700" title="Maletero (compartimento superior)">
+                  <input type="checkbox"
+                    checked={!!moduleConfigs[selectedModule]?.maletero}
+                    onChange={(e) => updateModuleConfig(selectedModule, 'maletero', e.target.checked)}
+                    className="w-3 h-3 rounded accent-amber-500" />
+                  🧳 Maletero
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {[['shelf', '📏 Balda'], ['drawer', '🗄️ Cajón'], ['rod', '👔 Barra'], ['maletero', '🧳 Maletero']].map(([tok, lbl]) => (
+                  <button key={tok} onClick={() => addElement(selectedModule, tok)}
+                    className="px-2 py-1 rounded-lg bg-white border border-purple-200 text-[10px] font-bold text-slate-700 hover:border-purple-400 transition-colors">
+                    + {lbl}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-1">
+                {getModuleLayout(moduleConfigs[selectedModule]).map((tok, pos, arr) => (
+                  <div key={pos} className="flex items-center gap-1 bg-white rounded-lg border border-slate-200 px-2 py-1">
+                    <span className="text-[10px]">{ELEMENT_META[tok]?.icon}</span>
+                    <span className="text-[10px] font-bold text-slate-700 flex-1">{ELEMENT_META[tok]?.label}</span>
+                    <button onClick={() => moveElement(selectedModule, pos, -1)} disabled={pos === 0}
+                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-xs font-bold disabled:opacity-30" title="Subir">↑</button>
+                    <button onClick={() => moveElement(selectedModule, pos, 1)} disabled={pos === arr.length - 1}
+                      className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-xs font-bold disabled:opacity-30" title="Bajar">↓</button>
+                    <button onClick={() => removeElement(selectedModule, pos)}
+                      className="w-5 h-5 rounded bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold" title="Quitar">✕</button>
+                  </div>
+                ))}
+                {getModuleLayout(moduleConfigs[selectedModule]).length === 0 && (
+                  <p className="text-[10px] text-slate-400 italic">Módulo vacío. Añade piezas con los botones de arriba.</p>
+                )}
+              </div>
+              <p className="text-[9px] text-slate-400 mt-1">Mueve con ↑/↓. El orden se refleja en el dibujo y en el despiece.</p>
             </div>
 
             {/* Accesorios extra del módulo */}

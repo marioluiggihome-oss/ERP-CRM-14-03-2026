@@ -431,10 +431,29 @@ async def ia_render_armario(request: IARenderRequest):
             "folding": "PUERTAS PLEGABLES (bi-fold doors)"
         }.get(request.doorType, "PUERTAS CORREDERAS")
         
+        # Etiqueta legible para cada token del orden de piezas (de arriba a abajo).
+        _tok_label = {
+            'maletero': "top 'maletero' storage box (full-width compartment at the very top)",
+            'rod': "horizontal chrome hanging rod",
+            'shelf': "horizontal shelf",
+            'drawer': "soft-close drawer",
+        }
+
         # Describir interior DETALLADAMENTE por modulo
         interior_desc = []
         for i, mod in enumerate(request.moduleConfigs):
+            # Si llega el orden explicito (layout), describir de ARRIBA a ABAJO.
+            layout = mod.get('layout') or []
+            if layout:
+                seq = [_tok_label.get(t, t) for t in layout]
+                order_txt = "; ".join(f"{n+1}) {d}" for n, d in enumerate(seq))
+                interior_desc.append(
+                    f"Module {i+1} (from left), TOP to BOTTOM in this EXACT order: {order_txt}."
+                )
+                continue
             items = []
+            if mod.get('maletero'):
+                items.append("a top 'maletero' storage box")
             if mod.get('hangingRods', 0) > 0:
                 rod_count = mod['hangingRods']
                 items.append(f"{rod_count} chrome hanging rod{'s' if rod_count > 1 else ''}")
