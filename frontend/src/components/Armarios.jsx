@@ -1500,10 +1500,19 @@ const Armarios = ({ state, setState }) => {
     const wc = wardrobeConfig;
     const doorLbl = wc.doorType === DoorType.SLIDING ? 'correderas' : wc.doorType === DoorType.FOLDING ? 'plegables' : 'abatibles';
     const name = `Armario a medida ${wc.width}×${wc.height}×${wc.depth}mm · ${wc.modules} mód. · ${wc.numDoors} ${doorLbl}`;
+    const finish = getColorByName(wc.exteriorColor).name;       // color exterior del armario
+    const interiorFinish = getColorByName(wc.interiorColor).name; // color interior
     setState(p => ({
       ...p,
       currentTab: 'presupuestador2',
-      p2PendingLines: [{ code: 'ARMARIO', name, price: Number(pricing.subtotal) || 0, qty: 1 }],
+      // Línea rica: el armario lleva su tipo, medidas REALES y acabado (color de
+      // armario), para que el pedido/fábrica no use defaults de cocina.
+      p2PendingLines: [{
+        code: 'ARMARIO', name, price: Number(pricing.subtotal) || 0, qty: 1,
+        itemType: 'armario',
+        width: wc.width, height: wc.height, depth: wc.depth,
+        finish, interiorFinish,
+      }],
     }));
   };
 

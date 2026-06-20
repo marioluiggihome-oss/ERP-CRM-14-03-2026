@@ -11,6 +11,12 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
   const allProducts = catalogs
     .flatMap(c => c.products.map(p => ({ ...p, catalogId: c.id })));
 
+  // Pedido de armarios: usa acabado de armario (color), no specs de cocina.
+  const _items = Array.isArray(items) ? items : [];
+  const isArmarioReport = _items.length > 0 && _items.every(i => i.itemType === 'armario');
+  const armarioFinish = _items.find(i => i.itemType === 'armario')?.finish
+    || _items.find(i => i.itemType === 'armario')?.material || finish;
+
   const handleExportPDF = () => {
     generateManufacturingPDF({
       budgetNumber: state.budgetNumber,
@@ -107,9 +113,12 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
             <p className="text-[9px] font-black text-indigo-300 uppercase mb-1">Cliente</p>
             <p className="text-lg font-black text-indigo-950">{state.customerName || 'Sin especificar'}</p>
           </div>
-          <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-            <p className="text-[9px] font-black text-orange-300 uppercase mb-1">Acabado Global</p>
-            <p className="text-sm font-black text-orange-950">{finish}</p>
+          <div className={`p-4 rounded-xl border ${isArmarioReport ? 'bg-purple-50 border-purple-100' : 'bg-orange-50 border-orange-100'}`}>
+            <p className={`text-[9px] font-black uppercase mb-1 flex items-center gap-2 ${isArmarioReport ? 'text-purple-300' : 'text-orange-300'}`}>
+              {isArmarioReport && <span className="px-1.5 py-0.5 rounded bg-purple-600 text-white tracking-wider">🚪 Armario</span>}
+              Acabado Global
+            </p>
+            <p className={`text-sm font-black ${isArmarioReport ? 'text-purple-950' : 'text-orange-950'}`}>{isArmarioReport ? armarioFinish : finish}</p>
           </div>
         </div>
 
@@ -162,6 +171,9 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
                     <td className="p-4 font-black text-indigo-900 text-lg">{item.quantity}</td>
                     <td className="p-4 font-black text-indigo-600 uppercase text-xs">
                       {code}
+                      {item.itemType === 'armario' && (
+                        <span className="ml-1 px-1 py-0.5 rounded bg-purple-100 text-purple-700 text-[8px] tracking-wider">ARMARIO</span>
+                      )}
                     </td>
                     <td className="p-4 font-bold text-indigo-900 text-sm">{name}</td>
                     <td className="p-4 text-center font-mono text-xs font-bold text-indigo-800">
@@ -188,6 +200,18 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
         {/* Especificaciones de Materiales */}
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
           <h3 className="text-sm font-black text-slate-900 uppercase mb-3">Especificaciones de Materiales</h3>
+          {isArmarioReport ? (
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div>
+                <span className="font-black text-slate-500 uppercase">Tipo:</span>
+                <span className="ml-2 font-bold text-purple-700">Armario a medida</span>
+              </div>
+              <div>
+                <span className="font-black text-slate-500 uppercase">Acabado / Color:</span>
+                <span className="ml-2 font-bold text-slate-900">{armarioFinish}</span>
+              </div>
+            </div>
+          ) : (
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
               <span className="font-black text-slate-500 uppercase">Armazón/Casco:</span>
@@ -222,6 +246,7 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Footer */}

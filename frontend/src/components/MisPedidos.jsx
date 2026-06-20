@@ -386,6 +386,16 @@ const MisPedidos = ({ currentUser }) => {
                     <div>
                       <div className="flex items-center gap-3">
                         <span className="text-lg font-black text-slate-800">#{order.budgetNumber}</span>
+                        {/* Etiqueta tipo de pedido: Armario / Cocina / Mixto */}
+                        {order.orderKind && (
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                            order.orderKind === 'armario' ? 'bg-purple-100 text-purple-700'
+                            : order.orderKind === 'mixto' ? 'bg-amber-100 text-amber-700'
+                            : 'bg-orange-100 text-orange-700'
+                          }`}>
+                            {order.orderKind === 'armario' ? '🚪 Armario' : order.orderKind === 'mixto' ? 'Mixto' : '🍳 Cocina'}
+                          </span>
+                        )}
                         {order.projectReference && (
                           <span className="text-sm text-slate-500">• {order.projectReference}</span>
                         )}
@@ -504,17 +514,28 @@ const MisPedidos = ({ currentUser }) => {
                           <FileText size={16} className="text-orange-500" />
                           Especificaciones
                         </h4>
-                        <div className="text-sm space-y-1">
-                          {order.specifications.globalFinish && (
-                            <p><span className="text-slate-500">Acabado:</span> <span className="font-bold">{order.specifications.globalFinish}</span></p>
-                          )}
-                          {order.specifications.carcassColor && (
-                            <p><span className="text-slate-500">Armazón:</span> <span className="font-bold">{order.specifications.carcassColor}</span></p>
-                          )}
-                          {order.specifications.doorColorLow && (
-                            <p><span className="text-slate-500">Puertas Bajos:</span> <span className="font-bold">{order.specifications.doorColorLow}</span></p>
-                          )}
-                        </div>
+                        {order.orderKind === 'armario' ? (
+                          // Pedido de armarios: acabado de armario (color), NO specs de cocina.
+                          <div className="text-sm space-y-1">
+                            <p><span className="text-slate-500">Tipo:</span> <span className="font-bold text-purple-700">Armario a medida</span></p>
+                            {(() => {
+                              const fin = order.items?.find(i => i.itemType === 'armario')?.finish;
+                              return fin ? <p><span className="text-slate-500">Acabado:</span> <span className="font-bold">{fin}</span></p> : null;
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="text-sm space-y-1">
+                            {order.specifications.globalFinish && (
+                              <p><span className="text-slate-500">Acabado:</span> <span className="font-bold">{order.specifications.globalFinish}</span></p>
+                            )}
+                            {order.specifications.carcassColor && (
+                              <p><span className="text-slate-500">Armazón:</span> <span className="font-bold">{order.specifications.carcassColor}</span></p>
+                            )}
+                            {order.specifications.doorColorLow && (
+                              <p><span className="text-slate-500">Puertas Bajos:</span> <span className="font-bold">{order.specifications.doorColorLow}</span></p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

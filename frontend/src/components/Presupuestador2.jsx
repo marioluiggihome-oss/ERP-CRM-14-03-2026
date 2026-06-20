@@ -310,6 +310,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       price: Number(l.price) || 0,
       qty: Number(l.qty) || 1,
       manual: true,
+      // Datos que trae el módulo de origen (p.ej. armario): tipo, medidas y acabado.
+      itemType: l.itemType || null,
+      finish: l.finish || null,
+      interiorFinish: l.interiorFinish || null,
+      customWidth: l.width != null ? Number(l.width) : '',
+      customHeight: l.height != null ? Number(l.height) : '',
+      customDepth: l.depth != null ? Number(l.depth) : '',
     }))]);
     if (onLinesConsumed) onLinesConsumed();
   }, [incomingLines]);
@@ -536,12 +543,15 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       manualDescription: it.name,
       customReference: it.code,
       manualPoints: pts,
-      customWidth: it.manual ? 0 : (it.customWidth !== '' ? Number(it.customWidth) : (prod?.width || 0)),
-      customHeight: it.manual ? 0 : (it.customHeight !== '' ? Number(it.customHeight) : (prod?.height || 0)),
-      customDepth: it.manual ? 0 : (it.customDepth !== '' ? Number(it.customDepth) : (prod?.depth || 0)),
+      // Las líneas manuales con medidas (p.ej. armario) las conservan; el resto 0.
+      customWidth: it.customWidth !== '' && it.customWidth != null ? Number(it.customWidth) : (it.manual ? 0 : (prod?.width || 0)),
+      customHeight: it.customHeight !== '' && it.customHeight != null ? Number(it.customHeight) : (it.manual ? 0 : (prod?.height || 0)),
+      customDepth: it.customDepth !== '' && it.customDepth != null ? Number(it.customDepth) : (it.manual ? 0 : (prod?.depth || 0)),
       hasVigaCut: !!it.hasVigaCut,
       openingDirection: it.hand === 'D' ? 'Derecha' : it.hand === 'I' ? 'Izquierda' : '',
       notes: it.notes || '',
+      itemType: it.itemType || null,
+      finish: it.finish || null,
     };
   }), [cart, products, pointValue, unitFull]);
 
@@ -672,6 +682,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       formData.append('items', JSON.stringify(buildMontadaItems().map(it => ({
         name: it.manualDescription, code: it.customReference, qty: it.quantity,
         price: (it.manualPoints || 0) * pointValue,
+        width: it.customWidth || 0, height: it.customHeight || 0, depth: it.customDepth || 0,
+        itemType: it.itemType || null, finish: it.finish || null,
       }))));
       formData.append('doorColorLow', doorColorLow);
       formData.append('doorColorHigh', doorColorHigh);

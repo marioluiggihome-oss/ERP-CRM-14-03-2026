@@ -72,7 +72,17 @@ async def confirm_order(
             items_list = json.loads(items) if items else []
         except json.JSONDecodeError:
             items_list = []
-        
+
+        # Tipo de pedido: armario / cocina / mixto (para etiquetar y no aplicar
+        # specs de cocina a los armarios).
+        _kinds = {(it.get("itemType") or "cocina") for it in items_list}
+        if _kinds == {"armario"}:
+            order_kind = "armario"
+        elif "armario" in _kinds:
+            order_kind = "mixto"
+        else:
+            order_kind = "cocina"
+
         # =============================================
         # PRE-PROCESAR ARCHIVOS ADJUNTOS (leer una vez y reutilizar)
         # =============================================
@@ -251,6 +261,7 @@ async def confirm_order(
             "notes": notes,
             "items": items_list,
             "itemsCount": len(items_list),
+            "orderKind": order_kind,
             "attachmentsCount": len(processed_attachments),
             "attachments": saved_attachments,  # Guardar adjuntos para reenvío
             "confirmedAt": datetime.now(timezone.utc).isoformat(),
@@ -304,11 +315,21 @@ async def confirm_order(
             
             for item in items_list:
                 item_id = f"moi-{uuid.uuid4().hex[:8]}"
-                width = float(item.get("width", item.get("customWidth", 60)))
-                height = float(item.get("height", item.get("customHeight", 70)))
-                depth = float(item.get("depth", item.get("customDepth", 58)))
+                is_armario = (item.get("itemType") == "armario")
+                # Si la línea trae medidas (armario), se usan; si no, defaults de cocina.
+                def _dim(*keys, default):
+                    for k in keys:
+                        v = item.get(k)
+                        if v not in (None, "", 0, "0"):
+                            return float(v)
+                    return float(default)
+                width = _dim("width", "customWidth", default=(0 if is_armario else 60))
+                height = _dim("height", "customHeight", default=(0 if is_armario else 70))
+                depth = _dim("depth", "customDepth", default=(0 if is_armario else 58))
                 qty = int(item.get("quantity", 1))
-                
+                # El armario usa su propio acabado (color de armario), no el armazón de cocina.
+                item_material = (item.get("finish") if is_armario else carcassColor) or carcassColor or ""
+
                 mfg_items.append({
                     "id": item_id,
                     "productCode": item.get("code", item.get("productCode", "")),
@@ -317,9 +338,10 @@ async def confirm_order(
                     "width": width,
                     "height": height,
                     "depth": depth,
-                    "material": carcassColor or "",
-                    "doorFinish": doorColorLow or doorColorHigh or "",
-                    "notes": "",
+                    "material": item_material,
+                    "doorFinish": (item.get("finish") if is_armario else (doorColorLow or doorColorHigh)) or "",
+                    "itemType": item.get("itemType") or "cocina",
+                    "notes": "Armario a medida" if is_armario else "",
                     "status": "pending",
                     "fabricationStatus": "pending"
                 })
@@ -345,6 +367,7 @@ async def confirm_order(
                 "actualDeliveryDate": None,
                 "status": "confirmed",
                 "priority": "normal",
+                "orderKind": order_kind,
                 "items": mfg_items,
                 "totalPieces": total_pieces,
                 "totalArea": round(total_area, 3),
