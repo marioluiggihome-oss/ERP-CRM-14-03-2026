@@ -390,8 +390,8 @@ const App = () => {
     const _crmOnly = !user.isAdmin && !!user.crmOnly && _canCRM;
     // Permisos de presupuestadores (independientes). P1 por defecto permitido
     // (compatibilidad con usuarios antiguos); P2 requiere autorización explícita.
-    const _canP1 = user.isAdmin || user.canUsePresupuestador1 !== false;
-    const _canP2 = user.isAdmin || user.canUsePresupuestador2 !== false;
+    const _canP1 = user.canUsePresupuestador1 !== false;
+    const _canP2 = user.canUsePresupuestador2 !== false;
     const _defaultBudgetTab = _canP2 ? 'presupuestador2' : 'budget';
     // Calendario (vista Día): lo más práctico en la calle = ver las visitas de hoy
     const _landingTab = _floorOnly
@@ -917,7 +917,7 @@ const App = () => {
                     )}
 
                     {/* Presupuestador (MV por tarifa) - principal, abre por defecto */}
-                    {(state.currentUser?.canUsePresupuestador2 !== false || state.currentUser?.isAdmin) && (
+                    {(state.currentUser?.canUsePresupuestador2 !== false) && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'presupuestador2'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador2' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -928,7 +928,7 @@ const App = () => {
                     )}
 
                     {/* Presupuestador 2 (el anterior) - requiere autorización por usuario */}
-                    {(state.currentUser?.canUsePresupuestador1 !== false || state.currentUser?.isAdmin) && (
+                    {(state.currentUser?.canUsePresupuestador1 !== false) && (
                     <button
                       onClick={() => setState(p => ({...p, currentTab: 'budget'}))}
                       className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -998,7 +998,7 @@ const App = () => {
                     )}
 
                     {/* Luiggi Floor - división de suelo SPC (solo con permiso canAccessFloor) */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.canAccessFloor === true) && (
+                    {(state.currentUser?.canAccessFloor === true) && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'luiggifloor'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'luiggifloor' ? 'bg-amber-500 text-zinc-900 shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1044,7 +1044,7 @@ const App = () => {
                       </button>
                     )}
                     {/* Kitchen 3D Designer - Panel de proyectos de cocinas */}
-                    {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && !state.currentUser?.isTienda && (
+                    {(state.currentUser?.canUseKitchenDesigner) && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'kitchenDesigner'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'kitchenDesigner' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1070,7 +1070,7 @@ const App = () => {
                     )}
                     
                     {/* Agenda de Montajes - Solo si está habilitada en settings Y usuario tiene permiso */}
-                    {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (                      <button 
+                    {state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (                      <button 
                         onClick={() => setState(p => ({...p, currentTab: 'montajes'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'montajes' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="montajes-nav-btn"
@@ -1123,7 +1123,7 @@ const App = () => {
               
               {/* Panel Maestro: un ADMIN siempre lo ve (aunque tenga ademas rol de
                   fabrica/tienda). Un Comercial lo ve si no es Tienda ni solo Fabrica. */}
-              {(state.currentUser?.isAdmin || (state.currentUser?.isRepresentative && !state.currentUser?.isTienda && !state.currentUser?.isFabrica)) && state.currentUser?.canAccessMaster !== false && (
+              {(state.currentUser?.isAdmin || (state.currentUser?.isRepresentative && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && state.currentUser?.canAccessMaster !== false)) && (
                 <button 
                     onClick={() => setState(p => ({...p, showSettings: true}))} 
                     className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1165,7 +1165,7 @@ const App = () => {
 
           <main className="flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10">
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
-            {state.currentTab === 'budget' && (state.currentUser?.canUsePresupuestador1 !== false || state.currentUser?.isAdmin) && (
+            {state.currentTab === 'budget' && (state.currentUser?.canUsePresupuestador1 !== false) && (
               <ErrorBoundary>
               <BudgetTable
                 items={state.currentModule === 'montada' ? state.budgetItemsMontada : state.budgetItemsDespiece} 
@@ -1177,7 +1177,7 @@ const App = () => {
               />
               </ErrorBoundary>
             )}
-            {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 !== false || state.currentUser?.isAdmin) && (
+            {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 !== false) && (
               <ErrorBoundary><Presupuestador2
                 currentUser={state.currentUser}
                 logo={state.logo}
@@ -1201,7 +1201,7 @@ const App = () => {
             {state.currentTab === 'armarios' && state.currentUser?.canAccessArmarios && (
               <Armarios state={state} setState={setState} />
             )}
-            {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isAdmin || state.currentUser?.isMontador) && (
+            {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (
               <AgendaMontajes currentUser={state.currentUser} />
             )}
             {state.currentTab === 'agendaNegocios' && state.currentUser?.isPrescriptor && (
@@ -1222,7 +1222,7 @@ const App = () => {
               <AIRenderStudio state={state} />
             )}
             {/* Kitchen 3D Designer - Panel de proyectos */}
-            {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && (
+            {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner) && (
               <KitchenDesigner3D state={state} />
             )}
 

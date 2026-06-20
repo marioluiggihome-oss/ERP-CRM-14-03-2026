@@ -61,8 +61,9 @@ async def confirm_order(
     """
     try:
         sendgrid_key = os.environ.get('SENDGRID_API_KEY')
-        if not sendgrid_key:
-            raise HTTPException(status_code=500, detail="SendGrid API key not configured. Configure it in MASTER > Settings.")
+        # No cortar aquí si falta SendGrid: el pedido DEBE guardarse igualmente.
+        # El envío de email es best-effort (SendGrid -> Resend) más abajo; si no hay
+        # ninguno configurado, el pedido se confirma igual y se avisa de que no se envió.
         
         # Parse items
         try:
