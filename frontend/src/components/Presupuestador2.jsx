@@ -693,46 +693,53 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             </p>
           </div>
 
-          {/* Cliente + Ref en fila, crecen */}
+          {/* Cliente + Ref — Cliente con ancho acotado para que no ocupe toda la barra */}
           <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Cliente…"
-            className="flex-1 min-w-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
+            className="flex-1 min-w-0 max-w-[16rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
           <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Ref…"
             className="w-20 sm:w-28 shrink-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
 
-          {/* Botones utilitarios */}
+          {/* Botones utilitarios — con etiqueta (en pantallas grandes) para que se entienda su función */}
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-            <button onClick={() => setConfigCollapsed(v => !v)} title={configCollapsed ? 'Mostrar tarifa y acabados' : 'Ocultar tarifa y acabados'}
-              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">
+            <button onClick={() => setConfigCollapsed(v => !v)} title={configCollapsed ? 'Mostrar la fila de tarifa y acabados' : 'Ocultar la fila de tarifa y acabados'}
+              className="flex items-center gap-1 px-2 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-[10px] font-bold">
               {configCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+              <span className="hidden lg:inline">Acabados</span>
             </button>
-            <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad (cm/mm)"
-              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">
+            <button onClick={() => setUseMillimeters(v => !v)} title="Cambiar unidad de medida (cm / mm)"
+              className="flex items-center gap-1 px-2 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-[10px] font-bold">
               <Ruler size={13} />
+              <span className="hidden lg:inline">{useMillimeters ? 'mm' : 'cm'}</span>
             </button>
-            <button onClick={() => setCatalogView(v => v === 'list' ? 'icons' : 'list')} title={catalogView === 'list' ? 'Vista iconos' : 'Vista lista'}
-              className="p-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">
+            <button onClick={() => setCatalogView(v => v === 'list' ? 'icons' : 'list')} title={catalogView === 'list' ? 'Ver el catálogo con iconos' : 'Ver el catálogo en lista'}
+              className="flex items-center gap-1 px-2 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-[10px] font-bold">
               {catalogView === 'list' ? <LayoutGrid size={13} /> : <List size={13} />}
+              <span className="hidden lg:inline">Vista</span>
             </button>
             {discountPct > 0 && (
-              <button onClick={() => setShowDistributorPrice(v => !v)}
-                className={`p-1.5 rounded-lg text-xs font-bold transition-colors ${showDistributorPrice ? 'bg-orange-500' : 'bg-white/15 hover:bg-white/25'}`}>
+              <button onClick={() => setShowDistributorPrice(v => !v)} title={showDistributorPrice ? 'Mostrando precio de distribuidor (clic para PVP)' : 'Mostrando PVP (clic para precio distribuidor)'}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${showDistributorPrice ? 'bg-orange-500' : 'bg-white/15 hover:bg-white/25'}`}>
                 {showDistributorPrice ? <Unlock size={13} /> : <Lock size={13} />}
+                <span className="hidden lg:inline">{showDistributorPrice ? 'Distrib.' : 'PVP'}</span>
               </button>
             )}
-            <button onClick={() => setShowNomenclatura(true)} title="Nomenclatura"
-              className="hidden sm:flex p-1.5 bg-white/15 hover:bg-white/25 rounded-lg">
+            <button onClick={() => setShowNomenclatura(true)} title="Nomenclatura: códigos e iconos de los muebles"
+              className="hidden sm:flex items-center gap-1 px-2 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-[10px] font-bold">
               <BookOpen size={13} />
+              <span className="hidden lg:inline">Nomenclatura</span>
             </button>
             {currentUser?.isAdmin && libraryCode === 'MV' && (
-              <button onClick={importTariffs} disabled={importing} title="Importar tarifas MV (admin)"
-                className="hidden sm:flex p-1.5 bg-white/15 hover:bg-white/25 rounded-lg disabled:opacity-60">
+              <button onClick={importTariffs} disabled={importing} title="Importar las tarifas oficiales MV a los precios (admin)"
+                className="hidden sm:flex items-center gap-1 px-2 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-[10px] font-bold disabled:opacity-60">
                 {importing ? <Loader size={13} className="animate-spin" /> : <Boxes size={13} />}
+                <span className="hidden lg:inline">Importar</span>
               </button>
             )}
             {currentUser?.isAdmin && libraryCode === 'ZC' && (
-              <button onClick={fixCostadosDepth} disabled={importing} title="Corregir paneles ZC (admin)"
-                className="hidden sm:flex p-1.5 bg-white/15 hover:bg-white/25 rounded-lg disabled:opacity-60">
+              <button onClick={fixCostadosDepth} disabled={importing} title="Corregir el grueso de los paneles ZC (admin)"
+                className="hidden sm:flex items-center gap-1 px-2 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-[10px] font-bold disabled:opacity-60">
                 {importing ? <Loader size={13} className="animate-spin" /> : <Boxes size={13} />}
+                <span className="hidden lg:inline">Paneles ZC</span>
               </button>
             )}
           </div>
