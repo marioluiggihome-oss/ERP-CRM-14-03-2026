@@ -687,7 +687,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             }
           </div>
           <div className="shrink-0 hidden sm:block">
-            <h1 className="text-sm font-black uppercase leading-none tracking-tight">Presupuestador 1</h1>
+            <h1 className="text-sm font-black uppercase leading-none tracking-tight">Presupuestador</h1>
             <p className="text-[9px] text-orange-100/80 flex items-center gap-0.5 mt-0.5 whitespace-nowrap">
               <Boxes size={9} /> {products.length} muebles
             </p>
@@ -741,6 +741,12 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                 {importing ? <Loader size={13} className="animate-spin" /> : <Boxes size={13} />}
                 <span className="hidden lg:inline">Paneles ZC</span>
               </button>
+            )}
+            {cartTotal > 0 && (
+              <div className="flex flex-col items-end leading-none ml-1 shrink-0 pl-1 sm:pl-2">
+                <span className="text-[8px] sm:text-[9px] uppercase text-orange-100/80 font-bold whitespace-nowrap">Total c/IVA</span>
+                <span className="text-sm sm:text-base font-black whitespace-nowrap">{eur(totalConIva)}</span>
+              </div>
             )}
           </div>
         </div>
@@ -801,12 +807,6 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             <input type="text" value={golaBajoColor} onChange={e => { setGolaBajoColor(e.target.value); setGolaBajo(true); }}
               className="flex-1 min-w-0 w-full px-1.5 py-0.5 bg-white rounded-md text-[10px] font-bold text-black placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-300 disabled:opacity-50" placeholder="color…" disabled={!golaBajo} />
           </label>
-          {cartTotal > 0 && (
-            <div className="flex flex-col items-end leading-none ml-1 shrink-0 pl-1">
-              <span className="text-[9px] uppercase text-orange-100/80 font-bold whitespace-nowrap">Total c/IVA</span>
-              <span className="text-base font-black">{eur(totalConIva)}</span>
-            </div>
-          )}
         </div>
         )}
       </div>

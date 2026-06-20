@@ -391,7 +391,7 @@ const App = () => {
     // Permisos de presupuestadores (independientes). P1 por defecto permitido
     // (compatibilidad con usuarios antiguos); P2 requiere autorización explícita.
     const _canP1 = user.isAdmin || user.canUsePresupuestador1 !== false;
-    const _canP2 = user.isAdmin || !!user.canUsePresupuestador2;
+    const _canP2 = user.isAdmin || user.canUsePresupuestador2 !== false;
     const _defaultBudgetTab = _canP2 ? 'presupuestador2' : 'budget';
     // Calendario (vista Día): lo más práctico en la calle = ver las visitas de hoy
     const _landingTab = _floorOnly
@@ -916,14 +916,14 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Presupuestador 1 (MV por tarifa) - principal, abre por defecto */}
-                    {(state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin) && (
+                    {/* Presupuestador (MV por tarifa) - principal, abre por defecto */}
+                    {(state.currentUser?.canUsePresupuestador2 !== false || state.currentUser?.isAdmin) && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'presupuestador2'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador2' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <Receipt size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Presup. 1</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Presup.</span>
                       </button>
                     )}
 
@@ -1177,7 +1177,7 @@ const App = () => {
               />
               </ErrorBoundary>
             )}
-            {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin) && (
+            {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 !== false || state.currentUser?.isAdmin) && (
               <ErrorBoundary><Presupuestador2
                 currentUser={state.currentUser}
                 logo={state.logo}
