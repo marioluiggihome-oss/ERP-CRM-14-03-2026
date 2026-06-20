@@ -938,8 +938,8 @@ const App = () => {
                     </button>
                     )}
 
-                    {/* Mis Pedidos - Visible para todos los usuarios NO tienda - DEBAJO DE PRESUPUESTOS */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos !== false && (
+                    {/* Mis Pedidos - requiere permiso explícito (la casilla manda) */}
+                    {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos === true && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -950,8 +950,8 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Archivo - NO visible para Tienda/Punto de Venta */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo !== false && (
+                    {/* Archivo - requiere permiso explícito (la casilla manda) */}
+                    {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo === true && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -961,8 +961,8 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Facturación - Solo admin, gerente y director comercial */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.canAccessInvoices !== false && (
+                    {/* G. Comercial / Facturación - requiere permiso explícito (la casilla manda) */}
+                    {state.currentUser?.canAccessInvoices === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'invoices'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'invoices' ? 'bg-orange-500 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -973,8 +973,8 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Rentabilidad por proyecto - admin/gerente/director comercial */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && state.currentUser?.canAccessRentabilidad !== false && (
+                    {/* Rentabilidad - requiere permiso explícito (la casilla manda) */}
+                    {state.currentUser?.canAccessRentabilidad === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'rentabilidad'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'rentabilidad' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1009,8 +1009,8 @@ const App = () => {
                       </button>
                     )}
 
-                    {/* Panel de Mando - Solo admin y gerente */}
-                    {(state.currentUser?.isAdmin || state.currentUser?.isGerente) && state.currentUser?.canAccessMando !== false && (
+                    {/* Panel de Mando - requiere permiso explícito (la casilla manda) */}
+                    {state.currentUser?.canAccessMando === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'command'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'command' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1092,8 +1092,8 @@ const App = () => {
                       </button>
                     )}
                     
-                    {/* Portal de Fábrica - usuarios con permiso o Director de Fábrica */}
-                    {(state.currentUser?.canAccessFabrica || state.currentUser?.isFabrica || state.currentUser?.isDirectorFabrica) && (
+                    {/* Portal de Fábrica - requiere permiso explícito (la casilla manda) */}
+                    {state.currentUser?.canAccessFabrica === true && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'fabrica'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'fabrica' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}

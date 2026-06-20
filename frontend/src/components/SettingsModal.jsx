@@ -2205,31 +2205,31 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">📂 Otros módulos</p>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
-                              <input type="checkbox" checked={userForm.canAccessPedidos !== false}
+                              <input type="checkbox" checked={userForm.canAccessPedidos === true}
                                 onChange={(e) => setUserForm({...userForm, canAccessPedidos: e.target.checked})}
                                 className="w-4 h-4 rounded accent-orange-600" />
                               <span className="text-xs font-bold text-slate-700">Pedidos</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
-                              <input type="checkbox" checked={userForm.canAccessArchivo !== false}
+                              <input type="checkbox" checked={userForm.canAccessArchivo === true}
                                 onChange={(e) => setUserForm({...userForm, canAccessArchivo: e.target.checked})}
                                 className="w-4 h-4 rounded accent-blue-600" />
                               <span className="text-xs font-bold text-slate-700">Archivo</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
-                              <input type="checkbox" checked={userForm.canAccessInvoices !== false}
+                              <input type="checkbox" checked={userForm.canAccessInvoices === true}
                                 onChange={(e) => setUserForm({...userForm, canAccessInvoices: e.target.checked})}
                                 className="w-4 h-4 rounded accent-orange-600" />
                               <span className="text-xs font-bold text-slate-700">G. Comercial</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
-                              <input type="checkbox" checked={userForm.canAccessRentabilidad !== false}
+                              <input type="checkbox" checked={userForm.canAccessRentabilidad === true}
                                 onChange={(e) => setUserForm({...userForm, canAccessRentabilidad: e.target.checked})}
                                 className="w-4 h-4 rounded accent-emerald-600" />
                               <span className="text-xs font-bold text-slate-700">Rentabilidad</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
-                              <input type="checkbox" checked={userForm.canAccessMando !== false}
+                              <input type="checkbox" checked={userForm.canAccessMando === true}
                                 onChange={(e) => setUserForm({...userForm, canAccessMando: e.target.checked})}
                                 className="w-4 h-4 rounded accent-slate-600" />
                               <span className="text-xs font-bold text-slate-700">Panel Mando</span>
