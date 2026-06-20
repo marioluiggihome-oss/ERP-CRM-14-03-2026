@@ -49,6 +49,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [familiesCollapsed, setFamiliesCollapsed] = useState(false);
   const [cartCollapsed, setCartCollapsed] = useState(false);
   const [configCollapsed, setConfigCollapsed] = useState(false); // ocultar fila de tarifa/acabados
+  const [actionsCollapsed, setActionsCollapsed] = useState(false); // barra inferior plegable (totales + acciones)
   const [familiesWidth, setFamiliesWidth] = useState(224);
   const [cartWidth, setCartWidth] = useState(416);
   const isResizingFamilies = useRef(false);
@@ -1258,54 +1259,78 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
               </div>
             )}
 
-            {/* Totales + acciones */}
-            <div className="border-t border-slate-200 p-4 bg-gradient-to-b from-white to-slate-50 space-y-3">
-              <div className="rounded-2xl bg-slate-900 text-white p-4">
-                <div className="flex justify-between text-xs text-slate-300 mb-1">
-                  <span>Base imponible</span><span className="font-mono">{eur(cartTotal)}</span>
+            {/* Totales + acciones — barra inferior plegable (libera espacio para la lista) */}
+            <div className="border-t border-slate-200 bg-gradient-to-b from-white to-slate-50 shrink-0">
+              {actionsCollapsed ? (
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <button onClick={() => setActionsCollapsed(false)} title="Mostrar totales y acciones"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 shrink-0">
+                    <ChevronUp size={16} />
+                  </button>
+                  <div className="flex flex-col leading-none">
+                    <span className="text-[8px] uppercase text-slate-400 font-bold">Total c/IVA</span>
+                    <span className="text-lg font-black text-orange-600">{eur(totalConIva)}</span>
+                  </div>
+                  <button onClick={() => { if (cart.length === 0) { alert('Añade al menos una línea'); return; } setShowConfirmOrder(true); }}
+                    disabled={cart.length === 0}
+                    className="ml-auto py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-black text-white flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-200 uppercase tracking-wider">
+                    <PackageCheck size={15} /> Confirmar
+                  </button>
                 </div>
-                <div className="flex justify-between text-xs text-slate-300 mb-2">
-                  <span>IVA ({ivaRate}%)</span><span className="font-mono">{eur(ivaAmount)}</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                  <span className="text-xs font-black uppercase text-orange-300 flex items-center gap-1"><Sparkles size={13} /> Total</span>
-                  <span className="text-2xl font-black text-orange-400">{eur(totalConIva)}</span>
-                </div>
-              </div>
+              ) : (
+                <div className="p-4 space-y-3">
+                  <button onClick={() => setActionsCollapsed(true)} title="Ocultar totales y acciones (más espacio para la lista)"
+                    className="w-full flex items-center justify-center gap-1 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600">
+                    <ChevronDown size={14} /> Ocultar totales y acciones
+                  </button>
+                  <div className="rounded-2xl bg-slate-900 text-white p-4">
+                    <div className="flex justify-between text-xs text-slate-300 mb-1">
+                      <span>Base imponible</span><span className="font-mono">{eur(cartTotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-300 mb-2">
+                      <span>IVA ({ivaRate}%)</span><span className="font-mono">{eur(ivaAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                      <span className="text-xs font-black uppercase text-orange-300 flex items-center gap-1"><Sparkles size={13} /> Total</span>
+                      <span className="text-2xl font-black text-orange-400">{eur(totalConIva)}</span>
+                    </div>
+                  </div>
 
-              {/* Confirmar Pedido — acción principal */}
-              <button onClick={() => { if (cart.length === 0) { alert('Añade al menos una línea'); return; } setShowConfirmOrder(true); }}
-                disabled={cart.length === 0}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-black text-white flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-200 uppercase tracking-wider border-2 border-emerald-400 disabled:border-slate-200">
-                <PackageCheck size={16} /> Confirmar Pedido
-              </button>
+                  {/* Confirmar Pedido — acción principal */}
+                  <button onClick={() => { if (cart.length === 0) { alert('Añade al menos una línea'); return; } setShowConfirmOrder(true); }}
+                    disabled={cart.length === 0}
+                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-black text-white flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-200 uppercase tracking-wider border-2 border-emerald-400 disabled:border-slate-200">
+                    <PackageCheck size={16} /> Confirmar Pedido
+                  </button>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setShowManual(!showManual)}
-                  className="py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-xs font-bold text-amber-700 flex items-center justify-center gap-1.5 transition-colors">
-                  <Edit3 size={13} /> Línea manual
-                </button>
-                <button onClick={saveOrder} disabled={saving || cart.length === 0}
-                  className="py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
-                  {saving ? <Loader size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
-                  {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar'}
-                </button>
-                <button onClick={exportPDF} disabled={cart.length === 0}
-                  className="py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
-                  <FileDown size={13} /> Exportar PDF
-                </button>
-                <button onClick={handlePrint} disabled={cart.length === 0}
-                  className="py-2.5 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
-                  <Printer size={13} /> Imprimir
-                </button>
-              </div>
-              {currentUser?.canViewTechnicalDespiece && (
-                <button onClick={openDespiece} disabled={cart.length === 0}
-                  className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-100 disabled:text-slate-300 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider">
-                  <Scissors size={14} /> Generar despiece
-                </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setShowManual(!showManual)}
+                      className="py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-xs font-bold text-amber-700 flex items-center justify-center gap-1.5 transition-colors">
+                      <Edit3 size={13} /> Línea manual
+                    </button>
+                    <button onClick={saveOrder} disabled={saving || cart.length === 0}
+                      className="py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                      {saving ? <Loader size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
+                      {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar'}
+                    </button>
+                    <button onClick={exportPDF} disabled={cart.length === 0}
+                      className="py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                      <FileDown size={13} /> Exportar PDF
+                    </button>
+                    <button onClick={handlePrint} disabled={cart.length === 0}
+                      className="py-2.5 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+                      <Printer size={13} /> Imprimir
+                    </button>
+                  </div>
+                  {currentUser?.canViewTechnicalDespiece && (
+                    <button onClick={openDespiece} disabled={cart.length === 0}
+                      className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-100 disabled:text-slate-300 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider">
+                      <Scissors size={14} /> Generar despiece
+                    </button>
+                  )}
+                  <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
+                </div>
               )}
-              <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
             </div>
           </div>
         )}
