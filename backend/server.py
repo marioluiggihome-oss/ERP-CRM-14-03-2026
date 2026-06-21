@@ -2293,6 +2293,41 @@ async def fix_product_data(current_user: dict = Depends(require_admin)):
 # Global Rate Limiting Middleware - protege TODOS los endpoints automáticamente
 app.add_middleware(GlobalRateLimitMiddleware, default_rpm=60)
 
+# ============================================================================
+# Global Auth Guard (Fase 2): exige un JWT válido en TODO /api/* salvo la
+# allowlist pública (login/registro/recuperación/refresh, estado de
+# mantenimiento, formulario de distribuidor y raíz). Se controla con la variable
+# de entorno ENFORCE_GLOBAL_AUTH (por defecto DESACTIVADO -> comportamiento
+# previo). Rollback instantáneo: ENFORCE_GLOBAL_AUTH=0.
+#
+# Se registra ANTES que CORS para que CORS quede por fuera y las respuestas 401
+# lleven cabeceras CORS y el preflight OPTIONS lo siga gestionando CORS.
+# ============================================================================
+from services.auth_guard import is_global_auth_enabled, is_public_api_path
+
+ENFORCE_GLOBAL_AUTH = is_global_auth_enabled()
+
+# Solo se registra el middleware si está activado, de modo que con el flag
+# DESACTIVADO (por defecto) el comportamiento es idéntico al previo (no-op real).
+if ENFORCE_GLOBAL_AUTH:
+    @app.middleware("http")
+    async def global_auth_guard(request: Request, call_next):
+        if request.method != "OPTIONS":
+            path = request.url.path
+            if path.startswith("/api/") and not is_public_api_path(path):
+                token = get_token_from_request(request)
+                if not token:
+                    return _JSONResponse(status_code=401, content={"detail": "Autenticación requerida"})
+                try:
+                    verify_access_token(token)
+                except HTTPException as exc:
+                    return _JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+                except Exception:
+                    return _JSONResponse(status_code=401, content={"detail": "Token inválido"})
+        return await call_next(request)
+
+logger.info(f"🔐 Global auth enforcement (ENFORCE_GLOBAL_AUTH): {'ON' if ENFORCE_GLOBAL_AUTH else 'OFF'}")
+
 # CORS Middleware - MUST be added BEFORE routers
 app.add_middleware(
     CORSMiddleware,
