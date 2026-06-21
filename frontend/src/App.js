@@ -811,16 +811,25 @@ const App = () => {
         />
       ) : (
         <>
-          {/* Botón hamburguesa - solo visible cuando sidebar está cerrada */}
+          {/* Botón flotante - solo visible cuando sidebar está cerrada.
+              Muestra el LOGO de Luiggi Home (la marca no se pierde al colapsar)
+              y al pasar el ratón enseña el icono de menú. */}
           {!sidebarOpen && (
             <button
               onClick={() => setSidebarOpen(true)}
-              className="fixed top-3 left-3 z-[60] w-10 h-10 bg-slate-950 text-white rounded-xl shadow-2xl flex items-center justify-center border border-white/10 hover:bg-slate-800 transition-all"
+              className="fixed top-3 left-3 z-[60] w-12 h-12 bg-white rounded-xl shadow-2xl flex items-center justify-center border border-slate-200 overflow-hidden hover:scale-95 transition-all group"
               aria-label="Mostrar menú"
               data-testid="sidebar-toggle"
               title="Mostrar menú"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              {state.logo ? (
+                <img src={state.logo} alt="Luiggi Home" className="w-full h-full object-contain p-1" />
+              ) : (
+                <div className="w-full h-full bg-brand flex items-center justify-center font-black text-white italic text-xl">L</div>
+              )}
+              <span className="absolute inset-0 bg-slate-900/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              </span>
             </button>
           )}
 

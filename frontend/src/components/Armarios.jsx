@@ -2128,8 +2128,8 @@ const Armarios = ({ state, setState }) => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
-      {/* Header — pl-14 deja sitio al botón de menú flotante (no tapa el logo) */}
-      <div className="bg-gradient-to-r from-emerald-600 to-green-800 text-white pl-14 pr-4 py-4 flex items-center justify-between">
+      {/* Header — pl-16 deja sitio al botón/logo flotante del menú */}
+      <div className="bg-gradient-to-r from-emerald-600 to-green-800 text-white pl-16 pr-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
             {state?.logo
