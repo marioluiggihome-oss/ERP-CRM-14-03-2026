@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "@/index.css";
+import "@/services/authFetch"; // instala el interceptor de fetch (adjunta el JWT) antes de montar la app
 import App from "@/App";
 
 // En producción, silenciar logs informativos para no filtrar datos de negocio por consola.
