@@ -376,9 +376,9 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0]));
   }, [products]);
 
-  useEffect(() => {
-    if (!family && families.length) setFamily(families[0][0]);
-  }, [families, family]);
+  // A propósito NO se auto-selecciona ninguna familia al cargar: el presupuestador
+  // entra mostrando todo el catálogo, sin familia ni mueble preseleccionados
+  // (el usuario busca o elige familia cuando quiere).
 
   // Agrupa familias muy parecidas (singular/plural, variantes "color"/"melamina"…)
   // bajo una cabecera común, para que la barra de categorías no sea interminable.
