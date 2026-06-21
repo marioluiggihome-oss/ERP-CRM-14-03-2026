@@ -4,7 +4,7 @@ import {
   Save, FileDown, Printer, Edit3, CheckCircle2, Receipt, Boxes, Sparkles, Scissors,
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, ChevronUp,
   Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List,
-  BookOpen, PackageCheck, Home
+  BookOpen, PackageCheck, Home, Maximize2, Minimize2
 } from 'lucide-react';
 import { authHeaders, librariesAPI, materialsAPI, settingsAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
@@ -74,6 +74,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [expandedGroups, setExpandedGroups] = useState({});
   const [familiesCollapsed, setFamiliesCollapsed] = useState(false);
   const [cartCollapsed, setCartCollapsed] = useState(false);
+  const [budgetExpanded, setBudgetExpanded] = useState(false); // ocultar el catálogo y ver el presupuesto a todo el ancho
   const [configCollapsed, setConfigCollapsed] = useState(false); // ocultar fila de tarifa/acabados
   const [actionsCollapsed, setActionsCollapsed] = useState(false); // barra inferior plegable (totales + acciones)
   const cartListRef = useRef(null);   // auto-scroll al último mueble añadido
@@ -898,7 +899,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* ── Catálogo ── */}
-        <div className={`flex-1 flex flex-col md:flex-row overflow-hidden ${mobileTab === 'cart' ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`flex-1 flex flex-col md:flex-row overflow-hidden ${budgetExpanded ? 'hidden' : (mobileTab === 'cart' ? 'hidden md:flex' : 'flex')}`}>
           {/* Familias */}
           {familiesCollapsed ? (
             <div className="flex w-full md:w-10 shrink-0 bg-white/70 backdrop-blur border-b md:border-b-0 md:border-r border-slate-200 md:flex-col items-center py-2 md:py-3 px-2 md:px-0 justify-between md:justify-center">
@@ -1173,11 +1174,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             )}
           </div>
         ) : (
-          <div className={`w-full md:w-[26rem] shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] relative ${
+          <div className={`${budgetExpanded ? 'w-full md:flex-1' : 'w-full md:w-[26rem] shrink-0'} bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] relative ${
             mobileTab === 'catalog' ? 'hidden md:flex' : 'flex'}`}
-            style={typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: cartWidth, maxWidth: cartWidth } : undefined}
+            style={!budgetExpanded && typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: cartWidth, maxWidth: cartWidth } : undefined}
           >
-            <div className="hidden md:block absolute top-0 left-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-500/40 z-20"
+            <div className={`${budgetExpanded ? 'hidden' : 'hidden md:block'} absolute top-0 left-0 w-1.5 h-full cursor-ew-resize hover:bg-orange-500/40 z-20`}
               onMouseDown={() => { isResizingCart.current = true; }} />
             {/* Module tabs */}
             <div className="flex bg-slate-100 shrink-0">
@@ -1191,10 +1192,16 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                   activeModule === 'despiece' ? 'bg-indigo-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/60'}`}>
                 <Scissors size={11} /> Despiece
               </button>
-              <button onClick={() => setCartCollapsed(true)} title="Ocultar presupuesto"
+              <button onClick={() => setBudgetExpanded(v => !v)} title={budgetExpanded ? 'Volver a ver los muebles' : 'Ver el presupuesto en grande (ocultar muebles)'}
                 className="hidden md:flex items-center px-2 text-slate-400 hover:text-orange-600">
-                <PanelRightClose size={15} />
+                {budgetExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
               </button>
+              {!budgetExpanded && (
+                <button onClick={() => setCartCollapsed(true)} title="Ocultar presupuesto"
+                  className="hidden md:flex items-center px-2 text-slate-400 hover:text-orange-600">
+                  <PanelRightClose size={15} />
+                </button>
+              )}
             </div>
 
             <div className="px-3 py-2 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
