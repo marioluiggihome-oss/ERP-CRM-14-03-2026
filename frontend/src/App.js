@@ -961,26 +961,26 @@ const App = () => {
                     </button>
                     )}
 
+                    {/* Archivo - requiere permiso explícito (la casilla manda) */}
+                    {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo === true && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'library'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <FolderOpen size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
+                      </button>
+                    )}
+
                     {/* Mis Pedidos - requiere permiso explícito (la casilla manda) */}
                     {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos === true && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))} 
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="mis-pedidos-nav-btn"
                       >
                         <ShoppingBag size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Pedidos</span>
-                      </button>
-                    )}
-
-                    {/* Archivo - requiere permiso explícito (la casilla manda) */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo === true && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'library'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'library' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                      >
-                        <FolderOpen size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
                       </button>
                     )}
 

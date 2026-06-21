@@ -637,7 +637,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       customDepth: depth,
       hasVigaCut: !!it.hasVigaCut,
       quantity: Number(it.qty) || 0,
-      _canDespiece: width > 0 && height > 0 && depth > 0 && (Number(it.qty) || 0) > 0,
+      // Las líneas manuales NO entran a fábrica/despiece (no son muebles del catálogo).
+      _canDespiece: !it.manual && width > 0 && height > 0 && depth > 0 && (Number(it.qty) || 0) > 0,
     };
   }), [cart, products]);
 
@@ -650,7 +651,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       return;
     }
     const ignored = rawDespieceItems.length - despieceItems.length;
-    if (ignored > 0 && !window.confirm(`${ignored} línea(s) no tienen medidas/cantidad válidas y se excluirán del despiece. ¿Continuar?`)) return;
+    if (ignored > 0 && !window.confirm(`${ignored} línea(s) manuales o sin medidas/cantidad válidas se excluirán del despiece. ¿Continuar?`)) return;
     setShowDespiece(true);
   };
 
@@ -880,8 +881,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             </select>
           </div>
           {[
-            ['Bajas', doorColorLow, setDoorColorLow],
-            ['Altas', doorColorHigh, setDoorColorHigh],
+            ['Bajos', doorColorLow, setDoorColorLow],
+            ['Altos', doorColorHigh, setDoorColorHigh],
             ['Col.', doorColorColumns, setDoorColorColumns],
             ['Cost.', sideColor, setSideColor],
           ].map(([label, val, setter]) => (
