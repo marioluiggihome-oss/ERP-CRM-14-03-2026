@@ -171,8 +171,12 @@ async def _analyze_with_google_genai(
                 ),
                 prompt,
             ],
-            # temperature=0 -> respuestas estables/repetibles para el mismo plano
-            config=google_genai_types.GenerateContentConfig(temperature=0),
+            # temperature=0 -> respuestas estables/repetibles para el mismo plano.
+            # max_output_tokens alto: gemini-2.5-pro es un modelo "thinking" y, sin un
+            # presupuesto amplio, el razonamiento agota la salida y TRUNCA el JSON
+            # (se pierden muebles detectados). 16384 deja sitio de sobra para el
+            # razonamiento + un listado largo de muebles.
+            config=google_genai_types.GenerateContentConfig(temperature=0, max_output_tokens=16384),
         )
         return response.text or ""
 

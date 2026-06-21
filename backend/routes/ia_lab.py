@@ -299,6 +299,24 @@ RAZONA DE FORMA METÓDICA ANTES DE RESPONDER (piensa paso a paso):
   Si una medida se sale de rango (p.ej. fondo de 5 mm), es un ERROR: corrígela al estándar más cercano.
 - Prioriza los anchos ROTULADOS en el plano; no inventes medidas.
 
+COMPLETITUD (CRÍTICO — el error más habitual es DETECTAR DE MENOS):
+- Detecta CADA módulo por separado, no solo los evidentes. Una cocina en L o en U
+  suele tener MUCHOS muebles (frecuentemente 10–20+). Si has detectado muy pocos,
+  REVISA otra vez: casi seguro te has dejado módulos.
+- DESCOMPÓN los tramos largos en módulos ESTÁNDAR: una fila continua de bajos de,
+  p. ej., 2400 mm NO es un solo mueble; son varios módulos estándar (p. ej.
+  600+600+600+600). Cuenta los frentes (puertas/cajones) para deducir cuántos
+  módulos hay.
+- Incluye SIEMPRE: la fila completa de BAJOS bajo la encimera, la fila completa de
+  ALTOS, columnas/torres (horno, microondas, despensa, frigorífico integrado),
+  muebles de RINCÓN, costados/laterales vistos, y altillos sobre electrodomésticos.
+- Para muebles PARCIALMENTE ocultos o cortados por el borde de la imagen: inclúyelos
+  igualmente con tu mejor estimación y "confianza": "BAJA".
+- Es MEJOR incluir un módulo dudoso (con confianza BAJA) que OMITIRLO. No descartes
+  un mueble solo porque no estés seguro de su medida exacta.
+- Antes de responder, comprueba que el nº total de muebles es coherente con el
+  TAMAÑO de la cocina visible; si parece bajo, vuelve a recorrer el plano.
+
 Responde SOLO con JSON válido:
 {
   "muebles_detectados": [
