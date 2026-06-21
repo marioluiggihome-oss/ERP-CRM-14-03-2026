@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Users, Activity, Calendar, TrendingUp, Download, RefreshCw, Clock, FileText, ShoppingCart, LogIn } from 'lucide-react';
+import { authHeaders } from '../../services/api';
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4', '#84cc16'];
 
@@ -18,7 +19,7 @@ const UsageReportTab = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/usage/report?days=${days}`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/usage/report?days=${days}`, { headers: authHeaders() });
       if (!response.ok) throw new Error('Error cargando informe');
       const data = await response.json();
       setReport(data);
