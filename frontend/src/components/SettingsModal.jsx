@@ -1141,8 +1141,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           </div>
         </div>
 
+        {/* Pestañas + contenido: barra lateral en PC, barra deslizable arriba en móvil */}
+        <div className="flex flex-col sm:flex-row flex-1 min-h-0">
         {/* Tabs */}
-        <div className="px-3 sm:px-8 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto sm:flex-wrap [&>button]:shrink-0 shrink-0">
+        <div className="px-3 py-3 sm:py-4 bg-slate-50 border-b sm:border-b-0 sm:border-r border-slate-200 flex sm:flex-col gap-2 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto [&>button]:shrink-0 shrink-0 sm:w-56">
           {/* Tab Panel Director Comercial - Solo Admin/Gerente/Director Comercial */}
           {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
@@ -1362,7 +1364,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 min-w-0">
           {/* PANEL DIRECTOR TAB */}
           {activeTab === 'director' && (
             <DirectorTab />
@@ -3248,6 +3250,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           {activeTab === 'backup-management' && (
             <BackupManagementTab />
           )}
+        </div>
         </div>
       </div>
     </div>
