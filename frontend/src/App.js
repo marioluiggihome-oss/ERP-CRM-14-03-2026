@@ -35,6 +35,7 @@ const ReportGenerator = lazy(() => import('./components/ReportGenerator'));
 import Login from './components/Login';
 import MaintenanceScreen from './components/MaintenanceScreen';
 import MaintenancePanel from './components/MaintenancePanel';
+import WelcomeScreen from './components/WelcomeScreen';
 import { authAPI, productsAPI, materialsAPI, settingsAPI, usersAPI, librariesAPI } from './services/api';
 import { logout as authLogout, getUser, clearTokens, isAuthenticated } from './services/authService';
 import { DOOR_FINISHES, INITIAL_CARCASS_MATERIALS, DEFAULT_BRAND_COLOR, STORAGE_KEY } from './constants';
@@ -398,7 +399,9 @@ const App = () => {
       ? 'luiggifloor'
       : _crmOnly
         ? 'crm-calendar'
-        : ((_isMobileTablet && _canCRM) ? 'crm-calendar' : _defaultBudgetTab);
+        : _isMobileTablet
+          ? (_canCRM ? 'crm-calendar' : _defaultBudgetTab)  // móvil/tablet: como estaba
+          : 'welcome';  // PC: pantalla de bienvenida tras el login
 
     setState(prev => ({
       ...prev,
@@ -896,6 +899,17 @@ const App = () => {
                 // Para otros usuarios, mostrar navegación normal
                 return (
                   <>
+                    {/* Inicio - pantalla de bienvenida (vídeo + accesos rápidos). Visible
+                        también en móvil para poder ver/abrir todos los módulos desde ahí. */}
+                    <button
+                      onClick={() => setState(p => ({...p, currentTab: 'welcome'}))}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'welcome' ? 'bg-slate-700 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      data-testid="welcome-nav-btn"
+                    >
+                      <LayoutDashboard size={18}/>
+                      <span className="text-[7px] font-black uppercase tracking-widest">Inicio</span>
+                    </button>
+
                     {/* CRM - Solo visible para usuarios con canAccessCRM (NO para Tienda/Punto de Venta) */}
                     {state.currentUser?.canAccessCRM && !state.currentUser?.isTienda && (
                       <button 
@@ -1186,6 +1200,15 @@ const App = () => {
 
           <main className="flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10">
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
+            {state.currentTab === 'welcome' && (
+              <ErrorBoundary>
+                <WelcomeScreen
+                  currentUser={state.currentUser}
+                  settings={state.settings}
+                  onNavigate={(tab) => setState(p => ({ ...p, currentTab: tab }))}
+                />
+              </ErrorBoundary>
+            )}
             {state.currentTab === 'budget' && (state.currentUser?.canUsePresupuestador1 !== false) && (
               <ErrorBoundary>
               <BudgetTable
