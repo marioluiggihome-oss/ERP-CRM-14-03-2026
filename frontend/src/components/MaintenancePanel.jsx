@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wrench, Power, PowerOff, Shield, Clock, Download, AlertTriangle, CheckCircle, Loader, RefreshCw, Database } from 'lucide-react';
+import { authHeaders } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -58,7 +59,7 @@ const MaintenancePanel = ({ currentUser, onClose }) => {
     try {
       const response = await fetch(`${API_URL}/api/maintenance/activate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           message,
           estimatedMinutes,
@@ -93,7 +94,8 @@ const MaintenancePanel = ({ currentUser, onClose }) => {
     setDeactivating(true);
     try {
       const response = await fetch(`${API_URL}/api/maintenance/deactivate?adminUserId=${currentUser.id}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: authHeaders()
       });
 
       const data = await response.json();
@@ -115,7 +117,7 @@ const MaintenancePanel = ({ currentUser, onClose }) => {
   // Download backup
   const handleDownloadBackup = async (backupId) => {
     try {
-      const response = await fetch(`${API_URL}/api/maintenance/backups/${backupId}/download`);
+      const response = await fetch(`${API_URL}/api/maintenance/backups/${backupId}/download`, { headers: authHeaders() });
       const data = await response.json();
       
       if (data.success) {

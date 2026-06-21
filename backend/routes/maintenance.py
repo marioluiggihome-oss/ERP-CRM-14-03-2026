@@ -2,7 +2,7 @@
 Routes for Maintenance Mode
 Extracted from server.py for better maintainability
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -13,6 +13,7 @@ import os
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+from services.jwt_service import require_admin
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -72,7 +73,7 @@ async def get_maintenance_status():
 
 
 @router.post("/activate")
-async def activate_maintenance_mode(request: MaintenanceActivateRequest):
+async def activate_maintenance_mode(request: MaintenanceActivateRequest, user=Depends(require_admin)):
     """Activate maintenance mode - ADMIN ONLY"""
     global maintenance_state
     
@@ -166,7 +167,7 @@ async def activate_maintenance_mode(request: MaintenanceActivateRequest):
 
 
 @router.post("/deactivate")
-async def deactivate_maintenance_mode(adminUserId: str):
+async def deactivate_maintenance_mode(adminUserId: str, user=Depends(require_admin)):
     """Deactivate maintenance mode - ADMIN ONLY"""
     global maintenance_state
     
@@ -232,7 +233,7 @@ async def list_pre_update_backups(limit: int = 10):
 
 
 @router.get("/backups/{backup_id}/download")
-async def download_pre_update_backup(backup_id: str):
+async def download_pre_update_backup(backup_id: str, user=Depends(require_admin)):
     """Download a specific pre-update backup"""
     try:
         backup = await db.system_backups.find_one({"id": backup_id})

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, CheckCircle, Building2, FileSpreadsheet, Download, HardDrive, Database, Clock, AlertTriangle, Wrench, Power, ShieldAlert, Timer, Maximize2, Minimize2, Target, Award, TrendingUp, BarChart3, FolderOpen, FileText, ChevronDown, ChevronUp, UserCheck, Layers, Factory } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
-import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, librariesAPI } from '../services/api';
+import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, librariesAPI, authHeaders } from '../services/api';
 import CatalogImporter from './CatalogImporter';
 
 // Componentes refactorizados
@@ -392,7 +392,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/activate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           message: maintenanceMessage,
           estimatedMinutes: maintenanceMinutes,
@@ -421,7 +421,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     setMaintenanceDeactivating(true);
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/deactivate?adminUserId=${state.currentUser?.id}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: authHeaders()
       });
       const data = await response.json();
       if (data.success) {
@@ -439,7 +440,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
   const handleDownloadMaintenanceBackup = async (backupId) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/backups/${backupId}/download`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/maintenance/backups/${backupId}/download`, { headers: authHeaders() });
       const data = await response.json();
       if (data.success) {
         const blob = new Blob([JSON.stringify(data.backup, null, 2)], { type: 'application/json' });

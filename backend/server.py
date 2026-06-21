@@ -1391,7 +1391,7 @@ async def get_commercial_shops_work(commercial_id: str, current_user: dict = Dep
     }
 
 @api_router.post("/init")
-async def init_data():
+async def init_data(user=Depends(require_admin)):
     """Comprobar el estado de inicialización de datos base.
 
     El usuario administrador (master) se crea/actualiza automáticamente en el evento

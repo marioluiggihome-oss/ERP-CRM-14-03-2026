@@ -186,7 +186,7 @@ async def backup_status():
         return {"status": "error", "message": str(e)}
 
 @router.post("/create")
-async def create_full_backup():
+async def create_full_backup(user=Depends(require_admin)):
     """Create a complete backup of code and database"""
     try:
         os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -293,7 +293,7 @@ async def create_full_backup():
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 @router.get("/download/{filename}")
-async def download_backup(filename: str):
+async def download_backup(filename: str, user=Depends(require_admin)):
     """Download a backup file"""
     filepath = os.path.join(BACKUP_DIR, filename)
     
@@ -310,7 +310,7 @@ async def download_backup(filename: str):
     )
 
 @router.delete("/delete/{filename}")
-async def delete_backup(filename: str):
+async def delete_backup(filename: str, user=Depends(require_admin)):
     """Delete a backup file"""
     filepath = os.path.join(BACKUP_DIR, filename)
     
@@ -355,7 +355,7 @@ async def get_scheduler_status():
     }
 
 @router.get("/download-part/{filename}")
-async def download_backup_part(filename: str):
+async def download_backup_part(filename: str, user=Depends(require_admin)):
     """Download a backup part file"""
     filepath = os.path.join(BACKUP_DIR, "parts", filename)
     
@@ -369,7 +369,7 @@ async def download_backup_part(filename: str):
     )
 
 @router.get("/download-collections/{filename}")
-async def download_collections_backup(filename: str):
+async def download_collections_backup(filename: str, user=Depends(require_admin)):
     """Download collections backup file"""
     filepath = os.path.join(BACKUP_DIR, filename)
     
