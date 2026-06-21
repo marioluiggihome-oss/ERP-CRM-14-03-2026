@@ -76,27 +76,6 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
           </p>
         </div>
 
-        {/* Vídeo promocional (16:9) */}
-        <div className="mb-8 sm:mb-10 rounded-3xl overflow-hidden shadow-xl bg-slate-900 ring-1 ring-slate-200">
-          <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
-            {embed ? (
-              <iframe
-                className="absolute inset-0 w-full h-full"
-                src={embed}
-                title="Vídeo promocional LUIGGI HOME"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 gap-3">
-                <PlayCircle size={56} className="opacity-70" />
-                <p className="text-sm font-semibold">Vídeo promocional próximamente</p>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Accesos rápidos */}
         <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Accesos rápidos</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -115,6 +94,34 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
               </button>
             );
           })}
+        </div>
+
+        {/* Vídeo promocional: más pequeño y debajo de los accesos; ampliable a
+            pantalla completa con el icono del propio reproductor. */}
+        <div className="mt-8 sm:mt-10">
+          <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Vídeo promocional</h2>
+          <div className="max-w-xl mx-auto rounded-2xl overflow-hidden shadow-lg bg-slate-900 ring-1 ring-slate-200">
+            <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+              {embed ? (
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={embed}
+                  title="Vídeo promocional LUIGGI HOME"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 gap-3">
+                  <PlayCircle size={56} className="opacity-70" />
+                  <p className="text-sm font-semibold">Vídeo promocional próximamente</p>
+                </div>
+              )}
+            </div>
+          </div>
+          {embed && (
+            <p className="text-center text-[11px] text-slate-400 mt-2">Pulsa el icono de pantalla completa del vídeo para ampliarlo.</p>
+          )}
         </div>
       </div>
     </div>
