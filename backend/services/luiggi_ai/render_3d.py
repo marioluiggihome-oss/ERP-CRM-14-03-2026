@@ -363,6 +363,40 @@ class Render3DService:
         ]
         return " ".join(parts)
 
+    async def _expand_brief(self, description: str, space_type: str) -> str:
+        """Convierte el brief del usuario en una especificación de render DETALLADA
+        y EXPLÍCITA usando un LLM potente (gemini-2.5-pro). Si falla, devuelve el
+        brief original. Así el render obedece las órdenes con mucho más detalle."""
+        desc = (description or "").strip()
+        if not desc:
+            return desc
+        try:
+            from services.llm_vision import generate_text_with_gemini
+        except Exception:
+            return desc
+        instruction = (
+            "Eres director de arte de renders fotorrealistas de mobiliario y cocinas. "
+            "A partir del brief del cliente, redacta UNA especificación de render en INGLÉS, "
+            "muy explícita y ordenada, que un modelo de imagen seguirá al pie de la letra.\n"
+            "REGLAS:\n"
+            "- Conserva TODOS los detalles del cliente; no contradigas nada de lo que pide.\n"
+            "- NO inventes una cocina si el cliente no la pide (respeta el tipo de pieza/espacio).\n"
+            "- Enumera con precisión: tipo de pieza/espacio; distribución y módulos (nº y tamaño "
+            "de puertas, cajones, baldas y columnas); materiales y acabados exactos; colores; "
+            "tiradores; encimera; electrodomésticos; suelo; paredes; iluminación; ambiente; y "
+            "ángulo de cámara.\n"
+            "- Respeta medidas/proporciones si se dan. Nada de texto, marcas de agua ni personas.\n"
+            f"- Tipo de pieza/espacio detectado: {space_type}.\n\n"
+            f"BRIEF DEL CLIENTE:\n{desc}\n\n"
+            "Devuelve SOLO la especificación de render (sin encabezados ni explicaciones)."
+        )
+        try:
+            expanded = await generate_text_with_gemini(instruction, model="gemini-2.5-pro")
+        except Exception as e:
+            logger.warning(f"_expand_brief falló: {e}")
+            return desc
+        return expanded.strip() if expanded else desc
+
     async def generate_render(
         self,
         description: str,
@@ -398,9 +432,14 @@ class Render3DService:
         ref_b64, ref_mime = self._prepare_reference(reference_image, reference_mime)
         parsed_params["hasReference"] = bool(ref_b64)
 
-        # Construir prompt GENÉRICO guiado por la descripción del usuario
+        # Expandir el brief con un LLM potente (gemini-2.5-pro) para que las órdenes
+        # sean mucho más explícitas y el render obedezca con detalle.
+        expanded_brief = await self._expand_brief(description, space_type)
+        parsed_params["briefExpanded"] = bool(expanded_brief) and expanded_brief != (description or "").strip()
+
+        # Construir prompt GENÉRICO guiado por la descripción (ya expandida).
         prompt = self.build_render_prompt(
-            description=description,
+            description=expanded_brief or description,
             style=parsed_params.get("style", "photorealistic"),
             space_type=space_type,
         )

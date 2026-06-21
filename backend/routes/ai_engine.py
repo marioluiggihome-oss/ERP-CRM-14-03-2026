@@ -444,7 +444,7 @@ async def describe_reference(payload: dict, user=Depends(require_auth)):
         import uuid as _uuid
         resp = await analyze_image_with_gemini(
             image_base64=img, prompt=_REF_PROMPT,
-            session_id=f"render-ref-{_uuid.uuid4().hex[:8]}", model="gemini-2.5-flash",
+            session_id=f"render-ref-{_uuid.uuid4().hex[:8]}", model="gemini-2.5-pro",
         )
         text = (resp or "").strip()
         if text.startswith("```"):

@@ -299,6 +299,41 @@ def _extract_inline_image(response) -> Optional[str]:
     return None
 
 
+async def generate_text_with_gemini(prompt: str, model: str = "gemini-2.5-pro",
+                                    temperature: float = 0.6) -> Optional[str]:
+    """Genera TEXTO con Gemini (modelo potente por defecto, con cascada de respaldo).
+
+    Se usa, por ejemplo, para expandir un brief de render en una especificación
+    detallada. Devuelve None si no hay clave/SDK o si todos los modelos fallan.
+    """
+    import asyncio
+    key = get_gemini_key()
+    if not (key and GOOGLE_GENAI_AVAILABLE):
+        return None
+    client = google_genai.Client(api_key=key)
+    candidates = []
+    for m in [model, "gemini-2.5-flash", "gemini-flash-latest"]:
+        if m not in candidates:
+            candidates.append(m)
+
+    def _sync_call(model_name):
+        cfg = google_genai_types.GenerateContentConfig(temperature=temperature)
+        resp = client.models.generate_content(model=model_name, contents=[prompt], config=cfg)
+        return (resp.text or "").strip()
+
+    loop = asyncio.get_event_loop()
+    for model_name in candidates:
+        try:
+            txt = await loop.run_in_executor(None, _sync_call, model_name)
+            if txt:
+                return txt
+        except Exception as e:
+            msg = str(e)
+            logger.warning(f"generate_text_with_gemini: modelo '{model_name}' falló: {msg[:140]}")
+            continue
+    return None
+
+
 async def generate_image_with_gemini(
     prompt: str,
     reference_image_base64: Optional[str] = None,
