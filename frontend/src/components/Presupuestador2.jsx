@@ -26,19 +26,21 @@ const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFraction
 // SUBFAMILIAS dentro de cada principal.
 const MAIN_FAMILY_DEFS = [
   { key: 'BAJOS',         label: '01 · Bajos',                       test: c => /^BAJO/.test(c) },
-  { key: 'ALTOS',         label: '02 · Altos',                       test: c => /^(ALTO|ALTILLO)/.test(c) && !/DECORATIV|VITRINA/.test(c) },
-  { key: 'SEMICOLUMNAS',  label: '03 · Semicolumnas',                test: c => /^(MEDIACOLUMNA|SEMICOLUMNA|SEMI)/.test(c) },
+  { key: 'ALTOS',         label: '02 · Altos',                       test: c => /^(ALTO|ALTILLO|CAMPANA)/.test(c) && !/DECORATIV|VITRINA/.test(c) },
+  { key: 'SEMICOLUMNAS',  label: '03 · Semicolumnas',                test: c => /^(MEDIA ?COLUMNA|SEMICOLUMNA|SEMI)/.test(c) },
   { key: 'COLUMNAS',      label: '04 · Columnas',                    test: c => /^COLUMNA/.test(c) },
-  { key: 'SOBREENCIMERA', label: '05 · Sobreencimera',               test: c => /^SOBRE_?ENC/.test(c) },
+  { key: 'SOBREENCIMERA', label: '05 · Sobreencimera',               test: c => /^SOBRE_?ENC/.test(c) || c === 'SOBRE' || c === 'ENCIMERA' },
   { key: 'SOBREMODULOS',  label: '06 · Sobremódulos',                test: c => /^SOBRE_?MODULO/.test(c) },
   { key: 'DECORATIVOS',   label: '07 · Muebles decorativos',         test: c => /DECORATIV|VITRINA/.test(c) },
-  { key: 'COSTADOS',      label: '08 · Costados, regletas y baldas',  test: c => /^(COSTADO|REGLETA|BALDA|LATERAL|TECHO|ZOCALO|CORNISA)/.test(c) },
+  { key: 'COSTADOS',      label: '08 · Costados, regletas y baldas',  test: c => /^(COSTADO|REGLETA|BALDA|ESTANTE|LATERAL|TECHO|ZOCALO|CORNISA)/.test(c) },
   { key: 'ACCESORIOS',    label: '10 · Accesorios',                   test: c => /^(ACCESORIO|BOTELLERO|CESTO|CUBO|HERRAJE|PUERTA|REJILLA|GAVETERO)/.test(c) },
-  { key: 'ELEMENTOS',     label: '11 · Elementos lineales',          test: c => /^(ELEMENTOS_?LINEALES|MOLDURA|REMATE|PERFIL|TIRADOR|PATA)/.test(c) },
+  { key: 'ELEMENTOS',     label: '11 · Elementos lineales',          test: c => /^(ELEMENTO|MOLDURA|REMATE|PERFIL|TIRADOR|PATA)/.test(c) },
   { key: 'ESTRUCTURAS',   label: '12 · Estructuras decorativas',     test: c => /^(ESTRUCTURA|PERGOLA|PANEL_DECOR|BANCO|MESA)/.test(c) },
 ];
 const mainFamilyKeyOf = (category) => {
-  const c = String(category || '').toUpperCase();
+  // Normalizamos a MAYÚSCULAS y SIN tildes para que variantes como "SOBREMÓDULOS"
+  // se agrupen igual que "SOBREMODULOS" (solo afecta a la agrupación, no al filtro).
+  const c = String(category || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   for (const d of MAIN_FAMILY_DEFS) { if (d.test(c)) return d.key; }
   return 'OTROS';
 };
