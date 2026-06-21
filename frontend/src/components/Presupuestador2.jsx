@@ -32,7 +32,7 @@ const MAIN_FAMILY_DEFS = [
   { key: 'SOBREENCIMERA', label: '05 · Sobreencimera',               test: c => /^SOBRE_?ENC/.test(c) || c === 'SOBRE' || c === 'ENCIMERA' },
   { key: 'SOBREMODULOS',  label: '06 · Sobremódulos',                test: c => /^SOBRE_?MODULO/.test(c) },
   { key: 'DECORATIVOS',   label: '07 · Muebles decorativos',         test: c => /DECORATIV|VITRINA/.test(c) },
-  { key: 'COSTADOS',      label: '08 · Costados, regletas y baldas',  test: c => /^(COSTADO|REGLETA|BALDA|ESTANTE|LATERAL|TECHO|ZOCALO|CORNISA)/.test(c) },
+  { key: 'COSTADOS',      label: '08 · Costados, regletas y baldas',  test: c => /^(COSTADO|REGLETA|BALDA|ESTANTE|LATERAL|TECHO|ZOCALO|CORNISA|PORTALUZ)/.test(c) },
   { key: 'ACCESORIOS',    label: '10 · Accesorios',                   test: c => /^(ACCESORIO|BOTELLERO|CESTO|CUBO|HERRAJE|PUERTA|REJILLA|GAVETERO)/.test(c) },
   { key: 'ELEMENTOS',     label: '11 · Elementos lineales',          test: c => /^(ELEMENTO|MOLDURA|REMATE|PERFIL|TIRADOR|PATA)/.test(c) },
   { key: 'ESTRUCTURAS',   label: '12 · Estructuras decorativas',     test: c => /^(ESTRUCTURA|PERGOLA|PANEL_DECOR|BANCO|MESA)/.test(c) },
@@ -43,6 +43,39 @@ const mainFamilyKeyOf = (category) => {
   const c = String(category || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   for (const d of MAIN_FAMILY_DEFS) { if (d.test(c)) return d.key; }
   return 'OTROS';
+};
+
+// Algunas categorías del catálogo MV son "bolsas mixtas" (MODULO, RINCON) que
+// contienen muebles de familias DISTINTAS (p.ej. MODULO = baldas + regletas +
+// media columnas + altillos…). Aquí re-categorizamos cada producto a su familia
+// real según su NOMBRE/código, para que el árbol de familias quede bien acotado.
+// No toca la BD: es una normalización al vuelo al cargar el catálogo.
+const _norm = (s) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const MIXED_CATEGORIES = new Set(['MODULO', 'RINCON']);
+const normalizeCategory = (category, name, code) => {
+  const cat = _norm(category).trim();
+  if (!MIXED_CATEGORIES.has(cat)) return category; // solo tocamos las bolsas mixtas
+  const n = _norm(name);
+  const c = _norm(code);
+  if (cat === 'RINCON') {
+    if (/BAJO RINCON/.test(n) || /^BR/.test(c)) return 'BAJO_RINCON';
+    if (/ALTO RINCON/.test(n) || /^AR/.test(c)) return 'ALTO_RINCON';
+    return category;
+  }
+  // MODULO → por el tipo de elemento (nombre)
+  if (/MEDIA ?COL|MEDIACOLUMNA/.test(n)) return 'MEDIA COLUMNA';
+  if (/ALTILLO/.test(n) && /VITRINA/.test(n)) return 'ALTILLO_VITRINA';
+  if (/^ALTILLO/.test(n)) return 'ALTILLO';
+  if (/^BALDA/.test(n)) return 'BALDA';
+  if (/^TECHO/.test(n)) return 'TECHO';
+  if (/^REGLETA/.test(n)) return 'REGLETA';
+  if (/^CORNISA/.test(n)) return 'CORNISA';
+  if (/^ZOCALO/.test(n)) return 'ZOCALO';
+  if (/^PORTALUZ/.test(n)) return 'PORTALUZ';
+  if (/^REJILLA/.test(n)) return 'REJILLA';
+  if (/^BOTELLERO/.test(n)) return 'BOTELLERO';
+  if (/^PERFIL/.test(n)) return 'PERFIL';
+  return category; // si no lo reconocemos, se queda como está (irá a "Otros")
 };
 
 // Familias "planas" (frentes/paneles/accesorios) que NO llevan incremento por
@@ -251,7 +284,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       const lib = await libR.json().catch(() => null);
       const prod = await prodR.json().catch(() => ({}));
       setLibrary(lib);
-      setProducts(Array.isArray(prod.products) ? prod.products : []);
+      const _raw = Array.isArray(prod.products) ? prod.products : [];
+      setProducts(_raw.map(p => {
+        const fixed = normalizeCategory(p.category, p.name || p.description, p.code || p.reference);
+        return fixed === p.category ? p : { ...p, category: fixed };
+      }));
     } catch (e) {
       setProducts([]);
     } finally { setLoading(false); }
