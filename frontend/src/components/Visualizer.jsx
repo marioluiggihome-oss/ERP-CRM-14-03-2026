@@ -13,6 +13,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
   const [selectedImages, setSelectedImages] = useState([]);  // Array de imágenes
+  const [dumpChoice, setDumpChoice] = useState(null);  // productos pendientes de elegir presupuestador
   const fileInputRef = useRef(null);
   
   const canUseAI = state.currentUser?.canUseAIAnalysis || state.currentUser?.isAdmin || state.currentUser?.isGerente;
@@ -138,21 +139,50 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
 
   const addAllFurnitureToBudget = () => {
     if (!analysisResult?.muebles_detectados?.length) return;
-    
+
     // Filtrar solo los productos encontrados en el catálogo
     const productosEncontrados = analysisResult.muebles_detectados.filter(f => f.producto_encontrado);
-    
+
     if (productosEncontrados.length === 0) {
       alert('⚠️ No hay productos del catálogo para añadir.\n\nRevisa manualmente los productos no encontrados.');
       return;
     }
-    
-    productosEncontrados.forEach((f) => {
-      addFurnitureToBudget(f, false);
-    });
-    
-    const totalPvp = productosEncontrados.reduce((sum, f) => sum + (f.precio_pvp || 0), 0);
-    alert(`✅ Se han añadido ${productosEncontrados.length} productos al presupuesto.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€\n\nVe a la pestaña "Presupuesto" para verlos.`);
+
+    // Volcar SOLO al presupuestador que el usuario tenga activo. Si tiene los dos,
+    // preguntar a cuál; si solo uno, va a ese; si ninguno, avisar.
+    const canP1 = state?.currentUser?.canUsePresupuestador1 !== false; // Presupuestador 2 (ZC)
+    const canP2 = state?.currentUser?.canUsePresupuestador2 !== false; // Presupuestador principal (MV)
+    if (!canP1 && !canP2) {
+      alert('No tienes ningún presupuestador activo para volcar los muebles.');
+      return;
+    }
+    if (canP1 && canP2) {
+      setDumpChoice(productosEncontrados);  // abre el diálogo de elección
+      return;
+    }
+    doDump(productosEncontrados, canP2 ? 'p2' : 'p1');
+  };
+
+  // Vuelca la lista al presupuestador elegido y navega a su pestaña.
+  const doDump = (productos, target) => {
+    if (target === 'p2') {
+      const lines = productos.map(f => ({
+        code: f.codigo_catalogo || f.codigo_sugerido || 'MV',
+        name: f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
+        price: Number(f.precio_pvp) || 0,
+        qty: 1,
+        width: f.ancho_real || f.ancho_estimado,
+        height: f.alto_real || f.alto_estimado,
+        depth: f.fondo_real || f.fondo_estimado,
+      }));
+      setState(p => ({ ...p, p2PendingLines: lines, currentTab: 'presupuestador2' }));
+    } else {
+      productos.forEach(f => addFurnitureToBudget(f, false));
+      setState(p => ({ ...p, currentTab: 'budget' }));
+    }
+    const totalPvp = productos.reduce((sum, f) => sum + (f.precio_pvp || 0), 0);
+    setDumpChoice(null);
+    alert(`✅ ${productos.length} productos añadidos al ${target === 'p2' ? 'Presupuestador (principal)' : 'Presupuestador 2'}.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€`);
   };
 
   const clearAll = () => {
@@ -522,6 +552,30 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
           )}
         </div>
       </div>
+
+      {/* Diálogo: elegir presupuestador cuando el usuario tiene los dos activos */}
+      {dumpChoice && (
+        <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setDumpChoice(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-black text-slate-900 mb-1">¿A qué presupuestador?</h3>
+            <p className="text-sm text-slate-500 mb-4">Tienes los dos activos. Elige dónde volcar los {dumpChoice.length} muebles detectados.</p>
+            <div className="grid grid-cols-1 gap-2">
+              <button onClick={() => doDump(dumpChoice, 'p2')}
+                className="w-full px-4 py-3 rounded-xl bg-orange-600 text-white font-black uppercase text-sm hover:bg-orange-700 transition-colors">
+                Presupuestador (principal · MV)
+              </button>
+              <button onClick={() => doDump(dumpChoice, 'p1')}
+                className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-black uppercase text-sm hover:bg-indigo-700 transition-colors">
+                Presupuestador 2 (ZC)
+              </button>
+              <button onClick={() => setDumpChoice(null)}
+                className="w-full px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
