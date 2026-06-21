@@ -8,6 +8,14 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeView, setActiveView] = useState('montaje'); // 'montaje', 'corte', 'bandas', 'herrajes', 'puertas_proveedor'
+  // Líneas anuladas del corte (p.ej. puertas que se piden fuera): se excluyen
+  // de la lista de corte y de las cuentas (lista de compra). Clave: productId-compId.
+  const [cancelledKeys, setCancelledKeys] = useState(() => new Set());
+  const toggleCancel = (key) => setCancelledKeys(prev => {
+    const n = new Set(prev);
+    if (n.has(key)) n.delete(key); else n.add(key);
+    return n;
+  });
   const [supplierDoors, setSupplierDoors] = useState([]); // Puertas editables para proveedor
   const [expandedItems, setExpandedItems] = useState({});
   const [editingComponent, setEditingComponent] = useState(null);
@@ -669,6 +677,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     despieceData.items.forEach(item => {
       const itemQty = item.itemQuantity || 1;
       item.components?.forEach(comp => {
+        // Pieza anulada (p.ej. puerta pedida fuera): no entra en las cuentas.
+        if (cancelledKeys.has(`${item.productId}-${comp.id}`)) return;
         // Los herrajes (length/width 0) no son tablero: se cuentan aparte.
         const isHardware = (!comp.length || !comp.width);
         const material = comp.material || carcassMaterialName || 'MELAMINA';
@@ -733,7 +743,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       costs: { costBoards, costEdge, hwCost, costTotal, pvp, margin, marginPct },
     };
   }, [despieceData, carcassMaterialName, calculateBandasYTraseras, calculateHerrajes, boardW, boardH, wastePct,
-      priceBoardM2, priceEdgeMl, priceHinge, priceSlide, priceHandle, priceShelfSup, priceHanger, salePvp]);
+      priceBoardM2, priceEdgeMl, priceHinge, priceSlide, priceHandle, priceShelfSup, priceHanger, salePvp, cancelledKeys]);
 
   // Exportar PDF - Genera contenido según la pestaña activa
   const handleExportPDF = () => {
@@ -1828,6 +1838,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                         <th className="px-4 py-4 text-center">Ancho (cm)</th>
                         <th className="px-4 py-4 text-center">Cantidad</th>
                         <th className="px-4 py-4 text-center">Cantos</th>
+                        <th className="px-4 py-4 text-center">Anular</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-indigo-50">
@@ -1842,9 +1853,12 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                           if (comp.notes.includes("frontal visto")) cantos = "1L";
                           if (comp.name.includes("LATERAL")) cantos = "1L";
                           if (comp.name.includes("TAPA")) cantos = "1L";
-                          
+
+                          const cancelKey = `${furniture.productId}-${comp.id}`;
+                          const cancelled = cancelledKeys.has(cancelKey);
+
                           return (
-                            <tr key={`${furniture.productId}-${comp.id}`} className="hover:bg-orange-50/50 transition-colors">
+                            <tr key={`${furniture.productId}-${comp.id}`} className={`transition-colors ${cancelled ? 'bg-slate-50 opacity-50 line-through' : 'hover:bg-orange-50/50'}`}>
                               <td className="px-6 py-3 font-black text-indigo-300">{rowNum}</td>
                               <td className="px-4 py-3">
                                 <span className="font-bold text-indigo-900 text-sm">{furniture.productCode}</span>
@@ -1871,6 +1885,13 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                   {cantos}
                                 </span>
                               </td>
+                              <td className="px-4 py-3 text-center no-print">
+                                <button type="button" onClick={() => toggleCancel(cancelKey)}
+                                  title={cancelled ? 'Restaurar línea' : 'Anular (no fabricar / pedida fuera)'}
+                                  className={`px-2 py-1 rounded-lg text-xs font-black uppercase no-underline ${cancelled ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}>
+                                  {cancelled ? '↩ Restaurar' : '✕ Anular'}
+                                </button>
+                              </td>
                             </tr>
                           );
                         })
@@ -1878,6 +1899,11 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                     </tbody>
                   </table>
                 </div>
+                {cancelledKeys.size > 0 && (
+                  <p className="text-xs text-slate-500 italic px-1">
+                    {cancelledKeys.size} línea(s) anulada(s): se excluyen del corte y de la lista de compra (p. ej. puertas que se piden fuera).
+                  </p>
+                )}
                 </div>
               )}
 
