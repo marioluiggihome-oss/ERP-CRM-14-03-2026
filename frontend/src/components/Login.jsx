@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogIn, User as UserIcon, Key, ShieldAlert, Loader, Building2, Mail, Phone, MapPin, Send, CheckCircle, ArrowLeft, Shield } from 'lucide-react';
 import Logo from './Logo';
 import { login } from '../services/authService';
+import { settingsAPI } from '../services/api';
 import RegisterForm from './RegisterForm';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -14,7 +15,19 @@ const Login = ({ onLogin, customLogo }) => {
   const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
+  // Logo corporativo para la pantalla de login. Si no llega por props, se pide
+  // al endpoint público (la pantalla de login no tiene sesión todavía).
+  const [publicLogo, setPublicLogo] = useState(null);
+  useEffect(() => {
+    if (customLogo) return;
+    let active = true;
+    settingsAPI.getPublicLogo()
+      .then(d => { if (active && d?.logo) setPublicLogo(d.logo); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [customLogo]);
+
   // Registro distribuidor
   const [registerData, setRegisterData] = useState({
     companyName: '',
@@ -221,7 +234,7 @@ const Login = ({ onLogin, customLogo }) => {
         <div className="w-full max-w-md relative z-10">
           {/* Logo */}
           <div className="text-center mb-8">
-            <Logo variant="dark" customLogo={customLogo} className="h-24 mb-3" />
+            <Logo variant="dark" customLogo={customLogo || publicLogo} className="h-24 mb-3" />
             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
               {mode === 'login' ? 'Acceso Distribuidores' : 'Solicitud de Alta'}
             </p>

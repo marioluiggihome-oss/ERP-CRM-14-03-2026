@@ -133,6 +133,17 @@ async def update_settings(settings: SettingsUpdate, current_user: dict = Depends
     return updated
 
 
+@router.get("/public-logo")
+async def get_public_logo():
+    """Logo corporativo GLOBAL para la pantalla de login (público, solo lectura).
+
+    Devuelve únicamente el logo global (el que se muestra antes de iniciar
+    sesión). No expone ningún otro ajuste sensible (email, claves, etc.).
+    """
+    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1})
+    return {"logo": settings.get("logo") if settings else None}
+
+
 @router.get("/logo")
 async def get_logo(current_user: dict = Depends(get_current_user)):
     """Logo EFECTIVO del usuario: su logo propio si tiene marca personalizada

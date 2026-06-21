@@ -33,6 +33,7 @@ PUBLIC_API_PATHS = frozenset({
     "/api/auth/reset-password",
     "/api/maintenance/status",
     "/api/distributor/request",
+    "/api/settings/public-logo",
 })
 
 _TRUTHY = ("1", "true", "yes", "on")

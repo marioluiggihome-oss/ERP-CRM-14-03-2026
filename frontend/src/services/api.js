@@ -672,6 +672,13 @@ export const settingsAPI = {
     const response = await fetch(`${API_URL}/api/settings/logo`, { headers: authHeaders() });
     if (!response.ok) throw new Error('Error al obtener el logo');
     return response.json();
+  },
+
+  // Logo GLOBAL público para la pantalla de login (no requiere sesión).
+  getPublicLogo: async () => {
+    const response = await fetch(`${API_URL}/api/settings/public-logo`);
+    if (!response.ok) throw new Error('Error al obtener el logo público');
+    return response.json();
   }
 };
 
