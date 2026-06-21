@@ -3,7 +3,7 @@ import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown,
 import { despieceAPI } from '../services/api';
 import BoardOptimizer from './BoardOptimizer';
 
-const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor, doorHasVeta = false, doorToleranceHeight = 2, doorToleranceWidth = 3 }) => {
+const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor, doorHasVeta = false, doorToleranceHeight = 2, doorToleranceWidth = 3, canSeeCost = false }) => {
   const [despieceData, setDespieceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1228,7 +1228,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                 <td class="font-bold">${p.productCode}</td>
                 <td class="text-center">${p.doorHeight}</td>
                 <td class="text-center">${p.doorWidth}</td>
-                <td class="text-center" style="background:#d1fae5; color:#065f46; font-weight:bold;">↕ V</td>
+                <td class="text-center" style="background:${doorHasVeta ? '#d1fae5' : '#f1f5f9'}; color:${doorHasVeta ? '#065f46' : '#64748b'}; font-weight:bold;">${doorHasVeta ? '↕ V' : '— Sin veta'}</td>
                 <td class="text-center">${p.doorQty}</td>
                 <td class="text-center font-bold">${total}</td>
               </tr>
@@ -1243,8 +1243,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         });
         
         html += `
-          <div style="background:#d1fae5; padding:8px; border-radius:6px; font-size:9px; color:#065f46; margin-top:10px;">
-            <strong>📐 VETA:</strong> Todas las puertas con veta VERTICAL (↕) - La veta sigue la dirección del ALTO
+          <div style="background:${doorHasVeta ? '#d1fae5' : '#f1f5f9'}; padding:8px; border-radius:6px; font-size:9px; color:${doorHasVeta ? '#065f46' : '#64748b'}; margin-top:10px;">
+            <strong>📐 VETA:</strong> ${doorHasVeta ? 'Todas las puertas con veta VERTICAL (↕) - La veta sigue la dirección del ALTO' : 'Las puertas NO llevan veta'}
           </div>
           <div style="background:#fef3c7; padding:8px; border-radius:6px; font-size:9px; color:#92400e; margin-top:5px;">
             <strong>TOTAL GENERAL:</strong> ${totalPuertas} puertas${sideColor ? ` | <strong>Costados:</strong> ${sideColor}` : ''}
@@ -2219,7 +2219,9 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                                       <td className={`px-4 py-3 text-center font-mono text-lg font-bold ${estilo.text.replace('-700', '-800')}`}>{p.doorHeight}</td>
                                       <td className={`px-4 py-3 text-center font-mono text-lg font-bold ${estilo.text.replace('-700', '-800')}`}>{p.doorWidth}</td>
                                       <td className="px-4 py-3 text-center">
-                                        <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">↕ V</span>
+                                        {doorHasVeta
+                                          ? <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">↕ V</span>
+                                          : <span className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs font-bold">— Sin veta</span>}
                                       </td>
                                       <td className="px-4 py-3 text-center font-bold">{p.doorQty}</td>
                                       <td className="px-4 py-3 text-center font-bold text-indigo-600">{p.itemQty}</td>
@@ -2548,7 +2550,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                     </div>
                   </div>
 
-                  {/* ===== COSTES Y MARGEN ===== */}
+                  {/* ===== COSTES Y MARGEN (solo con permiso Ver Costo) ===== */}
+                  {canSeeCost && (
                   <div className="bg-slate-900 text-white rounded-2xl p-5">
                     <h3 className="text-sm font-black uppercase mb-4 flex items-center gap-2">💶 Costes y Margen de Fabricación</h3>
                     {/* Precios unitarios configurables */}
@@ -2606,6 +2609,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       Coste = tableros (m²×€ con merma) + canto (ml×€) + herrajes (uds×€). Pon el <strong>PVP de venta</strong> para ver el margen. Los precios se pueden ajustar arriba.
                     </p>
                   </div>
+                  )}
 
                   {/* Tableros por material */}
                   <div>

@@ -2025,6 +2025,7 @@ const PortalFabrica = ({ currentUser }) => {
           doorColorColumns={despieceOrder.doorColor || ''}
           sideColor={despieceOrder.sideColor || ''}
           doorHasVeta={!!despieceOrder.doorHasVeta}
+          canSeeCost={currentUser?.isAdmin === true || currentUser?.canSeeCost === true || currentUser?.canAccessFabrica === true}
         />
       )}
 

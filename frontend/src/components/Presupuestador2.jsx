@@ -1475,6 +1475,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         doorHasVeta={doorHasVeta}
         doorToleranceHeight={2}
         doorToleranceWidth={3}
+        canSeeCost={currentUser?.isAdmin === true || currentUser?.canSeeCost === true}
       />
 
       <ConfirmOrderModal

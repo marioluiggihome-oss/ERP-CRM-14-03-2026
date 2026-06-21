@@ -2954,6 +2954,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
         doorHasVeta={state.doorHasVeta === true}
         doorToleranceHeight={state.doorToleranceHeight ?? 2}
         doorToleranceWidth={state.doorToleranceWidth ?? 3}
+        canSeeCost={state.currentUser?.isAdmin === true || state.currentUser?.canSeeCost === true}
       />
 
       {/* Modal para añadir tablero al presupuesto - Componente extraído */}
