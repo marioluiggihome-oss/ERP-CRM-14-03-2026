@@ -20,11 +20,27 @@ const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFraction
 // Agrupa nombres de familia muy parecidos (p.ej. "PUERTA"/"PUERTAS",
 // "LATERAL"/"LATERALES"/"LATERALES COLOR") bajo una misma cabecera para
 // compactar la lista de categorías sin tocar los datos del catálogo.
-const groupKeyOf = (name) => {
-  const first = (name || '').split(' ')[0].split('_')[0];
-  if (first.endsWith('ES')) return first.slice(0, -2);
-  if (first.endsWith('S')) return first.slice(0, -1);
-  return first;
+// Familias PRINCIPALES del menú lateral, en el orden de negocio (sirve para MV y
+// ZC). Cada categoría del catálogo cae en la PRIMERA que casa; lo no clasificado
+// va a "Otros" al final para no perder nada. Las categorías reales quedan como
+// SUBFAMILIAS dentro de cada principal.
+const MAIN_FAMILY_DEFS = [
+  { key: 'BAJOS',         label: '01 · Bajos',                       test: c => /^BAJO/.test(c) },
+  { key: 'ALTOS',         label: '02 · Altos',                       test: c => /^(ALTO|ALTILLO)/.test(c) && !/DECORATIV|VITRINA/.test(c) },
+  { key: 'SEMICOLUMNAS',  label: '03 · Semicolumnas',                test: c => /^(MEDIACOLUMNA|SEMICOLUMNA|SEMI)/.test(c) },
+  { key: 'COLUMNAS',      label: '04 · Columnas',                    test: c => /^COLUMNA/.test(c) },
+  { key: 'SOBREENCIMERA', label: '05 · Sobreencimera',               test: c => /^SOBRE_?ENCIMERA/.test(c) },
+  { key: 'SOBREMODULOS',  label: '06 · Sobremódulos',                test: c => /^SOBRE_?MODULO/.test(c) },
+  { key: 'DECORATIVOS',   label: '07 · Muebles decorativos',         test: c => /DECORATIV|VITRINA/.test(c) },
+  { key: 'COSTADOS',      label: '08 · Costados, regletas y baldas',  test: c => /^(COSTADO|REGLETA|BALDA|LATERAL|TECHO|ZOCALO|CORNISA)/.test(c) },
+  { key: 'ACCESORIOS',    label: '10 · Accesorios',                   test: c => /^(ACCESORIO|BOTELLERO|CESTO|CUBO|HERRAJE|PUERTA|REJILLA|GAVETERO)/.test(c) },
+  { key: 'ELEMENTOS',     label: '11 · Elementos lineales',          test: c => /^(ELEMENTOS_?LINEALES|MOLDURA|REMATE|PERFIL|TIRADOR|PATA)/.test(c) },
+  { key: 'ESTRUCTURAS',   label: '12 · Estructuras decorativas',     test: c => /^(ESTRUCTURA|PERGOLA|PANEL_DECOR|BANCO|MESA)/.test(c) },
+];
+const mainFamilyKeyOf = (category) => {
+  const c = String(category || '').toUpperCase();
+  for (const d of MAIN_FAMILY_DEFS) { if (d.test(c)) return d.key; }
+  return 'OTROS';
 };
 
 // Familias "planas" (frentes/paneles/accesorios) que NO llevan incremento por
@@ -367,27 +383,30 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   // Agrupa familias muy parecidas (singular/plural, variantes "color"/"melamina"…)
   // bajo una cabecera común, para que la barra de categorías no sea interminable.
   const familyGroups = useMemo(() => {
+    const order = {}, labelOf = {};
+    MAIN_FAMILY_DEFS.forEach((d, i) => { order[d.key] = i; labelOf[d.key] = d.label; });
+    labelOf['OTROS'] = '99 · Otros'; order['OTROS'] = 999;
     const groups = {};
     families.forEach(([name, count]) => {
-      const key = groupKeyOf(name);
-      if (!groups[key]) groups[key] = { key, total: 0, members: [] };
+      const key = mainFamilyKeyOf(name);
+      if (!groups[key]) groups[key] = { key, label: labelOf[key] || key, order: order[key] ?? 998, total: 0, members: [] };
       groups[key].total += count;
       groups[key].members.push([name, count]);
     });
     let list = Object.values(groups);
     const q = familyFilter.trim().toLowerCase();
     if (q) {
-      list = list.filter(g => g.key.toLowerCase().includes(q) || g.members.some(([n]) => n.toLowerCase().includes(q)));
+      list = list.filter(g => g.label.toLowerCase().includes(q) || g.key.toLowerCase().includes(q) || g.members.some(([n]) => n.toLowerCase().includes(q)));
     }
-    return list.sort((a, b) => a.key.localeCompare(b.key));
+    list.forEach(g => g.members.sort((a, b) => a[0].localeCompare(b[0])));
+    return list.sort((a, b) => a.order - b.order);
   }, [families, familyFilter]);
 
   // Si la familia activa pertenece a un grupo con varios miembros, lo dejamos
   // expandido automáticamente para que se vea seleccionado.
   useEffect(() => {
     if (!family) return;
-    const key = groupKeyOf(family);
-    if (family === key) return; // la familia base no auto-despliega sus sub-familias
+    const key = mainFamilyKeyOf(family);
     setExpandedGroups(prev => (prev[key] ? prev : { ...prev, [key]: true }));
   }, [family]);
 
@@ -928,8 +947,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                               ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-200'
                               : isActiveGroup ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-orange-50'}`}>
                           <span className="flex items-center gap-1.5 min-w-0">
-                            <MuebleIcon type={classifyMueble({ category: g.key })} size={16} className="shrink-0" />
-                            <span className="truncate">{single ? g.members[0][0] : g.key}</span>
+                            <MuebleIcon type={classifyMueble({ category: g.members[0]?.[0] || g.key })} size={16} className="shrink-0" />
+                            <span className="truncate">{single ? g.members[0][0] : g.label}</span>
                           </span>
                           <span className="flex items-center gap-1 shrink-0">
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
