@@ -287,6 +287,18 @@ Para cada mueble detectado proporciona:
 - codigo_sugerido: USAR EL SISTEMA DE CÓDIGOS DESCRITO ARRIBA
 - confianza: ALTA/MEDIA/BAJA
 
+RAZONA DE FORMA METÓDICA ANTES DE RESPONDER (piensa paso a paso):
+- Recorre el plano de IZQUIERDA a DERECHA y separa lo de ARRIBA (altos) de lo de ABAJO (bajos).
+- Cuenta por separado altos, bajos, columnas, semicolumnas y costados; no dupliques ni omitas ninguno.
+- Distingue MUEBLE de ELECTRODOMÉSTICO: nevera, horno, microondas, lavavajillas, placa y campana
+  NO son muebles del catálogo (márcalos como ELECTRODOMESTICO).
+- VERIFICA que cada medida sea REALISTA antes de darla. Rangos válidos:
+  · ancho: 300–1200 mm (usa el valor estándar más cercano)
+  · alto altos: 35–90 cm · alto bajos: 70–90 cm · columnas: 200–240 cm
+  · fondo: ~33 cm en altos, ~58 cm en bajos
+  Si una medida se sale de rango (p.ej. fondo de 5 mm), es un ERROR: corrígela al estándar más cercano.
+- Prioriza los anchos ROTULADOS en el plano; no inventes medidas.
+
 Responde SOLO con JSON válido:
 {
   "muebles_detectados": [
@@ -371,7 +383,7 @@ async def analyze_kitchen_plan(
             image_base64=base64_image,
             prompt=build_analysis_prompt(active_library),
             session_id=f"kitchen-plan-{uuid.uuid4().hex[:8]}",
-            model="gemini-2.5-flash",
+            model="gemini-2.5-pro",
         )
         
         # Clean JSON from markdown
@@ -523,7 +535,7 @@ ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente
                 image_base64=base64_image,
                 prompt=analysis_prompt,
                 session_id=f"kitchen-multi-{uuid.uuid4().hex[:8]}",
-                model="gemini-2.5-flash",
+                model="gemini-2.5-pro",
             )
             
             if '```json' in response_text:
