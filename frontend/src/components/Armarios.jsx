@@ -2114,7 +2114,7 @@ const Armarios = ({ state, setState }) => {
         </div>
         
         {/* Info de puertas */}
-        <div className="absolute top-2 right-2 text-xs font-bold text-purple-700 bg-purple-100 px-2 py-1 rounded shadow">
+        <div className="absolute top-2 right-2 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded shadow">
           {numDoors} {doorType === DoorType.SLIDING ? 'correderas' : doorType === DoorType.FOLDING ? 'plegables' : 'abatibles'}
         </div>
         
@@ -2128,17 +2128,17 @@ const Armarios = ({ state, setState }) => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-4 flex items-center justify-between">
+      {/* Header — pl-14 deja sitio al botón de menú flotante (no tapa el logo) */}
+      <div className="bg-gradient-to-r from-emerald-600 to-green-800 text-white pl-14 pr-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
             {state?.logo
               ? <img src={state.logo} alt="Logo" className="h-full w-full object-contain p-0.5" />
-              : <Box size={20} className="text-purple-700" />}
+              : <Box size={20} className="text-emerald-700" />}
           </div>
           <div className="hidden sm:block">
             <h1 className="text-base font-black tracking-tight leading-none">DISEÑADOR DE ARMARIOS</h1>
-            <p className="text-[9px] text-purple-300 uppercase tracking-widest mt-0.5">Configurador Profesional</p>
+            <p className="text-[9px] text-emerald-300 uppercase tracking-widest mt-0.5">Configurador Profesional</p>
           </div>
         </div>
         
@@ -2177,7 +2177,7 @@ const Armarios = ({ state, setState }) => {
           {/* Botones */}
           <button
             onClick={() => setShowIAModal(true)}
-            className="ml-auto shrink-0 flex items-center gap-2 bg-gradient-to-r from-pink-500 to-violet-500 hover:from-pink-400 hover:to-violet-400 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            className="ml-auto shrink-0 flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
             data-testid="armarios-ia-config-btn"
             title="Configurar con IA"
           >
@@ -2215,7 +2215,7 @@ const Armarios = ({ state, setState }) => {
           <button 
             onClick={saveProject}
             disabled={saving}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
             data-testid="armarios-guardar-btn"
           >
             {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
@@ -2347,7 +2347,7 @@ const Armarios = ({ state, setState }) => {
                   onClick={() => updateConfig('doorType', type)}
                   className={`p-2 rounded-lg text-center transition-all ${
                     wardrobeConfig.doorType === type
-                      ? 'bg-purple-600 text-white shadow-lg'
+                      ? 'bg-emerald-600 text-white shadow-lg'
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
                 >
@@ -2358,24 +2358,24 @@ const Armarios = ({ state, setState }) => {
             </div>
             
             {/* Número de puertas */}
-            <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
-              <label className="text-[10px] font-bold text-purple-600 uppercase block mb-2">Nº de Puertas</label>
+            <div className="mt-4 p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+              <label className="text-[10px] font-bold text-emerald-600 uppercase block mb-2">Nº de Puertas</label>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => updateConfig('numDoors', Math.max(1, wardrobeConfig.numDoors - 1))}
-                  className="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-purple-700"
+                  className="p-2 bg-emerald-100 hover:bg-emerald-200 rounded-lg text-emerald-700"
                 >
                   <Minus size={14} />
                 </button>
-                <span className="font-black text-2xl text-purple-700 w-10 text-center">{wardrobeConfig.numDoors}</span>
+                <span className="font-black text-2xl text-emerald-700 w-10 text-center">{wardrobeConfig.numDoors}</span>
                 <button
                   onClick={() => updateConfig('numDoors', Math.min(8, wardrobeConfig.numDoors + 1))}
-                  className="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-purple-700"
+                  className="p-2 bg-emerald-100 hover:bg-emerald-200 rounded-lg text-emerald-700"
                 >
                   <Plus size={14} />
                 </button>
               </div>
-              <p className="text-[9px] text-purple-500 mt-2">
+              <p className="text-[9px] text-emerald-500 mt-2">
                 {wardrobeConfig.doorType === DoorType.SLIDING 
                   ? `${wardrobeConfig.numDoors} puertas correderas` 
                   : wardrobeConfig.doorType === DoorType.FOLDING 
@@ -2429,14 +2429,14 @@ const Armarios = ({ state, setState }) => {
                       onClick={() => updateConfig('exteriorColor', color.id)}
                       className={`relative group w-7 h-7 rounded border-2 transition-all ${
                         wardrobeConfig.exteriorColor === color.id
-                          ? 'border-purple-500 scale-110 ring-2 ring-purple-300'
-                          : 'border-slate-300 hover:border-purple-300 hover:scale-105'
+                          ? 'border-emerald-500 scale-110 ring-2 ring-emerald-300'
+                          : 'border-slate-300 hover:border-emerald-300 hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.hex }}
                       title={`${color.ref} - ${color.name}`}
                     >
                       {wardrobeConfig.exteriorColor === color.id && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center">
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full flex items-center justify-center">
                           <span className="text-white text-[6px]">✓</span>
                         </span>
                       )}
@@ -2464,14 +2464,14 @@ const Armarios = ({ state, setState }) => {
                       onClick={() => updateConfig('interiorColor', color.id)}
                       className={`relative group w-7 h-7 rounded border-2 transition-all ${
                         wardrobeConfig.interiorColor === color.id
-                          ? 'border-purple-500 scale-110 ring-2 ring-purple-300'
-                          : 'border-slate-300 hover:border-purple-300 hover:scale-105'
+                          ? 'border-emerald-500 scale-110 ring-2 ring-emerald-300'
+                          : 'border-slate-300 hover:border-emerald-300 hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.hex }}
                       title={`${color.ref} - ${color.name}`}
                     >
                       {wardrobeConfig.interiorColor === color.id && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full flex items-center justify-center">
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full flex items-center justify-center">
                           <span className="text-white text-[6px]">✓</span>
                         </span>
                       )}
@@ -2491,8 +2491,8 @@ const Armarios = ({ state, setState }) => {
           </div>
 
           {/* Módulo seleccionado */}
-          <div className="p-4 border-b border-slate-200 bg-purple-50">
-            <h3 className="font-black text-purple-800 uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
+          <div className="p-4 border-b border-slate-200 bg-emerald-50">
+            <h3 className="font-black text-emerald-800 uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
               <Layers size={14} />
               MÓDULO {selectedModule + 1} de {wardrobeConfig.modules}
             </h3>
@@ -2505,8 +2505,8 @@ const Armarios = ({ state, setState }) => {
                   onClick={() => setSelectedModule(idx)}
                   className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${
                     selectedModule === idx 
-                      ? 'bg-purple-600 text-white shadow-lg' 
-                      : 'bg-white border border-purple-200 text-purple-600 hover:bg-purple-100'
+                      ? 'bg-emerald-600 text-white shadow-lg' 
+                      : 'bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-100'
                   }`}
                 >
                   {idx + 1}
@@ -2562,9 +2562,9 @@ const Armarios = ({ state, setState }) => {
             </div>
 
             {/* Distribución del módulo: maletero + orden de piezas (mover arriba/abajo) */}
-            <div className="mt-4 pt-3 border-t border-purple-200">
+            <div className="mt-4 pt-3 border-t border-emerald-200">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Distribución (de arriba a abajo)</h4>
+                <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Distribución (de arriba a abajo)</h4>
                 <label className="flex items-center gap-1 cursor-pointer text-[10px] font-bold text-slate-700" title="Maletero (compartimento superior)">
                   <input type="checkbox"
                     checked={!!moduleConfigs[selectedModule]?.maletero}
@@ -2576,7 +2576,7 @@ const Armarios = ({ state, setState }) => {
               <div className="flex flex-wrap gap-1 mb-2">
                 {[['shelf', '📏 Balda'], ['drawer', '🗄️ Cajón'], ['rod', '👔 Barra'], ['maletero', '🧳 Maletero']].map(([tok, lbl]) => (
                   <button key={tok} onClick={() => addElement(selectedModule, tok)}
-                    className="px-2 py-1 rounded-lg bg-white border border-purple-200 text-[10px] font-bold text-slate-700 hover:border-purple-400 transition-colors">
+                    className="px-2 py-1 rounded-lg bg-white border border-emerald-200 text-[10px] font-bold text-slate-700 hover:border-emerald-400 transition-colors">
                     + {lbl}
                   </button>
                 ))}
@@ -2602,8 +2602,8 @@ const Armarios = ({ state, setState }) => {
             </div>
 
             {/* Accesorios extra del módulo */}
-            <div className="mt-4 pt-3 border-t border-purple-200">
-              <h4 className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2">ACCESORIOS MÓDULO</h4>
+            <div className="mt-4 pt-3 border-t border-emerald-200">
+              <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">ACCESORIOS MÓDULO</h4>
               <div className="grid grid-cols-2 gap-1">
                 {[
                   { key: 'shoesRack', label: '👟 Zapatero', price: 120 },
@@ -2612,12 +2612,12 @@ const Armarios = ({ state, setState }) => {
                   { key: 'tieRack', label: '👔 Corbatero', price: 45 },
                   { key: 'pulloutBasket', label: '🧺 Cesto', price: 75 },
                 ].map(({ key, label, price }) => (
-                  <label key={key} className="flex items-center gap-1 cursor-pointer p-1 rounded hover:bg-purple-100 text-[10px]">
+                  <label key={key} className="flex items-center gap-1 cursor-pointer p-1 rounded hover:bg-emerald-100 text-[10px]">
                     <input
                       type="checkbox"
                       checked={moduleConfigs[selectedModule]?.extras?.[key] || false}
                       onChange={(e) => updateModuleExtra(selectedModule, key, e.target.checked)}
-                      className="w-3 h-3 rounded border-purple-300 text-purple-600"
+                      className="w-3 h-3 rounded border-emerald-300 text-emerald-600"
                     />
                     <span className="font-medium text-slate-700">{label}</span>
                   </label>
@@ -2642,7 +2642,7 @@ const Armarios = ({ state, setState }) => {
                       type="checkbox"
                       checked={extras[key]}
                       onChange={(e) => setExtras(prev => ({ ...prev, [key]: e.target.checked }))}
-                      className="w-4 h-4 rounded border-slate-300 text-purple-600"
+                      className="w-4 h-4 rounded border-slate-300 text-emerald-600"
                     />
                     <span className="text-sm font-medium text-slate-700">{label}</span>
                   </div>
@@ -2653,7 +2653,7 @@ const Armarios = ({ state, setState }) => {
           </div>
 
           {/* Panel DISEÑO CON IA - Nuevo */}
-          <div className="p-4 border-b border-slate-200 bg-gradient-to-br from-indigo-900 to-purple-900">
+          <div className="p-4 border-b border-slate-200 bg-gradient-to-br from-green-900 to-emerald-900">
             <h3 className="font-black text-white uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
               <Sparkles size={14} className="text-yellow-400" />
               DISEÑO INTELIGENTE IA
@@ -2719,7 +2719,7 @@ const Armarios = ({ state, setState }) => {
               onClick={() => setDoorsOpen(!doorsOpen)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all shadow-sm border ${
                 doorsOpen 
-                  ? 'bg-purple-100 border-purple-300 text-purple-700' 
+                  ? 'bg-emerald-100 border-emerald-300 text-emerald-700' 
                   : 'bg-green-100 border-green-300 text-green-700'
               }`}
             >
@@ -2810,43 +2810,43 @@ const Armarios = ({ state, setState }) => {
         </div>
 
         {/* Panel derecho - Resumen precio */}
-        <div className="w-72 bg-gradient-to-b from-purple-900 to-indigo-900 text-white p-4 overflow-y-auto">
-          <h3 className="font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2 text-purple-300">
+        <div className="w-72 bg-gradient-to-b from-emerald-600 to-green-800 text-white p-4 overflow-y-auto">
+          <h3 className="font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2 text-emerald-300">
             <Calculator size={14} />
             RESUMEN PRESUPUESTO
           </h3>
           
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-purple-300">Estructura base</span>
+              <span className="text-emerald-300">Estructura base</span>
               <span className="font-bold">{pricing.base.toFixed(2)}€</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-purple-300">Sistema puertas</span>
+              <span className="text-emerald-300">Sistema puertas</span>
               <span className="font-bold">{pricing.doors.toFixed(2)}€</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-purple-300">Terminaciones</span>
+              <span className="text-emerald-300">Terminaciones</span>
               <span className="font-bold">{pricing.ends.toFixed(2)}€</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-purple-300">Interior</span>
+              <span className="text-emerald-300">Interior</span>
               <span className="font-bold">{pricing.interior.toFixed(2)}€</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-purple-300">Extras</span>
+              <span className="text-emerald-300">Extras</span>
               <span className="font-bold">{pricing.extras.toFixed(2)}€</span>
             </div>
             
-            <div className="border-t border-purple-700 pt-3 mt-3">
+            <div className="border-t border-emerald-700 pt-3 mt-3">
               {/* Descuento aparte para armarios */}
               <div className="flex justify-between items-center mb-1">
-                <span className="text-purple-300">Descuento armarios</span>
+                <span className="text-emerald-300">Descuento armarios</span>
                 <div className="flex items-center gap-1">
                   <input type="number" min="0" max="100" value={armDiscount}
                     onChange={(e) => setArmDiscount(e.target.value)}
                     className="w-14 bg-white/10 text-white text-right font-bold rounded px-1 py-0.5 text-sm outline-none focus:bg-white/20" />
-                  <span className="text-purple-300 text-xs">%</span>
+                  <span className="text-emerald-300 text-xs">%</span>
                 </div>
               </div>
               {pricing.discountPct > 0 && (
@@ -2859,7 +2859,7 @@ const Armarios = ({ state, setState }) => {
               {canSeeCost && pricing.discountPct > 0 && (
                 <div className="flex justify-between items-center mb-1">
                   <button type="button" onClick={() => setShowCost(v => !v)}
-                    className="flex items-center gap-1 text-purple-300 hover:text-white transition-colors"
+                    className="flex items-center gap-1 text-emerald-300 hover:text-white transition-colors"
                     title={showCost ? 'Ocultar PVP sin descuento' : 'Ver PVP sin descuento'}>
                     {showCost ? <EyeOff size={12} /> : <Eye size={12} />}
                     <span className="text-xs">PVP sin dto.</span>
@@ -2868,25 +2868,25 @@ const Armarios = ({ state, setState }) => {
                 </div>
               )}
               <div className="flex justify-between mb-1">
-                <span className="text-purple-300">Base imponible</span>
+                <span className="text-emerald-300">Base imponible</span>
                 <span className="font-bold">{pricing.subtotal.toFixed(2)}€</span>
               </div>
               <div className="flex justify-between mb-1">
-                <span className="text-purple-300">IVA ({ivaRate}%)</span>
+                <span className="text-emerald-300">IVA ({ivaRate}%)</span>
                 <span className="font-bold">{pricing.iva.toFixed(2)}€</span>
               </div>
             </div>
             
-            <div className="bg-purple-600 rounded-xl p-4 mt-4">
-              <p className="text-xs text-purple-200 uppercase tracking-widest mb-1">Total presupuesto</p>
+            <div className="bg-emerald-600 rounded-xl p-4 mt-4">
+              <p className="text-xs text-emerald-200 uppercase tracking-widest mb-1">Total presupuesto</p>
               <p className="text-3xl font-black">{pricing.total.toFixed(2)}€</p>
             </div>
           </div>
           
           {/* Especificaciones */}
-          <div className="mt-6 pt-4 border-t border-purple-700">
-            <h4 className="text-[10px] font-bold text-purple-300 uppercase tracking-widest mb-2">ESPECIFICACIONES</h4>
-            <div className="text-[10px] text-purple-400 space-y-1">
+          <div className="mt-6 pt-4 border-t border-emerald-700">
+            <h4 className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-2">ESPECIFICACIONES</h4>
+            <div className="text-[10px] text-emerald-400 space-y-1">
               <p>• {wardrobeConfig.modules} módulos</p>
               <p>• Puerta {wardrobeConfig.doorType === DoorType.SLIDING ? 'corredera' : wardrobeConfig.doorType === DoorType.HINGED ? 'abatible' : 'plegable'}</p>
               <p>• Exterior: {getColorByName(wardrobeConfig.exteriorColor).name}</p>
@@ -2899,31 +2899,31 @@ const Armarios = ({ state, setState }) => {
 
           {/* Resumen Tableros + despiece: solo para Fábrica (canDespiece) */}
           {canDespiece && (<>
-          <div className="mt-4 pt-4 border-t border-purple-700">
-            <h4 className="text-[10px] font-bold text-purple-300 uppercase tracking-widest mb-2 flex items-center gap-1">
+          <div className="mt-4 pt-4 border-t border-emerald-700">
+            <h4 className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-2 flex items-center gap-1">
               <Layers size={12} />
               TABLEROS NECESARIOS
             </h4>
-            <div className="bg-purple-800/50 rounded-lg p-3 space-y-2">
+            <div className="bg-emerald-800/50 rounded-lg p-3 space-y-2">
               <div className="flex justify-between text-[10px]">
-                <span className="text-purple-300">18mm Estructura:</span>
+                <span className="text-emerald-300">18mm Estructura:</span>
                 <span className="font-bold text-white">{boardsCalculation.boards.tablero18mm.totalArea.toFixed(2)} m²</span>
               </div>
               <div className="flex justify-between text-[10px]">
-                <span className="text-purple-300">8mm Trasera:</span>
+                <span className="text-emerald-300">8mm Trasera:</span>
                 <span className="font-bold text-white">{boardsCalculation.boards.tablero8mm.totalArea.toFixed(2)} m²</span>
               </div>
               <div className="flex justify-between text-[10px]">
-                <span className="text-purple-300">18mm Puertas:</span>
+                <span className="text-emerald-300">18mm Puertas:</span>
                 <span className="font-bold text-white">{boardsCalculation.boards.puertasTablero.totalArea.toFixed(2)} m²</span>
               </div>
-              <div className="border-t border-purple-600 pt-2 mt-2">
+              <div className="border-t border-emerald-600 pt-2 mt-2">
                 <div className="flex justify-between text-xs">
-                  <span className="font-bold text-purple-200">TOTAL:</span>
+                  <span className="font-bold text-emerald-200">TOTAL:</span>
                   <span className="font-black text-orange-400">{boardsCalculation.totalArea.toFixed(2)} m²</span>
                 </div>
                 <div className="flex justify-between text-[10px] mt-1">
-                  <span className="text-purple-300">Tableros:</span>
+                  <span className="text-emerald-300">Tableros:</span>
                   <span className="font-bold text-white">{boardsCalculation.totalBoards} uds</span>
                 </div>
               </div>
@@ -2939,7 +2939,7 @@ const Armarios = ({ state, setState }) => {
             <List size={16} />
             VER DESPIECE PRIVADO
           </button>
-          <p className="text-[9px] text-purple-400 text-center mt-2">{despieceTotals.totalItems} accesorios numerados</p>
+          <p className="text-[9px] text-emerald-400 text-center mt-2">{despieceTotals.totalItems} accesorios numerados</p>
           </>)}
         </div>
       </div>
@@ -3120,7 +3120,7 @@ const Armarios = ({ state, setState }) => {
                       <td className="px-2 py-2">
                         <span className={`text-[9px] font-bold uppercase ${
                           acc.category === 'ESTRUCTURA' ? 'text-blue-600' :
-                          acc.category === 'PUERTAS' ? 'text-purple-600' :
+                          acc.category === 'PUERTAS' ? 'text-emerald-600' :
                           acc.category === 'HERRAJES' ? 'text-gray-600' :
                           acc.category === 'EXTRAS' ? 'text-green-600' :
                           acc.category.startsWith('MÓDULO') ? 'text-orange-600' :
@@ -3253,7 +3253,7 @@ const Armarios = ({ state, setState }) => {
               </div>
 
               {/* ========== SECCIÓN TABLEROS Y METROS CUADRADOS ========== */}
-              <div className="mt-6 p-6 bg-gradient-to-r from-blue-900 to-indigo-900 rounded-xl text-white">
+              <div className="mt-6 p-6 bg-gradient-to-r from-blue-900 to-green-900 rounded-xl text-white">
                 <h4 className="font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
                   <Layers size={18} />
                   CÁLCULO DE TABLEROS NECESARIOS
@@ -3400,14 +3400,14 @@ const Armarios = ({ state, setState }) => {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
             {/* Header Modal */}
-            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white px-8 py-5 flex justify-between items-center shrink-0">
+            <div className="bg-gradient-to-r from-emerald-600 to-green-800 text-white px-8 py-5 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-white/20 rounded-xl">
                   <FolderOpen size={24} />
                 </div>
                 <div>
                   <h2 className="text-xl font-black uppercase tracking-wider">PROYECTOS DE ARMARIOS</h2>
-                  <p className="text-purple-200 text-xs font-medium mt-0.5">Guardar, cargar y gestionar diseños</p>
+                  <p className="text-emerald-200 text-xs font-medium mt-0.5">Guardar, cargar y gestionar diseños</p>
                 </div>
               </div>
               <button 
@@ -3419,19 +3419,19 @@ const Armarios = ({ state, setState }) => {
             </div>
 
             {/* Nombre del proyecto actual */}
-            <div className="bg-purple-50 px-8 py-4 border-b border-purple-100">
-              <label className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Nombre del Proyecto Actual</label>
+            <div className="bg-emerald-50 px-8 py-4 border-b border-emerald-100">
+              <label className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Nombre del Proyecto Actual</label>
               <input
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                className="w-full px-3 py-2 mt-1 border border-purple-200 rounded-lg text-sm font-bold focus:outline-none focus:border-purple-400"
+                className="w-full px-3 py-2 mt-1 border border-emerald-200 rounded-lg text-sm font-bold focus:outline-none focus:border-emerald-400"
                 placeholder="Nombre del proyecto..."
               />
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={newProject}
-                  className="flex-1 bg-white border border-purple-200 text-purple-700 px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors"
+                  className="flex-1 bg-white border border-emerald-200 text-emerald-700 px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-2 hover:bg-emerald-50 transition-colors"
                 >
                   <Plus size={14} />
                   NUEVO
@@ -3439,7 +3439,7 @@ const Armarios = ({ state, setState }) => {
                 <button
                   onClick={saveProject}
                   disabled={saving}
-                  className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-2 hover:bg-purple-500 transition-colors disabled:opacity-50"
+                  className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-2 hover:bg-emerald-500 transition-colors disabled:opacity-50"
                 >
                   {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                   GUARDAR
@@ -3461,7 +3461,7 @@ const Armarios = ({ state, setState }) => {
 
               {loadingProjects ? (
                 <div className="flex items-center justify-center py-12">
-                  <RefreshCw size={24} className="animate-spin text-purple-400" />
+                  <RefreshCw size={24} className="animate-spin text-emerald-400" />
                 </div>
               ) : savedProjects.length === 0 ? (
                 <div className="text-center py-12 text-slate-400">
@@ -3475,8 +3475,8 @@ const Armarios = ({ state, setState }) => {
                       key={project.id}
                       className={`p-4 rounded-xl border transition-all cursor-pointer ${
                         currentProjectId === project.id
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-slate-200 hover:border-purple-300 hover:bg-purple-50/50'
+                          ? 'border-emerald-500 bg-emerald-50'
+                          : 'border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50'
                       }`}
                       onClick={() => loadProject(project)}
                     >
@@ -3499,7 +3499,7 @@ const Armarios = ({ state, setState }) => {
                         </div>
                         <div className="flex items-center gap-2">
                           {project.totalPrice > 0 && (
-                            <span className="text-sm font-black text-purple-600">
+                            <span className="text-sm font-black text-emerald-600">
                               {project.totalPrice.toFixed(0)}€
                             </span>
                           )}
@@ -3535,14 +3535,14 @@ const Armarios = ({ state, setState }) => {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-pink-500 to-violet-500 text-white px-8 py-5 flex justify-between items-center">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-5 flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-white/20 rounded-xl">
                   <Sparkles size={24} />
                 </div>
                 <div>
                   <h2 className="text-xl font-black uppercase tracking-wider">CONFIGURAR CON IA</h2>
-                  <p className="text-pink-100 text-xs font-medium mt-0.5">Describe qué necesitas y la IA configurará tu armario</p>
+                  <p className="text-emerald-100 text-xs font-medium mt-0.5">Describe qué necesitas y la IA configurará tu armario</p>
                 </div>
               </div>
               <button 
@@ -3563,12 +3563,12 @@ const Armarios = ({ state, setState }) => {
                   value={iaInstruction}
                   onChange={(e) => setIaInstruction(e.target.value)}
                   placeholder="Ej: Quiero un armario para una pareja con mucha ropa de colgar, 4 cajones para ropa interior, un zapatero y espacio para bolsos..."
-                  className="w-full px-4 py-3 pr-12 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-violet-400 h-32 resize-none"
+                  className="w-full px-4 py-3 pr-12 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 h-32 resize-none"
                 />
                 {iaVoiceSupported && (
                   <button type="button" onClick={toggleIaDictation}
                     title={iaListening ? 'Detener dictado' : 'Dictar por voz'}
-                    className={`absolute bottom-2 right-2 p-2 rounded-lg transition-all ${iaListening ? 'bg-red-500 text-white animate-pulse' : 'bg-violet-100 text-violet-600 hover:bg-violet-200'}`}>
+                    className={`absolute bottom-2 right-2 p-2 rounded-lg transition-all ${iaListening ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'}`}>
                     {iaListening ? <MicOff size={16} /> : <Mic size={16} />}
                   </button>
                 )}
@@ -3587,7 +3587,7 @@ const Armarios = ({ state, setState }) => {
                     <button
                       key={i}
                       onClick={() => setIaInstruction(example)}
-                      className="text-[10px] bg-slate-100 hover:bg-violet-100 text-slate-600 hover:text-violet-700 px-2 py-1 rounded transition-colors"
+                      className="text-[10px] bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 px-2 py-1 rounded transition-colors"
                     >
                       {example}
                     </button>
@@ -3614,7 +3614,7 @@ const Armarios = ({ state, setState }) => {
               <button
                 onClick={configureWithIA}
                 disabled={iaLoading || !iaInstruction.trim()}
-                className="bg-gradient-to-r from-pink-500 to-violet-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:from-pink-400 hover:to-violet-400 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:from-emerald-400 hover:to-teal-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {iaLoading ? (
                   <>
