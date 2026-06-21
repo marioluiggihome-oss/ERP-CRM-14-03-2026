@@ -13,7 +13,8 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState(null);
   const [selectedImages, setSelectedImages] = useState([]);  // Array de imágenes
-  const [dumpChoice, setDumpChoice] = useState(null);  // productos pendientes de elegir presupuestador
+  const [dumpChoice, setDumpChoice] = useState(null);  // { productos, opts } pendientes de elegir presupuestador
+  const [dumpTarget, setDumpTarget] = useState(null);  // elección recordada en la sesión: 'p1' | 'p2'
   const fileInputRef = useRef(null);
   
   const canUseAI = state.currentUser?.canUseAIAnalysis || state.currentUser?.isAdmin || state.currentUser?.isGerente;
@@ -109,62 +110,28 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     }
   };
 
-  const addFurnitureToBudget = (furniture, showAlert = true) => {
-    // Solo añadir si el producto fue encontrado en el catálogo
-    if (!furniture.producto_encontrado) {
-      if (showAlert) {
-        alert('⚠️ Este producto no se encontró en el catálogo. No se puede añadir al presupuesto.');
-      }
-      return;
-    }
-    
-    if (onAddToBudget) {
-      // Pasar el objeto con los datos del catálogo
-      onAddToBudget({
-        ...furniture,
-        // Usar datos del catálogo
-        code: furniture.codigo_catalogo || furniture.codigo_sugerido,
-        name: furniture.nombre_catalogo,
-        points: furniture.puntos,
-        price: furniture.precio_pvp,
-        width: furniture.ancho_real || furniture.ancho_estimado,
-        height: furniture.alto_real || furniture.alto_estimado * 10,
-        depth: furniture.fondo_real || furniture.fondo_estimado * 10,
-        category: furniture.categoria,
-        programa: furniture.programa,
-        productId: furniture.product_id
-      }, showAlert);
-    }
+  // Push de bajo nivel a P1 (Presupuestador 2 / ZC, budgetItemsMontada). Sin routing.
+  const pushToP1 = (furniture) => {
+    if (!onAddToBudget) return;
+    onAddToBudget({
+      ...furniture,
+      code: furniture.codigo_catalogo || furniture.codigo_sugerido,
+      name: furniture.nombre_catalogo,
+      points: furniture.puntos,
+      price: furniture.precio_pvp,
+      width: furniture.ancho_real || furniture.ancho_estimado,
+      height: furniture.alto_real || furniture.alto_estimado * 10,
+      depth: furniture.fondo_real || furniture.fondo_estimado * 10,
+      category: furniture.categoria,
+      programa: furniture.programa,
+      productId: furniture.product_id
+    }, false);
   };
 
-  const addAllFurnitureToBudget = () => {
-    if (!analysisResult?.muebles_detectados?.length) return;
-
-    // Filtrar solo los productos encontrados en el catálogo
-    const productosEncontrados = analysisResult.muebles_detectados.filter(f => f.producto_encontrado);
-
-    if (productosEncontrados.length === 0) {
-      alert('⚠️ No hay productos del catálogo para añadir.\n\nRevisa manualmente los productos no encontrados.');
-      return;
-    }
-
-    // Volcar SOLO al presupuestador que el usuario tenga activo. Si tiene los dos,
-    // preguntar a cuál; si solo uno, va a ese; si ninguno, avisar.
-    const canP1 = state?.currentUser?.canUsePresupuestador1 !== false; // Presupuestador 2 (ZC)
-    const canP2 = state?.currentUser?.canUsePresupuestador2 !== false; // Presupuestador principal (MV)
-    if (!canP1 && !canP2) {
-      alert('No tienes ningún presupuestador activo para volcar los muebles.');
-      return;
-    }
-    if (canP1 && canP2) {
-      setDumpChoice(productosEncontrados);  // abre el diálogo de elección
-      return;
-    }
-    doDump(productosEncontrados, canP2 ? 'p2' : 'p1');
-  };
-
-  // Vuelca la lista al presupuestador elegido y navega a su pestaña.
-  const doDump = (productos, target) => {
+  // Vuelca la lista al presupuestador elegido. Recuerda la elección (dumpTarget)
+  // para no volver a preguntar. opts.navigate: ir a la pestaña; opts.notify: avisar.
+  const doDump = (productos, target, opts = {}) => {
+    const { navigate = true, notify = true } = opts;
     if (target === 'p2') {
       const lines = productos.map(f => ({
         code: f.codigo_catalogo || f.codigo_sugerido || 'MV',
@@ -175,14 +142,60 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         height: f.alto_real || f.alto_estimado,
         depth: f.fondo_real || f.fondo_estimado,
       }));
-      setState(p => ({ ...p, p2PendingLines: lines, currentTab: 'presupuestador2' }));
+      setState(p => ({
+        ...p,
+        p2PendingLines: [...(p.p2PendingLines || []), ...lines],  // acumula (no pisa)
+        ...(navigate ? { currentTab: 'presupuestador2' } : {}),
+      }));
     } else {
-      productos.forEach(f => addFurnitureToBudget(f, false));
-      setState(p => ({ ...p, currentTab: 'budget' }));
+      productos.forEach(pushToP1);
+      if (navigate) setState(p => ({ ...p, currentTab: 'budget' }));
     }
-    const totalPvp = productos.reduce((sum, f) => sum + (f.precio_pvp || 0), 0);
+    setDumpTarget(target);
     setDumpChoice(null);
-    alert(`✅ ${productos.length} productos añadidos al ${target === 'p2' ? 'Presupuestador (principal)' : 'Presupuestador 2'}.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€`);
+    if (notify) {
+      const totalPvp = productos.reduce((sum, f) => sum + (f.precio_pvp || 0), 0);
+      alert(`✅ ${productos.length} producto(s) añadido(s) al ${target === 'p2' ? 'Presupuestador (principal)' : 'Presupuestador 2'}.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€`);
+    }
+  };
+
+  // Decide a qué presupuestador volcar: el recordado, el único activo, o pregunta.
+  const resolveAndDump = (productos, opts = {}) => {
+    const canP1 = state?.currentUser?.canUsePresupuestador1 !== false; // Presupuestador 2 (ZC)
+    const canP2 = state?.currentUser?.canUsePresupuestador2 !== false; // Presupuestador principal (MV)
+    if (!canP1 && !canP2) {
+      alert('No tienes ningún presupuestador activo para volcar los muebles.');
+      return;
+    }
+    if (dumpTarget && ((dumpTarget === 'p1' && canP1) || (dumpTarget === 'p2' && canP2))) {
+      doDump(productos, dumpTarget, opts);
+      return;
+    }
+    if (canP1 && canP2) {
+      setDumpChoice({ productos, opts });  // abre el diálogo de elección
+      return;
+    }
+    doDump(productos, canP2 ? 'p2' : 'p1', opts);
+  };
+
+  // Añadir UN mueble (botón ✓ de cada fila): silencioso, sin cambiar de pestaña.
+  const addFurnitureToBudget = (furniture) => {
+    if (!furniture.producto_encontrado) {
+      alert('⚠️ Este producto no se encontró en el catálogo. No se puede añadir al presupuesto.');
+      return;
+    }
+    resolveAndDump([furniture], { navigate: false, notify: false });
+  };
+
+  // Añadir TODOS los detectados del catálogo (botón inferior).
+  const addAllFurnitureToBudget = () => {
+    if (!analysisResult?.muebles_detectados?.length) return;
+    const productosEncontrados = analysisResult.muebles_detectados.filter(f => f.producto_encontrado);
+    if (productosEncontrados.length === 0) {
+      alert('⚠️ No hay productos del catálogo para añadir.\n\nRevisa manualmente los productos no encontrados.');
+      return;
+    }
+    resolveAndDump(productosEncontrados, { navigate: true, notify: true });
   };
 
   const clearAll = () => {
@@ -558,13 +571,13 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setDumpChoice(null)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-black text-slate-900 mb-1">¿A qué presupuestador?</h3>
-            <p className="text-sm text-slate-500 mb-4">Tienes los dos activos. Elige dónde volcar los {dumpChoice.length} muebles detectados.</p>
+            <p className="text-sm text-slate-500 mb-4">Tienes los dos activos. Elige dónde volcar los {dumpChoice.productos.length} muebles detectados.</p>
             <div className="grid grid-cols-1 gap-2">
-              <button onClick={() => doDump(dumpChoice, 'p2')}
+              <button onClick={() => doDump(dumpChoice.productos, 'p2', dumpChoice.opts)}
                 className="w-full px-4 py-3 rounded-xl bg-orange-600 text-white font-black uppercase text-sm hover:bg-orange-700 transition-colors">
                 Presupuestador (principal · MV)
               </button>
-              <button onClick={() => doDump(dumpChoice, 'p1')}
+              <button onClick={() => doDump(dumpChoice.productos, 'p1', dumpChoice.opts)}
                 className="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-black uppercase text-sm hover:bg-indigo-700 transition-colors">
                 Presupuestador 2 (ZC)
               </button>
