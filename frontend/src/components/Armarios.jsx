@@ -518,6 +518,8 @@ const Armarios = ({ state, setState }) => {
   const [customerName, setCustomerName] = useState('');
   const [projectRef, setProjectRef] = useState('');
   const [ivaRate, setIvaRate] = useState(21);
+  const [armDiscount, setArmDiscount] = useState(0);   // descuento comercial de armarios (%)
+  const [showCost, setShowCost] = useState(false);      // candado: ver PVP sin descuento
   const [showConfig, setShowConfig] = useState(true);
   const [selectedModule, setSelectedModule] = useState(0);
   
@@ -1301,7 +1303,10 @@ const Armarios = ({ state, setState }) => {
     if (extras.led) extrasPrice += modules * P('ledPerModule');
     if (extras.mirror) extrasPrice += P('mirror');
 
-    const subtotal = basePrice + doorPrice + endPrice + interiorPrice + extrasPrice;
+    const subtotalBruto = basePrice + doorPrice + endPrice + interiorPrice + extrasPrice;
+    const discountPct = Math.max(0, Math.min(100, Number(armDiscount) || 0));
+    const discountAmount = subtotalBruto * (discountPct / 100);
+    const subtotal = subtotalBruto - discountAmount;   // base imponible tras descuento
     const iva = subtotal * (ivaRate / 100);
     const total = subtotal + iva;
 
@@ -1311,16 +1316,21 @@ const Armarios = ({ state, setState }) => {
       ends: endPrice,
       interior: interiorPrice,
       extras: extrasPrice,
+      subtotalBruto,
+      discountPct,
+      discountAmount,
       subtotal,
       iva,
       total
     };
-  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, state?.settings]);
+  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, armDiscount, state?.settings]);
 
   // El despiece de armarios (lista de tableros/accesorios para fábrica) solo se
   // muestra a quien tenga activada la función de Fábrica (o admin). En el
   // presupuestador, sin ese permiso, no aparece.
   const canDespiece = state?.currentUser?.isAdmin === true || state?.currentUser?.canAccessFabrica === true;
+  // Permiso para ver el coste (PVP sin descuento) tras el candado, como en cocinas.
+  const canSeeCost = state?.currentUser?.isAdmin === true || state?.currentUser?.canSeeCost === true;
 
   // Dictado por voz para los campos de IA (Diseño Inteligente / IA armarios).
   const { isListening: iaListening, isSupported: iaVoiceSupported, transcript: iaTranscript, startListening: iaStart, stopListening: iaStop } = useSpeechRecognition();
@@ -2820,6 +2830,34 @@ const Armarios = ({ state, setState }) => {
             </div>
             
             <div className="border-t border-purple-700 pt-3 mt-3">
+              {/* Descuento aparte para armarios */}
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-purple-300">Descuento armarios</span>
+                <div className="flex items-center gap-1">
+                  <input type="number" min="0" max="100" value={armDiscount}
+                    onChange={(e) => setArmDiscount(e.target.value)}
+                    className="w-14 bg-white/10 text-white text-right font-bold rounded px-1 py-0.5 text-sm outline-none focus:bg-white/20" />
+                  <span className="text-purple-300 text-xs">%</span>
+                </div>
+              </div>
+              {pricing.discountPct > 0 && (
+                <div className="flex justify-between mb-1 text-emerald-300">
+                  <span>Dto. aplicado</span>
+                  <span className="font-bold">-{pricing.discountAmount.toFixed(2)}€</span>
+                </div>
+              )}
+              {/* Candado PVP/coste: ver PVP sin descuento (solo con permiso Ver Costo) */}
+              {canSeeCost && pricing.discountPct > 0 && (
+                <div className="flex justify-between items-center mb-1">
+                  <button type="button" onClick={() => setShowCost(v => !v)}
+                    className="flex items-center gap-1 text-purple-300 hover:text-white transition-colors"
+                    title={showCost ? 'Ocultar PVP sin descuento' : 'Ver PVP sin descuento'}>
+                    {showCost ? <EyeOff size={12} /> : <Eye size={12} />}
+                    <span className="text-xs">PVP sin dto.</span>
+                  </button>
+                  <span className="font-bold">{showCost ? `${pricing.subtotalBruto.toFixed(2)}€` : '•••'}</span>
+                </div>
+              )}
               <div className="flex justify-between mb-1">
                 <span className="text-purple-300">Base imponible</span>
                 <span className="font-bold">{pricing.subtotal.toFixed(2)}€</span>
