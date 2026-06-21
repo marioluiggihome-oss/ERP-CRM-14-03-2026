@@ -42,6 +42,13 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
             ("/api/products/export", "GET", 10),
             ("/api/ai-engine", None, 10),  # None = cualquier método
             ("/api/analyze", "POST", 10),
+            # IA (visión / generación) y exports masivos: caros en coste/tiempo,
+            # se limitan más que el resto. Prefijos específicos para no afectar al
+            # CRUD normal (p. ej. /api/invoices/... sigue al límite por defecto).
+            ("/api/ia-lab", None, 10),            # análisis de planos de cocina con IA
+            ("/api/armarios/ia", None, 10),       # generación de layout de armarios con IA
+            ("/api/invoices/export", None, 10),   # export contable
+            ("/api/export", None, 10),            # exports masivos (clientes/presupuestos/crm/usuarios)
             ("/api/backup", None, 5),
             ("/api/admin", None, 20),
         ]

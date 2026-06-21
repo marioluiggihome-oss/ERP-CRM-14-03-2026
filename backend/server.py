@@ -146,8 +146,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create the main app without a prefix
-app = FastAPI()
+# Create the main app without a prefix.
+# /docs, /redoc y /openapi.json quedan DESACTIVADOS por defecto para no exponer
+# el mapa completo de la API en producción. Para reactivarlos (p. ej. en local),
+# define ENABLE_DOCS=1.
+_ENABLE_DOCS = os.environ.get("ENABLE_DOCS", "0").strip().lower() in ("1", "true", "yes", "on")
+app = FastAPI(
+    docs_url="/docs" if _ENABLE_DOCS else None,
+    redoc_url="/redoc" if _ENABLE_DOCS else None,
+    openapi_url="/openapi.json" if _ENABLE_DOCS else None,
+)
 
 # Configurar Rate Limiter
 app.state.limiter = limiter
