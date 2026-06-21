@@ -387,6 +387,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     MAIN_FAMILY_DEFS.forEach((d, i) => { order[d.key] = i; labelOf[d.key] = d.label; });
     labelOf['OTROS'] = '99 · Otros'; order['OTROS'] = 999;
     const groups = {};
+    // Sembrar SIEMPRE las 12 familias principales (aunque no tengan productos aún),
+    // para que existan como categorías en el menú: Sobremódulos, Elementos
+    // lineales y Estructuras decorativas aparecen también vacías.
+    MAIN_FAMILY_DEFS.forEach((d, i) => { groups[d.key] = { key: d.key, label: d.label, order: i, total: 0, members: [] }; });
     families.forEach(([name, count]) => {
       const key = mainFamilyKeyOf(name);
       if (!groups[key]) groups[key] = { key, label: labelOf[key] || key, order: order[key] ?? 998, total: 0, members: [] };
@@ -924,6 +928,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                 <div className="flex md:flex-col gap-1.5 flex-wrap">
                   {familyGroups.map(g => {
                     const single = g.members.length === 1;
+                    const empty = g.total === 0;  // familia creada pero sin productos aún
                     // Sub-familias = miembros del grupo distintos de la familia base (cuyo
                     // nombre coincide con la cabecera). Así "BAJO" no se repite dentro de "BAJO".
                     const hasBase = g.members.some(([n]) => n === g.key);
@@ -938,11 +943,12 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                     return (
                       <div key={g.key} className="md:w-full">
                         <button
+                          title={empty ? 'Familia sin productos todavía (categoría creada)' : undefined}
                           onClick={() => {
                             if (headerFamily) { setFamily(headerFamily); setSearch(''); }
                             else if (expandable) toggleExpand();
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${
+                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex justify-between items-center gap-2 transition-all whitespace-nowrap ${empty ? 'opacity-40' : ''} ${
                             isHeaderActive
                               ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-200'
                               : isActiveGroup ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-orange-50'}`}>
