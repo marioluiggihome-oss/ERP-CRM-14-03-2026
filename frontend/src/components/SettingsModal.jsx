@@ -1112,13 +1112,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           : 'w-full max-w-5xl max-h-[90vh]'
       }`}>
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-950 to-indigo-900 shrink-0">
+        <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-950 to-indigo-900 shrink-0">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/10 rounded-xl">
               <SettingsIcon size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Panel Maestro</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">Panel Maestro</h2>
               <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Configuración Industrial</p>
             </div>
           </div>
@@ -1142,7 +1142,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         </div>
 
         {/* Tabs */}
-        <div className="px-8 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-2 shrink-0">
+        <div className="px-3 sm:px-8 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto sm:flex-wrap [&>button]:shrink-0 shrink-0">
           {/* Tab Panel Director Comercial - Solo Admin/Gerente/Director Comercial */}
           {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
@@ -1362,7 +1362,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
           {/* PANEL DIRECTOR TAB */}
           {activeTab === 'director' && (
             <DirectorTab />
@@ -1589,7 +1589,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
                   <div className="space-y-6">
                     {/* Basic Info */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Nombre *</label>
                         <input
@@ -1614,7 +1614,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
 
                     {/* Provincia */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Provincia *</label>
                         <select
@@ -1649,7 +1649,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         <Clock size={16} className="text-amber-600" />
                         Caducidad del Acceso
                       </h4>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-xs font-black text-amber-700 uppercase mb-2 block">Fecha de Vencimiento</label>
                           <input
@@ -2820,7 +2820,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Tipo y Segmento */}
                     <div>
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Tipo de Cliente *</label>
