@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Plus, Minus, Save, Download, Box, Palette, Layers, Settings, ChevronDown, ChevronUp, Trash2, Copy, Move, GripVertical, RotateCcw, Eye, EyeOff, Calculator, FileText, List, Package, Scissors, X, Edit3, Hash, Printer, FolderOpen, RefreshCw, AlertCircle, Check, Sparkles, Image, MessageSquare, ArrowUp, ArrowDown, Loader } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Plus, Minus, Save, Download, Box, Palette, Layers, Settings, ChevronDown, ChevronUp, Trash2, Copy, Move, GripVertical, RotateCcw, Eye, EyeOff, Calculator, FileText, List, Package, Scissors, X, Edit3, Hash, Printer, FolderOpen, RefreshCw, AlertCircle, Check, Sparkles, Image, MessageSquare, ArrowUp, ArrowDown, Loader, Mic, MicOff } from 'lucide-react';
 import { armariosAPI } from '../services/api';
 import { generateArmariosDespiecePDF, generateArmarioPresupuestoPDF } from '../services/pdfGenerator';
 
@@ -437,6 +437,52 @@ const DEFAULT_ARMARIOS_PRICING = {
   ledPerModule: 120,
   mirror: 200,
 };
+
+// ========== DICTADO POR VOZ (Web Speech API, es-ES) ==========
+function useSpeechRecognition() {
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [isSupported, setIsSupported] = useState(false);
+  const recognitionRef = useRef(null);
+  const finalRef = useRef('');
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setIsSupported(true);
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'es-ES';
+      recognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const r = event.results[i];
+          if (r.isFinal) finalRef.current += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        setTranscript(finalRef.current + interim);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const startListening = useCallback(() => {
+    if (recognitionRef.current) {
+      finalRef.current = '';
+      setTranscript('');
+      try { recognitionRef.current.start(); } catch (_) {}
+      setIsListening(true);
+    }
+  }, []);
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) { recognitionRef.current.stop(); setIsListening(false); }
+  }, []);
+
+  return { isListening, transcript, isSupported, startListening, stopListening };
+}
 
 // ========== COMPONENTE PRINCIPAL ==========
 
@@ -1275,6 +1321,17 @@ const Armarios = ({ state, setState }) => {
   // muestra a quien tenga activada la función de Fábrica (o admin). En el
   // presupuestador, sin ese permiso, no aparece.
   const canDespiece = state?.currentUser?.isAdmin === true || state?.currentUser?.canAccessFabrica === true;
+
+  // Dictado por voz para los campos de IA (Diseño Inteligente / IA armarios).
+  const { isListening: iaListening, isSupported: iaVoiceSupported, transcript: iaTranscript, startListening: iaStart, stopListening: iaStop } = useSpeechRecognition();
+  const iaDictateBaseRef = useRef('');
+  useEffect(() => {
+    if (iaListening) setIaInstruction((iaDictateBaseRef.current ? iaDictateBaseRef.current + ' ' : '') + iaTranscript);
+  }, [iaTranscript, iaListening]);
+  const toggleIaDictation = () => {
+    if (iaListening) { iaStop(); }
+    else { iaDictateBaseRef.current = (iaInstruction || '').trim(); iaStart(); }
+  };
 
   // Handlers
   const updateConfig = (key, value) => {
@@ -2584,13 +2641,22 @@ const Armarios = ({ state, setState }) => {
             </h3>
             
             <div className="space-y-3">
-              <textarea
-                value={iaInstruction}
-                onChange={(e) => setIaInstruction(e.target.value)}
-                placeholder="Ej: En el primer módulo, 3 cajones abajo, una balda, y un perchero con luz. En el segundo, solo baldas. En el tercero, percha doble altura..."
-                className="w-full bg-white/10 backdrop-blur text-white placeholder-white/50 text-xs p-3 rounded-xl border border-white/20 min-h-[100px] outline-none focus:border-yellow-400 resize-none"
-              />
-              
+              <div className="relative">
+                <textarea
+                  value={iaInstruction}
+                  onChange={(e) => setIaInstruction(e.target.value)}
+                  placeholder="Ej: En el primer módulo, 3 cajones abajo, una balda, y un perchero con luz. En el segundo, solo baldas. En el tercero, percha doble altura..."
+                  className="w-full bg-white/10 backdrop-blur text-white placeholder-white/50 text-xs p-3 pr-12 rounded-xl border border-white/20 min-h-[100px] outline-none focus:border-yellow-400 resize-none"
+                />
+                {iaVoiceSupported && (
+                  <button type="button" onClick={toggleIaDictation}
+                    title={iaListening ? 'Detener dictado' : 'Dictar por voz'}
+                    className={`absolute bottom-2 right-2 p-2 rounded-lg transition-all ${iaListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white/15 text-white hover:bg-white/25'}`}>
+                    {iaListening ? <MicOff size={16} /> : <Mic size={16} />}
+                  </button>
+                )}
+              </div>
+
               <button
                 onClick={handleIAGenerateLayout}
                 disabled={iaLoading || !iaInstruction.trim()}
@@ -3445,12 +3511,21 @@ const Armarios = ({ state, setState }) => {
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest">
                 ¿Qué necesitas en tu armario?
               </label>
-              <textarea
-                value={iaInstruction}
-                onChange={(e) => setIaInstruction(e.target.value)}
-                placeholder="Ej: Quiero un armario para una pareja con mucha ropa de colgar, 4 cajones para ropa interior, un zapatero y espacio para bolsos..."
-                className="w-full mt-2 px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-violet-400 h-32 resize-none"
-              />
+              <div className="relative mt-2">
+                <textarea
+                  value={iaInstruction}
+                  onChange={(e) => setIaInstruction(e.target.value)}
+                  placeholder="Ej: Quiero un armario para una pareja con mucha ropa de colgar, 4 cajones para ropa interior, un zapatero y espacio para bolsos..."
+                  className="w-full px-4 py-3 pr-12 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-violet-400 h-32 resize-none"
+                />
+                {iaVoiceSupported && (
+                  <button type="button" onClick={toggleIaDictation}
+                    title={iaListening ? 'Detener dictado' : 'Dictar por voz'}
+                    className={`absolute bottom-2 right-2 p-2 rounded-lg transition-all ${iaListening ? 'bg-red-500 text-white animate-pulse' : 'bg-violet-100 text-violet-600 hover:bg-violet-200'}`}>
+                    {iaListening ? <MicOff size={16} /> : <Mic size={16} />}
+                  </button>
+                )}
+              </div>
 
               {/* Ejemplos rápidos */}
               <div className="mt-4">

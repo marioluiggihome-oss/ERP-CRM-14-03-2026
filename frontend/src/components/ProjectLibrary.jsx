@@ -98,6 +98,16 @@ const isPresupuestador2 = (project) =>
   project?.source === 'presupuestador2' ||
   (!project?.source && (project?.itemsMontada || []).some(i => String(i?.id || '').startsWith('p2-')));
 
+// Tipo de proyecto para diferenciar cocina / armario / mixto. Un item es de
+// armario si lleva itemType 'armario' o su referencia es ARMARIO.
+const _isArmarioItem = (i) => i?.itemType === 'armario' || String(i?.customReference || i?.code || '').toUpperCase() === 'ARMARIO';
+const projectKindOf = (project) => {
+  const items = project?.itemsMontada || [];
+  const arm = items.filter(_isArmarioItem).length;
+  if (!arm) return 'cocina';
+  return arm === items.length ? 'armario' : 'mixto';
+};
+
 // ─── Componente principal ────────────────────────────────────────────────────
 const ProjectLibrary = ({ state, setState }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -426,6 +436,17 @@ const ProjectLibrary = ({ state, setState }) => {
                           {project.customerName || 'Sin nombre'}
                         </h3>
                         <StatusDropdown project={project} onStatusChange={handleStatusChange} />
+                        {(() => {
+                          const kind = projectKindOf(project);
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase ${
+                              kind === 'armario' ? 'bg-purple-100 text-purple-700'
+                              : kind === 'mixto' ? 'bg-amber-100 text-amber-700'
+                              : 'bg-emerald-100 text-emerald-700'}`}>
+                              {kind === 'armario' ? '🚪 Armario' : kind === 'mixto' ? 'Mixto' : '🍳 Cocina'}
+                            </span>
+                          );
+                        })()}
                         {isP2 && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-[9px] font-black uppercase">
                             <Table2 size={10} /> Presup. 2
