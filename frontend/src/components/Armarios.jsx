@@ -2130,29 +2130,38 @@ const Armarios = ({ state, setState }) => {
     <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Box size={28} className="text-purple-300" />
-          <div>
-            <h1 className="text-xl font-black tracking-tight">DISEÑADOR DE ARMARIOS</h1>
-            <p className="text-xs text-purple-300 uppercase tracking-widest">Configurador Profesional</p>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
+            {state?.logo
+              ? <img src={state.logo} alt="Logo" className="h-full w-full object-contain p-0.5" />
+              : <Box size={20} className="text-purple-700" />}
+          </div>
+          <div className="hidden sm:block">
+            <h1 className="text-base font-black tracking-tight leading-none">DISEÑADOR DE ARMARIOS</h1>
+            <p className="text-[9px] text-purple-300 uppercase tracking-widest mt-0.5">Configurador Profesional</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
-          {/* Cliente */}
-          <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value.toUpperCase())}
-              placeholder="Nombre cliente..."
-              className="bg-transparent text-white placeholder-white/50 text-sm outline-none w-40 uppercase"
-            />
-          </div>
-          
+        <div className="flex items-center gap-2 flex-1 min-w-0 ml-4">
+          {/* Cliente — estilo presupuestador de cocinas (campo blanco ancho) */}
+          <input
+            type="text"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value.toUpperCase())}
+            placeholder="👤 Cliente…"
+            className="flex-1 min-w-0 max-w-[20rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white uppercase"
+          />
+          {/* Referencia del proyecto */}
+          <input
+            type="text"
+            value={projectRef}
+            onChange={(e) => setProjectRef(e.target.value)}
+            placeholder="🏷️ Ref…"
+            className="w-28 sm:w-40 shrink-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white"
+          />
           {/* IVA */}
-          <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-            <span className="text-xs font-bold text-white/60 uppercase">IVA:</span>
+          <div className="flex items-center gap-1 bg-white/10 rounded-xl px-2.5 py-1.5 shrink-0">
+            <span className="text-[10px] font-bold text-white/60 uppercase">IVA</span>
             <select
               value={ivaRate}
               onChange={(e) => setIvaRate(parseFloat(e.target.value))}
@@ -2166,9 +2175,9 @@ const Armarios = ({ state, setState }) => {
           </div>
           
           {/* Botones */}
-          <button 
+          <button
             onClick={() => setShowIAModal(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-violet-500 hover:from-pink-400 hover:to-violet-400 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            className="ml-auto shrink-0 flex items-center gap-2 bg-gradient-to-r from-pink-500 to-violet-500 hover:from-pink-400 hover:to-violet-400 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
             data-testid="armarios-ia-config-btn"
             title="Configurar con IA"
           >
