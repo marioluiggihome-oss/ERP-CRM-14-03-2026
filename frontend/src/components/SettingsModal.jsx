@@ -7,6 +7,16 @@ import CatalogImporter from './CatalogImporter';
 // Componentes refactorizados
 import { TelemetryTab, TelemetryAuditTab, DigitalizadorAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab, DirectorTab, ShopClientsTab, PricingTab, BackupsTab, MaintenanceTab, InventoryTab, ArmazonesTab } from './settings';
 
+// Capacidades técnicas (checkboxes del panel de permisos) para los botones
+// "Marcar todo / Desmarcar todo". Solo capacidades, NO roles ni modos "solo".
+const CAPABILITY_KEYS = [
+  'canUsePresupuestador2', 'canUsePresupuestador1', 'canSeeCost', 'canViewTechnicalDespiece',
+  'canAccessCRM', 'canAccessGastos', 'canAccessFabrica', 'canAccessMontajes', 'isMontador',
+  'canManageArticles', 'canAccessFloor', 'canUseAIAnalysis', 'canUseKitchenDesigner', 'canUseDigitalizador',
+  'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
+  'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
+];
+
 // Lista de provincias de España con sus códigos
 const PROVINCIAS_ESPANA = [
   { codigo: 'AL', nombre: 'Almería' },
@@ -1983,7 +1993,17 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
                     {/* Technical Capabilities */}
                     <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                      <h4 className="text-sm font-black text-purple-900 uppercase mb-3">Capacidades Técnicas</h4>
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <h4 className="text-sm font-black text-purple-900 uppercase">Capacidades Técnicas</h4>
+                        <div className="flex gap-1.5 shrink-0">
+                          <button type="button"
+                            onClick={() => setUserForm(prev => ({ ...prev, ...Object.fromEntries(CAPABILITY_KEYS.map(k => [k, true])) }))}
+                            className="px-2 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors">Marcar todo</button>
+                          <button type="button"
+                            onClick={() => setUserForm(prev => ({ ...prev, ...Object.fromEntries(CAPABILITY_KEYS.map(k => [k, false])) }))}
+                            className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 text-[10px] font-black uppercase hover:bg-slate-300 transition-colors">Desmarcar todo</button>
+                        </div>
+                      </div>
                       <div className="space-y-3">
                         {/* ── Grupo: Presupuestación ── */}
                         <div>
