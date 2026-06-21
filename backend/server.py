@@ -1445,11 +1445,11 @@ def calculate_furniture_despiece(
     - HORIZONTALES (tapas, estantes): Se les descuenta el GROSOR del casco (x2)
     
     Standard furniture components:
-    - LATERAL IZQUIERDO: height x depth (ALTO COMPLETO)
-    - LATERAL DERECHO: height x depth (ALTO COMPLETO)
-    - TAPA SUPERIOR: (width - 2*grosor) x depth (entre laterales)
-    - TAPA INFERIOR: (width - 2*grosor) x depth (entre laterales)
-    - TRASERA: (width - 2*grosor) x (height - 0.6cm) (encajada en ranuras)
+    - LATERAL IZQUIERDO: height x depth (ALTO y FONDO COMPLETOS)
+    - LATERAL DERECHO: height x depth (ALTO y FONDO COMPLETOS)
+    - TAPA SUPERIOR: (width - 2*grosor) x depth (entre laterales, fondo completo)
+    - TAPA INFERIOR: (width - 2*grosor) x depth (entre laterales, fondo completo)
+    - TRASERA: (width - 2*grosor) x (height - 2*grosor) (encajada entre paneles)
     - BALDA/ESTANTE: (width - 2*grosor) x (depth - 2cm) - optional shelves
     """
     
@@ -1532,8 +1532,12 @@ def calculate_furniture_despiece(
     #    - Ancho = Fondo interior - margen frontal
     # =============================================
     
-    # Medidas calculadas
-    fondo_interior = d - back_g  # Fondo menos trasera para laterales y horizontales
+    # Medidas calculadas — TRASERA ENCAJADA ENTRE PANELES:
+    # Laterales y tapas van a FONDO COMPLETO (la trasera se aloja en ranura y NO
+    # descuenta fondo). El grosor de la trasera (back_g) solo define su propio
+    # grosor. La melamina (g) se descuenta 2× en ancho de tapas y en ancho y alto
+    # de la trasera (va entre laterales y entre tapas).
+    fondo_interior = d  # Fondo completo para laterales, tapas y baldas
     ancho_interior = w - (2 * g)  # Ancho menos los dos laterales
     
     components = []
@@ -1685,11 +1689,11 @@ def calculate_furniture_despiece(
         )
     
     # =============================================
-    # TRASERA (Back panel)
-    # Largo = ANCHO INTERIOR (entre laterales)
-    # Alto = ALTO - margen ranuras (0.6cm total)
+    # TRASERA (Back panel) — ENCAJADA ENTRE PANELES
+    # Largo = ANCHO INTERIOR (entre laterales) = ancho - 2×melamina
+    # Alto  = ALTO INTERIOR (entre tapas)      = alto  - 2×melamina
     # =============================================
-    back_height = h - 0.6  # Encajada en ranuras (0.3cm arriba y abajo)
+    back_height = h - (2 * g)  # Encajada entre las tapas (descuenta 2× melamina)
     add_component(
         "Trasera modulo", "TRAS",
         back_material,
