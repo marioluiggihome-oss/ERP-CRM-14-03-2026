@@ -132,13 +132,10 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       );
       
       setDespieceData(result);
-      
-      // Expand all items by default
-      const expanded = {};
-      result.items.forEach(item => {
-        expanded[item.productId] = true;
-      });
-      setExpandedItems(expanded);
+
+      // Lista COMPACTA: todos los muebles colapsados; el usuario despliega el que
+      // quiera pulsando en su cabecera.
+      setExpandedItems({});
       
       // Inicializar puertas para proveedor con datos calculados
       initializeSupplierDoors(result.items);
@@ -1680,6 +1677,20 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
               {/* Orden de Montaje View */}
               {activeView === 'montaje' && (
                 <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <button type="button"
+                      onClick={() => {
+                        const allExp = despieceData.items.every(i => expandedItems[i.productId]);
+                        const next = {};
+                        if (!allExp) despieceData.items.forEach(i => { next[i.productId] = true; });
+                        setExpandedItems(next);
+                      }}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                      {despieceData.items.every(i => expandedItems[i.productId])
+                        ? <><ChevronRight size={14} /> Contraer todo</>
+                        : <><ChevronDown size={14} /> Expandir todo</>}
+                    </button>
+                  </div>
                   {despieceData.items.map((furniture, idx) => (
                     <div key={furniture.productId} className="bg-white border border-indigo-100 rounded-xl overflow-hidden shadow-sm">
                       {/* Furniture Header */}
@@ -1705,7 +1716,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                         </div>
                       </button>
 
-                      {/* CASCO (Cabinet Body) Dimensions - Always visible */}
+                      {/* CASCO (Cabinet Body) Dimensions - visible al desplegar */}
+                      {expandedItems[furniture.productId] && (
                       <div className="px-6 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-y border-emerald-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -1760,6 +1772,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                           </div>
                         </div>
                       </div>
+                      )}
 
                       {/* Components List */}
                       {expandedItems[furniture.productId] && (
