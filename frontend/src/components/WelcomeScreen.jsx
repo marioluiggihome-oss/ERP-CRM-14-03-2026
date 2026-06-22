@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Receipt, FileText, Target, CalendarDays, ShoppingBag, FolderOpen,
   TrendingUp, Layers, Shield, Sparkles, Image as ImageIcon, Box,
-  ScanLine, Wrench, Factory, PlayCircle
+  ScanLine, Wrench, Factory, PlayCircle, Briefcase, Palette, Hammer, Settings2
 } from 'lucide-react';
 
 // ⬇️ Enlace del vídeo promocional (YouTube, Vimeo o Google Drive). Si se deja
@@ -35,25 +35,42 @@ const toEmbedUrl = (url) => {
 // Módulos para los accesos rápidos. Las condiciones `can` replican EXACTAMENTE
 // las del menú lateral, para no mostrar accesos a los que el usuario no tiene
 // permiso (que llevarían a una pantalla en blanco).
+// Cada módulo pertenece a un `group` (ver GROUPS) que define el orden de
+// secciones y su acento de color, para que sea más fácil localizar cada
+// pantalla por bloque temático en vez de una rejilla plana sin criterio.
+const GROUPS = [
+  { id: 'ventas',    label: 'Ventas y Presupuestos', icon: Briefcase, accent: 'border-indigo-200', dot: 'bg-indigo-500' },
+  { id: 'diseno',    label: 'Diseño y Visualización', icon: Palette,   accent: 'border-purple-200', dot: 'bg-purple-500' },
+  { id: 'produccion',label: 'Producción',             icon: Hammer,    accent: 'border-emerald-200', dot: 'bg-emerald-500' },
+  { id: 'admin',     label: 'Administración',         icon: Settings2, accent: 'border-slate-300', dot: 'bg-slate-500' },
+];
+
 const MODULES = [
-  { tab: 'crm-dashboard',   label: 'CRM',             icon: Target,       color: 'bg-indigo-600',  can: (u) => u?.canAccessCRM && !u?.isTienda },
-  { tab: 'agendaNegocios',  label: 'Agenda Negocios', icon: CalendarDays, color: 'bg-indigo-600',  can: (u) => u?.isPrescriptor },
-  { tab: 'presupuestador2', label: 'Presupuestador',  icon: Receipt,      color: 'bg-emerald-600', can: (u) => u?.canUsePresupuestador2 !== false },
-  { tab: 'budget',          label: 'Presupuestador 2',icon: FileText,     color: 'bg-orange-600',  can: (u) => u?.canUsePresupuestador1 !== false },
-  { tab: 'misPedidos',      label: 'Pedidos',         icon: ShoppingBag,  color: 'bg-orange-600',  can: (u) => !u?.isTienda && u?.canAccessPedidos === true },
-  { tab: 'library',         label: 'Archivo',         icon: FolderOpen,   color: 'bg-orange-500',  can: (u) => !u?.isTienda && u?.canAccessArchivo === true },
-  { tab: 'invoices',        label: 'G. Comercial',    icon: Receipt,      color: 'bg-orange-500',  can: (u) => u?.canAccessInvoices === true },
-  { tab: 'rentabilidad',    label: 'Rentabilidad',    icon: TrendingUp,   color: 'bg-emerald-600', can: (u) => u?.canAccessRentabilidad === true },
-  { tab: 'gastos',          label: 'Gastos',          icon: Receipt,      color: 'bg-indigo-600',  can: (u) => (u?.isAdmin || u?.isRepresentative || u?.isGerente || u?.isDirectorComercial) && u?.canAccessGastos !== false },
-  { tab: 'luiggifloor',     label: 'Luiggi Floor',    icon: Layers,       color: 'bg-amber-500',   can: (u) => u?.canAccessFloor === true },
-  { tab: 'command',         label: 'Panel de Mando',  icon: Shield,       color: 'bg-slate-700',   can: (u) => u?.canAccessMando === true },
-  { tab: 'visualizer',      label: 'IA Lab',          icon: Sparkles,     color: 'bg-orange-600',  can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
-  { tab: 'renderStudio',    label: 'Render 3D',       icon: ImageIcon,    color: 'bg-purple-600',  can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
-  { tab: 'kitchenDesigner', label: 'Cocinas 3D',      icon: Layers,       color: 'bg-emerald-600', can: (u) => u?.canUseKitchenDesigner && !u?.isTienda },
-  { tab: 'armarios',        label: 'Armarios',        icon: Box,          color: 'bg-cyan-600',    can: (u) => u?.canAccessArmarios && !u?.isTienda },
-  { tab: 'digitalizador',   label: 'Digitalizador',   icon: ScanLine,     color: 'bg-orange-600',  can: (u) => u?.canUseDigitalizador && !u?.isTienda },
-  { tab: 'montajes',        label: 'Montajes',        icon: Wrench,       color: 'bg-orange-600',  can: (u, s) => s?.montajesEnabled && (u?.canAccessMontajes || u?.isMontador) },
-  { tab: 'fabrica',         label: 'Fábrica',         icon: Factory,      color: 'bg-emerald-600', can: (u) => u?.canAccessFabrica === true },
+  // Ventas y Presupuestos
+  { tab: 'crm-dashboard',   label: 'CRM',             icon: Target,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => u?.canAccessCRM && !u?.isTienda },
+  { tab: 'agendaNegocios',  label: 'Agenda Negocios', icon: CalendarDays, color: 'bg-indigo-600',  group: 'ventas', can: (u) => u?.isPrescriptor },
+  { tab: 'presupuestador2', label: 'Presupuestador',  icon: Receipt,      color: 'bg-emerald-600', group: 'ventas', can: (u) => u?.canUsePresupuestador2 !== false },
+  { tab: 'budget',          label: 'Presupuestador 2',icon: FileText,     color: 'bg-orange-600',  group: 'ventas', can: (u) => u?.canUsePresupuestador1 !== false },
+  { tab: 'misPedidos',      label: 'Pedidos',         icon: ShoppingBag,  color: 'bg-orange-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessPedidos === true },
+  { tab: 'library',         label: 'Archivo',         icon: FolderOpen,   color: 'bg-orange-500',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessArchivo === true },
+  { tab: 'invoices',        label: 'G. Comercial',    icon: Receipt,      color: 'bg-orange-500',  group: 'ventas', can: (u) => u?.canAccessInvoices === true },
+  { tab: 'rentabilidad',    label: 'Rentabilidad',    icon: TrendingUp,   color: 'bg-emerald-600', group: 'ventas', can: (u) => u?.canAccessRentabilidad === true },
+  { tab: 'gastos',          label: 'Gastos',          icon: Receipt,      color: 'bg-indigo-600',  group: 'ventas', can: (u) => (u?.isAdmin || u?.isRepresentative || u?.isGerente || u?.isDirectorComercial) && u?.canAccessGastos !== false },
+
+  // Diseño y Visualización
+  { tab: 'visualizer',      label: 'IA Lab',          icon: Sparkles,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
+  { tab: 'renderStudio',    label: 'Render 3D',       icon: ImageIcon,    color: 'bg-purple-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
+  { tab: 'kitchenDesigner', label: 'Cocinas 3D',      icon: Layers,       color: 'bg-emerald-600', group: 'diseno', can: (u) => u?.canUseKitchenDesigner && !u?.isTienda },
+  { tab: 'armarios',        label: 'Armarios',        icon: Box,          color: 'bg-cyan-600',    group: 'diseno', can: (u) => u?.canAccessArmarios && !u?.isTienda },
+  { tab: 'digitalizador',   label: 'Digitalizador',   icon: ScanLine,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseDigitalizador && !u?.isTienda },
+
+  // Producción
+  { tab: 'fabrica',         label: 'Fábrica',         icon: Factory,      color: 'bg-emerald-600', group: 'produccion', can: (u) => u?.canAccessFabrica === true },
+  { tab: 'montajes',        label: 'Montajes',        icon: Wrench,       color: 'bg-orange-600',  group: 'produccion', can: (u, s) => s?.montajesEnabled && (u?.canAccessMontajes || u?.isMontador) },
+  { tab: 'luiggifloor',     label: 'Luiggi Floor',    icon: Layers,       color: 'bg-amber-500',   group: 'produccion', can: (u) => u?.canAccessFloor === true },
+
+  // Administración
+  { tab: 'command',         label: 'Panel de Mando',  icon: Shield,       color: 'bg-slate-700',   group: 'admin', can: (u) => u?.canAccessMando === true },
 ];
 
 const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
@@ -61,6 +78,9 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
   const modules = MODULES.filter((m) => {
     try { return !!m.can(currentUser, settings); } catch { return false; }
   });
+  const groupedModules = GROUPS
+    .map((g) => ({ ...g, items: modules.filter((m) => m.group === g.id) }))
+    .filter((g) => g.items.length > 0);
   const embed = toEmbedUrl(PROMO_VIDEO_URL);
 
   return (
@@ -76,22 +96,36 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
           </p>
         </div>
 
-        {/* Accesos rápidos */}
-        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Accesos rápidos</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {modules.map((m) => {
-            const Icon = m.icon;
+        {/* Accesos rápidos, agrupados por bloque temático */}
+        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Accesos rápidos</h2>
+        <div className="space-y-7">
+          {groupedModules.map((g) => {
+            const GroupIcon = g.icon;
             return (
-              <button
-                key={m.tab}
-                onClick={() => onNavigate?.(m.tab)}
-                className="group flex items-center gap-3 p-4 rounded-2xl bg-white ring-1 ring-slate-200 hover:ring-slate-300 hover:shadow-lg transition-all text-left"
-              >
-                <span className={`${m.color} p-2.5 rounded-xl text-white shrink-0`}>
-                  <Icon size={20} />
-                </span>
-                <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900">{m.label}</span>
-              </button>
+              <div key={g.id}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} />
+                  <GroupIcon size={14} className="text-slate-400" />
+                  <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{g.label}</h3>
+                </div>
+                <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 pl-3 border-l-2 ${g.accent}`}>
+                  {g.items.map((m) => {
+                    const Icon = m.icon;
+                    return (
+                      <button
+                        key={m.tab}
+                        onClick={() => onNavigate?.(m.tab)}
+                        className="group flex items-center gap-3 p-4 rounded-2xl bg-white ring-1 ring-slate-200 hover:ring-slate-300 hover:shadow-lg transition-all text-left"
+                      >
+                        <span className={`${m.color} p-2.5 rounded-xl text-white shrink-0`}>
+                          <Icon size={20} />
+                        </span>
+                        <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900">{m.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
