@@ -1446,7 +1446,7 @@ def calculate_furniture_despiece(
     drawer_front_clearance: float = 4,   # Holgura cajón en fondo (frontal), cm
     drawer_height_margin: float = 1.0,   # Margen alto interior cajón, cm
     drawer_height_gap: float = 0.3,      # Holgura adicional alto interior cajón, cm
-    gola_discount_cm: float = 2.0        # Descuento alto en frentes/puertas de BAJOS con sistema gola, cm
+    gola_discount_cm: float = 3.0        # Descuento alto en frentes/puertas de BAJOS con sistema gola, cm
 ) -> FurnitureDespiece:
     """
     Calculate the despiece (bill of materials) for a single furniture piece.
