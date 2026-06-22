@@ -52,7 +52,8 @@ export const generateBudgetPDF = ({
   golaAlto = false,
   golaAltoColor = '',
   golaBajo = false,
-  golaBajoColor = ''
+  golaBajoColor = '',
+  valorado = true
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -130,7 +131,7 @@ export const generateBudgetPDF = ({
     if (item.notes) notasList.push(capitalizeName(item.notes));
     const notas = notasList.length > 0 ? notasList.join(', ') : '-';
     
-    return [
+    const row = [
       item.quantity || 1,
       code.toUpperCase(),
       name.length > 40 ? name.substring(0, 40) + '...' : name,
@@ -139,8 +140,10 @@ export const generateBudgetPDF = ({
       depth,
       apertura,
       notas.length > 15 ? notas.substring(0, 15) + '...' : notas,
-      `${price.toFixed(2)}€`
     ];
+    // La columna de IMPORTE solo aparece en el PDF valorado (con precios).
+    if (valorado) row.push(`${price.toFixed(2)}€`);
+    return row;
   });
 
   // Especificaciones
@@ -157,9 +160,9 @@ export const generateBudgetPDF = ({
 
   // Calcular paginación
   const headerHeight = 50;
-  const totalsHeight = 35;
+  const totalsHeight = valorado ? 35 : 6;  // sin precios no se reserva sitio para totales
   const footerHeight = 28;  // Aumentado para mostrar mejor las especificaciones
-  const rowHeight = 6;
+  const rowHeight = 8;  // maqueta más grande (antes 6)
   const availableForRows = pageHeight - headerHeight - totalsHeight - footerHeight - 20;
   const maxRowsPerPage = Math.floor(availableForRows / rowHeight);
   
@@ -376,11 +379,11 @@ export const generateBudgetPDF = ({
     let yPos = drawHeader(currentPage);
     
     // Título de sección
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setTextColor(...primaryColor);
     doc.setFont('helvetica', 'bold');
-    doc.text('DETALLE DEL PRESUPUESTO', margin, yPos);
-    yPos += 4;
+    doc.text(valorado ? 'DETALLE DEL PRESUPUESTO' : 'DETALLE DEL PRESUPUESTO (SIN PRECIOS)', margin, yPos);
+    yPos += 5;
     
     // Calcular filas para esta página
     const rowsThisPage = tableData.slice(rowIndex, rowIndex + maxRowsPerPage);
@@ -388,19 +391,21 @@ export const generateBudgetPDF = ({
     if (rowsThisPage.length > 0) {
       autoTable(doc, {
         startY: yPos,
-        head: [['UD', 'REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'AP', 'NOTAS', 'IMPORTE']],
+        head: [valorado
+          ? ['UD', 'REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'AP', 'NOTAS', 'IMPORTE']
+          : ['UD', 'REF', 'DESCRIPCIÓN', 'AN', 'AL', 'FO', 'AP', 'NOTAS']],
         body: rowsThisPage,
         theme: 'striped',
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
           fontStyle: 'bold',
-          fontSize: 6,
-          cellPadding: 2
+          fontSize: 8,
+          cellPadding: 2.5
         },
         bodyStyles: {
-          fontSize: 6,
-          cellPadding: 1.5
+          fontSize: 7.5,
+          cellPadding: 2
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252]
@@ -413,7 +418,7 @@ export const generateBudgetPDF = ({
           4: { cellWidth: 10, halign: 'center' },
           5: { cellWidth: 10, halign: 'center' },
           6: { cellWidth: 8, halign: 'center' },
-          7: { cellWidth: 25, fontSize: 5 },
+          7: { cellWidth: 25, fontSize: 7 },
           8: { cellWidth: 18, halign: 'right' }
         },
         margin: { left: margin, right: margin },
@@ -426,7 +431,7 @@ export const generateBudgetPDF = ({
     
     // Dibujar totales y footer solo en la última página
     if (currentPage === totalPages) {
-      drawTotals();
+      if (valorado) drawTotals();  // sin precios: no se dibujan los totales
       drawFooter();
     }
     

@@ -1134,6 +1134,37 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
     setOrderAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Exporta el PDF del presupuesto. valorado=false genera la versión SIN precios.
+  const exportBudgetPdf = (valorado = true) => {
+    const carcassMat = state.carcassMaterials?.find(m => m.id === state.selectedCarcassMaterialId);
+    generateBudgetPDF({
+      budgetNumber: state.budgetNumber,
+      customerName: state.customerName,
+      customerAddress: state.customerAddress,
+      internalReference: state.internalReference,
+      itemsMontada: state.budgetItemsMontada,
+      itemsDespiece: state.budgetItemsDespiece,
+      pointValueMontada: state.pointValueMontada,
+      pointValueDespiece: state.pointValueDespiece,
+      doorColorLow: state.doorColorLow,
+      doorColorHigh: state.doorColorHigh,
+      doorColorColumns: state.doorColorColumns,
+      sideColor: state.sideColor,
+      carcassMaterialName: carcassMat?.name || 'No especificado',
+      brandColor: state.brandColor,
+      logo: state.logo,
+      companyName: 'LUIGGI HOME',
+      globalFinish: state.globalFinish,
+      allProducts: allProducts,
+      calculateLineDetails: calculateLineDetails,
+      golaAlto: state.golaAlto,
+      golaAltoColor: state.golaAltoColor,
+      golaBajo: state.golaBajo,
+      golaBajoColor: state.golaBajoColor,
+      valorado
+    });
+  };
+
   useEffect(() => {
     const onMouseMove = (e) => {
       if (isResizingSidebar.current) setSidebarWidth(Math.max(250, Math.min(600, e.clientX - 80)));
@@ -1203,39 +1234,20 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
              <Keyboard size={14}/> LÍNEA MANUAL
           </button>
 
-          <button 
-            onClick={() => {
-              const carcassMat = state.carcassMaterials?.find(m => m.id === state.selectedCarcassMaterialId);
-              generateBudgetPDF({
-                budgetNumber: state.budgetNumber,
-                customerName: state.customerName,
-                customerAddress: state.customerAddress,
-                internalReference: state.internalReference,
-                itemsMontada: state.budgetItemsMontada,
-                itemsDespiece: state.budgetItemsDespiece,
-                pointValueMontada: state.pointValueMontada,
-                pointValueDespiece: state.pointValueDespiece,
-                doorColorLow: state.doorColorLow,
-                doorColorHigh: state.doorColorHigh,
-                doorColorColumns: state.doorColorColumns,
-                sideColor: state.sideColor,
-                carcassMaterialName: carcassMat?.name || 'No especificado',
-                brandColor: state.brandColor,
-                logo: state.logo,
-                companyName: 'LUIGGI HOME',
-                globalFinish: state.globalFinish,
-                allProducts: allProducts,
-                calculateLineDetails: calculateLineDetails,
-                golaAlto: state.golaAlto,
-                golaAltoColor: state.golaAltoColor,
-                golaBajo: state.golaBajo,
-                golaBajoColor: state.golaBajoColor
-              });
-            }}
+          <button
+            onClick={() => exportBudgetPdf(true)}
             className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg"
             data-testid="export-pdf-btn"
           >
             <Download size={16}/> EXPORTAR PDF
+          </button>
+
+          <button
+            onClick={() => exportBudgetPdf(false)}
+            className="bg-white border-2 border-green-200 text-green-700 px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center gap-2 hover:bg-green-50 transition-all shadow-sm"
+            data-testid="export-pdf-noprice-btn"
+          >
+            <Download size={16}/> PDF SIN PRECIOS
           </button>
 
           {/* Botón Confirmar Pedido - Siempre visible */}

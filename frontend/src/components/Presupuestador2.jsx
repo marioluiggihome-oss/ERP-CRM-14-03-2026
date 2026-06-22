@@ -710,10 +710,11 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   };
 
   // Exportar PDF con el MISMO formato que el Presupuestador 1 (descarga un PDF real).
-  const exportPDF = () => {
+  const exportPDF = (valorado = true) => {
     if (cart.length === 0) { alert('Añade al menos una línea'); return; }
     try {
       generateBudgetPDF({
+        valorado,
         budgetNumber: getBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin especificar',
         customerAddress: '',
@@ -1446,13 +1447,17 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                       {saving ? <Loader size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
                       {saving ? 'Guardando…' : saved ? '¡Guardado!' : 'Guardar'}
                     </button>
-                    <button onClick={exportPDF} disabled={cart.length === 0}
+                    <button onClick={() => exportPDF(true)} disabled={cart.length === 0}
                       className="py-2.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
                       <FileDown size={13} /> Exportar PDF
                     </button>
                     <button onClick={handlePrint} disabled={cart.length === 0}
                       className="py-2.5 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
                       <Printer size={13} /> Imprimir
+                    </button>
+                    <button onClick={() => exportPDF(false)} disabled={cart.length === 0}
+                      className="col-span-2 py-2.5 bg-white border-2 border-purple-200 hover:bg-purple-50 disabled:border-slate-100 disabled:text-slate-300 rounded-xl text-xs font-bold text-purple-700 flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                      <FileDown size={13} /> PDF sin precios (no valorado)
                     </button>
                   </div>
                   {currentUser?.canViewTechnicalDespiece && (
