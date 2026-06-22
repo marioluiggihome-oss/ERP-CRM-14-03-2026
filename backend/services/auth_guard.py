@@ -14,6 +14,7 @@ Activación: variable de entorno ENFORCE_GLOBAL_AUTH.
 Rollback instantáneo: poner ENFORCE_GLOBAL_AUTH=0 y redeplegar.
 """
 import os
+import re
 
 # Rutas públicas (accesibles sin token). Todo lo que el frontend necesita ANTES
 # de tener sesión: login / registro / verificación / recuperación / refresh, el
@@ -37,6 +38,14 @@ PUBLIC_API_PATHS = frozenset({
     "/api/floor/public-logo",
 })
 
+# Rutas públicas con segmentos dinámicos (no se pueden listar como string
+# exacto). Se abren al público porque el navegador las descarga/visualiza
+# navegando directamente a la URL (enlace <a href>, sin posibilidad de
+# adjuntar cabecera Authorization), igual que ya ocurre con public-logo.
+PUBLIC_API_PATH_PATTERNS = (
+    re.compile(r"^/api/floor/docs/[^/]+/file$"),
+)
+
 _TRUTHY = ("1", "true", "yes", "on")
 
 
@@ -54,4 +63,6 @@ def is_public_api_path(path: str) -> bool:
     pública "/api/distributor/request".
     """
     p = path[:-1] if (len(path) > 1 and path.endswith("/")) else path
-    return p in PUBLIC_API_PATHS
+    if p in PUBLIC_API_PATHS:
+        return True
+    return any(pattern.match(p) for pattern in PUBLIC_API_PATH_PATTERNS)
