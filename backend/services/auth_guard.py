@@ -36,6 +36,7 @@ PUBLIC_API_PATHS = frozenset({
     "/api/distributor/request",
     "/api/settings/public-logo",
     "/api/floor/public-logo",
+    "/api/products/export/mv-catalog-pdf",
 })
 
 # Rutas públicas con segmentos dinámicos (no se pueden listar como string
@@ -44,6 +45,7 @@ PUBLIC_API_PATHS = frozenset({
 # adjuntar cabecera Authorization), igual que ya ocurre con public-logo.
 PUBLIC_API_PATH_PATTERNS = (
     re.compile(r"^/api/floor/docs/[^/]+/file$"),
+    re.compile(r"^/api/products/export/library/[^/]+$"),
 )
 
 _TRUTHY = ("1", "true", "yes", "on")
