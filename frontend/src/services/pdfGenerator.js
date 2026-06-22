@@ -82,6 +82,10 @@ export const generateBudgetPDF = ({
     } else if (product && calculateLineDetails) {
       const details = calculateLineDetails(item, product);
       grandTotal += details.total || 0;
+    } else if (item.manualPoints != null) {
+      // Flujos sin calculateLineDetails (p.ej. Presupuestador 2): el precio del
+      // catálogo ya viene como "puntos" (= precio/pointValue) en manualPoints.
+      grandTotal += (item.manualPoints || 0) * pointValueMontada * (item.quantity || 1);
     }
   });
   
@@ -97,18 +101,20 @@ export const generateBudgetPDF = ({
     if (item.isManual) {
       product = {
         code: item.customReference || 'MANUAL',
-        name: capitalizeName(item.manualDescription) || 'Concepto Manual'
+        name: item.manualDescription || 'Concepto Manual'
       };
       price = (item.manualPoints || 0) * pointValueMontada * (item.quantity || 1);
     } else if (product && calculateLineDetails) {
       const details = calculateLineDetails(item, product);
       price = details.total || 0;
+    } else if (item.manualPoints != null) {
+      price = (item.manualPoints || 0) * pointValueMontada * (item.quantity || 1);
     }
     
     const code = item.customReference || product?.code || '-';
     // Aplicar capitalización a los nombres, especialmente líneas manuales
     const rawName = item.manualDescription || product?.name || '-';
-    const name = item.isManual ? capitalizeName(rawName) : rawName;
+    const name = rawName; // respetar el texto EXACTO escrito en la línea manual
     // Dimensiones ya están en cm, no dividir por 10
     const width = item.customWidth || '-';
     const height = item.customHeight || '-';
