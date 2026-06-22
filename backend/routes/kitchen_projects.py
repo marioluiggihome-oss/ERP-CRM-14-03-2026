@@ -85,6 +85,14 @@ class ApproveRequest(BaseModel):
     library: str = Field(default="ZC", description="ZC o MV")
 
 
+class ComposeRenderRequest(BaseModel):
+    """Render fiel a partir de un PLANO EN PLANTA y un BOCETO por cada PARED."""
+    floor_plan: Optional[str] = None          # plano en planta (dataURL/base64/PDF)
+    wall_sketches: Optional[List[str]] = None  # bocetos por pared (dataURL/base64), en orden
+    brief: Optional[str] = None               # acabados/colores/materiales/estilo deseados
+    style: Optional[str] = None
+
+
 # ─── Almacenamiento en memoria (MVP) ─────────────────────────────────────────
 
 _projects_db: dict = {}
@@ -551,6 +559,67 @@ async def generate_project_render(project_id: str, user=Depends(require_auth)):
 
     except Exception as e:
         logger.error(f"Error generando render para proyecto {project_id}: {e}")
+        project["status"] = "failed"
+        raise HTTPException(status_code=500, detail="Error al generar el render")
+
+
+@kitchen_projects_router.post("/{project_id}/render-compose")
+async def generate_project_render_composed(project_id: str, data: ComposeRenderRequest, user=Depends(require_auth)):
+    """Render fotorrealista FIEL combinando el plano en planta + un boceto por pared.
+
+    Reutiliza el motor de imagen multi-referencia (Gemini 2.5 Flash Image) para que
+    el render respete a la vez la distribución del plano y el diseño de cada pared.
+    """
+    user_id = _get_user_id(user)
+    project = _find_project(user_id, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    sketches = [s for s in (data.wall_sketches or []) if s]
+    if not data.floor_plan and not sketches:
+        raise HTTPException(status_code=400, detail="Adjunta el plano en planta o al menos un boceto de pared.")
+
+    project["status"] = "generating"
+    render_service = get_render_service()
+
+    # Brief: descripción del proyecto + muebles + acabados + texto libre del usuario.
+    cabinet_desc = ""
+    for cab in project.get("cabinets", []):
+        cabinet_desc += f"\n- {cab['cabinet_type']} ({cab.get('width','?')}x{cab.get('height','?')}cm) en {cab.get('wall_label','?')}"
+        if cab.get("material"):
+            cabinet_desc += f", material: {cab['material']}"
+        if cab.get("color"):
+            cabinet_desc += f", color: {cab['color']}"
+    parts = [
+        project.get("description") or "",
+        data.brief or "",
+        f"Frentes: {project.get('cabinet_material','')}." if project.get("cabinet_material") else "",
+        f"Encimera: {project.get('countertop_material','')}." if project.get("countertop_material") else "",
+        f"Muebles específicos:{cabinet_desc}" if cabinet_desc else "",
+    ]
+    description = " ".join(p for p in parts if p).strip() or "Cocina moderna fotorrealista"
+
+    try:
+        result = await render_service.generate_render_composed(
+            description=description,
+            floor_plan=data.floor_plan,
+            wall_sketches=sketches,
+            params_override={"style": data.style or project.get("style", "fotorrealista")},
+        )
+        render_entry = {
+            "id": f"r_{int(time.time())}",
+            "status": result.get("status", "completed"),
+            "result": result,
+            "is_composed": True,
+            "created_at": time.time(),
+        }
+        project["renders"].append(render_entry)
+        project["status"] = "completed" if result.get("success") else "failed"
+        project["updated_at"] = time.time()
+        return {"render": render_entry}
+
+    except Exception as e:
+        logger.error(f"Error en render compuesto del proyecto {project_id}: {e}")
         project["status"] = "failed"
         raise HTTPException(status_code=500, detail="Error al generar el render")
 

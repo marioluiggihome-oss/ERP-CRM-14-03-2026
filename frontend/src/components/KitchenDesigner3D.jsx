@@ -729,6 +729,11 @@ function RendersTab({ project, onRefresh }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [iterateText, setIterateText] = useState('');
   const [isIterating, setIsIterating] = useState(false);
+  // Render fiel: plano en planta + un boceto por cada pared
+  const [floorPlan, setFloorPlan] = useState(null);
+  const [sketches, setSketches] = useState([]); // [{label, data}]
+  const [composeBrief, setComposeBrief] = useState('');
+  const [isComposing, setIsComposing] = useState(false);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -759,6 +764,40 @@ function RendersTab({ project, onRefresh }) {
     }
   };
 
+  const fileToDataUrl = (file) => new Promise((res, rej) => {
+    const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+  });
+  const onFloorPlan = async (e) => {
+    const f = e.target.files?.[0]; e.target.value = '';
+    if (f) setFloorPlan(await fileToDataUrl(f));
+  };
+  const onAddSketch = async (e) => {
+    const f = e.target.files?.[0]; e.target.value = '';
+    if (f) { const data = await fileToDataUrl(f); setSketches(prev => [...prev, { label: `Pared ${prev.length + 1}`, data }]); }
+  };
+  const handleCompose = async () => {
+    if (!floorPlan && sketches.length === 0) { alert('Adjunta el plano en planta o al menos un boceto de pared.'); return; }
+    setIsComposing(true);
+    try {
+      const labelNote = sketches.length
+        ? 'Bocetos por pared (en orden): ' + sketches.map((s, i) => `${i + 1}) ${s.label || 'pared'}`).join('; ') + '.'
+        : '';
+      await apiCall(`/${project.id}/render-compose`, {
+        method: 'POST',
+        body: JSON.stringify({
+          floor_plan: floorPlan,
+          wall_sketches: sketches.map(s => s.data),
+          brief: [composeBrief, labelNote].filter(Boolean).join(' '),
+        }),
+      });
+      await onRefresh();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setIsComposing(false);
+    }
+  };
+
   const renders = project.renders || [];
 
   return (
@@ -770,6 +809,63 @@ function RendersTab({ project, onRefresh }) {
           className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700 disabled:opacity-50">
           {isGenerating ? <Loader className="animate-spin" size={16} /> : <Wand2 size={16} />}
           {isGenerating ? 'Generando...' : 'Generar Render'}
+        </button>
+      </div>
+
+      {/* Render FIEL: plano en planta + un boceto por pared (IA multi-referencia) */}
+      <div className="mb-5 rounded-xl border-2 border-indigo-100 bg-indigo-50/40 p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Wand2 size={16} className="text-indigo-600" />
+          <h4 className="font-bold text-slate-800 text-sm">Render fiel: plano + bocetos por pared</h4>
+        </div>
+        <p className="text-xs text-slate-500 mb-3">Sube el plano en planta y un boceto de cada pared; la IA genera un render fotorrealista fiel a la distribución y a cada pared.</p>
+
+        {/* Plano en planta */}
+        <div className="mb-3">
+          <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">Plano en planta</span>
+          {floorPlan ? (
+            <div className="relative inline-block">
+              <img src={floorPlan} alt="Plano" className="h-24 rounded-lg border border-slate-200 object-cover" />
+              <button onClick={() => setFloorPlan(null)} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow" title="Quitar"><X size={12} /></button>
+            </div>
+          ) : (
+            <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border-2 border-dashed border-slate-300 rounded-lg text-xs font-bold text-slate-600 cursor-pointer hover:border-indigo-400">
+              <Upload size={14} /> Subir plano (imagen o PDF)
+              <input type="file" accept="image/*,application/pdf" onChange={onFloorPlan} className="hidden" />
+            </label>
+          )}
+        </div>
+
+        {/* Bocetos por pared */}
+        <div className="mb-3">
+          <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">Bocetos por pared</span>
+          <div className="flex flex-wrap gap-3">
+            {sketches.map((s, i) => (
+              <div key={i} className="w-28">
+                <div className="relative">
+                  <img src={s.data} alt={`Boceto ${i + 1}`} className="h-20 w-28 rounded-lg border border-slate-200 object-cover" />
+                  <button onClick={() => setSketches(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow" title="Quitar"><X size={12} /></button>
+                </div>
+                <input value={s.label} onChange={e => setSketches(prev => prev.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))}
+                  className="mt-1 w-full px-2 py-1 border border-slate-200 rounded text-[11px]" placeholder={`Pared ${i + 1}`} />
+              </div>
+            ))}
+            <label className="h-20 w-28 flex flex-col items-center justify-center gap-1 bg-white border-2 border-dashed border-slate-300 rounded-lg text-[11px] font-bold text-slate-500 cursor-pointer hover:border-indigo-400">
+              <Upload size={14} /> Añadir boceto
+              <input type="file" accept="image/*" onChange={onAddSketch} className="hidden" />
+            </label>
+          </div>
+        </div>
+
+        {/* Brief de acabados */}
+        <textarea value={composeBrief} onChange={e => setComposeBrief(e.target.value)} rows={2}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-3"
+          placeholder="Acabados deseados: colores, materiales, estilo… (ej: 'frentes verde salvia mate, encimera porcelánico blanco, tiradores gola negros, suelo madera clara')" />
+
+        <button onClick={handleCompose} disabled={isComposing}
+          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
+          {isComposing ? <Loader className="animate-spin" size={16} /> : <Wand2 size={16} />}
+          {isComposing ? 'Generando render fiel…' : 'Generar render fiel (IA)'}
         </button>
       </div>
 
