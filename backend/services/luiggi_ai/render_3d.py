@@ -474,6 +474,85 @@ class Render3DService:
             reference_image_base64=ref_b64, reference_mime=ref_mime,
         )
 
+    async def generate_render_composed(
+        self,
+        description: str,
+        floor_plan: Optional[str] = None,
+        wall_sketches: Optional[list] = None,
+        params_override: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Genera UN render fotorrealista combinando un PLANO EN PLANTA (distribución)
+        y un BOCETO por cada PARED (diseño de esa pared), fiel a ambos.
+
+        Args:
+            description: brief del acabado deseado (colores, materiales, estilo…)
+            floor_plan: plano en planta (base64/dataURL/PDF)
+            wall_sketches: lista de bocetos, uno por pared (base64/dataURL)
+            params_override: overrides (p.ej. style)
+        """
+        parsed_params = self.parse_natural_language(description or "")
+        if params_override:
+            parsed_params.update(params_override)
+        space_type = self.detect_space_type(description or "cocina")
+        parsed_params["space_type"] = space_type
+
+        images = []       # [{"data","mime"}] para la generación multi-imagen
+        ref_lines = []    # descripción textual de cada imagen para el prompt
+
+        if floor_plan:
+            b64, mime = self._prepare_reference(floor_plan, None)
+            if b64:
+                images.append({"data": b64, "mime": mime})
+                ref_lines.append(
+                    f"- IMAGE {len(images)} is the FLOOR PLAN (top-down view): it defines the "
+                    "exact LAYOUT — position and length of every wall, placement of cabinets/"
+                    "furniture, doors and windows. Respect these positions and proportions."
+                )
+
+        for i, sk in enumerate(wall_sketches or []):
+            b64, mime = self._prepare_reference(sk, None)
+            if b64:
+                images.append({"data": b64, "mime": mime})
+                ref_lines.append(
+                    f"- IMAGE {len(images)} is a SKETCH of WALL {i + 1}: it shows the desired "
+                    "design of that wall (cabinets, shelves, appliances, finishes, proportions). "
+                    "Reproduce that wall faithfully."
+                )
+
+        if not images:
+            return {
+                "success": False,
+                "status": "failed",
+                "error": "Adjunta al menos el plano en planta o un boceto de pared.",
+                "engine": self.config.brand_name,
+            }
+
+        expanded_brief = await self._expand_brief(description, space_type)
+        prompt = self.build_render_prompt(
+            description=expanded_brief or description,
+            style=parsed_params.get("style", "photorealistic"),
+            space_type=space_type,
+        )
+        refs_block = "\n".join(ref_lines)
+        task_prompt = (
+            "You are given MULTIPLE reference images that you must COMBINE into ONE single "
+            "photorealistic interior render:\n" + refs_block + "\n\n"
+            "Produce a single ultra-photorealistic photograph of the FINISHED space that is "
+            "FAITHFUL at the same time to the floor-plan layout and to EACH wall sketch, "
+            "applying the finishes, colors and materials described in the brief. Keep geometry, "
+            "proportions and the number/size of modules consistent with the plan and the "
+            "sketches; do NOT invent extra walls nor omit elements that appear in them.\n\n"
+            f"{prompt}\n\n"
+            "The result must look like a real professional interior photograph (PBR materials, "
+            "natural light, realistic soft shadows and reflections), NOT a cartoon or videogame "
+            "image. Avoid plastic, flat or oversaturated looks. No text, watermarks or logos."
+        )
+        parsed_params["hasReference"] = True
+        parsed_params["referenceCount"] = len(images)
+        return await self._render_with_gemini(
+            task_prompt, prompt, parsed_params, reference_images=images,
+        )
+
     def _prepare_reference(self, reference_image, reference_mime):
         """Normaliza la referencia: quita el prefijo data:, y si es PDF convierte
         la primera página a PNG para que el modelo de imagen la pueda usar."""
@@ -543,7 +622,8 @@ class Render3DService:
     async def _render_with_gemini(self, task_prompt: str, prompt: str,
                                   parsed_params: Optional[Dict[str, Any]] = None,
                                   reference_image_base64: Optional[str] = None,
-                                  reference_mime: str = "image/png") -> Dict[str, Any]:
+                                  reference_mime: str = "image/png",
+                                  reference_images: Optional[list] = None) -> Dict[str, Any]:
         """Genera el render con Gemini y lo devuelve como data URL (marca blanca)."""
         from services.llm_vision import generate_image_with_gemini
         start = time.time()
@@ -552,6 +632,7 @@ class Render3DService:
                 task_prompt,
                 reference_image_base64=reference_image_base64,
                 reference_mime=reference_mime or "image/png",
+                reference_images=reference_images,
             )
         except Exception as e:
             logger.error(f"Render (Gemini) error: {e}")

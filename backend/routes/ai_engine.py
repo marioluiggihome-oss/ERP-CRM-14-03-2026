@@ -42,6 +42,14 @@ class RenderRequest(BaseModel):
     referenceMime: Optional[str] = Field(None, description="MIME de la imagen de referencia")
 
 
+class RenderComposeRequest(BaseModel):
+    """Render combinando un PLANO EN PLANTA + un BOCETO por cada PARED."""
+    description: str = Field("", description="Brief del acabado/estilo deseado")
+    style: Optional[str] = Field(None, description="Estilo de render")
+    floorPlan: Optional[str] = Field(None, description="Plano en planta (base64/dataURL/PDF)")
+    wallSketches: Optional[list] = Field(None, description="Bocetos por pared (lista base64/dataURL)")
+
+
 class RenderParamsRequest(BaseModel):
     """Solicitud de render 3D con parámetros explícitos."""
     layout: str = Field(default="L-shape", description="Distribución de la cocina")
@@ -170,6 +178,27 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
     )
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")
+    return result
+
+
+@ai_engine_router.post("/render/compose")
+async def generate_render_compose(request: RenderComposeRequest, user=Depends(require_auth)):
+    """Genera un render fotorrealista combinando un PLANO EN PLANTA (distribución)
+    y un BOCETO por cada PARED (diseño de esa pared), fiel a ambos a la vez."""
+    service = get_render_service()
+    overrides = {}
+    if request.style:
+        overrides["style"] = request.style
+    result = await service.generate_render_composed(
+        description=request.description or "",
+        floor_plan=request.floorPlan,
+        wall_sketches=request.wallSketches or [],
+        params_override=overrides or None,
+    )
+    logger.info(
+        f"Render compuesto por {user.get('username')}: "
+        f"plano={bool(request.floorPlan)} bocetos={len(request.wallSketches or [])}"
+    )
     return result
 
 

@@ -342,6 +342,7 @@ async def generate_image_with_gemini(
     prompt: str,
     reference_image_base64: Optional[str] = None,
     reference_mime: str = "image/png",
+    reference_images: Optional[list] = None,
 ) -> str:
     """
     Genera una imagen con Gemini a partir de un prompt (y opcionalmente una
@@ -359,13 +360,27 @@ async def generate_image_with_gemini(
     client = google_genai.Client(api_key=key)
 
     contents = []
+    # Lista unificada de imágenes de referencia: admite VARIAS (p.ej. plano en
+    # planta + un boceto por cada pared), además de la referencia única clásica.
+    refs = []
+    for it in (reference_images or []):
+        if not it:
+            continue
+        if isinstance(it, dict):
+            data, mime = it.get("data"), (it.get("mime") or "image/png")
+        else:
+            data, mime = it, "image/png"
+        if data:
+            refs.append((data, mime))
     if reference_image_base64:
+        refs.append((reference_image_base64, reference_mime or "image/png"))
+    for data, mime in refs:
         try:
-            ref = reference_image_base64
-            if ref.startswith("data:"):
+            ref = data
+            if isinstance(ref, str) and ref.startswith("data:"):
                 ref = ref.split(",", 1)[1]
             img_bytes = base64.b64decode(ref)
-            contents.append(google_genai_types.Part.from_bytes(data=img_bytes, mime_type=reference_mime))
+            contents.append(google_genai_types.Part.from_bytes(data=img_bytes, mime_type=mime))
         except Exception as e:
             logger.warning(f"Imagen de referencia ignorada: {e}")
     contents.append(prompt)

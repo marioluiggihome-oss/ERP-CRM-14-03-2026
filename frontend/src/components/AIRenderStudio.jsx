@@ -156,6 +156,8 @@ export default function AIRenderStudio({ state }) {
   const [mode, setMode] = useState('natural'); // 'natural' | 'params'
   const [description, setDescription] = useState('');
   const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) para que el modelo la "vea"
+  const [floorPlan, setFloorPlan] = useState(null);    // plano en planta (dataURL)
+  const [wallSketches, setWallSketches] = useState([]); // bocetos por pared (dataURL[])
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderResult, setRenderResult] = useState(null);
   const [renderHistory, setRenderHistory] = useState([]);
@@ -235,6 +237,54 @@ export default function AIRenderStudio({ state }) {
       setError('No se pudo subir la imagen de referencia. Inténtelo de nuevo.');
     } finally {
       setAnalyzingRef(false);
+    }
+  };
+
+  // ─── Plano en planta + bocetos por pared → render fiel ───────────────────
+  const fileToDataUrl = (file) => new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+  const handleFloorPlanUpload = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    try { setFloorPlan(await fileToDataUrl(file)); } catch { setError('No se pudo leer el plano.'); }
+  };
+  const handleAddWallSketch = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    try { const b64 = await fileToDataUrl(file); setWallSketches(prev => [...prev, b64]); }
+    catch { setError('No se pudo leer el boceto.'); }
+  };
+  const removeWallSketch = (i) => setWallSketches(prev => prev.filter((_, idx) => idx !== i));
+  const handleGenerateComposed = async () => {
+    if (!floorPlan && wallSketches.length === 0) return;
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_URL}/api/ai-engine/render/compose`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          description: description.trim(),
+          style: params.style,
+          floorPlan: floorPlan || undefined,
+          wallSketches,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setRenderResult(data);
+        setRenderHistory(prev => [{ ...data, description, timestamp: new Date() }, ...prev].slice(0, 10));
+      } else {
+        setError(data.error || 'Error al generar el render');
+      }
+    } catch (err) {
+      setError('Error de conexión. Verifique su conexión a internet.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -439,6 +489,40 @@ export default function AIRenderStudio({ state }) {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Plano en planta + bocetos por pared → render fiel a la distribución y a cada pared */}
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 flex flex-col gap-2">
+                <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Image size={14} /> Plano + bocetos por pared
+                </p>
+                <p className="text-[11px] text-slate-500 -mt-1">
+                  Sube el plano en planta y un boceto por cada pared: el render seguirá la distribución del plano y el diseño de cada pared, con el acabado del brief de arriba.
+                </p>
+                <label className={`text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${floorPlan ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50'}`}>
+                  {floorPlan ? <><CheckCircle size={13} /> Plano en planta cargado</> : <><Image size={13} /> Subir plano en planta</>}
+                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFloorPlanUpload} />
+                </label>
+                {floorPlan && (
+                  <button onClick={() => setFloorPlan(null)} className="text-[10px] text-slate-400 hover:text-red-500 self-start">Quitar plano</button>
+                )}
+                {wallSketches.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+                    <CheckCircle size={13} /> Boceto pared {i + 1}
+                    <button onClick={() => removeWallSketch(i)} className="ml-auto text-emerald-500 hover:text-red-500" title="Quitar boceto"><X size={13} /></button>
+                  </div>
+                ))}
+                <label className="text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg bg-white text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50">
+                  <Image size={13} /> Añadir boceto de pared
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAddWallSketch} />
+                </label>
+                <button
+                  onClick={handleGenerateComposed}
+                  disabled={isGenerating || (!floorPlan && wallSketches.length === 0)}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider text-xs rounded-xl shadow hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isGenerating ? <><Loader size={15} className="animate-spin" /> Generando…</> : <><Send size={15} /> Generar render (plano + bocetos)</>}
+                </button>
               </div>
 
               {/* Botón generar */}
