@@ -21,7 +21,7 @@ import time
 import math
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from services.jwt_service import require_auth
@@ -71,6 +71,15 @@ class MeasurementCreate(BaseModel):
     door_from_left: Optional[float] = None
     notes: Optional[str] = None
 
+    @field_validator(
+        "wall_width", "wall_height", "window_width", "window_height", "door_width", "door_height"
+    )
+    @classmethod
+    def _must_be_positive(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("Las dimensiones deben ser mayores que cero")
+        return v
+
 
 class CabinetCreate(BaseModel):
     cabinet_type: str
@@ -83,6 +92,13 @@ class CabinetCreate(BaseModel):
     color: Optional[str] = None
     handle_type: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("width", "height", "depth")
+    @classmethod
+    def _must_be_positive(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("Las dimensiones deben ser mayores que cero")
+        return v
 
 
 class IterateRequest(BaseModel):

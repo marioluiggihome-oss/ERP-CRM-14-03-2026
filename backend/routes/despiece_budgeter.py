@@ -4,7 +4,7 @@ Gestiona productos de fabricantes como ALVIC con parámetros específicos
 """
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 import os
@@ -103,6 +103,20 @@ class DespieceBudgetItem(BaseModel):
     unitPrice: float = 0
     totalPrice: float = 0
     notes: str = ""
+
+    @field_validator("width", "height")
+    @classmethod
+    def _must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Las dimensiones del corte deben ser mayores que cero")
+        return v
+
+    @field_validator("quantity")
+    @classmethod
+    def _quantity_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError("La cantidad debe ser mayor que cero")
+        return v
 
 
 class DespieceBudget(BaseModel):
