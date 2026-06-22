@@ -282,7 +282,8 @@ const MisPedidos = ({ currentUser }) => {
   }
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen">
+    <div className="h-full flex flex-col bg-slate-50">
+    <div className="flex-1 overflow-y-auto p-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-orange-600 to-amber-500 rounded-2xl p-6 mb-6 text-white shadow-xl">
         <div className="flex items-center justify-between">
@@ -696,6 +697,7 @@ const MisPedidos = ({ currentUser }) => {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };

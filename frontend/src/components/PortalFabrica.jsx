@@ -1753,7 +1753,8 @@ const PortalFabrica = ({ currentUser }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50">
+    <div className="flex-1 overflow-y-auto p-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
@@ -2063,6 +2064,7 @@ const PortalFabrica = ({ currentUser }) => {
           />
         </div>
       )}
+    </div>
     </div>
   );
 };
