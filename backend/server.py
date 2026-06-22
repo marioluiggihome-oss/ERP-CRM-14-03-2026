@@ -1613,6 +1613,19 @@ def calculate_furniture_despiece(
             thickness_cm = g
         # Área en m² (cm² / 10000)
         area = (length_cm * width_cm * qty) / 10_000
+        # Metros lineales de canto: misma heurística que el frontend
+        # (calculateCantoForComponent en DespieceModal.jsx), parseando notes
+        # por "1l"/"2l"/"4l"/"todos" para saber cuántos lados llevan canto.
+        notes_lower = (notes or "").lower()
+        l1 = l2 = w1 = w2 = 0.0
+        if "4l" in notes_lower or "todos" in notes_lower:
+            l1 = l2 = length_cm
+            w1 = w2 = width_cm
+        elif "2l" in notes_lower:
+            l1 = l2 = length_cm
+        elif "1l" in notes_lower:
+            l1 = length_cm
+        edge_banding_ml = round(((l1 + l2 + w1 + w2) * qty) / 100, 3)
         components.append(ComponentPiece(
             id=f"CMP-{item.productId[:8]}-{component_id:03d}",
             name=name,
@@ -1623,7 +1636,8 @@ def calculate_furniture_despiece(
             thickness=round(thickness_cm * 10, 1),  # Mostrar grosor en mm
             quantity=qty,
             area=round(area, 4),
-            notes=notes
+            notes=notes,
+            edgeBandingMl=edge_banding_ml
         ))
     
     # =============================================

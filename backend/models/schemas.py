@@ -825,6 +825,7 @@ class ComponentPiece(BaseModel):
     quantity: int
     area: float
     notes: str = ""
+    edgeBandingMl: float = 0  # Metros lineales de canto para esta pieza (qty incluido)
 
 
 class FurnitureDespiece(BaseModel):
