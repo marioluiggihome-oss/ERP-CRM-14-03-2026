@@ -394,11 +394,17 @@ async def generate_image_with_gemini(
     last_err = None
     for model_name in GEMINI_IMAGE_MODELS:
         try:
-            data_url = await loop.run_in_executor(None, _sync_call, model_name)
+            data_url = await asyncio.wait_for(
+                loop.run_in_executor(None, _sync_call, model_name), timeout=90
+            )
             if data_url:
                 return data_url
             last_err = RuntimeError(f"'{model_name}' no devolvió imagen")
             logger.warning(f"Modelo de imagen '{model_name}' no devolvió imagen, probando siguiente")
+        except asyncio.TimeoutError:
+            last_err = RuntimeError(f"'{model_name}' tardó demasiado en responder")
+            logger.warning(f"Modelo de imagen '{model_name}' agotó el tiempo de espera (90s)")
+            continue
         except Exception as e:
             last_err = e
             logger.warning(f"Modelo de imagen '{model_name}' falló: {str(e)[:140]}")

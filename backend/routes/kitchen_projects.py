@@ -14,6 +14,7 @@ Incluye:
   - Alzado alámbrico SVG con cotas
   - Despiece de muebles con valoración por biblioteca (ZC/MV)
 """
+import asyncio
 import logging
 import os
 import time
@@ -100,6 +101,22 @@ class ComposeRenderRequest(BaseModel):
     wall_sketches: Optional[List[str]] = None  # bocetos por pared (dataURL/base64), en orden
     brief: Optional[str] = None               # acabados/colores/materiales/estilo deseados
     style: Optional[str] = None
+
+
+# Tamaño máximo aceptado para una imagen/PDF en base64 (~15MB de archivo real,
+# el base64 pesa ~1.37x el binario). Evita payloads gigantes que agoten
+# memoria o se cuelguen contra el motor de render.
+MAX_BASE64_IMAGE_CHARS = 20_000_000
+# Tiempo máximo de espera al motor de render antes de devolver error al cliente.
+RENDER_TIMEOUT_SECONDS = 120
+
+
+def _validate_base64_image_size(data: Optional[str], label: str):
+    if data and len(data) > MAX_BASE64_IMAGE_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{label} demasiado grande. Reduce el tamaño del archivo e inténtalo de nuevo.",
+        )
 
 
 # ─── Almacenamiento persistente (MongoDB, colección kitchen_projects) ────────
@@ -541,15 +558,18 @@ async def generate_project_render(project_id: str, user=Depends(require_auth)):
             cabinet_desc += f", color: {cab['color']}"
 
     try:
-        result = await render_service.generate_render_from_params(
-            layout=project.get("layout", "L-shape"),
-            countertop=project.get("countertop_material", "cuarzo blanco"),
-            cabinets=project.get("cabinet_material", "blanco mate"),
-            handles="integrado",
-            floor="porcelánico efecto madera",
-            lighting="natural",
-            style=project.get("style", "fotorrealista"),
-            additional_details=f"{project.get('description', '')} Muebles específicos: {cabinet_desc}" if cabinet_desc else project.get("description"),
+        result = await asyncio.wait_for(
+            render_service.generate_render_from_params(
+                layout=project.get("layout", "L-shape"),
+                countertop=project.get("countertop_material", "cuarzo blanco"),
+                cabinets=project.get("cabinet_material", "blanco mate"),
+                handles="integrado",
+                floor="porcelánico efecto madera",
+                lighting="natural",
+                style=project.get("style", "fotorrealista"),
+                additional_details=f"{project.get('description', '')} Muebles específicos: {cabinet_desc}" if cabinet_desc else project.get("description"),
+            ),
+            timeout=RENDER_TIMEOUT_SECONDS,
         )
 
         render_entry = {
@@ -568,6 +588,12 @@ async def generate_project_render(project_id: str, user=Depends(require_auth)):
         )
         return {"render": render_entry}
 
+    except asyncio.TimeoutError:
+        logger.error(f"Timeout generando render para proyecto {project_id}")
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
+        )
+        raise HTTPException(status_code=504, detail="El render tardó demasiado en generarse. Inténtalo de nuevo.")
     except Exception as e:
         logger.error(f"Error generando render para proyecto {project_id}: {e}")
         await db.kitchen_projects.update_one(
@@ -592,6 +618,10 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
     if not data.floor_plan and not sketches:
         raise HTTPException(status_code=400, detail="Adjunta el plano en planta o al menos un boceto de pared.")
 
+    _validate_base64_image_size(data.floor_plan, "El plano en planta")
+    for i, sk in enumerate(sketches):
+        _validate_base64_image_size(sk, f"El boceto de la pared {i + 1}")
+
     await db.kitchen_projects.update_one(
         {"id": project_id, "user_id": user_id}, {"$set": {"status": "generating"}}
     )
@@ -615,11 +645,14 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
     description = " ".join(p for p in parts if p).strip() or "Cocina moderna fotorrealista"
 
     try:
-        result = await render_service.generate_render_composed(
-            description=description,
-            floor_plan=data.floor_plan,
-            wall_sketches=sketches,
-            params_override={"style": data.style or project.get("style", "fotorrealista")},
+        result = await asyncio.wait_for(
+            render_service.generate_render_composed(
+                description=description,
+                floor_plan=data.floor_plan,
+                wall_sketches=sketches,
+                params_override={"style": data.style or project.get("style", "fotorrealista")},
+            ),
+            timeout=RENDER_TIMEOUT_SECONDS,
         )
         render_entry = {
             "id": f"r_{int(time.time())}",
@@ -637,6 +670,12 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
         )
         return {"render": render_entry}
 
+    except asyncio.TimeoutError:
+        logger.error(f"Timeout en render compuesto del proyecto {project_id}")
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
+        )
+        raise HTTPException(status_code=504, detail="El render tardó demasiado en generarse. Inténtalo de nuevo.")
     except Exception as e:
         logger.error(f"Error en render compuesto del proyecto {project_id}: {e}")
         await db.kitchen_projects.update_one(
@@ -667,9 +706,12 @@ async def iterate_render(project_id: str, data: IterateRequest, user=Depends(req
     )
 
     try:
-        result = await render_service.generate_render(
-            description=base_description,
-            params_override=None,
+        result = await asyncio.wait_for(
+            render_service.generate_render(
+                description=base_description,
+                params_override=None,
+            ),
+            timeout=RENDER_TIMEOUT_SECONDS,
         )
 
         render_entry = {
@@ -690,6 +732,12 @@ async def iterate_render(project_id: str, data: IterateRequest, user=Depends(req
         )
         return {"render": render_entry}
 
+    except asyncio.TimeoutError:
+        logger.error(f"Timeout en iteración para proyecto {project_id}")
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
+        )
+        raise HTTPException(status_code=504, detail="El render tardó demasiado en generarse. Inténtalo de nuevo.")
     except Exception as e:
         logger.error(f"Error en iteración para proyecto {project_id}: {e}")
         await db.kitchen_projects.update_one(
