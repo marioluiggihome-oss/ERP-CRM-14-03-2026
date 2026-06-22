@@ -4,11 +4,12 @@
  * Incluye tabla de precios por dimensiones tipo VIFORMING/ALVIC
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
+import {
   Search, Plus, Trash2, Package, Factory, Palette, Layers, Box,
   ChevronDown, ChevronUp, Filter, X, Grid, List, Calculator,
   Ruler, Square, RefreshCw, Download, ArrowUpDown, Check
 } from 'lucide-react';
+import { settingsAPI } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -67,10 +68,16 @@ const DespieceCatalog = ({
     notes: ''
   });
 
+  // Precio de canto €/ml (configurable en Ajustes > Fabricación)
+  const [edgePriceMl, setEdgePriceMl] = useState(1.77);
+
   // Cargar datos iniciales
   useEffect(() => {
     loadFilterOptions();
     loadProducts();
+    settingsAPI.get()
+      .then(s => { if (s && s.defaultEdgeBandingPriceMl != null) setEdgePriceMl(s.defaultEdgeBandingPriceMl); })
+      .catch(() => {});
   }, []);
 
   // Recargar productos cuando cambien los filtros
@@ -133,17 +140,16 @@ const DespieceCatalog = ({
     // Coste de cantos (precio por metro lineal)
     const cantoCount = [cantos.cantoL1, cantos.cantoL2, cantos.cantoW1, cantos.cantoW2].filter(Boolean).length;
     if (cantoCount > 0) {
-      const cantoPricePerMeter = 2.5; // €/ml
       const cantoLength = ((cantoCount >= 2 ? width * 2 : width) + (cantoCount >= 2 ? height * 2 : height)) / 1000 / 2;
-      basePrice += cantoLength * cantoPricePerMeter;
+      basePrice += cantoLength * edgePriceMl;
     }
-    
+
     return {
       areaM2,
       unitPrice: basePrice,
       totalPrice: basePrice * quantity
     };
-  }, []);
+  }, [edgePriceMl]);
 
   // Abrir modal de añadir
   const openAddModal = (product) => {

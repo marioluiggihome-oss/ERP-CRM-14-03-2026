@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, FileText, Layers, Scissors, Package, Download, Printer, ChevronDown, ChevronRight, Edit3, Save, AlertCircle, Loader, Box, Ruler, Calendar, User, Hash, Copy, Check, FileDown, Grid3X3, Wrench, Maximize2, Minimize2, LayoutGrid, DoorOpen, Truck, Send } from 'lucide-react';
-import { despieceAPI } from '../services/api';
+import { despieceAPI, settingsAPI } from '../services/api';
 import BoardOptimizer from './BoardOptimizer';
 
 const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, carcassBackThickness, customerName, projectReference, expedientNumber, doorColorLow, doorColorHigh, doorColorColumns, sideColor, doorHasVeta = false, doorToleranceHeight = 2, doorToleranceWidth = 3, canSeeCost = false }) => {
@@ -29,7 +29,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
   const [wastePct, setWastePct] = useState(15);
   // Costes y margen: precios unitarios configurables (€) y PVP de venta.
   const [priceBoardM2, setPriceBoardM2] = useState(18);   // €/m² de tablero
-  const [priceEdgeMl, setPriceEdgeMl] = useState(0.6);    // €/ml de canto
+  const [priceEdgeMl, setPriceEdgeMl] = useState(1.77);   // €/ml de canto (valor configurable en Ajustes)
   const [priceHinge, setPriceHinge] = useState(1.5);      // €/bisagra
   const [priceSlide, setPriceSlide] = useState(8);        // €/juego correderas
   const [priceHandle, setPriceHandle] = useState(2);      // €/tirador
@@ -66,6 +66,18 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     setEditableProjectRef(projectReference || '');
     setEditableExpedient(expedientNumber || '');
   }, [customerName, projectReference, expedientNumber]);
+
+  // Cargar el precio de canto configurado en Ajustes (si no hay, se mantiene el default)
+  useEffect(() => {
+    if (!isOpen) return;
+    settingsAPI.get()
+      .then(s => {
+        if (s && s.defaultEdgeBandingPriceMl != null) {
+          setPriceEdgeMl(s.defaultEdgeBandingPriceMl);
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   // Get all products from catalogs
   const allProducts = useMemo(() => {

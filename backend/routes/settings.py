@@ -60,6 +60,7 @@ class SettingsModel(BaseModel):
     defaultBackMaterial: str = "Tablero 8mm"
     defaultGrosor: int = 18
     defaultBackThickness: int = 8
+    defaultEdgeBandingPriceMl: float = 1.77  # Precio canto €/ml (configurable, usado en despiece y presupuestador)
     
     # Email settings
     emailNotifications: bool = False
@@ -90,6 +91,7 @@ class SettingsUpdate(BaseModel):
     defaultBackMaterial: Optional[str] = None
     defaultGrosor: Optional[int] = None
     defaultBackThickness: Optional[int] = None
+    defaultEdgeBandingPriceMl: Optional[float] = None
     emailNotifications: Optional[bool] = None
     emailSender: Optional[str] = None
     emailSenderName: Optional[str] = None

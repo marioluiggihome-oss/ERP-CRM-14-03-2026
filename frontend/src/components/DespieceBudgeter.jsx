@@ -4,12 +4,13 @@
  * Permite seleccionar fabricante, colección, color, acabado y calcular presupuestos
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  X, Search, Plus, Trash2, Save, Printer, Download, Filter, 
+import {
+  X, Search, Plus, Trash2, Save, Printer, Download, Filter,
   Package, Palette, Layers, Box, ChevronDown, ChevronUp,
   AlertCircle, CheckCircle, Loader, Hash, User, FileText,
   Calculator, Ruler, Grid, Settings, RefreshCw
 } from 'lucide-react';
+import { settingsAPI } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -39,6 +40,9 @@ const DespieceBudgeter = ({ isOpen, onClose, currentUser, onBudgetSaved }) => {
   
   // Items del presupuesto
   const [budgetItems, setBudgetItems] = useState([]);
+
+  // Precio de canto €/ml (configurable en Ajustes > Fabricación)
+  const [edgePriceMl, setEdgePriceMl] = useState(1.77);
   
   // Datos del presupuesto
   const [budgetData, setBudgetData] = useState({
@@ -68,6 +72,9 @@ const DespieceBudgeter = ({ isOpen, onClose, currentUser, onBudgetSaved }) => {
     if (isOpen) {
       loadFilterOptions();
       loadProducts();
+      settingsAPI.get()
+        .then(s => { if (s && s.defaultEdgeBandingPriceMl != null) setEdgePriceMl(s.defaultEdgeBandingPriceMl); })
+        .catch(() => {});
     }
   }, [isOpen]);
   
@@ -145,15 +152,14 @@ const DespieceBudgeter = ({ isOpen, onClose, currentUser, onBudgetSaved }) => {
     
     // Añadir coste de cantos
     const cantoCount = [item.cantoL1, item.cantoL2, item.cantoW1, item.cantoW2].filter(Boolean).length;
-    const cantoPricePerMeter = 2.5; // Precio aproximado por metro lineal de canto
     const perimeter = (item.width * 2 + item.height * 2) / 1000; // Perímetro en metros
     const cantoLength = (cantoCount / 4) * perimeter; // Metros de canto
-    unitPrice += cantoLength * cantoPricePerMeter;
-    
+    unitPrice += cantoLength * edgePriceMl;
+
     const totalPrice = unitPrice * item.quantity;
-    
+
     return { areaM2, unitPrice, totalPrice };
-  }, [products]);
+  }, [products, edgePriceMl]);
   
   // Añadir item al presupuesto
   const handleAddItem = () => {
