@@ -34,6 +34,7 @@ PUBLIC_API_PATHS = frozenset({
     "/api/maintenance/status",
     "/api/distributor/request",
     "/api/settings/public-logo",
+    "/api/floor/public-logo",
 })
 
 _TRUTHY = ("1", "true", "yes", "on")

@@ -199,6 +199,17 @@ async def get_floor_settings():
     return s or {"id": "floor-settings", "logo": ""}
 
 
+@router.get("/floor/public-logo")
+async def get_floor_public_logo():
+    """Logo de marca Luiggi Floor para la pantalla de login (público, solo lectura).
+
+    Expone únicamente el logo de Luiggi Floor (el que se muestra antes de iniciar
+    sesión, como acceso directo a la división de suelo). No revela ningún otro ajuste.
+    """
+    s = await db.floor_settings.find_one({"id": "floor-settings"}, {"_id": 0, "logo": 1})
+    return {"logo": s.get("logo") if s else None}
+
+
 @router.put("/floor/settings")
 async def update_floor_settings(payload: dict):
     update = {}

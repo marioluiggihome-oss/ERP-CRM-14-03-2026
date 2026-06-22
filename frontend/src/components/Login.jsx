@@ -7,8 +7,26 @@ import RegisterForm from './RegisterForm';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Marca Luiggi Floor (división de suelo SPC). Si el admin subió un logo, se usa
+// esa imagen; si no, una representación tipográfica con el oro de la marca
+// (#CAA968), siempre sobre fondo oscuro como el logotipo original.
+const FloorBrand = ({ src, big = false }) => (
+  <div className={`inline-flex items-center justify-center rounded-2xl bg-zinc-950 shadow-md ${big ? 'px-8 py-5' : 'px-4 py-2.5'}`}>
+    {src ? (
+      <img src={src} alt="Luiggi Floor" className={`${big ? 'h-16' : 'h-9'} w-auto object-contain`} />
+    ) : (
+      <div className="flex flex-col items-center justify-center leading-none" style={{ color: '#CAA968' }}>
+        <span className={`${big ? 'text-4xl' : 'text-xl'} italic`} style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>luiggi</span>
+        <span className={`${big ? 'text-sm mt-1.5' : 'text-[9px] mt-1'} font-bold tracking-[0.45em]`}>FLOOR</span>
+      </div>
+    )}
+  </div>
+);
+
 const Login = ({ onLogin, customLogo }) => {
   const [mode, setMode] = useState('login'); // 'login', 'register', 'registerEmail', 'distributor'
+  const [brand, setBrand] = useState('home'); // 'home' = Luiggi Home (cocinas) | 'floor' = Luiggi Floor (suelo)
+  const [floorLogo, setFloorLogo] = useState(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
@@ -20,10 +38,15 @@ const Login = ({ onLogin, customLogo }) => {
   // al endpoint público (la pantalla de login no tiene sesión todavía).
   const [publicLogo, setPublicLogo] = useState(null);
   useEffect(() => {
-    if (customLogo) return;
     let active = true;
-    settingsAPI.getPublicLogo()
-      .then(d => { if (active && d?.logo) setPublicLogo(d.logo); })
+    if (!customLogo) {
+      settingsAPI.getPublicLogo()
+        .then(d => { if (active && d?.logo) setPublicLogo(d.logo); })
+        .catch(() => {});
+    }
+    // Logo de marca Luiggi Floor para el acceso directo (público, sin sesión).
+    settingsAPI.getPublicFloorLogo()
+      .then(d => { if (active && d?.logo) setFloorLogo(d.logo); })
       .catch(() => {});
     return () => { active = false; };
   }, [customLogo]);
@@ -216,14 +239,30 @@ const Login = ({ onLogin, customLogo }) => {
         {/* Overlay Content */}
         <div className="relative z-10 flex flex-col justify-end p-12 text-white">
           <div className="max-w-md">
-            <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
-              TU COCINA<br />
-              TU HOGAR<br />
-              <span className="text-orange-400">TU ESTILO</span>
-            </h1>
-            <p className="text-white/70 text-lg">
-              Sistema profesional de presupuestos para distribuidores de cocinas.
-            </p>
+            {brand === 'floor' ? (
+              <>
+                <div className="mb-6"><FloorBrand src={floorLogo} big /></div>
+                <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
+                  TU SUELO<br />
+                  TU ESPACIO<br />
+                  <span style={{ color: '#CAA968' }}>TU ESTILO</span>
+                </h1>
+                <p className="text-white/70 text-lg">
+                  Suelo SPC porcelánico — red de distribución Luiggi Floor.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
+                  TU COCINA<br />
+                  TU HOGAR<br />
+                  <span className="text-orange-400">TU ESTILO</span>
+                </h1>
+                <p className="text-white/70 text-lg">
+                  Sistema profesional de presupuestos para distribuidores de cocinas.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -234,10 +273,29 @@ const Login = ({ onLogin, customLogo }) => {
         <div className="w-full max-w-md relative z-10">
           {/* Logo */}
           <div className="text-center mb-8">
-            <Logo variant="dark" customLogo={customLogo || publicLogo} className="h-24 mb-3" />
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-              {mode === 'login' ? 'Acceso Distribuidores' : 'Solicitud de Alta'}
-            </p>
+            {brand === 'floor' ? (
+              <div className="flex flex-col items-center">
+                <FloorBrand src={floorLogo} big />
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-3">
+                  Acceso Luiggi Floor
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setBrand('home')}
+                  className="mt-2 text-[11px] font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
+                  data-testid="login-back-home"
+                >
+                  <ArrowLeft size={12} /> Volver a Luiggi Home
+                </button>
+              </div>
+            ) : (
+              <>
+                <Logo variant="dark" customLogo={customLogo || publicLogo} className="h-24 mb-3" />
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+                  {mode === 'login' ? 'Acceso Distribuidores' : 'Solicitud de Alta'}
+                </p>
+              </>
+            )}
           </div>
 
           {mode === 'login' ? (
@@ -474,6 +532,31 @@ const Login = ({ onLogin, customLogo }) => {
                 para gestionar tu alta como distribuidor.
               </p>
             </form>
+          )}
+
+          {/* Acceso directo a Luiggi Floor (división de suelo SPC). Re-marca el
+              login; el enrutado real tras entrar lo gestiona canAccessFloor/floorOnly. */}
+          {mode === 'login' && brand === 'home' && (
+            <div className="mt-6">
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white/70 px-3 text-[10px] font-black uppercase tracking-widest text-slate-400">¿Distribuidor de suelo?</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setBrand('floor'); setError(null); }}
+                className="w-full flex items-center gap-4 rounded-2xl border-2 border-slate-200 bg-white/80 hover:bg-white hover:border-zinc-300 p-3 transition-all active:scale-[0.99] shadow-sm"
+                data-testid="login-floor-access"
+              >
+                <FloorBrand src={floorLogo} />
+                <span className="text-left">
+                  <span className="block text-xs font-black uppercase tracking-wider text-slate-700">Acceso Luiggi Floor</span>
+                  <span className="block text-[11px] text-slate-400 font-medium">División de suelo SPC porcelánico →</span>
+                </span>
+              </button>
+            </div>
           )}
 
           {/* Footer */}
