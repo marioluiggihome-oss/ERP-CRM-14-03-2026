@@ -112,6 +112,7 @@ const App = () => {
       golaAlto: false, golaAltoColor: '',
       golaBajo: false, golaBajoColor: '',
       pointValueMontada: 1.0, pointValueDespiece: 0.88,
+      defaultEdgeBandingPriceMl: 1.77,
       // Valor de punto por biblioteca (para montada)
       libraryPointValues: { ZC: 1.0, MV: 1.0 },
       // Incrementos muebles especiales GLOBALES (legacy)
@@ -233,6 +234,7 @@ const App = () => {
           settings: settings,  // Guardar settings completo para montajesEnabled y otros
           pointValueMontada: settings.pointValueMontada || 1.0,
           pointValueDespiece: settings.pointValueDespiece || 0.88,
+          defaultEdgeBandingPriceMl: settings.defaultEdgeBandingPriceMl ?? 1.77,
           specialIncrementWidth: settings.specialIncrementWidth || 45,
           specialIncrementHeight: settings.specialIncrementHeight || 45,
           specialIncrementDepth: settings.specialIncrementDepth || 45,

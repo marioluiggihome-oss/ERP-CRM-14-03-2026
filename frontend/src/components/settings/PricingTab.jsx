@@ -19,7 +19,8 @@ const PricingTab = ({ state, setState }) => {
         specialIncrementDepth: state.specialIncrementDepth,
         librarySpecialIncrements: state.librarySpecialIncrements,
         vigaCutIncrement: state.vigaCutIncrement || 0,
-        libraryVigaCutIncrements: state.libraryVigaCutIncrements || { ZC: 0, MV: 0 }
+        libraryVigaCutIncrements: state.libraryVigaCutIncrements || { ZC: 0, MV: 0 },
+        defaultEdgeBandingPriceMl: state.defaultEdgeBandingPriceMl ?? 1.77
       });
       alert('Configuración guardada correctamente');
     } catch (err) {
@@ -91,7 +92,7 @@ const PricingTab = ({ state, setState }) => {
         </div>
 
         <div className="border-t border-indigo-100 my-4"></div>
-        
+
         {/* Valor de punto DESPIECE */}
         <div>
           <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">
@@ -102,6 +103,22 @@ const PricingTab = ({ state, setState }) => {
             step="0.01"
             value={state.pointValueDespiece}
             onChange={(e) => setState(prev => ({ ...prev, pointValueDespiece: parseFloat(e.target.value) || 0.88 }))}
+            className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center max-w-xs"
+          />
+        </div>
+
+        <div className="border-t border-indigo-100 my-4"></div>
+
+        {/* Precio canto (cinta de borde) */}
+        <div>
+          <label className="text-xs font-black text-indigo-400 uppercase mb-2 block">
+            Canto (€/ml) - Cinta de borde, común a despiece y presupuestador de tableros
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={state.defaultEdgeBandingPriceMl ?? 1.77}
+            onChange={(e) => setState(prev => ({ ...prev, defaultEdgeBandingPriceMl: parseFloat(e.target.value) || 1.77 }))}
             className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center max-w-xs"
           />
         </div>
