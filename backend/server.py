@@ -1445,7 +1445,8 @@ def calculate_furniture_despiece(
     drawer_side_clearance: float = 2,    # Holgura cajón en ancho (guías), cm
     drawer_front_clearance: float = 4,   # Holgura cajón en fondo (frontal), cm
     drawer_height_margin: float = 1.0,   # Margen alto interior cajón, cm
-    drawer_height_gap: float = 0.3       # Holgura adicional alto interior cajón, cm
+    drawer_height_gap: float = 0.3,      # Holgura adicional alto interior cajón, cm
+    gola_discount_cm: float = 2.0        # Descuento alto en frentes/puertas de BAJOS con sistema gola, cm
 ) -> FurnitureDespiece:
     """
     Calculate the despiece (bill of materials) for a single furniture piece.
@@ -1600,6 +1601,10 @@ def calculate_furniture_despiece(
     is_fregadero = "FREGADERO" in name_upper or "FREG" in code_upper
     is_horno = "HORNO" in name_upper or "BH" in code_upper[:2]
     is_rincon = "RINCON" in name_upper or "RINCÓN" in name_upper or code_upper.startswith('BR') or code_upper.startswith('AR')
+
+    # Sistema GOLA: el perfil/canal de tirador integrado ocupa parte del frente,
+    # así que frentes de cajón y puertas de BAJOS necesitan un alto menor.
+    is_gola = "GOLA" in name_upper or "GOLA" in category_upper
     
     def add_component(name: str, short: str, material: str, length_cm: float, width_cm: float, thickness_cm: float = None, qty: int = 1, notes: str = ""):
         nonlocal component_id
@@ -1857,13 +1862,40 @@ def calculate_furniture_despiece(
         drawer_depth = fondo_interior - drawer_front_clearance  # Fondo cajón = fondo interior menos frontal
 
         # Frentes de cajón
-        add_component(
-            f"Frente cajón {'(' + str(num_drawers) + ' uds)' if num_drawers > 1 else ''}",
-            "FRENTE-CAJ",
-            "PUERTA COLOR",
-            round(drawer_height_cm, 1), round(w - 0.3, 1), 1.9, num_drawers,
-            f"Frente cajón acabado a elegir. {num_drawers} ud{'s' if num_drawers > 1 else ''}"
-        )
+        # Sistema GOLA en BAJOS: el canal del tirador integrado va en el borde
+        # superior del mueble, así que solo el frente superior (el que linda con
+        # la encimera) pierde alto; el resto de frentes no se ven afectados.
+        if is_bajo and is_gola and num_drawers > 1:
+            add_component(
+                "Frente cajón superior (gola)",
+                "FRENTE-CAJ",
+                "PUERTA COLOR",
+                round(drawer_height_cm - gola_discount_cm, 1), round(w - 0.3, 1), 1.9, 1,
+                "Frente cajón superior con descuento de alto por canal gola"
+            )
+            add_component(
+                f"Frente cajón {'(' + str(num_drawers - 1) + ' uds)' if num_drawers - 1 > 1 else ''}",
+                "FRENTE-CAJ",
+                "PUERTA COLOR",
+                round(drawer_height_cm, 1), round(w - 0.3, 1), 1.9, num_drawers - 1,
+                f"Frente cajón acabado a elegir. {num_drawers - 1} ud{'s' if num_drawers - 1 > 1 else ''}"
+            )
+        elif is_bajo and is_gola and num_drawers == 1:
+            add_component(
+                "Frente cajón (gola)",
+                "FRENTE-CAJ",
+                "PUERTA COLOR",
+                round(drawer_height_cm - gola_discount_cm, 1), round(w - 0.3, 1), 1.9, 1,
+                "Frente cajón con descuento de alto por canal gola"
+            )
+        else:
+            add_component(
+                f"Frente cajón {'(' + str(num_drawers) + ' uds)' if num_drawers > 1 else ''}",
+                "FRENTE-CAJ",
+                "PUERTA COLOR",
+                round(drawer_height_cm, 1), round(w - 0.3, 1), 1.9, num_drawers,
+                f"Frente cajón acabado a elegir. {num_drawers} ud{'s' if num_drawers > 1 else ''}"
+            )
         # Laterales cajón (x2 por cajón)
         add_component(
             "Laterales cajón",
@@ -1918,6 +1950,11 @@ def calculate_furniture_despiece(
             door_height = round(h - door_height_tolerance, 1)
             door_rows = 1
 
+        # Sistema GOLA en BAJOS: el canal del tirador integrado va en el borde
+        # superior de la puerta (junto a la encimera), descontando alto extra.
+        if is_bajo and is_gola:
+            door_height = round(door_height - gola_discount_cm, 1)
+
         # ── Ancho de puerta ─────────────────────────
         # En columnas 4P: 2 puertas por fila
         doors_per_row = num_doors // door_rows if door_rows > 1 else num_doors
@@ -1934,6 +1971,8 @@ def calculate_furniture_despiece(
         door_desc = f"{num_doors} puerta{'s' if num_doors > 1 else ''} acabado a elegir"
         if door_rows > 1:
             door_desc += f" ({door_rows} filas × {doors_per_row} puertas, {door_height}cm alto c/u)"
+        if is_bajo and is_gola:
+            door_desc += f" (-{gola_discount_cm}cm alto por canal gola)"
 
         add_component(
             f"Puerta {'(' + str(num_doors) + ' uds)' if num_doors > 1 else ''}",
