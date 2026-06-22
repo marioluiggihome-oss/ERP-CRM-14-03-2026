@@ -631,24 +631,27 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     
     despieceData.items.forEach(item => {
       const itemQty = item.itemQuantity || 1;
-      const height = item.originalHeight || 70;
-      const width = item.originalWidth || 60;
       const category = (item.productName || '').toUpperCase();
-      
-      // Bisagras: 2-3 por puerta según altura
-      const numPuertas = category.includes('2P') ? 2 : 1;
-      const bisagrasPerPuerta = height > 100 ? 3 : 2;
-      totalBisagras += (numPuertas * bisagrasPerPuerta * itemQty);
-      
-      // Correderas para cajones
+
+      // Bisagras y tiradores: usar los valores YA CALCULADOS en backend
+      // (item.components), no recalcular con heurísticas propias que pueden
+      // divergir del umbral real de altura de puerta usado en el servidor.
+      const bisagComp = item.components?.find(c => c.nameShort === 'BISAG');
+      if (bisagComp) {
+        totalBisagras += ((bisagComp.quantity || 1) * itemQty);
+      }
+      const tiradComp = item.components?.find(c => c.nameShort === 'TIRAD');
+      if (tiradComp) {
+        totalTiradores += ((tiradComp.quantity || 1) * itemQty);
+      }
+
+      // Correderas para cajones: el backend no calcula este herraje, se
+      // mantiene como heurística de frontend basada en el nombre del producto.
       if (category.includes('CAJON') || category.includes('GAVETA')) {
         const numCajones = category.includes('5') ? 5 : category.includes('3') ? 3 : category.includes('2') ? 2 : 1;
         totalCorrederas += (numCajones * 2 * itemQty); // Par por cajón
       }
-      
-      // Tiradores: 1 por puerta/cajón
-      totalTiradores += (numPuertas * itemQty);
-      
+
       // Soportes baldas: 4 por balda
       const numBaldas = item.components?.filter(c => c.name?.toLowerCase().includes('balda')).reduce((acc, c) => acc + (c.quantity || 1), 0) || 0;
       totalSoportesBaldas += (numBaldas * 4 * itemQty);
@@ -2320,19 +2323,20 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                       </thead>
                       <tbody className="divide-y divide-indigo-50">
                         {despieceData.items.map(furniture => {
-                          const numPuertas = (furniture.productName || '').toUpperCase().includes('2P') ? 2 : 1;
-                          const height = furniture.originalHeight || 70;
-                          const bisagrasPerPuerta = height > 100 ? 3 : 2;
+                          const bisagComp = furniture.components?.find(c => c.nameShort === 'BISAG');
+                          const tiradComp = furniture.components?.find(c => c.nameShort === 'TIRAD');
+                          const numBisagras = bisagComp?.quantity || 0;
+                          const numTiradores = tiradComp?.quantity || 0;
                           const numBaldas = furniture.components?.filter(c => c.name?.toLowerCase().includes('balda')).reduce((acc, c) => acc + (c.quantity || 1), 0) || 0;
-                          
+
                           return (
                             <tr key={furniture.productId} className="hover:bg-indigo-50/50">
                               <td className="px-4 py-3 font-bold text-indigo-900">{furniture.productCode}</td>
                               <td className="px-4 py-3 text-sm text-indigo-600">{furniture.productName}</td>
                               <td className="px-4 py-3 text-center text-xs">{furniture.originalWidth}×{furniture.originalHeight}×{furniture.originalDepth} cm</td>
                               <td className="px-4 py-3 text-center font-bold text-orange-600">{furniture.itemQuantity}</td>
-                              <td className="px-4 py-3 text-center font-bold">{numPuertas * bisagrasPerPuerta * furniture.itemQuantity}</td>
-                              <td className="px-4 py-3 text-center font-bold">{numPuertas * furniture.itemQuantity}</td>
+                              <td className="px-4 py-3 text-center font-bold">{numBisagras * furniture.itemQuantity}</td>
+                              <td className="px-4 py-3 text-center font-bold">{numTiradores * furniture.itemQuantity}</td>
                               <td className="px-4 py-3 text-center font-bold">{numBaldas * furniture.itemQuantity} <span className="text-xs text-indigo-400">({numBaldas * 4 * furniture.itemQuantity} soportes)</span></td>
                             </tr>
                           );
@@ -2344,8 +2348,8 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
                   {/* Nota informativa */}
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                     <p className="text-amber-800 text-sm">
-                      <strong>Nota:</strong> Los herrajes se calculan de forma estimada. Las bisagras se calculan según la altura del mueble (2 para ≤100cm, 3 para &gt;100cm). 
-                      Las correderas se calculan para muebles con cajones/gavetas. Los <strong>colgadores</strong> se añaden automáticamente para muebles <strong>ALTOS</strong> (1 juego = 2 unidades por mueble).
+                      <strong>Nota:</strong> Bisagras y tiradores son los valores reales calculados en fábrica (según altura real de cada puerta: 2 bisagras/puerta para ≤90cm, 3 para &gt;90cm).
+                      Las correderas se calculan de forma estimada para muebles con cajones/gavetas. Los <strong>colgadores</strong> se añaden automáticamente para muebles <strong>ALTOS</strong> (1 juego = 2 unidades por mueble).
                       Verificar según especificaciones del fabricante.
                     </p>
                   </div>
