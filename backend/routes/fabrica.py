@@ -769,13 +769,16 @@ async def get_order_despiece(order_id: str):
             )
             
             carcass_material = item.get("material", "MELAMINA BLANCA")
-            back_material = "Tablero 8mm"
-            
+            grosor = item.get("grosor") or item.get("thickness") or 18  # mm, 18 si el ítem no lo especifica
+            back_thickness = item.get("backThickness") or 8  # mm
+            back_material = item.get("backMaterial") or f"Tablero {int(back_thickness)}mm"
+
             furniture_despiece = calculate_furniture_despiece(
                 despiece_input,
                 carcass_material,
                 back_material,
-                18  # grosor 18mm
+                grosor,
+                back_thickness
             )
             
             despiece_items.append({

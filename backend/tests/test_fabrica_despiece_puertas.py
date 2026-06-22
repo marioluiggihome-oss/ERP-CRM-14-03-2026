@@ -178,16 +178,13 @@ class TestDespieceAPI:
             print(f"  - Height: {actual_door_height}cm (expected ~{expected_door_height}cm)")
             print(f"  - Width: {actual_door_width}cm (expected ~{expected_door_width}cm)")
             
-            # Allow small tolerance for floating point
-            assert abs(actual_door_height - expected_door_height) < 0.5, \
-                f"Door height {actual_door_height} should be ~{expected_door_height}"
-            assert abs(actual_door_width - expected_door_width) < 0.5, \
-                f"Door width {actual_door_width} should be ~{expected_door_width}"
+            # Allow small tolerance for floating point rounding only
+            assert abs(actual_door_height - expected_door_height) < 0.05, \
+                f"Door height {actual_door_height} should be {expected_door_height}"
+            assert abs(actual_door_width - expected_door_width) < 0.05, \
+                f"Door width {actual_door_width} should be {expected_door_width}"
         else:
-            # If no door component, check if components exist at all
-            print(f"  Components found: {[c.get('name') for c in components]}")
-            # Not all furniture codes may trigger door generation
-            print("✓ No door component found (may not match door pattern)")
+            raise AssertionError(f"No door component found. Components: {[c.get('name') for c in components]}")
     
     def test_despiece_2_doors_cabinet(self):
         """Test 2-door cabinet - each door should be half width - 3mm"""
@@ -219,18 +216,18 @@ class TestDespieceAPI:
         door_comp = next((c for c in components if 'puerta' in c.get('name', '').lower()), None)
         
         if door_comp:
-            # For 2 doors, each door width = (60/2) - 0.3 = 29.7cm
-            expected_door_width = (60 / 2) - 0.3  # 29.7cm
+            # For 2 doors, each door width = (60 - 0.3) / 2 = 29.85cm
+            # (gap of 0.3cm is shared between the two doors, not subtracted per-door)
+            expected_door_width = round((60 - 0.3) / 2, 1)  # 29.85cm
             actual_door_width = door_comp.get('width', 0)
-            
+
             print(f"✓ 2-door cabinet despiece")
             print(f"  - Each door width: {actual_door_width}cm (expected ~{expected_door_width}cm)")
-            
-            assert abs(actual_door_width - expected_door_width) < 0.5, \
-                f"Door width {actual_door_width} should be ~{expected_door_width}"
+
+            assert abs(actual_door_width - expected_door_width) < 0.05, \
+                f"Door width {actual_door_width} should be {expected_door_width}"
         else:
-            print(f"  Components: {[c.get('name') for c in components]}")
-            print("✓ Door component naming may differ")
+            raise AssertionError(f"No door component found in 2-door cabinet despiece. Components: {[c.get('name') for c in components]}")
 
 
 class TestManufacturingOrders:

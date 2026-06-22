@@ -1441,7 +1441,11 @@ def calculate_furniture_despiece(
     grosor: float,
     back_thickness: float = 8,  # Grosor de trasera en mm
     door_tolerance_height: float = 2,  # Tolerancia alto puerta en mm
-    door_tolerance_width: float = 3    # Tolerancia ancho puerta en mm
+    door_tolerance_width: float = 3,    # Tolerancia ancho puerta en mm
+    drawer_side_clearance: float = 2,    # Holgura cajón en ancho (guías), cm
+    drawer_front_clearance: float = 4,   # Holgura cajón en fondo (frontal), cm
+    drawer_height_margin: float = 1.0,   # Margen alto interior cajón, cm
+    drawer_height_gap: float = 0.3       # Holgura adicional alto interior cajón, cm
 ) -> FurnitureDespiece:
     """
     Calculate the despiece (bill of materials) for a single furniture piece.
@@ -1475,7 +1479,7 @@ def calculate_furniture_despiece(
         raise ValueError(f"Cantidad no valida para {item.productName}: {item.quantity}")
     if g <= 0 or back_g <= 0:
         raise ValueError("Los grosores de tablero y trasera deben ser mayores que cero")
-    if w <= (2 * g) or h <= 0.6 or d <= 2:
+    if w <= (2 * g) or h <= (2 * g) or d <= 2:
         raise ValueError(f"Medidas insuficientes para despiezar {item.productName}: {w}x{h}x{d} cm")
 
     # =============================================
@@ -1521,19 +1525,20 @@ def calculate_furniture_despiece(
         )
 
     # =============================================
-    # REGLAS DE CÁLCULO SEGÚN DOCUMENTO:
+    # REGLAS DE CÁLCULO (trasera encajada en ranura, NO capturada entre tapas):
     # =============================================
-    # 1. LATERALES (verticales): 
+    # 1. LATERALES (verticales):
     #    - Largo = Alto exterior completo
-    #    - Ancho = Fondo exterior - Grosor trasera
-    # 
+    #    - Ancho = Fondo exterior completo (la trasera se aloja en una ranura,
+    #      no resta fondo a los laterales)
+    #
     # 2. HORIZONTALES (tapas, estantes):
     #    - Largo = Ancho exterior - (2 × Grosor lateral)
-    #    - Ancho = Fondo exterior - Grosor trasera
+    #    - Ancho = Fondo exterior completo (mismo motivo que en laterales)
     #
     # 3. TRASERA:
-    #    - Largo = Ancho exterior - (2 × Grosor lateral) [encaja entre laterales]
-    #    - Alto = Alto exterior - margen ranuras (0.6cm)
+    #    - Largo = Ancho exterior - (2 × Grosor lateral) [entre laterales]
+    #    - Alto = Alto exterior - (2 × Grosor lateral) [entre tapas]
     #
     # 4. ESTANTES:
     #    - Largo = Ancho interior - margen soportes
@@ -1625,6 +1630,8 @@ def calculate_furniture_despiece(
     # LATERAL IZQUIERDO (Side panel - full height)
     # Para muebles de rincón, el lateral tiene forma especial
     lateral_fondo = fondo_interior if not is_rincon else fondo_interior - 5  # Rincón: lateral más corto
+    if lateral_fondo <= 0:
+        raise ValueError(f"Fondo insuficiente para despiezar mueble de rincón {item.productName}: {d} cm")
     add_component(
         "Lateral izquierdo", "LAT-I",
         carcass_material,
@@ -1733,7 +1740,7 @@ def calculate_furniture_despiece(
             num_drawers = 2
         else:
             num_drawers = 1
-        drawer_height_cm = round((h - 1.0) / num_drawers - 0.3, 1)  # Alto interior cajón
+        drawer_height_cm = round((h - drawer_height_margin) / num_drawers - drawer_height_gap, 1)  # Alto interior cajón
 
     # =============================================
     # BALDAS / ESTANTES (Shelves)
@@ -1846,8 +1853,8 @@ def calculate_furniture_despiece(
     # CAJONES - Alta de componentes (la detección se hizo antes de las baldas)
     # =============================================
     if has_drawers and num_drawers > 0:
-        drawer_width = ancho_interior - 2  # Ancho cajón = ancho interior menos guías
-        drawer_depth = fondo_interior - 4  # Fondo cajón = fondo interior menos frontal
+        drawer_width = ancho_interior - drawer_side_clearance  # Ancho cajón = ancho interior menos guías
+        drawer_depth = fondo_interior - drawer_front_clearance  # Fondo cajón = fondo interior menos frontal
 
         # Frentes de cajón
         add_component(
