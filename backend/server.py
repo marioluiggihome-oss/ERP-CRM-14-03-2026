@@ -1951,14 +1951,18 @@ def calculate_furniture_despiece(
         door_thickness_cm = 1.9
 
         # ── Alto de puerta ──────────────────────────
+        # Holgura vertical entre filas de puertas apiladas (2mm), para que la
+        # fila de arriba y la de abajo no queden tocando entre sí.
+        door_row_gap_cm = 0.2
         if is_columna and num_doors == 4:
-            # 4 puertas en 2 filas: cada puerta cubre la mitad de la altura
-            door_height = round(h / 2 - door_height_tolerance, 1)
+            # 4 puertas en 2 filas: cada puerta cubre la mitad de la altura,
+            # descontando la holgura entre las 2 filas
             door_rows = 2   # 2 filas de puertas
+            door_height = round((h - door_row_gap_cm * (door_rows - 1)) / door_rows - door_height_tolerance, 1)
         elif is_columna and num_doors == 6:
             # 6 puertas en 3 filas (columnas muy altas)
-            door_height = round(h / 3 - door_height_tolerance, 1)
             door_rows = 3
+            door_height = round((h - door_row_gap_cm * (door_rows - 1)) / door_rows - door_height_tolerance, 1)
         else:
             # 1P, 2P, 3P → siempre la altura completa del mueble
             door_height = round(h - door_height_tolerance, 1)
