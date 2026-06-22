@@ -162,19 +162,16 @@ class TestDespieceCalculation:
         
         # Get despiece for the order
         despiece_response = requests.get(f"{BASE_URL}/api/fabrica/orders/{order_id}/despiece")
-        
-        # Note: This endpoint may return 500 if despiece calculation has issues
-        # We just verify the endpoint exists and responds
-        assert despiece_response.status_code in [200, 500], f"Unexpected status: {despiece_response.status_code}"
-        
-        if despiece_response.status_code == 200:
-            data = despiece_response.json()
-            assert "orderId" in data, "Despiece should have orderId"
-            assert "items" in data, "Despiece should have items"
-            print(f"✓ Despiece calculation working for order {order_id}")
-        else:
-            print(f"⚠ Despiece endpoint returned 500 (may need server-side fix)")
-        
+
+        assert despiece_response.status_code == 200, (
+            f"Despiece endpoint failed with status {despiece_response.status_code}: "
+            f"{despiece_response.text}"
+        )
+        data = despiece_response.json()
+        assert "orderId" in data, "Despiece should have orderId"
+        assert "items" in data, "Despiece should have items"
+        print(f"✓ Despiece calculation working for order {order_id}")
+
         # Cleanup
         requests.delete(f"{BASE_URL}/api/fabrica/orders/{order_id}")
 
