@@ -23,9 +23,23 @@ const FloorBrand = ({ src, big = false }) => (
   </div>
 );
 
+// ¿Acceso directo a Luiggi Floor? Se activa con ?brand=floor, ?floor o #floor en
+// la URL, de modo que los distribuidores de suelo tengan un enlace directo que
+// muestra ÚNICAMENTE la marca Luiggi Floor (sin Luiggi Home ni conmutador).
+const isFloorDirect = () => {
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    const hash = (window.location.hash || '').toLowerCase();
+    return sp.get('brand') === 'floor' || sp.has('floor') || hash === '#floor' || hash === '#luiggifloor';
+  } catch { return false; }
+};
+
 const Login = ({ onLogin, customLogo }) => {
+  const floorDirect = isFloorDirect();
+  // La marca la decide CÓMO se entra: por el acceso directo de Luiggi Floor se ve
+  // sólo Luiggi Floor; el resto de usuarios, sólo Luiggi Home. No hay conmutador.
+  const brand = floorDirect ? 'floor' : 'home';
   const [mode, setMode] = useState('login'); // 'login', 'register', 'registerEmail', 'distributor'
-  const [brand, setBrand] = useState('home'); // 'home' = Luiggi Home (cocinas) | 'floor' = Luiggi Floor (suelo)
   const [floorLogo, setFloorLogo] = useState(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -279,14 +293,6 @@ const Login = ({ onLogin, customLogo }) => {
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-3">
                   Acceso Luiggi Floor
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setBrand('home')}
-                  className="mt-2 text-[11px] font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
-                  data-testid="login-back-home"
-                >
-                  <ArrowLeft size={12} /> Volver a Luiggi Home
-                </button>
               </div>
             ) : (
               <>
@@ -534,35 +540,12 @@ const Login = ({ onLogin, customLogo }) => {
             </form>
           )}
 
-          {/* Acceso directo a Luiggi Floor (división de suelo SPC). Re-marca el
-              login; el enrutado real tras entrar lo gestiona canAccessFloor/floorOnly. */}
-          {mode === 'login' && brand === 'home' && (
-            <div className="mt-6">
-              <div className="relative py-2">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-                <div className="relative flex justify-center">
-                  <span className="bg-white/70 px-3 text-[10px] font-black uppercase tracking-widest text-slate-400">¿Distribuidor de suelo?</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setBrand('floor'); setError(null); }}
-                className="w-full flex items-center gap-4 rounded-2xl border-2 border-slate-200 bg-white/80 hover:bg-white hover:border-zinc-300 p-3 transition-all active:scale-[0.99] shadow-sm"
-                data-testid="login-floor-access"
-              >
-                <FloorBrand src={floorLogo} />
-                <span className="text-left">
-                  <span className="block text-xs font-black uppercase tracking-wider text-slate-700">Acceso Luiggi Floor</span>
-                  <span className="block text-[11px] text-slate-400 font-medium">División de suelo SPC porcelánico →</span>
-                </span>
-              </button>
-            </div>
-          )}
-
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <p className="text-[10px] text-slate-400 font-medium">
-              © 2026 LUIGGI HOME · Sistema Profesional de Presupuestos
+              {brand === 'floor'
+                ? '© 2026 LUIGGI FLOOR · Suelo SPC porcelánico'
+                : '© 2026 LUIGGI HOME · Sistema Profesional de Presupuestos'}
             </p>
           </div>
         </div>
