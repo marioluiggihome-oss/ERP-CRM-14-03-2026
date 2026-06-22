@@ -468,7 +468,12 @@ function MeasurementsTab({ project, onRefresh }) {
       const payload = {};
       for (const [key, val] of Object.entries(form)) {
         if (val === '' || val === null) continue;
-        payload[key] = ['wall_label', 'notes'].includes(key) ? val : parseFloat(val) || null;
+        if (['wall_label', 'notes'].includes(key)) {
+          payload[key] = val;
+        } else {
+          const n = parseFloat(val);
+          payload[key] = Number.isNaN(n) ? null : n;
+        }
       }
       payload.wall_label = form.wall_label;
       await apiCall(`/${project.id}/measurements`, { method: 'POST', body: JSON.stringify(payload) });
@@ -599,7 +604,8 @@ function CabinetsTab({ project, onRefresh }) {
       for (const [key, val] of Object.entries(form)) {
         if (val === '' || val === null) continue;
         if (['width', 'height', 'depth', 'position_from_left'].includes(key)) {
-          payload[key] = parseFloat(val) || null;
+          const n = parseFloat(val);
+          payload[key] = Number.isNaN(n) ? null : n;
         } else {
           payload[key] = val;
         }

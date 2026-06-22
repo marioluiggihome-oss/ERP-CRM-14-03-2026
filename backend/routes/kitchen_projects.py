@@ -15,15 +15,24 @@ Incluye:
   - Despiece de muebles con valoración por biblioteca (ZC/MV)
 """
 import logging
+import os
 import time
 import math
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, Field
+from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
 from services.jwt_service import require_auth
 from services.luiggi_ai import get_render_service
 
+load_dotenv()
 logger = logging.getLogger("kitchen_projects")
+
+MONGO_URL = os.environ.get("MONGO_URL")
+DB_NAME = os.environ.get("DB_NAME", "luiggi_home")
+_client = AsyncIOMotorClient(MONGO_URL)
+db = _client[DB_NAME]
 
 kitchen_projects_router = APIRouter(prefix="/kitchen-projects", tags=["Kitchen 3D Projects"])
 
@@ -93,26 +102,15 @@ class ComposeRenderRequest(BaseModel):
     style: Optional[str] = None
 
 
-# ─── Almacenamiento en memoria (MVP) ─────────────────────────────────────────
+# ─── Almacenamiento persistente (MongoDB, colección kitchen_projects) ────────
 
-_projects_db: dict = {}
-_project_counter = 0
-
-
-# ─── Helpers ─────────────────────────────────────────────────────────────────
-
-def _get_user_projects(user_id: str) -> list:
-    if user_id not in _projects_db:
-        _projects_db[user_id] = []
-    return _projects_db[user_id]
+async def _get_user_projects(user_id: str) -> list:
+    cursor = db.kitchen_projects.find({"user_id": user_id}, {"_id": 0}).sort("created_at", 1)
+    return await cursor.to_list(length=None)
 
 
-def _find_project(user_id: str, project_id: str):
-    projects = _get_user_projects(user_id)
-    for p in projects:
-        if p["id"] == project_id:
-            return p
-    return None
+async def _find_project(user_id: str, project_id: str):
+    return await db.kitchen_projects.find_one({"id": project_id, "user_id": user_id}, {"_id": 0})
 
 
 def _get_user_id(user):
@@ -322,18 +320,16 @@ def _generate_cabinet_breakdown(cabinets: list, library: str, default_material: 
 @kitchen_projects_router.get("")
 async def list_projects(user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    projects = _get_user_projects(user_id)
+    projects = await _get_user_projects(user_id)
     return {"projects": projects, "total": len(projects)}
 
 
 @kitchen_projects_router.post("")
 async def create_project(data: KitchenProjectCreate, user=Depends(require_auth)):
-    global _project_counter
     user_id = _get_user_id(user)
-    _project_counter += 1
 
     project = {
-        "id": f"kp_{_project_counter}_{int(time.time())}",
+        "id": f"kp_{int(time.time() * 1000)}",
         "user_id": user_id,
         "name": data.name,
         "description": data.description,
@@ -351,14 +347,14 @@ async def create_project(data: KitchenProjectCreate, user=Depends(require_auth))
         "updated_at": time.time(),
     }
 
-    _get_user_projects(user_id).append(project)
+    await db.kitchen_projects.insert_one(dict(project))
     return {"project": project}
 
 
 @kitchen_projects_router.get("/{project_id}")
 async def get_project(project_id: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return {"project": project}
@@ -367,25 +363,26 @@ async def get_project(project_id: str, user=Depends(require_auth)):
 @kitchen_projects_router.put("/{project_id}")
 async def update_project(project_id: str, data: KitchenProjectUpdate, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     update_data = data.model_dump(exclude_none=True)
-    for key, value in update_data.items():
-        project[key] = value
-    project["updated_at"] = time.time()
+    update_data["updated_at"] = time.time()
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id}, {"$set": update_data}
+    )
+    project.update(update_data)
     return {"project": project}
 
 
 @kitchen_projects_router.delete("/{project_id}")
 async def delete_project(project_id: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    projects = _get_user_projects(user_id)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    projects.remove(project)
+    await db.kitchen_projects.delete_one({"id": project_id, "user_id": user_id})
     return {"success": True, "message": "Proyecto eliminado"}
 
 
@@ -401,7 +398,7 @@ async def upload_file(
 ):
     """Sube una foto o vídeo asociado al proyecto. Sin límite de archivos."""
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
@@ -417,7 +414,7 @@ async def upload_file(
 
     # En producción se subiría a S3; aquí guardamos metadata
     file_entry = {
-        "id": f"f_{int(time.time())}_{len(project['files'])}",
+        "id": f"f_{int(time.time())}_{len(project.get('files', []))}",
         "file_name": file.filename,
         "file_type": file_type,
         "wall_label": wall_label,
@@ -425,15 +422,17 @@ async def upload_file(
         "uploaded_at": time.time(),
     }
 
-    project["files"].append(file_entry)
-    project["updated_at"] = time.time()
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id},
+        {"$push": {"files": file_entry}, "$set": {"updated_at": time.time()}}
+    )
     return {"file": file_entry}
 
 
 @kitchen_projects_router.get("/{project_id}/files")
 async def list_files(project_id: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return {"files": project.get("files", [])}
@@ -445,25 +444,27 @@ async def list_files(project_id: str, user=Depends(require_auth)):
 async def add_measurement(project_id: str, data: MeasurementCreate, user=Depends(require_auth)):
     """Añade medidas de una pared al proyecto."""
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     measurement = {
-        "id": f"m_{int(time.time())}_{len(project['measurements'])}",
+        "id": f"m_{int(time.time())}_{len(project.get('measurements', []))}",
         **data.model_dump(),
         "created_at": time.time(),
     }
 
-    project["measurements"].append(measurement)
-    project["updated_at"] = time.time()
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id},
+        {"$push": {"measurements": measurement}, "$set": {"updated_at": time.time()}}
+    )
     return {"measurement": measurement}
 
 
 @kitchen_projects_router.get("/{project_id}/measurements")
 async def list_measurements(project_id: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return {"measurements": project.get("measurements", [])}
@@ -475,37 +476,41 @@ async def list_measurements(project_id: str, user=Depends(require_auth)):
 async def add_cabinet(project_id: str, data: CabinetCreate, user=Depends(require_auth)):
     """Añade un mueble personalizado al proyecto."""
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     cabinet = {
-        "id": f"c_{int(time.time())}_{len(project['cabinets'])}",
+        "id": f"c_{int(time.time())}_{len(project.get('cabinets', []))}",
         **data.model_dump(),
         "created_at": time.time(),
     }
 
-    project["cabinets"].append(cabinet)
-    project["updated_at"] = time.time()
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id},
+        {"$push": {"cabinets": cabinet}, "$set": {"updated_at": time.time()}}
+    )
     return {"cabinet": cabinet}
 
 
 @kitchen_projects_router.delete("/{project_id}/cabinets/{cabinet_id}")
 async def delete_cabinet(project_id: str, cabinet_id: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    project["cabinets"] = [c for c in project["cabinets"] if c["id"] != cabinet_id]
-    project["updated_at"] = time.time()
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id},
+        {"$pull": {"cabinets": {"id": cabinet_id}}, "$set": {"updated_at": time.time()}}
+    )
     return {"success": True}
 
 
 @kitchen_projects_router.get("/{project_id}/cabinets")
 async def list_cabinets(project_id: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return {"cabinets": project.get("cabinets", [])}
@@ -517,11 +522,13 @@ async def list_cabinets(project_id: str, user=Depends(require_auth)):
 async def generate_project_render(project_id: str, user=Depends(require_auth)):
     """Genera un render 3D respetando las indicaciones exactas del usuario."""
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    project["status"] = "generating"
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id}, {"$set": {"status": "generating"}}
+    )
     render_service = get_render_service()
 
     # Construir prompt detallado con muebles y medidas
@@ -552,14 +559,20 @@ async def generate_project_render(project_id: str, user=Depends(require_auth)):
             "created_at": time.time(),
         }
 
-        project["renders"].append(render_entry)
-        project["status"] = "completed" if result.get("success") else "failed"
-        project["updated_at"] = time.time()
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id},
+            {"$push": {"renders": render_entry}, "$set": {
+                "status": "completed" if result.get("success") else "failed",
+                "updated_at": time.time(),
+            }}
+        )
         return {"render": render_entry}
 
     except Exception as e:
         logger.error(f"Error generando render para proyecto {project_id}: {e}")
-        project["status"] = "failed"
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
+        )
         raise HTTPException(status_code=500, detail="Error al generar el render")
 
 
@@ -571,7 +584,7 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
     el render respete a la vez la distribución del plano y el diseño de cada pared.
     """
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
@@ -579,7 +592,9 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
     if not data.floor_plan and not sketches:
         raise HTTPException(status_code=400, detail="Adjunta el plano en planta o al menos un boceto de pared.")
 
-    project["status"] = "generating"
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id}, {"$set": {"status": "generating"}}
+    )
     render_service = get_render_service()
 
     # Brief: descripción del proyecto + muebles + acabados + texto libre del usuario.
@@ -613,14 +628,20 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
             "is_composed": True,
             "created_at": time.time(),
         }
-        project["renders"].append(render_entry)
-        project["status"] = "completed" if result.get("success") else "failed"
-        project["updated_at"] = time.time()
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id},
+            {"$push": {"renders": render_entry}, "$set": {
+                "status": "completed" if result.get("success") else "failed",
+                "updated_at": time.time(),
+            }}
+        )
         return {"render": render_entry}
 
     except Exception as e:
         logger.error(f"Error en render compuesto del proyecto {project_id}: {e}")
-        project["status"] = "failed"
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
+        )
         raise HTTPException(status_code=500, detail="Error al generar el render")
 
 
@@ -628,11 +649,13 @@ async def generate_project_render_composed(project_id: str, data: ComposeRenderR
 async def iterate_render(project_id: str, data: IterateRequest, user=Depends(require_auth)):
     """Iteración rápida: modifica un aspecto sin empezar de cero."""
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    project["status"] = "generating"
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id}, {"$set": {"status": "generating"}}
+    )
     render_service = get_render_service()
 
     base_description = (
@@ -658,24 +681,30 @@ async def iterate_render(project_id: str, data: IterateRequest, user=Depends(req
             "created_at": time.time(),
         }
 
-        project["renders"].append(render_entry)
-        project["status"] = "completed" if result.get("success") else "failed"
-        project["updated_at"] = time.time()
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id},
+            {"$push": {"renders": render_entry}, "$set": {
+                "status": "completed" if result.get("success") else "failed",
+                "updated_at": time.time(),
+            }}
+        )
         return {"render": render_entry}
 
     except Exception as e:
         logger.error(f"Error en iteración para proyecto {project_id}: {e}")
-        project["status"] = "failed"
+        await db.kitchen_projects.update_one(
+            {"id": project_id, "user_id": user_id}, {"$set": {"status": "failed"}}
+        )
         raise HTTPException(status_code=500, detail="Error en la iteración")
 
 
 @kitchen_projects_router.get("/{project_id}/renders")
 async def list_renders(project_id: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    return {"renders": project["renders"], "total": len(project["renders"])}
+    return {"renders": project.get("renders", []), "total": len(project.get("renders", []))}
 
 
 # ─── Endpoints: Aprobación y Documentación Técnica ───────────────────────────
@@ -689,7 +718,7 @@ async def approve_project(project_id: str, data: ApproveRequest, user=Depends(re
     - Despiece de muebles con valoración por biblioteca (ZC/MV)
     """
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
@@ -742,9 +771,14 @@ async def approve_project(project_id: str, data: ApproveRequest, user=Depends(re
         },
     ]
 
-    project["technical_docs"] = technical_docs
-    project["status"] = "approved"
-    project["updated_at"] = time.time()
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id},
+        {"$set": {
+            "technical_docs": technical_docs,
+            "status": "approved",
+            "updated_at": time.time(),
+        }}
+    )
 
     return {
         "success": True,
@@ -757,7 +791,7 @@ async def approve_project(project_id: str, data: ApproveRequest, user=Depends(re
 async def get_technical_docs(project_id: str, user=Depends(require_auth)):
     """Obtiene la documentación técnica generada tras la aprobación."""
     user_id = _get_user_id(user)
-    project = _find_project(user_id, project_id)
+    project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return {"technical_docs": project.get("technical_docs", [])}
