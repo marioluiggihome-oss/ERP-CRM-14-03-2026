@@ -1011,7 +1011,8 @@ export const crmOpportunitiesAPI = {
 
   createFromProject: async (projectId, businessType = 'cocina') => {
     const response = await fetch(`${API_URL}/api/crm/opportunities/from-project/${projectId}?businessType=${businessType}`, {
-      method: 'POST'
+      method: 'POST',
+      headers: authHeaders()
     });
     if (!response.ok) throw new Error('Error al crear oportunidad desde proyecto');
     return response.json();
@@ -1019,7 +1020,8 @@ export const crmOpportunitiesAPI = {
 
   createFromArmario: async (projectId) => {
     const response = await fetch(`${API_URL}/api/crm/opportunities/from-armario/${projectId}`, {
-      method: 'POST'
+      method: 'POST',
+      headers: authHeaders()
     });
     if (!response.ok) throw new Error('Error al crear oportunidad desde armario');
     return response.json();

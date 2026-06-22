@@ -6,7 +6,7 @@ import {
   Globe, Ruler, Lock, Unlock, Library as LibraryIcon, ArrowUpDown, LayoutGrid, List,
   BookOpen, PackageCheck, Home, Maximize2, Minimize2
 } from 'lucide-react';
-import { authHeaders, librariesAPI, materialsAPI, settingsAPI } from '../services/api';
+import { authHeaders, librariesAPI, materialsAPI, settingsAPI, crmOpportunitiesAPI } from '../services/api';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import DespieceModal from './DespieceModal';
 import ConfirmOrderModal from './ConfirmOrderModal';
@@ -690,7 +690,20 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(projectData),
       });
-      if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+      if (r.ok) {
+        setSaved(true); setTimeout(() => setSaved(false), 3000);
+        // Tras guardar, ofrecer crear la oportunidad en el CRM (solo a usuarios con CRM).
+        const savedProject = await r.json().catch(() => null);
+        const savedId = savedProject?.id;
+        if (savedId && currentUser?.canAccessCRM && window.confirm('Presupuesto guardado. ¿Crear también una oportunidad en el CRM con este presupuesto?')) {
+          try {
+            const res = await crmOpportunitiesAPI.createFromProject(savedId);
+            alert(`✅ Oportunidad creada en el CRM: "${res?.opportunity?.title || 'OK'}"`);
+          } catch (err) {
+            alert('El presupuesto se guardó, pero no se pudo crear la oportunidad: ' + (err.message || err));
+          }
+        }
+      }
       else { const e = await r.json().catch(() => ({})); alert('Error al guardar el presupuesto: ' + (e.detail || r.status)); }
     } catch (e) { alert('Error de conexión al guardar'); }
     finally { setSaving(false); }
