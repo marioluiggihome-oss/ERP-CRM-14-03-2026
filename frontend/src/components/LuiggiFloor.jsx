@@ -148,7 +148,11 @@ const LuiggiFloor = ({ currentUser }) => {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ name: file.name.replace(/\.pdf$/i, ''), fileBase64: b64, mime: file.type || 'application/pdf' }),
       });
-      if (r.ok) await loadDocs(); else alert('No se pudo subir el catálogo');
+      if (r.ok) { await loadDocs(); } else {
+        let detail = '';
+        try { detail = (await r.json()).detail || ''; } catch { /* noop */ }
+        alert('No se pudo subir el catálogo' + (detail ? `: ${detail}` : ''));
+      }
     } catch (err) { alert('Error al subir: ' + err.message); }
     finally { setUploadingDoc(false); }
   };

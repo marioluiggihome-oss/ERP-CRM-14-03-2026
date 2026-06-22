@@ -16,6 +16,8 @@ import logging
 import os
 import uuid
 import base64
+import unicodedata
+from urllib.parse import quote
 from motor.motor_asyncio import AsyncIOMotorClient
 
 try:
@@ -145,6 +147,8 @@ async def upload_floor_doc(payload: dict):
         size = int(len(b64) * 3 / 4)
     except Exception:
         size = 0
+    if size > 14 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="El archivo supera el tamaño máximo permitido (14MB)")
     doc = {
         "id": f"floordoc-{uuid.uuid4().hex[:8]}",
         "name": name,
@@ -153,7 +157,10 @@ async def upload_floor_doc(payload: dict):
         "size": size,
         "createdAt": datetime.now(timezone.utc).isoformat(),
     }
-    await db.floor_docs.insert_one(doc)
+    try:
+        await db.floor_docs.insert_one(doc)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"No se pudo guardar el archivo: {e}")
     return {"success": True, "id": doc["id"], "name": doc["name"], "mime": mime, "size": size}
 
 
@@ -178,8 +185,13 @@ async def get_floor_doc_file(doc_id: str, download: bool = False):
     if not name.lower().endswith(".pdf") and "pdf" in (d.get("mime") or ""):
         name += ".pdf"
     disp = "attachment" if download else "inline"
+    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode() or "catalogo.pdf"
+    encoded_name = quote(name)
     return Response(content=data, media_type=d.get("mime") or "application/pdf",
-                    headers={"Content-Disposition": f'{disp}; filename="{name}"'})
+                    headers={
+                        "Content-Disposition": f"{disp}; filename=\"{ascii_name}\"; filename*=UTF-8''{encoded_name}",
+                        "Content-Length": str(len(data)),
+                    })
 
 
 @router.delete("/floor/docs/{doc_id}")
