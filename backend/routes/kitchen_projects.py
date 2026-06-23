@@ -189,8 +189,10 @@ def _generate_installation_plan(measurements: list, cabinets: list) -> dict:
         outlets = []
         water_connections = []
 
-        # Enchufes estándar: uno cada ~120cm a 110cm del suelo
-        num_outlets = max(2, int(wall_width / 120))
+        # Enchufes estándar: uno cada ~120cm a 110cm del suelo. Se usa ceil (no
+        # truncamiento) para no quedarse corto de enchufes en paredes que
+        # superan un múltiplo de 120cm por poco (p.ej. 241cm necesita 3, no 2).
+        num_outlets = max(2, math.ceil(wall_width / 120))
         spacing = wall_width / (num_outlets + 1)
         for i in range(num_outlets):
             outlets.append({

@@ -722,7 +722,6 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         itemsMontada: buildMontadaItems(),
         itemsDespiece: [],
         pointValueMontada: pointValue,
-        pointValueDespiece: 0.88,
         logo: logo || currentUser?.logo,
         brandColor: '#ea580c',
         companyName: 'LUIGGI HOME',
