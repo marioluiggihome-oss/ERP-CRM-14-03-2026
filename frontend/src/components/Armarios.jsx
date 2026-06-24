@@ -458,6 +458,43 @@ const DEFAULT_INTERIOR_COMPONENTS = {
   led: { name: 'LED Interior', price: 180, icon: '💡' },
 };
 
+// Categorías de acabado de FINSA_COLORS y su suplemento €/m² por defecto sobre
+// el precio base (a mayor categoría de material, mayor coste de la chapa).
+// Configurable en MASTER con claves armPrice_matSupp_<categoria>.
+const MATERIAL_CATEGORY_LABELS = {
+  blancos: 'Blancos',
+  grises: 'Grises',
+  cremas: 'Cremas/Beiges',
+  verdes: 'Verdes',
+  azules: 'Azules',
+  calidos: 'Rojos/Cálidos',
+  'maderas-claras': 'Maderas claras',
+  'maderas-medias': 'Maderas medias (robles)',
+  'maderas-oscuras': 'Maderas oscuras',
+  nogales: 'Nogales',
+  cerezos: 'Cerezos y otros',
+  metalizados: 'Metalizados',
+  piedras: 'Piedras/Cementos',
+  textiles: 'Textiles',
+};
+
+const DEFAULT_MATERIAL_CATEGORY_SUPP = {
+  blancos: 0,
+  grises: 0,
+  cremas: 5,
+  verdes: 15,
+  azules: 15,
+  calidos: 15,
+  'maderas-claras': 20,
+  'maderas-medias': 25,
+  'maderas-oscuras': 30,
+  nogales: 35,
+  cerezos: 35,
+  metalizados: 40,
+  piedras: 45,
+  textiles: 30,
+};
+
 // Precios por defecto del configurador (modelo por m²). Configurables en MASTER
 // (claves planas armPrice_*). Si en ajustes está vacío, se usa este valor.
 const DEFAULT_ARMARIOS_PRICING = {
@@ -476,6 +513,9 @@ const DEFAULT_ARMARIOS_PRICING = {
   antiFingerprintPerM2: 80,
   ledPerModule: 120,
   mirror: 200,
+  ...Object.fromEntries(
+    Object.entries(DEFAULT_MATERIAL_CATEGORY_SUPP).map(([cat, v]) => [`matSupp_${cat}`, v])
+  ),
 };
 
 // ========== DICTADO POR VOZ (Web Speech API, es-ES) ==========
@@ -1335,6 +1375,16 @@ const Armarios = ({ state, setState }) => {
     };
     const endPrice = (endPrices[endLeft] || 0) + (endPrices[endRight] || 0);
 
+    // Suplemento por material/acabado elegido (exterior + interior), según la
+    // categoría del color en FINSA_COLORS (maderas, nogales, piedras... cuestan
+    // más que blancos/grises lisos). El acabado exterior se aplica a toda la
+    // superficie; el interior solo a la mitad (menos superficie visible/usada).
+    const exteriorCategory = getColorByName(wardrobeConfig.exteriorColor).category;
+    const interiorCategory = getColorByName(wardrobeConfig.interiorColor).category;
+    const exteriorMaterialSupp = P('matSupp_' + exteriorCategory) || 0;
+    const interiorMaterialSupp = P('matSupp_' + interiorCategory) || 0;
+    const materialPrice = surfaceM2 * exteriorMaterialSupp + surfaceM2 * 0.5 * interiorMaterialSupp;
+
     // Componentes interiores
     let interiorPrice = 0;
     moduleConfigs.forEach(mod => {
@@ -1351,7 +1401,7 @@ const Armarios = ({ state, setState }) => {
     if (extras.led) extrasPrice += modules * P('ledPerModule');
     if (extras.mirror) extrasPrice += P('mirror');
 
-    const subtotalBruto = basePrice + doorPrice + endPrice + interiorPrice + extrasPrice;
+    const subtotalBruto = basePrice + doorPrice + endPrice + materialPrice + interiorPrice + extrasPrice;
     const discountPct = Math.max(0, Math.min(100, Number(armDiscount) || 0));
     const discountAmount = subtotalBruto * (discountPct / 100);
     const subtotal = subtotalBruto - discountAmount;   // base imponible tras descuento
@@ -1362,6 +1412,7 @@ const Armarios = ({ state, setState }) => {
       base: basePrice,
       doors: doorPrice,
       ends: endPrice,
+      material: materialPrice,
       interior: interiorPrice,
       extras: extrasPrice,
       subtotalBruto,
@@ -3230,6 +3281,10 @@ const Armarios = ({ state, setState }) => {
             <div className="flex justify-between">
               <span className="text-emerald-300">Terminaciones</span>
               <span className="font-bold">{pricing.ends.toFixed(2)}€</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-emerald-300">Acabado/material</span>
+              <span className="font-bold">{pricing.material.toFixed(2)}€</span>
             </div>
             <div className="flex justify-between">
               <span className="text-emerald-300">Interior</span>

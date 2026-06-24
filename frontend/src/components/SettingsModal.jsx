@@ -3184,6 +3184,36 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   ))}
                 </div>
               </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Armarios — suplemento por material</h3>
+                <p className="text-xs text-slate-500 mb-4">€/m² extra según la categoría de color/acabado elegida (exterior e interior). Se suma al precio base €/m². Vacío = valor por defecto.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { k: 'matSupp_blancos', label: 'Blancos €/m²', def: 0 },
+                    { k: 'matSupp_grises', label: 'Grises €/m²', def: 0 },
+                    { k: 'matSupp_cremas', label: 'Cremas/Beiges €/m²', def: 5 },
+                    { k: 'matSupp_verdes', label: 'Verdes €/m²', def: 15 },
+                    { k: 'matSupp_azules', label: 'Azules €/m²', def: 15 },
+                    { k: 'matSupp_calidos', label: 'Rojos/Cálidos €/m²', def: 15 },
+                    { k: 'matSupp_maderas-claras', label: 'Maderas claras €/m²', def: 20 },
+                    { k: 'matSupp_maderas-medias', label: 'Maderas medias (roble) €/m²', def: 25 },
+                    { k: 'matSupp_maderas-oscuras', label: 'Maderas oscuras €/m²', def: 30 },
+                    { k: 'matSupp_nogales', label: 'Nogales €/m²', def: 35 },
+                    { k: 'matSupp_cerezos', label: 'Cerezos y otros €/m²', def: 35 },
+                    { k: 'matSupp_metalizados', label: 'Metalizados €/m²', def: 40 },
+                    { k: 'matSupp_piedras', label: 'Piedras/Cementos €/m²', def: 45 },
+                    { k: 'matSupp_textiles', label: 'Textiles €/m²', def: 30 },
+                  ].map(f => (
+                    <div key={f.k}>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{f.label}</label>
+                      <input type="number" step="0.01" placeholder={String(f.def)}
+                        defaultValue={state.settings?.['armPrice_' + f.k] ?? ''}
+                        onChange={async (e) => { try { await settingsAPI.update({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) }); } catch (err) { console.error(err); } }}
+                        className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-mono" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
