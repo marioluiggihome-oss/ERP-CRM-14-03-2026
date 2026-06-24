@@ -376,6 +376,20 @@ function ProjectDetail({ project: initialProject, onBack, onUpdate }) {
 function FilesTab({ project, onRefresh }) {
   const [uploading, setUploading] = useState(false);
   const [wallLabel, setWallLabel] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+
+  const handleDelete = async (fileId) => {
+    if (!window.confirm('¿Eliminar este archivo?')) return;
+    setDeletingId(fileId);
+    try {
+      await apiCall(`/${project.id}/files/${fileId}`, { method: 'DELETE' });
+      await onRefresh();
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleUpload = async (e, fileType) => {
     const files = Array.from(e.target.files);
@@ -434,7 +448,16 @@ function FilesTab({ project, onRefresh }) {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {files.map(f => (
-            <div key={f.id} className="border border-slate-200 rounded-lg p-3 text-center">
+            <div key={f.id} className="relative border border-slate-200 rounded-lg p-3 text-center">
+              <button
+                type="button"
+                onClick={() => handleDelete(f.id)}
+                disabled={deletingId === f.id}
+                className="absolute top-1 right-1 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                title="Eliminar archivo"
+              >
+                {deletingId === f.id ? <Loader size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              </button>
               {f.file_type === 'video' ? (
                 <Video size={32} className="mx-auto text-purple-500 mb-2" />
               ) : (
