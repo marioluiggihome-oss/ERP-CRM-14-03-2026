@@ -1056,6 +1056,11 @@ class IARenderRequest(BaseModel):
     # (abre la primera puerta corredera disponible). Permite generar una foto
     # por cada puerta en vez de una única vista con paneles solapados.
     openDoorIndex: Optional[int] = None
+    # Render YA generado del MISMO armario (otra vista) que se pasa como
+    # referencia para que el interior (baldas, cajones, barra, colores,
+    # materiales, ropa) sea IDÉNTICO entre todas las fotos de la misma serie.
+    consistencyImage: Optional[str] = None
+    consistencyMime: str = "image/png"
 
 
 class IALayoutRequest(BaseModel):

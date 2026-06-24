@@ -558,11 +558,28 @@ BLUEPRINT (FIRST IMAGE) - THIS IS MANDATORY:
   interior.
 """
 
+        has_consistency = bool(getattr(request, "consistencyImage", None))
+        consistency_block = ""
+        if has_consistency:
+            consistency_block = """
+CONSISTENCY REFERENCE (LAST IMAGE) - THIS IS MANDATORY:
+- The LAST image provided is a previously generated PHOTO of THIS SAME EXACT
+  wardrobe, from another view / with a different door open.
+- Treat it as THE SAME physical wardrobe in THE SAME room. The interior MUST be
+  IDENTICAL to it: same exact shelves, drawers, hanging rods, maletero, the same
+  colors and materials, the same wood/melamine finish and grain, the same wall
+  color, the same floor, the same lighting and the same folded clothes in the
+  same places.
+- The ONLY thing that may differ from that reference is WHICH door is open or
+  closed (per the DOORS section). Everything else must look like the very same
+  wardrobe photographed again, not a different design.
+"""
+
         prompt = f"""Create a PHOTOREALISTIC interior design photograph of a BUILT-IN WARDROBE/CLOSET.
 
 CRITICAL - FOLLOW THESE SPECIFICATIONS EXACTLY. This is a technical product
 render: accuracy to the specification matters more than artistic freedom.
-{blueprint_block}
+{blueprint_block}{consistency_block}
 DIMENSIONS:
 - Total width: {request.width}mm ({request.width/10}cm / {round(request.width/25.4, 1)} inches)
 - Total height: {request.height}mm ({request.height/10}cm)
@@ -615,6 +632,12 @@ Generate ONE high-quality photorealistic image."""
             reference_images.append({
                 "data": request.referenceImage,
                 "mime": getattr(request, "referenceMime", None) or "image/png",
+            })
+        # La imagen de consistencia va LA ÚLTIMA (coincide con "LAST IMAGE" del prompt).
+        if has_consistency:
+            reference_images.append({
+                "data": request.consistencyImage,
+                "mime": getattr(request, "consistencyMime", None) or "image/png",
             })
 
         try:

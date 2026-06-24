@@ -2102,7 +2102,7 @@ const Armarios = ({ state, setState }) => {
   };
 
   // Construye el payload común para el render con IA del armario.
-  const buildRenderPayload = (doorsOpenParam, openDoorIndex = null) => {
+  const buildRenderPayload = (doorsOpenParam, openDoorIndex = null, consistencyImage = null) => {
     const payload = {
       width: wardrobeConfig.width,
       height: wardrobeConfig.height,
@@ -2112,6 +2112,7 @@ const Armarios = ({ state, setState }) => {
       doorType: wardrobeConfig.doorType || 'sliding',
       doorsOpen: doorsOpenParam,
       openDoorIndex: doorsOpenParam ? openDoorIndex : null,
+      consistencyImage: consistencyImage || null,
       exteriorColorName: getColorByName(wardrobeConfig.exteriorColor).name,
       exteriorColorHex: getColorByName(wardrobeConfig.exteriorColor).hex,
       interiorColorName: getColorByName(wardrobeConfig.interiorColor).name,
@@ -2183,7 +2184,14 @@ const Armarios = ({ state, setState }) => {
   };
 
   // Genera UNA foto por cada puerta abierta (sin solapes entre paneles) más
-  // una foto con todas cerradas, y permite alternar entre todas ellas.
+  // una foto con todas cerradas. Para que el INTERIOR sea idéntico en todas las
+  // fotos (es el mismo armario), se genera primero una foto "ancla" y se pasa
+  // como referencia de consistencia al resto de fotos.
+  const dataUrlFromResult = (result) =>
+    (result?.success && result?.image)
+      ? `data:${result.image.mime_type};base64,${result.image.data}`
+      : null;
+
   const generateAllDoorRenders = async () => {
     setRenderBothLoading(true);
     setRenderError(null);
@@ -2194,34 +2202,36 @@ const Armarios = ({ state, setState }) => {
     const numDoors = wardrobeConfig.numDoors || wardrobeConfig.modules;
 
     try {
-      const [closedResult, ...doorResults] = await Promise.all([
-        armariosAPI.iaRender(buildRenderPayload(false)),
-        ...Array.from({ length: numDoors }, (_, i) => armariosAPI.iaRender(buildRenderPayload(true, i))),
+      // 1) Foto ANCLA: primera puerta abierta (es la que más interior revela).
+      const anchorResult = await armariosAPI.iaRender(buildRenderPayload(true, 0));
+      const anchorUrl = dataUrlFromResult(anchorResult);
+
+      if (!anchorUrl) {
+        setRenderError(anchorResult.error || 'No se pudo generar el render inicial. Inténtalo de nuevo.');
+        return;
+      }
+
+      const byDoor = { 0: anchorUrl };
+      setRenderImagesByDoor({ ...byDoor });
+      setRenderImage(anchorUrl);
+      setRenderView(0);
+
+      // 2) Resto de fotos EN PARALELO, todas con la ancla como referencia de
+      //    consistencia para que el interior coincida exactamente.
+      const restOpen = Array.from({ length: numDoors }, (_, i) => i).filter(i => i !== 0);
+      const [closedResult, ...openResults] = await Promise.all([
+        armariosAPI.iaRender(buildRenderPayload(false, null, anchorUrl)),
+        ...restOpen.map(i => armariosAPI.iaRender(buildRenderPayload(true, i, anchorUrl))),
       ]);
 
-      let closedUrl = null;
-      if (closedResult.success && closedResult.image) {
-        closedUrl = `data:${closedResult.image.mime_type};base64,${closedResult.image.data}`;
-        setRenderImageClosed(closedUrl);
-      }
+      const closedUrl = dataUrlFromResult(closedResult);
+      if (closedUrl) setRenderImageClosed(closedUrl);
 
-      const byDoor = {};
-      doorResults.forEach((result, i) => {
-        if (result.success && result.image) {
-          byDoor[i] = `data:${result.image.mime_type};base64,${result.image.data}`;
-        }
+      openResults.forEach((result, idx) => {
+        const url = dataUrlFromResult(result);
+        if (url) byDoor[restOpen[idx]] = url;
       });
-      setRenderImagesByDoor(byDoor);
-
-      if (byDoor[0]) {
-        setRenderImage(byDoor[0]);
-        setRenderView(0);
-      } else if (closedUrl) {
-        setRenderImage(closedUrl);
-        setRenderView('closed');
-      } else {
-        setRenderError('No se pudieron generar los renders. Inténtalo de nuevo.');
-      }
+      setRenderImagesByDoor({ ...byDoor });
     } catch (error) {
       console.error('Error generando los renders por puerta:', error);
       setRenderError(error.message || 'Error inesperado al generar los renders');
