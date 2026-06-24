@@ -521,8 +521,11 @@ async def ia_render_armario(request: IARenderRequest):
                 )
         else:
             doors_state_desc = (
-                f"Show ALL {doors_count} doors fully CLOSED, presenting the clean closed "
-                f"exterior front of the wardrobe."
+                f"Show ALL {doors_count} doors fully CLOSED. NONE of the interior (shelves, "
+                f"drawers, hanging rods, clothes, maletero) must be visible — it is completely "
+                f"hidden behind the closed door panels. The photo shows ONLY the clean, flat "
+                f"closed exterior front of the wardrobe (door panels, handles, frame), with "
+                f"zero gaps revealing the inside."
             )
 
 
@@ -536,15 +539,23 @@ async def ia_render_armario(request: IARenderRequest):
         if has_blueprint:
             blueprint_block = """
 BLUEPRINT (FIRST IMAGE) - THIS IS MANDATORY:
-- The FIRST image provided is a SCHEMATIC ELEVATION of THIS EXACT wardrobe.
-- It is the AUTHORITATIVE BLUEPRINT. Reproduce it EXACTLY in photorealistic form.
+- The FIRST image provided is a SCHEMATIC ELEVATION of THIS EXACT wardrobe,
+  drawn with the doors "transparent" (dashed red lines) purely so the
+  INTERNAL layout is visible for reference. It is NOT a depiction of the
+  final photo's door state — it does NOT mean the doors are open in the
+  photo. Whether each door is OPEN or CLOSED in the final image is defined
+  ONLY by the "DOORS - CRITICAL" section below; follow that section, not the
+  blueprint, for the door state.
+- It is the AUTHORITATIVE BLUEPRINT for everything else. Reproduce it EXACTLY
+  in photorealistic form.
 - Same number of doors and same door widths.
 - Same vertical module divisions (in the same positions).
 - Same count, order and vertical position of every shelf, drawer, hanging rod,
-  top "maletero" storage box and accessory, module by module.
+  top "maletero" storage box and accessory, module by module — this interior
+  must be reproduced even behind a CLOSED door (it defines what is hidden).
 - Same width:height proportions. DO NOT add, remove, move or resize anything.
-- The photo must match the blueprint 1:1; only add realistic materials, light
-  and textures. NEVER invent a different interior.
+- Only add realistic materials, light and textures. NEVER invent a different
+  interior.
 """
 
         prompt = f"""Create a PHOTOREALISTIC interior design photograph of a BUILT-IN WARDROBE/CLOSET.
