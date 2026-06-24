@@ -476,6 +476,29 @@ async def ia_render_armario(request: IARenderRequest):
         # Usar el numero de puertas de la configuracion del usuario
         doors_count = request.numDoors
         door_width = request.width / doors_count
+        doors_open = getattr(request, "doorsOpen", True)
+
+        if doors_open:
+            if request.doorType == "sliding":
+                doors_state_desc = (
+                    f"Show the doors PARTIALLY OPEN by sliding ONE single door panel "
+                    f"sideways so it overlaps and hides behind an adjacent panel, revealing "
+                    f"the interior behind the gap. The wardrobe still has EXACTLY "
+                    f"{doors_count} door panels in total (overlapping counts as the same "
+                    f"panel, never duplicate or add extra panels to fake an open look)."
+                )
+            else:
+                doors_state_desc = (
+                    f"Show ONE of the {doors_count} doors swung open on its hinges to "
+                    f"reveal the interior; the remaining doors stay closed. Do NOT add, "
+                    f"duplicate or remove any door panel — exactly {doors_count} doors total."
+                )
+        else:
+            doors_state_desc = (
+                f"Show ALL {doors_count} doors fully CLOSED, presenting the clean closed "
+                f"exterior front of the wardrobe."
+            )
+
 
         # Si el frontend manda el esquema/plano del configurador, es el plano
         # AUTORITATIVO: el modelo debe reproducirlo tal cual (puertas, divisiones,
@@ -513,7 +536,7 @@ DOORS - CRITICAL - PAY ATTENTION:
 - Each door width: approximately {round(door_width)}mm
 - Door color/finish: {request.exteriorColorName} (hex: {request.exteriorColorHex})
 - Handle/knob style: {request.handleColorName} color handles
-- Show doors 50% OPEN to reveal interior organization
+- {doors_state_desc}
 
 COLORS - MATCH EXACTLY:
 - EXTERIOR FINISH (doors): {request.exteriorColorName} (hex color: {request.exteriorColorHex})
@@ -532,7 +555,7 @@ ROOM SETTING:
 
 IMAGE REQUIREMENTS:
 - Professional interior photography style, NOT a 3D render or sketch
-- Camera angle: 3/4 view from front-left to show interior through open doors
+- Camera angle: 3/4 view from front-left{' to show interior through the open door' if doors_open else ', showing the closed front'}
 - High-end quality materials: melamine, chrome hardware, soft-close systems
 - Realistic shadows and reflections
 - A few neatly folded clothing items are allowed but MUST NOT hide or change the

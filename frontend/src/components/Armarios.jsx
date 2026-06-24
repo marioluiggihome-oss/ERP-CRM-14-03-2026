@@ -551,6 +551,11 @@ const Armarios = ({ state, setState }) => {
   const [renderLoading, setRenderLoading] = useState(false);
   const [renderImage, setRenderImage] = useState(null);
   const [renderError, setRenderError] = useState(null);
+  // Render con puertas abiertas/cerradas: se pueden generar y ver ambas variantes.
+  const [renderImageOpen, setRenderImageOpen] = useState(null);
+  const [renderImageClosed, setRenderImageClosed] = useState(null);
+  const [renderView, setRenderView] = useState('open'); // 'open' | 'closed'
+  const [renderBothLoading, setRenderBothLoading] = useState(false);
   const [roomStyle, setRoomStyle] = useState('moderno');
   
   // Estado para edición de accesorios en despiece
@@ -1801,48 +1806,62 @@ const Armarios = ({ state, setState }) => {
     }
   };
 
-  // Generar render realista
-  const generateRender = async () => {
+  // Construye el payload común para el render con IA del armario.
+  const buildRenderPayload = (doorsOpenParam) => {
+    const payload = {
+      width: wardrobeConfig.width,
+      height: wardrobeConfig.height,
+      depth: wardrobeConfig.depth,
+      modules: wardrobeConfig.modules,
+      numDoors: wardrobeConfig.numDoors || wardrobeConfig.modules,
+      doorType: wardrobeConfig.doorType || 'sliding',
+      doorsOpen: doorsOpenParam,
+      exteriorColorName: getColorByName(wardrobeConfig.exteriorColor).name,
+      exteriorColorHex: getColorByName(wardrobeConfig.exteriorColor).hex,
+      interiorColorName: getColorByName(wardrobeConfig.interiorColor).name,
+      handleColorName: getColorByName(wardrobeConfig.handleColor).name,
+      moduleConfigs: moduleConfigs.slice(0, wardrobeConfig.modules).map(m => ({
+        shelves: m.shelves || 0,
+        drawers: m.drawers || 0,
+        hangingRods: m.hangingRods || 0,
+        hangingHeight: m.hangingHeight || 0,
+        maletero: !!m.maletero,
+        // Orden real de las piezas (de arriba a abajo) para un render fiel.
+        layout: getModuleLayout(m),
+        shoesRack: m.extras?.shoesRack || false,
+        trousersRack: m.extras?.trousersRack || false,
+        mirrorDoor: m.extras?.mirror || false
+      })),
+      roomStyle: roomStyle || 'moderno'
+    };
+
+    // Si hay archivo de referencia, incluirlo como base64
+    if (referenceFile && referencePreview) {
+      payload.referenceImage = referencePreview;
+    }
+    return payload;
+  };
+
+  // Genera un único render (puertas abiertas o cerradas según doorsOpenParam).
+  const generateRender = async (doorsOpenParam = true) => {
     setRenderLoading(true);
     setRenderError(null);
     setRenderImage(null);
-    
+
     try {
-      const payload = {
-        width: wardrobeConfig.width,
-        height: wardrobeConfig.height,
-        depth: wardrobeConfig.depth,
-        modules: wardrobeConfig.modules,
-        numDoors: wardrobeConfig.numDoors || wardrobeConfig.modules,
-        doorType: wardrobeConfig.doorType || 'sliding',
-        exteriorColorName: getColorByName(wardrobeConfig.exteriorColor).name,
-        exteriorColorHex: getColorByName(wardrobeConfig.exteriorColor).hex,
-        interiorColorName: getColorByName(wardrobeConfig.interiorColor).name,
-        handleColorName: getColorByName(wardrobeConfig.handleColor).name,
-        moduleConfigs: moduleConfigs.slice(0, wardrobeConfig.modules).map(m => ({
-          shelves: m.shelves || 0,
-          drawers: m.drawers || 0,
-          hangingRods: m.hangingRods || 0,
-          hangingHeight: m.hangingHeight || 0,
-          maletero: !!m.maletero,
-          // Orden real de las piezas (de arriba a abajo) para un render fiel.
-          layout: getModuleLayout(m),
-          shoesRack: m.extras?.shoesRack || false,
-          trousersRack: m.extras?.trousersRack || false,
-          mirrorDoor: m.extras?.mirror || false
-        })),
-        roomStyle: roomStyle || 'moderno'
-      };
-
-      // Si hay archivo de referencia, incluirlo como base64
-      if (referenceFile && referencePreview) {
-        payload.referenceImage = referencePreview;
-      }
-
+      const payload = buildRenderPayload(doorsOpenParam);
       const result = await armariosAPI.iaRender(payload);
-      
+
       if (result.success && result.image) {
-        setRenderImage(`data:${result.image.mime_type};base64,${result.image.data}`);
+        const dataUrl = `data:${result.image.mime_type};base64,${result.image.data}`;
+        setRenderImage(dataUrl);
+        if (doorsOpenParam) {
+          setRenderImageOpen(dataUrl);
+          setRenderView('open');
+        } else {
+          setRenderImageClosed(dataUrl);
+          setRenderView('closed');
+        }
       } else {
         setRenderError(result.error || 'No se pudo generar el render. Inténtalo de nuevo.');
       }
@@ -1856,6 +1875,55 @@ const Armarios = ({ state, setState }) => {
     } finally {
       setRenderLoading(false);
     }
+  };
+
+  // Genera las DOS variantes (abierta y cerrada) y permite alternar entre ellas.
+  const generateBothRenders = async () => {
+    setRenderBothLoading(true);
+    setRenderError(null);
+    setRenderImageOpen(null);
+    setRenderImageClosed(null);
+    setRenderImage(null);
+
+    try {
+      const [openResult, closedResult] = await Promise.all([
+        armariosAPI.iaRender(buildRenderPayload(true)),
+        armariosAPI.iaRender(buildRenderPayload(false)),
+      ]);
+
+      let openUrl = null;
+      let closedUrl = null;
+      if (openResult.success && openResult.image) {
+        openUrl = `data:${openResult.image.mime_type};base64,${openResult.image.data}`;
+        setRenderImageOpen(openUrl);
+      }
+      if (closedResult.success && closedResult.image) {
+        closedUrl = `data:${closedResult.image.mime_type};base64,${closedResult.image.data}`;
+        setRenderImageClosed(closedUrl);
+      }
+
+      if (openUrl) {
+        setRenderImage(openUrl);
+        setRenderView('open');
+      } else if (closedUrl) {
+        setRenderImage(closedUrl);
+        setRenderView('closed');
+      } else {
+        setRenderError(openResult.error || closedResult.error || 'No se pudieron generar los renders. Inténtalo de nuevo.');
+      }
+    } catch (error) {
+      console.error('Error generando ambos renders:', error);
+      setRenderError(error.message || 'Error inesperado al generar los renders');
+    } finally {
+      setRenderBothLoading(false);
+    }
+  };
+
+  // Alterna entre la variante abierta/cerrada ya generada (sin volver a llamar a la IA).
+  const switchRenderView = (view) => {
+    setRenderView(view);
+    if (view === 'open' && renderImageOpen) setRenderImage(renderImageOpen);
+    if (view === 'closed' && renderImageClosed) setRenderImage(renderImageClosed);
   };
 
   // ========== FUNCIONES EDICIÓN DESPIECE ==========
@@ -3710,18 +3778,38 @@ const Armarios = ({ state, setState }) => {
                 </div>
               </div>
 
+              {/* Toggle abierto/cerrado, visible cuando hay al menos una variante generada */}
+              {(renderImageOpen || renderImageClosed) && !renderLoading && !renderBothLoading && (
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => switchRenderView('open')}
+                    disabled={!renderImageOpen}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-40 ${renderView === 'open' ? 'bg-cyan-500 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                  >
+                    Puertas abiertas
+                  </button>
+                  <button
+                    onClick={() => switchRenderView('closed')}
+                    disabled={!renderImageClosed}
+                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-40 ${renderView === 'closed' ? 'bg-cyan-500 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                  >
+                    Puertas cerradas
+                  </button>
+                </div>
+              )}
+
               {/* Área de render */}
               <div className="bg-slate-100 rounded-xl min-h-[400px] flex items-center justify-center">
-                {renderLoading ? (
+                {(renderLoading || renderBothLoading) ? (
                   <div className="text-center">
                     <RefreshCw size={48} className="animate-spin text-cyan-500 mx-auto mb-4" />
-                    <p className="text-slate-500 font-bold">Generando render...</p>
+                    <p className="text-slate-500 font-bold">{renderBothLoading ? 'Generando las 2 variantes (abierta y cerrada)...' : 'Generando render...'}</p>
                     <p className="text-slate-400 text-xs mt-1">Esto puede tardar unos segundos</p>
                   </div>
                 ) : renderImage ? (
-                  <img 
-                    src={renderImage} 
-                    alt="Render del armario" 
+                  <img
+                    src={renderImage}
+                    alt="Render del armario"
                     className="max-w-full max-h-[400px] rounded-lg shadow-lg"
                   />
                 ) : renderError ? (
@@ -3763,8 +3851,26 @@ const Armarios = ({ state, setState }) => {
                   Cerrar
                 </button>
                 <button
-                  onClick={generateRender}
-                  disabled={renderLoading}
+                  onClick={generateBothRenders}
+                  disabled={renderLoading || renderBothLoading}
+                  className="bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  title="Genera la imagen con puertas abiertas y con puertas cerradas"
+                >
+                  {renderBothLoading ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} />
+                      Generar Abierto + Cerrado
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => generateRender(true)}
+                  disabled={renderLoading || renderBothLoading}
                   className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:from-cyan-400 hover:to-blue-400 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {renderLoading ? (

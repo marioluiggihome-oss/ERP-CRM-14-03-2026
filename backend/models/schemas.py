@@ -1042,6 +1042,8 @@ class IARenderRequest(BaseModel):
     # respetar EXACTAMENTE como plano estructural. Opcional.
     referenceImage: Optional[str] = None
     referenceMime: str = "image/png"
+    # True = mostrar puertas abiertas (revela interior), False = puertas cerradas.
+    doorsOpen: bool = True
 
 
 class IALayoutRequest(BaseModel):
