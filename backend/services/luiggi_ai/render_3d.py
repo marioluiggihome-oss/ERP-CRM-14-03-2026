@@ -357,6 +357,9 @@ class Render3DService:
             "Consistency: keep doors, drawers, shelves and handles straight, evenly spaced "
             "and aligned with the described layout; do not duplicate, merge, warp or omit "
             "modules; edges and lines must stay straight and in correct perspective.",
+            "Do NOT invent or add appliances, fixtures, furniture, plants or decorative "
+            "objects that are not explicitly mentioned in the brief above — if the brief "
+            "does not mention an item, leave that space empty/clean rather than guessing.",
             "Composition: wide-angle shot in 16:9 landscape orientation, framing the full "
             "piece and its surrounding space from a corner.",
             "No text, watermarks, logos, people, or distorted/extra objects in the image.",
@@ -541,7 +544,11 @@ class Render3DService:
             "FAITHFUL at the same time to the floor-plan layout and to EACH wall sketch, "
             "applying the finishes, colors and materials described in the brief. Keep geometry, "
             "proportions and the number/size of modules consistent with the plan and the "
-            "sketches; do NOT invent extra walls nor omit elements that appear in them.\n\n"
+            "sketches; do NOT invent extra walls, appliances, furniture, decorative objects "
+            "or architectural elements (windows, doors, columns…) that do not appear in the "
+            "reference images or the brief, and do NOT omit any element that DOES appear in "
+            "them. If a reference image is unclear about a detail, keep that area plain and "
+            "neutral instead of guessing or filling it with invented content.\n\n"
             f"{prompt}\n\n"
             "The result must look like a real professional interior photograph (PBR materials, "
             "natural light, realistic soft shadows and reflections), NOT a cartoon or videogame "
