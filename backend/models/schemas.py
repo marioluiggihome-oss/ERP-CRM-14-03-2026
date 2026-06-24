@@ -1051,6 +1051,11 @@ class IARenderRequest(BaseModel):
     blueprintMime: str = "image/png"
     # True = mostrar puertas abiertas (revela interior), False = puertas cerradas.
     doorsOpen: bool = True
+    # Índice (0 = puerta de más a la izquierda) de la puerta concreta que debe
+    # mostrarse abierta cuando doorsOpen=True. None = comportamiento genérico
+    # (abre la primera puerta corredera disponible). Permite generar una foto
+    # por cada puerta en vez de una única vista con paneles solapados.
+    openDoorIndex: Optional[int] = None
 
 
 class IALayoutRequest(BaseModel):

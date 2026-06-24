@@ -477,9 +477,35 @@ async def ia_render_armario(request: IARenderRequest):
         doors_count = request.numDoors
         door_width = request.width / doors_count
         doors_open = getattr(request, "doorsOpen", True)
+        open_door_index = getattr(request, "openDoorIndex", None)
+
+        def _ordinal(n):
+            return {1: "1st", 2: "2nd", 3: "3rd"}.get(n, f"{n}th")
 
         if doors_open:
-            if request.doorType == "sliding":
+            if open_door_index is not None and 0 <= open_door_index < doors_count:
+                door_num = open_door_index + 1
+                if request.doorType == "sliding":
+                    doors_state_desc = (
+                        f"Door panel #{door_num} (the {_ordinal(door_num)} door counting "
+                        f"from the LEFT) is OPEN: slide it all the way out of view, fully "
+                        f"behind the nearest end panel or completely off-frame to the side, "
+                        f"so it does NOT visibly overlap or stack in front of any other "
+                        f"panel. The interior behind door #{door_num} must be completely "
+                        f"unobstructed and clearly visible. The other {doors_count - 1} "
+                        f"door panels stay normally CLOSED in their own positions. The "
+                        f"wardrobe still has EXACTLY {doors_count} door panels in total — "
+                        f"never duplicate, remove or add panels."
+                    )
+                else:
+                    doors_state_desc = (
+                        f"Door #{door_num} (the {_ordinal(door_num)} door counting from "
+                        f"the LEFT) is swung fully open on its hinges to reveal the "
+                        f"interior behind it; the other {doors_count - 1} doors stay "
+                        f"closed. Do NOT add, duplicate or remove any door panel — exactly "
+                        f"{doors_count} doors total."
+                    )
+            elif request.doorType == "sliding":
                 doors_state_desc = (
                     f"Show the doors PARTIALLY OPEN by sliding ONE single door panel "
                     f"sideways so it overlaps and hides behind an adjacent panel, revealing "
