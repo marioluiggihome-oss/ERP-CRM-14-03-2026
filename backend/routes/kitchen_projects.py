@@ -15,6 +15,7 @@ Incluye:
   - Despiece de muebles con valoración por biblioteca (ZC/MV)
 """
 import asyncio
+import base64
 import logging
 import os
 import time
@@ -447,13 +448,24 @@ async def upload_file(
     if file_type == "video" and content_type not in allowed_videos:
         raise HTTPException(status_code=400, detail=f"Formato de vídeo no soportado: {content_type}")
 
-    # En producción se subiría a S3; aquí guardamos metadata
+    content = await file.read()
+    max_size = 10 * 1024 * 1024 if file_type == "photo" else 100 * 1024 * 1024
+    if len(content) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Archivo demasiado grande (máx. {max_size // (1024 * 1024)}MB)",
+        )
+
+    # Se guarda en base64 dentro de MongoDB (mismo patrón usado en otros
+    # módulos del ERP, p.ej. adjuntos de facturas en routes/invoices.py).
     file_entry = {
         "id": f"f_{int(time.time())}_{len(project.get('files', []))}",
         "file_name": file.filename,
         "file_type": file_type,
         "wall_label": wall_label,
         "mime_type": content_type,
+        "size": len(content),
+        "data": base64.b64encode(content).decode("utf-8"),
         "uploaded_at": time.time(),
     }
 
@@ -461,7 +473,9 @@ async def upload_file(
         {"id": project_id, "user_id": user_id},
         {"$push": {"files": file_entry}, "$set": {"updated_at": time.time()}}
     )
-    return {"file": file_entry}
+    # No devolvemos "data" en la respuesta para no inflar el payload; el cliente
+    # ya tiene el archivo local que acaba de subir.
+    return {"file": {k: v for k, v in file_entry.items() if k != "data"}}
 
 
 @kitchen_projects_router.get("/{project_id}/files")
@@ -470,7 +484,37 @@ async def list_files(project_id: str, user=Depends(require_auth)):
     project = await _find_project(user_id, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    return {"files": project.get("files", [])}
+    # No devolvemos el campo "data" (base64) en el listado para no inflar la
+    # respuesta; se sirve aparte vía /files/{file_id}.
+    files = [{k: v for k, v in f.items() if k != "data"} for f in project.get("files", [])]
+    return {"files": files}
+
+
+@kitchen_projects_router.get("/{project_id}/files/{file_id}")
+async def get_file(project_id: str, file_id: str, user=Depends(require_auth)):
+    user_id = _get_user_id(user)
+    project = await _find_project(user_id, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    file_entry = next((f for f in project.get("files", []) if f.get("id") == file_id), None)
+    if not file_entry:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return {"file": file_entry}
+
+
+@kitchen_projects_router.delete("/{project_id}/files/{file_id}")
+async def delete_file(project_id: str, file_id: str, user=Depends(require_auth)):
+    user_id = _get_user_id(user)
+    project = await _find_project(user_id, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    if not any(f.get("id") == file_id for f in project.get("files", [])):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    await db.kitchen_projects.update_one(
+        {"id": project_id, "user_id": user_id},
+        {"$pull": {"files": {"id": file_id}}, "$set": {"updated_at": time.time()}}
+    )
+    return {"success": True, "message": "Archivo eliminado"}
 
 
 # ─── Endpoints: Medidas ──────────────────────────────────────────────────────
