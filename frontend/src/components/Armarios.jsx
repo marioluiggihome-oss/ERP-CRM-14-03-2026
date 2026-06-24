@@ -1806,6 +1806,108 @@ const Armarios = ({ state, setState }) => {
     }
   };
 
+  // Genera un plano esquemático (PNG) a partir de la configuración REAL del
+  // armario: nº de puertas, módulos y orden exacto de baldas/cajones/barras/
+  // maletero por módulo. Se envía siempre a la IA como referencia estructural
+  // para que el render respete la configuración exacta (en vez de fiarse solo
+  // de la descripción en texto, que el modelo de imagen puede ignorar).
+  const generateBlueprintDataUrl = () => {
+    try {
+      const { width, height, modules, doorType, depth } = wardrobeConfig;
+      const numDoors = wardrobeConfig.numDoors || modules;
+      const W = 800;
+      const H = Math.max(300, Math.round(W * (height / width))) || 600;
+      const canvas = document.createElement('canvas');
+      const margin = 50;
+      canvas.width = W + margin * 2;
+      canvas.height = H + margin * 2 + 30;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const ox = margin, oy = margin;
+
+      // Marco exterior del armario
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(ox, oy, W, H);
+
+      // Divisiones e interior por módulo
+      const modW = W / modules;
+      for (let i = 0; i < modules; i++) {
+        const mx = ox + i * modW;
+        if (i > 0) {
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(mx, oy); ctx.lineTo(mx, oy + H); ctx.stroke();
+        }
+        ctx.fillStyle = '#475569';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(`M${i + 1}`, mx + 4, oy + 14);
+
+        const mod = moduleConfigs[i] || {};
+        const layout = getModuleLayout(mod);
+        const rows = layout.length || 1;
+        const rowH = (H - 18) / rows;
+        layout.forEach((tok, j) => {
+          const ry = oy + 18 + j * rowH;
+          if (tok === 'maletero') {
+            ctx.fillStyle = '#fde68a';
+            ctx.fillRect(mx + 4, ry + 2, modW - 8, Math.min(18, rowH - 4));
+            ctx.fillStyle = '#92400e';
+            ctx.font = '9px sans-serif';
+            ctx.fillText('maletero', mx + 6, ry + 14);
+          } else if (tok === 'rod') {
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(mx + 6, ry + rowH * 0.35);
+            ctx.lineTo(mx + modW - 6, ry + rowH * 0.35);
+            ctx.stroke();
+          } else if (tok === 'drawer') {
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(mx + 5, ry + rowH * 0.25, modW - 10, rowH * 0.5);
+          } else {
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(mx + 4, ry + rowH - 4);
+            ctx.lineTo(mx + modW - 4, ry + rowH - 4);
+            ctx.stroke();
+          }
+        });
+      }
+
+      // Puertas superpuestas (líneas rojas discontinuas + numeración)
+      const doorW = W / numDoors;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2;
+      for (let d = 1; d < numDoors; d++) {
+        const dx = ox + d * doorW;
+        ctx.beginPath(); ctx.moveTo(dx, oy - 8); ctx.lineTo(dx, oy + H + 8); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 12px sans-serif';
+      for (let d = 0; d < numDoors; d++) {
+        ctx.fillText(`Puerta ${d + 1}`, ox + d * doorW + 6, oy + H + 22);
+      }
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(
+        `${width}×${height}×${depth}mm — ${numDoors} puertas ${doorType} — ${modules} módulos`,
+        ox, oy + H + 46
+      );
+
+      return canvas.toDataURL('image/png');
+    } catch (e) {
+      console.error('Error generando plano de referencia para IA:', e);
+      return null;
+    }
+  };
+
   // Construye el payload común para el render con IA del armario.
   const buildRenderPayload = (doorsOpenParam) => {
     const payload = {
@@ -1835,7 +1937,16 @@ const Armarios = ({ state, setState }) => {
       roomStyle: roomStyle || 'moderno'
     };
 
-    // Si hay archivo de referencia, incluirlo como base64
+    // Plano esquemático autogenerado a partir de la config real: SIEMPRE se
+    // envía como referencia estructural (puertas, módulos, interior exactos).
+    const blueprint = generateBlueprintDataUrl();
+    if (blueprint) {
+      payload.blueprintImage = blueprint;
+      payload.blueprintMime = 'image/png';
+    }
+
+    // Si el usuario subió una foto de inspiración (estilo de la habitación),
+    // incluirla aparte: es solo referencia de estilo, no estructural.
     if (referenceFile && referencePreview) {
       payload.referenceImage = referencePreview;
     }

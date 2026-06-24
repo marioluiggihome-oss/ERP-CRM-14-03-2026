@@ -1038,10 +1038,17 @@ class IARenderRequest(BaseModel):
     interiorColorName: str = "Blanco"
     handleColorName: str = "Plata"
     roomStyle: str = "Moderno"
-    # Esquema/plano del configurador (data URL o base64) que el modelo debe
-    # respetar EXACTAMENTE como plano estructural. Opcional.
+    # Foto de referencia/inspiración (estilo de la habitación) que aporta el
+    # usuario. Opcional, no estructural.
     referenceImage: Optional[str] = None
     referenceMime: str = "image/png"
+    # Plano esquemático AUTOGENERADO por el configurador (módulos, puertas e
+    # interior dibujados a partir de la configuración real). Es la referencia
+    # ESTRUCTURAL que el modelo debe reproducir 1:1. Se envía siempre desde el
+    # frontend, independientemente de si el usuario sube también una foto de
+    # inspiración.
+    blueprintImage: Optional[str] = None
+    blueprintMime: str = "image/png"
     # True = mostrar puertas abiertas (revela interior), False = puertas cerradas.
     doorsOpen: bool = True
 

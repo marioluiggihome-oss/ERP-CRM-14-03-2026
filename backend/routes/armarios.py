@@ -500,10 +500,12 @@ async def ia_render_armario(request: IARenderRequest):
             )
 
 
-        # Si el frontend manda el esquema/plano del configurador, es el plano
-        # AUTORITATIVO: el modelo debe reproducirlo tal cual (puertas, divisiones,
-        # baldas, cajones, barras, maletero y proporciones).
-        has_blueprint = bool(getattr(request, "referenceImage", None))
+        # Si el frontend manda el esquema/plano AUTOGENERADO del configurador
+        # (blueprintImage), es el plano AUTORITATIVO: el modelo debe
+        # reproducirlo tal cual (puertas, divisiones, baldas, cajones, barras,
+        # maletero y proporciones). La referenceImage (si la hay) es solo una
+        # foto de inspiración de estilo, no estructural.
+        has_blueprint = bool(getattr(request, "blueprintImage", None))
         blueprint_block = ""
         if has_blueprint:
             blueprint_block = """
@@ -566,11 +568,22 @@ IMPORTANT: The wardrobe MUST have EXACTLY {doors_count} {request.doorType} doors
 EXACT interior layout described{' and shown in the blueprint' if has_blueprint else ''}. DO NOT add, remove or rearrange anything.
 Generate ONE high-quality photorealistic image."""
 
+        reference_images = []
+        if has_blueprint:
+            reference_images.append({
+                "data": request.blueprintImage,
+                "mime": getattr(request, "blueprintMime", None) or "image/png",
+            })
+        if getattr(request, "referenceImage", None):
+            reference_images.append({
+                "data": request.referenceImage,
+                "mime": getattr(request, "referenceMime", None) or "image/png",
+            })
+
         try:
             data_url = await generate_image_with_gemini(
                 prompt,
-                reference_image_base64=getattr(request, "referenceImage", None),
-                reference_mime=getattr(request, "referenceMime", None) or "image/png",
+                reference_images=reference_images,
             )
         except Exception as e:
             logger.error(f"Error generando render de armario: {e}")
