@@ -18,6 +18,46 @@ const DoorType = {
   FOLDING: 'folding'
 };
 
+// Dibuja una línea de cota (con flechas y etiqueta) entre dos puntos en un
+// canvas 2D. Usado por los planos técnicos (alzado/planta acotados).
+function drawDimensionLine(ctx, x1, y1, x2, y2, label) {
+  ctx.strokeStyle = '#2563eb';
+  ctx.fillStyle = '#2563eb';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const drawArrow = (x, y, a) => {
+    const size = 5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - size * Math.cos(a - Math.PI / 6), y - size * Math.sin(a - Math.PI / 6));
+    ctx.lineTo(x - size * Math.cos(a + Math.PI / 6), y - size * Math.sin(a + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  };
+  drawArrow(x1, y1, angle + Math.PI);
+  drawArrow(x2, y2, angle);
+
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  ctx.save();
+  ctx.font = 'bold 11px sans-serif';
+  if (Math.abs(y2 - y1) > Math.abs(x2 - x1)) {
+    ctx.translate(midX - 6, midY);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText(label, 0, 0);
+  } else {
+    ctx.textAlign = 'center';
+    ctx.fillText(label, midX, midY - 6);
+  }
+  ctx.restore();
+}
+
 const FINSA_COLORS = [
   // ========== BLANCOS ==========
   { id: '010', name: 'Blanco Standard', hex: '#FFFFFF', ref: '010', category: 'blancos' },
@@ -547,6 +587,9 @@ const Armarios = ({ state, setState }) => {
   const [iaError, setIaError] = useState(null);
   
   // Estado para render
+  const [showPlanosModal, setShowPlanosModal] = useState(false);
+  const [elevationDrawing, setElevationDrawing] = useState(null);
+  const [floorPlanDrawing, setFloorPlanDrawing] = useState(null);
   const [showRenderModal, setShowRenderModal] = useState(false);
   const [renderLoading, setRenderLoading] = useState(false);
   const [renderImage, setRenderImage] = useState(null);
@@ -1908,6 +1951,156 @@ const Armarios = ({ state, setState }) => {
     }
   };
 
+  // ALZADO acotado: vista frontal a escala con anchura/altura totales,
+  // anchura de cada puerta y, módulo a módulo, la altura desde el suelo de
+  // cada balda/cajón/barra/maletero (en cm).
+  const generateElevationDrawing = () => {
+    const { width, height, modules, doorType, depth } = wardrobeConfig;
+    const numDoors = wardrobeConfig.numDoors || modules;
+    const W = 700;
+    const px = W / width; // px por mm
+    const H = Math.round(height * px);
+    const left = 80, right = 70, top = 60, bottom = 90;
+    const canvas = document.createElement('canvas');
+    canvas.width = left + W + right;
+    canvas.height = top + H + bottom;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const ox = left, oy = top;
+
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(ox, oy, W, H);
+
+    const modW = W / modules;
+    for (let i = 0; i < modules; i++) {
+      const mx = ox + i * modW;
+      if (i > 0) {
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(mx, oy); ctx.lineTo(mx, oy + H); ctx.stroke();
+      }
+      ctx.fillStyle = '#475569';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(`M${i + 1}`, mx + 4, oy + 12);
+
+      const mod = moduleConfigs[i] || {};
+      const layout = getModuleLayout(mod);
+      const rows = layout.length || 1;
+      const rowH = H / rows;
+      layout.forEach((tok, j) => {
+        const yTop = oy + j * rowH;
+        const yBot = oy + (j + 1) * rowH;
+        if (tok === 'maletero') {
+          ctx.fillStyle = '#fde68a';
+          ctx.fillRect(mx + 3, yTop + 2, modW - 6, Math.min(16, rowH - 4));
+        } else if (tok === 'rod') {
+          ctx.strokeStyle = '#64748b';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(mx + 5, yTop + rowH * 0.4);
+          ctx.lineTo(mx + modW - 5, yTop + rowH * 0.4);
+          ctx.stroke();
+        } else if (tok === 'drawer') {
+          ctx.strokeStyle = '#64748b';
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(mx + 4, yTop + rowH * 0.25, modW - 8, rowH * 0.5);
+        } else {
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(mx + 3, yBot - 3);
+          ctx.lineTo(mx + modW - 3, yBot - 3);
+          ctx.stroke();
+        }
+        // Altura desde el suelo hasta el borde inferior del elemento (cm)
+        const heightFromFloorCm = Math.round((height - (yBot - oy) / px) / 10);
+        ctx.fillStyle = '#0369a1';
+        ctx.font = '8px sans-serif';
+        ctx.fillText(`${heightFromFloorCm}cm`, mx + modW - 26, yBot - 2);
+      });
+    }
+
+    // Cota de ancho total (arriba)
+    drawDimensionLine(ctx, ox, oy - 24, ox + W, oy - 24, `${width}mm (${(width / 10).toFixed(0)}cm)`);
+    // Cota de alto total (lado derecho)
+    drawDimensionLine(ctx, ox + W + 40, oy, ox + W + 40, oy + H, `${height}mm (${(height / 10).toFixed(0)}cm)`);
+
+    // Divisiones y cotas de puertas (debajo del armario)
+    const doorW = W / numDoors;
+    const doorY = oy + H + 30;
+    for (let d = 1; d < numDoors; d++) {
+      const dx = ox + d * doorW;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(dx, oy); ctx.lineTo(dx, doorY); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    for (let d = 0; d < numDoors; d++) {
+      const realDoorWidthMm = Math.round(width / numDoors);
+      drawDimensionLine(
+        ctx, ox + d * doorW + 6, doorY, ox + (d + 1) * doorW - 6, doorY,
+        `${realDoorWidthMm}mm`
+      );
+    }
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(
+      `ALZADO ACOTADO — ${width}×${height}×${depth}mm — ${numDoors} puertas ${doorType} — ${modules} módulos`,
+      ox, canvas.height - 12
+    );
+
+    return canvas.toDataURL('image/png');
+  };
+
+  // PLANTA acotada: vista en planta (vista superior) a escala, con ancho y
+  // profundidad totales.
+  const generateFloorPlanDrawing = () => {
+    const { width, depth } = wardrobeConfig;
+    const W = 700;
+    const px = W / width;
+    const D = Math.max(60, Math.round(depth * px));
+    const left = 80, right = 70, top = 60, bottom = 60;
+    const canvas = document.createElement('canvas');
+    canvas.width = left + W + right;
+    canvas.height = top + D + bottom;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const ox = left, oy = top;
+
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(ox, oy, W, D);
+
+    // Pared de fondo (línea gruesa en la parte superior de la planta)
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(ox - 10, oy); ctx.lineTo(ox + W + 10, oy); ctx.stroke();
+
+    // Divisiones de módulos vistas en planta
+    const { modules } = wardrobeConfig;
+    const modW = W / modules;
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < modules; i++) {
+      const mx = ox + i * modW;
+      ctx.beginPath(); ctx.moveTo(mx, oy); ctx.lineTo(mx, oy + D); ctx.stroke();
+    }
+
+    drawDimensionLine(ctx, ox, oy - 24, ox + W, oy - 24, `${width}mm (${(width / 10).toFixed(0)}cm)`);
+    drawDimensionLine(ctx, ox + W + 40, oy, ox + W + 40, oy + D, `${depth}mm (${(depth / 10).toFixed(0)}cm)`);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`PLANTA ACOTADA — ${width}×${depth}mm`, ox, canvas.height - 12);
+
+    return canvas.toDataURL('image/png');
+  };
+
   // Construye el payload común para el render con IA del armario.
   const buildRenderPayload = (doorsOpenParam) => {
     const payload = {
@@ -2363,7 +2556,7 @@ const Armarios = ({ state, setState }) => {
             <Sparkles size={16} />
             IA
           </button>
-          <button 
+          <button
             onClick={() => setShowRenderModal(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
             data-testid="armarios-render-btn"
@@ -2371,6 +2564,19 @@ const Armarios = ({ state, setState }) => {
           >
             <Image size={16} />
             RENDER
+          </button>
+          <button
+            onClick={() => {
+              setElevationDrawing(generateElevationDrawing());
+              setFloorPlanDrawing(generateFloorPlanDrawing());
+              setShowPlanosModal(true);
+            }}
+            className="flex items-center gap-2 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+            data-testid="armarios-planos-btn"
+            title="Ver planta y alzado acotados"
+          >
+            <Hash size={16} />
+            PLANOS
           </button>
           <button 
             onClick={() => setShowProjectsModal(true)}
@@ -3813,6 +4019,70 @@ const Armarios = ({ state, setState }) => {
       )}
 
       {/* ========== MODAL RENDER 3D ========== */}
+      {showPlanosModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-8 py-5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-xl">
+                  <Hash size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wider">PLANTA Y ALZADO ACOTADOS</h2>
+                  <p className="text-slate-200 text-xs font-medium mt-0.5">Medidas reales: dimensiones, puertas y altura de cada elemento</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPlanosModal(false)}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-slate-700">Alzado (vista frontal)</h3>
+                  {elevationDrawing && (
+                    <a
+                      href={elevationDrawing}
+                      download="armario-alzado.png"
+                      className="flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700"
+                    >
+                      <Download size={14} /> Descargar
+                    </a>
+                  )}
+                </div>
+                {elevationDrawing ? (
+                  <img src={elevationDrawing} alt="Alzado acotado" className="w-full border border-slate-200 rounded-lg" />
+                ) : (
+                  <p className="text-sm text-slate-400">Generando alzado...</p>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-slate-700">Planta (vista superior)</h3>
+                  {floorPlanDrawing && (
+                    <a
+                      href={floorPlanDrawing}
+                      download="armario-planta.png"
+                      className="flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700"
+                    >
+                      <Download size={14} /> Descargar
+                    </a>
+                  )}
+                </div>
+                {floorPlanDrawing ? (
+                  <img src={floorPlanDrawing} alt="Planta acotada" className="w-full border border-slate-200 rounded-lg" />
+                ) : (
+                  <p className="text-sm text-slate-400">Generando planta...</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showRenderModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
