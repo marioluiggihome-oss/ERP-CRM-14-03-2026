@@ -280,7 +280,8 @@ const RentabilidadLineas = ({ currentUser }) => {
     const next = NEXT_DOC_TYPE[cur] || null;
     if (!next) return;
     const nextLabel = TABS.find(t => t.key === next)?.label || next;
-    if (!window.confirm(`¿Crear un ${nextLabel} a partir de "${f.ref || ''}"? Se copiarán las líneas.`)) return;
+    const newRef = window.prompt(`Serie/número del nuevo ${nextLabel.toLowerCase()} (a partir de "${f.ref || ''}"):`, f.ref || '');
+    if (newRef === null) return; // cancelado
     setConverting(f.id);
     try {
       // Traer la ficha completa (con sus líneas) por si la lista no las incluye
@@ -289,7 +290,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ref: full.ref, cliente: full.cliente,
+          ref: newRef.trim() || full.ref, cliente: full.cliente,
           fecha: new Date().toISOString().slice(0, 10),
           docType: next, lines: full.lines || [], projectRef: full.projectRef || '',
           createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
