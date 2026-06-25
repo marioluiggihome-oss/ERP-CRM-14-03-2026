@@ -619,6 +619,7 @@ Extrae la cabecera y TODAS las lineas del documento y responde SOLO con JSON val
   "docType": "presupuesto|pedido|albaran|factura",   // deducelo del documento (albaran = nota de entrega/entrega de mercancia)
   "ref": "numero del documento (ej LG26/38) o vacio",
   "cliente": "nombre del cliente",
+  "clienteCodigo": "numero o codigo de cliente si aparece impreso en el documento (ej Cliente: 12345), si no aparece deja vacio",
   "fecha": "YYYY-MM-DD",
   "lineas": [
     {
@@ -721,6 +722,7 @@ async def parse_sale_doc(payload: dict):
                 "docType": str(parsed.get("docType") or "factura"),
                 "ref": str(parsed.get("ref") or ""),
                 "cliente": str(parsed.get("cliente") or ""),
+                "clienteCodigo": str(parsed.get("clienteCodigo") or ""),
                 "fecha": str(parsed.get("fecha") or datetime.now(timezone.utc).strftime("%Y-%m-%d")),
                 "lines": lines,
             },
@@ -815,28 +817,35 @@ async def get_ficha(ficha_id: str):
     return f
 
 
-async def _ensure_client_for_invoice(nombre: str):
-    """Si una factura trae un cliente que no existe en db.clients (por nombre),
-    lo crea con un numero de cliente (codigo) autogenerado. Devuelve
-    {id, codigo, nombre} del cliente existente o recien creado."""
+async def _ensure_client_for_invoice(nombre: str, codigo: str = ""):
+    """Si una factura trae un cliente que no existe en db.clients, lo busca
+    primero por el codigo que viene impreso en la factura (si lo hay) y si no
+    por nombre. Si no existe ninguno, lo crea usando ese MISMO codigo (no se
+    autogenera ningun numero correlativo). Devuelve
+    {id, codigo, nombre, created} del cliente existente o recien creado."""
     nombre = (nombre or "").strip()
+    codigo = (codigo or "").strip()
+    if not nombre and not codigo:
+        return None
+
+    if codigo:
+        existing = await db.clients.find_one(
+            {"codigo": {"$regex": f"^{re.escape(codigo)}$", "$options": "i"}},
+            {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
+        )
+        if existing:
+            return {**existing, "created": False}
+
+    if nombre:
+        existing = await db.clients.find_one(
+            {"nombre": {"$regex": f"^{re.escape(nombre)}$", "$options": "i"}},
+            {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
+        )
+        if existing:
+            return {**existing, "created": False}
+
     if not nombre:
         return None
-    existing = await db.clients.find_one(
-        {"nombre": {"$regex": f"^{re.escape(nombre)}$", "$options": "i"}},
-        {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
-    )
-    if existing:
-        return existing
-
-    last = await db.clients.find(
-        {"codigo": {"$regex": "^C[0-9]+$"}}, {"_id": 0, "codigo": 1}
-    ).sort("codigo", -1).to_list(1)
-    next_num = int(last[0]["codigo"][1:]) + 1 if last else 1
-    codigo = f"C{next_num:04d}"
-    while await db.clients.find_one({"codigo": codigo}):
-        next_num += 1
-        codigo = f"C{next_num:04d}"
 
     client_doc = {
         "id": f"cli-{uuid.uuid4().hex[:8]}",
@@ -847,7 +856,28 @@ async def _ensure_client_for_invoice(nombre: str):
         "origenAutoFactura": True,
     }
     await db.clients.insert_one(client_doc)
-    return {"id": client_doc["id"], "codigo": codigo, "nombre": nombre}
+    return {"id": client_doc["id"], "codigo": codigo, "nombre": nombre, "created": True}
+
+
+@router.get("/rentabilidad/check-client")
+async def check_client(nombre: str = "", codigo: str = ""):
+    """Comprueba si un cliente (por codigo o nombre) ya existe, sin crearlo.
+    Lo usa el frontend para avisar antes de guardar una factura si se va a
+    crear un cliente nuevo."""
+    nombre = (nombre or "").strip()
+    codigo = (codigo or "").strip()
+    existing = None
+    if codigo:
+        existing = await db.clients.find_one(
+            {"codigo": {"$regex": f"^{re.escape(codigo)}$", "$options": "i"}},
+            {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
+        )
+    if not existing and nombre:
+        existing = await db.clients.find_one(
+            {"nombre": {"$regex": f"^{re.escape(nombre)}$", "$options": "i"}},
+            {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
+        )
+    return {"exists": bool(existing), "client": existing}
 
 
 @router.post("/rentabilidad/fichas")
@@ -884,15 +914,21 @@ async def save_ficha(payload: dict):
         existing = await db.sale_fichas.find_one({"id": fid}, {"_id": 0, "createdAt": 1})
         doc["createdAt"] = (existing or {}).get("createdAt") or doc["updatedAt"]
 
+        clienteCodigo = str(payload.get("clienteCodigo") or "")
+        client_created = None
         if doc["docType"] == "factura" and doc["cliente"]:
-            client_match = await _ensure_client_for_invoice(doc["cliente"])
+            client_match = await _ensure_client_for_invoice(doc["cliente"], clienteCodigo)
             if client_match:
                 doc["clienteId"] = client_match["id"]
                 doc["clienteCodigo"] = client_match["codigo"]
+                if client_match.get("created"):
+                    client_created = {"codigo": client_match["codigo"], "nombre": client_match["nombre"]}
+        else:
+            doc["clienteCodigo"] = clienteCodigo
 
         await db.sale_fichas.update_one({"id": fid}, {"$set": doc}, upsert=True)
         doc["totals"] = _ficha_totals(norm_lines)
-        return {"success": True, "ficha": doc}
+        return {"success": True, "ficha": doc, "clientCreated": client_created}
     except Exception as e:
         logger.error(f"Save ficha error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

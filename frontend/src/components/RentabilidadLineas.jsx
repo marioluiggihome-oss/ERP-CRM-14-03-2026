@@ -124,6 +124,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       setEditor({
         ref: data.data.ref || '',
         cliente: data.data.cliente || '',
+        clienteCodigo: data.data.clienteCodigo || '',
         fecha: data.data.fecha || '',
         docType,
         lines: data.data.lines || [],
@@ -162,6 +163,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         const fichaData = {
           ref: data.data.ref || '',
           cliente: data.data.cliente || '',
+          clienteCodigo: data.data.clienteCodigo || '',
           fecha: data.data.fecha || '',
           docType,
           lines: data.data.lines || [],
@@ -230,12 +232,22 @@ const RentabilidadLineas = ({ currentUser }) => {
 
   const saveFicha = async () => {
     if (!editor) return;
+    if (editor.docType === 'factura' && editor.cliente) {
+      try {
+        const cr = await fetch(`${API_URL}/api/rentabilidad/check-client?nombre=${encodeURIComponent(editor.cliente)}&codigo=${encodeURIComponent(editor.clienteCodigo || '')}`);
+        const cd = await cr.json();
+        if (!cd.exists) {
+          const ok = window.confirm(`No existe ningun cliente con ${editor.clienteCodigo ? `el codigo "${editor.clienteCodigo}"` : `el nombre "${editor.cliente}"`}.\nSe va a crear un cliente nuevo: ${editor.cliente}${editor.clienteCodigo ? ` (codigo ${editor.clienteCodigo})` : ''}.\n\n¿Continuar?`);
+          if (!ok) return;
+        }
+      } catch { /* si falla la comprobacion, seguimos con el guardado normal */ }
+    }
     setSaving(true);
     try {
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: editor.id, ref: editor.ref, cliente: editor.cliente, fecha: editor.fecha,
+          id: editor.id, ref: editor.ref, cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
           docType: editor.docType, lines: editor.lines,
           createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
         }),
@@ -252,6 +264,9 @@ const RentabilidadLineas = ({ currentUser }) => {
             body: JSON.stringify({ fileBase64: u.b64, filename: u.name, kind: u.kind }),
           });
         }
+      }
+      if (data?.clientCreated) {
+        alert(`Cliente creado: ${data.clientCreated.nombre} (codigo ${data.clientCreated.codigo}).`);
       }
       setEditor(null);
       load();
@@ -681,6 +696,8 @@ const RentabilidadLineas = ({ currentUser }) => {
                   <input value={editor.ref} onChange={e => setEditor({ ...editor, ref: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Cliente</label>
                   <input value={editor.cliente} onChange={e => setEditor({ ...editor, cliente: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase">Codigo cliente</label>
+                  <input value={editor.clienteCodigo || ''} onChange={e => setEditor({ ...editor, clienteCodigo: e.target.value })} placeholder="ej. 12345" className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Fecha</label>
                   <input value={editor.fecha} onChange={e => setEditor({ ...editor, fecha: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Estado</label>
