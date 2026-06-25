@@ -104,7 +104,8 @@ async def get_rentabilidad(userId: Optional[str] = None):
             query,
             {"_id": 0, "id": 1, "budgetNumber": 1, "customerName": 1, "clientCode": 1,
              "totalPvp": 1, "totalConIVA": 1, "createdAt": 1, "userId": 1, "status": 1,
-             "orderId": 1, "orderRef": 1, "invoiceId": 1, "invoiceNumber": 1, "internalReference": 1}
+             "orderId": 1, "orderRef": 1, "albaranId": 1, "albaranRef": 1,
+             "invoiceId": 1, "invoiceNumber": 1, "internalReference": 1}
         ).sort("createdAt", -1).to_list(3000)
 
         # Agregar costes por projectRef (== budgetNumber u otra ref ya normalizada)
@@ -156,6 +157,8 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "status": p.get("status", ""),
                 "orderId": p.get("orderId", ""),
                 "orderRef": p.get("orderRef", ""),
+                "albaranId": p.get("albaranId", ""),
+                "albaranRef": p.get("albaranRef", ""),
                 "invoiceId": p.get("invoiceId", ""),
                 "invoiceNumber": p.get("invoiceNumber", ""),
                 "internalReference": p.get("internalReference", ""),
@@ -896,10 +899,77 @@ async def presupuesto_to_pedido(project_id: str, request: Request):
     return {"success": True, "orderId": order["id"], "orderRef": pedido_ref, "message": f"Presupuesto convertido en pedido {pedido_ref}"}
 
 
+@router.post("/rentabilidad/pedido-to-albaran/{project_id}")
+async def pedido_to_albaran(project_id: str, request: Request):
+    """Convierte el PEDIDO de un proyecto en ALBARÁN (nota de entrega). SIEMPRE
+    pide serie + número de albarán (si se dejan en blanco se genera uno). Deja
+    huella bidireccional: el proyecto/pedido guarda albaranId/albaranRef y el
+    albarán guarda de dónde viene (sourceProjectId/sourceOrderId)."""
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    if project.get("albaranId"):
+        raise HTTPException(status_code=400, detail="Este pedido ya tiene un albarán asociado")
+    if not project.get("orderId"):
+        raise HTTPException(status_code=400, detail="Primero pasa el presupuesto a pedido")
+
+    albaran_serie = str(body.get("albaranSerie") or "").strip()
+    albaran_number = str(body.get("albaranNumber") or "").strip()
+    if albaran_serie and albaran_number:
+        albaran_ref = f"{albaran_serie}/{albaran_number}"
+    elif albaran_number:
+        albaran_ref = albaran_number
+    else:
+        albaran_ref = f"ALB-{uuid.uuid4().hex[:6].upper()}"
+
+    order = await db.orders.find_one({"id": project["orderId"]}, {"_id": 0})
+    now = datetime.now(timezone.utc)
+    albaran = {
+        "id": f"alb-{uuid.uuid4().hex[:8]}",
+        "albaranRef": albaran_ref,
+        "albaranSerie": albaran_serie,
+        "albaranNumber": albaran_number,
+        "sourceProjectId": project_id,
+        "sourceOrderId": project.get("orderId"),
+        "orderRef": project.get("orderRef", ""),
+        "budgetNumber": project.get("budgetNumber", ""),
+        "customerName": project.get("customerName", ""),
+        "customerAddress": project.get("customerAddress", ""),
+        "items": (order or {}).get("items", []),
+        "totalAmount": float((order or {}).get("totalAmount", 0) or project.get("totalPvp", 0) or 0),
+        "status": "entregado",
+        "userId": project.get("userId", ""),
+        "createdAt": now.isoformat(),
+    }
+    await db.delivery_notes.insert_one(albaran)
+    await db.projects.update_one(
+        {"id": project_id},
+        {"$set": {
+            "albaranId": albaran["id"],
+            "albaranRef": albaran_ref,
+            "updatedAt": now.isoformat(),
+        }},
+    )
+    await db.orders.update_one(
+        {"id": project["orderId"]},
+        {"$set": {"albaranId": albaran["id"], "albaranRef": albaran_ref}},
+    )
+    return {"success": True, "albaranId": albaran["id"], "albaranRef": albaran_ref,
+            "message": f"Pedido convertido en albarán {albaran_ref}"}
+
+
 @router.post("/rentabilidad/pedido-to-factura/{project_id}")
 async def pedido_to_factura(project_id: str, request: Request):
-    """Convierte el PEDIDO de un proyecto en FACTURA. Acepta body JSON opcional
-    con {invoiceSerie, invoiceNumber} para personalizar el número de factura."""
+    """Convierte el ALBARÁN de un proyecto en FACTURA. SIEMPRE pide serie +
+    número de factura (si se dejan en blanco se genera uno). Deja huella
+    bidireccional: el proyecto/pedido/albarán guardan invoiceId/invoiceNumber y
+    la factura guarda de dónde viene (sourceDeliveryNoteId/sourceOrderId)."""
     body = {}
     try:
         body = await request.json()
@@ -911,8 +981,8 @@ async def pedido_to_factura(project_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     if project.get("invoiceId"):
         raise HTTPException(status_code=400, detail="Este pedido ya está facturado")
-    if not project.get("orderId"):
-        raise HTTPException(status_code=400, detail="Primero pasa el presupuesto a pedido")
+    if not project.get("albaranId"):
+        raise HTTPException(status_code=400, detail="Primero pasa el pedido a albarán")
 
     invoice_serie = str(body.get("invoiceSerie") or "").strip()
     invoice_number = str(body.get("invoiceNumber") or "").strip()
@@ -940,8 +1010,22 @@ async def pedido_to_factura(project_id: str, request: Request):
             {"$set": {"status": "facturado", "invoiceId": doc.get("id"),
                       "invoiceNumber": doc.get("invoiceNumber")}},
         )
+    await db.delivery_notes.update_one(
+        {"id": project["albaranId"]},
+        {"$set": {"status": "facturado", "invoiceId": doc.get("id"),
+                  "invoiceNumber": doc.get("invoiceNumber")}},
+    )
+    await db.invoices.update_one(
+        {"id": doc.get("id")},
+        {"$set": {
+            "sourceDeliveryNoteId": project.get("albaranId"),
+            "albaranRef": project.get("albaranRef", ""),
+            "sourceOrderId": project.get("orderId", ""),
+            "orderRef": project.get("orderRef", ""),
+        }},
+    )
     return {"success": True, "invoiceId": doc.get("id"),
-            "invoiceNumber": doc.get("invoiceNumber"), "message": "Pedido facturado"}
+            "invoiceNumber": doc.get("invoiceNumber"), "message": "Albarán facturado"}
 
 
 # ============================================================================
@@ -1082,8 +1166,9 @@ async def list_asignables(userId: Optional[str] = None):
 
 @router.post("/rentabilidad/ingresos")
 async def create_ingreso(payload: dict):
-    """Registra un ingreso a cuenta. SIEMPRE se asigna a un pedido o factura y se
-    archiva el documento del que se detectó."""
+    """Registra un ingreso a cuenta. SIEMPRE debe quedar asignado a un CLIENTE
+    y/o a un documento (presupuesto, pedido o factura); se archiva el
+    documento del que se detectó si lo hay."""
     try:
         imp = float((payload or {}).get("importe") or 0)
     except Exception:
@@ -1092,8 +1177,12 @@ async def create_ingreso(payload: dict):
         raise HTTPException(status_code=400, detail="Importe inválido")
 
     target_id = str((payload or {}).get("targetId") or "")
-    if not target_id:
-        raise HTTPException(status_code=400, detail="El ingreso debe asignarse a un pedido o una factura")
+    client_code = str((payload or {}).get("clientCode") or "")
+    if not target_id and not client_code:
+        raise HTTPException(
+            status_code=400,
+            detail="El ingreso debe asignarse a un cliente y/o a un presupuesto, pedido o factura",
+        )
 
     now = datetime.now(timezone.utc)
     iid = f"ing-{uuid.uuid4().hex[:8]}"
@@ -1121,8 +1210,9 @@ async def create_ingreso(payload: dict):
         "concepto": str(payload.get("concepto") or "Ingreso a cuenta"),
         "metodo": str(payload.get("metodo") or "otro"),
         "cliente": str(payload.get("cliente") or ""),
+        "clientCode": client_code,                              # vinculo directo a db.clients
         "projectRef": str(payload.get("projectRef") or payload.get("proyecto") or ""),
-        "targetType": str(payload.get("targetType") or ""),   # pedido | factura
+        "targetType": str(payload.get("targetType") or ""),   # presupuesto | pedido | factura
         "targetId": target_id,                                  # id de la ficha
         "targetRef": str(payload.get("targetRef") or ""),
         "docId": doc_id,

@@ -4,6 +4,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkles, Trash2, X, Plus, RefreshCw, Banknote } from 'lucide-react';
+import { clientsAPI } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
@@ -13,9 +14,10 @@ const IngresosACuenta = ({ currentUser }) => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
-  const [review, setReview] = useState(null); // { cliente, proyecto, ingresos: [], targetId, fileB64, fileName, fileMime }
+  const [review, setReview] = useState(null); // { cliente, clientCode, proyecto, ingresos: [], targetId, fileB64, fileName, fileMime }
   const [saving, setSaving] = useState(false);
-  const [asignables, setAsignables] = useState([]); // pedidos/facturas a los que asignar
+  const [asignables, setAsignables] = useState([]); // presupuestos/pedidos/facturas a los que asignar
+  const [clients, setClients] = useState([]); // clientes a los que asignar directamente
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -28,6 +30,8 @@ const IngresosACuenta = ({ currentUser }) => {
       if (r.ok) { const j = await r.json(); setItems(j.items || []); setTotal(j.total || 0); }
       const a = await fetch(`${API_URL}/api/rentabilidad/asignables${qs}`);
       if (a.ok) setAsignables(await a.json());
+      const c = await clientsAPI.getAll(true).catch(() => []);
+      setClients(c || []);
     } catch { /* noop */ } finally { setLoading(false); }
   }, [currentUser]);
 
@@ -63,7 +67,7 @@ const IngresosACuenta = ({ currentUser }) => {
       if (!j.success) { alert('No se pudieron localizar ingresos: ' + (j.error || '')); return; }
       if (!(j.data.ingresos || []).length) { alert('La IA no encontró ingresos a cuenta en el documento.'); return; }
       setReview({
-        cliente: j.data.cliente || '', proyecto: j.data.proyecto || '', ingresos: j.data.ingresos,
+        cliente: j.data.cliente || '', clientCode: '', proyecto: j.data.proyecto || '', ingresos: j.data.ingresos,
         targetId: '', fileB64: b64, fileName: file.name, fileMime: file.type || 'application/octet-stream',
       });
     } catch (err) {
@@ -78,10 +82,20 @@ const IngresosACuenta = ({ currentUser }) => {
   };
   const removeRevLine = (i) => setReview({ ...review, ingresos: review.ingresos.filter((_, x) => x !== i) });
 
+  const addManual = () => setReview({
+    cliente: '', clientCode: '', proyecto: '',
+    ingresos: [{ fecha: new Date().toISOString().slice(0, 10), importe: 0, concepto: 'Ingreso a cuenta', metodo: 'transferencia' }],
+    targetId: '', fileB64: '', fileName: '', fileMime: '',
+  });
+
   const saveAll = async () => {
     if (!review?.ingresos?.length) { setReview(null); return; }
-    if (!review.targetId) { alert('Asigna el ingreso a un pedido o una factura.'); return; }
+    if (!review.targetId && !review.clientCode) {
+      alert('Asigna el ingreso a un cliente y/o a un presupuesto, pedido o factura.');
+      return;
+    }
     const target = asignables.find(a => a.id === review.targetId);
+    const client = clients.find(c => c.codigo === review.clientCode);
     setSaving(true);
     try {
       for (const ing of review.ingresos) {
@@ -89,7 +103,8 @@ const IngresosACuenta = ({ currentUser }) => {
         await fetch(`${API_URL}/api/rentabilidad/ingresos`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ...ing, cliente: review.cliente, proyecto: review.proyecto,
+            ...ing, cliente: review.cliente || client?.nombre || '', proyecto: review.proyecto,
+            clientCode: review.clientCode,
             targetId: review.targetId,
             targetType: target?.docType || '',
             targetRef: target?.ref || '',
@@ -126,6 +141,9 @@ const IngresosACuenta = ({ currentUser }) => {
             {importing ? 'Localizando…' : 'Localizar ingresos (IA)'}
             <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFile} disabled={importing} />
           </label>
+          <button onClick={addManual} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-sm flex items-center gap-2">
+            <Plus size={16} /> Registrar manual
+          </button>
           <button onClick={load} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-sm flex items-center gap-2">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Actualizar
           </button>
@@ -157,7 +175,10 @@ const IngresosACuenta = ({ currentUser }) => {
             {items.map((i) => (
               <tr key={i.id} className="hover:bg-slate-50">
                 <td className="p-3 text-slate-500">{i.fecha || '—'}</td>
-                <td className="p-3 text-slate-700">{i.cliente || '—'}</td>
+                <td className="p-3 text-slate-700">
+                  {i.cliente || '—'}
+                  {i.clientCode && <span className="ml-1 px-1.5 py-0.5 bg-teal-100 text-teal-700 rounded text-[10px] font-black">{i.clientCode}</span>}
+                </td>
                 <td className="p-3 font-bold text-indigo-700">{i.projectRef || '—'}</td>
                 <td className="p-3 text-slate-700">{i.concepto || '—'}</td>
                 <td className="p-3 text-[11px] uppercase text-slate-500">{i.metodo || '—'}</td>
@@ -199,18 +220,31 @@ const IngresosACuenta = ({ currentUser }) => {
                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Proyecto / Expediente</label>
                   <input value={review.proyecto} onChange={e => setReview({ ...review, proyecto: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
               </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Asignar a pedido / factura (obligatorio)</label>
-                <select value={review.targetId} onChange={e => setReview({ ...review, targetId: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm font-bold ${review.targetId ? 'border-emerald-300' : 'border-red-300'}`}>
-                  <option value="">— Selecciona pedido o factura —</option>
-                  {asignables.map(a => (
-                    <option key={a.id} value={a.id}>{(a.docType || '').toUpperCase()} · {a.ref || '(sin ref)'} · {a.cliente || ''}</option>
-                  ))}
-                </select>
-                {asignables.length === 0 && (
-                  <p className="text-[11px] text-amber-600 mt-1">No hay pedidos/facturas aún. Créalos en "Por líneas (documentos)" para poder asignar el ingreso.</p>
-                )}
+              <p className="text-[11px] text-slate-400">Asigna el ingreso a un cliente y/o a un presupuesto, pedido o factura (al menos uno).</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Cliente</label>
+                  <select value={review.clientCode} onChange={e => setReview({ ...review, clientCode: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm font-bold ${review.clientCode || review.targetId ? 'border-emerald-300' : 'border-red-300'}`}>
+                    <option value="">— Sin cliente vinculado —</option>
+                    {clients.map(c => (
+                      <option key={c.codigo} value={c.codigo}>{c.codigo} · {c.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Presupuesto / pedido / factura</label>
+                  <select value={review.targetId} onChange={e => setReview({ ...review, targetId: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm font-bold ${review.clientCode || review.targetId ? 'border-emerald-300' : 'border-red-300'}`}>
+                    <option value="">— Sin documento vinculado —</option>
+                    {asignables.map(a => (
+                      <option key={a.id} value={a.id}>{(a.docType || '').toUpperCase()} · {a.ref || '(sin ref)'} · {a.cliente || ''}</option>
+                    ))}
+                  </select>
+                  {asignables.length === 0 && (
+                    <p className="text-[11px] text-amber-600 mt-1">No hay presupuestos/pedidos/facturas aún.</p>
+                  )}
+                </div>
               </div>
               <table className="w-full text-sm">
                 <thead className="text-slate-500"><tr>

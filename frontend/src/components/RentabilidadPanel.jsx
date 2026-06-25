@@ -3,7 +3,7 @@
  * Cruza Ventas (presupuestos) con Costes (facturas/gastos) -> Margen.
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter, PackageCheck, Receipt } from 'lucide-react';
+import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter, PackageCheck, Receipt, Truck } from 'lucide-react';
 import RentabilidadLineas from './RentabilidadLineas';
 import ReportGenerator from './ReportGenerator';
 import IngresosACuenta from './IngresosACuenta';
@@ -95,24 +95,30 @@ const RentabilidadPanel = ({ currentUser }) => {
 
   const openConvModal = (row, tipo) => setConvModal({ row, tipo, serie: '', numero: '' });
 
+  const CONV_ENDPOINTS = {
+    pedido: 'presupuesto-to-pedido',
+    albaran: 'pedido-to-albaran',
+    factura: 'pedido-to-factura',
+  };
+  const CONV_BODY = {
+    pedido: (serie, numero) => ({ orderSerie: serie, orderNumber: numero }),
+    albaran: (serie, numero) => ({ albaranSerie: serie, albaranNumber: numero }),
+    factura: (serie, numero) => ({ invoiceSerie: serie, invoiceNumber: numero }),
+  };
+
   const doConversion = async () => {
     const { row, tipo, serie, numero } = convModal;
     setConvModal(null);
     setConverting(row.projectId);
     try {
-      const endpoint = tipo === 'pedido'
-        ? `presupuesto-to-pedido/${row.projectId}`
-        : `pedido-to-factura/${row.projectId}`;
-      const body = tipo === 'pedido'
-        ? { orderSerie: serie, orderNumber: numero }
-        : { invoiceSerie: serie, invoiceNumber: numero };
-      const res = await fetch(`${API_URL}/api/rentabilidad/${endpoint}`, {
+      const res = await fetch(`${API_URL}/api/rentabilidad/${CONV_ENDPOINTS[tipo]}/${row.projectId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(CONV_BODY[tipo](serie, numero)),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.detail || 'Error');
+      if (tipo === 'albaran') alert('Albarán creado: ' + (j.albaranRef || ''));
       if (tipo === 'factura') alert('Factura creada: ' + (j.invoiceNumber || ''));
       await load();
     } catch (e) { alert(`No se pudo convertir a ${tipo}: ` + e.message); }
@@ -508,11 +514,19 @@ const RentabilidadPanel = ({ currentUser }) => {
                 <td className="p-3 text-center">
                   {r.invoiceId ? (
                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[11px] font-black flex items-center gap-1 mx-auto w-fit"><Receipt size={11} /> FACTURA {r.invoiceNumber || ''}</span>
+                  ) : r.albaranId && r.projectId ? (
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-[11px] font-black flex items-center gap-1"><Truck size={11} /> ALBARÁN {r.albaranRef || ''}</span>
+                      <button onClick={() => openConvModal(r, 'factura')} disabled={converting === r.projectId}
+                        className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-bold hover:bg-blue-700 disabled:opacity-50">→ Factura</button>
+                    </div>
+                  ) : r.albaranId ? (
+                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-[11px] font-black flex items-center gap-1 mx-auto w-fit"><Truck size={11} /> ALBARÁN {r.albaranRef || ''}</span>
                   ) : r.orderId && r.projectId ? (
                     <div className="flex items-center justify-center gap-1.5">
                       <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[11px] font-black flex items-center gap-1"><PackageCheck size={11} /> PEDIDO {r.orderRef || ''}</span>
-                      <button onClick={() => openConvModal(r, 'factura')} disabled={converting === r.projectId}
-                        className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-bold hover:bg-blue-700 disabled:opacity-50">→ Factura</button>
+                      <button onClick={() => openConvModal(r, 'albaran')} disabled={converting === r.projectId}
+                        className="px-2.5 py-1 bg-purple-600 text-white rounded-lg text-[11px] font-bold hover:bg-purple-700 disabled:opacity-50">→ Albarán</button>
                     </div>
                   ) : r.orderId ? (
                     <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[11px] font-black flex items-center gap-1 mx-auto w-fit"><PackageCheck size={11} /> PEDIDO {r.orderRef || ''}</span>
@@ -622,23 +636,30 @@ const RentabilidadPanel = ({ currentUser }) => {
         </div>
       )}
 
-      {/* Modal de conversión: presupuesto → pedido / pedido → factura */}
-      {convModal && (
+      {/* Modal de conversión: presupuesto → pedido → albarán → factura. SIEMPRE
+          pregunta el número del documento de destino, dejando huella de origen/destino. */}
+      {convModal && (() => {
+        const CONV_META = {
+          pedido: { label: 'Pedido', icon: PackageCheck, theme: 'bg-indigo-700 hover:bg-indigo-800' },
+          albaran: { label: 'Albarán', icon: Truck, theme: 'bg-purple-700 hover:bg-purple-800' },
+          factura: { label: 'Factura', icon: Receipt, theme: 'bg-blue-700 hover:bg-blue-800' },
+        };
+        const meta = CONV_META[convModal.tipo];
+        const Icon = meta.icon;
+        return (
         <div className="fixed inset-0 bg-black/60 z-[140] flex items-center justify-center p-4" onClick={() => setConvModal(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className={`px-6 py-4 text-white flex items-center gap-3 ${convModal.tipo === 'pedido' ? 'bg-indigo-700' : 'bg-blue-700'}`}>
-              {convModal.tipo === 'pedido' ? <PackageCheck size={20} /> : <Receipt size={20} />}
+            <div className={`px-6 py-4 text-white flex items-center gap-3 ${meta.theme.split(' ')[0]}`}>
+              <Icon size={20} />
               <div>
-                <h3 className="font-black uppercase text-sm">
-                  {convModal.tipo === 'pedido' ? 'Convertir a Pedido' : 'Convertir a Factura'}
-                </h3>
+                <h3 className="font-black uppercase text-sm">Convertir a {meta.label}</h3>
                 <p className="text-[11px] opacity-80">{convModal.row.ref} · {convModal.row.cliente}</p>
               </div>
               <button onClick={() => setConvModal(null)} className="ml-auto hover:bg-white/20 rounded-lg p-1"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
               <p className="text-xs text-slate-500">
-                Indica la serie y el número del {convModal.tipo === 'pedido' ? 'pedido' : 'factura'}.
+                Indica la serie y el número del {meta.label.toLowerCase()}.
                 Si los dejas en blanco, se generará automáticamente.
               </p>
               <div className="flex gap-3">
@@ -659,14 +680,15 @@ const RentabilidadPanel = ({ currentUser }) => {
                 </p>
               )}
               <button onClick={doConversion}
-                className={`w-full py-3 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 ${convModal.tipo === 'pedido' ? 'bg-indigo-700 hover:bg-indigo-800' : 'bg-blue-700 hover:bg-blue-800'}`}>
-                {convModal.tipo === 'pedido' ? <PackageCheck size={16} /> : <Receipt size={16} />}
+                className={`w-full py-3 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2 ${meta.theme}`}>
+                <Icon size={16} />
                 Confirmar
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
       </>)}
     </div>
   );
