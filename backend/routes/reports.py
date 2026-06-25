@@ -73,12 +73,12 @@ async def generate_rentabilidad_report(
     Devuelve datos estructurados para el frontend y para generar PDF.
     """
     from server import db
-    
+
     try:
-        # Obtener todas las fichas de rentabilidad
-        fichas_cursor = db["rentabilidad_fichas"].find({})
+        # Obtener todas las fichas de rentabilidad (por líneas de documentos)
+        fichas_cursor = db["sale_fichas"].find({})
         fichas = await fichas_cursor.to_list(length=1000)
-        
+
         # Aplicar filtros
         filtered_fichas = []
         for ficha in fichas:
@@ -418,11 +418,11 @@ async def generate_rentabilidad_pdf(
 async def get_available_filters():
     """Devuelve los valores disponibles para los filtros (clientes, categorías, etc.)"""
     from server import db
-    
+
     try:
-        fichas_cursor = db["rentabilidad_fichas"].find({})
+        fichas_cursor = db["sale_fichas"].find({})
         fichas = await fichas_cursor.to_list(length=1000)
-        
+
         clientes = set()
         categorias = set()
         creadores = set()
