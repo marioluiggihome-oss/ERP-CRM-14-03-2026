@@ -125,7 +125,7 @@ async def activate_maintenance_mode(request: MaintenanceActivateRequest, user=De
                 "createdAt": datetime.now(timezone.utc).isoformat(),
                 "createdBy": admin_user.get("username", "admin"),
                 "data": backup_data,
-                "size": len(json.dumps(backup_data))
+                "size": len(json.dumps(backup_data, default=str))
             }
             
             await db.system_backups.insert_one(backup_record)
