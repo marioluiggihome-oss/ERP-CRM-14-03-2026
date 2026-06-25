@@ -8,9 +8,9 @@ import {
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const TABS = [
-  { key: 'presupuesto', label: 'Presupuesto', icon: ClipboardList },
-  { key: 'pedido', label: 'Pedido', icon: Receipt },
-  { key: 'factura', label: 'Factura de venta', icon: FileCheck },
+  { key: 'presupuesto', label: 'Presupuesto', icon: ClipboardList, singular: 'presupuesto', plural: 'presupuestos' },
+  { key: 'pedido', label: 'Pedido', icon: Receipt, singular: 'pedido', plural: 'pedidos' },
+  { key: 'factura', label: 'Factura de venta', icon: FileCheck, singular: 'factura', plural: 'facturas' },
 ];
 
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC`;
@@ -122,7 +122,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         ref: data.data.ref || '',
         cliente: data.data.cliente || '',
         fecha: data.data.fecha || '',
-        docType: data.data.docType || docType,
+        docType,
         lines: data.data.lines || [],
         saleDoc: { b64, name: file.name },
         costDocs: [],
@@ -160,7 +160,7 @@ const RentabilidadLineas = ({ currentUser }) => {
           ref: data.data.ref || '',
           cliente: data.data.cliente || '',
           fecha: data.data.fecha || '',
-          docType: data.data.docType || docType,
+          docType,
           lines: data.data.lines || [],
           createdBy: currentUser?.id,
           createdByName: currentUser?.clientName || currentUser?.username,
@@ -442,16 +442,16 @@ const RentabilidadLineas = ({ currentUser }) => {
           );
         })}
         <div className="ml-auto flex items-center gap-2">
-          {/* Multi-upload: subir varias facturas a la vez */}
+          {/* Multi-upload: subir varios documentos del tipo activo a la vez */}
           <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${parsingMulti ? 'bg-green-200 text-green-600' : 'bg-green-600 text-white hover:bg-green-700'}`}>
             <Files size={16} className={parsingMulti ? 'animate-pulse' : ''} />
-            {parsingMulti ? `Importando ${multiProgress.current}/${multiProgress.total}...` : 'Subir varias facturas'}
+            {parsingMulti ? `Importando ${multiProgress.current}/${multiProgress.total}...` : `Subir varios ${TABS.find(t => t.key === docType)?.plural || 'documentos'}`}
             <input type="file" accept="image/*,application/pdf" className="hidden" multiple onChange={handleMultiUpload} disabled={parsingMulti || parsing} />
           </label>
-          {/* Single upload */}
+          {/* Single upload: el tipo de documento se toma de la pestana activa */}
           <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${parsing ? 'bg-purple-200 text-purple-500' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
             <Sparkles size={16} className={parsing ? 'animate-pulse' : ''} />
-            {parsing ? 'Leyendo...' : 'Subir documento de venta'}
+            {parsing ? 'Leyendo...' : `Subir ${TABS.find(t => t.key === docType)?.singular || 'documento'}`}
             <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleSaleDoc} disabled={parsing || parsingMulti} />
           </label>
           <button onClick={load} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl">

@@ -286,11 +286,13 @@ const RentabilidadPanel = ({ currentUser }) => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${importing ? 'bg-purple-200 text-purple-500' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
-            <Sparkles size={16} className={importing ? 'animate-pulse' : ''} />
-            {importing ? 'Leyendo factura...' : 'Importar factura (IA)'}
-            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleInvoiceFile} disabled={importing} />
-          </label>
+          {view === 'proyecto' && (
+            <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${importing ? 'bg-purple-200 text-purple-500' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
+              <Sparkles size={16} className={importing ? 'animate-pulse' : ''} />
+              {importing ? 'Leyendo factura de coste...' : 'Importar factura de coste (IA)'}
+              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleInvoiceFile} disabled={importing} />
+            </label>
+          )}
           <button onClick={load} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-sm flex items-center gap-2">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Actualizar
           </button>
