@@ -533,7 +533,7 @@ async def rentabilidad_analytics():
 _SALE_LINES_PROMPT = """Eres un experto en presupuestos, pedidos y facturas de VENTA de muebles/cocinas y electrodomesticos.
 Extrae la cabecera y TODAS las lineas del documento y responde SOLO con JSON valido:
 {
-  "docType": "presupuesto|pedido|factura",   // deducelo del documento
+  "docType": "presupuesto|pedido|albaran|factura",   // deducelo del documento (albaran = nota de entrega/entrega de mercancia)
   "ref": "numero del documento (ej LG26/38) o vacio",
   "cliente": "nombre del cliente",
   "fecha": "YYYY-MM-DD",
@@ -1129,7 +1129,7 @@ async def list_ingresos(userId: Optional[str] = None):
 async def list_asignables(userId: Optional[str] = None):
     """Documentos a los que asignar un ingreso a cuenta: PRESUPUESTOS, PEDIDOS y FACTURAS.
     Combina sale_fichas (documentos IA) + projects (presupuestos normales)."""
-    q_fichas = {"docType": {"$in": ["presupuesto", "pedido", "factura"]}}
+    q_fichas = {"docType": {"$in": ["presupuesto", "pedido", "albaran", "factura"]}}
     if userId:
         q_fichas["createdBy"] = userId
     fichas = await db.sale_fichas.find(

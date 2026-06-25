@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FileText, Upload, Sparkles, Plus, Trash2, X, Save, Euro,
   Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw,
-  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight
+  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -10,8 +10,11 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const TABS = [
   { key: 'presupuesto', label: 'Presupuesto', icon: ClipboardList, singular: 'presupuesto', plural: 'presupuestos' },
   { key: 'pedido', label: 'Pedido', icon: Receipt, singular: 'pedido', plural: 'pedidos' },
+  { key: 'albaran', label: 'Albarán', icon: Truck, singular: 'albarán', plural: 'albaranes' },
   { key: 'factura', label: 'Factura de venta', icon: FileCheck, singular: 'factura', plural: 'facturas' },
 ];
+
+const NEXT_DOC_TYPE = { presupuesto: 'pedido', pedido: 'albaran', albaran: 'factura' };
 
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC`;
 
@@ -271,12 +274,12 @@ const RentabilidadLineas = ({ currentUser }) => {
     } catch { alert('No se pudo abrir el documento'); }
   };
 
-  // ── Convertir documento al siguiente tipo: presupuesto → pedido → factura ──
+  // ── Convertir documento al siguiente tipo: presupuesto → pedido → albarán → factura ──
   const convertFicha = async (f) => {
     const cur = f.docType || 'factura';
-    const next = cur === 'presupuesto' ? 'pedido' : cur === 'pedido' ? 'factura' : null;
+    const next = NEXT_DOC_TYPE[cur] || null;
     if (!next) return;
-    const nextLabel = next === 'pedido' ? 'Pedido' : 'Factura';
+    const nextLabel = TABS.find(t => t.key === next)?.label || next;
     if (!window.confirm(`¿Crear un ${nextLabel} a partir de "${f.ref || ''}"? Se copiarán las líneas.`)) return;
     setConverting(f.id);
     try {
@@ -599,10 +602,10 @@ const RentabilidadLineas = ({ currentUser }) => {
                   <td className={`p-3 text-right font-mono font-black ${tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
                   <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
                   <td className="p-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                    {(f.docType || 'factura') !== 'factura' && (
+                    {NEXT_DOC_TYPE[f.docType || 'factura'] && (
                       <button onClick={() => convertFicha(f)} disabled={converting === f.id}
                         className="mr-2 px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50">
-                        → {(f.docType || 'factura') === 'presupuesto' ? 'Pedido' : 'Factura'}
+                        → {TABS.find(t => t.key === NEXT_DOC_TYPE[f.docType || 'factura'])?.label}
                       </button>
                     )}
                     <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
