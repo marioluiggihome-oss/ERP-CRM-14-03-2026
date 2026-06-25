@@ -86,9 +86,15 @@ async def delete_project_cost(cost_id: str):
 
 @router.get("/rentabilidad")
 async def get_rentabilidad(userId: Optional[str] = None):
-    """Cuenta de resultados por proyecto: Venta (presupuesto) - Coste = Margen.
+    """Cuenta de resultados: Venta - Coste = Margen.
 
-    Une cada proyecto con sus costes (por budgetNumber == projectRef).
+    Une presupuestos (`projects`) con sus costes (`project_costs`, por ref).
+    Si un presupuesto ya tiene factura asociada (`invoiceId`), la venta se toma
+    del importe REAL de esa factura (puede haberse editado tras la conversion)
+    en lugar del totalPvp congelado del presupuesto. Ademas se incluyen como
+    filas independientes los PEDIDOS y FACTURAS que no provienen de ningun
+    presupuesto (creados directamente en Pedidos/Facturas), que antes eran
+    invisibles para este informe.
     """
     try:
         query = {}
@@ -101,17 +107,41 @@ async def get_rentabilidad(userId: Optional[str] = None):
              "orderId": 1, "orderRef": 1, "invoiceId": 1, "invoiceNumber": 1, "internalReference": 1}
         ).sort("createdAt", -1).to_list(3000)
 
-        # Agregar costes por projectRef (== budgetNumber)
+        # Agregar costes por projectRef (== budgetNumber u otra ref ya normalizada)
         costs_agg = {}
         async for c in db.project_costs.find({}, {"_id": 0, "projectRef": 1, "importe": 1}):
             ref = c.get("projectRef")
             costs_agg[ref] = costs_agg.get(ref, 0) + float(c.get("importe", 0) or 0)
 
+        # Facturas y pedidos actuales, para poder: (a) usar el importe REAL y
+        # actualizado de la factura cuando un presupuesto la tenga asociada, y
+        # (b) detectar las que NO vienen de ningun presupuesto.
+        invoices_by_id = {}
+        async for inv in db.invoices.find({}, {"_id": 0}):
+            invoices_by_id[inv.get("id")] = inv
+
+        orders_by_id = {}
+        async for o in db.orders.find({}, {"_id": 0}):
+            orders_by_id[o.get("id")] = o
+
+        linked_invoice_ids = set()
+        linked_order_ids = set()
+
         rows = []
         tot_venta = tot_coste = 0.0
         for p in projects:
             ref = p.get("budgetNumber") or ""
-            venta = float(p.get("totalPvp", 0) or 0)
+            invoice_id = p.get("invoiceId")
+            order_id = p.get("orderId")
+            inv = invoices_by_id.get(invoice_id) if invoice_id else None
+            if inv:
+                # Importe real de la factura (sin IVA) en vez del totalPvp congelado.
+                venta = float(inv.get("taxBase", inv.get("subtotal", 0)) or 0)
+                linked_invoice_ids.add(invoice_id)
+            else:
+                venta = float(p.get("totalPvp", 0) or 0)
+            if order_id:
+                linked_order_ids.add(order_id)
             coste = float(costs_agg.get(ref, 0))
             margen = venta - coste
             margen_pct = (margen / venta * 100) if venta > 0 else 0
@@ -129,11 +159,78 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "invoiceId": p.get("invoiceId", ""),
                 "invoiceNumber": p.get("invoiceNumber", ""),
                 "internalReference": p.get("internalReference", ""),
+                "origen": "presupuesto",
                 "venta": round(venta, 2),
                 "coste": round(coste, 2),
                 "margen": round(margen, 2),
                 "margenPct": round(margen_pct, 1),
             })
+
+        # Pedidos creados directamente (sin presupuesto de origen), p.ej. desde
+        # confirmacion de pedido de cocina. Si ya estan facturados se omiten
+        # aqui porque se contabilizan como factura mas abajo (evita duplicar).
+        for oid, o in orders_by_id.items():
+            if oid in linked_order_ids or o.get("sourceProjectId"):
+                continue
+            if o.get("invoiceId"):
+                continue
+            ref = o.get("budgetNumber") or oid
+            venta = float(o.get("totalAmount", 0) or 0)
+            coste = float(costs_agg.get(ref, 0))
+            margen = venta - coste
+            margen_pct = (margen / venta * 100) if venta > 0 else 0
+            tot_venta += venta
+            tot_coste += coste
+            rows.append({
+                "projectId": None,
+                "ref": ref,
+                "cliente": o.get("customerName", ""),
+                "clientCode": "",
+                "fecha": o.get("createdAt", o.get("confirmedAt", "")),
+                "status": o.get("status", ""),
+                "orderId": oid,
+                "orderRef": ref,
+                "invoiceId": "",
+                "invoiceNumber": "",
+                "internalReference": "",
+                "origen": "pedido",
+                "venta": round(venta, 2),
+                "coste": round(coste, 2),
+                "margen": round(margen, 2),
+                "margenPct": round(margen_pct, 1),
+            })
+
+        # Facturas creadas directamente (sin presupuesto de origen).
+        for iid, inv in invoices_by_id.items():
+            if iid in linked_invoice_ids or inv.get("projectId"):
+                continue
+            ref = inv.get("budgetNumber") or inv.get("invoiceNumber") or iid
+            venta = float(inv.get("taxBase", inv.get("subtotal", 0)) or 0)
+            coste = float(costs_agg.get(ref, 0))
+            margen = venta - coste
+            margen_pct = (margen / venta * 100) if venta > 0 else 0
+            tot_venta += venta
+            tot_coste += coste
+            rows.append({
+                "projectId": None,
+                "ref": ref,
+                "cliente": inv.get("clientName", ""),
+                "clientCode": "",
+                "fecha": inv.get("createdAt", inv.get("issueDate", "")),
+                "status": inv.get("status", ""),
+                "orderId": "",
+                "orderRef": "",
+                "invoiceId": iid,
+                "invoiceNumber": inv.get("invoiceNumber", ""),
+                "internalReference": "",
+                "origen": "factura",
+                "venta": round(venta, 2),
+                "coste": round(coste, 2),
+                "margen": round(margen, 2),
+                "margenPct": round(margen_pct, 1),
+            })
+
+        rows.sort(key=lambda r: r.get("fecha") or "", reverse=True)
 
         tot_margen = tot_venta - tot_coste
         return {

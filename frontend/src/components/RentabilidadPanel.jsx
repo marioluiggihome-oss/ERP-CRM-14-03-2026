@@ -492,7 +492,7 @@ const RentabilidadPanel = ({ currentUser }) => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredRows.map((r) => (
-              <tr key={r.projectId} className="hover:bg-slate-50">
+              <tr key={r.projectId || r.orderId || r.invoiceId || r.ref} className="hover:bg-slate-50">
                 <td className="p-3 font-black text-indigo-700">{r.ref || '-'}</td>
                 <td className="p-3 text-slate-700">{r.cliente || '-'}</td>
                 <td className="p-3 text-slate-500 text-xs">{r.fecha || '-'}</td>
@@ -508,15 +508,19 @@ const RentabilidadPanel = ({ currentUser }) => {
                 <td className="p-3 text-center">
                   {r.invoiceId ? (
                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[11px] font-black flex items-center gap-1 mx-auto w-fit"><Receipt size={11} /> FACTURA {r.invoiceNumber || ''}</span>
-                  ) : r.orderId ? (
+                  ) : r.orderId && r.projectId ? (
                     <div className="flex items-center justify-center gap-1.5">
                       <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[11px] font-black flex items-center gap-1"><PackageCheck size={11} /> PEDIDO {r.orderRef || ''}</span>
                       <button onClick={() => openConvModal(r, 'factura')} disabled={converting === r.projectId}
                         className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-bold hover:bg-blue-700 disabled:opacity-50">→ Factura</button>
                     </div>
-                  ) : (
+                  ) : r.orderId ? (
+                    <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[11px] font-black flex items-center gap-1 mx-auto w-fit"><PackageCheck size={11} /> PEDIDO {r.orderRef || ''}</span>
+                  ) : r.projectId ? (
                     <button onClick={() => openConvModal(r, 'pedido')} disabled={converting === r.projectId}
                       className="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50">→ Pedido</button>
+                  ) : (
+                    <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px] font-bold">SIN PRESUPUESTO</span>
                   )}
                 </td>
               </tr>
