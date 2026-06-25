@@ -815,6 +815,41 @@ async def get_ficha(ficha_id: str):
     return f
 
 
+async def _ensure_client_for_invoice(nombre: str):
+    """Si una factura trae un cliente que no existe en db.clients (por nombre),
+    lo crea con un numero de cliente (codigo) autogenerado. Devuelve
+    {id, codigo, nombre} del cliente existente o recien creado."""
+    nombre = (nombre or "").strip()
+    if not nombre:
+        return None
+    existing = await db.clients.find_one(
+        {"nombre": {"$regex": f"^{re.escape(nombre)}$", "$options": "i"}},
+        {"_id": 0, "id": 1, "codigo": 1, "nombre": 1},
+    )
+    if existing:
+        return existing
+
+    last = await db.clients.find(
+        {"codigo": {"$regex": "^C[0-9]+$"}}, {"_id": 0, "codigo": 1}
+    ).sort("codigo", -1).to_list(1)
+    next_num = int(last[0]["codigo"][1:]) + 1 if last else 1
+    codigo = f"C{next_num:04d}"
+    while await db.clients.find_one({"codigo": codigo}):
+        next_num += 1
+        codigo = f"C{next_num:04d}"
+
+    client_doc = {
+        "id": f"cli-{uuid.uuid4().hex[:8]}",
+        "codigo": codigo,
+        "nombre": nombre,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "origenAutoFactura": True,
+    }
+    await db.clients.insert_one(client_doc)
+    return {"id": client_doc["id"], "codigo": codigo, "nombre": nombre}
+
+
 @router.post("/rentabilidad/fichas")
 async def save_ficha(payload: dict):
     """Crea o actualiza una ficha de rentabilidad por lineas."""
@@ -848,6 +883,13 @@ async def save_ficha(payload: dict):
         }
         existing = await db.sale_fichas.find_one({"id": fid}, {"_id": 0, "createdAt": 1})
         doc["createdAt"] = (existing or {}).get("createdAt") or doc["updatedAt"]
+
+        if doc["docType"] == "factura" and doc["cliente"]:
+            client_match = await _ensure_client_for_invoice(doc["cliente"])
+            if client_match:
+                doc["clienteId"] = client_match["id"]
+                doc["clienteCodigo"] = client_match["codigo"]
+
         await db.sale_fichas.update_one({"id": fid}, {"$set": doc}, upsert=True)
         doc["totals"] = _ficha_totals(norm_lines)
         return {"success": True, "ficha": doc}

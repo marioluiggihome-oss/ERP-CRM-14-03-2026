@@ -595,7 +595,10 @@ const RentabilidadLineas = ({ currentUser }) => {
               return (
                 <tr key={f.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openFicha(f.id)}>
                   <td className="p-3 font-black text-indigo-700">{f.ref || '-'}</td>
-                  <td className="p-3 text-slate-700">{f.cliente || '-'}</td>
+                  <td className="p-3 text-slate-700">
+                    {f.cliente || '-'}
+                    {f.clienteCodigo && <span className="ml-1.5 text-[10px] font-bold text-indigo-500">({f.clienteCodigo})</span>}
+                  </td>
                   <td className="p-3 text-slate-500">{f.fecha || '-'}</td>
                   <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
                   <td className="p-3 text-right font-mono text-orange-600">{eur(tt.coste)}</td>
