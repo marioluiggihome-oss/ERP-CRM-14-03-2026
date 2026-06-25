@@ -3,7 +3,7 @@
  * a partir de un documento (PDF/imagen) y los registra. Cada usuario ve los suyos.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Trash2, X, Plus, RefreshCw, Banknote } from 'lucide-react';
+import { Sparkles, Trash2, X, Plus, RefreshCw, Banknote, UserPlus } from 'lucide-react';
 import { clientsAPI } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -87,6 +87,18 @@ const IngresosACuenta = ({ currentUser }) => {
     ingresos: [{ fecha: new Date().toISOString().slice(0, 10), importe: 0, concepto: 'Ingreso a cuenta', metodo: 'transferencia' }],
     targetId: '', fileB64: '', fileName: '', fileMime: '',
   });
+
+  const createClientInline = async () => {
+    const nombre = window.prompt('Nombre del cliente nuevo:');
+    if (!nombre || !nombre.trim()) return;
+    try {
+      const created = await clientsAPI.create({ nombre: nombre.trim() });
+      const codigo = created.codigo || created.code || '';
+      const fresh = await clientsAPI.getAll(true).catch(() => []);
+      setClients(fresh || []);
+      if (codigo) setReview(r => ({ ...r, clientCode: codigo, cliente: r.cliente || nombre.trim() }));
+    } catch (e) { alert('No se pudo crear el cliente: ' + e.message); }
+  };
 
   const saveAll = async () => {
     if (!review?.ingresos?.length) { setReview(null); return; }
@@ -215,22 +227,29 @@ const IngresosACuenta = ({ currentUser }) => {
             </div>
             <div className="p-6 overflow-auto space-y-3">
               <div className="grid grid-cols-2 gap-2">
-                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Cliente</label>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Nombre detectado (texto libre)</label>
                   <input value={review.cliente} onChange={e => setReview({ ...review, cliente: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Proyecto / Expediente</label>
                   <input value={review.proyecto} onChange={e => setReview({ ...review, proyecto: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" /></div>
               </div>
-              <p className="text-[11px] text-slate-400">Asigna el ingreso a un cliente y/o a un presupuesto, pedido o factura (al menos uno).</p>
+              <p className="text-[11px] text-slate-400">Asigna el ingreso a un cliente final y/o a un presupuesto, pedido o factura (al menos uno).</p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Cliente</label>
-                  <select value={review.clientCode} onChange={e => setReview({ ...review, clientCode: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm font-bold ${review.clientCode || review.targetId ? 'border-emerald-300' : 'border-red-300'}`}>
-                    <option value="">— Sin cliente vinculado —</option>
-                    {clients.map(c => (
-                      <option key={c.codigo} value={c.codigo}>{c.codigo} · {c.nombre}</option>
-                    ))}
-                  </select>
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Cliente final</label>
+                  <div className="flex gap-1.5">
+                    <select value={review.clientCode} onChange={e => setReview({ ...review, clientCode: e.target.value })}
+                      className={`flex-1 px-3 py-2 border rounded-lg text-sm font-bold ${review.clientCode || review.targetId ? 'border-emerald-300' : 'border-red-300'}`}>
+                      <option value="">— Sin cliente vinculado —</option>
+                      {clients.map(c => (
+                        <option key={c.codigo} value={c.codigo}>{c.codigo} · {c.nombre}</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={createClientInline} title="Crear cliente nuevo"
+                      className="px-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg"><UserPlus size={16} /></button>
+                  </div>
+                  {clients.length === 0 && (
+                    <p className="text-[11px] text-amber-600 mt-1">Aún no hay clientes creados. Usa <UserPlus size={11} className="inline" /> para crear uno rápido.</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Presupuesto / pedido / factura</label>
