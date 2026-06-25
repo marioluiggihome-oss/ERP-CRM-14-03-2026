@@ -3121,8 +3121,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     { key: 'companyEmail', label: 'Email de facturación', placeholder: 'facturacion@empresa.es' },
                     { key: 'companyIban', label: 'IBAN (datos bancarios)', placeholder: 'ES00 0000 0000 00 0000000000' },
                   ].map(field => (
-                    <div key={field.key}>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</label>
+                    <div key={field.key} className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{field.label}</label>
                       <input
                         type="text"
                         placeholder={field.placeholder}
@@ -3132,7 +3132,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             await settingsAPI.update({ [field.key]: e.target.value });
                           } catch (err) { console.error(err); }
                         }}
-                        className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-medium"
+                        className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900"
                       />
                     </div>
                   ))}
@@ -3145,18 +3145,18 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 </div>
                 <p className="text-xs text-slate-500 mb-5 ml-[52px]">Para que los pedidos confirmados se envíen por email. Si se deja vacío, el pedido se confirma igual pero sin email.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email remitente</label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
+                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Email remitente</label>
                     <input type="text" placeholder="no-reply@luiggihome.es" defaultValue={state.settings?.emailSender || ''}
                       onChange={async (e) => { try { await settingsAPI.update({ emailSender: e.target.value }); } catch (err) { console.error(err); } }}
-                      className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-medium" />
+                      className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900" />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SendGrid API Key</label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
+                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">SendGrid API Key</label>
                     <input type="password" autoComplete="new-password"
                       placeholder={state.settings?.sendgridConfigured ? '•••••••• (ya configurada)' : 'SG.xxxxx'}
                       onChange={async (e) => { if (!e.target.value) return; try { await settingsAPI.update({ sendgridApiKey: e.target.value }); } catch (err) { console.error(err); } }}
-                      className="w-full mt-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-mono" />
+                      className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
                   </div>
                 </div>
               </div>
@@ -3168,27 +3168,30 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 <p className="text-xs text-slate-500 mb-5 ml-[52px]">Precios base del configurador de armarios (modelo por m²). Vacío = valor por defecto.</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {[
-                    { k: 'basePerM2', label: 'Base €/m²', def: 450 },
-                    { k: 'depthSuppPerMm', label: 'Fondo €/mm (>600)', def: 0.5 },
-                    { k: 'doorSlidingPerM2', label: 'P. corredera €/m²', def: 180 },
-                    { k: 'doorFoldingPerM2', label: 'P. plegable €/m²', def: 250 },
-                    { k: 'endStandard', label: 'Term. estándar €', def: 85 },
-                    { k: 'endPremium', label: 'Term. premium €', def: 150 },
-                    { k: 'endColumn', label: 'Term. columna €', def: 280 },
-                    { k: 'shelf', label: 'Balda €', def: 25 },
-                    { k: 'drawer', label: 'Cajón €', def: 85 },
-                    { k: 'hangingRod', label: 'Barra €', def: 35 },
-                    { k: 'softClosePerModule', label: 'Cierre suave €/mód.', def: 45 },
-                    { k: 'antiFingerprintPerM2', label: 'Anti-huellas €/m²', def: 80 },
-                    { k: 'ledPerModule', label: 'LED €/mód.', def: 120 },
-                    { k: 'mirror', label: 'Espejo €', def: 200 },
+                    { k: 'basePerM2', label: 'Base', unit: '€/m²', def: 450 },
+                    { k: 'depthSuppPerMm', label: 'Fondo (>600)', unit: '€/mm', def: 0.5 },
+                    { k: 'doorSlidingPerM2', label: 'P. corredera', unit: '€/m²', def: 180 },
+                    { k: 'doorFoldingPerM2', label: 'P. plegable', unit: '€/m²', def: 250 },
+                    { k: 'endStandard', label: 'Term. estándar', unit: '€', def: 85 },
+                    { k: 'endPremium', label: 'Term. premium', unit: '€', def: 150 },
+                    { k: 'endColumn', label: 'Term. columna', unit: '€', def: 280 },
+                    { k: 'shelf', label: 'Balda', unit: '€', def: 25 },
+                    { k: 'drawer', label: 'Cajón', unit: '€', def: 85 },
+                    { k: 'hangingRod', label: 'Barra', unit: '€', def: 35 },
+                    { k: 'softClosePerModule', label: 'Cierre suave', unit: '€/mód.', def: 45 },
+                    { k: 'antiFingerprintPerM2', label: 'Anti-huellas', unit: '€/m²', def: 80 },
+                    { k: 'ledPerModule', label: 'LED', unit: '€/mód.', def: 120 },
+                    { k: 'mirror', label: 'Espejo', unit: '€', def: 200 },
                   ].map(f => (
-                    <div key={f.k}>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{f.label}</label>
-                      <input type="number" step="0.01" placeholder={String(f.def)}
-                        defaultValue={state.settings?.['armPrice_' + f.k] ?? ''}
-                        onChange={async (e) => { try { await settingsAPI.update({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) }); } catch (err) { console.error(err); } }}
-                        className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-mono" />
+                    <div key={f.k} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 hover:border-emerald-300 transition-colors">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide block truncate">{f.label}</label>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <input type="number" step="0.01" placeholder={String(f.def)}
+                          defaultValue={state.settings?.['armPrice_' + f.k] ?? ''}
+                          onChange={async (e) => { try { await settingsAPI.update({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) }); } catch (err) { console.error(err); } }}
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0">{f.unit}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -3201,27 +3204,30 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 <p className="text-xs text-slate-500 mb-5 ml-[52px]">€/m² extra según la categoría de color/acabado elegida (exterior e interior). Se suma al precio base €/m². Vacío = valor por defecto.</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {[
-                    { k: 'matSupp_blancos', label: 'Blancos €/m²', def: 0 },
-                    { k: 'matSupp_grises', label: 'Grises €/m²', def: 0 },
-                    { k: 'matSupp_cremas', label: 'Cremas/Beiges €/m²', def: 5 },
-                    { k: 'matSupp_verdes', label: 'Verdes €/m²', def: 15 },
-                    { k: 'matSupp_azules', label: 'Azules €/m²', def: 15 },
-                    { k: 'matSupp_calidos', label: 'Rojos/Cálidos €/m²', def: 15 },
-                    { k: 'matSupp_maderas-claras', label: 'Maderas claras €/m²', def: 20 },
-                    { k: 'matSupp_maderas-medias', label: 'Maderas medias (roble) €/m²', def: 25 },
-                    { k: 'matSupp_maderas-oscuras', label: 'Maderas oscuras €/m²', def: 30 },
-                    { k: 'matSupp_nogales', label: 'Nogales €/m²', def: 35 },
-                    { k: 'matSupp_cerezos', label: 'Cerezos y otros €/m²', def: 35 },
-                    { k: 'matSupp_metalizados', label: 'Metalizados €/m²', def: 40 },
-                    { k: 'matSupp_piedras', label: 'Piedras/Cementos €/m²', def: 45 },
-                    { k: 'matSupp_textiles', label: 'Textiles €/m²', def: 30 },
+                    { k: 'matSupp_blancos', label: 'Blancos', def: 0 },
+                    { k: 'matSupp_grises', label: 'Grises', def: 0 },
+                    { k: 'matSupp_cremas', label: 'Cremas/Beiges', def: 5 },
+                    { k: 'matSupp_verdes', label: 'Verdes', def: 15 },
+                    { k: 'matSupp_azules', label: 'Azules', def: 15 },
+                    { k: 'matSupp_calidos', label: 'Rojos/Cálidos', def: 15 },
+                    { k: 'matSupp_maderas-claras', label: 'Maderas claras', def: 20 },
+                    { k: 'matSupp_maderas-medias', label: 'Maderas medias (roble)', def: 25 },
+                    { k: 'matSupp_maderas-oscuras', label: 'Maderas oscuras', def: 30 },
+                    { k: 'matSupp_nogales', label: 'Nogales', def: 35 },
+                    { k: 'matSupp_cerezos', label: 'Cerezos y otros', def: 35 },
+                    { k: 'matSupp_metalizados', label: 'Metalizados', def: 40 },
+                    { k: 'matSupp_piedras', label: 'Piedras/Cementos', def: 45 },
+                    { k: 'matSupp_textiles', label: 'Textiles', def: 30 },
                   ].map(f => (
-                    <div key={f.k}>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{f.label}</label>
-                      <input type="number" step="0.01" placeholder={String(f.def)}
-                        defaultValue={state.settings?.['armPrice_' + f.k] ?? ''}
-                        onChange={async (e) => { try { await settingsAPI.update({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) }); } catch (err) { console.error(err); } }}
-                        className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 font-mono" />
+                    <div key={f.k} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 hover:border-emerald-300 transition-colors">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide block truncate">{f.label}</label>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <input type="number" step="0.01" placeholder={String(f.def)}
+                          defaultValue={state.settings?.['armPrice_' + f.k] ?? ''}
+                          onChange={async (e) => { try { await settingsAPI.update({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) }); } catch (err) { console.error(err); } }}
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0">€/m²</span>
+                      </div>
                     </div>
                   ))}
                 </div>
