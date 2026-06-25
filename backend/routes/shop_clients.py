@@ -15,6 +15,55 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/shop-clients", tags=["Shop Clients"])
 
+# Campos del cliente de tienda -> nombre de campo en db.clients (CRM general)
+_CRM_FIELD_MAP = {
+    "code": "codigo",
+    "name": "nombre",
+    "company": "empresa",
+    "email": "email",
+    "phone": "telefono",
+    "address": "direccion",
+    "city": "localidad",
+    "province": "provincia",
+    "postalCode": "codigoPostal",
+    "taxId": "cif",
+    "notes": "notas",
+}
+
+
+async def _sync_to_crm_client(shop_client: dict):
+    """Mantiene un cliente espejo en db.clients (CRM general) para cada cliente
+    de tienda, marcado como segmento 'tienda' y atribuido al representante
+    (usuario tienda) propietario. Así "Mis Clientes" deja de ser una isla y el
+    cliente aparece también en el CRM general."""
+    crm_data = {es: shop_client.get(en, "") for en, es in _CRM_FIELD_MAP.items()}
+    crm_data["segmento"] = "tienda"
+    crm_data["shopClientId"] = shop_client["id"]
+    owner_id = shop_client.get("ownerUserId")
+    crm_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
+
+    crm_client_id = shop_client.get("crmClientId")
+    if crm_client_id:
+        existing = await db.clients.find_one({"id": crm_client_id})
+    else:
+        existing = None
+
+    if existing:
+        await db.clients.update_one({"id": crm_client_id}, {"$set": crm_data})
+        return crm_client_id
+
+    crm_data["id"] = f"cli-{uuid.uuid4().hex[:8]}"
+    crm_data["createdAt"] = crm_data["updatedAt"]
+    if owner_id:
+        crm_data["createdByUserId"] = owner_id
+        crm_data["assignedRepresentativeId"] = owner_id
+    await db.clients.insert_one(crm_data)
+
+    await db.shop_clients.update_one(
+        {"id": shop_client["id"]}, {"$set": {"crmClientId": crm_data["id"]}}
+    )
+    return crm_data["id"]
+
 
 async def get_current_user_from_token(authorization: str = None):
     """Obtener usuario actual desde el token"""
@@ -217,7 +266,8 @@ async def create_shop_client(
         client_dict["ownerName"] = owner.get("clientName", "") if owner else ""
     
     await db.shop_clients.insert_one(client_dict)
-    
+    await _sync_to_crm_client(client_dict)
+
     result = await db.shop_clients.find_one({"id": client_dict["id"]}, {"_id": 0})
     return result
 
@@ -255,8 +305,9 @@ async def update_shop_client(
     update_data["updatedAt"] = datetime.now(timezone.utc)
     
     await db.shop_clients.update_one({"id": client_id}, {"$set": update_data})
-    
+
     result = await db.shop_clients.find_one({"id": client_id}, {"_id": 0})
+    await _sync_to_crm_client(result)
     return result
 
 
@@ -333,6 +384,7 @@ async def import_shop_clients(
             
             if client_dict["name"]:
                 await db.shop_clients.insert_one(client_dict)
+                await _sync_to_crm_client(client_dict)
                 imported += 1
             else:
                 errors.append(f"Fila {idx + 1}: Nombre requerido")

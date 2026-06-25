@@ -54,7 +54,20 @@ async def get_clients(activo: Optional[bool] = None, search: Optional[str] = Non
             search_lower in c.get("cif", "").lower() or
             search_lower in c.get("localidad", "").lower()
         ]
-    
+
+    # Para clientes segmento "tienda", resolver el nombre de la tienda
+    # (assignedRepresentativeId) que los gestiona, para mostrarlo en el CRM.
+    tienda_rep_ids = {c["assignedRepresentativeId"] for c in clients
+                      if c.get("segmento") == "tienda" and c.get("assignedRepresentativeId")}
+    if tienda_rep_ids:
+        reps = await db.users.find(
+            {"id": {"$in": list(tienda_rep_ids)}}, {"_id": 0, "id": 1, "username": 1, "clientName": 1}
+        ).to_list(len(tienda_rep_ids))
+        rep_names = {r["id"]: (r.get("clientName") or r.get("username") or r["id"]) for r in reps}
+        for c in clients:
+            if c.get("segmento") == "tienda" and c.get("assignedRepresentativeId") in rep_names:
+                c["tiendaUserName"] = rep_names[c["assignedRepresentativeId"]]
+
     return clients
 
 @router.get("/clients/segments")
@@ -69,6 +82,20 @@ async def get_client_segments():
             {"id": "mayorista", "name": "Mayorista"}
         ]
     }
+
+@router.get("/clients/tienda-users")
+async def get_tienda_users(current_user: dict = Depends(require_auth)):
+    """Lista de usuarios marcados como tienda/distribuidor, para poder vincular
+    un cliente del CRM (segmento 'tienda') con la tienda real que lo gestiona
+    en 'Mis Clientes'."""
+    users = await db.users.find(
+        {"isTienda": True}, {"_id": 0, "id": 1, "username": 1, "clientName": 1}
+    ).to_list(500)
+    return [
+        {"id": u["id"], "name": u.get("clientName") or u.get("username") or u["id"]}
+        for u in users
+    ]
+
 
 @router.get("/clients/{client_id}")
 async def get_client(client_id: str,
