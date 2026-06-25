@@ -3105,10 +3105,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
           {/* Tab Backups */}
           {activeTab === 'billing' && (
-            <div className="p-6 space-y-6">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 uppercase mb-4">Datos de Facturación</h3>
-                <p className="text-xs text-slate-500 mb-6">Estos datos aparecerán en las facturas PDF generadas.</p>
+            <div className="p-6 space-y-5 bg-slate-50">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><Building2 size={18} /></div>
+                  <h3 className="text-base font-black text-slate-900 uppercase">Datos de Facturación</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-5 ml-[52px]">Estos datos aparecerán en las facturas PDF generadas.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
                     { key: 'companyName', label: 'Nombre / Razón Social', placeholder: 'LUIGGI HOME S.L.' },
@@ -3135,9 +3138,12 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   ))}
                 </div>
               </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Email (envío de pedidos)</h3>
-                <p className="text-xs text-slate-500 mb-4">Para que los pedidos confirmados se envíen por email. Si se deja vacío, el pedido se confirma igual pero sin email.</p>
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><RefreshCw size={18} /></div>
+                  <h3 className="text-base font-black text-slate-900 uppercase">Email (envío de pedidos)</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-5 ml-[52px]">Para que los pedidos confirmados se envíen por email. Si se deja vacío, el pedido se confirma igual pero sin email.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email remitente</label>
@@ -3154,10 +3160,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   </div>
                 </div>
               </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Armarios — precios</h3>
-                <p className="text-xs text-slate-500 mb-4">Precios base del configurador de armarios (modelo por m²). Vacío = valor por defecto.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><Layers size={18} /></div>
+                  <h3 className="text-base font-black text-slate-900 uppercase">Armarios — precios</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-5 ml-[52px]">Precios base del configurador de armarios (modelo por m²). Vacío = valor por defecto.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {[
                     { k: 'basePerM2', label: 'Base €/m²', def: 450 },
                     { k: 'depthSuppPerMm', label: 'Fondo €/mm (>600)', def: 0.5 },
@@ -3184,10 +3193,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   ))}
                 </div>
               </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Armarios — suplemento por material</h3>
-                <p className="text-xs text-slate-500 mb-4">€/m² extra según la categoría de color/acabado elegida (exterior e interior). Se suma al precio base €/m². Vacío = valor por defecto.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0"><Palette size={18} /></div>
+                  <h3 className="text-base font-black text-slate-900 uppercase">Armarios — suplemento por material</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-5 ml-[52px]">€/m² extra según la categoría de color/acabado elegida (exterior e interior). Se suma al precio base €/m². Vacío = valor por defecto.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {[
                     { k: 'matSupp_blancos', label: 'Blancos €/m²', def: 0 },
                     { k: 'matSupp_grises', label: 'Grises €/m²', def: 0 },

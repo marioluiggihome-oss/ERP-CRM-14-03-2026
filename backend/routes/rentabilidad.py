@@ -84,6 +84,25 @@ async def delete_project_cost(cost_id: str):
 
 # ----------------------------- RENTABILIDAD -----------------------------
 
+def _enrich_row(row, ref, costs_by_cat, cobrado_by_target, alerta_pct, order=None):
+    """Anade al row de rentabilidad las metricas de controller: cobrado/pendiente
+    de cobro (cruce con ingresos a cuenta), alerta de margen bajo, desglose de
+    coste por categoria, y desviacion venta pedido vs venta facturada real."""
+    cobrado = 0.0
+    for tid in [row.get("projectId"), row.get("orderId"), row.get("albaranId"), row.get("invoiceId")]:
+        if tid and tid in cobrado_by_target:
+            cobrado += cobrado_by_target[tid]
+    row["cobrado"] = round(cobrado, 2)
+    row["pendienteCobro"] = round(row["venta"] - cobrado, 2)
+    row["alertaMargen"] = bool(row["venta"] > 0 and row["margenPct"] < alerta_pct)
+    row["costesPorCategoria"] = {k: round(v, 2) for k, v in costs_by_cat.get(ref, {}).items()}
+    if order:
+        venta_pedido = float(order.get("totalAmount", 0) or 0)
+        row["ventaPedido"] = round(venta_pedido, 2)
+        row["desviacionVenta"] = round(row["venta"] - venta_pedido, 2)
+    return row
+
+
 @router.get("/rentabilidad")
 async def get_rentabilidad(userId: Optional[str] = None):
     """Cuenta de resultados: Venta - Coste = Margen.
@@ -108,11 +127,31 @@ async def get_rentabilidad(userId: Optional[str] = None):
              "invoiceId": 1, "invoiceNumber": 1, "internalReference": 1}
         ).sort("createdAt", -1).to_list(3000)
 
-        # Agregar costes por projectRef (== budgetNumber u otra ref ya normalizada)
+        # Agregar costes por projectRef (== budgetNumber u otra ref ya normalizada),
+        # tanto el total como el desglose por categoria (MOBILIARIO, TRANSPORTE...).
         costs_agg = {}
-        async for c in db.project_costs.find({}, {"_id": 0, "projectRef": 1, "importe": 1}):
+        costs_by_cat = {}
+        async for c in db.project_costs.find({}, {"_id": 0, "projectRef": 1, "importe": 1, "categoria": 1}):
             ref = c.get("projectRef")
-            costs_agg[ref] = costs_agg.get(ref, 0) + float(c.get("importe", 0) or 0)
+            importe = float(c.get("importe", 0) or 0)
+            cat = str(c.get("categoria") or "OTROS").upper()
+            costs_agg[ref] = costs_agg.get(ref, 0) + importe
+            costs_by_cat.setdefault(ref, {})
+            costs_by_cat[ref][cat] = costs_by_cat[ref].get(cat, 0) + importe
+
+        # Ingresos a cuenta (cobros) ya registrados, para poder calcular el
+        # pendiente de cobro por documento (venta facturada - cobrado a cuenta).
+        cobrado_by_target = {}
+        async for ing in db.ingresos_cuenta.find({}, {"_id": 0, "targetId": 1, "ingresos": 1, "importe": 1}):
+            tid = ing.get("targetId")
+            if not tid:
+                continue
+            monto = float(ing.get("importe", 0) or 0)
+            if not monto and isinstance(ing.get("ingresos"), list):
+                monto = sum(float(i.get("importe", 0) or 0) for i in ing["ingresos"])
+            cobrado_by_target[tid] = cobrado_by_target.get(tid, 0) + monto
+
+        MARGEN_ALERTA_PCT = 15.0
 
         # Facturas y pedidos actuales, para poder: (a) usar el importe REAL y
         # actualizado de la factura cuando un presupuesto la tenga asociada, y
@@ -168,6 +207,8 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "margen": round(margen, 2),
                 "margenPct": round(margen_pct, 1),
             })
+            order_for_dev = orders_by_id.get(order_id) if order_id else None
+            _enrich_row(rows[-1], ref, costs_by_cat, cobrado_by_target, MARGEN_ALERTA_PCT, order_for_dev)
 
         # Pedidos creados directamente (sin presupuesto de origen), p.ej. desde
         # confirmacion de pedido de cocina. Si ya estan facturados se omiten
@@ -202,6 +243,7 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "margen": round(margen, 2),
                 "margenPct": round(margen_pct, 1),
             })
+            _enrich_row(rows[-1], ref, costs_by_cat, cobrado_by_target, MARGEN_ALERTA_PCT, None)
 
         # Facturas creadas directamente (sin presupuesto de origen).
         for iid, inv in invoices_by_id.items():
@@ -232,10 +274,19 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "margen": round(margen, 2),
                 "margenPct": round(margen_pct, 1),
             })
+            _enrich_row(rows[-1], ref, costs_by_cat, cobrado_by_target, MARGEN_ALERTA_PCT, None)
 
         rows.sort(key=lambda r: r.get("fecha") or "", reverse=True)
 
         tot_margen = tot_venta - tot_coste
+        tot_cobrado = sum(r.get("cobrado", 0) for r in rows)
+        tot_pendiente = sum(r.get("pendienteCobro", 0) for r in rows)
+        alertas = [r for r in rows if r.get("alertaMargen")]
+        # Pipeline: documentos aun no facturados (margen esperado de lo que esta en curso).
+        pipeline_rows = [r for r in rows if not r.get("invoiceId")]
+        pipeline_venta = sum(r.get("venta", 0) for r in pipeline_rows)
+        pipeline_margen = sum(r.get("margen", 0) for r in pipeline_rows)
+
         return {
             "rows": rows,
             "totales": {
@@ -244,11 +295,43 @@ async def get_rentabilidad(userId: Optional[str] = None):
                 "margen": round(tot_margen, 2),
                 "margenPct": round((tot_margen / tot_venta * 100) if tot_venta > 0 else 0, 1),
                 "proyectos": len(rows),
+                "cobrado": round(tot_cobrado, 2),
+                "pendienteCobro": round(tot_pendiente, 2),
+                "alertasMargen": len(alertas),
+                "pipeline": {
+                    "documentos": len(pipeline_rows),
+                    "venta": round(pipeline_venta, 2),
+                    "margen": round(pipeline_margen, 2),
+                },
             },
         }
     except Exception as e:
         logger.error(f"Get rentabilidad error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/rentabilidad/por-periodo")
+async def rentabilidad_por_periodo(userId: Optional[str] = None):
+    """Agrupa la rentabilidad por mes (YYYY-MM) para ver la evolucion de venta,
+    coste y margen en el tiempo, en vez de solo el acumulado total."""
+    data = await get_rentabilidad(userId=userId)
+    meses = {}
+    for r in data["rows"]:
+        fecha = str(r.get("fecha") or "")[:7]
+        if not fecha:
+            fecha = "sin-fecha"
+        m = meses.setdefault(fecha, {"periodo": fecha, "venta": 0.0, "coste": 0.0, "margen": 0.0, "documentos": 0})
+        m["venta"] += r.get("venta", 0)
+        m["coste"] += r.get("coste", 0)
+        m["margen"] += r.get("margen", 0)
+        m["documentos"] += 1
+    out = sorted(meses.values(), key=lambda m: m["periodo"])
+    for m in out:
+        m["venta"] = round(m["venta"], 2)
+        m["coste"] = round(m["coste"], 2)
+        m["margen"] = round(m["margen"], 2)
+        m["margenPct"] = round((m["margen"] / m["venta"] * 100) if m["venta"] > 0 else 0, 1)
+    return {"periodos": out}
 
 
 # ----------------------------- IMPORTAR FACTURA (IA) -----------------------------

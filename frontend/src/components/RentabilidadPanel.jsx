@@ -27,6 +27,7 @@ const RentabilidadPanel = ({ currentUser }) => {
   const [importing, setImporting] = useState(false);
   const [invoice, setInvoice] = useState(null);
   const [analytics, setAnalytics] = useState({ bySupplier: [], byCategory: [], byMonth: [] });
+  const [periodos, setPeriodos] = useState([]);
 
   // Filtros por columna
   const [columnFilters, setColumnFilters] = useState({
@@ -53,6 +54,8 @@ const RentabilidadPanel = ({ currentUser }) => {
       if (r.ok) setData(await r.json());
       const a = await fetch(`${API_URL}/api/rentabilidad/analytics`);
       if (a.ok) setAnalytics(await a.json());
+      const per = await fetch(`${API_URL}/api/rentabilidad/por-periodo`);
+      if (per.ok) setPeriodos((await per.json()).periodos || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -372,12 +375,64 @@ const RentabilidadPanel = ({ currentUser }) => {
       )}
 
       {/* Totales */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div className="bg-indigo-600 text-white p-4 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Venta total</p><p className="text-2xl font-black">{eur(t.venta)}</p></div>
         <div className="bg-orange-600 text-white p-4 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Coste total</p><p className="text-2xl font-black">{eur(t.coste)}</p></div>
         <div className={`${(t.margen || 0) >= 0 ? 'bg-emerald-600' : 'bg-red-600'} text-white p-4 rounded-2xl`}><p className="text-[10px] uppercase opacity-80">Margen total</p><p className="text-2xl font-black">{eur(t.margen)}</p><p className="text-[11px] opacity-80">{t.margenPct}%</p></div>
         <div className="bg-slate-800 text-white p-4 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Proyectos</p><p className="text-2xl font-black">{t.proyectos || 0}</p></div>
       </div>
+
+      {/* Métricas de controller: cobro pendiente, alertas de margen y pipeline */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white border border-slate-200 p-4 rounded-2xl">
+          <p className="text-[10px] uppercase text-slate-400 font-black">Cobrado (ingresos a cuenta)</p>
+          <p className="text-xl font-black text-emerald-600">{eur(t.cobrado)}</p>
+        </div>
+        <div className="bg-white border border-slate-200 p-4 rounded-2xl">
+          <p className="text-[10px] uppercase text-slate-400 font-black">Pendiente de cobro</p>
+          <p className={`text-xl font-black ${(t.pendienteCobro || 0) > 0 ? 'text-amber-600' : 'text-slate-700'}`}>{eur(t.pendienteCobro)}</p>
+        </div>
+        <div className="bg-white border border-slate-200 p-4 rounded-2xl">
+          <p className="text-[10px] uppercase text-slate-400 font-black">Alertas margen bajo (&lt;15%)</p>
+          <p className={`text-xl font-black ${(t.alertasMargen || 0) > 0 ? 'text-red-600' : 'text-slate-700'}`}>{t.alertasMargen || 0}</p>
+        </div>
+        <div className="bg-white border border-slate-200 p-4 rounded-2xl">
+          <p className="text-[10px] uppercase text-slate-400 font-black">Pipeline (sin facturar)</p>
+          <p className="text-xl font-black text-indigo-600">{eur(t.pipeline?.venta)}</p>
+          <p className="text-[11px] text-slate-400">{t.pipeline?.documentos || 0} documentos · margen esperado {eur(t.pipeline?.margen)}</p>
+        </div>
+      </div>
+
+      {/* Evolución mensual: venta/coste/margen por periodo */}
+      {periodos.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-6 overflow-x-auto">
+          <h3 className="text-xs font-black text-slate-600 uppercase mb-3">Evolución mensual (venta - coste = margen)</h3>
+          <table className="w-full text-sm min-w-[480px]">
+            <thead className="text-slate-400">
+              <tr>
+                <th className="text-left p-1.5 text-[10px] font-black uppercase">Mes</th>
+                <th className="text-right p-1.5 text-[10px] font-black uppercase">Venta</th>
+                <th className="text-right p-1.5 text-[10px] font-black uppercase">Coste</th>
+                <th className="text-right p-1.5 text-[10px] font-black uppercase">Margen</th>
+                <th className="text-right p-1.5 text-[10px] font-black uppercase">%</th>
+                <th className="text-right p-1.5 text-[10px] font-black uppercase">Docs</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {periodos.slice(-12).map(m => (
+                <tr key={m.periodo}>
+                  <td className="p-1.5 font-bold text-slate-700">{m.periodo}</td>
+                  <td className="p-1.5 text-right font-mono">{eur(m.venta)}</td>
+                  <td className="p-1.5 text-right font-mono text-orange-600">{eur(m.coste)}</td>
+                  <td className={`p-1.5 text-right font-mono font-bold ${m.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m.margen)}</td>
+                  <td className={`p-1.5 text-right font-bold ${m.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{m.margenPct}%</td>
+                  <td className="p-1.5 text-right text-slate-400">{m.documentos}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Barra de filtros activos */}
       {hasActiveFilters && (
@@ -402,6 +457,7 @@ const RentabilidadPanel = ({ currentUser }) => {
               <SortHeader col="coste" label="Coste" align="right" />
               <SortHeader col="margen" label="Margen" align="right" />
               <SortHeader col="margenPct" label="%" align="right" />
+              <th className="text-right p-3 text-xs font-black uppercase">Pendiente cobro</th>
               <th className="text-center p-3 text-xs font-black uppercase">Costes</th>
               <th className="text-center p-3 text-xs font-black uppercase">Documento</th>
             </tr>
@@ -489,6 +545,7 @@ const RentabilidadPanel = ({ currentUser }) => {
                 </div>
               </th>
               <th className="p-1.5"></th>
+              <th className="p-1.5"></th>
               <th className="p-1.5">
                 {hasActiveFilters && (
                   <button onClick={clearColumnFilters} className="text-[10px] text-red-500 hover:text-red-700 font-bold">
@@ -500,14 +557,18 @@ const RentabilidadPanel = ({ currentUser }) => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredRows.map((r) => (
-              <tr key={r.projectId || r.orderId || r.invoiceId || r.ref} className="hover:bg-slate-50">
-                <td className="p-3 font-black text-indigo-700">{r.ref || '-'}</td>
+              <tr key={r.projectId || r.orderId || r.invoiceId || r.ref} className={`hover:bg-slate-50 ${r.alertaMargen ? 'bg-red-50/60' : ''}`}>
+                <td className="p-3 font-black text-indigo-700">
+                  {r.alertaMargen && <span title="Margen bajo (<15%)" className="inline-block mr-1 text-red-500">⚠</span>}
+                  {r.ref || '-'}
+                </td>
                 <td className="p-3 text-slate-700">{r.cliente || '-'}</td>
                 <td className="p-3 text-slate-500 text-xs">{r.fecha || '-'}</td>
                 <td className="p-3 text-right font-mono">{eur(r.venta)}</td>
                 <td className="p-3 text-right font-mono text-orange-600">{eur(r.coste)}</td>
                 <td className={`p-3 text-right font-mono font-black ${r.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(r.margen)}</td>
-                <td className={`p-3 text-right font-bold ${r.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{r.margenPct}%</td>
+                <td className={`p-3 text-right font-bold ${r.alertaMargen ? 'text-red-600' : r.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{r.margenPct}%</td>
+                <td className={`p-3 text-right font-mono ${(r.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>{eur(r.pendienteCobro)}</td>
                 <td className="p-3 text-center">
                   <button onClick={() => openCosts(r)} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-100 flex items-center gap-1 mx-auto">
                     <Plus size={12} /> Coste
@@ -542,7 +603,7 @@ const RentabilidadPanel = ({ currentUser }) => {
               </tr>
             ))}
             {filteredRows.length === 0 && (
-              <tr><td colSpan={9} className="p-8 text-center text-slate-400">{loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : 'Sin proyectos'}</td></tr>
+              <tr><td colSpan={10} className="p-8 text-center text-slate-400">{loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : 'Sin proyectos'}</td></tr>
             )}
           </tbody>
         </table>
