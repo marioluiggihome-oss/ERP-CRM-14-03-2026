@@ -67,6 +67,32 @@ function GuidedSelect({ value, onChange, options, placeholder }) {
   );
 }
 
+// Compone un brief profesional a partir de los datos estructurados del proyecto
+// (distribución, estilo, acabados, medidas de paredes). Así el render usa TODA la
+// información del proyecto, como haría un diseñador, y no solo un texto suelto.
+function buildProjectBrief(project) {
+  const p = project || {};
+  const parts = [];
+  if (p.layout) parts.push(`Distribución: ${p.layout}.`);
+  if (p.style) parts.push(`Estilo: ${p.style}.`);
+  if (p.cabinet_material) parts.push(`Frentes de los muebles: ${p.cabinet_material}.`);
+  if (p.countertop_material) parts.push(`Encimera: ${p.countertop_material}.`);
+  if (p.description) parts.push(`Notas del cliente: ${p.description}.`);
+
+  const ms = p.measurements || [];
+  if (ms.length) {
+    const dims = ms.map(m => {
+      const seg = [];
+      if (m.wall_width || m.wall_height) seg.push(`${m.wall_width || '?'}×${m.wall_height || '?'} cm`);
+      if (m.window_width) seg.push(`ventana ${m.window_width}×${m.window_height || '?'} cm`);
+      if (m.door_width) seg.push(`puerta ${m.door_width}×${m.door_height || '?'} cm`);
+      return `${m.wall_label || 'pared'} (${seg.join(', ') || 'sin medidas'})`;
+    });
+    parts.push(`Medidas reales de las paredes (respétalas a escala): ${dims.join('; ')}.`);
+  }
+  return parts.join(' ');
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function assetSrc(url) {
   if (!url) return '';
@@ -863,12 +889,14 @@ function RendersTab({ project, onRefresh }) {
       const labelNote = sketches.length
         ? 'Bocetos por pared (en orden): ' + sketches.map((s, i) => `${i + 1}) ${s.label || 'pared'}`).join('; ') + '.'
         : '';
+      // Brief profesional = datos del proyecto + acabados manuales + etiquetas.
+      const projectBrief = buildProjectBrief(project);
       await apiCall(`/${project.id}/render-compose`, {
         method: 'POST',
         body: JSON.stringify({
           floor_plan: floorPlan,
           wall_sketches: sketches.map(s => s.data),
-          brief: [composeBrief, labelNote].filter(Boolean).join(' '),
+          brief: [projectBrief, composeBrief, labelNote].filter(Boolean).join(' '),
         }),
       });
       await onRefresh();
@@ -938,10 +966,18 @@ function RendersTab({ project, onRefresh }) {
           </div>
         </div>
 
-        {/* Brief de acabados */}
+        {/* Ficha del proyecto que la IA usará automáticamente */}
+        {buildProjectBrief(project) && (
+          <div className="mb-3 rounded-lg bg-white border border-indigo-100 px-3 py-2">
+            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mb-0.5">El render usará la ficha del proyecto</p>
+            <p className="text-[11px] text-slate-500 leading-snug">{buildProjectBrief(project)}</p>
+          </div>
+        )}
+
+        {/* Brief de acabados (se suma a la ficha del proyecto) */}
         <textarea value={composeBrief} onChange={e => setComposeBrief(e.target.value)} rows={2}
           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-3"
-          placeholder="Acabados deseados: colores, materiales, estilo… (ej: 'frentes verde salvia mate, encimera porcelánico blanco, tiradores gola negros, suelo madera clara')" />
+          placeholder="Detalles extra opcionales: tiradores, suelo, paredes, iluminación… (ej: 'tiradores gola negros, suelo madera clara, luz cálida bajo muebles altos')" />
 
         <button onClick={handleCompose} disabled={isComposing}
           className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
