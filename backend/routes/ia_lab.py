@@ -297,7 +297,12 @@ RAZONA DE FORMA METÓDICA ANTES DE RESPONDER (piensa paso a paso):
   · alto altos: 35–90 cm · alto bajos: 70–90 cm · columnas: 200–240 cm
   · fondo: ~33 cm en altos, ~58 cm en bajos
   Si una medida se sale de rango (p.ej. fondo de 5 mm), es un ERROR: corrígela al estándar más cercano.
-- Prioriza los anchos ROTULADOS en el plano; no inventes medidas.
+- Prioriza los anchos ROTULADOS en el plano; no inventes medidas. Lee las líneas de
+  cota y las cifras escritas junto a cada mueble: esa es la fuente de verdad del ancho.
+- Si hay una ISLA o PENÍNSULA, detéctala como una fila de bajos independiente (sus
+  propios módulos) y NO la confundas con la fila pegada a la pared.
+- Si el plano indica una ESCALA o una medida total de pared, úsala para repartir los
+  anchos de los módulos de forma coherente (que la suma de anchos cuadre con el tramo).
 
 COMPLETITUD (CRÍTICO — el error más habitual es DETECTAR DE MENOS):
 - Detecta CADA módulo por separado, no solo los evidentes. Una cocina en L o en U

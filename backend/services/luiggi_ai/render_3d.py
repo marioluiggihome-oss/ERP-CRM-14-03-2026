@@ -174,18 +174,38 @@ class Render3DService:
 
         # Instrucciones técnicas finales
         prompt_parts.extend([
-            "Camera angle: eye-level perspective showing the full kitchen layout.",
-            "Realism: photorealistic PBR materials with accurate roughness and reflectivity, "
-            "realistic global illumination and contact shadows, true-to-scale proportions, "
-            "natural color grading. It must look like a REAL photograph, NOT a 3D cartoon: "
-            "avoid plastic-looking surfaces, flat lighting, oversaturated colors and any "
-            "CGI/videogame look.",
-            "Consistency: keep cabinet doors, drawers and handles straight, evenly spaced "
-            "and aligned; do not duplicate, merge, warp or omit cabinet modules; walls, "
-            "floor lines and countertop edges must stay straight and in correct perspective.",
+            # Escala y proporciones reales de cocina (anclaje físico)
+            "Real-world kitchen proportions: base cabinets ~90 cm high with a recessed "
+            "toe-kick plinth at the floor, wall cabinets mounted with a ~55-60 cm gap above "
+            "the worktop, a continuous worktop of consistent thickness with a matching "
+            "upstand/backsplash, and seamless integrated appliances flush with the cabinet "
+            "fronts. Keep all module widths, heights and gaps to realistic cabinetry scale.",
+            # Cámara y óptica
+            "Camera: eye-level (~150 cm) interior photograph on a full-frame DSLR with a "
+            "24-35 mm lens, two-point perspective from a front corner, vertical lines kept "
+            "perfectly straight (no fisheye distortion), showing the full kitchen layout.",
+            # Materiales y luz fotorrealistas
+            "Realism: physically-based (PBR) materials with accurate roughness, micro-detail "
+            "and reflectivity — visible wood grain, true stone/quartz veining that wraps the "
+            "worktop edge, satin or matte lacquer with subtle sheen, brushed metal hardware. "
+            "Realistic global illumination, soft directional daylight from a window, accurate "
+            "contact shadows, ambient occlusion and subtle reflections on glossy surfaces. "
+            "Neutral white balance, natural color grading, high dynamic range. It must look "
+            "like a REAL professional interior photograph.",
+            # Coherencia geométrica
+            "Consistency: keep cabinet doors, drawers and handles straight, equal in size, "
+            "evenly spaced and perfectly aligned; reveal gaps between fronts uniform; do not "
+            "duplicate, merge, warp, bend or omit cabinet modules; walls, floor joints, "
+            "worktop edges and ceiling lines must stay straight and in correct perspective.",
+            # Composición
             "Composition: wide-angle shot in 16:9 landscape orientation, framing the full "
-            "kitchen run from a corner so all cabinetry is visible.",
-            "No text, watermarks, logos, people, or distorted/extra objects in the image.",
+            "kitchen run from a corner so all cabinetry is visible, well-balanced and uncluttered.",
+            # Prompt negativo explícito (lo que NO debe aparecer)
+            "Negative — strictly avoid: cartoon / CGI / videogame / 3D-render look, plastic or "
+            "waxy surfaces, flat or ambient-only lighting, oversaturated or neon colors, blurry "
+            "or low-detail textures, warped or melted geometry, crooked or misaligned doors, "
+            "floating cabinets, duplicated or merged modules, extra invented appliances or "
+            "decoration, people, hands, text, watermarks, logos and reflections of a camera.",
         ])
 
         return " ".join(prompt_parts)
@@ -340,10 +360,20 @@ class Render3DService:
         }
         style_desc = style_instructions.get(style, style_instructions["photorealistic"])
 
+        is_kitchen = "kitchen" in (space_type or "").lower() or "cocina" in (space_type or "").lower()
+        kitchen_scale = (
+            "Use real kitchen cabinetry scale: base units ~90 cm high with a recessed toe-kick "
+            "plinth, wall units mounted ~55-60 cm above a continuous worktop of uniform thickness "
+            "with a matching upstand/backsplash, and appliances integrated flush with the fronts; "
+            "keep reveal gaps between fronts uniform. "
+            if is_kitchen else ""
+        )
+
         parts = [
             f"{style_desc}.",
             f"Subject: a {space_type}.",
             f"Design brief (follow it precisely): {(description or '').strip()}",
+            kitchen_scale,
             "Reproduce EXACTLY the elements described in the brief: the requested "
             "type of piece, exterior doors, finishes and colors, handles/pulls, "
             "materials, and the interior configuration (shelves, columns, drawers, "
@@ -378,17 +408,27 @@ class Render3DService:
         except Exception:
             return desc
         instruction = (
-            "Eres director de arte de renders fotorrealistas de mobiliario y cocinas. "
-            "A partir del brief del cliente, redacta UNA especificación de render en INGLÉS, "
-            "muy explícita y ordenada, que un modelo de imagen seguirá al pie de la letra.\n"
+            "Eres director de arte y prompt engineer de renders fotorrealistas de mobiliario "
+            "y cocinas a partir de planos, bocetos y medidas. A partir del brief del cliente, "
+            "redacta UNA especificación de render en INGLÉS, muy explícita y ordenada, que un "
+            "modelo de imagen seguirá al pie de la letra para producir una FOTO profesional.\n"
             "REGLAS:\n"
-            "- Conserva TODOS los detalles del cliente; no contradigas nada de lo que pide.\n"
-            "- NO inventes una cocina si el cliente no la pide (respeta el tipo de pieza/espacio).\n"
-            "- Enumera con precisión: tipo de pieza/espacio; distribución y módulos (nº y tamaño "
-            "de puertas, cajones, baldas y columnas); materiales y acabados exactos; colores; "
-            "tiradores; encimera; electrodomésticos; suelo; paredes; iluminación; ambiente; y "
-            "ángulo de cámara.\n"
-            "- Respeta medidas/proporciones si se dan. Nada de texto, marcas de agua ni personas.\n"
+            "- Conserva TODOS los detalles del cliente; no contradigas ni omitas nada de lo que pide.\n"
+            "- NO inventes una cocina si el cliente no la pide (respeta el tipo de pieza/espacio). "
+            "Si NO se menciona un elemento (electrodoméstico, isla, decoración…), NO lo añadas.\n"
+            "- Enumera con precisión y en este orden: tipo de pieza/espacio; distribución "
+            "(en L, en U, lineal, con isla…) y módulos de IZQUIERDA a DERECHA con su nº y tamaño "
+            "de puertas/cajones/baldas/columnas; materiales y acabados exactos con su textura "
+            "(veta de madera, vetas de piedra/cuarzo, lacas mate/satinadas); colores precisos; "
+            "tiradores; encimera (material, grosor y canto) y copete/frontal; electrodomésticos "
+            "integrados; zócalo; suelo; paredes; iluminación; ambiente; y ángulo de cámara.\n"
+            "- Si es una COCINA, especifica proporciones reales: bajos ~90 cm con zócalo "
+            "retranqueado, altos a ~55-60 cm sobre la encimera, encimera continua de grosor "
+            "uniforme, electrodomésticos enrasados con los frentes y juntas/holguras regulares.\n"
+            "- Respeta SIEMPRE las medidas/proporciones si se dan; no las cambies. Termina con "
+            "instrucciones de fotorrealismo (materiales PBR, luz natural, sombras y reflejos "
+            "reales) y un breve prompt negativo (nada de aspecto cartoon/CGI, plástico, "
+            "geometría deformada, módulos duplicados, texto, marcas de agua ni personas).\n"
             f"- Tipo de pieza/espacio detectado: {space_type}.\n\n"
             f"BRIEF DEL CLIENTE:\n{desc}\n\n"
             "Devuelve SOLO la especificación de render (sin encabezados ni explicaciones)."
@@ -538,21 +578,34 @@ class Render3DService:
         )
         refs_block = "\n".join(ref_lines)
         task_prompt = (
-            "You are given MULTIPLE reference images that you must COMBINE into ONE single "
-            "photorealistic interior render:\n" + refs_block + "\n\n"
+            "You are a professional architectural visualizer. You are given MULTIPLE reference "
+            "images that you must COMBINE into ONE single photorealistic interior render:\n"
+            + refs_block + "\n\n"
+            "TREAT THE REFERENCES AS AUTHORITATIVE GEOMETRY. The floor plan defines the exact "
+            "room shape, wall lengths and the position/length of every cabinet run, island, "
+            "door and window — keep these positions, alignments and proportions to scale. Each "
+            "wall sketch defines the exact elevation of that wall: reproduce the SAME number, "
+            "order, width and height of modules (base units, wall units, tall columns, drawers, "
+            "open shelves and appliances) shown there. Count the fronts in each sketch and match "
+            "them exactly — do not add, remove, merge or reorder modules.\n\n"
             "Produce a single ultra-photorealistic photograph of the FINISHED space that is "
             "FAITHFUL at the same time to the floor-plan layout and to EACH wall sketch, "
-            "applying the finishes, colors and materials described in the brief. Keep geometry, "
-            "proportions and the number/size of modules consistent with the plan and the "
-            "sketches; do NOT invent extra walls, appliances, furniture, decorative objects "
-            "or architectural elements (windows, doors, columns…) that do not appear in the "
-            "reference images or the brief, and do NOT omit any element that DOES appear in "
-            "them. If a reference image is unclear about a detail, keep that area plain and "
-            "neutral instead of guessing or filling it with invented content.\n\n"
+            "applying the finishes, colors and materials described in the brief. If this is a "
+            "kitchen, use real cabinetry scale: base units ~90 cm with a recessed toe-kick, "
+            "wall units ~55-60 cm above a continuous worktop of uniform thickness with a "
+            "matching upstand, and appliances integrated flush with the fronts. Do NOT invent "
+            "extra walls, appliances, furniture, decorative objects or architectural elements "
+            "(windows, doors, columns…) that do not appear in the reference images or the brief, "
+            "and do NOT omit any element that DOES appear in them. If a reference is unclear "
+            "about a detail, keep that area plain and neutral instead of guessing.\n\n"
             f"{prompt}\n\n"
-            "The result must look like a real professional interior photograph (PBR materials, "
-            "natural light, realistic soft shadows and reflections), NOT a cartoon or videogame "
-            "image. Avoid plastic, flat or oversaturated looks. No text, watermarks or logos."
+            "The result must look like a real professional interior photograph: PBR materials "
+            "with accurate roughness and reflectivity, natural directional daylight, realistic "
+            "soft shadows, ambient occlusion and subtle reflections, neutral white balance and "
+            "true-to-scale proportions. Negative — strictly avoid: cartoon/CGI/videogame look, "
+            "plastic or flat surfaces, oversaturated colors, warped or melted geometry, crooked "
+            "or duplicated modules, floating cabinets, invented decor, people, text, watermarks "
+            "and logos."
         )
         parsed_params["hasReference"] = True
         parsed_params["referenceCount"] = len(images)
