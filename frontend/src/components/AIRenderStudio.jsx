@@ -151,6 +151,19 @@ const MATERIALS = {
   ],
 };
 
+// Cabecera de paso numerada para ordenar la petición de datos del render.
+function StepHeader({ n, title, hint }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center">{n}</span>
+      <div className="leading-tight">
+        <p className="text-xs font-black text-slate-700 uppercase tracking-wider">{title}</p>
+        {hint && <p className="text-[11px] text-slate-400 font-medium">{hint}</p>}
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente Principal ────────────────────────────────────────────────────
 export default function AIRenderStudio({ state }) {
   const [mode, setMode] = useState('natural'); // 'natural' | 'params'
@@ -403,11 +416,8 @@ export default function AIRenderStudio({ state }) {
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
             <div className="flex-1 flex flex-col p-6 gap-5">
-              <div className="text-center">
-                <p className="text-sm text-slate-600 font-medium">
-                  Describe lo que quieres (cocina, armario, baño, mueble a medida…). Puedes hablar o escribir.
-                </p>
-              </div>
+              {/* PASO 1 — Describe el diseño */}
+              <StepHeader n={1} title="Describe el diseño" hint="Cocina, armario, baño o mueble a medida. Puedes hablar o escribir." />
 
               {/* Botón de micrófono grande */}
               <div className="flex justify-center">
@@ -469,11 +479,9 @@ export default function AIRenderStudio({ state }) {
                 />
               </div>
 
-              {/* Selector de estilo rápido */}
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">
-                  Estilo de render
-                </label>
+              {/* PASO 2 — Estilo de render */}
+              <div className="flex flex-col gap-2">
+                <StepHeader n={2} title="Estilo de render" hint="Cómo quieres que se vea la imagen final." />
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {MATERIALS.styles.map(s => (
                     <button
@@ -491,13 +499,11 @@ export default function AIRenderStudio({ state }) {
                 </div>
               </div>
 
-              {/* Plano en planta + bocetos por pared → render fiel a la distribución y a cada pared */}
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 flex flex-col gap-2">
-                <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Image size={14} /> Plano + bocetos por pared
-                </p>
-                <p className="text-[11px] text-slate-500 -mt-1">
-                  Sube el plano en planta y un boceto por cada pared: el render seguirá la distribución del plano y el diseño de cada pared, con el acabado del brief de arriba.
+              {/* PASO 3 — Plano + bocetos por pared (opcional, máxima fidelidad) */}
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 flex flex-col gap-2.5">
+                <StepHeader n={3} title="Plano + bocetos (opcional)" hint="Para máxima fidelidad: sube el plano en planta y un boceto por cada pared." />
+                <p className="text-[11px] text-slate-500">
+                  El render seguirá la distribución del plano y el diseño de cada pared, con el acabado descrito en el paso 1.
                 </p>
                 <label className={`text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg ${floorPlan ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50'}`}>
                   {floorPlan ? <><CheckCircle size={13} /> Plano en planta cargado</> : <><Image size={13} /> Subir plano en planta</>}
@@ -525,7 +531,12 @@ export default function AIRenderStudio({ state }) {
                 </button>
               </div>
 
-              {/* Botón generar */}
+              {/* Separador entre las dos vías de generación */}
+              <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                <span className="flex-1 h-px bg-slate-200" /> o <span className="flex-1 h-px bg-slate-200" />
+              </div>
+
+              {/* Botón generar (solo desde la descripción del paso 1) */}
               <button
                 onClick={handleGenerateNatural}
                 disabled={!description.trim() || isGenerating}
@@ -539,7 +550,7 @@ export default function AIRenderStudio({ state }) {
                 ) : (
                   <>
                     <Send size={18} />
-                    Generar Render 3D
+                    Generar desde la descripción
                   </>
                 )}
               </button>
