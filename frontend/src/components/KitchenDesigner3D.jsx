@@ -93,6 +93,51 @@ function buildProjectBrief(project) {
   return parts.join(' ');
 }
 
+// Validador ergonómico: revisa el diseño con criterio de diseñador profesional
+// y devuelve avisos. Solo lee datos del proyecto (muebles + medidas).
+function ergonomicChecks(project) {
+  const out = [];
+  const cabs = project?.cabinets || [];
+  const ms = project?.measurements || [];
+  const txt = (c) => `${c.cabinet_type || ''} ${c.notes || ''}`.toLowerCase();
+  const has = (re) => cabs.some(c => re.test(txt(c)));
+
+  if (!cabs.length) {
+    out.push({ level: 'info', msg: 'Añade los muebles para poder revisar el diseño (triángulo de trabajo, holguras, etc.).' });
+    return out;
+  }
+
+  // 1) Triángulo de trabajo: fregadero + placa/cocción + frigorífico
+  const sink = has(/fregader|sink|seno/);
+  const hob = has(/placa|cocci|induc|vitro|hob|cooktop|fuego/);
+  const fridge = has(/nevera|frigor|fridge|combi/);
+  const falta = [!sink && 'fregadero', !hob && 'placa de cocción', !fridge && 'frigorífico'].filter(Boolean);
+  if (falta.length) out.push({ level: 'warn', msg: `Triángulo de trabajo incompleto: falta ${falta.join(', ')}. Una cocina funcional necesita fregadero, cocción y frío bien repartidos.` });
+  else out.push({ level: 'ok', msg: 'Triángulo de trabajo completo (fregadero, cocción y frío).' });
+
+  // 2) Hay base (bajos) y almacenaje alto
+  const bajos = cabs.filter(c => /bajo|base|isla|penin/.test(txt(c)));
+  const altos = cabs.filter(c => /alto|pared|wall|column|torre|despens/.test(txt(c)));
+  if (!bajos.length) out.push({ level: 'warn', msg: 'No hay muebles bajos: no habrá encimera de trabajo continua.' });
+  if (!altos.length) out.push({ level: 'info', msg: 'No hay muebles altos ni columnas: revisa si el almacenaje es suficiente.' });
+
+  // 3) Ocupación por pared (suma de anchos vs ancho de pared)
+  const wallW = {};
+  ms.forEach(m => { if (m.wall_label && m.wall_width) wallW[m.wall_label] = Number(m.wall_width); });
+  const sumByWall = {};
+  cabs.forEach(c => { if (c.wall_label && c.width) sumByWall[c.wall_label] = (sumByWall[c.wall_label] || 0) + Number(c.width) / 10; }); // mm→cm
+  Object.entries(sumByWall).forEach(([w, sum]) => {
+    if (wallW[w] && sum > wallW[w] + 2) out.push({ level: 'warn', msg: `La pared "${w}" se queda corta: los muebles suman ~${Math.round(sum)} cm y la pared mide ${wallW[w]} cm.` });
+  });
+
+  // 4) Coherencia de materiales (máx. 2-3 acabados principales)
+  const mats = new Set(cabs.map(c => (c.material || '').trim().toLowerCase()).filter(Boolean));
+  const cols = new Set(cabs.map(c => (c.color || '').trim().toLowerCase()).filter(Boolean));
+  if (mats.size + cols.size > 3) out.push({ level: 'info', msg: `Hay ${mats.size + cols.size} acabados/colores distintos: un diseño profesional suele limitarse a 2-3 que armonicen.` });
+
+  return out;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function assetSrc(url) {
   if (!url) return '';
@@ -912,6 +957,32 @@ function RendersTab({ project, onRefresh }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6">
       <h3 className="text-lg font-bold text-slate-800 mb-4">Renders 3D</h3>
+
+      {/* Revisión profesional del diseño (validador ergonómico) */}
+      {(() => {
+        const checks = ergonomicChecks(project);
+        if (!checks.length) return null;
+        const styleByLevel = {
+          ok: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          warn: 'bg-amber-50 text-amber-800 border-amber-200',
+          info: 'bg-slate-50 text-slate-600 border-slate-200',
+        };
+        const iconByLevel = { ok: '✅', warn: '⚠️', info: 'ℹ️' };
+        return (
+          <div className="mb-5 rounded-xl border border-slate-200 p-4">
+            <p className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <CheckCircle size={14} className="text-indigo-600" /> Revisión profesional del diseño
+            </p>
+            <ul className="space-y-1.5">
+              {checks.map((c, i) => (
+                <li key={i} className={`text-[12px] leading-snug border rounded-lg px-3 py-1.5 ${styleByLevel[c.level]}`}>
+                  <span className="mr-1.5">{iconByLevel[c.level]}</span>{c.msg}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
 
       <div className="flex gap-3 mb-4">
         <button onClick={handleGenerate} disabled={isGenerating}
