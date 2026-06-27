@@ -29,6 +29,14 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const LAYOUT_OPTIONS = ['En L', 'En U', 'Lineal (en una pared)', 'En paralelo (dos frentes)', 'Con isla', 'Con península'];
 const STYLE_OPTIONS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Mediterráneo'];
 
+// Vistas coherentes de la misma cocina (solo cambia el ángulo de cámara).
+const VIEW_PRESETS = [
+  { label: 'General', note: 'Vista: plano general de toda la cocina desde una esquina, mostrando toda la distribución.' },
+  { label: 'Zona de aguas', note: 'Vista: encuadre de la zona del fregadero y la encimera de trabajo, ángulo frontal cercano.' },
+  { label: 'Zona de cocción', note: 'Vista: encuadre de la zona de la placa de cocción y la campana, ángulo frontal cercano.' },
+  { label: 'Detalle / isla', note: 'Vista: plano de detalle de la isla o península (o de la encimera y los acabados si no hay isla).' },
+];
+
 // Muestras visuales de acabado (swatch) para elegir como en un configurador real.
 // 'bg' es CSS (color o gradiente que imita el material).
 const CABINET_SWATCHES = [
@@ -935,6 +943,8 @@ function RendersTab({ project, onRefresh }) {
   const [sketches, setSketches] = useState([]); // [{label, data}]
   const [composeBrief, setComposeBrief] = useState('');
   const [isComposing, setIsComposing] = useState(false);
+  const [isComposingViews, setIsComposingViews] = useState(false);
+  const [viewProgress, setViewProgress] = useState(null);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -976,28 +986,49 @@ function RendersTab({ project, onRefresh }) {
     const f = e.target.files?.[0]; e.target.value = '';
     if (f) { const data = await fileToDataUrl(f); setSketches(prev => [...prev, { label: `Pared ${prev.length + 1}`, data }]); }
   };
+  // Una sola llamada de render compuesto, con una nota de vista/cámara opcional.
+  const composeOnce = async (viewNote) => {
+    const labelNote = sketches.length
+      ? 'Bocetos por pared (en orden): ' + sketches.map((s, i) => `${i + 1}) ${s.label || 'pared'}`).join('; ') + '.'
+      : '';
+    const projectBrief = buildProjectBrief(project);
+    await apiCall(`/${project.id}/render-compose`, {
+      method: 'POST',
+      body: JSON.stringify({
+        floor_plan: floorPlan,
+        wall_sketches: sketches.map(s => s.data),
+        brief: [projectBrief, composeBrief, labelNote, viewNote].filter(Boolean).join(' '),
+      }),
+    });
+  };
+
   const handleCompose = async () => {
     if (!floorPlan && sketches.length === 0) { alert('Adjunta el plano en planta o al menos un boceto de pared.'); return; }
     setIsComposing(true);
     try {
-      const labelNote = sketches.length
-        ? 'Bocetos por pared (en orden): ' + sketches.map((s, i) => `${i + 1}) ${s.label || 'pared'}`).join('; ') + '.'
-        : '';
-      // Brief profesional = datos del proyecto + acabados manuales + etiquetas.
-      const projectBrief = buildProjectBrief(project);
-      await apiCall(`/${project.id}/render-compose`, {
-        method: 'POST',
-        body: JSON.stringify({
-          floor_plan: floorPlan,
-          wall_sketches: sketches.map(s => s.data),
-          brief: [projectBrief, composeBrief, labelNote].filter(Boolean).join(' '),
-        }),
-      });
+      await composeOnce('');
       await onRefresh();
     } catch (e) {
       alert(e.message);
     } finally {
       setIsComposing(false);
+    }
+  };
+
+  // Genera varias vistas coherentes de la MISMA cocina (mismo plano/bocetos/brief),
+  // variando solo el ángulo de cámara. Cada vista se guarda como un render.
+  const handleComposeViews = async () => {
+    if (!floorPlan && sketches.length === 0) { alert('Adjunta el plano en planta o al menos un boceto de pared.'); return; }
+    setIsComposingViews(true);
+    try {
+      for (let i = 0; i < VIEW_PRESETS.length; i++) {
+        setViewProgress({ current: i + 1, total: VIEW_PRESETS.length, label: VIEW_PRESETS[i].label });
+        try { await composeOnce(VIEW_PRESETS[i].note); } catch { /* sigue con las demás vistas */ }
+      }
+      await onRefresh();
+    } finally {
+      setIsComposingViews(false);
+      setViewProgress(null);
     }
   };
 
@@ -1099,11 +1130,21 @@ function RendersTab({ project, onRefresh }) {
           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-3"
           placeholder="Detalles extra opcionales: tiradores, suelo, paredes, iluminación… (ej: 'tiradores gola negros, suelo madera clara, luz cálida bajo muebles altos')" />
 
-        <button onClick={handleCompose} disabled={isComposing}
-          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
-          {isComposing ? <Loader className="animate-spin" size={16} /> : <Wand2 size={16} />}
-          {isComposing ? 'Generando render fiel…' : 'Generar render fiel (IA)'}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button onClick={handleCompose} disabled={isComposing || isComposingViews}
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
+            {isComposing ? <Loader className="animate-spin" size={16} /> : <Wand2 size={16} />}
+            {isComposing ? 'Generando render fiel…' : 'Generar render fiel (IA)'}
+          </button>
+          <button onClick={handleComposeViews} disabled={isComposing || isComposingViews}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700 disabled:opacity-50">
+            {isComposingViews ? <Loader className="animate-spin" size={16} /> : <Layers size={16} />}
+            {isComposingViews
+              ? `Generando vistas… ${viewProgress ? `(${viewProgress.current}/${viewProgress.total}: ${viewProgress.label})` : ''}`
+              : `Generar ${VIEW_PRESETS.length} vistas`}
+          </button>
+        </div>
+        <p className="text-[11px] text-slate-400 mt-2">«{VIEW_PRESETS.length} vistas» genera varias tomas coherentes de la misma cocina (general, aguas, cocción, detalle).</p>
       </div>
 
       {renders.length > 0 && (
