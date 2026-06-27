@@ -110,6 +110,27 @@ LIGHTING_STYLES = {
 }
 
 
+# Principios de diseño profesional de cocina que el "cerebro" del render debe
+# respetar (en inglés, para el modelo de imagen). Se inyectan cuando la pieza es
+# una cocina, para que el resultado tenga criterio de diseñador, no solo estética.
+PRO_KITCHEN_DESIGN_PRINCIPLES = (
+    "Apply professional kitchen design principles: (1) Work triangle — keep "
+    "sink, hob/cooktop and fridge in a logical, efficient triangle, not crammed "
+    "together nor too far apart. (2) Ergonomic heights — worktop ~90 cm, wall "
+    "units ~55-60 cm above the worktop, extractor hood ~65-75 cm above the hob, "
+    "tall/oven columns with the oven at a comfortable height. (3) Lighting in "
+    "layers — natural daylight, ambient ceiling light and warm under-cabinet task "
+    "lighting over the worktop. (4) Balanced composition and proportions — "
+    "symmetry where it helps, consistent reveal gaps, aligned horizontal lines "
+    "(worktop, wall-unit bottoms, handles). (5) Material coherence — at most 2-3 "
+    "main materials/finishes that harmonize, with the worktop and backsplash "
+    "relating to the cabinet fronts. (6) Realistic detailing — plinth/toe-kick, "
+    "continuous worktop with matching upstand, integrated and aligned appliances, "
+    "visible but tasteful hardware. The space must look designed by a professional "
+    "kitchen designer: functional, ergonomic, well-lit and visually balanced."
+)
+
+
 class Render3DService:
     """Servicio de generación de renders 3D fotorrealistas."""
 
@@ -206,6 +227,7 @@ class Render3DService:
             "or low-detail textures, warped or melted geometry, crooked or misaligned doors, "
             "floating cabinets, duplicated or merged modules, extra invented appliances or "
             "decoration, people, hands, text, watermarks, logos and reflections of a camera.",
+            PRO_KITCHEN_DESIGN_PRINCIPLES,
         ])
 
         return " ".join(prompt_parts)
@@ -394,7 +416,9 @@ class Render3DService:
             "piece and its surrounding space from a corner.",
             "No text, watermarks, logos, people, or distorted/extra objects in the image.",
         ]
-        return " ".join(parts)
+        if is_kitchen:
+            parts.append(PRO_KITCHEN_DESIGN_PRINCIPLES)
+        return " ".join(p for p in parts if p)
 
     async def _expand_brief(self, description: str, space_type: str) -> str:
         """Convierte el brief del usuario en una especificación de render DETALLADA
