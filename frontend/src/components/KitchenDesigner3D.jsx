@@ -28,8 +28,57 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // Se guardan como texto, así que el backend no cambia.
 const LAYOUT_OPTIONS = ['En L', 'En U', 'Lineal (en una pared)', 'En paralelo (dos frentes)', 'Con isla', 'Con península'];
 const STYLE_OPTIONS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Mediterráneo'];
-const CABINET_OPTIONS = ['Blanco mate', 'Blanco brillo', 'Gris antracita', 'Roble natural', 'Nogal', 'Verde salvia', 'Azul marino', 'Negro mate'];
-const COUNTERTOP_OPTIONS = ['Cuarzo blanco', 'Cuarzo Calacatta', 'Granito negro', 'Mármol Carrara', 'Dekton', 'Madera de roble', 'Hormigón pulido', 'Acero inoxidable'];
+
+// Muestras visuales de acabado (swatch) para elegir como en un configurador real.
+// 'bg' es CSS (color o gradiente que imita el material).
+const CABINET_SWATCHES = [
+  { label: 'Blanco mate', bg: '#f5f5f3' },
+  { label: 'Blanco brillo', bg: 'linear-gradient(135deg,#ffffff,#e9eef2)' },
+  { label: 'Gris antracita', bg: '#3a3f44' },
+  { label: 'Roble natural', bg: 'linear-gradient(135deg,#c9a26a,#a9803f)' },
+  { label: 'Nogal', bg: 'linear-gradient(135deg,#6b4421,#4a2c14)' },
+  { label: 'Verde salvia', bg: '#9caa8a' },
+  { label: 'Azul marino', bg: '#2c3e57' },
+  { label: 'Negro mate', bg: '#1c1c1e' },
+];
+const COUNTERTOP_SWATCHES = [
+  { label: 'Cuarzo blanco', bg: '#f3f4f2' },
+  { label: 'Cuarzo Calacatta', bg: 'linear-gradient(135deg,#f7f7f4,#d8d2c4)' },
+  { label: 'Granito negro', bg: 'linear-gradient(135deg,#2b2b2b,#0d0d0d)' },
+  { label: 'Mármol Carrara', bg: 'linear-gradient(135deg,#fafafa,#cfd6da)' },
+  { label: 'Dekton', bg: '#bdbdb6' },
+  { label: 'Madera de roble', bg: 'linear-gradient(135deg,#c9a26a,#a9803f)' },
+  { label: 'Hormigón pulido', bg: '#9a9a96' },
+  { label: 'Acero inoxidable', bg: 'linear-gradient(135deg,#d7dadd,#a7adb3)' },
+];
+
+// Selector de muestras visuales con opción libre.
+function SwatchPicker({ value, onChange, swatches }) {
+  const isOther = value && !swatches.some(s => s.label === value);
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-4 gap-2">
+        {swatches.map(s => (
+          <button type="button" key={s.label} onClick={() => onChange(s.label)} title={s.label}
+            className={`group relative rounded-lg overflow-hidden border-2 transition-all ${value === s.label ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'}`}>
+            <span className="block h-10 w-full" style={{ background: s.bg }} />
+            <span className="block text-[9px] font-bold text-slate-600 px-1 py-0.5 leading-tight truncate">{s.label}</span>
+            {value === s.label && <CheckCircle size={14} className="absolute top-1 right-1 text-white drop-shadow" />}
+          </button>
+        ))}
+        <button type="button" onClick={() => onChange(isOther ? value : ' ')} title="Otro acabado"
+          className={`rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-[10px] font-bold transition-all ${isOther ? 'border-indigo-600 text-indigo-600 ring-2 ring-indigo-200' : 'border-slate-300 text-slate-500 hover:border-slate-400'}`}>
+          <span className="h-10 flex items-center justify-center">+</span>
+          <span className="px-1 py-0.5">Otro…</span>
+        </button>
+      </div>
+      {isOther && (
+        <input type="text" autoFocus value={value.trimStart()} onChange={e => onChange(e.target.value)}
+          className="w-full px-3 py-2 border border-indigo-300 rounded-lg text-sm" placeholder="Acabado personalizado" />
+      )}
+    </div>
+  );
+}
 
 // Cabecera de paso numerada para ordenar la petición de datos.
 function StepHeader({ n, title, hint }) {
@@ -397,14 +446,14 @@ function NewProjectForm({ onBack, onCreated }) {
           {/* PASO 3 — Acabados */}
           <div className="space-y-3 border-t border-slate-100 pt-5">
             <StepHeader n={3} title="Acabados" hint="Material de muebles y encimera." />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Material muebles</label>
-                <GuidedSelect value={form.cabinet_material} onChange={v => setForm({...form, cabinet_material: v})} options={CABINET_OPTIONS} placeholder="Elige acabado…" />
+                <label className="block text-sm font-bold text-slate-700 mb-2">Frentes de los muebles</label>
+                <SwatchPicker value={form.cabinet_material} onChange={v => setForm({...form, cabinet_material: v})} swatches={CABINET_SWATCHES} />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Material encimera</label>
-                <GuidedSelect value={form.countertop_material} onChange={v => setForm({...form, countertop_material: v})} options={COUNTERTOP_OPTIONS} placeholder="Elige encimera…" />
+                <label className="block text-sm font-bold text-slate-700 mb-2">Encimera</label>
+                <SwatchPicker value={form.countertop_material} onChange={v => setForm({...form, countertop_material: v})} swatches={COUNTERTOP_SWATCHES} />
               </div>
             </div>
           </div>
