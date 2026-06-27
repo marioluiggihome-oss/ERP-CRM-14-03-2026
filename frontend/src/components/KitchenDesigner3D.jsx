@@ -24,6 +24,49 @@ import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Opciones guiadas (estilo "diseñador profesional") para el alta de proyecto.
+// Se guardan como texto, así que el backend no cambia.
+const LAYOUT_OPTIONS = ['En L', 'En U', 'Lineal (en una pared)', 'En paralelo (dos frentes)', 'Con isla', 'Con península'];
+const STYLE_OPTIONS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Mediterráneo'];
+const CABINET_OPTIONS = ['Blanco mate', 'Blanco brillo', 'Gris antracita', 'Roble natural', 'Nogal', 'Verde salvia', 'Azul marino', 'Negro mate'];
+const COUNTERTOP_OPTIONS = ['Cuarzo blanco', 'Cuarzo Calacatta', 'Granito negro', 'Mármol Carrara', 'Dekton', 'Madera de roble', 'Hormigón pulido', 'Acero inoxidable'];
+
+// Cabecera de paso numerada para ordenar la petición de datos.
+function StepHeader({ n, title, hint }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center">{n}</span>
+      <div className="leading-tight">
+        <p className="text-xs font-black text-slate-700 uppercase tracking-wider">{title}</p>
+        {hint && <p className="text-[11px] text-slate-400 font-medium">{hint}</p>}
+      </div>
+    </div>
+  );
+}
+
+// Campo select con opción libre "Otro…" para mantener flexibilidad profesional.
+function GuidedSelect({ value, onChange, options, placeholder }) {
+  const isOther = value && !options.includes(value);
+  return (
+    <div className="space-y-1.5">
+      <select
+        value={isOther ? '__other__' : (value || '')}
+        onChange={e => onChange(e.target.value === '__other__' ? ' ' : e.target.value)}
+        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+      >
+        <option value="">{placeholder}</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        <option value="__other__">Otro…</option>
+      </select>
+      {isOther && (
+        <input type="text" autoFocus value={value.trimStart()} onChange={e => onChange(e.target.value)}
+          className="w-full px-4 py-2 border border-indigo-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
+          placeholder="Escribe el valor personalizado" />
+      )}
+    </div>
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function assetSrc(url) {
   if (!url) return '';
@@ -247,48 +290,51 @@ function NewProjectForm({ onBack, onCreated }) {
         <h2 className="text-2xl font-black text-slate-800 mb-2">Nuevo Proyecto de Cocina</h2>
         <p className="text-slate-500 mb-6">Crea el proyecto y luego añade fotos, medidas y muebles desde el panel de detalle.</p>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">Nombre del proyecto *</label>
-            <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Ej: Cocina familia García" required />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">Descripción / Instrucciones</label>
-            <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              rows={3} placeholder="Describe lo que quieres para esta cocina..." />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+          {/* PASO 1 — Datos del proyecto */}
+          <div className="space-y-3">
+            <StepHeader n={1} title="Datos del proyecto" hint="Identifica el proyecto y el cliente." />
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Distribución</label>
-              <input type="text" value={form.layout} onChange={e => setForm({...form, layout: e.target.value})}
+              <label className="block text-sm font-bold text-slate-700 mb-1">Nombre del proyecto *</label>
+              <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Ej: En L, En U, Lineal..." />
+                placeholder="Ej: Cocina familia García" required />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Estilo</label>
-              <input type="text" value={form.style} onChange={e => setForm({...form, style: e.target.value})}
+              <label className="block text-sm font-bold text-slate-700 mb-1">Descripción / Instrucciones</label>
+              <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})}
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Ej: Moderno, Nórdico, Industrial..." />
+                rows={3} placeholder="Necesidades del cliente, gustos, presupuesto orientativo, electrodomésticos deseados..." />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Material muebles</label>
-              <input type="text" value={form.cabinet_material} onChange={e => setForm({...form, cabinet_material: e.target.value})}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Ej: Blanco mate, Roble natural..." />
+          {/* PASO 2 — Distribución y estilo */}
+          <div className="space-y-3 border-t border-slate-100 pt-5">
+            <StepHeader n={2} title="Distribución y estilo" hint="La base del diseño." />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Distribución</label>
+                <GuidedSelect value={form.layout} onChange={v => setForm({...form, layout: v})} options={LAYOUT_OPTIONS} placeholder="Elige distribución…" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Estilo</label>
+                <GuidedSelect value={form.style} onChange={v => setForm({...form, style: v})} options={STYLE_OPTIONS} placeholder="Elige estilo…" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Material encimera</label>
-              <input type="text" value={form.countertop_material} onChange={e => setForm({...form, countertop_material: e.target.value})}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Ej: Cuarzo Calacatta, Granito negro..." />
+          </div>
+
+          {/* PASO 3 — Acabados */}
+          <div className="space-y-3 border-t border-slate-100 pt-5">
+            <StepHeader n={3} title="Acabados" hint="Material de muebles y encimera." />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Material muebles</label>
+                <GuidedSelect value={form.cabinet_material} onChange={v => setForm({...form, cabinet_material: v})} options={CABINET_OPTIONS} placeholder="Elige acabado…" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Material encimera</label>
+                <GuidedSelect value={form.countertop_material} onChange={v => setForm({...form, countertop_material: v})} options={COUNTERTOP_OPTIONS} placeholder="Elige encimera…" />
+              </div>
             </div>
           </div>
 
@@ -419,25 +465,31 @@ function FilesTab({ project, onRefresh }) {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6">
-      <h3 className="text-lg font-bold text-slate-800 mb-4">Fotos y Vídeos del Espacio</h3>
-      <p className="text-sm text-slate-500 mb-4">Sube todas las fotos de las paredes que necesites. También puedes subir un vídeo con instrucciones de voz.</p>
+      <h3 className="text-lg font-bold text-slate-800 mb-1">Fotos y Vídeos del Espacio</h3>
+      <p className="text-sm text-slate-500 mb-5">Cuantas más vistas reales aportes, más fiel será el render. Sigue los pasos.</p>
 
-      <div className="flex items-center gap-3 mb-4">
+      {/* PASO 1 — Etiqueta la pared */}
+      <div className="space-y-2.5 mb-5">
+        <StepHeader n={1} title="Etiqueta la pared (opcional)" hint="Pon un nombre antes de subir, para saber a qué pared corresponde cada foto." />
         <input type="text" value={wallLabel} onChange={e => setWallLabel(e.target.value)}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-          placeholder="Etiqueta pared (ej: Pared A)" />
+          className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-full max-w-xs"
+          placeholder="Ej: Pared A / Pared del fregadero" />
       </div>
 
-      <div className="flex gap-3 mb-6">
-        <label className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors font-medium text-sm">
-          <Upload size={16} /> Subir Fotos
-          <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleUpload(e, 'photo')} />
-        </label>
-        <label className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-700 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors font-medium text-sm">
-          <Video size={16} /> Subir Vídeo
-          <input type="file" accept="video/*" className="hidden" onChange={e => handleUpload(e, 'video')} />
-        </label>
-        {uploading && <Loader className="animate-spin text-indigo-500" size={20} />}
+      {/* PASO 2 — Sube el material */}
+      <div className="space-y-2.5 mb-6 border-t border-slate-100 pt-5">
+        <StepHeader n={2} title="Sube el material" hint="Fotos de cada pared y, si quieres, un vídeo con instrucciones habladas." />
+        <div className="flex gap-3">
+          <label className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors font-medium text-sm">
+            <Upload size={16} /> Subir Fotos
+            <input type="file" multiple accept="image/*" className="hidden" onChange={e => handleUpload(e, 'photo')} />
+          </label>
+          <label className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-700 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors font-medium text-sm">
+            <Video size={16} /> Subir Vídeo
+            <input type="file" accept="video/*" className="hidden" onChange={e => handleUpload(e, 'video')} />
+          </label>
+          {uploading && <Loader className="animate-spin text-indigo-500" size={20} />}
+        </div>
       </div>
 
       {files.length === 0 ? (
