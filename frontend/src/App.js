@@ -1271,7 +1271,7 @@ const App = () => {
             )}
             {/* Kitchen 3D Designer - Panel de proyectos */}
             {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner) && (
-              <KitchenDesigner3D state={state} />
+              <KitchenDesigner3D state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
             )}
 
             {/* Generador de Informes */}

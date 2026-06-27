@@ -238,7 +238,20 @@ async function apiCall(path, options = {}) {
 }
 
 // ─── Componente Principal ────────────────────────────────────────────────────
-export default function KitchenDesigner3D({ state }) {
+export default function KitchenDesigner3D({ state, setState, onAddToBudget }) {
+  // Vuelca una lista de líneas valoradas al Presupuestador (principal/P2),
+  // reutilizando el mismo mecanismo que IA Lab (state.p2PendingLines).
+  const dumpToBudget = (lines) => {
+    if (!lines || !lines.length) { alert('No hay muebles valorados para volcar.'); return; }
+    if (typeof setState !== 'function') { alert('No se puede volcar al presupuesto en este contexto.'); return; }
+    setState(p => ({
+      ...p,
+      p2PendingLines: [...(p.p2PendingLines || []), ...lines],
+      currentTab: 'presupuestador2',
+    }));
+    const total = lines.reduce((s, l) => s + (Number(l.price) || 0) * (Number(l.qty) || 1), 0);
+    alert(`✅ ${lines.length} mueble(s) volcado(s) al Presupuestador.\n\nTotal: ${total.toLocaleString('es-ES')}€`);
+  };
   const [view, setView] = useState('list');
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -287,6 +300,15 @@ export default function KitchenDesigner3D({ state }) {
             <p className="text-sm text-slate-500 mt-1">Gestiona tus proyectos y genera renders fotorrealistas</p>
           </div>
           <div className="flex items-center gap-2">
+            {typeof setState === 'function' && (
+              <button
+                onClick={() => setState(p => ({ ...p, currentTab: 'renderStudio' }))}
+                title="¿Solo quieres una imagen rápida sin crear un proyecto? Ve a Render 3D"
+                className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl font-bold text-sm hover:bg-purple-100 transition-colors"
+              >
+                <Wand2 size={16} /> ¿Render rápido?
+              </button>
+            )}
             <button
               onClick={runDiagnostics}
               disabled={diagLoading}
@@ -380,7 +402,7 @@ export default function KitchenDesigner3D({ state }) {
 
   // ─── Vista: Detalle de Proyecto ────────────────────────────────────────────
   if (view === 'detail' && selectedProject) {
-    return <ProjectDetail project={selectedProject} onBack={() => { setView('list'); loadProjects(); }} onUpdate={(p) => setSelectedProject(p)} />;
+    return <ProjectDetail project={selectedProject} onBack={() => { setView('list'); loadProjects(); }} onUpdate={(p) => setSelectedProject(p)} onDumpToBudget={dumpToBudget} />;
   }
 
   return null;
@@ -480,7 +502,7 @@ function NewProjectForm({ onBack, onCreated }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // DETALLE DE PROYECTO
 // ═══════════════════════════════════════════════════════════════════════════════
-function ProjectDetail({ project: initialProject, onBack, onUpdate }) {
+function ProjectDetail({ project: initialProject, onBack, onUpdate, onDumpToBudget }) {
   const [project, setProject] = useState(initialProject);
   const [activeTab, setActiveTab] = useState('files');
   const [isLoading, setIsLoading] = useState(false);
@@ -539,7 +561,7 @@ function ProjectDetail({ project: initialProject, onBack, onUpdate }) {
         {activeTab === 'measurements' && <MeasurementsTab project={project} onRefresh={refreshProject} />}
         {activeTab === 'cabinets' && <CabinetsTab project={project} onRefresh={refreshProject} />}
         {activeTab === 'renders' && <RendersTab project={project} onRefresh={refreshProject} />}
-        {activeTab === 'docs' && <TechnicalDocsTab project={project} onRefresh={refreshProject} />}
+        {activeTab === 'docs' && <TechnicalDocsTab project={project} onRefresh={refreshProject} onDumpToBudget={onDumpToBudget} />}
       </div>
     </div>
   );
@@ -1201,10 +1223,28 @@ function RendersTab({ project, onRefresh }) {
 
 
 // ─── Tab: Documentación Técnica ──────────────────────────────────────────────
-function TechnicalDocsTab({ project, onRefresh }) {
+function TechnicalDocsTab({ project, onRefresh, onDumpToBudget }) {
   const [library, setLibrary] = useState('ZC');
   const [isApproving, setIsApproving] = useState(false);
   const [expandedDoc, setExpandedDoc] = useState(null);
+
+  // Construye las líneas de presupuesto desde el despiece valorado del proyecto.
+  const breakdownDoc = (project.technical_docs || []).find(d => d.doc_type === 'cabinet_breakdown');
+  const buildBudgetLines = () => {
+    const items = breakdownDoc?.content?.items || [];
+    return items.map(it => {
+      const dims = (it.dimensions || '').replace(/cm/i, '').split('x').map(s => parseFloat(s.trim()));
+      return {
+        code: it.library || library,
+        name: `${it.cabinetType || 'Mueble'}${it.material && it.material !== 'Sin especificar' ? ` · ${it.material}` : ''}${it.wall ? ` (${it.wall})` : ''}`.trim(),
+        price: Number(it.price) || 0,
+        qty: 1,
+        width: dims[0] || undefined,
+        height: dims[1] || undefined,
+        depth: dims[2] || undefined,
+      };
+    });
+  };
 
   const handleApprove = async () => {
     const renders = project.renders || [];
@@ -1261,6 +1301,23 @@ function TechnicalDocsTab({ project, onRefresh }) {
 
       {docs.length === 0 && project.status === 'approved' && (
         <p className="text-slate-500 text-sm">Documentación generada. Revisa los documentos a continuación.</p>
+      )}
+
+      {/* Volcar a presupuesto: cierra el ciclo plano → diseño → render → presupuesto */}
+      {project.status === 'approved' && breakdownDoc && onDumpToBudget && (
+        <div className="mb-6 rounded-xl border-2 border-emerald-100 bg-emerald-50/50 p-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-black text-emerald-800">Pasar este diseño a presupuesto</p>
+            <p className="text-[12px] text-slate-500">
+              Vuelca los {breakdownDoc.content?.items?.length || 0} muebles valorados al Presupuestador
+              {typeof breakdownDoc.content?.totalPrice === 'number' ? ` (${breakdownDoc.content.totalPrice.toFixed(2)}€)` : ''}.
+            </p>
+          </div>
+          <button onClick={() => onDumpToBudget(buildBudgetLines())}
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700">
+            <Download size={16} /> Volcar a presupuesto
+          </button>
+        </div>
       )}
 
       {docs.length > 0 && (
