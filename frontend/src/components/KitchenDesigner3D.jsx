@@ -268,7 +268,9 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const [sketches, setSketches] = useState([]);        // dataURL[] bocetos por pared
   const [form, setForm] = useState({ layout: '', style: 'photorealistic', cabinet_material: '', countertop_material: '', brief: '' });
   const [isRendering, setIsRendering] = useState(false);
-  const [renderUrl, setRenderUrl] = useState(null);
+  const [proposals, setProposals] = useState([]);   // [{url, source:'ia'|'subido'}]
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
   const [renderErr, setRenderErr] = useState(null);
   const [isBudgeting, setIsBudgeting] = useState(false);
   const [detected, setDetected] = useState(null);      // muebles detectados
@@ -299,10 +301,19 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       });
       const data = await r.json();
       const url = data?.result?.images?.[0];
-      if (data.success && url) setRenderUrl(url);
-      else setRenderErr(data.error || 'No se pudo generar el render.');
+      if (data.success && url) {
+        setProposals(prev => { const next = [...prev, { url, source: 'ia' }]; setActiveIdx(next.length - 1); return next; });
+      } else setRenderErr(data.error || 'No se pudo generar el render.');
     } catch { setRenderErr('Error de conexión al generar el render.'); }
     finally { setIsRendering(false); }
+  };
+
+  // Subir tus propios renders (de tu CAD) y usarlos como propuesta.
+  const onUploadRender = async (e) => {
+    const files = Array.from(e.target.files || []); e.target.value = '';
+    if (!files.length) return;
+    const urls = await Promise.all(files.map(f => fileToDataUrl(f)));
+    setProposals(prev => { const next = [...prev, ...urls.map(u => ({ url: u, source: 'subido' }))]; setActiveIdx(next.length - 1); return next; });
   };
 
   // Paso 4: analiza plano/bocetos, detecta muebles y vuelca a Presupuestador 1.
@@ -336,17 +347,26 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       const cotizables = muebles.filter(m => !m.es_electrodomestico);
       setDetected({ total: muebles.length, cotizables: cotizables.length, lib, muebles });
       if (!cotizables.length) { alert('No se detectaron muebles cotizables en el plano. Revisa la imagen.'); return; }
-      if (typeof onAddToBudget === 'function') {
-        cotizables.forEach(m => onAddToBudget(m, false));
-        if (typeof setState === 'function') setState(p => ({ ...p, currentLibrary: lib, currentTab: 'budget' }));
-        alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (catálogo ${lib}).`);
-      }
+      // Volcar SIEMPRE al Presupuestador 1 (tab 'presupuestador2' = "Presup.")
+      // mediante p2PendingLines, que el componente resuelve con su catálogo.
+      const lines = cotizables.map(f => ({
+        code: f.codigo_catalogo || f.codigo_sugerido || lib,
+        name: f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
+        price: Number(f.precio_pvp) || 0,
+        qty: 1,
+        width: f.ancho_real || f.ancho_estimado,
+        height: f.alto_real || f.alto_estimado,
+        depth: f.fondo_real || f.fondo_estimado,
+      }));
+      setState(p => ({ ...p, currentLibrary: lib, p2PendingLines: [...(p.p2PendingLines || []), ...lines], currentTab: 'presupuestador2' }));
+      alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (catálogo ${lib}).`);
     } catch (e) { alert('No se pudo analizar el plano: ' + (e.message || '')); }
     finally { setIsBudgeting(false); }
   };
 
   const STEPS = ['Plano', 'Acabados', 'Render', 'Presupuesto'];
-  const canNext = step === 1 ? (floorPlan || sketches.length > 0) : step === 3 ? !!renderUrl : true;
+  const canNext = step === 1 ? (floorPlan || sketches.length > 0) : step === 3 ? proposals.length > 0 : true;
+  const active = proposals[activeIdx];
   const quickRender = () => { if (typeof setState === 'function') setState(p => ({ ...p, currentTab: 'renderStudio' })); };
 
   return (
@@ -379,7 +399,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         })}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-2xl w-full">
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 w-full flex-1">
         {/* PASO 1 — Plano + bocetos */}
         {step === 1 && (
           <div className="space-y-4">
@@ -458,20 +478,47 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         {/* PASO 3 — Render */}
         {step === 3 && (
           <div className="space-y-4">
-            <StepHeader n={3} title="Genera el render" hint="Fiel al plano y a los bocetos, con tus acabados." />
-            {renderUrl ? (
-              <img src={assetSrc(renderUrl)} alt="Render" className="w-full rounded-xl border border-slate-200" />
+            <StepHeader n={3} title="Genera el render" hint="Fiel al plano y a los bocetos, con tus acabados. También puedes subir tus propios renders." />
+            {/* Propuesta grande */}
+            {active ? (
+              <div className="relative group">
+                <img src={assetSrc(active.url)} alt="Propuesta" className="w-full max-h-[60vh] object-contain rounded-xl border border-slate-200 bg-slate-50" />
+                <button onClick={() => setFullscreen(true)} title="Ver a pantalla completa"
+                  className="absolute top-3 right-3 bg-white/90 hover:bg-white border border-slate-200 rounded-lg p-2 shadow">
+                  <Maximize2 size={18} />
+                </button>
+                <span className="absolute bottom-3 left-3 text-[10px] font-black uppercase tracking-wider bg-black/55 text-white px-2 py-1 rounded">
+                  {active.source === 'ia' ? 'Generado por IA' : 'Subido por ti'}
+                </span>
+              </div>
             ) : (
-              <div className="h-48 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 text-sm">
-                {isRendering ? <span className="flex items-center gap-2"><Loader size={18} className="animate-spin" /> Generando render…</span> : 'Pulsa "Generar render"'}
+              <div className="h-64 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 text-sm">
+                {isRendering ? <span className="flex items-center gap-2"><Loader size={18} className="animate-spin" /> Generando render…</span> : 'Genera un render o sube el tuyo'}
+              </div>
+            )}
+            {/* Galería de propuestas */}
+            {proposals.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                {proposals.map((p, i) => (
+                  <button key={i} onClick={() => setActiveIdx(i)}
+                    className={`h-16 w-24 rounded-lg overflow-hidden border-2 ${i === activeIdx ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-200'}`}>
+                    <img src={assetSrc(p.url)} alt={`Propuesta ${i + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
               </div>
             )}
             {renderErr && <p className="text-sm text-red-600">{renderErr}</p>}
-            <button onClick={generateRender} disabled={isRendering}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
-              {isRendering ? <Loader className="animate-spin" size={16} /> : <Wand2 size={16} />}
-              {renderUrl ? 'Generar otra vez' : 'Generar render'}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={generateRender} disabled={isRendering}
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
+                {isRendering ? <Loader className="animate-spin" size={16} /> : <Wand2 size={16} />}
+                {proposals.some(p => p.source === 'ia') ? 'Generar otra vez' : 'Generar render'}
+              </button>
+              <label className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg font-bold text-sm hover:bg-slate-50 cursor-pointer">
+                <Upload size={16} /> Subir mis renders
+                <input type="file" accept="image/*" multiple className="hidden" onChange={onUploadRender} />
+              </label>
+            </div>
           </div>
         )}
 
@@ -506,6 +553,14 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
           )}
         </div>
       </div>
+
+      {/* Pantalla completa de la propuesta */}
+      {fullscreen && active && (
+        <div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" onClick={() => setFullscreen(false)}>
+          <button onClick={() => setFullscreen(false)} className="absolute top-4 right-4 text-white/80 hover:text-white"><X size={28} /></button>
+          <img src={assetSrc(active.url)} alt="Propuesta" className="max-w-full max-h-full object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }
