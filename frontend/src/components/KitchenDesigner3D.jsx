@@ -554,6 +554,15 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
     } catch { alert('No se pudo cargar la lista de proyectos.'); }
   };
 
+  const deleteSavedProject = async (wid, name) => {
+    if (!window.confirm(`¿Eliminar el proyecto "${name || ''}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await fetch(`${API_URL}/api/kitchen-projects/wizard/${wid}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` } });
+      setSavedList(prev => prev ? { ...prev, items: (prev.items || []).filter(it => it.id !== wid) } : prev);
+      if (savedId === wid) setSavedId(null);
+    } catch { alert('No se pudo eliminar el proyecto.'); }
+  };
+
   const loadProject = async (wid) => {
     try {
       const r = await fetch(`${API_URL}/api/kitchen-projects/wizard/${wid}`, { headers: { 'Authorization': `Bearer ${getToken()}` } });
@@ -828,6 +837,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
                         <p className="font-bold text-slate-700 text-sm truncate">{it.name}</p>
                       </div>
                       <button onClick={() => loadProject(it.id)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
+                      <button onClick={() => deleteSavedProject(it.id, it.name)} title="Eliminar proyecto" className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                     </div>
                   ))}
                 </div>
