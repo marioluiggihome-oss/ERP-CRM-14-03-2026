@@ -277,6 +277,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const [savedId, setSavedId] = useState(null);        // id del proyecto guardado
   const [savedList, setSavedList] = useState(null);     // lista para "Mis proyectos" (null = oculto)
   const [busySave, setBusySave] = useState(false);
+  const [projectName, setProjectName] = useState('');   // nombre del proyecto
 
   const fileToDataUrl = (file) => new Promise((res, rej) => {
     const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
@@ -384,9 +385,8 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
 
   // Guardar el proyecto (estado completo) para rescatarlo más tarde.
   const saveProject = async () => {
-    const def = (savedList && savedList.name) || '';
-    const name = window.prompt('Nombre del proyecto:', def || 'Cocina');
-    if (name === null) return;
+    const name = projectName.trim();
+    if (!name) { alert('Escribe un nombre para el proyecto antes de guardar.'); return; }
     setBusySave(true);
     try {
       const r = await fetch(`${API_URL}/api/kitchen-projects/wizard`, {
@@ -424,6 +424,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       setActiveIdx(0);
       setDetected(w.detected || null);
       setSavedId(doc.id);
+      setProjectName(doc.name || '');
       setStep(w.step || 1);
       setSavedList(null);
     } catch { alert('No se pudo abrir el proyecto.'); }
@@ -440,10 +441,12 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-black text-slate-800">Cocinas 3D</h1>
         <div className="flex items-center gap-2">
+          <input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="Nombre del proyecto…"
+            className="px-3 py-2 border border-slate-300 rounded-xl text-sm w-52 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           <button onClick={openSavedList} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">
             <FolderOpen size={16} /> Mis proyectos
           </button>
-          <button onClick={saveProject} disabled={busySave} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 disabled:opacity-50">
+          <button onClick={saveProject} disabled={busySave} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50">
             {busySave ? <Loader size={16} className="animate-spin" /> : <CheckCircle size={16} />} Guardar
           </button>
           {typeof setState === 'function' && (
