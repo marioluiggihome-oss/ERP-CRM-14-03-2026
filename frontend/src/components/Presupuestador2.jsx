@@ -139,6 +139,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [manualLine, setManualLine] = useState({ name: '', price: '', qty: 1 });
   const [showManual, setShowManual] = useState(false);
   const [clientName, setClientName] = useState('');
+  const [clientId, setClientId] = useState('');          // cliente enlazado de la BD
+  const [clientCodigo, setClientCodigo] = useState('');
+  const [clientResults, setClientResults] = useState([]); // resultados de búsqueda
+  const [showClientList, setShowClientList] = useState(false);
   const [budgetReference, setBudgetReference] = useState('');
   const [notes, setNotes] = useState('');
   const [doorColorLow, setDoorColorLow] = useState('');
@@ -688,6 +692,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       const projectData = {
         budgetNumber: getBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin cliente',
+        clientId: clientId || undefined,
+        clientCodigo: clientCodigo || undefined,
         customerAddress: '',
         internalReference: budgetReference || notes || `Presupuesto ${libraryCode} (${levelLabel} ${tariff})`,
         itemsMontada: buildMontadaItems(),
@@ -743,6 +749,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         valorado,
         budgetNumber: getBudgetNumber(),
         customerName: clientName || currentUser?.clientName || 'Sin especificar',
+        clientId: clientId || undefined,
+        clientCodigo: clientCodigo || undefined,
         customerAddress: '',
         internalReference: budgetReference || notes || '',
         itemsMontada: buildMontadaItems(),
@@ -778,6 +786,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       const budNum = getBudgetNumber();
       formData.append('budgetNumber', budNum);
       formData.append('customerName', clientName || currentUser?.clientName || 'Sin cliente');
+      if (clientId) formData.append('clientId', clientId);
+      if (clientCodigo) formData.append('clientCodigo', clientCodigo);
       formData.append('customerAddress', '');
       formData.append('totalAmount', String(totalConIva.toFixed(2)));
       formData.append('email', orderEmail);
@@ -842,9 +852,39 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             </p>
           </div>
 
-          {/* Cliente + Ref — Cliente con ancho acotado para que no ocupe toda la barra */}
-          <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="👤 Cliente…"
-            className="flex-1 min-w-0 max-w-[22rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
+          {/* Cliente — buscador enlazado a la base de datos de clientes */}
+          <div className="relative flex-1 min-w-0 max-w-[22rem]">
+            <input
+              value={clientName}
+              onChange={async (e) => {
+                const v = e.target.value;
+                setClientName(v); setClientId(''); setClientCodigo('');
+                if (v.trim().length < 2) { setClientResults([]); setShowClientList(false); return; }
+                try {
+                  const r = await fetch(`${API_URL}/api/clients?search=${encodeURIComponent(v.trim())}`, { headers: authHeaders() });
+                  const list = r.ok ? await r.json() : [];
+                  setClientResults(Array.isArray(list) ? list.slice(0, 12) : []);
+                  setShowClientList(true);
+                } catch { setClientResults([]); }
+              }}
+              onFocus={() => { if (clientResults.length) setShowClientList(true); }}
+              onBlur={() => setTimeout(() => setShowClientList(false), 150)}
+              placeholder="👤 Cliente…"
+              className="w-full px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
+            {clientId && <span className="absolute -bottom-4 left-1 text-[9px] font-bold text-emerald-200">✓ Enlazado{clientCodigo ? ` · ${clientCodigo}` : ''}</span>}
+            {showClientList && clientResults.length > 0 && (
+              <div className="absolute z-[120] mt-1 w-full bg-white rounded-xl shadow-2xl border border-slate-200 max-h-72 overflow-y-auto">
+                {clientResults.map(c => (
+                  <button key={c.id} type="button"
+                    onMouseDown={(ev) => { ev.preventDefault(); setClientName(c.nombre || ''); setClientId(c.id || ''); setClientCodigo(c.codigo || ''); setShowClientList(false); }}
+                    className="w-full text-left px-3 py-2 hover:bg-indigo-50 border-b border-slate-100 last:border-0">
+                    <span className="block text-xs font-black text-slate-800 truncate">{c.nombre || 'Sin nombre'}</span>
+                    <span className="block text-[10px] text-slate-400">{[c.codigo && `Cód. ${c.codigo}`, c.localidad, c.cif].filter(Boolean).join(' · ') || '—'}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input value={budgetReference} onChange={e => setBudgetReference(e.target.value)} placeholder="🏷️ Ref…"
             className="w-24 sm:w-40 shrink-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
 
