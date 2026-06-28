@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Plus, Minus, Save, Download, Box, Palette, Layers, Settings, ChevronDown, ChevronUp, Trash2, Copy, Move, GripVertical, RotateCcw, Eye, EyeOff, Calculator, FileText, List, Package, Scissors, X, Edit3, Hash, Printer, FolderOpen, RefreshCw, AlertCircle, Check, Sparkles, Image, MessageSquare, ArrowUp, ArrowDown, Loader, Mic, MicOff } from 'lucide-react';
 import { armariosAPI } from '../services/api';
+import { ALVIC_WARDROBE_COLORS, ACB_WARDROBE_DOORS } from '../data/finishes';
 import { generateArmariosDespiecePDF, generateArmarioPresupuestoPDF } from '../services/pdfGenerator';
 
 // ========== TIPOS Y CONSTANTES ==========
@@ -246,6 +247,15 @@ const FINSA_COLORS = [
   { id: '681B', name: 'Tailor Lava', hex: '#504840', ref: '681B', category: 'textiles' },
 ];
 
+// Catálogo de acabados combinado por fabricante: FINSA (base) + ALVIC + ACB.
+// Cada color/puerta se identifica por id; getColorByName busca en esta lista.
+const WARDROBE_COLORS = [
+  ...FINSA_COLORS.map(c => ({ ...c, brand: c.brand || 'FINSA' })),
+  ...ALVIC_WARDROBE_COLORS,
+  ...ACB_WARDROBE_DOORS,
+];
+const COLOR_BRANDS = ['FINSA', 'ALVIC', 'ACB'];
+
 // ========== CATÁLOGO DE ACCESORIOS CON CÓDIGOS ==========
 const ACCESSORIES_CATALOG = {
   // Estructura
@@ -476,6 +486,8 @@ const MATERIAL_CATEGORY_LABELS = {
   metalizados: 'Metalizados',
   piedras: 'Piedras/Cementos',
   textiles: 'Textiles',
+  alvic: 'ALVIC (acabados)',
+  acb: 'ACB (puertas)',
 };
 
 const DEFAULT_MATERIAL_CATEGORY_SUPP = {
@@ -493,6 +505,8 @@ const DEFAULT_MATERIAL_CATEGORY_SUPP = {
   metalizados: 40,
   piedras: 45,
   textiles: 30,
+  alvic: 35,
+  acb: 30,
 };
 
 // Precios por defecto del configurador (modelo por m²). Configurables en MASTER
@@ -610,6 +624,7 @@ const Armarios = ({ state, setState }) => {
   
   // Estado para filtro de categoría de colores
   const [colorCategory, setColorCategory] = useState('all');
+  const [colorBrand, setColorBrand] = useState('FINSA');
   
   // Estado para guardar/cargar proyectos
   const [showProjectsModal, setShowProjectsModal] = useState(false);
@@ -1304,7 +1319,7 @@ const Armarios = ({ state, setState }) => {
 
   // Función helper para obtener color
   function getColorByName(colorId) {
-    const color = FINSA_COLORS.find(c => c.id === colorId);
+    const color = WARDROBE_COLORS.find(c => c.id === colorId);
     return color || { id: '010', name: 'Blanco Standard', hex: '#FFFFFF', ref: '010', category: 'blancos' };
   }
 
@@ -1522,7 +1537,7 @@ const Armarios = ({ state, setState }) => {
   };
 
   const getColorByIdFn = (colorId) => {
-    return FINSA_COLORS.find(c => c.id === colorId) || FINSA_COLORS[0];
+    return WARDROBE_COLORS.find(c => c.id === colorId) || WARDROBE_COLORS[0];
   };
 
   // ========== FUNCIONES GUARDAR/CARGAR ==========
@@ -2842,11 +2857,24 @@ const Armarios = ({ state, setState }) => {
           <div className="p-4 border-b border-slate-200">
             <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
               <Palette size={14} />
-              COLORES FINSA 2025
+              COLORES / PUERTAS
             </h3>
-            
-            {/* Selector de categoría */}
-            <div className="mb-3">
+
+            {/* Selector de fabricante */}
+            <div className="mb-2 flex gap-1">
+              {COLOR_BRANDS.map(b => (
+                <button key={b} onClick={() => { setColorBrand(b); setColorCategory('all'); }}
+                  className={`flex-1 px-2 py-1.5 rounded text-[11px] font-black transition-all ${colorBrand === b ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  {b}
+                </button>
+              ))}
+            </div>
+            {colorBrand === 'ACB' && (
+              <p className="text-[9px] text-slate-400 mb-2">ACB: elige el modelo de puerta. El color/acabado se define según su tarifa.</p>
+            )}
+
+            {/* Selector de categoría (solo FINSA tiene categorías de color) */}
+            <div className="mb-3" style={{ display: colorBrand === 'FINSA' ? 'block' : 'none' }}>
               <select
                 value={colorCategory}
                 onChange={(e) => setColorCategory(e.target.value)}
@@ -2874,8 +2902,9 @@ const Armarios = ({ state, setState }) => {
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Exterior</label>
                 <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                  {FINSA_COLORS
-                    .filter(c => colorCategory === 'all' || c.category === colorCategory)
+                  {WARDROBE_COLORS
+                    .filter(c => (c.brand || 'FINSA') === colorBrand)
+                    .filter(c => colorBrand !== 'FINSA' || colorCategory === 'all' || c.category === colorCategory)
                     .map(color => (
                     <button
                       key={color.id}

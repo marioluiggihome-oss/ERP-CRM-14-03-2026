@@ -3258,6 +3258,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     { k: 'matSupp_metalizados', label: 'Metalizados', def: 40 },
                     { k: 'matSupp_piedras', label: 'Piedras/Cementos', def: 45 },
                     { k: 'matSupp_textiles', label: 'Textiles', def: 30 },
+                    { k: 'matSupp_alvic', label: 'ALVIC (acabados)', def: 35 },
+                    { k: 'matSupp_acb', label: 'ACB (puertas)', def: 30 },
                   ].map(f => (
                     <div key={f.k} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 hover:border-emerald-300 transition-colors">
                       <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide block truncate">{f.label}</label>
