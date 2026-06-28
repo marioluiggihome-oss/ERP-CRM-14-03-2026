@@ -324,13 +324,10 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const analyzeAndBudget = async () => {
     const imgs = [floorPlan, ...sketches].filter(Boolean);
     if (!imgs.length) { alert('Sube el plano o un boceto en el paso 1.'); return; }
-    const allowed = state?.allowedLibraries || ['ZC'];
-    let lib = state?.currentLibrary || allowed[0] || 'ZC';
-    if (allowed.includes('ZC') && allowed.includes('MV')) {
-      const ans = (window.prompt('Tienes dos catálogos activos. ¿Con cuál presupuestar? Escribe ZC o MV:', lib) || '').trim().toUpperCase();
-      if (ans !== 'ZC' && ans !== 'MV') return;
-      lib = ans;
-    }
+    // Siempre se pregunta el catálogo antes de volcar, sugiriendo MV por defecto.
+    const ans = (window.prompt('¿Con qué catálogo presupuestar? Escribe MV o ZC:', 'MV') || '').trim().toUpperCase();
+    if (ans !== 'ZC' && ans !== 'MV') return; // cancelado o valor no válido
+    const lib = ans;
     setIsBudgeting(true);
     try {
       const files = imgs.map((d, i) => dataURLtoFile(d, `plano${i}.png`)).filter(Boolean);
