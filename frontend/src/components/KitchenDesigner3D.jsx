@@ -39,46 +39,34 @@ const VIEW_PRESETS = [
 
 // Muestras visuales de acabado (swatch) para elegir como en un configurador real.
 // 'bg' es CSS (color o gradiente que imita el material).
+// Acabados ALVIC — gama Just In Time 2025 (nombres reales del catálogo oficial).
 const CABINET_SWATCHES = [
-  // Básicos
-  { group: 'Básicos', label: 'Blanco mate', bg: '#f5f5f3' },
-  { group: 'Básicos', label: 'Blanco brillo', bg: 'linear-gradient(135deg,#ffffff,#e9eef2)' },
-  { group: 'Básicos', label: 'Gris antracita', bg: '#3a3f44' },
-  { group: 'Básicos', label: 'Verde salvia', bg: '#9caa8a' },
-  { group: 'Básicos', label: 'Azul marino', bg: '#2c3e57' },
-  { group: 'Básicos', label: 'Negro mate', bg: '#1c1c1e' },
-  // ALVIC — Luxe (alto brillo)
-  { group: 'Alvic Luxe (brillo)', label: 'Luxe Blanco', bg: 'linear-gradient(135deg,#ffffff,#eef1f3)' },
-  { group: 'Alvic Luxe (brillo)', label: 'Luxe Negro', bg: 'linear-gradient(135deg,#2a2a2c,#101012)' },
-  { group: 'Alvic Luxe (brillo)', label: 'Luxe Gris Antracita', bg: 'linear-gradient(135deg,#4a4d50,#303336)' },
-  { group: 'Alvic Luxe (brillo)', label: 'Luxe Gris Seda', bg: 'linear-gradient(135deg,#cdcbc6,#b5b3ad)' },
-  { group: 'Alvic Luxe (brillo)', label: 'Luxe Champán', bg: 'linear-gradient(135deg,#ddccac,#c2ad84)' },
-  { group: 'Alvic Luxe (brillo)', label: 'Luxe Cobre', bg: 'linear-gradient(135deg,#c07d44,#8c4f23)' },
-  { group: 'Alvic Luxe (brillo)', label: 'Luxe Azul Marino', bg: 'linear-gradient(135deg,#33415c,#202c44)' },
-  // ALVIC — Zenit (supermate)
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Blanco', bg: '#f3f3f0' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Negro', bg: '#1a1a1c' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Gris Cristal', bg: '#c7c8c5' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Arena', bg: '#d8cdb8' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Tortora', bg: '#b3a596' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Verde Kaki', bg: '#6b6f4e' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Azul Noche', bg: '#2a3550' },
-  // ALVIC — Syncron (maderas texturizadas)
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Eless', bg: 'linear-gradient(135deg,#d6bd95,#b9975f)' },
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Estoril', bg: 'linear-gradient(135deg,#c0a376,#9a7847)' },
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Lakeland', bg: 'linear-gradient(135deg,#b3a892,#8c8270)' },
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Tavola Nogal', bg: 'linear-gradient(135deg,#6b4a2c,#43291699)' },
-  // ACB
-  { group: 'Grupo ACB', label: 'ACB Blanco', bg: '#f6f6f4' },
-  { group: 'Grupo ACB', label: 'ACB Cachemir', bg: '#d9cfc0' },
-  { group: 'Grupo ACB', label: 'ACB Gris Antracita', bg: '#3b3e42' },
-  { group: 'Grupo ACB', label: 'ACB Gris Piedra', bg: '#9a9893' },
-  { group: 'Grupo ACB', label: 'ACB Arena', bg: '#d6c9b0' },
-  { group: 'Grupo ACB', label: 'ACB Tortora', bg: '#aa9c8d' },
-  { group: 'Grupo ACB', label: 'ACB Roble Natural', bg: 'linear-gradient(135deg,#c9a26a,#a9803f)' },
-  { group: 'Grupo ACB', label: 'ACB Roble Castaño', bg: 'linear-gradient(135deg,#8a5a32,#5c3a1e)' },
-  { group: 'Grupo ACB', label: 'ACB Nogal', bg: 'linear-gradient(135deg,#6b4421,#4a2c14)' },
-  { group: 'Grupo ACB', label: 'ACB Olmo', bg: 'linear-gradient(135deg,#b59b78,#8f7350)' },
+  // ALVIC Luxe (lacado alto brillo)
+  { group: 'Alvic Luxe (alto brillo)', label: 'Luxe Blanco', bg: 'linear-gradient(135deg,#ffffff,#eef0f1)' },
+  { group: 'Alvic Luxe (alto brillo)', label: 'Luxe Cashmere', bg: 'linear-gradient(135deg,#e2d6c1,#d3c5ab)' },
+  { group: 'Alvic Luxe (alto brillo)', label: 'Luxe Gris Nube', bg: 'linear-gradient(135deg,#cdcfce,#b9bbba)' },
+  // ALVIC Zenit 3.0 (supermate)
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Blanco SM', bg: '#f2f2ef' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Cameo SM', bg: '#e7dccd' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Arena SM', bg: '#d7cab0' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Cashmere SM', bg: '#d5c9b4' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Gris Nube SM', bg: '#c0c2c1' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Cotto SM', bg: '#b06a4e' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Agave SM', bg: '#8f9b86' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Verde Salvia SM', bg: '#9aa98c' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Gris Plomo SM', bg: '#6f7378' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Negro SM', bg: '#1b1b1d' },
+  // ALVIC Syncron (texturizado madera)
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Anniversary Oak 01', bg: 'linear-gradient(135deg,#cdb38a,#a98a5c)' },
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Anniversary Oak 02', bg: 'linear-gradient(135deg,#b9966a,#8f6c41)' },
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Nocce 01', bg: 'linear-gradient(135deg,#6e4a2b,#452a16)' },
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Picasso 02', bg: 'linear-gradient(135deg,#9b8e7d,#6f6457)' },
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Roble Muratti 04', bg: 'linear-gradient(135deg,#b7a17f,#8c7252)' },
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Velázquez 02', bg: 'linear-gradient(135deg,#c2ad88,#9c8059)' },
+  // ALVIC MattDeco
+  { group: 'Alvic MattDeco', label: 'MattDeco Blanco', bg: '#f3f3f1' },
+  { group: 'Alvic MattDeco', label: 'MattDeco Cashmere', bg: '#d8ccb7' },
+  { group: 'Alvic MattDeco', label: 'MattDeco Gris Nube', bg: '#c3c5c4' },
 ];
 const COUNTERTOP_SWATCHES = [
   { label: 'Cuarzo blanco', bg: '#f3f4f2' },
