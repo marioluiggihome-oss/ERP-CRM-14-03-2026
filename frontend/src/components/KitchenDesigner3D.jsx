@@ -29,6 +29,26 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const LAYOUT_OPTIONS = ['En L', 'En U', 'Lineal (en una pared)', 'En paralelo (dos frentes)', 'Con isla', 'Con península'];
 const STYLE_OPTIONS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Mediterráneo'];
 
+// Modelos de puerta de GRUPO ACB (catálogo, por orden alfabético). El color/acabado
+// va aparte (se elige en "Frentes"); el material se confirma en la tarifa.
+const ACB_DOOR_MODELS = [
+  'Alba', 'Alfa', 'Almería', 'Alzira', 'Amberes', 'Amsterdam', 'Ancinale', 'Andros', 'Andújar', 'Aneto',
+  'Apolo', 'Arles', 'Asturias', 'Bahía', 'Baku', 'Baltimore', 'Barbados', 'Bari', 'Berna', 'Berlín',
+  'Bombay', 'Cadaqués', 'Calabria', 'Cambridge', 'Cantabria', 'Cazorla', 'Cíes', 'Coimbra', 'Copenhague',
+  'Córcega', 'Córcega curva', 'Córdoba', 'Corfu', 'Corintia', 'Cronos', 'Dalí', 'Denver', 'Doha', 'Domo',
+  'Dubai', 'Dublín', 'Egabro', 'Época', 'Espinosa', 'Estoril', 'Euro', 'Everest', 'Flor membrana',
+  'Florencia', 'Florida', 'Galdar', 'Gante', 'Grecia', 'Greco con tacos', 'Hanoi', 'Itaca',
+  'Kansas plafón liso', 'Kansas plafón rayado', 'Laredo', 'Leiria 14', 'Lieja', 'Lima', 'Livorno', 'Loira',
+  'Madrid', 'Madrid tirador forma', 'Madrid tirador lineal', 'Maella tipo 1', 'Maella tipo 2', 'Málaga',
+  'Mallorca', 'Manacor', 'Marina', 'Miguel Ángel', 'Milán', 'Mónaco', 'Montreal lisa', 'Nantes', 'Nastur',
+  'Niza', 'Nilo', 'Nube', 'Olimpia', 'Oporto', 'Orense', 'Orlando', 'Orleans', 'Oslo', 'Ostende', 'Oviedo',
+  'Oxford', 'Paladio', 'Palencia', 'Palma', 'París', 'Penagos', 'Pisa', 'Pizarro', 'Ródano', 'Rodas',
+  'Roma maciza', 'Rubens', 'Rubens canto Sena', 'Salamanca', 'Salzburgo', 'Santorini', 'Segovia',
+  'Sarajevo', 'Segura', 'Sena', 'Seúl', 'Silos', 'Sintra recta', 'Soller', 'Támesis', 'Tapies', 'Tare',
+  'Telde', 'Torrox', 'Trento', 'Trípoli', 'Turín', 'Vega', 'Vega tirador aluminio', 'Venecia', 'Vera',
+  'Verona', 'Versalles', 'Viena', 'Vilanova', 'Volga', 'Xátiva', 'Yakarta', 'Zamora', 'Zeus',
+];
+
 // Vistas coherentes de la misma cocina (solo cambia el ángulo de cámara).
 const VIEW_PRESETS = [
   { label: 'General', note: 'Vista: plano general de toda la cocina desde una esquina, mostrando toda la distribución.' },
@@ -301,7 +321,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const [step, setStep] = useState(1);
   const [floorPlan, setFloorPlan] = useState(null);   // dataURL plano en planta
   const [sketches, setSketches] = useState([]);        // dataURL[] bocetos por pared
-  const [form, setForm] = useState({ layout: '', style: 'photorealistic', cabinet_material: '', countertop_material: '', brief: '' });
+  const [form, setForm] = useState({ layout: '', style: 'photorealistic', doorModel: '', cabinet_material: '', countertop_material: '', brief: '' });
   const [isRendering, setIsRendering] = useState(false);
   const [proposals, setProposals] = useState([]);   // [{url, source:'ia'|'subido'}]
   const [activeIdx, setActiveIdx] = useState(0);
@@ -323,6 +343,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const buildBrief = () => {
     const p = [];
     if (form.layout) p.push(`Distribución: ${form.layout}.`);
+    if (form.doorModel) p.push(`Modelo de puerta: ${form.doorModel} (ACB).`);
     if (form.cabinet_material) p.push(`Frentes: ${form.cabinet_material}.`);
     if (form.countertop_material) p.push(`Encimera: ${form.countertop_material}.`);
     if (form.brief) p.push(form.brief);
@@ -570,6 +591,10 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Modelo de puerta (ACB)</label>
+                <GuidedSelect value={form.doorModel} onChange={v => setForm({ ...form, doorModel: v })} options={ACB_DOOR_MODELS} placeholder="Elige modelo…" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
