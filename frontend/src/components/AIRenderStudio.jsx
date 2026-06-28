@@ -304,6 +304,16 @@ export default function AIRenderStudio({ state }) {
   // ─── Generar render por descripción natural ─────────────────────────────
   const handleGenerateNatural = async () => {
     if (!description.trim()) return;
+    // Guardarraíl: si hay plano o bocetos subidos, este botón los IGNORARÍA.
+    // Evitamos que el render salga genérico sin respetar el plano.
+    if (floorPlan || wallSketches.length > 0) {
+      const usePlan = window.confirm(
+        'Has subido un plano o boceto, pero "Generar desde la descripción" NO lo usa.\n\n' +
+        'Aceptar = generar RESPETANDO el plano/bocetos (recomendado).\n' +
+        'Cancelar = generar solo desde el texto (ignora el plano).'
+      );
+      if (usePlan) { await handleGenerateComposed(); return; }
+    }
     setIsGenerating(true);
     setError(null);
 

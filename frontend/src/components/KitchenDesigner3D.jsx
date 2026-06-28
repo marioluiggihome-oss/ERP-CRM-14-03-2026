@@ -261,15 +261,43 @@ export default function KitchenDesigner3D({ state, setState, onAddToBudget }) {
     };
   };
 
-  // Vuelca los muebles del proyecto al Presupuestador, pasando cada uno por el
-  // emparejador de catálogo de IA Lab (onAddToBudget) para usar códigos reales.
+  // Vuelca los muebles del proyecto al Presupuestador. El destino depende de la
+  // librería marcada para el usuario; si tiene las dos, pregunta cuál usar.
+  //  - P1 (ZC): pasa por el emparejador de catálogo (onAddToBudget), códigos reales.
+  //  - P2 (MV/principal): manda líneas a Presupuestador 2, que resuelve por su catálogo.
   const dumpToBudget = (cabinets) => {
     const cabs = (cabinets || []).filter(c => c && c.cabinet_type);
     if (!cabs.length) { alert('Añade muebles al proyecto antes de volcar al presupuesto.'); return; }
-    if (typeof onAddToBudget !== 'function') { alert('No se puede volcar al presupuesto en este contexto.'); return; }
-    cabs.forEach(c => onAddToBudget(cabinetToFurniture(c), false));
-    if (typeof setState === 'function') setState(p => ({ ...p, currentTab: 'budget' }));
-    alert(`✅ ${cabs.length} mueble(s) volcado(s) al Presupuestador (emparejados con el catálogo).`);
+    if (typeof setState !== 'function') { alert('No se puede volcar al presupuesto en este contexto.'); return; }
+
+    const u = state?.currentUser || {};
+    const canP1 = u.canUsePresupuestador1 !== false; // ZC (catálogo)
+    const canP2 = u.canUsePresupuestador2 !== false; // MV (principal)
+    if (!canP1 && !canP2) { alert('No tienes ningún presupuestador activo para volcar los muebles.'); return; }
+
+    let target;
+    if (canP1 && !canP2) target = 'p1';
+    else if (canP2 && !canP1) target = 'p2';
+    else target = window.confirm('¿A qué presupuestador quieres volcar?\n\nAceptar = Presupuestador principal (MV)\nCancelar = Presupuestador 2 (ZC)') ? 'p2' : 'p1';
+
+    if (target === 'p1') {
+      if (typeof onAddToBudget !== 'function') { alert('El Presupuestador 2 (ZC) no está disponible.'); return; }
+      cabs.forEach(c => onAddToBudget(cabinetToFurniture(c), false));
+      setState(p => ({ ...p, currentTab: 'budget' }));
+      alert(`✅ ${cabs.length} mueble(s) volcado(s) al Presupuestador 2 (ZC), emparejados con el catálogo.`);
+    } else {
+      const lines = cabs.map(c => {
+        const f = cabinetToFurniture(c);
+        return {
+          code: `${f.tipo}-${Math.round(f.ancho_estimado)}`,
+          name: `${c.cabinet_type}${f.material ? ` · ${f.material}` : ''}`.trim(),
+          price: 0, qty: 1,
+          width: f.ancho_estimado, height: f.alto_estimado, depth: f.fondo_estimado,
+        };
+      });
+      setState(p => ({ ...p, p2PendingLines: [...(p.p2PendingLines || []), ...lines], currentTab: 'presupuestador2' }));
+      alert(`✅ ${cabs.length} mueble(s) volcado(s) al Presupuestador principal (MV).`);
+    }
   };
   const [view, setView] = useState('list');
   const [projects, setProjects] = useState([]);
