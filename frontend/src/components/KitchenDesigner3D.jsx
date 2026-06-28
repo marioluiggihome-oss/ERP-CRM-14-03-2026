@@ -57,37 +57,125 @@ const VIEW_PRESETS = [
   { label: 'Detalle / isla', note: 'Vista: plano de detalle de la isla o península (o de la encimera y los acabados si no hay isla).' },
 ];
 
-// Muestras visuales de acabado (swatch) para elegir como en un configurador real.
-// 'bg' es CSS (color o gradiente que imita el material).
-// Acabados ALVIC — gama Just In Time 2025 (nombres reales del catálogo oficial).
-const CABINET_SWATCHES = [
-  // ALVIC Luxe (lacado alto brillo)
-  { group: 'Alvic Luxe (alto brillo)', label: 'Luxe Blanco', bg: 'linear-gradient(135deg,#ffffff,#eef0f1)' },
-  { group: 'Alvic Luxe (alto brillo)', label: 'Luxe Cashmere', bg: 'linear-gradient(135deg,#e2d6c1,#d3c5ab)' },
-  { group: 'Alvic Luxe (alto brillo)', label: 'Luxe Gris Nube', bg: 'linear-gradient(135deg,#cdcfce,#b9bbba)' },
-  // ALVIC Zenit 3.0 (supermate)
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Blanco SM', bg: '#f2f2ef' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Cameo SM', bg: '#e7dccd' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Arena SM', bg: '#d7cab0' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Cashmere SM', bg: '#d5c9b4' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Gris Nube SM', bg: '#c0c2c1' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Cotto SM', bg: '#b06a4e' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Agave SM', bg: '#8f9b86' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Verde Salvia SM', bg: '#9aa98c' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Gris Plomo SM', bg: '#6f7378' },
-  { group: 'Alvic Zenit (supermate)', label: 'Zenit Negro SM', bg: '#1b1b1d' },
-  // ALVIC Syncron (texturizado madera)
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Anniversary Oak 01', bg: 'linear-gradient(135deg,#cdb38a,#a98a5c)' },
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Anniversary Oak 02', bg: 'linear-gradient(135deg,#b9966a,#8f6c41)' },
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Nocce 01', bg: 'linear-gradient(135deg,#6e4a2b,#452a16)' },
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Picasso 02', bg: 'linear-gradient(135deg,#9b8e7d,#6f6457)' },
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Roble Muratti 04', bg: 'linear-gradient(135deg,#b7a17f,#8c7252)' },
-  { group: 'Alvic Syncron (madera)', label: 'Syncron Velázquez 02', bg: 'linear-gradient(135deg,#c2ad88,#9c8059)' },
-  // ALVIC MattDeco
-  { group: 'Alvic MattDeco', label: 'MattDeco Blanco', bg: '#f3f3f1' },
-  { group: 'Alvic MattDeco', label: 'MattDeco Cashmere', bg: '#d8ccb7' },
-  { group: 'Alvic MattDeco', label: 'MattDeco Gris Nube', bg: '#c3c5c4' },
+// Muestras visuales de acabado (swatch). 'bg' es CSS (color/gradiente que imita
+// el material). Gama ALVIC completa del catálogo (Luxe, Zenit 3.0, Syncron,
+// MattDeco, Metal). Los tonos son aproximación visual fiel de la muestra impresa.
+const ALVIC_COLORS = [
+  // Luxe (lacado alto brillo) + Luxe Plus
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Blanco', bg: 'linear-gradient(135deg,#ffffff,#eef0f1)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Cashmere', bg: 'linear-gradient(135deg,#e3d7c2,#d3c5ab)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Gris Nube', bg: 'linear-gradient(135deg,#cfd1d0,#b9bbba)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Azul Índigo', bg: 'linear-gradient(135deg,#3a4a6b,#27344f)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Agua Marina', bg: 'linear-gradient(135deg,#7fb0ad,#5b908d)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Azul Ultramar', bg: 'linear-gradient(135deg,#2b3f7a,#1c2c5c)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Ice Blue', bg: 'linear-gradient(135deg,#cfe0e6,#aac6d1)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Nogal Rosales 02', bg: 'linear-gradient(135deg,#6e4a30,#48301d)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Metallo 01 Silver', bg: 'linear-gradient(135deg,#c9ccce,#9aa0a4)' },
+  { group: 'ALVIC · Luxe (alto brillo)', label: 'Luxe Metallo 04 Grafito', bg: 'linear-gradient(135deg,#5b5e62,#3a3d40)' },
+  // Zenit 3.0 (supermate)
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Blanco SM', bg: '#f2f2ef' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Blanco Polar SM', bg: '#f6f7f5' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Magnolia SM', bg: '#efe9da' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Cameo SM', bg: '#e7dccd' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Arena SM', bg: '#d7cab0' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Cashmere SM', bg: '#d5c9b4' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Gris Nube SM', bg: '#c0c2c1' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Taupe SM', bg: '#b3a89a' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Tortora SM', bg: '#a99c8d' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Basalto SM', bg: '#595c5f' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Gris Plomo SM', bg: '#6f7378' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Antracita SM', bg: '#3a3d40' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Camel SM', bg: '#c69b6d' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Naranja Citrus SM', bg: '#e08a2e' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Ice Blue SM', bg: '#cfe0e6' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Azul Ultramar SM', bg: '#2b3f7a' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Azul Índigo SM', bg: '#3a4a6b' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Azul Marino SM', bg: '#25324a' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Amarillo Albero SM', bg: '#e0c04a' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Ginger SM', bg: '#c56a35' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Agave SM', bg: '#8f9b86' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Agua Marina SM', bg: '#7fb0ad' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Verde Salvia SM', bg: '#9aa98c' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Negro SM', bg: '#1b1b1d' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Coral SM', bg: '#e2705f' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Cotto SM', bg: '#b06a4e' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Rojo Pompei SM', bg: '#b23b32' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Almagra SM', bg: '#9a4a3a' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Elitis 01 SM', bg: 'linear-gradient(135deg,#c2b39a,#a08e74)' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Elitis 03 SM', bg: 'linear-gradient(135deg,#8a7a64,#695b48)' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Picasso 01 SM', bg: 'linear-gradient(135deg,#b3a695,#8f8270)' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Picasso 02 SM', bg: 'linear-gradient(135deg,#8f8270,#6f6457)' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Nuvola 01 SM', bg: '#d7d3cc' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Nuvola 03 SM', bg: '#9a958d' },
+  { group: 'ALVIC · Zenit (supermate)', label: 'Zenit Mármol Versilia SM', bg: 'linear-gradient(135deg,#efede8,#cfc9bd)' },
+  // Metal Plus (Zenit metalizados)
+  { group: 'ALVIC · Metal Plus', label: 'Metal Plus Light Gold', bg: 'linear-gradient(135deg,#d8c69a,#bda169)' },
+  { group: 'ALVIC · Metal Plus', label: 'Metal Plus Copper', bg: 'linear-gradient(135deg,#bb7a4e,#8c4f2e)' },
+  { group: 'ALVIC · Metal Plus', label: 'Metal Plus Champagne', bg: 'linear-gradient(135deg,#dccdb4,#c2ad8e)' },
+  { group: 'ALVIC · Metal Plus', label: 'Metal Plus Titanio', bg: 'linear-gradient(135deg,#8f9296,#6a6d71)' },
+  // MattDeco (ultra mate)
+  { group: 'ALVIC · MattDeco', label: 'MattDeco Blanco', bg: '#f3f3f1' },
+  { group: 'ALVIC · MattDeco', label: 'MattDeco Cashmere', bg: '#d8ccb7' },
+  { group: 'ALVIC · MattDeco', label: 'MattDeco Gris Nube', bg: '#c3c5c4' },
+  { group: 'ALVIC · MattDeco', label: 'MattDeco Basalto', bg: '#595c5f' },
+  { group: 'ALVIC · MattDeco', label: 'MattDeco Antracita', bg: '#3a3d40' },
+  // Syncron (texturizado / maderas y decorativos)
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Anniversary Oak 01', bg: 'linear-gradient(135deg,#cdb38a,#a98a5c)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Anniversary Oak 02', bg: 'linear-gradient(135deg,#b9966a,#8f6c41)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Anniversary Oak 03', bg: 'linear-gradient(135deg,#a07c4f,#75552f)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Como Ash 02', bg: 'linear-gradient(135deg,#c3b49a,#9b8a6e)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Alhambra 01', bg: 'linear-gradient(135deg,#b6a489,#8e7c62)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Alhambra 02', bg: 'linear-gradient(135deg,#9c8a70,#74634b)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Alhambra 03', bg: 'linear-gradient(135deg,#7c6b52,#564838)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Roble Muratti 01', bg: 'linear-gradient(135deg,#c7b08a,#9d855e)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Roble Muratti 04', bg: 'linear-gradient(135deg,#b7a17f,#8c7252)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Nogal Rosales 01', bg: 'linear-gradient(135deg,#7a5436,#4f3320)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Nogal Rosales 02', bg: 'linear-gradient(135deg,#6e4a30,#48301d)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Nogal Rosales 03', bg: 'linear-gradient(135deg,#5e3f2a,#3c2718)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Nogal Rosales 04', bg: 'linear-gradient(135deg,#6b4a2c,#432916)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Nocce 01', bg: 'linear-gradient(135deg,#6e4a2b,#452a16)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Nocce 03', bg: 'linear-gradient(135deg,#5a3c24,#382414)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Goya 01', bg: 'linear-gradient(135deg,#cbb38c,#a48a60)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Goya 02', bg: 'linear-gradient(135deg,#b1936a,#876b45)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Lakeland Oak 03', bg: 'linear-gradient(135deg,#b3a892,#8c8270)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Velázquez 01', bg: 'linear-gradient(135deg,#cbb78f,#a68f63)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Velázquez 02', bg: 'linear-gradient(135deg,#c2ad88,#9c8059)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Picasso 01', bg: 'linear-gradient(135deg,#b3a695,#8f8270)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Picasso 02', bg: 'linear-gradient(135deg,#9b8e7d,#6f6457)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Picasso 03', bg: 'linear-gradient(135deg,#857868,#5e5346)' },
+  { group: 'ALVIC · Syncron (madera)', label: 'Syncron Woodline 03', bg: 'linear-gradient(135deg,#a99176,#7e6b51)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Trevi 02', bg: 'linear-gradient(135deg,#b8a894,#8f8270)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Siena', bg: 'linear-gradient(135deg,#cdbfa6,#a99a7d)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Porcelain 01 Gold', bg: 'linear-gradient(135deg,#e6dcc4,#cbb98f)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Porcelain 03 Silver', bg: 'linear-gradient(135deg,#dfe1e2,#bcc0c2)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Oxid 04 Grafito', bg: 'linear-gradient(135deg,#5b5e62,#3a3d40)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Ice Cream 01', bg: '#efe7d8' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Ice Cream 02', bg: '#e6dccb' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Blanco JZ', bg: '#f3f2ee' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Blanco Polar AV', bg: '#f6f7f5' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Vitamine', bg: 'linear-gradient(135deg,#d9cdb6,#b9a886)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Vulcano', bg: 'linear-gradient(135deg,#5a5550,#332f2b)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Factory 01', bg: 'linear-gradient(135deg,#9a948b,#6f6a62)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Factory 02', bg: 'linear-gradient(135deg,#7c766d,#544f48)' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Spatt 01 Blanco', bg: '#eceae4' },
+  { group: 'ALVIC · Syncron (decorativo)', label: 'Syncron Titan 01', bg: 'linear-gradient(135deg,#9a9ca0,#6f7175)' },
 ];
+
+// Compatibilidad con el resto del componente (selector por defecto = ALVIC).
+const CABINET_SWATCHES = ALVIC_COLORS;
+
+// Diseños / formas de puerta de ALVIC (gama Just In Time).
+const ALVIC_DOOR_MODELS = [
+  'Clásico', 'Canto Textura', 'Canto Creativo', 'MattDeco', 'Quadro Slim', 'Marco 4 Cantos',
+  'Tirador Formentera', 'Tirador Mallorca', 'Tirador Madeira', 'Tirador Menorca', 'Tirador Ibiza',
+  'Tirador Tenerife', 'Tirador Lanzarote',
+];
+
+// Fabricantes disponibles, con sus colores y modelos de puerta.
+const MAKERS = {
+  ALVIC: { colors: ALVIC_COLORS, doors: ALVIC_DOOR_MODELS },
+  ACB: { colors: [], doors: ACB_DOOR_MODELS }, // ACB: color/acabado según tarifa
+};
 const COUNTERTOP_SWATCHES = [
   { label: 'Cuarzo blanco', bg: '#f3f4f2' },
   { label: 'Cuarzo Calacatta', bg: 'linear-gradient(135deg,#f7f7f4,#d8d2c4)' },
@@ -321,7 +409,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const [step, setStep] = useState(1);
   const [floorPlan, setFloorPlan] = useState(null);   // dataURL plano en planta
   const [sketches, setSketches] = useState([]);        // dataURL[] bocetos por pared
-  const [form, setForm] = useState({ layout: '', style: 'photorealistic', doorModel: '', cabinet_material: '', countertop_material: '', brief: '' });
+  const [form, setForm] = useState({ layout: '', style: 'photorealistic', maker: 'ALVIC', doorModel: '', cabinet_material: '', countertop_material: '', brief: '' });
   const [isRendering, setIsRendering] = useState(false);
   const [proposals, setProposals] = useState([]);   // [{url, source:'ia'|'subido'}]
   const [activeIdx, setActiveIdx] = useState(0);
@@ -343,8 +431,8 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const buildBrief = () => {
     const p = [];
     if (form.layout) p.push(`Distribución: ${form.layout}.`);
-    if (form.doorModel) p.push(`Modelo de puerta: ${form.doorModel} (ACB).`);
-    if (form.cabinet_material) p.push(`Frentes: ${form.cabinet_material}.`);
+    if (form.doorModel) p.push(`Modelo de puerta: ${form.doorModel} (${form.maker}).`);
+    if (form.cabinet_material) p.push(`Frentes/acabado: ${form.cabinet_material}${form.maker ? ` (${form.maker})` : ''}.`);
     if (form.countertop_material) p.push(`Encimera: ${form.countertop_material}.`);
     if (form.brief) p.push(form.brief);
     return p.join(' ');
@@ -575,14 +663,26 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         {/* PASO 2 — Acabados */}
         {step === 2 && (
           <div className="space-y-6 max-w-5xl">
-            <StepHeader n={2} title="Acabados y estilo" hint="Lo que define el aspecto del render." />
+            <StepHeader n={2} title="Acabados y estilo" hint="Elige fabricante, modelo de puerta y color." />
+            {/* Fabricante */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Fabricante</label>
+              <div className="flex gap-2">
+                {Object.keys(MAKERS).map(m => (
+                  <button key={m} onClick={() => setForm({ ...form, maker: m, doorModel: '', cabinet_material: '' })}
+                    className={`px-5 py-2 rounded-lg text-sm font-black transition-all ${form.maker === m ? 'bg-indigo-600 text-white ring-2 ring-indigo-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Distribución</label>
                 <GuidedSelect value={form.layout} onChange={v => setForm({ ...form, layout: v })} options={LAYOUT_OPTIONS} placeholder="Elige distribución…" />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Estilo</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Estilo de render</label>
                 <div className="grid grid-cols-2 gap-2">
                   {WIZARD_STYLES.map(s => (
                     <button key={s.id} onClick={() => setForm({ ...form, style: s.id })}
@@ -592,15 +692,23 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Modelo de puerta (ACB)</label>
-                <GuidedSelect value={form.doorModel} onChange={v => setForm({ ...form, doorModel: v })} options={ACB_DOOR_MODELS} placeholder="Elige modelo…" />
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-bold text-slate-700 mb-1">Modelo de puerta ({form.maker})</label>
+                <GuidedSelect value={form.doorModel} onChange={v => setForm({ ...form, doorModel: v })} options={(MAKERS[form.maker]?.doors) || []} placeholder="Elige modelo de puerta…" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Frentes de los muebles</label>
-                <SwatchPicker value={form.cabinet_material} onChange={v => setForm({ ...form, cabinet_material: v })} swatches={CABINET_SWATCHES} />
+                <label className="block text-sm font-bold text-slate-700 mb-2">Color / acabado del frente ({form.maker})</label>
+                {(MAKERS[form.maker]?.colors || []).length > 0 ? (
+                  <SwatchPicker value={form.cabinet_material} onChange={v => setForm({ ...form, cabinet_material: v })} swatches={MAKERS[form.maker].colors} />
+                ) : (
+                  <div className="space-y-1.5">
+                    <input value={form.cabinet_material} onChange={e => setForm({ ...form, cabinet_material: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Escribe el color/acabado del modelo elegido" />
+                    <p className="text-[11px] text-slate-400">El color de {form.maker} se elige según su tarifa para el modelo seleccionado.</p>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Encimera</label>
