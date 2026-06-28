@@ -107,6 +107,18 @@ const RentabilidadLineas = ({ currentUser }) => {
     return { venta, coste, margen, margenPct: venta > 0 ? (margen / venta * 100) : 0 };
   };
 
+  // Normaliza el tipo de documento detectado por la IA a uno de los 4 válidos.
+  const VALID_DOCTYPES = ['presupuesto', 'pedido', 'albaran', 'factura'];
+  const normDocType = (t) => {
+    const s = (t || '').toString().trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // quita acentos (albarán→albaran)
+    if (s.includes('presup')) return 'presupuesto';
+    if (s.includes('pedido')) return 'pedido';
+    if (s.includes('albar')) return 'albaran';
+    if (s.includes('factur')) return 'factura';
+    return VALID_DOCTYPES.includes(s) ? s : '';
+  };
+
   // ── Subir UN documento de venta ──
   const handleSaleDoc = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
@@ -126,7 +138,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         cliente: data.data.cliente || '',
         clienteCodigo: data.data.clienteCodigo || '',
         fecha: data.data.fecha || '',
-        docType,
+        docType: normDocType(data.data.docType) || docType,
         lines: data.data.lines || [],
         saleDoc: { b64, name: file.name },
         costDocs: [],
@@ -165,7 +177,7 @@ const RentabilidadLineas = ({ currentUser }) => {
           cliente: data.data.cliente || '',
           clienteCodigo: data.data.clienteCodigo || '',
           fecha: data.data.fecha || '',
-          docType,
+          docType: normDocType(data.data.docType) || docType,
           lines: data.data.lines || [],
           createdBy: currentUser?.id,
           createdByName: currentUser?.clientName || currentUser?.username,
