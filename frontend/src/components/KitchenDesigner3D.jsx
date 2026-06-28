@@ -274,6 +274,9 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const [renderErr, setRenderErr] = useState(null);
   const [isBudgeting, setIsBudgeting] = useState(false);
   const [detected, setDetected] = useState(null);      // muebles detectados
+  const [savedId, setSavedId] = useState(null);        // id del proyecto guardado
+  const [savedList, setSavedList] = useState(null);     // lista para "Mis proyectos" (null = oculto)
+  const [busySave, setBusySave] = useState(false);
 
   const fileToDataUrl = (file) => new Promise((res, rej) => {
     const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
@@ -364,6 +367,68 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
     finally { setIsBudgeting(false); }
   };
 
+  // Descargar una propuesta (vale tanto dataURL como URL del motor con token).
+  const downloadImage = async (url, name) => {
+    try {
+      let href = url;
+      if (!String(url).startsWith('data:')) {
+        const resp = await fetch(assetSrc(url));
+        href = URL.createObjectURL(await resp.blob());
+      }
+      const a = document.createElement('a');
+      a.href = href; a.download = name || 'diseno-cocina.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      if (href !== url) setTimeout(() => URL.revokeObjectURL(href), 4000);
+    } catch { alert('No se pudo descargar la imagen.'); }
+  };
+
+  // Guardar el proyecto (estado completo) para rescatarlo más tarde.
+  const saveProject = async () => {
+    const def = (savedList && savedList.name) || '';
+    const name = window.prompt('Nombre del proyecto:', def || 'Cocina');
+    if (name === null) return;
+    setBusySave(true);
+    try {
+      const r = await fetch(`${API_URL}/api/kitchen-projects/wizard`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: savedId || undefined, name,
+          thumb: proposals[0]?.url || floorPlan || '',
+          wizard: { step, floorPlan, sketches, form, proposals, detected },
+        }),
+      });
+      const data = await r.json();
+      if (data.id) { setSavedId(data.id); alert('✅ Proyecto guardado. Podrás rescatarlo desde "Mis proyectos".'); }
+      else alert('No se pudo guardar el proyecto.');
+    } catch { alert('Error al guardar el proyecto.'); }
+    finally { setBusySave(false); }
+  };
+
+  const openSavedList = async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/kitchen-projects/wizard/list`, { headers: { 'Authorization': `Bearer ${getToken()}` } });
+      const data = await r.json();
+      setSavedList({ items: data.projects || [] });
+    } catch { alert('No se pudo cargar la lista de proyectos.'); }
+  };
+
+  const loadProject = async (wid) => {
+    try {
+      const r = await fetch(`${API_URL}/api/kitchen-projects/wizard/${wid}`, { headers: { 'Authorization': `Bearer ${getToken()}` } });
+      const doc = await r.json();
+      const w = doc.wizard || {};
+      setFloorPlan(w.floorPlan || null);
+      setSketches(w.sketches || []);
+      setForm(w.form || form);
+      setProposals(w.proposals || []);
+      setActiveIdx(0);
+      setDetected(w.detected || null);
+      setSavedId(doc.id);
+      setStep(w.step || 1);
+      setSavedList(null);
+    } catch { alert('No se pudo abrir el proyecto.'); }
+  };
+
   const STEPS = ['Plano', 'Acabados', 'Render', 'Presupuesto'];
   const canNext = step === 1 ? (floorPlan || sketches.length > 0) : step === 3 ? proposals.length > 0 : true;
   const active = proposals[activeIdx];
@@ -374,11 +439,19 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       {/* Cabecera + progreso */}
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-black text-slate-800">Cocinas 3D</h1>
-        {typeof setState === 'function' && (
-          <button onClick={quickRender} className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl font-bold text-sm hover:bg-purple-100">
-            <Wand2 size={16} /> ¿Render rápido?
+        <div className="flex items-center gap-2">
+          <button onClick={openSavedList} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">
+            <FolderOpen size={16} /> Mis proyectos
           </button>
-        )}
+          <button onClick={saveProject} disabled={busySave} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 disabled:opacity-50">
+            {busySave ? <Loader size={16} className="animate-spin" /> : <CheckCircle size={16} />} Guardar
+          </button>
+          {typeof setState === 'function' && (
+            <button onClick={quickRender} className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl font-bold text-sm hover:bg-purple-100">
+              <Wand2 size={16} /> ¿Render rápido?
+            </button>
+          )}
+        </div>
       </div>
       <p className="text-sm text-slate-500 mb-5">Del plano al presupuesto en 4 pasos.</p>
 
@@ -483,10 +556,16 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
             {active ? (
               <div className="relative group">
                 <img src={assetSrc(active.url)} alt="Propuesta" className="w-full max-h-[60vh] object-contain rounded-xl border border-slate-200 bg-slate-50" />
-                <button onClick={() => setFullscreen(true)} title="Ver a pantalla completa"
-                  className="absolute top-3 right-3 bg-white/90 hover:bg-white border border-slate-200 rounded-lg p-2 shadow">
-                  <Maximize2 size={18} />
-                </button>
+                <div className="absolute top-3 right-3 flex gap-2">
+                  <button onClick={() => downloadImage(active.url, `cocina-${activeIdx + 1}.png`)} title="Descargar diseño"
+                    className="bg-white/90 hover:bg-white border border-slate-200 rounded-lg p-2 shadow">
+                    <Download size={18} />
+                  </button>
+                  <button onClick={() => setFullscreen(true)} title="Ver a pantalla completa"
+                    className="bg-white/90 hover:bg-white border border-slate-200 rounded-lg p-2 shadow">
+                    <Maximize2 size={18} />
+                  </button>
+                </div>
                 <span className="absolute bottom-3 left-3 text-[10px] font-black uppercase tracking-wider bg-black/55 text-white px-2 py-1 rounded">
                   {active.source === 'ia' ? 'Generado por IA' : 'Subido por ti'}
                 </span>
@@ -553,6 +632,35 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
           )}
         </div>
       </div>
+
+      {/* Mis proyectos guardados */}
+      {savedList && Array.isArray(savedList.items) && (
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={() => setSavedList(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="font-black text-slate-800">Mis proyectos</h3>
+              <button onClick={() => setSavedList(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              {savedList.items.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-8">No tienes proyectos guardados todavía.</p>
+              ) : (
+                <div className="space-y-2">
+                  {savedList.items.map(it => (
+                    <div key={it.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 hover:bg-slate-50">
+                      {it.thumb ? <img src={assetSrc(it.thumb)} alt="" className="h-12 w-16 rounded object-cover border border-slate-200" /> : <div className="h-12 w-16 rounded bg-slate-100" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-700 text-sm truncate">{it.name}</p>
+                      </div>
+                      <button onClick={() => loadProject(it.id)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pantalla completa de la propuesta */}
       {fullscreen && active && (

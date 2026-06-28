@@ -387,6 +387,56 @@ async def create_project(data: KitchenProjectCreate, user=Depends(require_auth))
     return {"project": project}
 
 
+# ─── Wizard de Cocinas 3D: guardar / recuperar (estado completo) ──────────────
+@kitchen_projects_router.post("/wizard")
+async def save_wizard(data: dict, user=Depends(require_auth)):
+    """Guarda (o actualiza) el estado del asistente de Cocinas 3D para rescatarlo."""
+    user_id = _get_user_id(user)
+    wid = (data or {}).get("id") or f"kw_{int(time.time() * 1000)}"
+    doc = {
+        "id": wid,
+        "user_id": user_id,
+        "name": (data.get("name") or "Cocina sin nombre").strip() or "Cocina sin nombre",
+        "wizard": data.get("wizard") or {},
+        "thumb": data.get("thumb") or "",
+        "updated_at": time.time(),
+    }
+    existing = await db.kitchen_wizard_projects.find_one(
+        {"id": wid, "user_id": user_id}, {"_id": 0, "created_at": 1}
+    )
+    doc["created_at"] = (existing or {}).get("created_at") or doc["updated_at"]
+    await db.kitchen_wizard_projects.update_one(
+        {"id": wid, "user_id": user_id}, {"$set": doc}, upsert=True
+    )
+    return {"id": wid, "name": doc["name"]}
+
+
+@kitchen_projects_router.get("/wizard/list")
+async def list_wizard(user=Depends(require_auth)):
+    """Lista los proyectos del asistente guardados (sin el estado pesado)."""
+    user_id = _get_user_id(user)
+    items = await db.kitchen_wizard_projects.find(
+        {"user_id": user_id}, {"_id": 0, "wizard": 0}
+    ).sort("updated_at", -1).to_list(300)
+    return {"projects": items}
+
+
+@kitchen_projects_router.get("/wizard/{wid}")
+async def get_wizard(wid: str, user=Depends(require_auth)):
+    user_id = _get_user_id(user)
+    doc = await db.kitchen_wizard_projects.find_one({"id": wid, "user_id": user_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return doc
+
+
+@kitchen_projects_router.delete("/wizard/{wid}")
+async def delete_wizard(wid: str, user=Depends(require_auth)):
+    user_id = _get_user_id(user)
+    await db.kitchen_wizard_projects.delete_one({"id": wid, "user_id": user_id})
+    return {"success": True}
+
+
 @kitchen_projects_router.get("/{project_id}")
 async def get_project(project_id: str, user=Depends(require_auth)):
     user_id = _get_user_id(user)
