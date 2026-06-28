@@ -345,11 +345,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const loadBackups = async () => {
     setLoadingBackups(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backups`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backup/status`, { headers: authHeaders() });
       const data = await response.json();
-      setBackups(data);
+      const list = Array.isArray(data?.existing_backups) ? data.existing_backups : [];
+      setBackups(list.map(b => ({
+        id: b.filename,
+        path: b.filename,
+        createdAt: b.created,
+        type: (b.filename || '').includes('pre_update') ? 'pre_update' : 'manual',
+        createdBy: 'Sistema',
+        size_mb: b.size_mb,
+      })));
     } catch (err) {
       console.error('Error loading backups:', err);
+      setBackups([]);
     } finally {
       setLoadingBackups(false);
     }
@@ -461,19 +470,16 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const createManualBackup = async () => {
     setCreatingBackup(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backups/create`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backup/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          type: 'manual',
-          createdBy: state.currentUser?.username || 'admin'
-        })
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
       });
       if (response.ok) {
         await loadBackups();
-        alert('✅ Backup creado correctamente');
+        alert('✅ Backup creado correctamente (código + base de datos)');
       } else {
-        throw new Error('Error al crear backup');
+        const e = await response.json().catch(() => ({}));
+        throw new Error(e.detail || 'Error al crear backup');
       }
     } catch (err) {
       console.error('Error creating backup:', err);
