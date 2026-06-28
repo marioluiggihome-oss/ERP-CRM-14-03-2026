@@ -239,18 +239,37 @@ async function apiCall(path, options = {}) {
 
 // ─── Componente Principal ────────────────────────────────────────────────────
 export default function KitchenDesigner3D({ state, setState, onAddToBudget }) {
-  // Vuelca una lista de líneas valoradas al Presupuestador (principal/P2),
-  // reutilizando el mismo mecanismo que IA Lab (state.p2PendingLines).
-  const dumpToBudget = (lines) => {
-    if (!lines || !lines.length) { alert('No hay muebles valorados para volcar.'); return; }
-    if (typeof setState !== 'function') { alert('No se puede volcar al presupuesto en este contexto.'); return; }
-    setState(p => ({
-      ...p,
-      p2PendingLines: [...(p.p2PendingLines || []), ...lines],
-      currentTab: 'presupuestador2',
-    }));
-    const total = lines.reduce((s, l) => s + (Number(l.price) || 0) * (Number(l.qty) || 1), 0);
-    alert(`✅ ${lines.length} mueble(s) volcado(s) al Presupuestador.\n\nTotal: ${total.toLocaleString('es-ES')}€`);
+  // Convierte un mueble del proyecto (medidas en cm, tipo libre) al formato que
+  // espera el emparejador de catálogo de IA Lab (tipo normalizado, ancho en mm,
+  // alto/fondo en cm). Así el volcado pasa por el MISMO catálogo real.
+  const cabinetToFurniture = (cab) => {
+    const t = `${cab.cabinet_type || ''} ${cab.notes || ''}`.toUpperCase();
+    let tipo = 'BAJO';
+    if (/COLUMNA|TORRE|DESPENS|HORNO|FRIGOR|NEVERA/.test(t)) tipo = 'COLUMNA';
+    else if (/SEMICOLUMNA/.test(t)) tipo = 'SEMICOLUMNA';
+    else if (/COSTADO|LATERAL/.test(t)) tipo = 'COSTADO';
+    else if (/ALTO|PARED|VITRIN/.test(t)) tipo = 'ALTO';
+    const nPuertas = /2\s*PUERTA|DOS PUERTA/.test(t) ? 2 : 1;
+    return {
+      tipo,
+      subtipo: nPuertas === 2 ? '2_PUERTAS' : '1_PUERTA',
+      ancho_estimado: Math.round((Number(cab.width) || 60) * 10), // cm → mm
+      alto_estimado: Number(cab.height) || (tipo === 'ALTO' ? 90 : tipo === 'COLUMNA' ? 220 : 70), // cm
+      fondo_estimado: Number(cab.depth) || (tipo === 'ALTO' ? 33 : 58), // cm
+      material: cab.material || '',
+      color: cab.color || '',
+    };
+  };
+
+  // Vuelca los muebles del proyecto al Presupuestador, pasando cada uno por el
+  // emparejador de catálogo de IA Lab (onAddToBudget) para usar códigos reales.
+  const dumpToBudget = (cabinets) => {
+    const cabs = (cabinets || []).filter(c => c && c.cabinet_type);
+    if (!cabs.length) { alert('Añade muebles al proyecto antes de volcar al presupuesto.'); return; }
+    if (typeof onAddToBudget !== 'function') { alert('No se puede volcar al presupuesto en este contexto.'); return; }
+    cabs.forEach(c => onAddToBudget(cabinetToFurniture(c), false));
+    if (typeof setState === 'function') setState(p => ({ ...p, currentTab: 'budget' }));
+    alert(`✅ ${cabs.length} mueble(s) volcado(s) al Presupuestador (emparejados con el catálogo).`);
   };
   const [view, setView] = useState('list');
   const [projects, setProjects] = useState([]);
@@ -1228,23 +1247,7 @@ function TechnicalDocsTab({ project, onRefresh, onDumpToBudget }) {
   const [isApproving, setIsApproving] = useState(false);
   const [expandedDoc, setExpandedDoc] = useState(null);
 
-  // Construye las líneas de presupuesto desde el despiece valorado del proyecto.
-  const breakdownDoc = (project.technical_docs || []).find(d => d.doc_type === 'cabinet_breakdown');
-  const buildBudgetLines = () => {
-    const items = breakdownDoc?.content?.items || [];
-    return items.map(it => {
-      const dims = (it.dimensions || '').replace(/cm/i, '').split('x').map(s => parseFloat(s.trim()));
-      return {
-        code: it.library || library,
-        name: `${it.cabinetType || 'Mueble'}${it.material && it.material !== 'Sin especificar' ? ` · ${it.material}` : ''}${it.wall ? ` (${it.wall})` : ''}`.trim(),
-        price: Number(it.price) || 0,
-        qty: 1,
-        width: dims[0] || undefined,
-        height: dims[1] || undefined,
-        depth: dims[2] || undefined,
-      };
-    });
-  };
+  const cabinetCount = (project.cabinets || []).filter(c => c && c.cabinet_type).length;
 
   const handleApprove = async () => {
     const renders = project.renders || [];
@@ -1304,16 +1307,15 @@ function TechnicalDocsTab({ project, onRefresh, onDumpToBudget }) {
       )}
 
       {/* Volcar a presupuesto: cierra el ciclo plano → diseño → render → presupuesto */}
-      {project.status === 'approved' && breakdownDoc && onDumpToBudget && (
+      {cabinetCount > 0 && onDumpToBudget && (
         <div className="mb-6 rounded-xl border-2 border-emerald-100 bg-emerald-50/50 p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-black text-emerald-800">Pasar este diseño a presupuesto</p>
             <p className="text-[12px] text-slate-500">
-              Vuelca los {breakdownDoc.content?.items?.length || 0} muebles valorados al Presupuestador
-              {typeof breakdownDoc.content?.totalPrice === 'number' ? ` (${breakdownDoc.content.totalPrice.toFixed(2)}€)` : ''}.
+              Vuelca los {cabinetCount} muebles del proyecto al Presupuestador, emparejándolos con el catálogo real (códigos y precios confirmados).
             </p>
           </div>
-          <button onClick={() => onDumpToBudget(buildBudgetLines())}
+          <button onClick={() => onDumpToBudget(project.cabinets)}
             className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700">
             <Download size={16} /> Volcar a presupuesto
           </button>
