@@ -79,7 +79,8 @@ async def create_telemetry_job(library: str, module: str, files_data: List[Dict]
     
     jobs_queue[job_id] = job
     files_queue[job_id] = files_data
-    
+    await _save_job(job)  # visible inmediatamente desde cualquier worker
+
     # Iniciar procesamiento en background
     asyncio.create_task(process_job(job_id))
     
@@ -88,12 +89,7 @@ async def create_telemetry_job(library: str, module: str, files_data: List[Dict]
     return job_id
 
 
-async def get_job_status(job_id: str) -> Optional[Dict]:
-    """Obtiene el estado actual de un job"""
-    job = jobs_queue.get(job_id)
-    if not job:
-        return None
-    
+def _job_to_dict(job: "TelemetryJob") -> Dict:
     return {
         "job_id": job.job_id,
         "library": job.library,
@@ -110,8 +106,34 @@ async def get_job_status(job_id: str) -> Optional[Dict]:
         "current_file": job.current_file,
         "progress_percent": round((job.processed_files / max(job.total_files, 1)) * 100, 1),
         "created_at": job.created_at,
-        "updated_at": job.updated_at
+        "updated_at": job.updated_at,
     }
+
+
+async def _save_job(job: "TelemetryJob"):
+    """Persiste el estado del job en Mongo para que sea visible desde CUALQUIER
+    worker (el polling de estado puede caer en un proceso distinto al que procesa)."""
+    try:
+        doc = _job_to_dict(job)
+        # logs completos en Mongo (no solo los últimos 20) para no perder histórico
+        doc["logs"] = job.logs[-200:]
+        await db.telemetry_jobs.update_one({"job_id": job.job_id}, {"$set": doc}, upsert=True)
+    except Exception as e:
+        logger.warning(f"No se pudo persistir el job {job.job_id}: {e}")
+
+
+async def get_job_status(job_id: str) -> Optional[Dict]:
+    """Obtiene el estado actual de un job. Primero memoria local; si no está
+    (otro worker), lo lee de Mongo."""
+    job = jobs_queue.get(job_id)
+    if job:
+        return _job_to_dict(job)
+    doc = await db.telemetry_jobs.find_one({"job_id": job_id}, {"_id": 0})
+    if not doc:
+        return None
+    logs = doc.get("logs") or []
+    doc["logs"] = logs[-20:]
+    return doc
 
 
 def add_job_log(job: TelemetryJob, log_type: str, message: str):
@@ -132,7 +154,8 @@ async def process_job(job_id: str):
     
     job.status = JobStatus.PROCESSING
     add_job_log(job, "info", f"Iniciando procesamiento de {job.total_files} archivo(s)...")
-    
+    await _save_job(job)
+
     files_data = files_queue.get(job_id, [])
     all_products = []
     
@@ -151,9 +174,11 @@ async def process_job(job_id: str):
             job.current_file = filename
             job.processed_files = idx + 1
             add_job_log(job, "info", f"📄 Procesando {idx+1}/{job.total_files}: {filename}")
-            
+            await _save_job(job)
+
             if not base64_image:
                 add_job_log(job, "err", f"⚠️ {filename}: Sin datos de imagen")
+                await _save_job(job)
                 continue
             
             try:
@@ -187,11 +212,13 @@ async def process_job(job_id: str):
                     add_job_log(job, "ok", f"✅ {filename}: {len(products)} productos ({detected_tariff or 'T1'})")
                 else:
                     add_job_log(job, "warn", f"⚠️ {filename}: Sin productos detectados")
-                    
+                await _save_job(job)
+
             except Exception as e:
                 error_msg = str(e)[:100]
                 job.errors.append(f"{filename}: {error_msg}")
                 add_job_log(job, "err", f"❌ {filename}: {error_msg}")
+                await _save_job(job)
         
         # Guardar productos en la base de datos
         if all_products:
@@ -218,15 +245,16 @@ async def process_job(job_id: str):
         job.status = JobStatus.COMPLETED
         total_tarifas = list(set(job.detected_tariffs))
         add_job_log(job, "ok", f"🎉 Completado: {job.products_found} productos, {len(total_tarifas)} tarifa(s)")
-        
+
     except Exception as e:
         job.status = JobStatus.FAILED
         job.errors.append(str(e))
         add_job_log(job, "err", f"❌ Error fatal: {str(e)[:100]}")
         logger.error(f"Job {job_id} failed: {e}")
-    
+
     finally:
         job.current_file = ""
+        await _save_job(job)  # estado final visible desde cualquier worker
         # Limpiar archivos de la cola
         if job_id in files_queue:
             del files_queue[job_id]
