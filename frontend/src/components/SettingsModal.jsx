@@ -125,6 +125,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     username: '',
     password: '',
     clientName: '',
+    linkedClientCodigo: '',  // Código de cliente del CRM (relaciona usuario↔cliente)
     provinciaCode: '',  // Código de provincia (2 letras: AV, LE, SA, etc.)
     accessExpirationDate: '',  // Fecha de caducidad del acceso
     isActive: true,
@@ -717,6 +718,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       username: '',
       password: '',
       clientName: '',
+      linkedClientCodigo: '',
       provinciaCode: '',  // Código de provincia
       accessExpirationDate: '',  // Fecha de caducidad
       linkedClientId: '',
@@ -775,9 +777,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     setIsEditingUser(true);
     setEditingUserId(user.id);
     // Asegurar que allowedLibraries, provinciaCode y accessExpirationDate tengan valor por defecto
-    setUserForm({ 
-      ...user, 
+    setUserForm({
+      ...user,
       linkedClientId: user.linkedClientId || '',
+      linkedClientCodigo: user.linkedClientCodigo || '',
       allowedLibraries: user.allowedLibraries || ['ZC'],
       provinciaCode: user.provinciaCode || '',
       accessExpirationDate: user.accessExpirationDate || ''
@@ -1612,6 +1615,17 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
                         />
                         <p className="text-[10px] text-slate-400 mt-1">Puede ser un email o texto libre (minúsculas permitidas)</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Código cliente (CRM)</label>
+                        <input
+                          type="text"
+                          value={userForm.linkedClientCodigo || ''}
+                          onChange={(e) => setUserForm({...userForm, linkedClientCodigo: e.target.value})}
+                          placeholder="Ej: 2546"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Si este usuario es un cliente con acceso, pon su código de cliente para relacionarlo con el CRM.</p>
                       </div>
                     </div>
 
