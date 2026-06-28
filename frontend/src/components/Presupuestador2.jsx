@@ -356,26 +356,52 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     if (onProjectConsumed) onProjectConsumed();
   }, [incomingProject]);
 
-  // Añadir líneas que llegan de otros módulos (p.ej. un armario) SIN borrar el carrito.
+  // Añadir líneas que llegan de otros módulos (p.ej. un plano de Cocinas 3D).
+  // Se EMPAREJAN con el catálogo de la librería activa por productId o código:
+  // si se encuentra el producto, entra como línea de catálogo (precio de la
+  // librería, manual:false); solo si no se encuentra entra como línea manual.
   useEffect(() => {
     if (!incomingLines || !incomingLines.length) return;
-    setCart(prev => [...prev, ...incomingLines.map((l, idx) => ({
-      id: `ext-${Date.now()}-${idx}`,
-      code: l.code || 'MANUAL',
-      name: l.name || 'Línea',
-      price: Number(l.price) || 0,
-      qty: Number(l.qty) || 1,
-      manual: true,
-      // Datos que trae el módulo de origen (p.ej. armario): tipo, medidas y acabado.
-      itemType: l.itemType || null,
-      finish: l.finish || null,
-      interiorFinish: l.interiorFinish || null,
-      customWidth: l.width != null ? Number(l.width) : '',
-      customHeight: l.height != null ? Number(l.height) : '',
-      customDepth: l.depth != null ? Number(l.depth) : '',
-    }))]);
+    if (!products || !products.length) return; // espera a que cargue el catálogo
+    const norm = (c) => (c == null ? '' : String(c)).trim().toUpperCase();
+    setCart(prev => [...prev, ...incomingLines.map((l, idx) => {
+      const code = norm(l.code);
+      const prod =
+        (l.productId && products.find(p => p.id === l.productId)) ||
+        (code && products.find(p => norm(p.code) === code)) ||
+        (code && products.find(p => norm(p.code).replace(/[^A-Z0-9]/g, '') === code.replace(/[^A-Z0-9]/g, ''))) ||
+        null;
+      if (prod) {
+        // Línea de CATÁLOGO: el precio lo calcula la propia tarifa (unitPriceOf).
+        return {
+          id: prod.id,
+          code: prod.code,
+          name: prod.name,
+          qty: Number(l.qty) || 1,
+          manual: false,
+          customWidth: l.width != null ? Number(l.width) : '',
+          customHeight: l.height != null ? Number(l.height) : '',
+          customDepth: l.depth != null ? Number(l.depth) : '',
+        };
+      }
+      // No encontrado: línea manual (igual que antes).
+      return {
+        id: `ext-${Date.now()}-${idx}`,
+        code: l.code || 'MANUAL',
+        name: l.name || 'Línea',
+        price: Number(l.price) || 0,
+        qty: Number(l.qty) || 1,
+        manual: true,
+        itemType: l.itemType || null,
+        finish: l.finish || null,
+        interiorFinish: l.interiorFinish || null,
+        customWidth: l.width != null ? Number(l.width) : '',
+        customHeight: l.height != null ? Number(l.height) : '',
+        customDepth: l.depth != null ? Number(l.depth) : '',
+      };
+    })]);
     if (onLinesConsumed) onLinesConsumed();
-  }, [incomingLines]);
+  }, [incomingLines, products]);
 
   // Descuento comercial del usuario, para el modo "COSTO fábrica".
   const discountPct = currentUser?.discountMontada ?? currentUser?.commercialDiscount ?? 0;

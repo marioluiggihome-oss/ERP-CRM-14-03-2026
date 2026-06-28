@@ -40,14 +40,45 @@ const VIEW_PRESETS = [
 // Muestras visuales de acabado (swatch) para elegir como en un configurador real.
 // 'bg' es CSS (color o gradiente que imita el material).
 const CABINET_SWATCHES = [
-  { label: 'Blanco mate', bg: '#f5f5f3' },
-  { label: 'Blanco brillo', bg: 'linear-gradient(135deg,#ffffff,#e9eef2)' },
-  { label: 'Gris antracita', bg: '#3a3f44' },
-  { label: 'Roble natural', bg: 'linear-gradient(135deg,#c9a26a,#a9803f)' },
-  { label: 'Nogal', bg: 'linear-gradient(135deg,#6b4421,#4a2c14)' },
-  { label: 'Verde salvia', bg: '#9caa8a' },
-  { label: 'Azul marino', bg: '#2c3e57' },
-  { label: 'Negro mate', bg: '#1c1c1e' },
+  // Básicos
+  { group: 'Básicos', label: 'Blanco mate', bg: '#f5f5f3' },
+  { group: 'Básicos', label: 'Blanco brillo', bg: 'linear-gradient(135deg,#ffffff,#e9eef2)' },
+  { group: 'Básicos', label: 'Gris antracita', bg: '#3a3f44' },
+  { group: 'Básicos', label: 'Verde salvia', bg: '#9caa8a' },
+  { group: 'Básicos', label: 'Azul marino', bg: '#2c3e57' },
+  { group: 'Básicos', label: 'Negro mate', bg: '#1c1c1e' },
+  // ALVIC — Luxe (alto brillo)
+  { group: 'Alvic Luxe (brillo)', label: 'Luxe Blanco', bg: 'linear-gradient(135deg,#ffffff,#eef1f3)' },
+  { group: 'Alvic Luxe (brillo)', label: 'Luxe Negro', bg: 'linear-gradient(135deg,#2a2a2c,#101012)' },
+  { group: 'Alvic Luxe (brillo)', label: 'Luxe Gris Antracita', bg: 'linear-gradient(135deg,#4a4d50,#303336)' },
+  { group: 'Alvic Luxe (brillo)', label: 'Luxe Gris Seda', bg: 'linear-gradient(135deg,#cdcbc6,#b5b3ad)' },
+  { group: 'Alvic Luxe (brillo)', label: 'Luxe Champán', bg: 'linear-gradient(135deg,#ddccac,#c2ad84)' },
+  { group: 'Alvic Luxe (brillo)', label: 'Luxe Cobre', bg: 'linear-gradient(135deg,#c07d44,#8c4f23)' },
+  { group: 'Alvic Luxe (brillo)', label: 'Luxe Azul Marino', bg: 'linear-gradient(135deg,#33415c,#202c44)' },
+  // ALVIC — Zenit (supermate)
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Blanco', bg: '#f3f3f0' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Negro', bg: '#1a1a1c' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Gris Cristal', bg: '#c7c8c5' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Arena', bg: '#d8cdb8' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Tortora', bg: '#b3a596' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Verde Kaki', bg: '#6b6f4e' },
+  { group: 'Alvic Zenit (supermate)', label: 'Zenit Azul Noche', bg: '#2a3550' },
+  // ALVIC — Syncron (maderas texturizadas)
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Eless', bg: 'linear-gradient(135deg,#d6bd95,#b9975f)' },
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Estoril', bg: 'linear-gradient(135deg,#c0a376,#9a7847)' },
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Lakeland', bg: 'linear-gradient(135deg,#b3a892,#8c8270)' },
+  { group: 'Alvic Syncron (madera)', label: 'Syncron Tavola Nogal', bg: 'linear-gradient(135deg,#6b4a2c,#43291699)' },
+  // ACB
+  { group: 'Grupo ACB', label: 'ACB Blanco', bg: '#f6f6f4' },
+  { group: 'Grupo ACB', label: 'ACB Cachemir', bg: '#d9cfc0' },
+  { group: 'Grupo ACB', label: 'ACB Gris Antracita', bg: '#3b3e42' },
+  { group: 'Grupo ACB', label: 'ACB Gris Piedra', bg: '#9a9893' },
+  { group: 'Grupo ACB', label: 'ACB Arena', bg: '#d6c9b0' },
+  { group: 'Grupo ACB', label: 'ACB Tortora', bg: '#aa9c8d' },
+  { group: 'Grupo ACB', label: 'ACB Roble Natural', bg: 'linear-gradient(135deg,#c9a26a,#a9803f)' },
+  { group: 'Grupo ACB', label: 'ACB Roble Castaño', bg: 'linear-gradient(135deg,#8a5a32,#5c3a1e)' },
+  { group: 'Grupo ACB', label: 'ACB Nogal', bg: 'linear-gradient(135deg,#6b4421,#4a2c14)' },
+  { group: 'Grupo ACB', label: 'ACB Olmo', bg: 'linear-gradient(135deg,#b59b78,#8f7350)' },
 ];
 const COUNTERTOP_SWATCHES = [
   { label: 'Cuarzo blanco', bg: '#f3f4f2' },
@@ -60,26 +91,42 @@ const COUNTERTOP_SWATCHES = [
   { label: 'Acero inoxidable', bg: 'linear-gradient(135deg,#d7dadd,#a7adb3)' },
 ];
 
-// Selector de muestras visuales con opción libre.
+// Botón individual de muestra.
+function SwatchButton({ s, value, onChange }) {
+  return (
+    <button type="button" onClick={() => onChange(s.label)} title={s.label}
+      className={`relative rounded-lg overflow-hidden border-2 transition-all ${value === s.label ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'}`}>
+      <span className="block h-10 w-full" style={{ background: s.bg }} />
+      <span className="block text-[9px] font-bold text-slate-600 px-1 py-0.5 leading-tight truncate">{s.label}</span>
+      {value === s.label && <CheckCircle size={14} className="absolute top-1 right-1 text-white drop-shadow" />}
+    </button>
+  );
+}
+
+// Selector de muestras visuales con opción libre. Agrupa por s.group si existe.
 function SwatchPicker({ value, onChange, swatches }) {
   const isOther = value && !swatches.some(s => s.label === value);
+  const groups = [];
+  const byGroup = {};
+  swatches.forEach(s => {
+    const g = s.group || '';
+    if (!(g in byGroup)) { byGroup[g] = []; groups.push(g); }
+    byGroup[g].push(s);
+  });
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-4 gap-2">
-        {swatches.map(s => (
-          <button type="button" key={s.label} onClick={() => onChange(s.label)} title={s.label}
-            className={`group relative rounded-lg overflow-hidden border-2 transition-all ${value === s.label ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'}`}>
-            <span className="block h-10 w-full" style={{ background: s.bg }} />
-            <span className="block text-[9px] font-bold text-slate-600 px-1 py-0.5 leading-tight truncate">{s.label}</span>
-            {value === s.label && <CheckCircle size={14} className="absolute top-1 right-1 text-white drop-shadow" />}
-          </button>
-        ))}
-        <button type="button" onClick={() => onChange(isOther ? value : ' ')} title="Otro acabado"
-          className={`rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-[10px] font-bold transition-all ${isOther ? 'border-indigo-600 text-indigo-600 ring-2 ring-indigo-200' : 'border-slate-300 text-slate-500 hover:border-slate-400'}`}>
-          <span className="h-10 flex items-center justify-center">+</span>
-          <span className="px-1 py-0.5">Otro…</span>
-        </button>
-      </div>
+    <div className="space-y-3">
+      {groups.map(g => (
+        <div key={g || '_'} className="space-y-1.5">
+          {g && <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{g}</p>}
+          <div className="grid grid-cols-4 gap-2">
+            {byGroup[g].map(s => <SwatchButton key={s.label} s={s} value={value} onChange={onChange} />)}
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange(isOther ? value : ' ')} title="Otro acabado"
+        className={`w-full rounded-lg border-2 border-dashed py-2 text-[11px] font-bold transition-all ${isOther ? 'border-indigo-600 text-indigo-600 ring-2 ring-indigo-200' : 'border-slate-300 text-slate-500 hover:border-slate-400'}`}>
+        + Otro acabado…
+      </button>
       {isOther && (
         <input type="text" autoFocus value={value.trimStart()} onChange={e => onChange(e.target.value)}
           className="w-full px-3 py-2 border border-indigo-300 rounded-lg text-sm" placeholder="Acabado personalizado" />
@@ -351,6 +398,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       // Volcar SIEMPRE al Presupuestador 1 (tab 'presupuestador2' = "Presup.")
       // mediante p2PendingLines, que el componente resuelve con su catálogo.
       const lines = cotizables.map(f => ({
+        productId: f.product_id || f.productId || null,
         code: f.codigo_catalogo || f.codigo_sugerido || lib,
         name: f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
         price: Number(f.precio_pvp) || 0,
@@ -472,38 +520,44 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         })}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 w-full flex-1">
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 w-full flex-1 flex flex-col">
         {/* PASO 1 — Plano + bocetos */}
         {step === 1 && (
-          <div className="space-y-4">
+          <div className="flex flex-col gap-5 flex-1">
             <StepHeader n={1} title="Sube el plano y los bocetos" hint="El plano en planta (distribución) y un boceto/alzado por cada pared." />
-            <div>
-              <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">Plano en planta</span>
-              {floorPlan ? (
-                <div className="relative inline-block">
-                  <img src={floorPlan} alt="Plano" className="h-28 rounded-lg border border-slate-200 object-cover" />
-                  <button onClick={() => setFloorPlan(null)} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow"><X size={12} /></button>
-                </div>
-              ) : (
-                <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border-2 border-dashed border-slate-300 rounded-lg text-xs font-bold text-slate-600 cursor-pointer hover:border-indigo-400">
-                  <Upload size={14} /> Subir plano (imagen o PDF)
-                  <input type="file" accept="image/*,application/pdf" onChange={onFloorPlan} className="hidden" />
-                </label>
-              )}
-            </div>
-            <div>
-              <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">Bocetos / alzados por pared</span>
-              <div className="flex flex-wrap gap-3">
-                {sketches.map((s, i) => (
-                  <div key={i} className="relative">
-                    <img src={s} alt={`Boceto ${i + 1}`} className="h-24 w-32 rounded-lg border border-slate-200 object-cover" />
-                    <button onClick={() => setSketches(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow"><X size={12} /></button>
+            <div className="grid lg:grid-cols-2 gap-6 flex-1">
+              {/* Plano en planta */}
+              <div className="flex flex-col">
+                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-2">Plano en planta</span>
+                {floorPlan ? (
+                  <div className="relative flex-1 min-h-[260px] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+                    <img src={floorPlan} alt="Plano" className="w-full h-full object-contain" />
+                    <button onClick={() => setFloorPlan(null)} className="absolute top-2 right-2 bg-white border border-slate-200 rounded-full p-1 shadow"><X size={14} /></button>
                   </div>
-                ))}
-                <label className="h-24 w-32 flex flex-col items-center justify-center gap-1 bg-white border-2 border-dashed border-slate-300 rounded-lg text-[11px] font-bold text-slate-500 cursor-pointer hover:border-indigo-400">
-                  <Upload size={14} /> Añadir boceto
-                  <input type="file" accept="image/*" onChange={onAddSketch} className="hidden" />
-                </label>
+                ) : (
+                  <label className="flex-1 min-h-[260px] flex flex-col items-center justify-center gap-2 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl text-sm font-bold text-slate-500 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40">
+                    <Upload size={28} /> Subir plano (imagen o PDF)
+                    <input type="file" accept="image/*,application/pdf" onChange={onFloorPlan} className="hidden" />
+                  </label>
+                )}
+              </div>
+              {/* Bocetos por pared */}
+              <div className="flex flex-col">
+                <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-2">Bocetos / alzados por pared</span>
+                <div className="flex-1 min-h-[260px] rounded-xl border border-slate-200 bg-slate-50 p-3 overflow-auto">
+                  <div className="flex flex-wrap gap-3">
+                    {sketches.map((s, i) => (
+                      <div key={i} className="relative">
+                        <img src={s} alt={`Boceto ${i + 1}`} className="h-28 w-40 rounded-lg border border-slate-200 object-cover" />
+                        <button onClick={() => setSketches(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow"><X size={12} /></button>
+                      </div>
+                    ))}
+                    <label className="h-28 w-40 flex flex-col items-center justify-center gap-1 bg-white border-2 border-dashed border-slate-300 rounded-lg text-[11px] font-bold text-slate-500 cursor-pointer hover:border-indigo-400">
+                      <Upload size={18} /> Añadir boceto
+                      <input type="file" accept="image/*" onChange={onAddSketch} className="hidden" />
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -511,7 +565,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
 
         {/* PASO 2 — Acabados */}
         {step === 2 && (
-          <div className="space-y-5">
+          <div className="space-y-6 max-w-5xl">
             <StepHeader n={2} title="Acabados y estilo" hint="Lo que define el aspecto del render." />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -619,7 +673,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         )}
 
         {/* Navegación */}
-        <div className="flex items-center justify-between mt-6 pt-5 border-t border-slate-100">
+        <div className="flex items-center justify-between mt-auto pt-5 border-t border-slate-100">
           <button onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}
             className="flex items-center gap-1.5 px-4 py-2 text-slate-600 font-bold text-sm disabled:opacity-40 hover:text-slate-800">
             <ArrowLeft size={16} /> Atrás
