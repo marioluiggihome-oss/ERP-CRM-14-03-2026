@@ -238,7 +238,283 @@ async function apiCall(path, options = {}) {
 }
 
 // ─── Componente Principal ────────────────────────────────────────────────────
-export default function KitchenDesigner3D({ state, setState, onAddToBudget }) {
+// Estilos de render para el wizard (id que entiende el motor + etiqueta ES).
+const WIZARD_STYLES = [
+  { id: 'photorealistic', label: 'Fotorrealista' },
+  { id: 'architectural', label: 'Arquitectónico' },
+  { id: 'minimalist', label: 'Minimalista' },
+  { id: 'warm', label: 'Cálido' },
+  { id: 'industrial', label: 'Industrial' },
+];
+
+function dataURLtoFile(dataUrl, filename) {
+  try {
+    const [head, body] = dataUrl.split(',');
+    const mime = (head.match(/:(.*?);/) || [])[1] || 'image/png';
+    const bin = atob(body);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new File([arr], filename, { type: mime });
+  } catch { return null; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COCINAS 3D — ASISTENTE GUIADO (wizard de 4 pasos)
+//  1) Plano + bocetos  2) Acabados  3) Render  4) Presupuesto
+// ═══════════════════════════════════════════════════════════════════════════════
+function KitchenWizard({ state, setState, onAddToBudget }) {
+  const [step, setStep] = useState(1);
+  const [floorPlan, setFloorPlan] = useState(null);   // dataURL plano en planta
+  const [sketches, setSketches] = useState([]);        // dataURL[] bocetos por pared
+  const [form, setForm] = useState({ layout: '', style: 'photorealistic', cabinet_material: '', countertop_material: '', brief: '' });
+  const [isRendering, setIsRendering] = useState(false);
+  const [renderUrl, setRenderUrl] = useState(null);
+  const [renderErr, setRenderErr] = useState(null);
+  const [isBudgeting, setIsBudgeting] = useState(false);
+  const [detected, setDetected] = useState(null);      // muebles detectados
+
+  const fileToDataUrl = (file) => new Promise((res, rej) => {
+    const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+  });
+  const onFloorPlan = async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFloorPlan(await fileToDataUrl(f)); };
+  const onAddSketch = async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; const d = await fileToDataUrl(f); setSketches(prev => [...prev, d]); };
+
+  const buildBrief = () => {
+    const p = [];
+    if (form.layout) p.push(`Distribución: ${form.layout}.`);
+    if (form.cabinet_material) p.push(`Frentes: ${form.cabinet_material}.`);
+    if (form.countertop_material) p.push(`Encimera: ${form.countertop_material}.`);
+    if (form.brief) p.push(form.brief);
+    return p.join(' ');
+  };
+
+  // Paso 3: render fiel (plano + bocetos) reutilizando el motor existente.
+  const generateRender = async () => {
+    setIsRendering(true); setRenderErr(null);
+    try {
+      const r = await fetch(`${API_URL}/api/ai-engine/render/compose`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: buildBrief(), style: form.style, floorPlan: floorPlan || undefined, wallSketches: sketches }),
+      });
+      const data = await r.json();
+      const url = data?.result?.images?.[0];
+      if (data.success && url) setRenderUrl(url);
+      else setRenderErr(data.error || 'No se pudo generar el render.');
+    } catch { setRenderErr('Error de conexión al generar el render.'); }
+    finally { setIsRendering(false); }
+  };
+
+  // Paso 4: analiza plano/bocetos, detecta muebles y vuelca a Presupuestador 1.
+  const analyzeAndBudget = async () => {
+    const imgs = [floorPlan, ...sketches].filter(Boolean);
+    if (!imgs.length) { alert('Sube el plano o un boceto en el paso 1.'); return; }
+    const allowed = state?.allowedLibraries || ['ZC'];
+    let lib = state?.currentLibrary || allowed[0] || 'ZC';
+    if (allowed.includes('ZC') && allowed.includes('MV')) {
+      const ans = (window.prompt('Tienes dos catálogos activos. ¿Con cuál presupuestar? Escribe ZC o MV:', lib) || '').trim().toUpperCase();
+      if (ans !== 'ZC' && ans !== 'MV') return;
+      lib = ans;
+    }
+    setIsBudgeting(true);
+    try {
+      const files = imgs.map((d, i) => dataURLtoFile(d, `plano${i}.png`)).filter(Boolean);
+      const fd = new FormData();
+      fd.append('library', lib);
+      let muebles = [];
+      if (files.length === 1) {
+        fd.append('file', files[0]);
+        const r = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan`, { method: 'POST', body: fd });
+        const data = await r.json();
+        muebles = data?.analysis?.muebles_detectados || [];
+      } else {
+        files.forEach(f => fd.append('files', f));
+        const r = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan-multi`, { method: 'POST', body: fd });
+        const data = await r.json();
+        muebles = data?.analysis?.muebles_detectados || data?.muebles_detectados || [];
+      }
+      const cotizables = muebles.filter(m => !m.es_electrodomestico);
+      setDetected({ total: muebles.length, cotizables: cotizables.length, lib, muebles });
+      if (!cotizables.length) { alert('No se detectaron muebles cotizables en el plano. Revisa la imagen.'); return; }
+      if (typeof onAddToBudget === 'function') {
+        cotizables.forEach(m => onAddToBudget(m, false));
+        if (typeof setState === 'function') setState(p => ({ ...p, currentLibrary: lib, currentTab: 'budget' }));
+        alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (catálogo ${lib}).`);
+      }
+    } catch (e) { alert('No se pudo analizar el plano: ' + (e.message || '')); }
+    finally { setIsBudgeting(false); }
+  };
+
+  const STEPS = ['Plano', 'Acabados', 'Render', 'Presupuesto'];
+  const canNext = step === 1 ? (floorPlan || sketches.length > 0) : step === 3 ? !!renderUrl : true;
+  const quickRender = () => { if (typeof setState === 'function') setState(p => ({ ...p, currentTab: 'renderStudio' })); };
+
+  return (
+    <div className="h-full flex flex-col p-6 bg-slate-50 overflow-y-auto">
+      {/* Cabecera + progreso */}
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-2xl font-black text-slate-800">Cocinas 3D</h1>
+        {typeof setState === 'function' && (
+          <button onClick={quickRender} className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl font-bold text-sm hover:bg-purple-100">
+            <Wand2 size={16} /> ¿Render rápido?
+          </button>
+        )}
+      </div>
+      <p className="text-sm text-slate-500 mb-5">Del plano al presupuesto en 4 pasos.</p>
+
+      <div className="flex items-center gap-2 mb-6 max-w-2xl">
+        {STEPS.map((s, i) => {
+          const n = i + 1;
+          return (
+            <React.Fragment key={s}>
+              <div className={`flex items-center gap-2 ${n === step ? 'text-indigo-700' : n < step ? 'text-emerald-600' : 'text-slate-400'}`}>
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${n === step ? 'bg-indigo-600 text-white' : n < step ? 'bg-emerald-500 text-white' : 'bg-slate-200'}`}>
+                  {n < step ? '✓' : n}
+                </span>
+                <span className="text-xs font-bold hidden sm:block">{s}</span>
+              </div>
+              {n < STEPS.length && <span className={`flex-1 h-0.5 ${n < step ? 'bg-emerald-400' : 'bg-slate-200'}`} />}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-2xl w-full">
+        {/* PASO 1 — Plano + bocetos */}
+        {step === 1 && (
+          <div className="space-y-4">
+            <StepHeader n={1} title="Sube el plano y los bocetos" hint="El plano en planta (distribución) y un boceto/alzado por cada pared." />
+            <div>
+              <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">Plano en planta</span>
+              {floorPlan ? (
+                <div className="relative inline-block">
+                  <img src={floorPlan} alt="Plano" className="h-28 rounded-lg border border-slate-200 object-cover" />
+                  <button onClick={() => setFloorPlan(null)} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow"><X size={12} /></button>
+                </div>
+              ) : (
+                <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border-2 border-dashed border-slate-300 rounded-lg text-xs font-bold text-slate-600 cursor-pointer hover:border-indigo-400">
+                  <Upload size={14} /> Subir plano (imagen o PDF)
+                  <input type="file" accept="image/*,application/pdf" onChange={onFloorPlan} className="hidden" />
+                </label>
+              )}
+            </div>
+            <div>
+              <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">Bocetos / alzados por pared</span>
+              <div className="flex flex-wrap gap-3">
+                {sketches.map((s, i) => (
+                  <div key={i} className="relative">
+                    <img src={s} alt={`Boceto ${i + 1}`} className="h-24 w-32 rounded-lg border border-slate-200 object-cover" />
+                    <button onClick={() => setSketches(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow"><X size={12} /></button>
+                  </div>
+                ))}
+                <label className="h-24 w-32 flex flex-col items-center justify-center gap-1 bg-white border-2 border-dashed border-slate-300 rounded-lg text-[11px] font-bold text-slate-500 cursor-pointer hover:border-indigo-400">
+                  <Upload size={14} /> Añadir boceto
+                  <input type="file" accept="image/*" onChange={onAddSketch} className="hidden" />
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PASO 2 — Acabados */}
+        {step === 2 && (
+          <div className="space-y-5">
+            <StepHeader n={2} title="Acabados y estilo" hint="Lo que define el aspecto del render." />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Distribución</label>
+                <GuidedSelect value={form.layout} onChange={v => setForm({ ...form, layout: v })} options={LAYOUT_OPTIONS} placeholder="Elige distribución…" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Estilo</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {WIZARD_STYLES.map(s => (
+                    <button key={s.id} onClick={() => setForm({ ...form, style: s.id })}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${form.style === s.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Frentes de los muebles</label>
+                <SwatchPicker value={form.cabinet_material} onChange={v => setForm({ ...form, cabinet_material: v })} swatches={CABINET_SWATCHES} />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Encimera</label>
+                <SwatchPicker value={form.countertop_material} onChange={v => setForm({ ...form, countertop_material: v })} swatches={COUNTERTOP_SWATCHES} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Detalles extra (opcional)</label>
+              <textarea value={form.brief} onChange={e => setForm({ ...form, brief: e.target.value })} rows={2}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Tiradores, suelo, iluminación…" />
+            </div>
+          </div>
+        )}
+
+        {/* PASO 3 — Render */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <StepHeader n={3} title="Genera el render" hint="Fiel al plano y a los bocetos, con tus acabados." />
+            {renderUrl ? (
+              <img src={assetSrc(renderUrl)} alt="Render" className="w-full rounded-xl border border-slate-200" />
+            ) : (
+              <div className="h-48 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 text-sm">
+                {isRendering ? <span className="flex items-center gap-2"><Loader size={18} className="animate-spin" /> Generando render…</span> : 'Pulsa "Generar render"'}
+              </div>
+            )}
+            {renderErr && <p className="text-sm text-red-600">{renderErr}</p>}
+            <button onClick={generateRender} disabled={isRendering}
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
+              {isRendering ? <Loader className="animate-spin" size={16} /> : <Wand2 size={16} />}
+              {renderUrl ? 'Generar otra vez' : 'Generar render'}
+            </button>
+          </div>
+        )}
+
+        {/* PASO 4 — Presupuesto */}
+        {step === 4 && (
+          <div className="space-y-4">
+            <StepHeader n={4} title="Saca el presupuesto" hint="Analiza el plano, detecta los muebles y vuélcalos al Presupuestador 1." />
+            {detected && (
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-[12px] text-emerald-800">
+                Detectados {detected.total} elementos · {detected.cotizables} muebles cotizables (catálogo {detected.lib}).
+              </div>
+            )}
+            <button onClick={analyzeAndBudget} disabled={isBudgeting}
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
+              {isBudgeting ? <Loader className="animate-spin" size={16} /> : <Download size={16} />}
+              {isBudgeting ? 'Analizando plano…' : 'Analizar y volcar a presupuesto'}
+            </button>
+          </div>
+        )}
+
+        {/* Navegación */}
+        <div className="flex items-center justify-between mt-6 pt-5 border-t border-slate-100">
+          <button onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}
+            className="flex items-center gap-1.5 px-4 py-2 text-slate-600 font-bold text-sm disabled:opacity-40 hover:text-slate-800">
+            <ArrowLeft size={16} /> Atrás
+          </button>
+          {step < 4 && (
+            <button onClick={() => canNext && setStep(s => Math.min(4, s + 1))} disabled={!canNext}
+              className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700 disabled:opacity-40">
+              Siguiente <ChevronRight size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function KitchenDesigner3D(props) {
+  return <KitchenWizard {...props} />;
+}
+
+function LegacyKitchenDesigner({ state, setState, onAddToBudget }) {
   // Convierte un mueble del proyecto (medidas en cm, tipo libre) al formato que
   // espera el emparejador de catálogo de IA Lab (tipo normalizado, ancho en mm,
   // alto/fondo en cm). Así el volcado pasa por el MISMO catálogo real.
