@@ -581,9 +581,9 @@ class Render3DService:
             if b64:
                 images.append({"data": b64, "mime": mime})
                 ref_lines.append(
-                    f"- IMAGE {len(images)} is a SKETCH of WALL {i + 1}: it shows the desired "
-                    "design of that wall (cabinets, shelves, appliances, finishes, proportions). "
-                    "Reproduce that wall faithfully."
+                    f"- IMAGE {len(images)} is a reference (render/photo/sketch) of WALL {i + 1}: "
+                    "it shows the exact design of that wall (cabinets, shelves, appliances, "
+                    "finishes, proportions). Reproduce that wall faithfully, as shown."
                 )
 
         if not images:
@@ -594,43 +594,32 @@ class Render3DService:
                 "engine": self.config.brand_name,
             }
 
-        expanded_brief = await self._expand_brief(description, space_type)
-        prompt = self.build_render_prompt(
-            description=expanded_brief or description,
-            style=parsed_params.get("style", "photorealistic"),
-            space_type=space_type,
-        )
+        # Con modelos de imagen que editan a partir de referencias, un prompt CORTO
+        # y centrado en "reproduce estas imágenes" funciona mucho mejor que un texto
+        # largo de dirección de arte (ese texto compite con las imágenes y el modelo
+        # acaba inventando una cocina genérica). Por eso aquí NO usamos build_render_
+        # prompt ni _expand_brief: solo referencias + acabados pedidos.
+        brief_txt = (description or "").strip()
         refs_block = "\n".join(ref_lines)
         task_prompt = (
-            "You are a professional architectural visualizer. You are given MULTIPLE reference "
-            "images that you must COMBINE into ONE single photorealistic interior render:\n"
+            "You are given reference images of ONE specific kitchen. Recreate THAT SAME kitchen "
+            "as a single photorealistic interior photograph. This is a FAITHFUL re-render of the "
+            "references, NOT a new design — copy what the images show.\n"
             + refs_block + "\n\n"
-            "TREAT THE REFERENCES AS AUTHORITATIVE GEOMETRY. The floor plan defines the exact "
-            "room shape, wall lengths and the position/length of every cabinet run, island, "
-            "door and window — keep these positions, alignments and proportions to scale. Each "
-            "wall sketch defines the exact elevation of that wall: reproduce the SAME number, "
-            "order, width and height of modules (base units, wall units, tall columns, drawers, "
-            "open shelves and appliances) shown there. Count the fronts in each sketch and match "
-            "them exactly — do not add, remove, merge or reorder modules.\n\n"
-            "Produce a single ultra-photorealistic photograph of the FINISHED space that is "
-            "FAITHFUL at the same time to the floor-plan layout and to EACH wall sketch, "
-            "applying the finishes, colors and materials described in the brief. If this is a "
-            "kitchen, use real cabinetry scale: base units ~90 cm with a recessed toe-kick, "
-            "wall units ~55-60 cm above a continuous worktop of uniform thickness with a "
-            "matching upstand, and appliances integrated flush with the fronts. Do NOT invent "
-            "extra walls, appliances, furniture, decorative objects or architectural elements "
-            "(windows, doors, columns…) that do not appear in the reference images or the brief, "
-            "and do NOT omit any element that DOES appear in them. If a reference is unclear "
-            "about a detail, keep that area plain and neutral instead of guessing.\n\n"
-            f"{prompt}\n\n"
-            "The result must look like a real professional interior photograph: PBR materials "
-            "with accurate roughness and reflectivity, natural directional daylight, realistic "
-            "soft shadows, ambient occlusion and subtle reflections, neutral white balance and "
-            "true-to-scale proportions. Negative — strictly avoid: cartoon/CGI/videogame look, "
-            "plastic or flat surfaces, oversaturated colors, warped or melted geometry, crooked "
-            "or duplicated modules, floating cabinets, invented decor, people, text, watermarks "
-            "and logos."
+            "STRICT RULES:\n"
+            "- Keep the EXACT same layout and the SAME cabinet modules (number, order, widths and "
+            "heights), the same wall units, base units, tall/column units, the same appliances "
+            "(fridge, oven, hob, hood, dishwasher), sink, windows, doors and island/peninsula, "
+            "each in the SAME position and proportion as in the reference images.\n"
+            "- Do NOT add, remove, move, merge, duplicate or restyle anything that is not "
+            "explicitly requested below. Match the references, including the camera-like point of view.\n"
+            + (f"- Apply ONLY these finishes/changes, keep everything else identical to the references: {brief_txt}\n"
+               if brief_txt else
+               "- Keep the same finishes, colors and materials shown in the references.\n")
+            + "- Photorealistic result: realistic materials, natural light, soft real shadows and "
+            "reflections. No text, watermarks, logos, people or invented extra objects."
         )
+        prompt = task_prompt
         parsed_params["hasReference"] = True
         parsed_params["referenceCount"] = len(images)
         return await self._render_with_gemini(
