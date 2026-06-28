@@ -198,6 +198,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
   // Client states
   const [clients, setClients] = useState([]);
+  const [showClientCodeList, setShowClientCodeList] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const [clientFilterType, setClientFilterType] = useState('todos'); // 'todos', 'potencial', 'activo'
   const [clientFilterSegment, setClientFilterSegment] = useState('');
@@ -1616,16 +1617,41 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         />
                         <p className="text-[10px] text-slate-400 mt-1">Puede ser un email o texto libre (minúsculas permitidas)</p>
                       </div>
-                      <div>
+                      <div className="relative">
                         <label className="text-xs font-black text-slate-600 uppercase mb-2 block">Código cliente (CRM)</label>
                         <input
                           type="text"
                           value={userForm.linkedClientCodigo || ''}
-                          onChange={(e) => setUserForm({...userForm, linkedClientCodigo: e.target.value})}
-                          placeholder="Ej: 2546"
+                          onChange={(e) => { setUserForm({...userForm, linkedClientCodigo: e.target.value, linkedClientId: ''}); setShowClientCodeList(true); }}
+                          onFocus={() => setShowClientCodeList(true)}
+                          onBlur={() => setTimeout(() => setShowClientCodeList(false), 150)}
+                          placeholder="Ej: 2546 o nombre"
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:border-orange-500"
                         />
-                        <p className="text-[10px] text-slate-400 mt-1">Si este usuario es un cliente con acceso, pon su código de cliente para relacionarlo con el CRM.</p>
+                        {(() => {
+                          const q = (userForm.linkedClientCodigo || '').trim().toLowerCase();
+                          const exact = q && clients.find(c => (c.codigo || '').toLowerCase() === q);
+                          if (exact) return <p className="text-[10px] text-emerald-600 font-bold mt-1">✓ {exact.nombre}</p>;
+                          if (q) return <p className="text-[10px] text-amber-500 mt-1">Sin coincidencia exacta · se guardará tal cual</p>;
+                          return <p className="text-[10px] text-slate-400 mt-1">Si este usuario es un cliente con acceso, pon su código para relacionarlo con el CRM.</p>;
+                        })()}
+                        {showClientCodeList && (userForm.linkedClientCodigo || '').trim().length >= 1 && (() => {
+                          const q = userForm.linkedClientCodigo.trim().toLowerCase();
+                          const matches = clients.filter(c => (c.codigo || '').toLowerCase().includes(q) || (c.nombre || '').toLowerCase().includes(q)).slice(0, 8);
+                          if (!matches.length) return null;
+                          return (
+                            <div className="absolute z-[120] mt-1 w-full bg-white rounded-xl shadow-2xl border border-slate-200 max-h-64 overflow-y-auto">
+                              {matches.map(c => (
+                                <button key={c.id} type="button"
+                                  onMouseDown={(ev) => { ev.preventDefault(); setUserForm(f => ({ ...f, linkedClientCodigo: c.codigo || '', linkedClientId: c.id || '', clientName: f.clientName || c.nombre || '' })); setShowClientCodeList(false); }}
+                                  className="w-full text-left px-3 py-2 hover:bg-orange-50 border-b border-slate-100 last:border-0">
+                                  <span className="block text-xs font-black text-slate-800 truncate">{c.nombre || 'Sin nombre'}</span>
+                                  <span className="block text-[10px] text-slate-400">{[c.codigo && `Cód. ${c.codigo}`, c.localidad].filter(Boolean).join(' · ') || 'Sin código'}</span>
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 

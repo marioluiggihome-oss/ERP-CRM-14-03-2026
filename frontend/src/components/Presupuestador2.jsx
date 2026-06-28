@@ -867,12 +867,12 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                   setShowClientList(true);
                 } catch { setClientResults([]); }
               }}
-              onFocus={() => { if (clientResults.length) setShowClientList(true); }}
+              onFocus={() => { if (clientName.trim().length >= 2) setShowClientList(true); }}
               onBlur={() => setTimeout(() => setShowClientList(false), 150)}
               placeholder="👤 Cliente…"
               className="w-full px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white" />
             {clientId && <span className="absolute -bottom-4 left-1 text-[9px] font-bold text-emerald-200">✓ Enlazado{clientCodigo ? ` · ${clientCodigo}` : ''}</span>}
-            {showClientList && clientResults.length > 0 && (
+            {showClientList && clientName.trim().length >= 2 && (
               <div className="absolute z-[120] mt-1 w-full bg-white rounded-xl shadow-2xl border border-slate-200 max-h-72 overflow-y-auto">
                 {clientResults.map(c => (
                   <button key={c.id} type="button"
@@ -882,6 +882,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                     <span className="block text-[10px] text-slate-400">{[c.codigo && `Cód. ${c.codigo}`, c.localidad, c.cif].filter(Boolean).join(' · ') || '—'}</span>
                   </button>
                 ))}
+                {/* Sin coincidencia exacta: usar el texto escrito como nombre libre */}
+                <button type="button"
+                  onMouseDown={(ev) => { ev.preventDefault(); setClientId(''); setClientCodigo(''); setShowClientList(false); }}
+                  className="w-full text-left px-3 py-2 hover:bg-amber-100 bg-amber-50/50 border-t border-slate-100">
+                  <span className="block text-xs font-black text-amber-700 truncate">Usar "{clientName.trim()}"</span>
+                  <span className="block text-[10px] text-amber-500">{clientResults.length ? 'Como cliente nuevo (sin enlazar)' : 'No está en la BD · se usará tal cual'}</span>
+                </button>
               </div>
             )}
           </div>
