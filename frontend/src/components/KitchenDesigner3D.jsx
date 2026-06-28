@@ -436,9 +436,9 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const quickRender = () => { if (typeof setState === 'function') setState(p => ({ ...p, currentTab: 'renderStudio' })); };
 
   return (
-    <div className="h-full flex flex-col p-6 bg-slate-50 overflow-y-auto">
+    <div className="h-full min-h-screen flex flex-col p-6 pl-20 bg-slate-50 overflow-y-auto">
       {/* Cabecera + progreso */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
         <h1 className="text-2xl font-black text-slate-800">Cocinas 3D</h1>
         <div className="flex items-center gap-2">
           <input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="Nombre del proyecto…"
@@ -458,7 +458,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       </div>
       <p className="text-sm text-slate-500 mb-5">Del plano al presupuesto en 4 pasos.</p>
 
-      <div className="flex items-center gap-2 mb-6 max-w-2xl">
+      <div className="flex items-center gap-2 mb-6 max-w-4xl">
         {STEPS.map((s, i) => {
           const n = i + 1;
           return (
