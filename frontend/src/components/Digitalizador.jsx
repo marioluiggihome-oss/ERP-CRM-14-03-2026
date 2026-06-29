@@ -26,6 +26,7 @@ const Digitalizador = ({ state, setState }) => {
   const [labelAcabado, setLabelAcabado] = useState('Acabado');
   const [labelArmazon, setLabelArmazon] = useState('Armazón');
   const [labelCostados, setLabelCostados] = useState('Costados');
+  const [validez, setValidez] = useState('Validez del presupuesto: 30 días');
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
   const [historySearch, setHistorySearch] = useState('');
@@ -205,6 +206,7 @@ const Digitalizador = ({ state, setState }) => {
             labelAcabado,
             labelArmazon,
             labelCostados,
+            validez,
             lines,
             globalDiscount,
             globalMarkup,
@@ -340,6 +342,7 @@ const Digitalizador = ({ state, setState }) => {
     if (item.labelAcabado) setLabelAcabado(item.labelAcabado);
     if (item.labelArmazon) setLabelArmazon(item.labelArmazon);
     if (item.labelCostados) setLabelCostados(item.labelCostados);
+    if (item.validez != null) setValidez(item.validez);
     setGlobalDiscount(item.globalDiscount || 0);
     setGlobalMarkup(item.globalMarkup || 0);
     setIvaRate(item.ivaRate || 21);
@@ -688,7 +691,17 @@ const Digitalizador = ({ state, setState }) => {
           if (c.sub) { pdf.setFontSize(5.5); pdf.setTextColor(234, 160, 90); pdf.text(c.sub, mid, panelY + 20, { align: 'center' }); }
         });
         pdf.setFont(undefined, 'normal');
+        // Validez del presupuesto: justo encima del panel de totales.
+        if (validez && validez.trim()) {
+          pdf.setFontSize(8.5); pdf.setTextColor(110);
+          pdf.text(clean(validez.trim()), M, panelY - 4);
+        }
         y = panelY + panelH + 6;
+      } else if (validez && validez.trim()) {
+        // Sin panel de totales: la validez va al pie.
+        const pageH = pdf.internal.pageSize.getHeight();
+        pdf.setFontSize(8.5); pdf.setTextColor(110);
+        pdf.text(clean(validez.trim()), M, pageH - M);
       }
 
       const fileName = `${(documentTitle || 'Presupuesto').replace(/\s+/g, '_')}_${expNumber || 'borrador'}_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -1186,6 +1199,17 @@ const Digitalizador = ({ state, setState }) => {
                       className="w-full bg-indigo-50/50 border border-indigo-100 rounded-lg px-3 py-2 text-sm font-bold text-indigo-800 outline-none focus:border-orange-500"
                     />
                   </div>
+                </div>
+                {/* Validez del presupuesto (texto editable, sale en el PDF) */}
+                <div className="mt-4">
+                  <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block mb-1">Validez</label>
+                  <input
+                    type="text"
+                    value={validez}
+                    onChange={(e) => setValidez(e.target.value)}
+                    placeholder="Ej: Validez del presupuesto: 30 días"
+                    className="w-full bg-indigo-50/50 border border-indigo-100 rounded-lg px-3 py-2 text-sm font-medium text-indigo-800 outline-none focus:border-orange-500"
+                  />
                 </div>
               </div>
 

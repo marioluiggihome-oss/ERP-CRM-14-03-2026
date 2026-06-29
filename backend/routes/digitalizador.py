@@ -157,6 +157,7 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
             "labelAcabado": request.labelAcabado,
             "labelArmazon": request.labelArmazon,
             "labelCostados": request.labelCostados,
+            "validez": request.validez,
             "lines": [line.model_dump() for line in request.lines],
             "globalDiscount": request.globalDiscount,
             "globalMarkup": request.globalMarkup,

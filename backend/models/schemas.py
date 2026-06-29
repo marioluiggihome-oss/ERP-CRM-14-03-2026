@@ -911,6 +911,7 @@ class DigitalizadorSaveRequest(BaseModel):
     labelAcabado: str = ""
     labelArmazon: str = ""
     labelCostados: str = ""
+    validez: str = ""
     lines: List[DigitalizadorLine]
     globalDiscount: float = 0
     globalMarkup: float = 0
