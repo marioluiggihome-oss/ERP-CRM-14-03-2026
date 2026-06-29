@@ -426,7 +426,8 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
     const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
   });
   const onFloorPlan = async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFloorPlan(await fileToDataUrl(f)); };
-  const onAddSketch = async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; const d = await fileToDataUrl(f); setSketches(prev => [...prev, d]); };
+  const onAddSketch = async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; const d = await fileToDataUrl(f); setSketches(prev => [...prev, { url: d, medida: '' }]); };
+  const setSketchMedida = (i, medida) => setSketches(prev => prev.map((s, x) => x === i ? { ...s, medida } : s));
 
   const buildBrief = () => {
     const p = [];
@@ -434,6 +435,9 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
     if (form.doorModel) p.push(`Modelo de puerta: ${form.doorModel} (${form.maker}).`);
     if (form.cabinet_material) p.push(`Frentes/acabado: ${form.cabinet_material}${form.maker ? ` (${form.maker})` : ''}.`);
     if (form.countertop_material) p.push(`Encimera: ${form.countertop_material}.`);
+    // Medidas de cada pared (alzado) para casar con el plano en planta.
+    const medidas = sketches.map((s, i) => s.medida ? `Pared ${i + 1}: ${s.medida}` : null).filter(Boolean);
+    if (medidas.length) p.push(`Medidas reales de las paredes (respétalas a escala): ${medidas.join('; ')}.`);
     if (form.brief) p.push(form.brief);
     return p.join(' ');
   };
@@ -445,7 +449,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       const r = await fetch(`${API_URL}/api/ai-engine/render/compose`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: buildBrief(), style: form.style, floorPlan: floorPlan || undefined, wallSketches: sketches }),
+        body: JSON.stringify({ description: buildBrief(), style: form.style, floorPlan: floorPlan || undefined, wallSketches: sketches.map(s => s.url) }),
       });
       const data = await r.json();
       const url = data?.result?.images?.[0];
@@ -468,7 +472,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const analyzeAndBudget = async () => {
     // Para el presupuesto basta con el plano en planta (o, si no hay, el primer
     // boceto). Analizar UNA sola imagen evita envíos enormes (NetworkError).
-    const src = floorPlan || sketches[0];
+    const src = floorPlan || sketches[0]?.url;
     if (!src) { alert('Sube el plano o un boceto en el paso 1.'); return; }
     // Siempre se pregunta el catálogo antes de volcar, sugiriendo MV por defecto.
     const ans = (window.prompt('¿Con qué catálogo presupuestar? Escribe MV o ZC:', 'MV') || '').trim().toUpperCase();
@@ -566,7 +570,8 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       const doc = await r.json();
       const w = doc.wizard || {};
       setFloorPlan(w.floorPlan || null);
-      setSketches(w.sketches || []);
+      // Compatibilidad: bocetos antiguos eran strings; ahora son {url, medida}.
+      setSketches((w.sketches || []).map(s => typeof s === 'string' ? { url: s, medida: '' } : s));
       setForm(w.form || form);
       setProposals(w.proposals || []);
       setActiveIdx(0);
@@ -650,9 +655,14 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
                 <div className="flex-1 min-h-[260px] rounded-xl border border-slate-200 bg-slate-50 p-3 overflow-auto">
                   <div className="flex flex-wrap gap-3">
                     {sketches.map((s, i) => (
-                      <div key={i} className="relative">
-                        <img src={s} alt={`Boceto ${i + 1}`} className="h-28 w-40 rounded-lg border border-slate-200 object-cover" />
-                        <button onClick={() => setSketches(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow"><X size={12} /></button>
+                      <div key={i} className="w-40">
+                        <div className="relative">
+                          <img src={s.url} alt={`Boceto ${i + 1}`} className="h-28 w-40 rounded-lg border border-slate-200 object-cover" />
+                          <button onClick={() => setSketches(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-white border border-slate-200 rounded-full p-0.5 shadow"><X size={12} /></button>
+                        </div>
+                        <input value={s.medida || ''} onChange={e => setSketchMedida(i, e.target.value)}
+                          placeholder={`Medida pared ${i + 1} (opcional)`}
+                          className="mt-1 w-full px-2 py-1 border border-slate-200 rounded text-[11px]" />
                       </div>
                     ))}
                     <label className="h-28 w-40 flex flex-col items-center justify-center gap-1 bg-white border-2 border-dashed border-slate-300 rounded-lg text-[11px] font-bold text-slate-500 cursor-pointer hover:border-indigo-400">
@@ -660,6 +670,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
                       <input type="file" accept="image/*" onChange={onAddSketch} className="hidden" />
                     </label>
                   </div>
+                  <p className="text-[10px] text-slate-400 mt-2">La medida es opcional: si no la pones, la IA intentará leerla del alzado.</p>
                 </div>
               </div>
             </div>
