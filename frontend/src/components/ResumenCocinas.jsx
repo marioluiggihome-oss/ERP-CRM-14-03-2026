@@ -126,7 +126,7 @@ const ResumenCocinas = ({ state }) => {
   return (
     <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
       <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
-        <h1 className="text-2xl font-black text-slate-800 ml-16 flex items-center gap-2"><Layers size={22} /> Resumen por cocinas</h1>
+        <h1 className="text-2xl font-black text-slate-800 ml-16 flex items-center gap-2"><Layers size={22} /> Resumen Totales</h1>
         <button onClick={exportPDF} disabled={exporting}
           className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50">
           <Download size={16} /> {exporting ? 'Generando…' : 'Exportar / Imprimir PDF'}

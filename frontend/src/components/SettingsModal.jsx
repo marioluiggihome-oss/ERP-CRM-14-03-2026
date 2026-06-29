@@ -15,6 +15,7 @@ const CAPABILITY_KEYS = [
   'canManageArticles', 'canAccessFloor', 'canUseAIAnalysis', 'canUseKitchenDesigner', 'canUseDigitalizador',
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
+  'canUseResumenTotales',
 ];
 
 // Lista de provincias de España con sus códigos
@@ -151,6 +152,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canManageArticles: false,
     canViewTechnicalDespiece: false,
     canAccessCRM: false,
+    canUseResumenTotales: false,
     canUseDigitalizador: false,
     canAccessArmarios: false,
     canAccessFabrica: false,  // Acceso a Portal de Fábrica
@@ -748,6 +750,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canManageArticles: false,
       canViewTechnicalDespiece: false,
       canAccessCRM: false,
+      canUseResumenTotales: false,
       canUseDigitalizador: false,
       canAccessArmarios: false,
       canAccessFabrica: false,
@@ -2222,6 +2225,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-orange-600"
                               />
                               <span className="text-xs font-bold text-slate-700">Digitalizador</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canUseResumenTotales}
+                                onChange={(e) => setUserForm({...userForm, canUseResumenTotales: e.target.checked})}
+                                className="w-4 h-4 rounded accent-indigo-600"
+                              />
+                              <span className="text-xs font-bold text-slate-700">Resumen Totales</span>
                             </label>
                           </div>
                         </div>
