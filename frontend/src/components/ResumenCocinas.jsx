@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Download, Layers, FileText } from 'lucide-react';
+import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader } from 'lucide-react';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Resumen por cocinas: junta partidas a mano (Muebles, Electrodomésticos,
 // Encimera…) por cada cocina, suma totales y forma de pago, y lo presenta /
@@ -25,6 +27,53 @@ const ResumenCocinas = ({ state }) => {
     { id: uid(), label: '5% al terminar', percent: 5 },
   ]);
   const [exporting, setExporting] = useState(false);
+  const [docName, setDocName] = useState('');     // nombre con el que se guarda
+  const [savedId, setSavedId] = useState(null);
+  const [savedList, setSavedList] = useState(null); // null = oculto
+  const [busy, setBusy] = useState(false);
+  const uidUser = state?.currentUser?.id || 'anonymous';
+
+  // ── guardar / historial ──
+  const saveResumen = async () => {
+    const name = (docName || cliente || '').trim();
+    if (!name) { alert('Pon un nombre (o cliente) para guardar el resumen.'); return; }
+    setBusy(true);
+    try {
+      const r = await fetch(`${API_URL}/api/resumen-totales`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: savedId || undefined, userId: uidUser, name, data: { cliente, fecha, cocinas, pagos } }),
+      });
+      const d = await r.json();
+      if (d.id) { setSavedId(d.id); setDocName(name); alert('✅ Resumen guardado. Lo tienes en "Mis resúmenes".'); }
+      else alert('No se pudo guardar.');
+    } catch { alert('Error al guardar el resumen.'); }
+    finally { setBusy(false); }
+  };
+  const openList = async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/resumen-totales?userId=${encodeURIComponent(uidUser)}`);
+      const d = await r.json();
+      setSavedList(d.items || []);
+    } catch { alert('No se pudo cargar la lista.'); }
+  };
+  const loadResumen = async (id) => {
+    try {
+      const r = await fetch(`${API_URL}/api/resumen-totales/${id}`);
+      const doc = await r.json();
+      const data = doc.data || {};
+      setCliente(data.cliente || ''); setFecha(data.fecha || today);
+      setCocinas(data.cocinas || []); setPagos(data.pagos || []);
+      setSavedId(doc.id); setDocName(doc.name || ''); setSavedList(null);
+    } catch { alert('No se pudo abrir el resumen.'); }
+  };
+  const deleteResumen = async (id, name) => {
+    if (!window.confirm(`¿Eliminar "${name || ''}"?`)) return;
+    try {
+      await fetch(`${API_URL}/api/resumen-totales/${id}`, { method: 'DELETE' });
+      setSavedList(prev => (prev || []).filter(it => it.id !== id));
+      if (savedId === id) setSavedId(null);
+    } catch { alert('No se pudo eliminar.'); }
+  };
 
   const cocinaTotal = (c) => (c.lineas || []).reduce((s, l) => s + (Number(l.importe) || 0), 0);
   const totalGeneral = useMemo(() => cocinas.reduce((s, c) => s + cocinaTotal(c), 0), [cocinas]);
@@ -127,11 +176,47 @@ const ResumenCocinas = ({ state }) => {
     <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
       <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
         <h1 className="text-2xl font-black text-slate-800 ml-16 flex items-center gap-2"><Layers size={22} /> Resumen Totales</h1>
-        <button onClick={exportPDF} disabled={exporting}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50">
-          <Download size={16} /> {exporting ? 'Generando…' : 'Exportar / Imprimir PDF'}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input value={docName} onChange={e => setDocName(e.target.value)} placeholder="Nombre del resumen…"
+            className="px-3 py-2 border border-slate-300 rounded-xl text-sm w-48" />
+          <button onClick={openList} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">
+            <FolderOpen size={16} /> Mis resúmenes
+          </button>
+          <button onClick={saveResumen} disabled={busy} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">
+            {busy ? <Loader size={16} className="animate-spin" /> : <Save size={16} />} Guardar
+          </button>
+          <button onClick={exportPDF} disabled={exporting}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50">
+            <Download size={16} /> {exporting ? 'Generando…' : 'Exportar / Imprimir PDF'}
+          </button>
+        </div>
       </div>
+
+      {/* Mis resúmenes guardados */}
+      {Array.isArray(savedList) && (
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={() => setSavedList(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="font-black text-slate-800">Mis resúmenes</h3>
+              <button onClick={() => setSavedList(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              {savedList.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-8">No tienes resúmenes guardados todavía.</p>
+              ) : savedList.map(it => (
+                <div key={it.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2 hover:bg-slate-50">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-700 text-sm truncate">{it.name}</p>
+                    {it.updatedAt && <p className="text-[10px] text-slate-400">{new Date(it.updatedAt).toLocaleString('es-ES')}</p>}
+                  </div>
+                  <button onClick={() => loadResumen(it.id)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
+                  <button onClick={() => deleteResumen(it.id, it.name)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <p className="text-sm text-slate-500 mb-5">Junta partidas por cocina, suma totales y forma de pago, y preséntalo con tu logo.</p>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-4xl space-y-6">

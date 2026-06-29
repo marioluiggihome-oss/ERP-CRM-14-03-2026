@@ -801,3 +801,53 @@ async def export_digitalizador_csv(request: DigitalizadorExportRequest):
     except Exception as e:
         logger.error(f"Export CSV error: {e}")
         raise HTTPException(status_code=500, detail=f"Error exportando CSV: {str(e)}")
+
+
+# ============================================================================
+# RESUMEN TOTALES — historial por usuario (guardar/listar/abrir/borrar)
+# ============================================================================
+@router.post("/resumen-totales")
+async def save_resumen_totales(payload: dict):
+    """Guarda (o actualiza) un Resumen Totales para consultarlo/modificarlo."""
+    try:
+        rid = (payload or {}).get("id") or f"rt-{uuid.uuid4().hex[:10]}"
+        doc = {
+            "id": rid,
+            "userId": payload.get("userId") or "anonymous",
+            "name": (payload.get("name") or "Resumen sin nombre").strip() or "Resumen sin nombre",
+            "data": payload.get("data") or {},
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+        }
+        existing = await db.resumen_totales.find_one({"id": rid}, {"_id": 0, "createdAt": 1})
+        doc["createdAt"] = (existing or {}).get("createdAt") or doc["updatedAt"]
+        await db.resumen_totales.update_one({"id": rid}, {"$set": doc}, upsert=True)
+        return {"success": True, "id": rid, "name": doc["name"]}
+    except Exception as e:
+        logger.error(f"Save resumen-totales error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/resumen-totales")
+async def list_resumen_totales(userId: str = None):
+    """Lista los resúmenes guardados (por usuario)."""
+    try:
+        query = {"userId": userId} if userId else {}
+        items = await db.resumen_totales.find(query, {"_id": 0, "data": 0}).sort("updatedAt", -1).to_list(300)
+        return {"success": True, "items": items}
+    except Exception as e:
+        logger.error(f"List resumen-totales error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/resumen-totales/{rid}")
+async def get_resumen_totales(rid: str):
+    item = await db.resumen_totales.find_one({"id": rid}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Resumen no encontrado")
+    return item
+
+
+@router.delete("/resumen-totales/{rid}")
+async def delete_resumen_totales(rid: str):
+    await db.resumen_totales.delete_one({"id": rid})
+    return {"success": True}
