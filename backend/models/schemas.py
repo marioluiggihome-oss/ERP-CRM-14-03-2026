@@ -908,6 +908,9 @@ class DigitalizadorSaveRequest(BaseModel):
     acabado: str = ""
     armazon: str = ""
     costados: str = ""
+    labelAcabado: str = ""
+    labelArmazon: str = ""
+    labelCostados: str = ""
     lines: List[DigitalizadorLine]
     globalDiscount: float = 0
     globalMarkup: float = 0

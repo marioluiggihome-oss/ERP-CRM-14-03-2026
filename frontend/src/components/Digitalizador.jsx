@@ -22,6 +22,10 @@ const Digitalizador = ({ state, setState }) => {
   const [acabado, setAcabado] = useState('');
   const [armazon, setArmazon] = useState('');
   const [costados, setCostados] = useState('');
+  // Títulos editables de los 3 campos de configuración.
+  const [labelAcabado, setLabelAcabado] = useState('Acabado');
+  const [labelArmazon, setLabelArmazon] = useState('Armazón');
+  const [labelCostados, setLabelCostados] = useState('Costados');
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
   const [historySearch, setHistorySearch] = useState('');
@@ -198,6 +202,9 @@ const Digitalizador = ({ state, setState }) => {
             acabado,
             armazon,
             costados,
+            labelAcabado,
+            labelArmazon,
+            labelCostados,
             lines,
             globalDiscount,
             globalMarkup,
@@ -330,6 +337,9 @@ const Digitalizador = ({ state, setState }) => {
     setAcabado(item.acabado || '');
     setArmazon(item.armazon || '');
     setCostados(item.costados || '');
+    if (item.labelAcabado) setLabelAcabado(item.labelAcabado);
+    if (item.labelArmazon) setLabelArmazon(item.labelArmazon);
+    if (item.labelCostados) setLabelCostados(item.labelCostados);
     setGlobalDiscount(item.globalDiscount || 0);
     setGlobalMarkup(item.globalMarkup || 0);
     setIvaRate(item.ivaRate || 21);
@@ -594,9 +604,9 @@ const Digitalizador = ({ state, setState }) => {
         pdf.setFont(undefined, 'normal'); y += 6;
       }
       const cfg = [];
-      if (acabado) cfg.push(`Acabado: ${acabado}`);
-      if (armazon) cfg.push(`Armazón: ${armazon}`);
-      if (costados) cfg.push(`Costados: ${costados}`);
+      if (acabado) cfg.push(`${labelAcabado || 'Acabado'}: ${acabado}`);
+      if (armazon) cfg.push(`${labelArmazon || 'Armazón'}: ${armazon}`);
+      if (costados) cfg.push(`${labelCostados || 'Costados'}: ${costados}`);
       if (cfg.length) {
         pdf.setFontSize(9); pdf.setTextColor(90);
         pdf.text(cfg.join('     '), M, y); y += 5;
@@ -1121,7 +1131,12 @@ const Digitalizador = ({ state, setState }) => {
                 {/* Config Fields */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
                   <div>
-                    <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block mb-1">Acabado</label>
+                    <input
+                      value={labelAcabado}
+                      onChange={(e) => setLabelAcabado(e.target.value)}
+                      className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block mb-1 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full"
+                      title="Editar el título de este campo"
+                    />
                     <input
                       type="text"
                       value={acabado}
@@ -1131,7 +1146,12 @@ const Digitalizador = ({ state, setState }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block mb-1">Armazón</label>
+                    <input
+                      value={labelArmazon}
+                      onChange={(e) => setLabelArmazon(e.target.value)}
+                      className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block mb-1 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full"
+                      title="Editar el título de este campo"
+                    />
                     <input
                       type="text"
                       value={armazon}
@@ -1141,7 +1161,12 @@ const Digitalizador = ({ state, setState }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block mb-1">Costados</label>
+                    <input
+                      value={labelCostados}
+                      onChange={(e) => setLabelCostados(e.target.value)}
+                      className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block mb-1 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full"
+                      title="Editar el título de este campo"
+                    />
                     <input
                       type="text"
                       value={costados}
@@ -1290,13 +1315,21 @@ const Digitalizador = ({ state, setState }) => {
                           <div className="flex flex-col items-center">
                             <input
                               type="text"
-                              value={isLocked ? displayPrice.toFixed(2) : (typeof line.price === 'number' ? line.price.toFixed(2) : line.price)}
+                              inputMode="decimal"
+                              value={isLocked
+                                ? displayPrice.toFixed(2)
+                                : (line._priceStr !== undefined ? line._priceStr : (line.price != null ? String(line.price) : ''))}
                               onChange={(e) => {
-                                if (!isLocked) {
-                                  const value = e.target.value.replace(',', '.');
-                                  updateLine(line.id, 'price', parseFloat(value) || 0);
-                                }
+                                if (isLocked) return;
+                                const raw = e.target.value;
+                                // Permite enteros y decimales con coma o punto mientras se escribe.
+                                if (!/^[0-9]*[.,]?[0-9]*$/.test(raw)) return;
+                                const num = parseFloat(raw.replace(',', '.'));
+                                setLines(prev => prev.map(l => l.id === line.id
+                                  ? { ...l, _priceStr: raw, price: Number.isNaN(num) ? 0 : num }
+                                  : l));
                               }}
+                              onBlur={() => setLines(prev => prev.map(l => l.id === line.id ? { ...l, _priceStr: undefined } : l))}
                               readOnly={isLocked && globalMarkup > 0}
                               className={`w-24 bg-transparent text-center font-bold outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 ${isLocked && globalMarkup > 0 ? 'text-indigo-900' : 'text-indigo-900'}`}
                               placeholder="0.00"
