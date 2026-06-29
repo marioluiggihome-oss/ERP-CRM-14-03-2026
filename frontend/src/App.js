@@ -45,24 +45,36 @@ import { initSecurityGuard } from './utils/securityGuard';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Detecta fallos de carga de "chunk" (típicos tras un despliegue: el index viejo
+// pide un chunk con hash que ya no existe). Se resuelven recargando la página.
+const isChunkError = (e) => /Loading chunk|ChunkLoadError|dynamically imported module|Failed to fetch dynamically|importing a module script failed/i.test((e && (e.message || e.name)) || '');
+
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
   componentDidCatch(error, info) {
-    // Surfacing real para diagnosticar "pantallas en blanco": deja el error y el stack en consola
     console.error('[ErrorBoundary] Módulo falló al renderizar:', error, info?.componentStack);
+    // Auto-recuperación: si es un fallo de chunk (despliegue nuevo), recarga una vez.
+    if (isChunkError(error)) {
+      try {
+        const k = '__chunk_reload_ts__';
+        const last = Number(sessionStorage.getItem(k) || 0);
+        if (Date.now() - last > 10000) { sessionStorage.setItem(k, String(Date.now())); window.location.reload(); }
+      } catch { window.location.reload(); }
+    }
   }
   render() {
     if (this.state.hasError) {
+      const chunk = isChunkError(this.state.error);
       return (
         <div className="h-full flex items-center justify-center bg-slate-50 p-8">
           <div className="text-center">
             <p className="text-2xl mb-2">⚠️</p>
-            <p className="font-black text-slate-700 text-sm uppercase">Error al cargar el módulo</p>
-            <p className="text-xs text-slate-400 mt-2 font-mono">{this.state.error?.message}</p>
-            <button onClick={() => this.setState({ hasError: false })} 
+            <p className="font-black text-slate-700 text-sm uppercase">{chunk ? 'Actualizando a la última versión…' : 'Error al cargar el módulo'}</p>
+            <p className="text-xs text-slate-400 mt-2 font-mono">{chunk ? 'Recarga la página para cargar la versión más reciente.' : this.state.error?.message}</p>
+            <button onClick={() => chunk ? window.location.reload() : this.setState({ hasError: false })}
               className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black">
-              Reintentar
+              {chunk ? 'Recargar' : 'Reintentar'}
             </button>
           </div>
         </div>

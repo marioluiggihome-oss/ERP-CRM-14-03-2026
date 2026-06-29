@@ -329,7 +329,7 @@ const Cascos = ({ state }) => {
   };
 
   return (
-    <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
+    <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-slate-50 overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white p-5 mb-5 shadow-lg flex items-center justify-between gap-3 flex-wrap">
         <div className="ml-16 sm:ml-16">
           <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Box size={22} /> Cocina Desmontada</h1>
@@ -411,14 +411,22 @@ const Cascos = ({ state }) => {
               {resultados.map(m => (
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
                   className="w-full text-left flex items-center gap-3 p-3 hover:bg-indigo-50 transition-colors cursor-pointer group">
-                  <div className="w-12 h-16 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
+                  <div className="w-14 h-20 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-800 text-sm truncate">{m.tipo} <span className="text-slate-400 font-normal">{m.grosor}mm</span></p>
-                    <p className="text-[11px] text-slate-500">Fondo {med(m.fondo)} · Alto {med(m.alto)} · Ancho {med(m.ancho)} {unidad}</p>
+                    <p className="font-bold text-slate-800 text-sm sm:text-base truncate">{m.tipo} <span className="text-slate-400 font-normal text-xs">{m.grosor}mm</span></p>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {[['Fondo', m.fondo], ['Alto', m.alto], ['Ancho', m.ancho]].map(([lab, val]) => (
+                        <span key={lab} className="inline-flex items-baseline gap-1 px-2.5 py-1 bg-slate-100 rounded-lg">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">{lab}</span>
+                          <span className="text-sm sm:text-base font-black text-slate-700 leading-none">{med(val)}</span>
+                        </span>
+                      ))}
+                      <span className="inline-flex items-center px-1.5 text-[10px] font-bold text-slate-400 uppercase">{unidad}</span>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-black text-indigo-700">{eur(pc(m.precios[colorActivo]))}</p>
-                    <span className="mt-1 inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold group-hover:bg-indigo-700"><Plus size={12} /> Añadir</span>
+                  <div className="text-right shrink-0 flex flex-col items-end">
+                    <p className="font-black text-indigo-700 text-base sm:text-lg">{eur(pc(m.precios[colorActivo]))}</p>
+                    <span className="mt-1.5 inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold group-hover:bg-indigo-700"><Plus size={13} /> Añadir</span>
                   </div>
                 </button>
               ))}
