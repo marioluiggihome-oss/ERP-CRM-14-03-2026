@@ -66,6 +66,21 @@ const ResumenCocinas = ({ state }) => {
       setSavedId(doc.id); setDocName(doc.name || ''); setSavedList(null);
     } catch { alert('No se pudo abrir el resumen.'); }
   };
+  const nuevoResumen = () => {
+    if (!window.confirm('¿Empezar un resumen nuevo en blanco? Se perderá lo no guardado.')) return;
+    setCliente(''); setFecha(today); setDocName(''); setSavedId(null);
+    setCocinas([{ id: uid(), nombre: 'COCINA PRINCIPAL', lineas: [
+      { id: uid(), concepto: 'MUEBLES', importe: '' },
+      { id: uid(), concepto: 'ELECTRODOMÉSTICOS', importe: '' },
+      { id: uid(), concepto: 'ENCIMERA', importe: '' },
+    ] }]);
+    setPagos([
+      { id: uid(), label: '50% al hacer pedido', percent: 50 },
+      { id: uid(), label: '45% a la entrega de materiales', percent: 45 },
+      { id: uid(), label: '5% al terminar', percent: 5 },
+    ]);
+  };
+
   const deleteResumen = async (id, name) => {
     if (!window.confirm(`¿Eliminar "${name || ''}"?`)) return;
     try {
@@ -179,6 +194,9 @@ const ResumenCocinas = ({ state }) => {
         <div className="flex items-center gap-2 flex-wrap">
           <input value={docName} onChange={e => setDocName(e.target.value)} placeholder="Nombre del resumen…"
             className="px-3 py-2 border border-slate-300 rounded-xl text-sm w-48" />
+          <button onClick={nuevoResumen} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">
+            <Plus size={16} /> Nuevo
+          </button>
           <button onClick={openList} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50">
             <FolderOpen size={16} /> Mis resúmenes
           </button>
