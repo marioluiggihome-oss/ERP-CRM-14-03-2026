@@ -105,6 +105,7 @@ const Cascos = ({ state }) => {
   const isAdmin = currentUser?.isAdmin === true;
   const userDtoDesmontada = Number(currentUser?.discountDesmontada ?? currentUser?.commercialDiscount ?? 0) || 0;
   const [descuento, setDescuento] = useState(userDtoDesmontada);
+  const [descProveedor, setDescProveedor] = useState(0); // descuento comercial del proveedor
   // Valor de punto (coeficiente) configurable en Master (Cocina Des-Montada); multiplica el precio de tarifa.
   const coef = Number(state?.pointValueDesmontada ?? state?.settings?.cascosPointValue) || 1;
   const pc = (base) => (base == null ? null : Math.round(base * coef * 100) / 100);
@@ -156,16 +157,23 @@ const Cascos = ({ state }) => {
   const SWATCH = { blanco: '#f1f5f9', aluminio: '#cbd5e1', grafito: '#374151', blancoHidrofugo: '#eef2ff', robleAurora: '#c8a063', spike: '#9ca3af', stone: '#a8a29e', roble: '#b07c4f', olmo: '#a8794e', blancoEsp: '#f8fafc' };
 
   const addToCart = (m) => {
-    const precio = pc(m.precios[colorActivo]);
+    const base = m.precios[colorActivo];        // precio de tarifa (puntos)
+    const precio = pc(base);
     const line = {
       key: `${m.id}-${colorActivo}-${Date.now()}`,
       tipo: m.tipo, grosor: m.grosor, dibujo: m.dibujo,
       fondo: m.fondo, alto: m.alto, ancho: m.ancho,
       color: colorActivo, colorLabel: colorLabel(colorActivo), gama: m.gama || 'kit',
-      precio, qty: 1,
+      precio, precioBase: base, qty: 1,
     };
     setCart(prev => [...prev, line]);
   };
+  // Nombre del casco, con la altura cuando es relevante (columnas/altillos),
+  // para distinguir variantes como 200 vs 220 de altura.
+  const altoSensible = (tp) => /columna|semicolumna|altillo/i.test(tp || '');
+  const nombre = (m) => altoSensible(m.tipo) ? `${m.tipo} · ${med(m.alto)} ${unidad} alto` : m.tipo;
+  // Precio base (tarifa) de una línea, con respaldo para pedidos antiguos.
+  const baseDe = (l) => (l.precioBase != null ? l.precioBase : (coef ? (l.precio || 0) / coef : (l.precio || 0)));
   const setQty = (key, q) => setCart(prev => prev.map(l => l.key === key ? { ...l, qty: Math.max(1, parseInt(q) || 1) } : l));
   const removeLine = (key) => setCart(prev => prev.filter(l => l.key !== key));
 
@@ -223,7 +231,7 @@ const Cascos = ({ state }) => {
     autoTable(pdf, {
       startY: 38,
       head: [['Ud.', 'Módulo', 'Acabado', `Medidas F×Al×An (${unidad})`, 'Precio', 'Importe']],
-      body: cart.map(l => [String(l.qty), l.tipo, acabadoOf(l), `${med(l.fondo)}×${med(l.alto)}×${med(l.ancho)}`, eur(l.precio), eur(l.precio * l.qty)]),
+      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.fondo)}×${med(l.alto)}×${med(l.ancho)}`, eur(l.precio), eur(l.precio * l.qty)]),
       styles: { fontSize: 8.5, cellPadding: 1.8 },
       headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 250] },
@@ -246,6 +254,55 @@ const Cascos = ({ state }) => {
   const generarPedido = async () => {
     const o = await guardar('pedido');
     if (o) { alert('✅ Pedido de cascos guardado.'); await exportarPDF(); }
+  };
+
+  // Pedido a PROVEEDOR: pide el descuento comercial y genera el PDF a precio de
+  // tarifa (puntos/€ base) con ese descuento aplicado. No usa el valor de punto.
+  const pedidoProveedor = async () => {
+    if (!cart.length) { alert('Añade cascos primero.'); return; }
+    const resp = window.prompt('Descuento comercial del proveedor (%)', String(descProveedor || 0));
+    if (resp === null) return;
+    const d = Math.min(100, Math.max(0, Number(String(resp).replace(',', '.')) || 0));
+    setDescProveedor(d);
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = pdf.internal.pageSize.getWidth(); const M = 14;
+    const logo = state?.logo;
+    if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+      try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 12, 32, 16); } catch {}
+    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+    pdf.setFontSize(16); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
+    pdf.text('PEDIDO A PROVEEDOR', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(10); pdf.setTextColor(120);
+    pdf.text(`${cliente ? 'Ref. cliente: ' + cliente : ''}${ref ? '  ·  ' + ref : ''}`, W - M, 24, { align: 'right' });
+    pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
+    const brutoP = cart.reduce((s, l) => s + baseDe(l) * l.qty, 0);
+    const dtoP = brutoP * (d / 100);
+    const subP = brutoP - dtoP;
+    const ivaP = subP * (ivaRate / 100);
+    const totP = subP + ivaP;
+    autoTable(pdf, {
+      startY: 38,
+      head: [['Ud.', 'Módulo', 'Acabado', `Medidas F×Al×An (${unidad})`, 'Tarifa', 'Importe']],
+      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.fondo)}×${med(l.alto)}×${med(l.ancho)}`, eur(baseDe(l)), eur(baseDe(l) * l.qty)]),
+      styles: { fontSize: 8.5, cellPadding: 1.8 },
+      headStyles: { fillColor: [30, 27, 65], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [245, 245, 250] },
+      columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 2: { fontStyle: 'bold', textColor: [49, 46, 129] }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      margin: { left: M, right: M },
+    });
+    let y = (pdf.lastAutoTable?.finalY || 38) + 8;
+    const bx = W - M - 70;
+    pdf.setFontSize(10); pdf.setTextColor(40);
+    pdf.text('Bruto tarifa', bx, y); pdf.text(eur(brutoP), W - M, y, { align: 'right' }); y += 6;
+    pdf.text(`Descuento comercial ${d}%`, bx, y); pdf.text('-' + eur(dtoP), W - M, y, { align: 'right' }); y += 6;
+    pdf.text('Base', bx, y); pdf.text(eur(subP), W - M, y, { align: 'right' }); y += 6;
+    pdf.text(`IVA ${ivaRate}%`, bx, y); pdf.text(eur(ivaP), W - M, y, { align: 'right' }); y += 4;
+    pdf.setFillColor(30, 27, 65); pdf.roundedRect(bx - 4, y, 74 + 4, 11, 2, 2, 'F');
+    pdf.setFontSize(13); pdf.setTextColor(255); pdf.setFont(undefined, 'bold');
+    pdf.text('TOTAL', bx, y + 7.5); pdf.text(eur(totP), W - M, y + 7.5, { align: 'right' });
+    pdf.save(`PedidoProveedor_${(cliente || 'cascos').replace(/\s+/g, '_')}.pdf`);
   };
 
   // Catálogo completo maquetado (Luiggi Home) con precios en PUNTOS, paginado y
@@ -425,7 +482,7 @@ const Cascos = ({ state }) => {
                   className="w-full text-left flex items-center gap-3 p-3 hover:bg-indigo-50 transition-colors cursor-pointer group">
                   <div className="w-14 h-20 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-800 text-sm sm:text-base truncate">{m.tipo} <span className="text-slate-400 font-normal text-xs">{m.grosor}mm</span></p>
+                    <p className="font-bold text-slate-800 text-sm sm:text-base truncate">{nombre(m)} <span className="text-slate-400 font-normal text-xs">{m.grosor}mm</span></p>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {[['Fondo', m.fondo], ['Alto', m.alto], ['Ancho', m.ancho]].map(([lab, val]) => (
                         <span key={lab} className="inline-flex items-baseline gap-1 px-2.5 py-1 bg-slate-100 rounded-lg">
@@ -452,7 +509,7 @@ const Cascos = ({ state }) => {
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
                   className="relative flex flex-col items-center text-center border border-slate-200 rounded-xl p-2.5 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transition-all cursor-pointer group">
                   <div className="w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
-                  <p className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{m.tipo}</p>
+                  <p className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{nombre(m)}</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">{med(m.alto)}×{med(m.ancho)} {unidad} · {m.grosor}mm</p>
                   <p className="font-black text-indigo-700 text-sm mt-1">{eur(pc(m.precios[colorActivo]))}</p>
                   <span className="mt-1.5 inline-flex items-center justify-center gap-1 w-full px-2 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold group-hover:bg-indigo-700"><Plus size={12} /> Añadir</span>
@@ -475,7 +532,7 @@ const Cascos = ({ state }) => {
             {cart.map(l => (
               <div key={l.key} className="flex items-center gap-2 border border-slate-100 rounded-lg p-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-700 truncate">{l.tipo}</p>
+                  <p className="text-xs font-bold text-slate-700 truncate">{nombre(l)}</p>
                   <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 max-w-full">
                     <span className="inline-block w-3 h-3 rounded-full border border-slate-300 shrink-0" style={{ background: SWATCH[l.color] || '#e2e8f0' }} />
                     <span className="text-[11px] font-black text-indigo-800 truncate">{acabadoOf(l)}</span>
@@ -502,6 +559,7 @@ const Cascos = ({ state }) => {
               <button onClick={generarPedido} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50"><ClipboardList size={16} /> Pedido</button>
               <button onClick={exportarPDF} disabled={!cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50"><Download size={16} /> PDF</button>
             </div>
+            <button onClick={pedidoProveedor} disabled={!cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900 disabled:opacity-50"><ClipboardList size={16} /> Pedido a proveedor</button>
           </div>
         </div>
       </div>
