@@ -53,10 +53,10 @@ const MODULES = [
   { tab: 'budget',          label: 'Presupuestador 2',icon: FileText,     color: 'bg-orange-600',  group: 'ventas', can: (u) => u?.canUsePresupuestador1 !== false },
   { tab: 'misPedidos',      label: 'Pedidos',         icon: ShoppingBag,  color: 'bg-orange-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessPedidos === true },
   { tab: 'library',         label: 'Archivo',         icon: FolderOpen,   color: 'bg-orange-500',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessArchivo === true },
-  { tab: 'invoices',        label: 'G. Comercial',    icon: Receipt,      color: 'bg-orange-500',  group: 'ventas', can: (u) => u?.canAccessInvoices === true },
-  { tab: 'rentabilidad',    label: 'Rentabilidad',    icon: TrendingUp,   color: 'bg-emerald-600', group: 'ventas', can: (u) => u?.canAccessRentabilidad === true },
+  { tab: 'invoices',        label: 'G. Comercial',    icon: Receipt,      color: 'bg-orange-500',  group: 'admin',  can: (u) => u?.canAccessInvoices === true },
+  { tab: 'rentabilidad',    label: 'Rentabilidad',    icon: TrendingUp,   color: 'bg-emerald-600', group: 'admin',  can: (u) => u?.canAccessRentabilidad === true },
   { tab: 'resumenCocinas',  label: 'Resumen Totales', icon: Layers,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canUseResumenTotales === true },
-  { tab: 'gastos',          label: 'Gastos',          icon: Receipt,      color: 'bg-indigo-600',  group: 'ventas', can: (u) => (u?.isAdmin || u?.isRepresentative || u?.isGerente || u?.isDirectorComercial) && u?.canAccessGastos !== false },
+  { tab: 'gastos',          label: 'Gastos',          icon: Receipt,      color: 'bg-indigo-600',  group: 'admin',  can: (u) => (u?.isAdmin || u?.isRepresentative || u?.isGerente || u?.isDirectorComercial) && u?.canAccessGastos !== false },
 
   // Diseño y Visualización
   { tab: 'visualizer',      label: 'IA Lab',          icon: Sparkles,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
