@@ -225,6 +225,13 @@ const ProjectLibrary = ({ state, setState }) => {
   };
 
   const loadProject = async (project) => {
+    // Si el expediente viene del DIGITALIZADOR, se restaura en el Digitalizador
+    // (no en el presupuestador / mesa de trabajo).
+    if (project.source === 'digitalizador') {
+      if (!window.confirm(`¿Abrir "${project.customerName || project.budgetNumber}" en el Digitalizador?`)) return;
+      openInDigitalizador(project);
+      return;
+    }
     // Reabrir en el presupuestador con el que se creó el expediente.
     const isP2 = isPresupuestador2(project);
     const canP2 = state.currentUser?.canUsePresupuestador2 || state.currentUser?.isAdmin;
