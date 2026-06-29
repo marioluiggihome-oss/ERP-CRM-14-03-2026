@@ -129,7 +129,8 @@ const Digitalizador = ({ state }) => {
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setHistory(data.items || []);
+        // El backend devuelve { history: [...] } (antes se leía data.items y salía vacío)
+        setHistory(data.history || data.items || []);
       }
     } catch (err) {
       console.error('Error loading history:', err);
@@ -603,8 +604,11 @@ const Digitalizador = ({ state }) => {
       if (isValorado && showTotals) {
         const pageH = pdf.internal.pageSize.getHeight();
         const panelH = 24;
-        if (y + panelH + 6 > pageH) { pdf.addPage(); drawHeader(); y = 38; }
-        const panelX = M, panelW = W - 2 * M, panelY = y + 2;
+        // El bloque de totales SIEMPRE al fondo de la página. Si el contenido de
+        // la tabla llega demasiado abajo, se pasa a una página nueva.
+        const panelY = pageH - M - panelH;
+        if (panelY < y + 6) { pdf.addPage(); drawHeader(); }
+        const panelX = M, panelW = W - 2 * M;
         pdf.setFillColor(30, 27, 65); // navy
         pdf.roundedRect(panelX, panelY, panelW, panelH, 3, 3, 'F');
 
