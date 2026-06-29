@@ -466,6 +466,11 @@ const Digitalizador = ({ state, setState }) => {
     setLines(prev => [...prev, newLine]);
   };
 
+  // Cantidad para el cálculo: vacía/0 cuenta como 1 (en líneas manuales se puede
+  // dejar sin unidad, pero el importe sigue siendo el del precio). DEBE ir antes
+  // de los cálculos de totales, que la usan.
+  const qtyOf = (l) => { const n = Number(l.quantity); return n > 0 ? n : 1; };
+
   // Calculate totals
   const calculateTotals = useCallback(() => {
     let brutoLineas = 0;
@@ -521,10 +526,6 @@ const Digitalizador = ({ state, setState }) => {
   }, [lines, globalDiscount, globalMarkup, ivaRate, userDiscount]);
 
   const costTotals = calculateCostTotals();
-
-  // Cantidad para el cálculo: vacía/0 cuenta como 1 (en líneas manuales se puede
-  // dejar sin unidad, pero el importe sigue siendo el del precio).
-  const qtyOf = (l) => { const n = Number(l.quantity); return n > 0 ? n : 1; };
 
   // Get net price for a line (con incremento de margen si aplica)
   const getLineNet = (line) => {
