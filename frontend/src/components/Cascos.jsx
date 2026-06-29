@@ -6,6 +6,8 @@ import { getToken } from '../services/api';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const auth = () => ({ 'Authorization': `Bearer ${getToken()}` });
+// Normaliza para búsqueda sin acentos ni mayúsculas.
+const norm = (s) => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
 // Dibujo esquemático (SVG) reconocible según el tipo de casco.
 function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
@@ -73,6 +75,7 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
 const Cascos = ({ state }) => {
   const currentUser = state?.currentUser;
   const [gama, setGama] = useState('kit');
+  const [q, setQ] = useState(''); // búsqueda por palabras (fregadero, campana, altillo…)
   const [tipo, setTipo] = useState('');
   const [grosor, setGrosor] = useState('16');
   const [color, setColor] = useState('blanco');
@@ -127,13 +130,14 @@ const Cascos = ({ state }) => {
     return CASCOS.filter(m => (m.gama || 'kit') === gama)
       .filter(m => String(m.grosor) === String(grosorActivo))
       .filter(m => !tipo || m.tipo === tipo)
+      .filter(m => !q || norm(m.tipo).includes(norm(q))) // búsqueda por palabras
       .filter(m => (m.precios[colorActivo] != null)) // disponible en ese color
       .filter(m => !altoMin || m.alto >= Number(altoMin) * uFactor)
       .filter(m => !altoMax || m.alto <= Number(altoMax) * uFactor)
       .filter(m => !anchoMin || m.ancho >= Number(anchoMin) * uFactor)
       .filter(m => !anchoMax || m.ancho <= Number(anchoMax) * uFactor)
       .sort((a, b) => a.tipo.localeCompare(b.tipo) || a.alto - b.alto || a.ancho - b.ancho);
-  }, [gama, tipo, grosorActivo, colorActivo, altoMin, altoMax, anchoMin, anchoMax, uFactor]);
+  }, [gama, tipo, q, grosorActivo, colorActivo, altoMin, altoMax, anchoMin, anchoMax, uFactor]);
 
   const colorLabel = (cid) => {
     for (const g of CASCOS_GAMAS) for (const gr of Object.keys(g.colores)) {
@@ -223,7 +227,7 @@ const Cascos = ({ state }) => {
       styles: { fontSize: 8.5, cellPadding: 1.8 },
       headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 250] },
-      columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 2: { fontStyle: 'bold', textColor: [49, 46, 129] }, 4: { halign: 'right' }, 5: { halign: 'right' } },
       margin: { left: M, right: M },
     });
     let y = (pdf.lastAutoTable?.finalY || 38) + 8;
@@ -338,7 +342,9 @@ const Cascos = ({ state }) => {
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><FolderOpen size={16} /> Presupuestos</button>
           <button onClick={() => openHistory('pedido')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><ClipboardList size={16} /> Pedidos</button>
+          {isAdmin && (
           <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm disabled:opacity-50">{genCat ? <Loader size={16} className="animate-spin" /> : <Download size={16} />} Catálogo</button>
+          )}
           <button onClick={nuevoPedido} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white text-indigo-700 rounded-xl font-bold text-xs sm:text-sm hover:bg-indigo-50"><Plus size={16} /> Nuevo</button>
         </div>
       </div>
@@ -347,6 +353,12 @@ const Cascos = ({ state }) => {
         {/* Buscador + resultados */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
+            <div className="relative mb-3">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por palabra: fregadero, campana, altillo, columna…"
+                className="w-full pl-9 pr-9 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-indigo-400 outline-none" />
+              {q && <button type="button" onClick={() => setQ('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600"><X size={16} /></button>}
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
               <div className="col-span-2 sm:col-span-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Gama</label>
@@ -464,11 +476,11 @@ const Cascos = ({ state }) => {
               <div key={l.key} className="flex items-center gap-2 border border-slate-100 rounded-lg p-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-700 truncate">{l.tipo}</p>
-                  <p className="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full border border-slate-300 shrink-0" style={{ background: SWATCH[l.color] || '#e2e8f0' }} />
-                    {acabadoOf(l)}
-                  </p>
-                  <p className="text-[10px] text-slate-400">{med(l.alto)}×{med(l.ancho)} {unidad} · {eur(l.precio)}</p>
+                  <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 max-w-full">
+                    <span className="inline-block w-3 h-3 rounded-full border border-slate-300 shrink-0" style={{ background: SWATCH[l.color] || '#e2e8f0' }} />
+                    <span className="text-[11px] font-black text-indigo-800 truncate">{acabadoOf(l)}</span>
+                  </span>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{med(l.alto)}×{med(l.ancho)} {unidad} · {eur(l.precio)}</p>
                 </div>
                 <input type="number" value={l.qty} onChange={e => setQty(l.key, e.target.value)} className="w-12 px-1 py-1 border border-slate-200 rounded text-sm text-center" />
                 <span className="w-20 text-right text-xs font-bold text-slate-700">{eur(l.precio * l.qty)}</span>
