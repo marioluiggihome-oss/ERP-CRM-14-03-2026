@@ -951,7 +951,7 @@ const App = () => {
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'presupuestador2' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <Receipt size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Presup.</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Montada</span>
                       </button>
                     )}
 
@@ -962,7 +962,7 @@ const App = () => {
                       className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'budget' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                     >
                       <FileText size={18}/>
-                      <span className="text-[7px] font-black uppercase tracking-widest">Presup. 2</span>
+                      <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Montada 2</span>
                     </button>
                     )}
 
@@ -984,7 +984,7 @@ const App = () => {
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cascos' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                       >
                         <Box size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Cascos</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocina Desmontada</span>
                       </button>
                     )}
 

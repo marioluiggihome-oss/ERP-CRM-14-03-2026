@@ -75,15 +75,29 @@ async def list_casco_orders(userId: Optional[str] = None, kind: Optional[str] = 
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _can_access(order: dict, current_user: Optional[dict]) -> bool:
+    """Admin/elevado ve todo; el resto solo sus propios pedidos."""
+    if not current_user or not current_user.get("id"):
+        return True  # sin auth (modo compat); el aislamiento real lo da el listado
+    if any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
+        return True
+    return order.get("userId") == current_user["id"]
+
+
 @router.get("/cascos/orders/{order_id}")
 async def get_casco_order(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
     o = await db.cascos_orders.find_one({"id": order_id}, {"_id": 0})
     if not o:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    if not _can_access(o, current_user):
+        raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
     return o
 
 
 @router.delete("/cascos/orders/{order_id}")
 async def delete_casco_order(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    o = await db.cascos_orders.find_one({"id": order_id}, {"_id": 0, "userId": 1})
+    if o and not _can_access(o, current_user):
+        raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
     await db.cascos_orders.delete_one({"id": order_id})
     return {"success": True}

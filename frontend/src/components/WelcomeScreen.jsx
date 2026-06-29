@@ -49,14 +49,14 @@ const MODULES = [
   // Ventas y Presupuestos
   { tab: 'crm-dashboard',   label: 'CRM',             icon: Target,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => u?.canAccessCRM && !u?.isTienda },
   { tab: 'agendaNegocios',  label: 'Agenda Negocios', icon: CalendarDays, color: 'bg-indigo-600',  group: 'ventas', can: (u) => u?.isPrescriptor },
-  { tab: 'presupuestador2', label: 'Presupuestador',  icon: Receipt,      color: 'bg-emerald-600', group: 'ventas', can: (u) => u?.canUsePresupuestador2 !== false },
-  { tab: 'budget',          label: 'Presupuestador 2',icon: FileText,     color: 'bg-orange-600',  group: 'ventas', can: (u) => u?.canUsePresupuestador1 !== false },
+  { tab: 'presupuestador2', label: 'Cocina Montada',  icon: Receipt,      color: 'bg-emerald-600', group: 'ventas', can: (u) => u?.canUsePresupuestador2 !== false },
+  { tab: 'budget',          label: 'Cocina Montada 2',icon: FileText,     color: 'bg-orange-600',  group: 'ventas', can: (u) => u?.canUsePresupuestador1 !== false },
   { tab: 'misPedidos',      label: 'Pedidos',         icon: ShoppingBag,  color: 'bg-orange-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessPedidos === true },
   { tab: 'library',         label: 'Archivo',         icon: FolderOpen,   color: 'bg-orange-500',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessArchivo === true },
   { tab: 'invoices',        label: 'G. Comercial',    icon: Receipt,      color: 'bg-orange-500',  group: 'admin',  can: (u) => u?.canAccessInvoices === true },
   { tab: 'rentabilidad',    label: 'Rentabilidad',    icon: TrendingUp,   color: 'bg-emerald-600', group: 'admin',  can: (u) => u?.canAccessRentabilidad === true },
   { tab: 'resumenCocinas',  label: 'Resumen Totales', icon: Layers,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canUseResumenTotales === true },
-  { tab: 'cascos',          label: 'Cascos',          icon: Box,          color: 'bg-cyan-600',    group: 'ventas', can: (u) => !u?.isTienda && u?.canUseCascos === true },
+  { tab: 'cascos',          label: 'Cocina Desmontada',icon: Box,         color: 'bg-cyan-600',    group: 'ventas', can: (u) => !u?.isTienda && u?.canUseCascos === true },
   { tab: 'gastos',          label: 'Gastos',          icon: Receipt,      color: 'bg-indigo-600',  group: 'admin',  can: (u) => (u?.isAdmin || u?.isRepresentative || u?.isGerente || u?.isDirectorComercial) && u?.canAccessGastos !== false },
 
   // Diseño y Visualización

@@ -156,7 +156,7 @@ const Cascos = ({ state }) => {
       try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 12, 32, 16); } catch {}
     } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
     pdf.setFontSize(16); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
-    pdf.text('PRESUPUESTO DE CASCOS', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
+    pdf.text('PRESUPUESTO COCINA DESMONTADA', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
     pdf.setFontSize(10); pdf.setTextColor(120);
     pdf.text(`${cliente || ''}${ref ? '  ·  Ref. ' + ref : ''}`, W - M, 24, { align: 'right' });
     pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
@@ -210,8 +210,8 @@ const Cascos = ({ state }) => {
     <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white p-5 mb-5 shadow-lg flex items-center justify-between gap-3 flex-wrap">
         <div className="ml-16 sm:ml-16">
-          <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Box size={22} /> Presupuestador de Cascos</h1>
-          <p className="text-xs sm:text-sm text-white/80">Busca por tipo y medidas, monta el presupuesto y genera el pedido.</p>
+          <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Box size={22} /> Cocina Desmontada</h1>
+          <p className="text-xs sm:text-sm text-white/80">Presupuestador de cascos: busca por tipo y medidas, monta el presupuesto y genera el pedido.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><FolderOpen size={16} /> Presupuestos</button>
