@@ -7,31 +7,63 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const auth = () => ({ 'Authorization': `Bearer ${getToken()}` });
 
-// Dibujo esquemático (SVG) según tipo de casco, con baldas representativas.
-function CascoDibujo({ dibujo, alto, ancho, fondo }) {
+// Dibujo esquemático (SVG) reconocible según el tipo de casco.
+function CascoDibujo({ dibujo, tipo, alto, ancho, fondo }) {
   const W = 120, H = 150, pad = 10;
-  // proporción aproximada alto/ancho del módulo
   const ratio = Math.min(2.2, Math.max(0.4, (alto || 700) / (ancho || 600)));
   const bw = W - pad * 2;
   const bh = Math.min(H - pad * 2, bw * ratio);
   const x = pad, y = (H - bh) / 2;
-  const shelves = ({ alto: alto >= 1900 ? 4 : alto >= 850 ? 2 : 1 }).alto;
-  const lines = [];
-  if (dibujo === 'columna' || dibujo === 'columna-horno') {
-    const n = alto >= 2000 ? 4 : 3;
-    for (let s = 1; s <= n; s++) lines.push(y + (bh * s) / (n + 1));
-  } else if (dibujo === 'bajo-fregadero' || dibujo === 'altillo') {
-    // sin balda o caja simple
+  const cx = x + bw / 2, cy = y + bh / 2;
+  const t = (tipo || '').toLowerCase();
+  const STROKE = '#475569', THIN = '#94a3b8';
+  const detail = [];
+
+  const shelvesAt = (n) => { for (let s = 1; s <= n; s++) detail.push(<line key={'s' + s} x1={x + 4} y1={y + (bh * s) / (n + 1)} x2={x + bw - 4} y2={y + (bh * s) / (n + 1)} stroke={THIN} strokeWidth="1.5" />); };
+
+  if (t.includes('fregadero')) {
+    // seno de fregadero + grifo
+    detail.push(<rect key="b" x={x + bw * 0.18} y={cy - bh * 0.12} width={bw * 0.64} height={bh * 0.3} rx="3" fill="#e0e7ff" stroke={STROKE} strokeWidth="1.6" />);
+    detail.push(<circle key="d" cx={cx} cy={cy + bh * 0.03} r="3" fill="none" stroke={STROKE} strokeWidth="1.4" />);
+    detail.push(<path key="g" d={`M ${cx + bw * 0.22} ${cy - bh * 0.12} v -8 q 0 -5 -6 -5`} fill="none" stroke={STROKE} strokeWidth="1.6" />);
+  } else if (t.includes('placa')) {
+    // encimera con 4 fuegos
+    [[-0.18, -0.06], [0.18, -0.06], [-0.18, 0.14], [0.18, 0.14]].forEach((p, i) =>
+      detail.push(<circle key={'f' + i} cx={cx + bw * p[0]} cy={cy + bh * p[1]} r="5" fill="none" stroke={STROKE} strokeWidth="1.5" />));
+  } else if (t.includes('horno')) {
+    // horno: tirador + visor
+    detail.push(<line key="h" x1={x + 6} y1={y + bh * 0.26} x2={x + bw - 6} y2={y + bh * 0.26} stroke={STROKE} strokeWidth="2" />);
+    detail.push(<rect key="v" x={x + bw * 0.22} y={y + bh * 0.4} width={bw * 0.56} height={bh * 0.4} rx="2" fill="#e0e7ff" stroke={STROKE} strokeWidth="1.4" />);
+  } else if (t.includes('bombona')) {
+    // puerta con rejilla de ventilación
+    [0.62, 0.7, 0.78].forEach((p, i) => detail.push(<line key={'r' + i} x1={x + bw * 0.3} y1={y + bh * p} x2={x + bw * 0.7} y2={y + bh * p} stroke={THIN} strokeWidth="1.6" />));
+  } else if (t.includes('escurre')) {
+    // escurreplatos: rejilla vertical
+    for (let i = 1; i <= 5; i++) detail.push(<line key={'e' + i} x1={x + (bw * i) / 6} y1={y + 5} x2={x + (bw * i) / 6} y2={y + bh * 0.55} stroke={THIN} strokeWidth="1.4" />);
+    shelvesAt(1);
+  } else if (t.includes('campana')) {
+    // campana extraíble: trapecio
+    detail.push(<path key="c" d={`M ${x} ${y + bh} L ${x + bw * 0.25} ${y} L ${x + bw * 0.75} ${y} L ${x + bw} ${y + bh} Z`} fill="#eef2ff" stroke={STROKE} strokeWidth="1.6" />);
+  } else if (dibujo === 'angular' || t.includes('rincón') || t.includes('rincon') || t.includes('angular')) {
+    // módulo en esquina
+    detail.push(<path key="a" d={`M ${x} ${y} L ${x + bw * 0.55} ${y} L ${x + bw} ${y + bh * 0.45} L ${x + bw} ${y + bh} L ${x} ${y + bh} Z`} fill="#f1f5f9" stroke={STROKE} strokeWidth="1.6" />);
+  } else if (dibujo === 'columna' || t.includes('columna') || t.includes('despensa')) {
+    shelvesAt(alto >= 2000 ? 5 : 4);
+  } else if (t.includes('cubretermo') || t.includes('termo')) {
+    detail.push(<rect key="tm" x={x + bw * 0.3} y={cy - bh * 0.1} width={bw * 0.4} height={bh * 0.22} rx="2" fill="#e0e7ff" stroke={STROKE} strokeWidth="1.4" />);
   } else {
-    for (let s = 1; s <= shelves; s++) lines.push(y + (bh * s) / (shelves + 1));
+    // alto / bajo / transversal / sobre: baldas
+    shelvesAt(alto >= 1300 ? 3 : alto >= 850 ? 2 : 1);
   }
+
+  const showAngular = dibujo === 'angular' && !(t.includes('rincón') || t.includes('rincon') || t.includes('angular'));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
-      <rect x={x} y={y} width={bw} height={bh} fill="#f8fafc" stroke="#475569" strokeWidth="2" />
-      {lines.map((ly, i) => <line key={i} x1={x} y1={ly} x2={x + bw} y2={ly} stroke="#94a3b8" strokeWidth="1.5" />)}
-      {dibujo === 'angular' && <line x1={x} y1={y} x2={x + bw / 2} y2={y + bh / 3} stroke="#475569" strokeWidth="1.5" />}
-      <text x={x + bw / 2} y={y - 3} textAnchor="middle" fontSize="9" fill="#334155">{ancho} mm</text>
-      <text x={x - 3} y={y + bh / 2} textAnchor="middle" fontSize="9" fill="#334155" transform={`rotate(-90 ${x - 3} ${y + bh / 2})`}>{alto} mm</text>
+      <rect x={x} y={y} width={bw} height={bh} rx="2" fill="#f8fafc" stroke={STROKE} strokeWidth="2" />
+      {detail}
+      {showAngular && <line x1={x} y1={y} x2={x + bw / 2} y2={y + bh / 3} stroke={STROKE} strokeWidth="1.5" />}
+      <text x={cx} y={y - 3} textAnchor="middle" fontSize="9" fill="#334155">{ancho} mm</text>
+      <text x={x - 3} y={cy} textAnchor="middle" fontSize="9" fill="#334155" transform={`rotate(-90 ${x - 3} ${cy})`}>{alto} mm</text>
     </svg>
   );
 }
@@ -46,7 +78,8 @@ const Cascos = ({ state }) => {
   const [altoMax, setAltoMax] = useState('');
   const [anchoMin, setAnchoMin] = useState('');
   const [anchoMax, setAnchoMax] = useState('');
-  const [vista, setVista] = useState('iconos'); // 'lista' | 'iconos'
+  // Por defecto: iconos en móvil/tablet, lista en ordenador (≥1024px).
+  const [vista, setVista] = useState(() => (typeof window !== 'undefined' && window.innerWidth >= 1024) ? 'lista' : 'iconos'); // 'lista' | 'iconos'
   const [cart, setCart] = useState([]);
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
@@ -283,7 +316,7 @@ const Cascos = ({ state }) => {
               {resultados.map(m => (
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
                   className="w-full text-left flex items-center gap-3 p-3 hover:bg-indigo-50 transition-colors cursor-pointer group">
-                  <div className="w-12 h-16 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
+                  <div className="w-12 h-16 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-800 text-sm truncate">{m.tipo} <span className="text-slate-400 font-normal">{m.grosor}mm</span></p>
                     <p className="text-[11px] text-slate-500">Fondo {m.fondo} · Alto {m.alto} · Ancho {m.ancho} mm</p>
@@ -303,7 +336,7 @@ const Cascos = ({ state }) => {
               {resultados.map(m => (
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
                   className="relative flex flex-col items-center text-center border border-slate-200 rounded-xl p-2.5 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transition-all cursor-pointer group">
-                  <div className="w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
+                  <div className="w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
                   <p className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{m.tipo}</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">{m.alto}×{m.ancho} · {m.grosor}mm</p>
                   <p className="font-black text-indigo-700 text-sm mt-1">{eur(pc(m.precios[colorActivo]))}</p>
