@@ -902,6 +902,9 @@ class DigitalizadorSaveRequest(BaseModel):
     """Request to save a digitalized budget to history"""
     projectName: str
     customerName: str = ""
+    customerCode: str = ""
+    customerEmail: str = ""
+    customerPhone: str = ""
     acabado: str = ""
     armazon: str = ""
     costados: str = ""
@@ -909,6 +912,9 @@ class DigitalizadorSaveRequest(BaseModel):
     globalDiscount: float = 0
     globalMarkup: float = 0
     ivaRate: float = 21
+    documentTitle: str = ""
+    isValorado: Optional[bool] = None
+    showTotals: Optional[bool] = None
     userId: str
     expNumber: str = ""
 

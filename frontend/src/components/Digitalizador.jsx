@@ -192,6 +192,9 @@ const Digitalizador = ({ state, setState }) => {
           body: JSON.stringify({
             projectName: projectName || 'Sin nombre',
             customerName,
+            customerCode,
+            customerEmail,
+            customerPhone,
             acabado,
             armazon,
             costados,
@@ -199,6 +202,9 @@ const Digitalizador = ({ state, setState }) => {
             globalDiscount,
             globalMarkup,
             ivaRate,
+            documentTitle,
+            isValorado,
+            showTotals,
             userId: state.currentUser?.id || 'anonymous',
             expNumber: expNumber
           })
@@ -318,11 +324,19 @@ const Digitalizador = ({ state, setState }) => {
   const loadBudgetFromHistory = (item) => {
     setProjectName(item.projectName || '');
     setCustomerName(item.customerName || '');
+    setCustomerCode(item.customerCode || '');
+    setCustomerEmail(item.customerEmail || '');
+    setCustomerPhone(item.customerPhone || '');
     setAcabado(item.acabado || '');
     setArmazon(item.armazon || '');
     setCostados(item.costados || '');
     setGlobalDiscount(item.globalDiscount || 0);
+    setGlobalMarkup(item.globalMarkup || 0);
     setIvaRate(item.ivaRate || 21);
+    if (item.documentTitle) setDocumentTitle(item.documentTitle);
+    if (typeof item.isValorado === 'boolean') setIsValorado(item.isValorado);
+    if (typeof item.showTotals === 'boolean') setShowTotals(item.showTotals);
+    if (item.expNumber) setExpNumber(item.expNumber);
     setLines(item.lines || []);
     setShowHistory(false);
   };
