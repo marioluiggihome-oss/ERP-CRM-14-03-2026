@@ -3,6 +3,12 @@ import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader }
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Cuentas bancarias para reflejar en el presupuesto (titular PUBLIOFERTA S.L.).
+const BANCOS = [
+  { id: 'santander', nombre: 'Banco Santander', titular: 'PUBLIOFERTA S.L.', iban: 'ES13 0049 5558 0020 1635 1274', swift: 'BSCHESMM' },
+  { id: 'bbva', nombre: 'BBVA', titular: 'PUBLIOFERTA S.L.', iban: 'ES38 0182 5581 9302 0159 9858', swift: 'BBVAESMMXXX' },
+];
+
 // Resumen por cocinas: junta partidas a mano (Muebles, Electrodomésticos,
 // Encimera…) por cada cocina, suma totales y forma de pago, y lo presenta /
 // exporta a PDF con el logotipo. Pensado para presentar al cliente.
@@ -27,6 +33,7 @@ const ResumenCocinas = ({ state }) => {
     { id: uid(), label: '5% al terminar', percent: 5 },
   ]);
   const [exporting, setExporting] = useState(false);
+  const [bancoId, setBancoId] = useState('');     // cuenta bancaria elegida
   const [docName, setDocName] = useState('');     // nombre con el que se guarda
   const [savedId, setSavedId] = useState(null);
   const [savedList, setSavedList] = useState(null); // null = oculto
@@ -41,7 +48,7 @@ const ResumenCocinas = ({ state }) => {
     try {
       const r = await fetch(`${API_URL}/api/resumen-totales`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: savedId || undefined, userId: uidUser, name, data: { cliente, fecha, cocinas, pagos } }),
+        body: JSON.stringify({ id: savedId || undefined, userId: uidUser, name, data: { cliente, fecha, cocinas, pagos, bancoId } }),
       });
       const d = await r.json();
       if (d.id) { setSavedId(d.id); setDocName(name); alert('✅ Resumen guardado. Lo tienes en "Mis resúmenes".'); }
@@ -62,7 +69,7 @@ const ResumenCocinas = ({ state }) => {
       const doc = await r.json();
       const data = doc.data || {};
       setCliente(data.cliente || ''); setFecha(data.fecha || today);
-      setCocinas(data.cocinas || []); setPagos(data.pagos || []);
+      setCocinas(data.cocinas || []); setPagos(data.pagos || []); setBancoId(data.bancoId || '');
       setSavedId(doc.id); setDocName(doc.name || ''); setSavedList(null);
     } catch { alert('No se pudo abrir el resumen.'); }
   };
@@ -179,6 +186,21 @@ const ResumenCocinas = ({ state }) => {
           pdf.text(eur(totalGeneral * (Number(p.percent) || 0) / 100), W - M - 2, y, { align: 'right' });
           y += 6.5;
         });
+      }
+
+      // Cuenta bancaria elegida (datos para el pago).
+      const banco = BANCOS.find(b => b.id === bancoId);
+      if (banco) {
+        ensure(20);
+        y += 4;
+        pdf.setFontSize(11); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
+        pdf.text('Forma de pago: Transferencia a:', M, y); pdf.setFont(undefined, 'normal'); y += 6;
+        pdf.setFontSize(10.5); pdf.setTextColor(60);
+        pdf.text(`${banco.nombre} — Titular: ${banco.titular}`, M + 4, y); y += 6;
+        pdf.setFont(undefined, 'bold'); pdf.text(`IBAN: ${banco.iban}`, M + 4, y);
+        pdf.setFont(undefined, 'normal');
+        if (banco.swift) pdf.text(`SWIFT: ${banco.swift}`, W - M - 2, y, { align: 'right' });
+        y += 6;
       }
 
       pdf.save(`Presupuesto_${(cliente || 'cocinas').replace(/\s+/g, '_')}.pdf`);
@@ -302,6 +324,21 @@ const ResumenCocinas = ({ state }) => {
               </div>
             ))}
             <button onClick={addPago} className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800"><Plus size={14} /> Añadir plazo</button>
+          </div>
+        </div>
+
+        {/* Cuenta bancaria para el pago */}
+        <div className="rounded-xl border border-slate-200 p-3">
+          <p className="text-xs font-black text-slate-500 uppercase mb-2">Forma de pago: Transferencia a:</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={bancoId} onChange={e => setBancoId(e.target.value)}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold bg-white">
+              <option value="">— Sin cuenta —</option>
+              {BANCOS.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+            </select>
+            {(() => { const b = BANCOS.find(x => x.id === bancoId); return b ? (
+              <span className="text-xs text-slate-500">{b.titular} · <span className="font-bold text-slate-700">{b.iban}</span></span>
+            ) : <span className="text-[11px] text-slate-400">Elige la cuenta que se mostrará en el presupuesto.</span>; })()}
           </div>
         </div>
       </div>
