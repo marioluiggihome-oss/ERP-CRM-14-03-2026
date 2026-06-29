@@ -593,13 +593,13 @@ const Digitalizador = ({ state, setState }) => {
       // Proyecto (+ referencia/cliente en la misma línea, estilo "Proyecto: X / REF")
       if (projectName || customerName) {
         pdf.setFontSize(13); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
-        // Cabecera Proyecto/Ref en mayúsculas (estilo título), igual que en pantalla.
-        const proj = `Proyecto: ${(projectName || '').toUpperCase()}`;
+        // Respeta exactamente lo que escribe el usuario (mayúsculas/minúsculas).
+        const proj = `Proyecto: ${projectName || ''}`;
         pdf.text(proj, M, y);
         if (customerName) {
           const projW = pdf.getTextWidth(proj);
           pdf.setTextColor(60, 57, 110);
-          pdf.text(`/ REF. ${customerName.toUpperCase()}`, M + projW + 6, y);
+          pdf.text(`/ ${customerName}`, M + projW + 6, y);
         }
         pdf.setFont(undefined, 'normal'); y += 6;
       }
@@ -1113,7 +1113,7 @@ const Digitalizador = ({ state, setState }) => {
                       value={projectName}
                       onChange={(e) => setProjectName(e.target.value)}
                       placeholder="Nombre del proyecto..."
-                      className="block text-xl font-black text-indigo-950 uppercase bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full mt-1"
+                      className="block text-xl font-black text-indigo-950 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full mt-1"
                     />
                   </div>
                   <div>
@@ -1123,7 +1123,7 @@ const Digitalizador = ({ state, setState }) => {
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Referencia (ej. cocina invitados)..."
-                      className="block text-xl font-black text-indigo-950 uppercase bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full mt-1"
+                      className="block text-xl font-black text-indigo-950 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full mt-1"
                     />
                   </div>
                 </div>
