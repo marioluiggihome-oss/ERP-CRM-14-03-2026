@@ -1093,16 +1093,28 @@ const Digitalizador = ({ state, setState }) => {
                   </div>
                 </div>
 
-                {/* Project Name */}
-                <div className="mt-6">
-                  <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Proyecto:</label>
-                  <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="Nombre del proyecto..."
-                    className="block text-xl font-black text-indigo-950 uppercase bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full mt-1"
-                  />
+                {/* Proyecto + Referencia */}
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Proyecto:</label>
+                    <input
+                      type="text"
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      placeholder="Nombre del proyecto..."
+                      className="block text-xl font-black text-indigo-950 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Ref.:</label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Referencia (ej. cocina invitados)..."
+                      className="block text-xl font-black text-indigo-950 bg-transparent outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 w-full mt-1"
+                    />
+                  </div>
                 </div>
 
                 {/* Config Fields */}
