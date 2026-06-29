@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList } from 'lucide-react';
+import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
 
@@ -46,6 +46,7 @@ const Cascos = ({ state }) => {
   const [altoMax, setAltoMax] = useState('');
   const [anchoMin, setAnchoMin] = useState('');
   const [anchoMax, setAnchoMax] = useState('');
+  const [vista, setVista] = useState('iconos'); // 'lista' | 'iconos'
   const [cart, setCart] = useState([]);
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
@@ -265,9 +266,18 @@ const Cascos = ({ state }) => {
                 </div>
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 flex items-center gap-1"><Search size={12} /> {resultados.length} cascos encontrados</p>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-[11px] text-slate-400 flex items-center gap-1"><Search size={12} /> {resultados.length} cascos encontrados</p>
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                <button type="button" onClick={() => setVista('iconos')} title="Vista de iconos"
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${vista === 'iconos' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><LayoutGrid size={14} /> Iconos</button>
+                <button type="button" onClick={() => setVista('lista')} title="Vista de lista"
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${vista === 'lista' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><List size={14} /> Lista</button>
+              </div>
+            </div>
           </div>
 
+          {vista === 'lista' ? (
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="max-h-[55vh] overflow-y-auto divide-y divide-slate-100">
               {resultados.map(m => (
@@ -287,6 +297,23 @@ const Cascos = ({ state }) => {
               {resultados.length === 0 && <p className="p-8 text-center text-slate-400 text-sm">No hay cascos con esos filtros.</p>}
             </div>
           </div>
+          ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 p-3">
+            <div className="max-h-[60vh] overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {resultados.map(m => (
+                <button key={m.id} type="button" onClick={() => addToCart(m)}
+                  className="relative flex flex-col items-center text-center border border-slate-200 rounded-xl p-2.5 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transition-all cursor-pointer group">
+                  <div className="w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
+                  <p className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{m.tipo}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{m.alto}×{m.ancho} · {m.grosor}mm</p>
+                  <p className="font-black text-indigo-700 text-sm mt-1">{eur(pc(m.precios[colorActivo]))}</p>
+                  <span className="mt-1.5 inline-flex items-center justify-center gap-1 w-full px-2 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold group-hover:bg-indigo-700"><Plus size={12} /> Añadir</span>
+                </button>
+              ))}
+              {resultados.length === 0 && <p className="col-span-full p-8 text-center text-slate-400 text-sm">No hay cascos con esos filtros.</p>}
+            </div>
+          </div>
+          )}
         </div>
 
         {/* Presupuesto */}
