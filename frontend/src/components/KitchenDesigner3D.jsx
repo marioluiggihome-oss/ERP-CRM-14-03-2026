@@ -466,29 +466,26 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
 
   // Paso 4: analiza plano/bocetos, detecta muebles y vuelca a Presupuestador 1.
   const analyzeAndBudget = async () => {
-    const imgs = [floorPlan, ...sketches].filter(Boolean);
-    if (!imgs.length) { alert('Sube el plano o un boceto en el paso 1.'); return; }
+    // Para el presupuesto basta con el plano en planta (o, si no hay, el primer
+    // boceto). Analizar UNA sola imagen evita envíos enormes (NetworkError).
+    const src = floorPlan || sketches[0];
+    if (!src) { alert('Sube el plano o un boceto en el paso 1.'); return; }
     // Siempre se pregunta el catálogo antes de volcar, sugiriendo MV por defecto.
     const ans = (window.prompt('¿Con qué catálogo presupuestar? Escribe MV o ZC:', 'MV') || '').trim().toUpperCase();
     if (ans !== 'ZC' && ans !== 'MV') return; // cancelado o valor no válido
     const lib = ans;
     setIsBudgeting(true);
     try {
-      const files = imgs.map((d, i) => dataURLtoFile(d, `plano${i}.png`)).filter(Boolean);
+      const file = dataURLtoFile(src, 'plano.png');
+      if (!file) { alert('No se pudo preparar la imagen del plano.'); return; }
+      if (file.size > 10 * 1024 * 1024) { alert('La imagen del plano es demasiado grande (máx. 10 MB). Sube una más ligera.'); return; }
       const fd = new FormData();
       fd.append('library', lib);
-      let muebles = [];
-      if (files.length === 1) {
-        fd.append('file', files[0]);
-        const r = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan`, { method: 'POST', body: fd });
-        const data = await r.json();
-        muebles = data?.analysis?.muebles_detectados || [];
-      } else {
-        files.forEach(f => fd.append('files', f));
-        const r = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan-multi`, { method: 'POST', body: fd });
-        const data = await r.json();
-        muebles = data?.analysis?.muebles_detectados || data?.muebles_detectados || [];
-      }
+      fd.append('file', file);
+      const r = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan`, { method: 'POST', body: fd });
+      if (!r.ok) { alert(`Error del servidor al analizar (${r.status}).`); return; }
+      const data = await r.json();
+      const muebles = data?.analysis?.muebles_detectados || [];
       const cotizables = muebles.filter(m => !m.es_electrodomestico);
       setDetected({ total: muebles.length, cotizables: cotizables.length, lib, muebles });
       if (!cotizables.length) { alert('No se detectaron muebles cotizables en el plano. Revisa la imagen.'); return; }
