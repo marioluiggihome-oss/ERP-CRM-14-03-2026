@@ -471,14 +471,14 @@ const Digitalizador = ({ state, setState }) => {
     let brutoLineas = 0;
     
     lines.forEach(line => {
-      const linePrice = line.price * line.quantity;
+      const linePrice = line.price * qtyOf(line);
       brutoLineas += linePrice;
     });
 
     // Calculate base with discounts
     let baseImponible = 0;
     lines.forEach(line => {
-      const linePrice = line.price * line.quantity;
+      const linePrice = line.price * qtyOf(line);
       let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
       baseImponible += linePrice * (1 - lineDiscount / 100);
     });
@@ -502,7 +502,7 @@ const Digitalizador = ({ state, setState }) => {
 
     // Aplicar descuento del usuario a cada línea
     let brutoLineas = lines.reduce((sum, line) => {
-      const linePrice = line.price * line.quantity;
+      const linePrice = line.price * qtyOf(line);
       let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
       return sum + (linePrice * (1 - lineDiscount / 100));
     }, 0);
@@ -522,9 +522,13 @@ const Digitalizador = ({ state, setState }) => {
 
   const costTotals = calculateCostTotals();
 
+  // Cantidad para el cálculo: vacía/0 cuenta como 1 (en líneas manuales se puede
+  // dejar sin unidad, pero el importe sigue siendo el del precio).
+  const qtyOf = (l) => { const n = Number(l.quantity); return n > 0 ? n : 1; };
+
   // Get net price for a line (con incremento de margen si aplica)
   const getLineNet = (line) => {
-    const linePrice = line.price * line.quantity;
+    const linePrice = line.price * qtyOf(line);
     let lineDiscount = line.isManual ? line.discount : Math.max(line.discount, globalDiscount);
     let netPrice = linePrice * (1 - lineDiscount / 100);
     
@@ -554,6 +558,9 @@ const Digitalizador = ({ state, setState }) => {
       const autoTable = (await import('jspdf-autotable')).default;
 
       const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+      // Normaliza ligaduras tipográficas (ﬁ→fi, ﬂ→fl…) que la fuente del PDF
+      // renderiza mal (p.ej. "Frigorífico" salía como "Frigoríûco").
+      const clean = (s) => String(s ?? '').normalize('NFKC');
       const T = (showCostMode ? costTotals : totals) || totals;
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -576,7 +583,7 @@ const Digitalizador = ({ state, setState }) => {
         }
 
         pdf.setFontSize(15); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
-        pdf.text(documentTitle || 'Presupuesto Técnico', W - M, hy + 4, { align: 'right' });
+        pdf.text(clean(documentTitle || 'Presupuesto Técnico'), W - M, hy + 4, { align: 'right' });
         pdf.setFont(undefined, 'normal');
         pdf.setFontSize(9); pdf.setTextColor(120);
         pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, hy + 10, { align: 'right' });
@@ -594,19 +601,19 @@ const Digitalizador = ({ state, setState }) => {
       if (projectName || customerName) {
         pdf.setFontSize(13); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
         // Cabecera Proyecto/Ref en mayúsculas (estilo título), igual que en pantalla y en el historial.
-        const proj = `Proyecto: ${(projectName || '').toUpperCase()}`;
+        const proj = `Proyecto: ${clean(projectName).toUpperCase()}`;
         pdf.text(proj, M, y);
         if (customerName) {
           const projW = pdf.getTextWidth(proj);
           pdf.setTextColor(60, 57, 110);
-          pdf.text(`/ ${customerName.toUpperCase()}`, M + projW + 6, y);
+          pdf.text(`/ ${clean(customerName).toUpperCase()}`, M + projW + 6, y);
         }
         pdf.setFont(undefined, 'normal'); y += 6;
       }
       const cfg = [];
-      if (acabado) cfg.push(`${labelAcabado || 'Acabado'}: ${acabado}`);
-      if (armazon) cfg.push(`${labelArmazon || 'Armazón'}: ${armazon}`);
-      if (costados) cfg.push(`${labelCostados || 'Costados'}: ${costados}`);
+      if (acabado) cfg.push(`${clean(labelAcabado) || 'Acabado'}: ${clean(acabado)}`);
+      if (armazon) cfg.push(`${clean(labelArmazon) || 'Armazón'}: ${clean(armazon)}`);
+      if (costados) cfg.push(`${clean(labelCostados) || 'Costados'}: ${clean(costados)}`);
       if (cfg.length) {
         pdf.setFontSize(9); pdf.setTextColor(90);
         pdf.text(cfg.join('     '), M, y); y += 5;
@@ -618,9 +625,10 @@ const Digitalizador = ({ state, setState }) => {
         ? [['Cant.', 'Ref.', 'Descripción', 'Precio', 'Dto%', 'Importe']]
         : [['Cant.', 'Ref.', 'Descripción']];
       const body = (lines || []).map(line => {
-        const cant = line.quantity ?? 1;
-        const ref = line.reference || '';
-        const desc = line.description || '';
+        // Sin unidad si la cantidad está vacía/0 (líneas manuales tipo nota).
+        const cant = (line.quantity === '' || line.quantity == null || Number(line.quantity) === 0) ? '' : line.quantity;
+        const ref = clean(line.reference || '');
+        const desc = clean(line.description || '');
         if (!isValorado) return [String(cant), ref, desc];
         const lineDiscount = line.isManual ? line.discount : Math.max(line.discount || 0, globalDiscount || 0);
         return [String(cant), ref, desc, eur(line.price), `${lineDiscount || 0}%`, eur(getLineNet(line))];
@@ -1284,10 +1292,15 @@ const Digitalizador = ({ state, setState }) => {
                         <td className="px-4 py-3">
                           <input
                             type="number"
-                            value={line.quantity}
-                            onChange={(e) => updateLine(line.id, 'quantity', parseInt(e.target.value) || 1)}
+                            value={(line.quantity === '' || line.quantity == null) ? '' : line.quantity}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (line.isManual) updateLine(line.id, 'quantity', v === '' ? '' : (parseInt(v) || 0));
+                              else updateLine(line.id, 'quantity', parseInt(v) || 1);
+                            }}
+                            placeholder={line.isManual ? '–' : '1'}
                             className="w-12 bg-transparent text-center font-bold text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
-                            min="1"
+                            min="0"
                           />
                         </td>
                         <td className="px-4 py-3">
