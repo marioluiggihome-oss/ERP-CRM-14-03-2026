@@ -537,8 +537,9 @@ const Digitalizador = ({ state }) => {
         pdf.setFont(undefined, 'normal');
         pdf.setFontSize(9); pdf.setTextColor(120);
         pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, hy + 10, { align: 'right' });
-        pdf.setTextColor(isValorado ? 200 : 150, isValorado ? 90 : 150, 30);
+        pdf.setTextColor(234, 120, 40); pdf.setFont(undefined, 'bold');
         pdf.text(isValorado ? 'DOCUMENTO VALORADO' : 'DOCUMENTO SIN VALORACIÓN', W - M, hy + 15, { align: 'right' });
+        pdf.setFont(undefined, 'normal');
         pdf.setTextColor(120);
         pdf.text(`${state?.currentUser?.clientName || ''}   ${new Date().toLocaleDateString('es-ES')}`, W - M, hy + 20, { align: 'right' });
       };
@@ -546,10 +547,17 @@ const Digitalizador = ({ state }) => {
       drawHeader();
       y += 26;
 
-      // Proyecto + configuración
-      if (projectName) {
-        pdf.setFontSize(12); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
-        pdf.text(`Proyecto: ${projectName}`, M, y); pdf.setFont(undefined, 'normal'); y += 6;
+      // Proyecto (+ referencia/cliente en la misma línea, estilo "Proyecto: X / REF")
+      if (projectName || customerName) {
+        pdf.setFontSize(13); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
+        const proj = `Proyecto: ${projectName || ''}`;
+        pdf.text(proj, M, y);
+        if (customerName) {
+          const projW = pdf.getTextWidth(proj);
+          pdf.setTextColor(60, 57, 110);
+          pdf.text(`/ ${customerName}`, M + projW + 6, y);
+        }
+        pdf.setFont(undefined, 'normal'); y += 6;
       }
       const cfg = [];
       if (acabado) cfg.push(`Acabado: ${acabado}`);
@@ -559,7 +567,6 @@ const Digitalizador = ({ state }) => {
         pdf.setFontSize(9); pdf.setTextColor(90);
         pdf.text(cfg.join('     '), M, y); y += 5;
       }
-      if (customerName) { pdf.setFontSize(9); pdf.setTextColor(90); pdf.text(`Cliente: ${customerName}`, M, y); y += 5; }
       y += 2;
 
       // Tabla de líneas (columnas según "valorado")
@@ -592,25 +599,38 @@ const Digitalizador = ({ state }) => {
       });
       y = (pdf.lastAutoTable?.finalY || y) + 8;
 
-      // Bloque de totales (solo si está valorado y los totales visibles)
+      // Bloque de totales: panel navy con 4 cajas (TOTAL en naranja).
       if (isValorado && showTotals) {
         const pageH = pdf.internal.pageSize.getHeight();
-        if (y + 30 > pageH) { pdf.addPage(); drawHeader(); y = 38; }
-        const bx = W - M - 78;
-        const rows = [
-          ['Bruto líneas', eur(T.brutoLineas)],
-          ['Base imponible', eur(T.baseImponible)],
-          [`IVA ${ivaRate}%`, eur(T.iva)],
+        const panelH = 24;
+        if (y + panelH + 6 > pageH) { pdf.addPage(); drawHeader(); y = 38; }
+        const panelX = M, panelW = W - 2 * M, panelY = y + 2;
+        pdf.setFillColor(30, 27, 65); // navy
+        pdf.roundedRect(panelX, panelY, panelW, panelH, 3, 3, 'F');
+
+        const cells = [
+          { label: 'BRUTO LÍNEAS', value: eur(T.brutoLineas), sub: '' },
+          { label: 'BASE IMPONIBLE (NETO)', value: eur(T.baseImponible), sub: (globalDiscount > 0 ? 'DTO GLOBAL APLICADO' : '') },
+          { label: `IVA (${ivaRate}%)`, value: eur(T.iva), sub: '' },
+          { label: 'TOTAL PRESUPUESTO', value: eur(T.total), sub: '', highlight: true },
         ];
-        pdf.setFontSize(10); pdf.setTextColor(40);
-        rows.forEach(([k, v]) => {
-          pdf.text(k, bx, y); pdf.text(v, W - M, y, { align: 'right' }); y += 6;
+        const cellW = panelW / cells.length;
+        cells.forEach((c, i) => {
+          const cx = panelX + i * cellW;
+          if (c.highlight) {
+            pdf.setFillColor(234, 120, 40); // naranja
+            pdf.roundedRect(cx + 3, panelY + 3, cellW - 6, panelH - 6, 2.5, 2.5, 'F');
+          }
+          const mid = cx + cellW / 2;
+          pdf.setFont(undefined, 'bold');
+          pdf.setFontSize(7); pdf.setTextColor(c.highlight ? 255 : 185, c.highlight ? 235 : 185, c.highlight ? 215 : 205);
+          pdf.text(c.label, mid, panelY + 8, { align: 'center' });
+          pdf.setFontSize(13); pdf.setTextColor(255, 255, 255);
+          pdf.text(c.value, mid, panelY + 16, { align: 'center' });
+          if (c.sub) { pdf.setFontSize(5.5); pdf.setTextColor(234, 160, 90); pdf.text(c.sub, mid, panelY + 20, { align: 'center' }); }
         });
-        pdf.setFillColor(49, 46, 129); pdf.rect(bx - 4, y - 4.5, 78 + 4, 10, 'F');
-        pdf.setFontSize(13); pdf.setTextColor(255); pdf.setFont(undefined, 'bold');
-        pdf.text('TOTAL', bx, y + 1.5); pdf.text(eur(T.total), W - M, y + 1.5, { align: 'right' });
         pdf.setFont(undefined, 'normal');
-        y += 12;
+        y = panelY + panelH + 6;
       }
 
       const fileName = `${(documentTitle || 'Presupuesto').replace(/\s+/g, '_')}_${expNumber || 'borrador'}_${new Date().toISOString().split('T')[0]}.pdf`;
