@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList } from 'lucide-react';
-import { CASCOS, CASCOS_COLORES, CASCOS_TIPOS } from '../data/cascos';
+import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -38,6 +38,7 @@ function CascoDibujo({ dibujo, alto, ancho, fondo }) {
 
 const Cascos = ({ state }) => {
   const currentUser = state?.currentUser;
+  const [gama, setGama] = useState('kit');
   const [tipo, setTipo] = useState('');
   const [grosor, setGrosor] = useState('16');
   const [color, setColor] = useState('blanco');
@@ -56,13 +57,24 @@ const Cascos = ({ state }) => {
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState(null); // null oculto
 
-  const colores = CASCOS_COLORES[grosor] || CASCOS_COLORES['16'];
-  // Si cambia el grosor y el color no aplica, ajustar
+  const gamaObj = CASCOS_GAMAS.find(g => g.id === gama) || CASCOS_GAMAS[0];
+  const grosores = gamaObj.grosores;
+  // Si el grosor activo no pertenece a la gama, usar el primero de la gama
+  const grosorActivo = grosores.map(String).includes(String(grosor)) ? grosor : String(grosores[0]);
+  const colores = (gamaObj.colores[grosorActivo] || gamaObj.colores[Number(grosorActivo)] || []);
+  // Si cambia la gama/grosor y el color no aplica, ajustar
   const colorOk = colores.some(c => c.id === color);
-  const colorActivo = colorOk ? color : colores[0].id;
+  const colorActivo = colorOk ? color : (colores[0]?.id || '');
+
+  // Tipos disponibles según la gama/grosor seleccionados (catálogo dinámico)
+  const tiposGama = useMemo(() => {
+    const set = new Set(CASCOS.filter(m => (m.gama || 'kit') === gama && String(m.grosor) === String(grosorActivo)).map(m => m.tipo));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [gama, grosorActivo]);
 
   const resultados = useMemo(() => {
-    return CASCOS.filter(m => String(m.grosor) === String(grosor))
+    return CASCOS.filter(m => (m.gama || 'kit') === gama)
+      .filter(m => String(m.grosor) === String(grosorActivo))
       .filter(m => !tipo || m.tipo === tipo)
       .filter(m => (m.precios[colorActivo] != null)) // disponible en ese color
       .filter(m => !altoMin || m.alto >= Number(altoMin))
@@ -70,9 +82,15 @@ const Cascos = ({ state }) => {
       .filter(m => !anchoMin || m.ancho >= Number(anchoMin))
       .filter(m => !anchoMax || m.ancho <= Number(anchoMax))
       .sort((a, b) => a.tipo.localeCompare(b.tipo) || a.alto - b.alto || a.ancho - b.ancho);
-  }, [tipo, grosor, colorActivo, altoMin, altoMax, anchoMin, anchoMax]);
+  }, [gama, tipo, grosorActivo, colorActivo, altoMin, altoMax, anchoMin, anchoMax]);
 
-  const colorLabel = (gr, cid) => (CASCOS_COLORES[gr] || []).find(c => c.id === cid)?.label || cid;
+  const colorLabel = (cid) => {
+    for (const g of CASCOS_GAMAS) for (const gr of Object.keys(g.colores)) {
+      const f = g.colores[gr].find(c => c.id === cid);
+      if (f) return f.label;
+    }
+    return cid;
+  };
 
   const addToCart = (m) => {
     const precio = pc(m.precios[colorActivo]);
@@ -80,7 +98,7 @@ const Cascos = ({ state }) => {
       key: `${m.id}-${colorActivo}-${Date.now()}`,
       tipo: m.tipo, grosor: m.grosor, dibujo: m.dibujo,
       fondo: m.fondo, alto: m.alto, ancho: m.ancho,
-      color: colorActivo, colorLabel: colorLabel(m.grosor, colorActivo),
+      color: colorActivo, colorLabel: colorLabel(colorActivo), gama: m.gama || 'kit',
       precio, qty: 1,
     };
     setCart(prev => [...prev, line]);
@@ -204,24 +222,29 @@ const Cascos = ({ state }) => {
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tipo</label>
-                <select value={tipo} onChange={e => setTipo(e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
-                  <option value="">Todos los tipos</option>
-                  {CASCOS_TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+              <div className="col-span-2 sm:col-span-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Gama</label>
+                <select value={gama} onChange={e => { setGama(e.target.value); setTipo(''); }} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                  {CASCOS_GAMAS.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Grosor</label>
-                <select value={grosor} onChange={e => setGrosor(e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
-                  <option value="16">16 mm</option>
-                  <option value="19">19 mm</option>
+                <select value={grosorActivo} onChange={e => setGrosor(e.target.value)} disabled={grosores.length <= 1} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400">
+                  {grosores.map(gr => <option key={gr} value={String(gr)}>{gr} mm</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Color</label>
-                <select value={colorActivo} onChange={e => setColor(e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                <select value={colorActivo} onChange={e => setColor(e.target.value)} disabled={colores.length <= 1} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400">
                   {colores.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </div>
+              <div className="col-span-2 sm:col-span-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tipo</label>
+                <select value={tipo} onChange={e => setTipo(e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                  <option value="">Todos los tipos</option>
+                  {tiposGama.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
