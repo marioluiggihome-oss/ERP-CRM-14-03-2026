@@ -8,8 +8,10 @@ const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFraction
 const auth = () => ({ 'Authorization': `Bearer ${getToken()}` });
 
 // Dibujo esquemático (SVG) reconocible según el tipo de casco.
-function CascoDibujo({ dibujo, tipo, alto, ancho, fondo }) {
+function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
   const W = 120, H = 150, pad = 10;
+  const f = unidad === 'cm' ? 10 : 1;
+  const dim = (mm) => { const v = mm / f; return Number.isInteger(v) ? v : Math.round(v * 10) / 10; };
   const ratio = Math.min(2.2, Math.max(0.4, (alto || 700) / (ancho || 600)));
   const bw = W - pad * 2;
   const bh = Math.min(H - pad * 2, bw * ratio);
@@ -62,8 +64,8 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo }) {
       <rect x={x} y={y} width={bw} height={bh} rx="2" fill="#f8fafc" stroke={STROKE} strokeWidth="2" />
       {detail}
       {showAngular && <line x1={x} y1={y} x2={x + bw / 2} y2={y + bh / 3} stroke={STROKE} strokeWidth="1.5" />}
-      <text x={cx} y={y - 3} textAnchor="middle" fontSize="9" fill="#334155">{ancho} mm</text>
-      <text x={x - 3} y={cy} textAnchor="middle" fontSize="9" fill="#334155" transform={`rotate(-90 ${x - 3} ${cy})`}>{alto} mm</text>
+      <text x={cx} y={y - 3} textAnchor="middle" fontSize="9" fill="#334155">{dim(ancho)} {unidad}</text>
+      <text x={x - 3} y={cy} textAnchor="middle" fontSize="9" fill="#334155" transform={`rotate(-90 ${x - 3} ${cy})`}>{dim(alto)} {unidad}</text>
     </svg>
   );
 }
@@ -80,6 +82,18 @@ const Cascos = ({ state }) => {
   const [anchoMax, setAnchoMax] = useState('');
   // Por defecto: iconos en móvil/tablet, lista en ordenador (≥1024px).
   const [vista, setVista] = useState(() => (typeof window !== 'undefined' && window.innerWidth >= 1024) ? 'lista' : 'iconos'); // 'lista' | 'iconos'
+  // Unidad de medida para mostrar/filtrar (los datos están en mm). Por defecto cm.
+  const [unidad, setUnidad] = useState('cm'); // 'cm' | 'mm'
+  const uFactor = unidad === 'cm' ? 10 : 1;
+  // Convierte mm a la unidad activa para mostrar (cm con hasta 1 decimal si no es entero).
+  const med = (mm) => { const v = mm / uFactor; return Number.isInteger(v) ? v : Math.round(v * 10) / 10; };
+  // Cambia de unidad convirtiendo los valores de los filtros para conservar su significado.
+  const toggleUnidad = () => {
+    const next = unidad === 'cm' ? 'mm' : 'cm';
+    const conv = (s) => { const n = Number(s); if (!s || isNaN(n)) return s; return String(next === 'mm' ? n * 10 : n / 10); };
+    setAltoMin(conv); setAltoMax(conv); setAnchoMin(conv); setAnchoMax(conv);
+    setUnidad(next);
+  };
   const [cart, setCart] = useState([]);
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
@@ -114,12 +128,12 @@ const Cascos = ({ state }) => {
       .filter(m => String(m.grosor) === String(grosorActivo))
       .filter(m => !tipo || m.tipo === tipo)
       .filter(m => (m.precios[colorActivo] != null)) // disponible en ese color
-      .filter(m => !altoMin || m.alto >= Number(altoMin))
-      .filter(m => !altoMax || m.alto <= Number(altoMax))
-      .filter(m => !anchoMin || m.ancho >= Number(anchoMin))
-      .filter(m => !anchoMax || m.ancho <= Number(anchoMax))
+      .filter(m => !altoMin || m.alto >= Number(altoMin) * uFactor)
+      .filter(m => !altoMax || m.alto <= Number(altoMax) * uFactor)
+      .filter(m => !anchoMin || m.ancho >= Number(anchoMin) * uFactor)
+      .filter(m => !anchoMax || m.ancho <= Number(anchoMax) * uFactor)
       .sort((a, b) => a.tipo.localeCompare(b.tipo) || a.alto - b.alto || a.ancho - b.ancho);
-  }, [gama, tipo, grosorActivo, colorActivo, altoMin, altoMax, anchoMin, anchoMax]);
+  }, [gama, tipo, grosorActivo, colorActivo, altoMin, altoMax, anchoMin, anchoMax, uFactor]);
 
   const colorLabel = (cid) => {
     for (const g of CASCOS_GAMAS) for (const gr of Object.keys(g.colores)) {
@@ -196,8 +210,8 @@ const Cascos = ({ state }) => {
     pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
     autoTable(pdf, {
       startY: 38,
-      head: [['Ud.', 'Módulo', 'Medidas (F×Al×An)', 'Color', 'Precio', 'Importe']],
-      body: cart.map(l => [String(l.qty), `${l.tipo} ${l.grosor}mm`, `${l.fondo}×${l.alto}×${l.ancho}`, l.colorLabel, eur(l.precio), eur(l.precio * l.qty)]),
+      head: [['Ud.', 'Módulo', `Medidas F×Al×An (${unidad})`, 'Color', 'Precio', 'Importe']],
+      body: cart.map(l => [String(l.qty), `${l.tipo} ${l.grosor}mm`, `${med(l.fondo)}×${med(l.alto)}×${med(l.ancho)}`, l.colorLabel, eur(l.precio), eur(l.precio * l.qty)]),
       styles: { fontSize: 8.5, cellPadding: 1.8 },
       headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 250] },
@@ -285,14 +299,14 @@ const Cascos = ({ state }) => {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Alto (mm)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Alto ({unidad})</label>
                 <div className="flex gap-1">
                   <input value={altoMin} onChange={e => setAltoMin(e.target.value)} placeholder="mín" className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
                   <input value={altoMax} onChange={e => setAltoMax(e.target.value)} placeholder="máx" className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
                 </div>
               </div>
               <div className="sm:col-span-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Ancho (mm)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Ancho ({unidad})</label>
                 <div className="flex gap-1">
                   <input value={anchoMin} onChange={e => setAnchoMin(e.target.value)} placeholder="mín" className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
                   <input value={anchoMax} onChange={e => setAnchoMax(e.target.value)} placeholder="máx" className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
@@ -301,11 +315,17 @@ const Cascos = ({ state }) => {
             </div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="text-[11px] text-slate-400 flex items-center gap-1"><Search size={12} /> {resultados.length} cascos encontrados</p>
+              <div className="flex items-center gap-2 flex-wrap">
+              <button type="button" onClick={toggleUnidad} title="Cambiar unidad (cm / mm)"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                <span className={unidad === 'cm' ? 'text-indigo-700' : ''}>cm</span><span className="text-slate-300">/</span><span className={unidad === 'mm' ? 'text-indigo-700' : ''}>mm</span>
+              </button>
               <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
                 <button type="button" onClick={() => setVista('iconos')} title="Vista de iconos"
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${vista === 'iconos' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><LayoutGrid size={14} /> Iconos</button>
                 <button type="button" onClick={() => setVista('lista')} title="Vista de lista"
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${vista === 'lista' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><List size={14} /> Lista</button>
+              </div>
               </div>
             </div>
           </div>
@@ -316,10 +336,10 @@ const Cascos = ({ state }) => {
               {resultados.map(m => (
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
                   className="w-full text-left flex items-center gap-3 p-3 hover:bg-indigo-50 transition-colors cursor-pointer group">
-                  <div className="w-12 h-16 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
+                  <div className="w-12 h-16 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-800 text-sm truncate">{m.tipo} <span className="text-slate-400 font-normal">{m.grosor}mm</span></p>
-                    <p className="text-[11px] text-slate-500">Fondo {m.fondo} · Alto {m.alto} · Ancho {m.ancho} mm</p>
+                    <p className="text-[11px] text-slate-500">Fondo {med(m.fondo)} · Alto {med(m.alto)} · Ancho {med(m.ancho)} {unidad}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-black text-indigo-700">{eur(pc(m.precios[colorActivo]))}</p>
@@ -336,9 +356,9 @@ const Cascos = ({ state }) => {
               {resultados.map(m => (
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
                   className="relative flex flex-col items-center text-center border border-slate-200 rounded-xl p-2.5 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transition-all cursor-pointer group">
-                  <div className="w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
+                  <div className="w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
                   <p className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{m.tipo}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{m.alto}×{m.ancho} · {m.grosor}mm</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{med(m.alto)}×{med(m.ancho)} {unidad} · {m.grosor}mm</p>
                   <p className="font-black text-indigo-700 text-sm mt-1">{eur(pc(m.precios[colorActivo]))}</p>
                   <span className="mt-1.5 inline-flex items-center justify-center gap-1 w-full px-2 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold group-hover:bg-indigo-700"><Plus size={12} /> Añadir</span>
                 </button>
@@ -361,7 +381,7 @@ const Cascos = ({ state }) => {
               <div key={l.key} className="flex items-center gap-2 border border-slate-100 rounded-lg p-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-700 truncate">{l.tipo} {l.grosor}mm</p>
-                  <p className="text-[10px] text-slate-400">{l.alto}×{l.ancho} · {l.colorLabel} · {eur(l.precio)}</p>
+                  <p className="text-[10px] text-slate-400">{med(l.alto)}×{med(l.ancho)} {unidad} · {l.colorLabel} · {eur(l.precio)}</p>
                 </div>
                 <input type="number" value={l.qty} onChange={e => setQty(l.key, e.target.value)} className="w-12 px-1 py-1 border border-slate-200 rounded text-sm text-center" />
                 <span className="w-20 text-right text-xs font-bold text-slate-700">{eur(l.precio * l.qty)}</span>
