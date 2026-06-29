@@ -3302,6 +3302,21 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                     </div>
                   ))}
                 </div>
+
+                {/* Cascos: valor de punto / coeficiente sobre el precio de tarifa */}
+                <div className="mt-6 pt-5 border-t border-slate-200">
+                  <h3 className="text-base font-black text-slate-900 uppercase">Cascos — valor de punto</h3>
+                  <p className="text-xs text-slate-500 mb-3">Coeficiente que multiplica el precio de tarifa de cada casco en el Presupuestador de Cascos (1 = precio tal cual; 1,15 = +15%).</p>
+                  <div className="flex items-center gap-2 max-w-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+                    <span className="text-xs font-bold text-slate-500">Valor de punto</span>
+                    <input
+                      type="number" step="0.01"
+                      defaultValue={state.settings?.cascosPointValue ?? 1}
+                      onChange={async (e) => { try { await settingsAPI.update({ cascosPointValue: e.target.value === '' ? 1 : Number(e.target.value) }); } catch (err) { console.error(err); } }}
+                      className="flex-1 min-w-0 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right font-bold"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

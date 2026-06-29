@@ -49,6 +49,10 @@ const Cascos = ({ state }) => {
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
   const [ivaRate, setIvaRate] = useState(21);
+  const [descuento, setDescuento] = useState(0);
+  // Valor de punto (coeficiente) configurable en Master; multiplica el precio de tarifa.
+  const coef = Number(state?.settings?.cascosPointValue) || 1;
+  const pc = (base) => (base == null ? null : Math.round(base * coef * 100) / 100);
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState(null); // null oculto
 
@@ -71,7 +75,7 @@ const Cascos = ({ state }) => {
   const colorLabel = (gr, cid) => (CASCOS_COLORES[gr] || []).find(c => c.id === cid)?.label || cid;
 
   const addToCart = (m) => {
-    const precio = m.precios[colorActivo];
+    const precio = pc(m.precios[colorActivo]);
     const line = {
       key: `${m.id}-${colorActivo}-${Date.now()}`,
       tipo: m.tipo, grosor: m.grosor, dibujo: m.dibujo,
@@ -84,14 +88,41 @@ const Cascos = ({ state }) => {
   const setQty = (key, q) => setCart(prev => prev.map(l => l.key === key ? { ...l, qty: Math.max(1, parseInt(q) || 1) } : l));
   const removeLine = (key) => setCart(prev => prev.filter(l => l.key !== key));
 
-  const subtotal = cart.reduce((s, l) => s + (l.precio || 0) * l.qty, 0);
+  const bruto = cart.reduce((s, l) => s + (l.precio || 0) * l.qty, 0);
+  const dto = bruto * ((Number(descuento) || 0) / 100);
+  const subtotal = bruto - dto;            // base imponible tras descuento
   const iva = subtotal * (ivaRate / 100);
   const total = subtotal + iva;
 
+  const [savedId, setSavedId] = useState(null);
+  const [histKind, setHistKind] = useState('presupuesto');
+
   const nuevoPedido = () => {
     if (!window.confirm('¿Vaciar el presupuesto actual?')) return;
-    setCart([]); setCliente(''); setRef('');
+    setCart([]); setCliente(''); setRef(''); setDescuento(0); setSavedId(null);
   };
+
+  // Guarda como presupuesto o pedido (mismo almacén, distinto 'kind').
+  const guardar = async (kind) => {
+    if (!cart.length) { alert('Añade cascos primero.'); return null; }
+    setSaving(true);
+    try {
+      const r = await fetch(`${API_URL}/api/cascos/orders`, {
+        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: savedId || undefined, kind, cliente, ref, ivaRate, descuento,
+          lines: cart, total: Math.round(total * 100) / 100,
+          userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
+        }),
+      });
+      if (!r.ok) throw new Error('Error');
+      const d = await r.json();
+      if (d.order?.id) setSavedId(d.order.id);
+      return d.order;
+    } catch { alert('No se pudo guardar.'); return null; }
+    finally { setSaving(false); }
+  };
+  const guardarPresupuesto = async () => { const o = await guardar('presupuesto'); if (o) alert('✅ Presupuesto de cascos guardado.'); };
 
   // Generar pedido (guardar) + PDF
   const exportarPDF = async () => {
@@ -121,6 +152,8 @@ const Cascos = ({ state }) => {
     let y = (pdf.lastAutoTable?.finalY || 38) + 8;
     const bx = W - M - 70;
     pdf.setFontSize(10); pdf.setTextColor(40);
+    pdf.text('Bruto líneas', bx, y); pdf.text(eur(bruto), W - M, y, { align: 'right' }); y += 6;
+    if (Number(descuento) > 0) { pdf.text(`Descuento ${descuento}%`, bx, y); pdf.text('-' + eur(dto), W - M, y, { align: 'right' }); y += 6; }
     pdf.text('Base imponible', bx, y); pdf.text(eur(subtotal), W - M, y, { align: 'right' }); y += 6;
     pdf.text(`IVA ${ivaRate}%`, bx, y); pdf.text(eur(iva), W - M, y, { align: 'right' }); y += 4;
     pdf.setFillColor(234, 120, 40); pdf.roundedRect(bx - 4, y, 74 + 4, 11, 2, 2, 'F');
@@ -130,41 +163,41 @@ const Cascos = ({ state }) => {
   };
 
   const generarPedido = async () => {
-    if (!cart.length) { alert('Añade cascos al presupuesto.'); return; }
-    setSaving(true);
-    try {
-      const r = await fetch(`${API_URL}/api/cascos/orders`, {
-        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cliente, ref, ivaRate, lines: cart, total: Math.round(total * 100) / 100,
-          userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
-        }),
-      });
-      if (!r.ok) throw new Error('Error');
-      alert('✅ Pedido de cascos guardado.');
-      await exportarPDF();
-    } catch { alert('No se pudo guardar el pedido.'); }
-    finally { setSaving(false); }
+    const o = await guardar('pedido');
+    if (o) { alert('✅ Pedido de cascos guardado.'); await exportarPDF(); }
   };
 
-  const openOrders = async () => {
+  const openHistory = async (kind) => {
+    setHistKind(kind);
     try {
-      const r = await fetch(`${API_URL}/api/cascos/orders?userId=${encodeURIComponent(currentUser?.id || '')}`, { headers: auth() });
+      const r = await fetch(`${API_URL}/api/cascos/orders?kind=${kind}&userId=${encodeURIComponent(currentUser?.id || '')}`, { headers: auth() });
       const d = await r.json();
       setOrders(d.orders || []);
     } catch { alert('No se pudo cargar el historial.'); }
   };
 
+  const loadOrder = (o) => {
+    setCliente(o.cliente || ''); setRef(o.ref || ''); setIvaRate(o.ivaRate ?? 21);
+    setDescuento(o.descuento || 0); setCart(o.lines || []); setSavedId(o.id); setOrders(null);
+  };
+  const deleteOrder = async (id) => {
+    if (!window.confirm('¿Eliminar?')) return;
+    try { await fetch(`${API_URL}/api/cascos/orders/${id}`, { method: 'DELETE', headers: auth() }); setOrders(prev => (prev || []).filter(x => x.id !== id)); } catch {}
+  };
+
   return (
     <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
-      <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
-        <h1 className="text-2xl font-black text-slate-800 ml-16 flex items-center gap-2"><Box size={22} /> Presupuestador de Cascos</h1>
-        <div className="flex items-center gap-2">
-          <button onClick={openOrders} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50"><FolderOpen size={16} /> Pedidos</button>
-          <button onClick={nuevoPedido} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50"><Plus size={16} /> Nuevo</button>
+      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white p-5 mb-5 shadow-lg flex items-center justify-between gap-3 flex-wrap">
+        <div className="ml-16 sm:ml-16">
+          <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Box size={22} /> Presupuestador de Cascos</h1>
+          <p className="text-xs sm:text-sm text-white/80">Busca por tipo y medidas, monta el presupuesto y genera el pedido.</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><FolderOpen size={16} /> Presupuestos</button>
+          <button onClick={() => openHistory('pedido')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><ClipboardList size={16} /> Pedidos</button>
+          <button onClick={nuevoPedido} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white text-indigo-700 rounded-xl font-bold text-xs sm:text-sm hover:bg-indigo-50"><Plus size={16} /> Nuevo</button>
         </div>
       </div>
-      <p className="text-sm text-slate-500 mb-5">Busca cascos por tipo y medidas, móntalos en un presupuesto y genera el pedido.</p>
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* Buscador + resultados */}
@@ -219,7 +252,7 @@ const Cascos = ({ state }) => {
                     <p className="text-[11px] text-slate-500">Fondo {m.fondo} · Alto {m.alto} · Ancho {m.ancho} mm</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-black text-indigo-700">{eur(m.precios[colorActivo])}</p>
+                    <p className="font-black text-indigo-700">{eur(pc(m.precios[colorActivo]))}</p>
                     <button onClick={() => addToCart(m)} className="mt-1 px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 flex items-center gap-1"><Plus size={12} /> Añadir</button>
                   </div>
                 </div>
@@ -251,13 +284,18 @@ const Cascos = ({ state }) => {
             {cart.length === 0 && <p className="text-center text-slate-400 text-xs py-6">Añade cascos desde el buscador.</p>}
           </div>
           <div className="border-t border-slate-100 pt-3 space-y-1 text-sm">
+            <div className="flex justify-between text-slate-500"><span>Bruto líneas</span><span className="font-bold">{eur(bruto)}</span></div>
+            <div className="flex justify-between text-slate-500 items-center"><span className="flex items-center gap-1">Descuento <input type="number" value={descuento} onChange={e => setDescuento(Number(e.target.value) || 0)} className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center" />%</span><span className="font-bold text-rose-500">-{eur(dto)}</span></div>
             <div className="flex justify-between text-slate-500"><span>Base imponible</span><span className="font-bold">{eur(subtotal)}</span></div>
             <div className="flex justify-between text-slate-500 items-center"><span className="flex items-center gap-1">IVA <input type="number" value={ivaRate} onChange={e => setIvaRate(Number(e.target.value) || 0)} className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center" />%</span><span className="font-bold">{eur(iva)}</span></div>
-            <div className="flex justify-between text-slate-900 text-lg font-black pt-1"><span>TOTAL</span><span className="text-orange-600">{eur(total)}</span></div>
+            <div className="flex justify-between text-slate-900 text-lg font-black pt-1 bg-orange-50 -mx-1 px-2 rounded-lg py-1"><span>TOTAL</span><span className="text-orange-600">{eur(total)}</span></div>
           </div>
           <div className="grid grid-cols-1 gap-2 mt-3">
-            <button onClick={generarPedido} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">{saving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />} Generar pedido</button>
-            <button onClick={exportarPDF} disabled={!cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50"><Download size={16} /> Exportar PDF</button>
+            <button onClick={guardarPresupuesto} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-600 text-white rounded-xl font-bold text-sm hover:bg-cyan-700 disabled:opacity-50">{saving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />} Guardar presupuesto</button>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={generarPedido} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50"><ClipboardList size={16} /> Pedido</button>
+              <button onClick={exportarPDF} disabled={!cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50"><Download size={16} /> PDF</button>
+            </div>
           </div>
         </div>
       </div>
@@ -267,17 +305,19 @@ const Cascos = ({ state }) => {
         <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={() => setOrders(null)}>
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h3 className="font-black text-slate-800">Pedidos de cascos</h3>
+              <h3 className="font-black text-slate-800">{histKind === 'pedido' ? 'Pedidos' : 'Presupuestos'} de cascos</h3>
               <button onClick={() => setOrders(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
             </div>
             <div className="p-4 overflow-y-auto">
-              {orders.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">No hay pedidos guardados.</p> : orders.map(o => (
-                <div key={o.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2">
+              {orders.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">No hay {histKind === 'pedido' ? 'pedidos' : 'presupuestos'} guardados.</p> : orders.map(o => (
+                <div key={o.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2 hover:bg-slate-50">
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-700 text-sm truncate">{o.cliente || 'Sin cliente'}{o.ref ? ` · ${o.ref}` : ''}</p>
                     <p className="text-[10px] text-slate-400">{o.createdAt ? new Date(o.createdAt).toLocaleString('es-ES') : ''} · {(o.lines || []).length} líneas</p>
                   </div>
                   <span className="text-sm font-black text-slate-800">{eur(o.total)}</span>
+                  <button onClick={() => loadOrder(o)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
+                  <button onClick={() => deleteOrder(o.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={15} /></button>
                 </div>
               ))}
             </div>

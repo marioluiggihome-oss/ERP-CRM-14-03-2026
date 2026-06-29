@@ -32,16 +32,19 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
     try:
         oid = (payload or {}).get("id") or f"casco-{uuid.uuid4().hex[:10]}"
         now = datetime.now(timezone.utc).isoformat()
+        existing = await db.cascos_orders.find_one({"id": oid}, {"_id": 0, "createdAt": 1})
         doc = {
             "id": oid,
             "userId": payload.get("userId") or (current_user or {}).get("id") or "anonymous",
+            "kind": str(payload.get("kind") or "pedido"),   # 'presupuesto' | 'pedido'
             "cliente": str(payload.get("cliente") or ""),
             "ref": str(payload.get("ref") or ""),
             "ivaRate": float(payload.get("ivaRate") or 21),
+            "descuento": float(payload.get("descuento") or 0),
             "lines": payload.get("lines") or [],
             "total": float(payload.get("total") or 0),
             "createdByName": payload.get("createdByName", ""),
-            "createdAt": now,
+            "createdAt": (existing or {}).get("createdAt") or now,
             "updatedAt": now,
         }
         await db.cascos_orders.update_one({"id": oid}, {"$set": doc}, upsert=True)
@@ -53,10 +56,12 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
 
 
 @router.get("/cascos/orders")
-async def list_casco_orders(userId: Optional[str] = None, current_user: Optional[dict] = Depends(get_current_user)):
-    """Lista los pedidos de cascos. Aislamiento por usuario (admin ve todos)."""
+async def list_casco_orders(userId: Optional[str] = None, kind: Optional[str] = None, current_user: Optional[dict] = Depends(get_current_user)):
+    """Lista los pedidos/presupuestos de cascos. Aislamiento por usuario (admin ve todos)."""
     try:
         query = {}
+        if kind:
+            query["kind"] = kind
         if current_user and current_user.get("id"):
             elevated = any(current_user.get(f) for f in ADMIN_ROLE_FLAGS)
             if not elevated:

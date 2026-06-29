@@ -653,7 +653,9 @@ const Digitalizador = ({ state, setState }) => {
       y = (pdf.lastAutoTable?.finalY || y) + 8;
 
       // Bloque de totales: panel navy con 4 cajas (TOTAL en naranja).
-      if (isValorado && showTotals) {
+      // Los totales salen SIEMPRE salvo que se desactive el botón TOTALES
+      // (independiente de ocultar los precios por línea con PRECIOS).
+      if (showTotals) {
         const pageH = pdf.internal.pageSize.getHeight();
         const panelH = 24;
         // El bloque de totales SIEMPRE al fondo de la página. Si el contenido de
