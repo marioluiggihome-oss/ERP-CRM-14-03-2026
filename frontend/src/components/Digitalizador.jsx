@@ -566,7 +566,7 @@ const Digitalizador = ({ state, setState }) => {
         }
 
         pdf.setFontSize(15); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
-        pdf.text((documentTitle || 'Presupuesto Técnico').toUpperCase(), W - M, hy + 4, { align: 'right' });
+        pdf.text(documentTitle || 'Presupuesto Técnico', W - M, hy + 4, { align: 'right' });
         pdf.setFont(undefined, 'normal');
         pdf.setFontSize(9); pdf.setTextColor(120);
         pdf.text(`${expNumber || 'SIN EXP'}${customerCode ? '  ·  ' + customerCode : ''}`, W - M, hy + 10, { align: 'right' });

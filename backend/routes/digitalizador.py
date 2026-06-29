@@ -138,14 +138,13 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
             seq = result["seq"]
             exp_number = f"EXP-{current_year}-{seq:03d}" if seq < 1000 else f"EXP-{current_year}-{seq}"
         
-        # Check if expediente number already exists
+        # Si el expediente ya existe, se ACTUALIZA (re-guardar tras retocar la
+        # cabecera o las líneas), en vez de rechazarlo.
         existing = await db.digitalizador_history.find_one({"expNumber": exp_number})
-        if existing:
-            raise HTTPException(status_code=400, detail=f"El numero de expediente {exp_number} ya existe. Por favor genera uno nuevo.")
-        
+
         # Create history item
         history_item = {
-            "id": f"digi-{uuid.uuid4().hex[:12]}",
+            "id": (existing or {}).get("id") or f"digi-{uuid.uuid4().hex[:12]}",
             "expNumber": exp_number,
             "projectName": request.projectName,
             "customerName": request.customerName,
@@ -166,10 +165,14 @@ async def save_digitalizador_budget(request: DigitalizadorSaveRequest):
             "totalNeto": round(total_neto, 2),
             "totalConIva": round(total_con_iva, 2),
             "userId": request.userId,
-            "createdAt": datetime.now(timezone.utc).isoformat()
+            "createdAt": (existing or {}).get("createdAt") or datetime.now(timezone.utc).isoformat(),
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
         }
-        
-        await db.digitalizador_history.insert_one(history_item)
+
+        if existing:
+            await db.digitalizador_history.update_one({"expNumber": exp_number}, {"$set": history_item})
+        else:
+            await db.digitalizador_history.insert_one(history_item)
         history_item.pop('_id', None)
         
         return {
