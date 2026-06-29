@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList, List, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelLeftOpen, ShoppingCart } from 'lucide-react';
 import { CASCOS, CASCOS_GAMAS } from '../data/cascos';
 import { getToken } from '../services/api';
 
@@ -111,6 +111,19 @@ const Cascos = ({ state }) => {
   const pc = (base) => (base == null ? null : Math.round(base * coef * 100) / 100);
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState(null); // null oculto
+  // Panel de presupuesto: redimensionable (arrastrar) y ocultable, como en Cocina Montada.
+  const [panelExpanded, setPanelExpanded] = useState(false); // ver presupuesto en grande (oculta buscador)
+  const [panelCollapsed, setPanelCollapsed] = useState(false); // ocultar presupuesto
+  const [panelWidth, setPanelWidth] = useState(384);
+  const isResizing = useRef(false);
+  useEffect(() => {
+    const onMove = (e) => { if (isResizing.current) setPanelWidth(Math.max(300, Math.min(680, window.innerWidth - e.clientX - 24))); };
+    const onUp = () => { isResizing.current = false; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+  const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
 
   const gamaObj = CASCOS_GAMAS.find(g => g.id === gama) || CASCOS_GAMAS[0];
   const grosores = gamaObj.grosores;
@@ -230,8 +243,8 @@ const Cascos = ({ state }) => {
     pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
     autoTable(pdf, {
       startY: 38,
-      head: [['Ud.', 'Módulo', 'Acabado', `Medidas F×Al×An (${unidad})`, 'Precio', 'Importe']],
-      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.fondo)}×${med(l.alto)}×${med(l.ancho)}`, eur(l.precio), eur(l.precio * l.qty)]),
+      head: [['Ud.', 'Módulo', 'Acabado', `Medidas Al×An×F (${unidad})`, 'Precio', 'Importe']],
+      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)}`, eur(l.precio), eur(l.precio * l.qty)]),
       styles: { fontSize: 8.5, cellPadding: 1.8 },
       headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 250] },
@@ -282,10 +295,17 @@ const Cascos = ({ state }) => {
     const subP = brutoP - dtoP;
     const ivaP = subP * (ivaRate / 100);
     const totP = subP + ivaP;
+    // Guardar en historial de COMPRAS (proveedor)
+    try {
+      await fetch(`${API_URL}/api/cascos/orders`, {
+        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'compra', cliente, ref, ivaRate, descuento: d, lines: cart, total: Math.round(totP * 100) / 100, userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }),
+      });
+    } catch {}
     autoTable(pdf, {
       startY: 38,
-      head: [['Ud.', 'Módulo', 'Acabado', `Medidas F×Al×An (${unidad})`, 'Tarifa', 'Importe']],
-      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.fondo)}×${med(l.alto)}×${med(l.ancho)}`, eur(baseDe(l)), eur(baseDe(l) * l.qty)]),
+      head: [['Ud.', 'Módulo', 'Acabado', `Medidas Al×An×F (${unidad})`, 'Tarifa', 'Importe']],
+      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)}`, eur(baseDe(l)), eur(baseDe(l) * l.qty)]),
       styles: { fontSize: 8.5, cellPadding: 1.8 },
       headStyles: { fillColor: [30, 27, 65], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 250] },
@@ -329,7 +349,7 @@ const Cascos = ({ state }) => {
         pdf.setTextColor(40);
       };
       const ptsFmt = (n) => (n == null ? '—' : Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-      const medStr = (m) => `${med(m.fondo)}×${med(m.alto)}×${med(m.ancho)}`;
+      const medStr = (m) => `${med(m.alto)}×${med(m.ancho)}×${med(m.fondo)}`;
       let y = tableTop;
       for (const g of CASCOS_GAMAS) {
         for (const gr of g.grosores) {
@@ -346,7 +366,7 @@ const Cascos = ({ state }) => {
             const tmods = mods.filter(m => m.tipo === tp).sort((a, b) => a.alto - b.alto || a.ancho - b.ancho);
             autoTable(pdf, {
               startY: y,
-              head: [[`${tp} — Medidas F×Al×An (${unidad})`, ...colors.map(c => c.label)]],
+              head: [[`${tp} — Medidas Al×An×F (${unidad})`, ...colors.map(c => c.label)]],
               body: tmods.map(m => [medStr(m), ...colors.map(c => ptsFmt(m.precios[c.id]))]),
               styles: { fontSize: 7.5, cellPadding: 1.4, lineColor: [226, 232, 240], lineWidth: 0.1 },
               headStyles: { fillColor: [234, 120, 40], textColor: [255, 255, 255], fontSize: 7.5 },
@@ -397,8 +417,9 @@ const Cascos = ({ state }) => {
           <p className="text-xs sm:text-sm text-white/80">Presupuestador de cascos: busca por tipo y medidas, monta el presupuesto y genera el pedido.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><FolderOpen size={16} /> Presupuestos</button>
-          <button onClick={() => openHistory('pedido')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><ClipboardList size={16} /> Pedidos</button>
+          <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Ventas: presupuestos"><FolderOpen size={16} /> Presupuestos</button>
+          <button onClick={() => openHistory('pedido')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Ventas: pedidos de cliente"><ClipboardList size={16} /> Pedidos</button>
+          <button onClick={() => openHistory('compra')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Compras: pedidos a proveedor"><Download size={16} /> Compras</button>
           {isAdmin && (
           <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm disabled:opacity-50">{genCat ? <Loader size={16} className="animate-spin" /> : <Download size={16} />} Catálogo</button>
           )}
@@ -406,9 +427,10 @@ const Cascos = ({ state }) => {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-5">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
         {/* Buscador + resultados */}
-        <div className="lg:col-span-2 space-y-4">
+        {!panelExpanded && (
+        <div className="flex-1 min-w-0 w-full space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="relative mb-3">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -484,7 +506,7 @@ const Cascos = ({ state }) => {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-800 text-sm sm:text-base truncate">{nombre(m)} <span className="text-slate-400 font-normal text-xs">{m.grosor}mm</span></p>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {[['Fondo', m.fondo], ['Alto', m.alto], ['Ancho', m.ancho]].map(([lab, val]) => (
+                      {[['Alto', m.alto], ['Ancho', m.ancho], ['Fondo', m.fondo]].map(([lab, val]) => (
                         <span key={lab} className="inline-flex items-baseline gap-1 px-2.5 py-1 bg-slate-100 rounded-lg">
                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">{lab}</span>
                           <span className="text-sm sm:text-base font-black text-slate-700 leading-none">{med(val)}</span>
@@ -510,7 +532,7 @@ const Cascos = ({ state }) => {
                   className="relative flex flex-col items-center text-center border border-slate-200 rounded-xl p-2.5 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transition-all cursor-pointer group">
                   <div className="w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
                   <p className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{nombre(m)}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{med(m.alto)}×{med(m.ancho)} {unidad} · {m.grosor}mm</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{med(m.alto)}×{med(m.ancho)}×{med(m.fondo)} {unidad} · {m.grosor}mm</p>
                   <p className="font-black text-indigo-700 text-sm mt-1">{eur(pc(m.precios[colorActivo]))}</p>
                   <span className="mt-1.5 inline-flex items-center justify-center gap-1 w-full px-2 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold group-hover:bg-indigo-700"><Plus size={12} /> Añadir</span>
                 </button>
@@ -520,10 +542,26 @@ const Cascos = ({ state }) => {
           </div>
           )}
         </div>
+        )}
 
-        {/* Presupuesto */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 h-fit">
-          <h3 className="font-black text-slate-800 mb-3 flex items-center gap-2"><ClipboardList size={18} /> Presupuesto</h3>
+        {/* Presupuesto — redimensionable y ocultable */}
+        {panelCollapsed ? (
+          <button onClick={() => setPanelCollapsed(false)} title="Mostrar presupuesto"
+            className="hidden lg:flex shrink-0 self-stretch items-center px-2 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-600">
+            <PanelLeftOpen size={20} />
+          </button>
+        ) : (
+        <div className={`relative bg-white rounded-2xl border border-slate-200 p-4 h-fit w-full ${panelExpanded ? 'lg:flex-1' : 'lg:shrink-0'}`}
+          style={!panelExpanded && isWide() ? { width: panelWidth, maxWidth: panelWidth } : undefined}>
+          <div className="hidden lg:block absolute top-3 bottom-3 -left-0.5 w-1.5 cursor-ew-resize hover:bg-indigo-400/50 rounded-full z-10"
+            onMouseDown={() => { isResizing.current = true; }} title="Arrastra para redimensionar" />
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-black text-slate-800 flex items-center gap-2"><ClipboardList size={18} /> Presupuesto</h3>
+            <div className="hidden lg:flex items-center gap-1">
+              <button onClick={() => setPanelExpanded(v => !v)} title={panelExpanded ? 'Volver a ver el buscador' : 'Ver el presupuesto en grande'} className="p-1.5 text-slate-400 hover:text-indigo-600">{panelExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
+              {!panelExpanded && <button onClick={() => setPanelCollapsed(true)} title="Ocultar presupuesto" className="p-1.5 text-slate-400 hover:text-indigo-600"><PanelRightClose size={16} /></button>}
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-2 mb-3">
             <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Cliente" className="px-3 py-2 border border-slate-200 rounded-lg text-sm" />
             <input value={ref} onChange={e => setRef(e.target.value)} placeholder="Referencia" className="px-3 py-2 border border-slate-200 rounded-lg text-sm" />
@@ -537,7 +575,7 @@ const Cascos = ({ state }) => {
                     <span className="inline-block w-3 h-3 rounded-full border border-slate-300 shrink-0" style={{ background: SWATCH[l.color] || '#e2e8f0' }} />
                     <span className="text-[11px] font-black text-indigo-800 truncate">{acabadoOf(l)}</span>
                   </span>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{med(l.alto)}×{med(l.ancho)} {unidad} · {eur(l.precio)}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{med(l.alto)}×{med(l.ancho)}×{med(l.fondo)} {unidad} · {eur(l.precio)}</p>
                 </div>
                 <input type="number" value={l.qty} onChange={e => setQty(l.key, e.target.value)} className="w-12 px-1 py-1 border border-slate-200 rounded text-sm text-center" />
                 <span className="w-20 text-right text-xs font-bold text-slate-700">{eur(l.precio * l.qty)}</span>
@@ -562,18 +600,25 @@ const Cascos = ({ state }) => {
             <button onClick={pedidoProveedor} disabled={!cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900 disabled:opacity-50"><ClipboardList size={16} /> Pedido a proveedor</button>
           </div>
         </div>
+        )}
       </div>
+
+      {/* Botón flotante (móvil): ir al presupuesto */}
+      <button onClick={() => { setPanelCollapsed(false); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }}
+        className="lg:hidden fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-full shadow-2xl font-bold text-sm">
+        <ShoppingCart size={18} /> {cart.length}
+      </button>
 
       {/* Historial de pedidos */}
       {Array.isArray(orders) && (
         <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={() => setOrders(null)}>
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h3 className="font-black text-slate-800">{histKind === 'pedido' ? 'Pedidos' : 'Presupuestos'} de cascos</h3>
+              <h3 className="font-black text-slate-800">{histKind === 'compra' ? 'Compras (proveedor)' : histKind === 'pedido' ? 'Pedidos (ventas)' : 'Presupuestos (ventas)'} de cascos</h3>
               <button onClick={() => setOrders(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
             </div>
             <div className="p-4 overflow-y-auto">
-              {orders.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">No hay {histKind === 'pedido' ? 'pedidos' : 'presupuestos'} guardados.</p> : orders.map(o => (
+              {orders.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">No hay {histKind === 'compra' ? 'compras' : histKind === 'pedido' ? 'pedidos' : 'presupuestos'} guardados.</p> : orders.map(o => (
                 <div key={o.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2 hover:bg-slate-50">
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-700 text-sm truncate">{o.cliente || 'Sin cliente'}{o.ref ? ` · ${o.ref}` : ''}</p>
