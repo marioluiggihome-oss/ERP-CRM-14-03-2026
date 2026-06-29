@@ -142,6 +142,14 @@ const Cascos = ({ state }) => {
     }
     return cid;
   };
+  const gamaLabelOf = (gid) => CASCOS_GAMAS.find(g => g.id === gid)?.label || '';
+  // Acabado legible para diferenciar líneas mezcladas en el pedido.
+  const acabadoOf = (l) => {
+    const g = l.gama || 'kit';
+    return g === 'kit' ? `${l.colorLabel} · ${l.grosor}mm` : `${gamaLabelOf(g)} · ${l.grosor}mm`;
+  };
+  // Muestra de color para el punto identificativo de cada acabado.
+  const SWATCH = { blanco: '#f1f5f9', aluminio: '#cbd5e1', grafito: '#374151', blancoHidrofugo: '#eef2ff', robleAurora: '#c8a063', spike: '#9ca3af', stone: '#a8a29e', roble: '#b07c4f', olmo: '#a8794e', blancoEsp: '#f8fafc' };
 
   const addToCart = (m) => {
     const precio = pc(m.precios[colorActivo]);
@@ -210,8 +218,8 @@ const Cascos = ({ state }) => {
     pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
     autoTable(pdf, {
       startY: 38,
-      head: [['Ud.', 'Módulo', `Medidas F×Al×An (${unidad})`, 'Color', 'Precio', 'Importe']],
-      body: cart.map(l => [String(l.qty), `${l.tipo} ${l.grosor}mm`, `${med(l.fondo)}×${med(l.alto)}×${med(l.ancho)}`, l.colorLabel, eur(l.precio), eur(l.precio * l.qty)]),
+      head: [['Ud.', 'Módulo', 'Acabado', `Medidas F×Al×An (${unidad})`, 'Precio', 'Importe']],
+      body: cart.map(l => [String(l.qty), l.tipo, acabadoOf(l), `${med(l.fondo)}×${med(l.alto)}×${med(l.ancho)}`, eur(l.precio), eur(l.precio * l.qty)]),
       styles: { fontSize: 8.5, cellPadding: 1.8 },
       headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 250] },
@@ -234,6 +242,72 @@ const Cascos = ({ state }) => {
   const generarPedido = async () => {
     const o = await guardar('pedido');
     if (o) { alert('✅ Pedido de cascos guardado.'); await exportarPDF(); }
+  };
+
+  // Catálogo completo maquetado (Luiggi Home) con precios en PUNTOS, paginado y
+  // ordenado según nuestro catálogo: gama → grosor → tipo → medidas.
+  const [genCat, setGenCat] = useState(false);
+  const generarCatalogo = async () => {
+    setGenCat(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const Hp = pdf.internal.pageSize.getHeight();
+      const M = 14, tableTop = 28;
+      const logo = state?.logo;
+      const drawHeader = () => {
+        if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+          try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 7, 30, 15); } catch {}
+        } else { pdf.setFontSize(13); pdf.setFont(undefined, 'bold'); pdf.setTextColor(30, 27, 65); pdf.text('LUIGGI HOME', M, 15); pdf.setFont(undefined, 'normal'); }
+        pdf.setFontSize(11); pdf.setTextColor(49, 46, 129); pdf.setFont(undefined, 'bold');
+        pdf.text('CATÁLOGO DE CASCOS · COCINA DESMONTADA', W - M, 13, { align: 'right' });
+        pdf.setFont(undefined, 'normal'); pdf.setFontSize(8); pdf.setTextColor(150);
+        pdf.text(`Precios en PUNTOS · medidas en ${unidad}`, W - M, 18, { align: 'right' });
+        pdf.setTextColor(40);
+      };
+      const ptsFmt = (n) => (n == null ? '—' : Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      const medStr = (m) => `${med(m.fondo)}×${med(m.alto)}×${med(m.ancho)}`;
+      let y = tableTop;
+      for (const g of CASCOS_GAMAS) {
+        for (const gr of g.grosores) {
+          const colors = g.colores[gr] || g.colores[Number(gr)] || [];
+          const mods = CASCOS.filter(m => (m.gama || 'kit') === g.id && String(m.grosor) === String(gr));
+          if (!mods.length) continue;
+          const tipos = [...new Set(mods.map(m => m.tipo))].sort((a, b) => a.localeCompare(b));
+          if (y > Hp - 45) { pdf.addPage(); y = tableTop; }
+          pdf.setFillColor(30, 27, 65); pdf.rect(M, y, W - 2 * M, 8, 'F');
+          pdf.setTextColor(255); pdf.setFontSize(10); pdf.setFont(undefined, 'bold');
+          pdf.text(`${g.label}  ·  ${gr} mm`, M + 2, y + 5.5); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40);
+          y += 11;
+          for (const tp of tipos) {
+            const tmods = mods.filter(m => m.tipo === tp).sort((a, b) => a.alto - b.alto || a.ancho - b.ancho);
+            autoTable(pdf, {
+              startY: y,
+              head: [[`${tp} — Medidas F×Al×An (${unidad})`, ...colors.map(c => c.label)]],
+              body: tmods.map(m => [medStr(m), ...colors.map(c => ptsFmt(m.precios[c.id]))]),
+              styles: { fontSize: 7.5, cellPadding: 1.4, lineColor: [226, 232, 240], lineWidth: 0.1 },
+              headStyles: { fillColor: [234, 120, 40], textColor: [255, 255, 255], fontSize: 7.5 },
+              alternateRowStyles: { fillColor: [245, 245, 250] },
+              columnStyles: { 0: { cellWidth: 56, fontStyle: 'bold' } },
+              margin: { left: M, right: M, top: tableTop },
+              didDrawPage: drawHeader,
+            });
+            y = (pdf.lastAutoTable?.finalY || y) + 5;
+            if (y > Hp - 28) { pdf.addPage(); y = tableTop; }
+          }
+        }
+      }
+      const n = pdf.getNumberOfPages();
+      for (let i = 1; i <= n; i++) {
+        pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(150);
+        pdf.text('Luiggi Home · Cocina Desmontada', M, Hp - 6);
+        pdf.text(`Página ${i} de ${n}`, W / 2, Hp - 6, { align: 'center' });
+      }
+      pdf.save('Catalogo_Cascos_LuiggiHome.pdf');
+    } catch (e) { alert('No se pudo generar el catálogo.'); }
+    finally { setGenCat(false); }
   };
 
   const openHistory = async (kind) => {
@@ -264,6 +338,7 @@ const Cascos = ({ state }) => {
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><FolderOpen size={16} /> Presupuestos</button>
           <button onClick={() => openHistory('pedido')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm"><ClipboardList size={16} /> Pedidos</button>
+          <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm disabled:opacity-50">{genCat ? <Loader size={16} className="animate-spin" /> : <Download size={16} />} Catálogo</button>
           <button onClick={nuevoPedido} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white text-indigo-700 rounded-xl font-bold text-xs sm:text-sm hover:bg-indigo-50"><Plus size={16} /> Nuevo</button>
         </div>
       </div>
@@ -380,8 +455,12 @@ const Cascos = ({ state }) => {
             {cart.map(l => (
               <div key={l.key} className="flex items-center gap-2 border border-slate-100 rounded-lg p-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-700 truncate">{l.tipo} {l.grosor}mm</p>
-                  <p className="text-[10px] text-slate-400">{med(l.alto)}×{med(l.ancho)} {unidad} · {l.colorLabel} · {eur(l.precio)}</p>
+                  <p className="text-xs font-bold text-slate-700 truncate">{l.tipo}</p>
+                  <p className="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full border border-slate-300 shrink-0" style={{ background: SWATCH[l.color] || '#e2e8f0' }} />
+                    {acabadoOf(l)}
+                  </p>
+                  <p className="text-[10px] text-slate-400">{med(l.alto)}×{med(l.ancho)} {unidad} · {eur(l.precio)}</p>
                 </div>
                 <input type="number" value={l.qty} onChange={e => setQty(l.key, e.target.value)} className="w-12 px-1 py-1 border border-slate-200 rounded text-sm text-center" />
                 <span className="w-20 text-right text-xs font-bold text-slate-700">{eur(l.precio * l.qty)}</span>
