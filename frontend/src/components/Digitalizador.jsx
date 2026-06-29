@@ -4,7 +4,7 @@ import Logo from './Logo';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const Digitalizador = ({ state }) => {
+const Digitalizador = ({ state, setState }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingOpportunity, setIsCreatingOpportunity] = useState(false);
@@ -138,6 +138,24 @@ const Digitalizador = ({ state }) => {
       setLoadingHistory(false);
     }
   };
+
+  // Cargar un proyecto que llega del Archivo ("Abrir en Digitalizador").
+  useEffect(() => {
+    const inc = state?.digiIncoming;
+    if (!inc) return;
+    setProjectName(inc.projectName || '');
+    setCustomerName(inc.customerName || '');
+    setAcabado(inc.acabado || '');
+    setArmazon(inc.armazon || '');
+    setCostados(inc.costados || '');
+    setGlobalDiscount(inc.globalDiscount || 0);
+    setIvaRate(inc.ivaRate || 21);
+    setLines(inc.lines || []);
+    if (inc.expNumber) setExpNumber(inc.expNumber);
+    if (typeof setState === 'function') setState(prev => ({ ...prev, digiIncoming: null }));
+    setSuccessMessage('Proyecto cargado en el Digitalizador para retoques');
+    setTimeout(() => setSuccessMessage(null), 3000);
+  }, [state?.digiIncoming]);
 
   // Load history when sidebar opens
   useEffect(() => {

@@ -1244,7 +1244,7 @@ const App = () => {
             {state.currentTab === 'luiggifloor' && <ErrorBoundary><LuiggiFloor currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'command' && <ErrorBoundary><CommandCenter currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'digitalizador' && state.currentUser?.canUseDigitalizador && (
-              <Digitalizador state={state} />
+              <Digitalizador state={state} setState={setState} />
             )}
             {state.currentTab === 'armarios' && state.currentUser?.canAccessArmarios && (
               <Armarios state={state} setState={setState} />

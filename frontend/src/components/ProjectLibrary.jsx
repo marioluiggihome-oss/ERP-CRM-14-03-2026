@@ -270,6 +270,36 @@ const ProjectLibrary = ({ state, setState }) => {
     }
   };
 
+  // Abrir un proyecto en el Digitalizador para retocarlo. Mapea itemsMontada a
+  // las líneas que espera el Digitalizador y deja el proyecto "entrante".
+  const openInDigitalizador = (project) => {
+    const items = project.itemsMontada || project.items || [];
+    const lines = items.map((it, i) => ({
+      id: it.productId || it.id || `digi-${i}`,
+      reference: it.productCode || it.reference || '',
+      description: it.productName || it.description || '',
+      quantity: it.quantity || 1,
+      price: Number(it.manualPrice ?? it.price ?? 0),
+      discount: Number(it.discount || 0),
+      isManual: it.isManual ?? true,
+    }));
+    setState(prev => ({
+      ...prev,
+      digiIncoming: {
+        projectName: project.internalReference || project.projectName || '',
+        customerName: project.customerName || '',
+        acabado: project.globalFinish || project.acabado || '',
+        armazon: project.selectedCarcassMaterialId || project.armazon || '',
+        costados: project.sideColor || project.costados || '',
+        globalDiscount: project.globalDiscount || 0,
+        ivaRate: project.ivaRate || 21,
+        expNumber: project.budgetNumber || '',
+        lines,
+      },
+      currentTab: 'digitalizador',
+    }));
+  };
+
   const toggleArchive = async (project) => {
     const isArchived = project.status === 'archived';
     if (window.confirm(`¿${isArchived ? 'Desarchivar' : 'Archivar'} el proyecto "${project.customerName || project.budgetNumber}"?`)) {
@@ -563,6 +593,12 @@ const ProjectLibrary = ({ state, setState }) => {
                         className="p-3 bg-cyan-100 text-cyan-700 rounded-xl hover:bg-cyan-200 transition-all" title="Duplicar presupuesto">
                         <Copy size={18} />
                       </button>
+                      {(project.source === 'digitalizador' || projectKindOf(project) === 'cocina') && (
+                        <button onClick={() => openInDigitalizador(project)}
+                          className="p-3 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all" title="Abrir en Digitalizador para retocar">
+                          <FileText size={18} />
+                        </button>
+                      )}
                       {['aceptado','en_fabricacion','entregado'].includes(project.status) && !project.invoiceId && (
                         <button onClick={() => createInvoice(project)}
                           className="p-3 bg-orange-100 text-orange-600 rounded-xl hover:bg-orange-200 transition-all" title="Crear factura">
