@@ -172,14 +172,18 @@ const Cascos = ({ state }) => {
   const addToCart = (m) => {
     const base = m.precios[colorActivo];        // precio de tarifa (puntos)
     const precio = pc(base);
-    const line = {
-      key: `${m.id}-${colorActivo}-${Date.now()}`,
-      tipo: m.tipo, grosor: m.grosor, dibujo: m.dibujo,
-      fondo: m.fondo, alto: m.alto, ancho: m.ancho,
-      color: colorActivo, colorLabel: colorLabel(colorActivo), gama: m.gama || 'kit',
-      precio, precioBase: base, qty: 1,
-    };
-    setCart(prev => [...prev, line]);
+    const sig = `${m.id}|${colorActivo}`;       // mismo módulo + mismo acabado
+    setCart(prev => {
+      const i = prev.findIndex(l => l.sig === sig);
+      if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + 1 }; return c; }
+      return [...prev, {
+        key: `${sig}-${Date.now()}`, sig,
+        tipo: m.tipo, grosor: m.grosor, dibujo: m.dibujo,
+        fondo: m.fondo, alto: m.alto, ancho: m.ancho,
+        color: colorActivo, colorLabel: colorLabel(colorActivo), gama: m.gama || 'kit',
+        precio, precioBase: base, qty: 1,
+      }];
+    });
   };
   // Nombre del casco, con la altura cuando es relevante (columnas/altillos),
   // para distinguir variantes como 200 vs 220 de altura.
@@ -198,10 +202,13 @@ const Cascos = ({ state }) => {
 
   const [savedId, setSavedId] = useState(null);
   const [histKind, setHistKind] = useState('presupuesto');
+  // Expediente: código común que vincula la VENTA con su COMPRA a proveedor.
+  const nuevoExpediente = () => `EXP-${Date.now().toString(36).toUpperCase()}`;
+  const [expediente, setExpediente] = useState(nuevoExpediente);
 
   const nuevoPedido = () => {
     if (!window.confirm('¿Vaciar el presupuesto actual?')) return;
-    setCart([]); setCliente(''); setRef(''); setDescuento(userDtoDesmontada); setSavedId(null);
+    setCart([]); setCliente(''); setRef(''); setDescuento(userDtoDesmontada); setSavedId(null); setExpediente(nuevoExpediente());
   };
 
   // Guarda como presupuesto o pedido (mismo almacén, distinto 'kind').
@@ -212,7 +219,7 @@ const Cascos = ({ state }) => {
       const r = await fetch(`${API_URL}/api/cascos/orders`, {
         method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: savedId || undefined, kind, cliente, ref, ivaRate, descuento,
+          id: savedId || undefined, kind, expediente, cliente, ref, ivaRate, descuento,
           lines: cart, total: Math.round(total * 100) / 100,
           userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
         }),
@@ -299,7 +306,7 @@ const Cascos = ({ state }) => {
     try {
       await fetch(`${API_URL}/api/cascos/orders`, {
         method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'compra', cliente, ref, ivaRate, descuento: d, lines: cart, total: Math.round(totP * 100) / 100, userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }),
+        body: JSON.stringify({ kind: 'compra', expediente, cliente, ref, ivaRate, descuento: d, lines: cart, total: Math.round(totP * 100) / 100, userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }),
       });
     } catch {}
     autoTable(pdf, {
@@ -402,7 +409,10 @@ const Cascos = ({ state }) => {
 
   const loadOrder = (o) => {
     setCliente(o.cliente || ''); setRef(o.ref || ''); setIvaRate(o.ivaRate ?? 21);
-    setDescuento(o.descuento || 0); setCart(o.lines || []); setSavedId(o.id); setOrders(null);
+    setCart(o.lines || []); setOrders(null);
+    if (o.expediente) setExpediente(o.expediente);
+    if (o.kind === 'compra') { setDescProveedor(o.descuento || 0); }
+    else { setDescuento(o.descuento || 0); setSavedId(o.id); }  // solo las ventas reusan id
   };
   const deleteOrder = async (id) => {
     if (!window.confirm('¿Eliminar?')) return;
@@ -410,7 +420,7 @@ const Cascos = ({ state }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-slate-50 overflow-y-auto">
+    <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-[#e9dcc3] overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white p-5 mb-5 shadow-lg flex items-center justify-between gap-3 flex-wrap">
         <div className="ml-16 sm:ml-16">
           <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Box size={22} /> Cocina Desmontada</h1>
@@ -556,7 +566,7 @@ const Cascos = ({ state }) => {
           <div className="hidden lg:block absolute top-3 bottom-3 -left-0.5 w-1.5 cursor-ew-resize hover:bg-indigo-400/50 rounded-full z-10"
             onMouseDown={() => { isResizing.current = true; }} title="Arrastra para redimensionar" />
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-black text-slate-800 flex items-center gap-2"><ClipboardList size={18} /> Presupuesto</h3>
+            <h3 className="font-black text-slate-800 flex items-center gap-2"><ClipboardList size={18} /> Presupuesto <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black" title="Expediente: vincula esta venta con su compra a proveedor">🔗 {expediente}</span></h3>
             <div className="hidden lg:flex items-center gap-1">
               <button onClick={() => setPanelExpanded(v => !v)} title={panelExpanded ? 'Volver a ver el buscador' : 'Ver el presupuesto en grande'} className="p-1.5 text-slate-400 hover:text-indigo-600">{panelExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
               {!panelExpanded && <button onClick={() => setPanelCollapsed(true)} title="Ocultar presupuesto" className="p-1.5 text-slate-400 hover:text-indigo-600"><PanelRightClose size={16} /></button>}
@@ -623,6 +633,7 @@ const Cascos = ({ state }) => {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-700 text-sm truncate">{o.cliente || 'Sin cliente'}{o.ref ? ` · ${o.ref}` : ''}</p>
                     <p className="text-[10px] text-slate-400">{o.createdAt ? new Date(o.createdAt).toLocaleString('es-ES') : ''} · {(o.lines || []).length} líneas</p>
+                    {o.expediente && <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black" title="Código que vincula la venta con su compra a proveedor">🔗 {o.expediente}</span>}
                   </div>
                   <span className="text-sm font-black text-slate-800">{eur(o.total)}</span>
                   <button onClick={() => loadOrder(o)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>

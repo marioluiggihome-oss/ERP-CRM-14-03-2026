@@ -36,7 +36,8 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
         doc = {
             "id": oid,
             "userId": payload.get("userId") or (current_user or {}).get("id") or "anonymous",
-            "kind": str(payload.get("kind") or "pedido"),   # 'presupuesto' | 'pedido'
+            "kind": str(payload.get("kind") or "pedido"),   # 'presupuesto' | 'pedido' | 'compra'
+            "expediente": str(payload.get("expediente") or ""),  # vínculo venta <-> compra
             "cliente": str(payload.get("cliente") or ""),
             "ref": str(payload.get("ref") or ""),
             "ivaRate": float(payload.get("ivaRate") or 21),
