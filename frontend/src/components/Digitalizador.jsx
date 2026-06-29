@@ -601,23 +601,19 @@ const Digitalizador = ({ state, setState }) => {
       drawHeader();
       y += 26;
 
-      // Proyecto (+ referencia/cliente en la misma línea, estilo "Proyecto: X / REF")
+      // Proyecto (+ referencia/cliente). Si el texto es largo, se parte en varias
+      // líneas para que NO se salga del margen.
       if (projectName || customerName) {
         pdf.setFontSize(13); pdf.setTextColor(30, 27, 75); pdf.setFont(undefined, 'bold');
-        // Cabecera Proyecto/Ref en mayúsculas (estilo título), igual que en pantalla y en el historial.
-        const proj = `Proyecto: ${clean(projectName).toUpperCase()}`;
-        pdf.text(proj, M, y);
-        if (customerName) {
-          const projW = pdf.getTextWidth(proj);
-          pdf.setTextColor(60, 57, 110);
-          pdf.text(`/ ${clean(customerName).toUpperCase()}`, M + projW + 6, y);
-        }
-        pdf.setFont(undefined, 'normal'); y += 6;
+        const full = `Proyecto: ${clean(projectName).toUpperCase()}${customerName ? '  /  ' + clean(customerName).toUpperCase() : ''}`;
+        const wrapped = pdf.splitTextToSize(full, W - 2 * M);
+        wrapped.forEach((ln, idx) => { pdf.text(ln, M, y + idx * 6); });
+        pdf.setFont(undefined, 'normal'); y += wrapped.length * 6;
       }
       const cfg = [];
-      if (acabado) cfg.push(`${clean(labelAcabado) || 'Acabado'}: ${clean(acabado)}`);
-      if (armazon) cfg.push(`${clean(labelArmazon) || 'Armazón'}: ${clean(armazon)}`);
-      if (costados) cfg.push(`${clean(labelCostados) || 'Costados'}: ${clean(costados)}`);
+      if ((acabado || '').trim()) cfg.push(`${clean(labelAcabado) || 'Acabado'}: ${clean(acabado)}`);
+      if ((armazon || '').trim()) cfg.push(`${clean(labelArmazon) || 'Armazón'}: ${clean(armazon)}`);
+      if ((costados || '').trim()) cfg.push(`${clean(labelCostados) || 'Costados'}: ${clean(costados)}`);
       if (cfg.length) {
         pdf.setFontSize(9); pdf.setTextColor(90);
         pdf.text(cfg.join('     '), M, y); y += 5;
@@ -1154,7 +1150,7 @@ const Digitalizador = ({ state, setState }) => {
 
                 {/* Config Fields */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
-                  <div>
+                  <div className={(acabado || '').trim() ? '' : 'no-print'}>
                     <input
                       value={labelAcabado}
                       onChange={(e) => setLabelAcabado(e.target.value)}
@@ -1165,11 +1161,11 @@ const Digitalizador = ({ state, setState }) => {
                       type="text"
                       value={acabado}
                       onChange={(e) => setAcabado(e.target.value)}
-                      placeholder="-"
+                      placeholder="(vacío)"
                       className="w-full bg-indigo-50/50 border border-indigo-100 rounded-lg px-3 py-2 text-sm font-bold text-indigo-800 outline-none focus:border-orange-500"
                     />
                   </div>
-                  <div>
+                  <div className={(armazon || '').trim() ? '' : 'no-print'}>
                     <input
                       value={labelArmazon}
                       onChange={(e) => setLabelArmazon(e.target.value)}
@@ -1180,11 +1176,11 @@ const Digitalizador = ({ state, setState }) => {
                       type="text"
                       value={armazon}
                       onChange={(e) => setArmazon(e.target.value)}
-                      placeholder="-"
+                      placeholder="(vacío)"
                       className="w-full bg-indigo-50/50 border border-indigo-100 rounded-lg px-3 py-2 text-sm font-bold text-indigo-800 outline-none focus:border-orange-500"
                     />
                   </div>
-                  <div>
+                  <div className={(costados || '').trim() ? '' : 'no-print'}>
                     <input
                       value={labelCostados}
                       onChange={(e) => setLabelCostados(e.target.value)}
@@ -1195,7 +1191,7 @@ const Digitalizador = ({ state, setState }) => {
                       type="text"
                       value={costados}
                       onChange={(e) => setCostados(e.target.value)}
-                      placeholder="-"
+                      placeholder="(vacío)"
                       className="w-full bg-indigo-50/50 border border-indigo-100 rounded-lg px-3 py-2 text-sm font-bold text-indigo-800 outline-none focus:border-orange-500"
                     />
                   </div>
@@ -1340,11 +1336,12 @@ const Digitalizador = ({ state, setState }) => {
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <input
-                            type="text"
+                          <textarea
+                            rows={1}
                             value={line.description}
-                            onChange={(e) => updateLine(line.id, 'description', e.target.value)}
-                            className="w-full bg-transparent font-medium text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500"
+                            onChange={(e) => { updateLine(line.id, 'description', e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                            ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+                            className="w-full bg-transparent font-medium text-indigo-900 outline-none border-b border-transparent hover:border-indigo-200 focus:border-orange-500 resize-none overflow-hidden leading-snug"
                           />
                         </td>
                         {/* Precio y Descuento solo si valorado */}

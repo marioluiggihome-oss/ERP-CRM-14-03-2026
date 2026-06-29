@@ -245,17 +245,18 @@ const Cascos = ({ state }) => {
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="max-h-[55vh] overflow-y-auto divide-y divide-slate-100">
               {resultados.map(m => (
-                <div key={m.id} className="flex items-center gap-3 p-3 hover:bg-slate-50">
+                <button key={m.id} type="button" onClick={() => addToCart(m)}
+                  className="w-full text-left flex items-center gap-3 p-3 hover:bg-indigo-50 transition-colors cursor-pointer group">
                   <div className="w-12 h-16 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-800 text-sm truncate">{m.tipo} <span className="text-slate-400 font-normal">{m.grosor}mm</span></p>
                     <p className="text-[11px] text-slate-500">Fondo {m.fondo} · Alto {m.alto} · Ancho {m.ancho} mm</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="font-black text-indigo-700">{eur(pc(m.precios[colorActivo]))}</p>
-                    <button onClick={() => addToCart(m)} className="mt-1 px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 flex items-center gap-1"><Plus size={12} /> Añadir</button>
+                    <span className="mt-1 inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold group-hover:bg-indigo-700"><Plus size={12} /> Añadir</span>
                   </div>
-                </div>
+                </button>
               ))}
               {resultados.length === 0 && <p className="p-8 text-center text-slate-400 text-sm">No hay cascos con esos filtros.</p>}
             </div>
