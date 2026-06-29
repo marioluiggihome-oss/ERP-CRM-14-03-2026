@@ -236,6 +236,7 @@ const App = () => {
           settings: settings,  // Guardar settings completo para montajesEnabled y otros
           pointValueMontada: settings.pointValueMontada || 1.0,
           pointValueDespiece: settings.pointValueDespiece || 0.88,
+          pointValueDesmontada: settings.cascosPointValue || settings.pointValueDesmontada || 1.0,
           defaultEdgeBandingPriceMl: settings.defaultEdgeBandingPriceMl ?? 1.77,
           specialIncrementWidth: settings.specialIncrementWidth || 45,
           specialIncrementHeight: settings.specialIncrementHeight || 45,

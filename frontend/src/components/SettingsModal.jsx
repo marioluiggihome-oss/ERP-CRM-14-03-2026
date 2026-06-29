@@ -145,6 +145,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     commercialDiscount: 0,
     discountMontada: 0,
     discountDespiece: 0,
+    discountDesmontada: 0,
     canSeeCost: false,
     canSeeRetail: true,
     canUseAIAnalysis: false,
@@ -744,6 +745,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       allowedLibraries: ['ZC'],  // Por defecto ZC
       allowedCatalogIds: state.catalogs.map(c => c.id),
       commercialDiscount: 0,
+      discountMontada: 0,
+      discountDespiece: 0,
+      discountDesmontada: 0,
       canSeeCost: false,
       canSeeRetail: true,
       canUseAIAnalysis: false,
@@ -1527,6 +1531,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               <div className="bg-slate-50 p-2 rounded-lg">
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Dto. Despiece</p>
                                 <p className="text-xs font-bold text-orange-600">{user.discountDespiece || 0}%</p>
+                              </div>
+                              <div className="bg-slate-50 p-2 rounded-lg">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Dto. Des-Montada</p>
+                                <p className="text-xs font-bold text-cyan-600">{user.discountDesmontada || 0}%</p>
                               </div>
                               <div className="bg-slate-50 p-2 rounded-lg">
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Módulos</p>
@@ -2396,6 +2404,30 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             className="w-20 bg-white border-2 border-orange-300 rounded-xl p-2 text-center text-lg font-black text-orange-700 outline-none"
                           />
                           <span className="text-sm font-black text-orange-700">%</span>
+                        </div>
+                      </div>
+
+                      {/* Descuento Des-Montada (Cascos) */}
+                      <div className="mt-4">
+                        <label className="text-xs font-bold text-cyan-700 mb-1 block">Descuento DES-MONTADA (Cascos)</label>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={userForm.discountDesmontada || 0}
+                            onChange={(e) => setUserForm({...userForm, discountDesmontada: parseInt(e.target.value)})}
+                            className="flex-1"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={userForm.discountDesmontada || 0}
+                            onChange={(e) => setUserForm({...userForm, discountDesmontada: parseInt(e.target.value) || 0})}
+                            className="w-20 bg-white border-2 border-cyan-300 rounded-xl p-2 text-center text-lg font-black text-cyan-700 outline-none"
+                          />
+                          <span className="text-sm font-black text-cyan-700">%</span>
                         </div>
                       </div>
                     </div>
@@ -3303,19 +3335,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   ))}
                 </div>
 
-                {/* Cascos: valor de punto / coeficiente sobre el precio de tarifa */}
+                {/* Cocina Des-Montada (Cascos): el valor de punto se configura en Márgenes Maestros → Valor de Punto Base. */}
                 <div className="mt-6 pt-5 border-t border-slate-200">
-                  <h3 className="text-base font-black text-slate-900 uppercase">Cascos — valor de punto</h3>
-                  <p className="text-xs text-slate-500 mb-3">Coeficiente que multiplica el precio de tarifa de cada casco en el Presupuestador de Cascos (1 = precio tal cual; 1,15 = +15%).</p>
-                  <div className="flex items-center gap-2 max-w-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5">
-                    <span className="text-xs font-bold text-slate-500">Valor de punto</span>
-                    <input
-                      type="number" step="0.01"
-                      defaultValue={state.settings?.cascosPointValue ?? 1}
-                      onChange={async (e) => { try { await settingsAPI.update({ cascosPointValue: e.target.value === '' ? 1 : Number(e.target.value) }); } catch (err) { console.error(err); } }}
-                      className="flex-1 min-w-0 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right font-bold"
-                    />
-                  </div>
+                  <h3 className="text-base font-black text-slate-900 uppercase">Cocina Des-Montada (Cascos)</h3>
+                  <p className="text-xs text-slate-500">El <b>valor de punto</b> de Des-Montada se configura en <b>Márgenes Maestros → Valor de Punto Base → Cocina Des-Montada</b>. El <b>descuento por usuario</b> se asigna en cada ficha de usuario.</p>
                 </div>
               </div>
             </div>

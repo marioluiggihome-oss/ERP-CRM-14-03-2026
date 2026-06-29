@@ -50,9 +50,12 @@ const Cascos = ({ state }) => {
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
   const [ivaRate, setIvaRate] = useState(21);
-  const [descuento, setDescuento] = useState(0);
-  // Valor de punto (coeficiente) configurable en Master; multiplica el precio de tarifa.
-  const coef = Number(state?.settings?.cascosPointValue) || 1;
+  // Descuento por defecto: el asignado al usuario para Des-Montada (el master puede cambiarlo libremente).
+  const isAdmin = currentUser?.isAdmin === true;
+  const userDtoDesmontada = Number(currentUser?.discountDesmontada ?? currentUser?.commercialDiscount ?? 0) || 0;
+  const [descuento, setDescuento] = useState(userDtoDesmontada);
+  // Valor de punto (coeficiente) configurable en Master (Cocina Des-Montada); multiplica el precio de tarifa.
+  const coef = Number(state?.pointValueDesmontada ?? state?.settings?.cascosPointValue) || 1;
   const pc = (base) => (base == null ? null : Math.round(base * coef * 100) / 100);
   const [saving, setSaving] = useState(false);
   const [orders, setOrders] = useState(null); // null oculto
@@ -117,7 +120,7 @@ const Cascos = ({ state }) => {
 
   const nuevoPedido = () => {
     if (!window.confirm('¿Vaciar el presupuesto actual?')) return;
-    setCart([]); setCliente(''); setRef(''); setDescuento(0); setSavedId(null);
+    setCart([]); setCliente(''); setRef(''); setDescuento(userDtoDesmontada); setSavedId(null);
   };
 
   // Guarda como presupuesto o pedido (mismo almacén, distinto 'kind').
@@ -309,7 +312,7 @@ const Cascos = ({ state }) => {
           </div>
           <div className="border-t border-slate-100 pt-3 space-y-1 text-sm">
             <div className="flex justify-between text-slate-500"><span>Bruto líneas</span><span className="font-bold">{eur(bruto)}</span></div>
-            <div className="flex justify-between text-slate-500 items-center"><span className="flex items-center gap-1">Descuento <input type="number" value={descuento} onChange={e => setDescuento(Number(e.target.value) || 0)} className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center" />%</span><span className="font-bold text-rose-500">-{eur(dto)}</span></div>
+            <div className="flex justify-between text-slate-500 items-center"><span className="flex items-center gap-1">Descuento <input type="number" value={descuento} disabled={!isAdmin} title={isAdmin ? 'Editable (master)' : 'Descuento asignado por el administrador'} onChange={e => setDescuento(Number(e.target.value) || 0)} className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center disabled:bg-slate-100 disabled:text-slate-400" />%</span><span className="font-bold text-rose-500">-{eur(dto)}</span></div>
             <div className="flex justify-between text-slate-500"><span>Base imponible</span><span className="font-bold">{eur(subtotal)}</span></div>
             <div className="flex justify-between text-slate-500 items-center"><span className="flex items-center gap-1">IVA <input type="number" value={ivaRate} onChange={e => setIvaRate(Number(e.target.value) || 0)} className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center" />%</span><span className="font-bold">{eur(iva)}</span></div>
             <div className="flex justify-between text-slate-900 text-lg font-black pt-1 bg-orange-50 -mx-1 px-2 rounded-lg py-1"><span>TOTAL</span><span className="text-orange-600">{eur(total)}</span></div>

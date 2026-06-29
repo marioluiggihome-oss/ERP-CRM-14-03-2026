@@ -14,6 +14,7 @@ const PricingTab = ({ state, setState }) => {
       await settingsAPI.update({
         pointValueMontada: state.pointValueMontada,
         pointValueDespiece: state.pointValueDespiece,
+        cascosPointValue: state.pointValueDesmontada,
         specialIncrementWidth: state.specialIncrementWidth,
         specialIncrementHeight: state.specialIncrementHeight,
         specialIncrementDepth: state.specialIncrementDepth,
@@ -105,6 +106,23 @@ const PricingTab = ({ state, setState }) => {
             onChange={(e) => setState(prev => ({ ...prev, pointValueDespiece: parseFloat(e.target.value) || 0.88 }))}
             className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 text-2xl font-black text-indigo-900 outline-none focus:border-orange-500 text-center max-w-xs"
           />
+        </div>
+
+        <div className="border-t border-indigo-100 my-4"></div>
+
+        {/* Valor de punto COCINA DES-MONTADA (Cascos) */}
+        <div>
+          <label className="text-xs font-black text-cyan-600 uppercase mb-2 block">
+            Cocina Des-Montada (€/punto) - Presupuestador de Cascos
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={state.pointValueDesmontada ?? 1.0}
+            onChange={(e) => setState(prev => ({ ...prev, pointValueDesmontada: parseFloat(e.target.value) || 1.0 }))}
+            className="w-full bg-cyan-50 border-2 border-cyan-200 rounded-xl p-4 text-2xl font-black text-cyan-900 outline-none focus:border-orange-500 text-center max-w-xs"
+          />
+          <p className="text-[11px] text-slate-400 mt-1">El descuento por usuario para Des-Montada se configura en cada ficha de usuario.</p>
         </div>
 
         <div className="border-t border-indigo-100 my-4"></div>

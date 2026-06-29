@@ -87,6 +87,7 @@ class UserModelInternal(BaseModel):
     commercialDiscount: float = 0
     discountMontada: float = 0
     discountDespiece: float = 0
+    discountDesmontada: float = 0
     canSeeCost: bool = False
     canSeeRetail: bool = True
     canUseAIAnalysis: bool = False
@@ -130,6 +131,7 @@ class UserResponse(BaseModel):
     commercialDiscount: float = 0
     discountMontada: float = 0
     discountDespiece: float = 0
+    discountDesmontada: float = 0
     canSeeCost: bool = False
     canSeeRetail: bool = True
     canUseAIAnalysis: bool = False
@@ -172,6 +174,7 @@ class UserCreate(BaseModel):
     commercialDiscount: float = 0
     discountMontada: float = 0
     discountDespiece: float = 0
+    discountDesmontada: float = 0
     canSeeCost: bool = False
     canSeeRetail: bool = True
     canUseAIAnalysis: bool = False
@@ -214,6 +217,7 @@ class UserUpdate(BaseModel):
     commercialDiscount: Optional[float] = None
     discountMontada: Optional[float] = None
     discountDespiece: Optional[float] = None
+    discountDesmontada: Optional[float] = None
     canSeeCost: Optional[bool] = None
     canAccessFabrica: Optional[bool] = None  # Acceso al portal de fábrica
     canManageOrders: Optional[bool] = None  # Gestión de órdenes de fabricación

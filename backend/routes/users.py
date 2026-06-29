@@ -35,6 +35,7 @@ class UserCreate(BaseModel):
     commercialDiscount: float = 0
     discountMontada: float = 0
     discountDespiece: float = 0
+    discountDesmontada: float = 0
     isAdmin: bool = False
     isRepresentative: bool = False
     isResponsableDelegacion: bool = False
@@ -59,6 +60,7 @@ class UserUpdate(BaseModel):
     commercialDiscount: Optional[float] = None
     discountMontada: Optional[float] = None
     discountDespiece: Optional[float] = None
+    discountDesmontada: Optional[float] = None
     isAdmin: Optional[bool] = None
     isRepresentative: Optional[bool] = None
     isResponsableDelegacion: Optional[bool] = None
@@ -136,7 +138,7 @@ async def require_authenticated_user(credentials: Optional[HTTPAuthorizationCred
 # Campos sensibles que se ocultan si no hay token JWT (modo compat con frontend viejo)
 SENSITIVE_USER_FIELDS = {
     "linkedClientId", "accessExpirationDate", "commercialDiscount",
-    "discountMontada", "discountDespiece", "allowedCatalogIds",
+    "discountMontada", "discountDespiece", "discountDesmontada", "allowedCatalogIds",
 }
 
 
