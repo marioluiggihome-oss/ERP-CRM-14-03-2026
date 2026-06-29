@@ -57,12 +57,14 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
 
 
 @router.get("/cascos/orders")
-async def list_casco_orders(userId: Optional[str] = None, kind: Optional[str] = None, current_user: Optional[dict] = Depends(get_current_user)):
+async def list_casco_orders(userId: Optional[str] = None, kind: Optional[str] = None, expediente: Optional[str] = None, current_user: Optional[dict] = Depends(get_current_user)):
     """Lista los pedidos/presupuestos de cascos. Aislamiento por usuario (admin ve todos)."""
     try:
         query = {}
         if kind:
             query["kind"] = kind
+        if expediente:
+            query["expediente"] = expediente
         if current_user and current_user.get("id"):
             elevated = any(current_user.get(f) for f in ADMIN_ROLE_FLAGS)
             if not elevated:

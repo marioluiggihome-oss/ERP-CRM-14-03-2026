@@ -414,6 +414,22 @@ const Cascos = ({ state }) => {
     if (o.kind === 'compra') { setDescProveedor(o.descuento || 0); }
     else { setDescuento(o.descuento || 0); setSavedId(o.id); }  // solo las ventas reusan id
   };
+  // Permiso para ver el documento vinculado (venta<->compra): master o usuarios autorizados.
+  const puedeVerVinculados = isAdmin || currentUser?.canVerVinculadosCascos === true;
+  const verVinculada = async (o) => {
+    if (!o.expediente) { alert('Este documento no tiene venta/compra vinculada.'); return; }
+    try {
+      const r = await fetch(`${API_URL}/api/cascos/orders?expediente=${encodeURIComponent(o.expediente)}`, { headers: auth() });
+      const d = await r.json();
+      const list = (d.orders || []).filter(x => x.id !== o.id);
+      // Si veo una compra, busco su venta (pedido/presupuesto); si veo una venta, busco la compra.
+      const target = o.kind === 'compra'
+        ? (list.find(x => x.kind === 'pedido') || list.find(x => x.kind === 'presupuesto'))
+        : (list.find(x => x.kind === 'compra'));
+      if (!target) { alert('Aún no hay documento vinculado a este expediente.'); return; }
+      loadOrder(target);
+    } catch { alert('No se pudo cargar el documento vinculado.'); }
+  };
   const deleteOrder = async (id) => {
     if (!window.confirm('¿Eliminar?')) return;
     try { await fetch(`${API_URL}/api/cascos/orders/${id}`, { method: 'DELETE', headers: auth() }); setOrders(prev => (prev || []).filter(x => x.id !== id)); } catch {}
@@ -637,6 +653,9 @@ const Cascos = ({ state }) => {
                   </div>
                   <span className="text-sm font-black text-slate-800">{eur(o.total)}</span>
                   <button onClick={() => loadOrder(o)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
+                  {puedeVerVinculados && o.expediente && (
+                    <button onClick={() => verVinculada(o)} title="Abrir la venta/compra vinculada" className="px-2 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-bold hover:bg-amber-600">🔗 Vinculada</button>
+                  )}
                   <button onClick={() => deleteOrder(o.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={15} /></button>
                 </div>
               ))}
