@@ -15,6 +15,7 @@ const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const ManufacturingReport = lazy(() => import('./components/ManufacturingReport'));
 const CRMLayout = lazy(() => import('./components/CRMLayout'));
 const Digitalizador = lazy(() => import('./components/Digitalizador'));
+const ResumenCocinas = lazy(() => import('./components/ResumenCocinas'));
 const AgendaMontajes = lazy(() => import('./components/AgendaMontajes'));
 const AdminWorkView = lazy(() => import('./components/AdminWorkView'));
 const CommercialWorkView = lazy(() => import('./components/CommercialWorkView'));
@@ -963,6 +964,17 @@ const App = () => {
                     </button>
                     )}
 
+                    {/* Resumen por cocinas - presupuesto resumido con totales y forma de pago */}
+                    {!state.currentUser?.isTienda && (state.currentUser?.canUsePresupuestador1 !== false || state.currentUser?.canUsePresupuestador2 !== false) && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'resumenCocinas'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'resumenCocinas' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <Layers size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Resumen</span>
+                      </button>
+                    )}
+
                     {/* Archivo - requiere permiso explícito (la casilla manda) */}
                     {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo === true && (
                       <button
@@ -1237,6 +1249,7 @@ const App = () => {
               <Visualizer images={state.uploadedImages} state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
             )}
             {state.currentTab === 'library' && <ErrorBoundary><ProjectLibrary state={state} setState={setState} /></ErrorBoundary>}
+            {state.currentTab === 'resumenCocinas' && <ErrorBoundary><ResumenCocinas state={state} /></ErrorBoundary>}
             {state.currentTab === 'backup' && <BackupManager />}
             {state.currentTab === 'invoices' && <ErrorBoundary><Invoices currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'rentabilidad' && <ErrorBoundary><RentabilidadPanel currentUser={state.currentUser} /></ErrorBoundary>}
