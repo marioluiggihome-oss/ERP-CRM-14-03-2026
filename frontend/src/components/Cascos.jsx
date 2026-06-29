@@ -1,0 +1,291 @@
+import React, { useState, useMemo } from 'react';
+import { Box, Search, Plus, Trash2, Download, FolderOpen, Save, X, Loader, ClipboardList } from 'lucide-react';
+import { CASCOS, CASCOS_COLORES, CASCOS_TIPOS } from '../data/cascos';
+import { getToken } from '../services/api';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+const auth = () => ({ 'Authorization': `Bearer ${getToken()}` });
+
+// Dibujo esquemático (SVG) según tipo de casco, con baldas representativas.
+function CascoDibujo({ dibujo, alto, ancho, fondo }) {
+  const W = 120, H = 150, pad = 10;
+  // proporción aproximada alto/ancho del módulo
+  const ratio = Math.min(2.2, Math.max(0.4, (alto || 700) / (ancho || 600)));
+  const bw = W - pad * 2;
+  const bh = Math.min(H - pad * 2, bw * ratio);
+  const x = pad, y = (H - bh) / 2;
+  const shelves = ({ alto: alto >= 1900 ? 4 : alto >= 850 ? 2 : 1 }).alto;
+  const lines = [];
+  if (dibujo === 'columna' || dibujo === 'columna-horno') {
+    const n = alto >= 2000 ? 4 : 3;
+    for (let s = 1; s <= n; s++) lines.push(y + (bh * s) / (n + 1));
+  } else if (dibujo === 'bajo-fregadero' || dibujo === 'altillo') {
+    // sin balda o caja simple
+  } else {
+    for (let s = 1; s <= shelves; s++) lines.push(y + (bh * s) / (shelves + 1));
+  }
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
+      <rect x={x} y={y} width={bw} height={bh} fill="#f8fafc" stroke="#475569" strokeWidth="2" />
+      {lines.map((ly, i) => <line key={i} x1={x} y1={ly} x2={x + bw} y2={ly} stroke="#94a3b8" strokeWidth="1.5" />)}
+      {dibujo === 'angular' && <line x1={x} y1={y} x2={x + bw / 2} y2={y + bh / 3} stroke="#475569" strokeWidth="1.5" />}
+      <text x={x + bw / 2} y={y - 3} textAnchor="middle" fontSize="9" fill="#334155">{ancho} mm</text>
+      <text x={x - 3} y={y + bh / 2} textAnchor="middle" fontSize="9" fill="#334155" transform={`rotate(-90 ${x - 3} ${y + bh / 2})`}>{alto} mm</text>
+    </svg>
+  );
+}
+
+const Cascos = ({ state }) => {
+  const currentUser = state?.currentUser;
+  const [tipo, setTipo] = useState('');
+  const [grosor, setGrosor] = useState('16');
+  const [color, setColor] = useState('blanco');
+  const [altoMin, setAltoMin] = useState('');
+  const [altoMax, setAltoMax] = useState('');
+  const [anchoMin, setAnchoMin] = useState('');
+  const [anchoMax, setAnchoMax] = useState('');
+  const [cart, setCart] = useState([]);
+  const [cliente, setCliente] = useState('');
+  const [ref, setRef] = useState('');
+  const [ivaRate, setIvaRate] = useState(21);
+  const [saving, setSaving] = useState(false);
+  const [orders, setOrders] = useState(null); // null oculto
+
+  const colores = CASCOS_COLORES[grosor] || CASCOS_COLORES['16'];
+  // Si cambia el grosor y el color no aplica, ajustar
+  const colorOk = colores.some(c => c.id === color);
+  const colorActivo = colorOk ? color : colores[0].id;
+
+  const resultados = useMemo(() => {
+    return CASCOS.filter(m => String(m.grosor) === String(grosor))
+      .filter(m => !tipo || m.tipo === tipo)
+      .filter(m => (m.precios[colorActivo] != null)) // disponible en ese color
+      .filter(m => !altoMin || m.alto >= Number(altoMin))
+      .filter(m => !altoMax || m.alto <= Number(altoMax))
+      .filter(m => !anchoMin || m.ancho >= Number(anchoMin))
+      .filter(m => !anchoMax || m.ancho <= Number(anchoMax))
+      .sort((a, b) => a.tipo.localeCompare(b.tipo) || a.alto - b.alto || a.ancho - b.ancho);
+  }, [tipo, grosor, colorActivo, altoMin, altoMax, anchoMin, anchoMax]);
+
+  const colorLabel = (gr, cid) => (CASCOS_COLORES[gr] || []).find(c => c.id === cid)?.label || cid;
+
+  const addToCart = (m) => {
+    const precio = m.precios[colorActivo];
+    const line = {
+      key: `${m.id}-${colorActivo}-${Date.now()}`,
+      tipo: m.tipo, grosor: m.grosor, dibujo: m.dibujo,
+      fondo: m.fondo, alto: m.alto, ancho: m.ancho,
+      color: colorActivo, colorLabel: colorLabel(m.grosor, colorActivo),
+      precio, qty: 1,
+    };
+    setCart(prev => [...prev, line]);
+  };
+  const setQty = (key, q) => setCart(prev => prev.map(l => l.key === key ? { ...l, qty: Math.max(1, parseInt(q) || 1) } : l));
+  const removeLine = (key) => setCart(prev => prev.filter(l => l.key !== key));
+
+  const subtotal = cart.reduce((s, l) => s + (l.precio || 0) * l.qty, 0);
+  const iva = subtotal * (ivaRate / 100);
+  const total = subtotal + iva;
+
+  const nuevoPedido = () => {
+    if (!window.confirm('¿Vaciar el presupuesto actual?')) return;
+    setCart([]); setCliente(''); setRef('');
+  };
+
+  // Generar pedido (guardar) + PDF
+  const exportarPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = pdf.internal.pageSize.getWidth(); const M = 14;
+    const logo = state?.logo;
+    if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+      try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 12, 32, 16); } catch {}
+    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+    pdf.setFontSize(16); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
+    pdf.text('PRESUPUESTO DE CASCOS', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(10); pdf.setTextColor(120);
+    pdf.text(`${cliente || ''}${ref ? '  ·  Ref. ' + ref : ''}`, W - M, 24, { align: 'right' });
+    pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
+    autoTable(pdf, {
+      startY: 38,
+      head: [['Ud.', 'Módulo', 'Medidas (F×Al×An)', 'Color', 'Precio', 'Importe']],
+      body: cart.map(l => [String(l.qty), `${l.tipo} ${l.grosor}mm`, `${l.fondo}×${l.alto}×${l.ancho}`, l.colorLabel, eur(l.precio), eur(l.precio * l.qty)]),
+      styles: { fontSize: 8.5, cellPadding: 1.8 },
+      headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [245, 245, 250] },
+      columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      margin: { left: M, right: M },
+    });
+    let y = (pdf.lastAutoTable?.finalY || 38) + 8;
+    const bx = W - M - 70;
+    pdf.setFontSize(10); pdf.setTextColor(40);
+    pdf.text('Base imponible', bx, y); pdf.text(eur(subtotal), W - M, y, { align: 'right' }); y += 6;
+    pdf.text(`IVA ${ivaRate}%`, bx, y); pdf.text(eur(iva), W - M, y, { align: 'right' }); y += 4;
+    pdf.setFillColor(234, 120, 40); pdf.roundedRect(bx - 4, y, 74 + 4, 11, 2, 2, 'F');
+    pdf.setFontSize(13); pdf.setTextColor(255); pdf.setFont(undefined, 'bold');
+    pdf.text('TOTAL', bx, y + 7.5); pdf.text(eur(total), W - M, y + 7.5, { align: 'right' });
+    pdf.save(`Cascos_${(cliente || 'presupuesto').replace(/\s+/g, '_')}.pdf`);
+  };
+
+  const generarPedido = async () => {
+    if (!cart.length) { alert('Añade cascos al presupuesto.'); return; }
+    setSaving(true);
+    try {
+      const r = await fetch(`${API_URL}/api/cascos/orders`, {
+        method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cliente, ref, ivaRate, lines: cart, total: Math.round(total * 100) / 100,
+          userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
+        }),
+      });
+      if (!r.ok) throw new Error('Error');
+      alert('✅ Pedido de cascos guardado.');
+      await exportarPDF();
+    } catch { alert('No se pudo guardar el pedido.'); }
+    finally { setSaving(false); }
+  };
+
+  const openOrders = async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/cascos/orders?userId=${encodeURIComponent(currentUser?.id || '')}`, { headers: auth() });
+      const d = await r.json();
+      setOrders(d.orders || []);
+    } catch { alert('No se pudo cargar el historial.'); }
+  };
+
+  return (
+    <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
+      <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
+        <h1 className="text-2xl font-black text-slate-800 ml-16 flex items-center gap-2"><Box size={22} /> Presupuestador de Cascos</h1>
+        <div className="flex items-center gap-2">
+          <button onClick={openOrders} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50"><FolderOpen size={16} /> Pedidos</button>
+          <button onClick={nuevoPedido} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50"><Plus size={16} /> Nuevo</button>
+        </div>
+      </div>
+      <p className="text-sm text-slate-500 mb-5">Busca cascos por tipo y medidas, móntalos en un presupuesto y genera el pedido.</p>
+
+      <div className="grid lg:grid-cols-3 gap-5">
+        {/* Buscador + resultados */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tipo</label>
+                <select value={tipo} onChange={e => setTipo(e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                  <option value="">Todos los tipos</option>
+                  {CASCOS_TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Grosor</label>
+                <select value={grosor} onChange={e => setGrosor(e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                  <option value="16">16 mm</option>
+                  <option value="19">19 mm</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Color</label>
+                <select value={colorActivo} onChange={e => setColor(e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                  {colores.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Alto (mm)</label>
+                <div className="flex gap-1">
+                  <input value={altoMin} onChange={e => setAltoMin(e.target.value)} placeholder="mín" className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
+                  <input value={altoMax} onChange={e => setAltoMax(e.target.value)} placeholder="máx" className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
+                </div>
+              </div>
+              <div className="sm:col-span-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Ancho (mm)</label>
+                <div className="flex gap-1">
+                  <input value={anchoMin} onChange={e => setAnchoMin(e.target.value)} placeholder="mín" className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
+                  <input value={anchoMax} onChange={e => setAnchoMax(e.target.value)} placeholder="máx" className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 flex items-center gap-1"><Search size={12} /> {resultados.length} cascos encontrados</p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="max-h-[55vh] overflow-y-auto divide-y divide-slate-100">
+              {resultados.map(m => (
+                <div key={m.id} className="flex items-center gap-3 p-3 hover:bg-slate-50">
+                  <div className="w-12 h-16 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-800 text-sm truncate">{m.tipo} <span className="text-slate-400 font-normal">{m.grosor}mm</span></p>
+                    <p className="text-[11px] text-slate-500">Fondo {m.fondo} · Alto {m.alto} · Ancho {m.ancho} mm</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-indigo-700">{eur(m.precios[colorActivo])}</p>
+                    <button onClick={() => addToCart(m)} className="mt-1 px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 flex items-center gap-1"><Plus size={12} /> Añadir</button>
+                  </div>
+                </div>
+              ))}
+              {resultados.length === 0 && <p className="p-8 text-center text-slate-400 text-sm">No hay cascos con esos filtros.</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* Presupuesto */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 h-fit">
+          <h3 className="font-black text-slate-800 mb-3 flex items-center gap-2"><ClipboardList size={18} /> Presupuesto</h3>
+          <div className="grid grid-cols-1 gap-2 mb-3">
+            <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Cliente" className="px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+            <input value={ref} onChange={e => setRef(e.target.value)} placeholder="Referencia" className="px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+          </div>
+          <div className="space-y-2 max-h-[40vh] overflow-y-auto mb-3">
+            {cart.map(l => (
+              <div key={l.key} className="flex items-center gap-2 border border-slate-100 rounded-lg p-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-700 truncate">{l.tipo} {l.grosor}mm</p>
+                  <p className="text-[10px] text-slate-400">{l.alto}×{l.ancho} · {l.colorLabel} · {eur(l.precio)}</p>
+                </div>
+                <input type="number" value={l.qty} onChange={e => setQty(l.key, e.target.value)} className="w-12 px-1 py-1 border border-slate-200 rounded text-sm text-center" />
+                <span className="w-20 text-right text-xs font-bold text-slate-700">{eur(l.precio * l.qty)}</span>
+                <button onClick={() => removeLine(l.key)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>
+              </div>
+            ))}
+            {cart.length === 0 && <p className="text-center text-slate-400 text-xs py-6">Añade cascos desde el buscador.</p>}
+          </div>
+          <div className="border-t border-slate-100 pt-3 space-y-1 text-sm">
+            <div className="flex justify-between text-slate-500"><span>Base imponible</span><span className="font-bold">{eur(subtotal)}</span></div>
+            <div className="flex justify-between text-slate-500 items-center"><span className="flex items-center gap-1">IVA <input type="number" value={ivaRate} onChange={e => setIvaRate(Number(e.target.value) || 0)} className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center" />%</span><span className="font-bold">{eur(iva)}</span></div>
+            <div className="flex justify-between text-slate-900 text-lg font-black pt-1"><span>TOTAL</span><span className="text-orange-600">{eur(total)}</span></div>
+          </div>
+          <div className="grid grid-cols-1 gap-2 mt-3">
+            <button onClick={generarPedido} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50">{saving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />} Generar pedido</button>
+            <button onClick={exportarPDF} disabled={!cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50"><Download size={16} /> Exportar PDF</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Historial de pedidos */}
+      {Array.isArray(orders) && (
+        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={() => setOrders(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="font-black text-slate-800">Pedidos de cascos</h3>
+              <button onClick={() => setOrders(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              {orders.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">No hay pedidos guardados.</p> : orders.map(o => (
+                <div key={o.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-700 text-sm truncate">{o.cliente || 'Sin cliente'}{o.ref ? ` · ${o.ref}` : ''}</p>
+                    <p className="text-[10px] text-slate-400">{o.createdAt ? new Date(o.createdAt).toLocaleString('es-ES') : ''} · {(o.lines || []).length} líneas</p>
+                  </div>
+                  <span className="text-sm font-black text-slate-800">{eur(o.total)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Cascos;
