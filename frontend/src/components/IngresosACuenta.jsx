@@ -102,12 +102,11 @@ const IngresosACuenta = ({ currentUser }) => {
 
   const saveAll = async () => {
     if (!review?.ingresos?.length) { setReview(null); return; }
-    if (!review.targetId && !review.clientCode) {
-      alert('Asigna el ingreso a un cliente y/o a un presupuesto, pedido o factura.');
-      return;
-    }
     const target = asignables.find(a => a.id === review.targetId);
     const client = clients.find(c => c.codigo === review.clientCode);
+    // Si no se asigna ni a documento ni a cliente, queda PENDIENTE DE ASIGNACIÓN.
+    const pendiente = !review.targetId && !review.clientCode;
+    if (pendiente && !window.confirm('No has asignado este ingreso a ningún cliente ni documento.\n\n¿Guardarlo como PENDIENTE DE ASIGNACIÓN para asignarlo más tarde?')) return;
     setSaving(true);
     try {
       for (const ing of review.ingresos) {
@@ -120,6 +119,7 @@ const IngresosACuenta = ({ currentUser }) => {
             targetId: review.targetId,
             targetType: target?.docType || '',
             targetRef: target?.ref || '',
+            pendiente,
             docBase64: review.fileB64, docName: review.fileName, docMime: review.fileMime,
             createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
           }),
@@ -199,6 +199,8 @@ const IngresosACuenta = ({ currentUser }) => {
                     <span className={`px-2 py-1 rounded-lg text-[11px] font-black ${i.targetType === 'factura' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
                       {(i.targetType || '').toUpperCase()} {i.targetRef}
                     </span>
+                  ) : (i.pendiente || (!i.clientCode && !i.cliente)) ? (
+                    <span className="px-2 py-1 rounded-lg text-[11px] font-black bg-orange-100 text-orange-700">PENDIENTE DE ASIGNACIÓN</span>
                   ) : <span className="text-slate-300">—</span>}
                 </td>
                 <td className="p-3 text-center">

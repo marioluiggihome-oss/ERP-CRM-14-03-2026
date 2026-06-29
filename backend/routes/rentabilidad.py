@@ -1376,6 +1376,8 @@ async def create_ingreso(payload: dict):
         "targetType": str(payload.get("targetType") or ""),   # presupuesto | pedido | factura
         "targetId": target_id,                                  # id de la ficha
         "targetRef": str(payload.get("targetRef") or ""),
+        # Pendiente de asignación: aún no se ha vinculado a documento ni cliente.
+        "pendiente": bool(payload.get("pendiente")) or (not target_id and not client_code),
         "docId": doc_id,
         "docName": str(payload.get("docName") or ""),
         "createdBy": payload.get("createdBy", ""),
