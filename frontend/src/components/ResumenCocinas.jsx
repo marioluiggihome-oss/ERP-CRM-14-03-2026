@@ -224,7 +224,7 @@ const ResumenCocinas = ({ state }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs font-black text-slate-500 uppercase block mb-1">Cliente / Proyecto</label>
-            <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Ej: MARIA JOSÉ / MARIA AUXILIADORA"
+            <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Cliente / proyecto"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold" />
           </div>
           <div>
