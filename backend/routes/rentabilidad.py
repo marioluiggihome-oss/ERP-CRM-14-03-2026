@@ -50,8 +50,23 @@ async def add_project_cost(cost: dict):
             "source": cost.get("source", "manual"),
             "compraId": cost.get("compraId", ""),      # vínculo con pedido de compra (cascos)
             "expediente": cost.get("expediente", ""),  # expediente que relaciona venta y compra
+            "docId": "",
             "createdAt": datetime.now(timezone.utc).isoformat(),
         }
+        # Documento adjunto opcional (PDF/imagen de la factura del proveedor)
+        b64 = cost.get("docBase64") or ""
+        if b64:
+            stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+            cdoc_id = f"costdoc-{uuid.uuid4().hex[:8]}"
+            await db.project_cost_docs.insert_one({
+                "id": cdoc_id,
+                "costId": doc["id"],
+                "dataBase64": stripped,
+                "mime": str(cost.get("docMime") or "application/octet-stream"),
+                "filename": str(cost.get("docName") or "documento"),
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+            })
+            doc["docId"] = cdoc_id
         await db.project_costs.insert_one(doc)
         doc.pop("_id", None)
         return doc
@@ -74,9 +89,19 @@ async def list_project_costs(projectRef: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/project-costs/doc/{doc_id}")
+async def get_project_cost_doc(doc_id: str):
+    """Devuelve el documento adjunto de un coste (factura del proveedor)."""
+    d = await db.project_cost_docs.find_one({"id": doc_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+    return d
+
+
 @router.delete("/project-costs/{cost_id}")
 async def delete_project_cost(cost_id: str):
     try:
+        await db.project_cost_docs.delete_many({"costId": cost_id})
         res = await db.project_costs.delete_one({"id": cost_id})
         return {"success": True, "deleted": res.deleted_count}
     except Exception as e:

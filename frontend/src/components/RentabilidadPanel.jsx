@@ -106,19 +106,41 @@ const RentabilidadPanel = ({ currentUser }) => {
     } catch (e) { alert('No se pudo asociar la compra.'); }
   };
 
+  const [costFile, setCostFile] = useState(null); // { b64, mime, name }
+  const readFile = (file) => new Promise((res) => {
+    const fr = new FileReader();
+    fr.onload = () => res({ b64: String(fr.result), mime: file.type || 'application/octet-stream', name: file.name });
+    fr.onerror = () => res(null);
+    fr.readAsDataURL(file);
+  });
   const addCost = async () => {
     if (!form.importe || Number(form.importe) <= 0) { alert('Indica el importe'); return; }
     try {
+      const body = { ...form, importe: Number(form.importe), projectRef: costModal.ref, source: 'manual' };
+      if (costFile) { body.docBase64 = costFile.b64; body.docMime = costFile.mime; body.docName = costFile.name; }
       const r = await fetch(`${API_URL}/api/project-costs`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, importe: Number(form.importe), projectRef: costModal.ref, source: 'manual' })
+        body: JSON.stringify(body)
       });
       if (r.ok) {
         setForm({ proveedor: '', concepto: '', categoria: 'MOBILIARIO', importe: '' });
+        setCostFile(null);
         await openCosts(costModal);
         load();
       }
     } catch (e) { alert('Error al guardar el coste'); }
+  };
+  // Visor del documento adjunto a un coste (factura de proveedor)
+  const verCostDoc = async (docId) => {
+    try {
+      const r = await fetch(`${API_URL}/api/project-costs/doc/${docId}`);
+      if (!r.ok) { alert('Documento no disponible'); return; }
+      const j = await r.json();
+      const b64 = j.dataBase64 || '';
+      if (!b64) { alert('Documento no disponible'); return; }
+      const src = b64.startsWith('data:') ? b64 : `data:${j.mime || 'application/pdf'};base64,${b64}`;
+      const w = window.open(); if (w) { w.document.write(`<iframe src="${src}" style="width:100%;height:100%;border:0"></iframe>`); } else window.open(src, '_blank');
+    } catch { alert('Documento no disponible'); }
   };
 
   // ---- Documentos del proyecto: entregas a cuenta, compras y ventas ----
@@ -743,6 +765,11 @@ const RentabilidadPanel = ({ currentUser }) => {
                 </select>
                 <input type="number" step="0.01" value={form.importe} onChange={e => setForm({ ...form, importe: e.target.value })} placeholder="EUR" className="px-2 py-2 border rounded-lg text-sm text-right" />
                 <button onClick={addCost} className="px-3 py-2 bg-emerald-600 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-1"><Plus size={14} /> Anadir</button>
+                <label className="col-span-2 md:col-span-5 flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+                  <span className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg font-bold text-slate-600 hover:bg-slate-100">📎 Adjuntar PDF/foto (opcional)</span>
+                  <input type="file" accept="application/pdf,image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; setCostFile(f ? await readFile(f) : null); }} />
+                  {costFile && <span className="text-emerald-700 font-bold truncate">{costFile.name} <button type="button" onClick={() => setCostFile(null)} className="text-red-400 ml-1">✕</button></span>}
+                </label>
               </div>
 
               {/* Asociar una compra (pedido a proveedor de Cocina Desmontada) como coste por partida */}
@@ -788,7 +815,10 @@ const RentabilidadPanel = ({ currentUser }) => {
                       <td className="p-2 text-slate-600">{c.concepto || '-'}{c.expediente && <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black">🔗 {c.expediente}</span>}</td>
                       <td className="p-2 text-[11px] text-slate-500">{c.categoria}</td>
                       <td className="p-2 text-right font-mono font-bold text-orange-600">{eur(c.importe)}</td>
-                      <td className="p-2 text-right"><button onClick={() => delCost(c.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button></td>
+                      <td className="p-2 text-right whitespace-nowrap">
+                        {c.docId && <button onClick={() => verCostDoc(c.docId)} title="Ver documento adjunto" className="text-slate-500 hover:text-indigo-600 mr-2">📎</button>}
+                        <button onClick={() => delCost(c.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+                      </td>
                     </tr>
                   ))}
                   {costs.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-slate-400">Sin costes aun</td></tr>}
@@ -853,11 +883,12 @@ const RentabilidadPanel = ({ currentUser }) => {
 
               {!docsLoading && docsTab === 'compras' && (
                 ((docsData.compras || []).length === 0 && (docsData.comprasCascos || []).length === 0) ? <p className="text-center text-slate-400 py-8 text-sm">Sin compras asociadas. Asóciala desde el botón “Coste”.</p> :
-                <table className="w-full text-sm"><thead className="text-slate-500"><tr><th className="text-left p-2 text-xs uppercase">Proveedor</th><th className="text-left p-2 text-xs uppercase">Concepto / Partida</th><th className="text-right p-2 text-xs uppercase">Importe</th></tr></thead>
+                <table className="w-full text-sm"><thead className="text-slate-500"><tr><th className="text-left p-2 text-xs uppercase">Proveedor</th><th className="text-left p-2 text-xs uppercase">Concepto / Partida</th><th className="text-right p-2 text-xs uppercase">Importe</th><th className="p-2"></th></tr></thead>
                   <tbody className="divide-y divide-slate-100">{(docsData.compras || []).map((c, k) => (
                     <tr key={k}><td className="p-2 font-medium">{c.proveedor || '—'}</td>
                       <td className="p-2 text-slate-600">{c.concepto || '—'} <span className="text-[10px] text-slate-400">· {c.categoria}</span>{c.expediente && <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black">🔗 {c.expediente}</span>}</td>
-                      <td className="p-2 text-right font-mono font-bold text-orange-600">{eur(c.importe)}</td></tr>
+                      <td className="p-2 text-right font-mono font-bold text-orange-600">{eur(c.importe)}</td>
+                      <td className="p-2 text-right">{c.docId && <button onClick={() => verCostDoc(c.docId)} title="Ver documento" className="text-slate-500 hover:text-indigo-600">📎</button>}</td></tr>
                   ))}</tbody></table>
               )}
 
