@@ -3,7 +3,7 @@
  * Cruza Ventas (presupuestos) con Costes (facturas/gastos) -> Margen.
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter, PackageCheck, Receipt, Truck } from 'lucide-react';
+import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter, PackageCheck, Receipt, Truck, FolderOpen, Banknote, ShoppingCart, Tag } from 'lucide-react';
 import { getToken } from '../services/api';
 import RentabilidadLineas from './RentabilidadLineas';
 import ReportGenerator from './ReportGenerator';
@@ -119,6 +119,43 @@ const RentabilidadPanel = ({ currentUser }) => {
         load();
       }
     } catch (e) { alert('Error al guardar el coste'); }
+  };
+
+  // ---- Documentos del proyecto: entregas a cuenta, compras y ventas ----
+  const [docsModal, setDocsModal] = useState(null); // row
+  const [docsTab, setDocsTab] = useState('cuenta');
+  const [docsData, setDocsData] = useState({ cuenta: [], compras: [], ventas: [] });
+  const [docsLoading, setDocsLoading] = useState(false);
+  const openDocs = async (row) => {
+    setDocsModal(row); setDocsTab('cuenta'); setDocsLoading(true);
+    setDocsData({ cuenta: [], compras: [], ventas: [] });
+    const refN = normRef(row.ref);
+    try {
+      const tok = getToken();
+      const authH = tok ? { Authorization: `Bearer ${tok}` } : {};
+      const [ing, costs, cascos] = await Promise.all([
+        fetch(`${API_URL}/api/rentabilidad/ingresos`).then(r => r.ok ? r.json() : { items: [] }).catch(() => ({ items: [] })),
+        fetch(`${API_URL}/api/project-costs?projectRef=${encodeURIComponent(row.ref)}`).then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch(`${API_URL}/api/cascos/orders`, { headers: authH }).then(r => r.ok ? r.json() : { orders: [] }).catch(() => ({ orders: [] })),
+      ]);
+      const cuenta = (ing.items || []).filter(i => normRef(i.projectRef) === refN);
+      const cascosAll = (cascos.orders || []).filter(o => normRef(o.ref) === refN);
+      const ventas = cascosAll.filter(o => o.kind !== 'compra');
+      const comprasCascos = cascosAll.filter(o => o.kind === 'compra');
+      setDocsData({ cuenta, compras: costs || [], ventas, comprasCascos });
+    } catch (e) { /* noop */ } finally { setDocsLoading(false); }
+  };
+  const verIngresoDoc = async (docId) => {
+    try {
+      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos/doc/${docId}`);
+      if (!r.ok) { alert('Documento no disponible'); return; }
+      const j = await r.json();
+      const b64 = j.dataBase64 || '';
+      if (!b64) { alert('Documento no disponible'); return; }
+      const mime = j.mime || 'application/pdf';
+      const src = b64.startsWith('data:') ? b64 : `data:${mime};base64,${b64}`;
+      const w = window.open(); if (w) { w.document.write(`<iframe src="${src}" style="width:100%;height:100%;border:0"></iframe>`); } else window.open(src, '_blank');
+    } catch { alert('Documento no disponible'); }
   };
 
   const delCost = async (id) => {
@@ -604,9 +641,14 @@ const RentabilidadPanel = ({ currentUser }) => {
                 <td className={`p-3 text-right font-bold ${r.alertaMargen ? 'text-red-600' : r.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{r.margenPct}%</td>
                 <td className={`p-3 text-right font-mono ${(r.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>{eur(r.pendienteCobro)}</td>
                 <td className="p-3 text-center">
-                  <button onClick={() => openCosts(r)} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-100 flex items-center gap-1 mx-auto">
-                    <Plus size={12} /> Coste
-                  </button>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <button onClick={() => openCosts(r)} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-100 flex items-center gap-1">
+                      <Plus size={12} /> Coste
+                    </button>
+                    <button onClick={() => openDocs(r)} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 flex items-center gap-1" title="Entregas a cuenta, compras y ventas del proyecto">
+                      <FolderOpen size={12} /> Docs
+                    </button>
+                  </div>
                 </td>
                 <td className="p-3 text-center">
                   {r.invoiceId ? (
@@ -766,6 +808,80 @@ const RentabilidadPanel = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Modal de DOCUMENTOS del proyecto: entregas a cuenta, compras y ventas */}
+      {docsModal && (() => {
+        const sum = (arr, f) => arr.reduce((s, x) => s + (Number(f(x)) || 0), 0);
+        const comprasTot = sum(docsData.compras || [], c => c.importe);
+        const ventaTot = docsModal.venta || 0;
+        const cuentaTot = sum(docsData.cuenta || [], i => i.importe);
+        const TABS = [
+          { id: 'cuenta', label: 'Entregas a cuenta', icon: Banknote, n: (docsData.cuenta || []).length },
+          { id: 'compras', label: 'Compras', icon: ShoppingCart, n: (docsData.compras || []).length },
+          { id: 'ventas', label: 'Ventas', icon: Tag, n: (docsData.ventas || []).length },
+        ];
+        return (
+        <div className="fixed inset-0 bg-black/60 z-[130] flex items-center justify-center p-4" onClick={() => setDocsModal(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-black">Documentos · {docsModal.ref}</h2>
+                <p className="text-xs text-indigo-200">{docsModal.cliente} · Venta {eur(ventaTot)} · A cuenta {eur(cuentaTot)} · Compras {eur(comprasTot)}</p>
+              </div>
+              <button onClick={() => setDocsModal(null)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
+            </div>
+            <div className="flex gap-1 px-4 pt-3 bg-slate-50">
+              {TABS.map(t => (
+                <button key={t.id} onClick={() => setDocsTab(t.id)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-t-xl text-sm font-bold ${docsTab === t.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  <t.icon size={15} /> {t.label} <span className="text-[10px] bg-slate-200 text-slate-600 rounded-full px-1.5">{t.n}</span>
+                </button>
+              ))}
+            </div>
+            <div className="p-5 overflow-auto">
+              {docsLoading && <p className="text-center text-slate-400 py-8 text-sm">Cargando…</p>}
+
+              {!docsLoading && docsTab === 'cuenta' && (
+                (docsData.cuenta || []).length === 0 ? <p className="text-center text-slate-400 py-8 text-sm">Sin entregas a cuenta para este proyecto.</p> :
+                <table className="w-full text-sm"><thead className="text-slate-500"><tr><th className="text-left p-2 text-xs uppercase">Fecha</th><th className="text-left p-2 text-xs uppercase">Cliente</th><th className="text-right p-2 text-xs uppercase">Importe</th><th className="p-2"></th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">{docsData.cuenta.map((i, k) => (
+                    <tr key={k}><td className="p-2 text-slate-500">{i.fecha || '—'}</td><td className="p-2">{i.cliente || '—'}</td>
+                      <td className="p-2 text-right font-mono font-bold text-teal-700">{eur(i.importe)}</td>
+                      <td className="p-2 text-right">{i.docId && <button onClick={() => verIngresoDoc(i.docId)} title="Ver documento" className="text-slate-500 hover:text-teal-600">📎</button>}</td></tr>
+                  ))}</tbody></table>
+              )}
+
+              {!docsLoading && docsTab === 'compras' && (
+                ((docsData.compras || []).length === 0 && (docsData.comprasCascos || []).length === 0) ? <p className="text-center text-slate-400 py-8 text-sm">Sin compras asociadas. Asóciala desde el botón “Coste”.</p> :
+                <table className="w-full text-sm"><thead className="text-slate-500"><tr><th className="text-left p-2 text-xs uppercase">Proveedor</th><th className="text-left p-2 text-xs uppercase">Concepto / Partida</th><th className="text-right p-2 text-xs uppercase">Importe</th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">{(docsData.compras || []).map((c, k) => (
+                    <tr key={k}><td className="p-2 font-medium">{c.proveedor || '—'}</td>
+                      <td className="p-2 text-slate-600">{c.concepto || '—'} <span className="text-[10px] text-slate-400">· {c.categoria}</span>{c.expediente && <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black">🔗 {c.expediente}</span>}</td>
+                      <td className="p-2 text-right font-mono font-bold text-orange-600">{eur(c.importe)}</td></tr>
+                  ))}</tbody></table>
+              )}
+
+              {!docsLoading && docsTab === 'ventas' && (
+                <>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {docsModal.orderRef && <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-black">Pedido {docsModal.orderRef}</span>}
+                    {docsModal.invoiceNumber && <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[11px] font-black">Factura {docsModal.invoiceNumber}</span>}
+                    {docsModal.albaranRef && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-[11px] font-black">Albarán {docsModal.albaranRef}</span>}
+                  </div>
+                  {(docsData.ventas || []).length === 0 ? <p className="text-center text-slate-400 py-6 text-sm">Sin documentos de venta de Cocina Desmontada para este proyecto.</p> :
+                  <table className="w-full text-sm"><thead className="text-slate-500"><tr><th className="text-left p-2 text-xs uppercase">Tipo</th><th className="text-left p-2 text-xs uppercase">Fecha</th><th className="text-right p-2 text-xs uppercase">Total</th></tr></thead>
+                    <tbody className="divide-y divide-slate-100">{docsData.ventas.map((o, k) => (
+                      <tr key={k}><td className="p-2 font-medium">{o.kind === 'pedido' ? 'Pedido' : 'Presupuesto'} cascos {o.expediente && <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black">🔗 {o.expediente}</span>}</td>
+                        <td className="p-2 text-slate-500">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-ES') : '—'}</td>
+                        <td className="p-2 text-right font-mono font-bold text-emerald-700">{eur(o.total)}</td></tr>
+                    ))}</tbody></table>}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* Modal de conversión: presupuesto → pedido → albarán → factura. SIEMPRE
           pregunta el número del documento de destino, dejando huella de origen/destino. */}
