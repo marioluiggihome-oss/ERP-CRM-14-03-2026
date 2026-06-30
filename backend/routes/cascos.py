@@ -42,6 +42,7 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
             "ref": str(payload.get("ref") or ""),
             "ivaRate": float(payload.get("ivaRate") or 21),
             "descuento": float(payload.get("descuento") or 0),
+            "sede": str(payload.get("sede") or ""),  # sede de entrega (pedido a proveedor)
             "lines": payload.get("lines") or [],
             "total": float(payload.get("total") or 0),
             "createdByName": payload.get("createdByName", ""),

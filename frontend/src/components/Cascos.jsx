@@ -9,6 +9,16 @@ const auth = () => ({ 'Authorization': `Bearer ${getToken()}` });
 // Normaliza para búsqueda sin acentos ni mayúsculas.
 const norm = (s) => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
+// Sedes de entrega de PUBLIOFERTA, S.L. (Salamanca por defecto). Badajoz se retira
+// porque ya no existe. La sede elegida es la dirección de entrega del pedido a proveedor.
+const SEDES = [
+  { id: 'salamanca', label: 'Salamanca', dir: ['C. Caño de las Pimientas, 14', '37184 Salamanca', 'Tel. 923 245 377 · 605 033 396'] },
+  { id: 'valladolid', label: 'Valladolid', dir: ['C. Acero, 5', '47012 Valladolid', 'Tel. 983 212 191'] },
+  { id: 'leon', label: 'León', dir: ['Av. Párroco Pablo Diez, 624, D', '24010 León', 'Tel. 637 551 871'] },
+  { id: 'zamora', label: 'Zamora', dir: ['C. Labrador, s/n, parcela B6', '49192 Zamora', 'Tel. 980 532 634'] },
+];
+const MARCA_REGISTRADA = 'LUIGGI HOME es una marca registrada de PUBLIOFERTA, S.L.';
+
 // Dibujo esquemático (SVG) reconocible según el tipo de casco.
 function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
   const W = 120, H = 150, pad = 10;
@@ -106,6 +116,7 @@ const Cascos = ({ state }) => {
   const userDtoDesmontada = Number(currentUser?.discountDesmontada ?? currentUser?.commercialDiscount ?? 0) || 0;
   const [descuento, setDescuento] = useState(userDtoDesmontada);
   const [descProveedor, setDescProveedor] = useState(0); // descuento comercial del proveedor
+  const [sede, setSede] = useState('salamanca'); // sede de entrega del pedido a proveedor
   // Valor de punto (coeficiente) configurable en Master (Cocina Des-Montada); multiplica el precio de tarifa.
   const coef = Number(state?.pointValueDesmontada ?? state?.settings?.cascosPointValue) || 1;
   const pc = (base) => (base == null ? null : Math.round(base * coef * 100) / 100);
@@ -187,7 +198,7 @@ const Cascos = ({ state }) => {
   };
   // Nombre del casco, con la altura cuando es relevante (columnas/altillos),
   // para distinguir variantes como 200 vs 220 de altura.
-  const altoSensible = (tp) => /columna|semicolumna|altillo/i.test(tp || '');
+  const altoSensible = (tp) => /columna|semicolumna|altillo|encimera/i.test(tp || '');
   const nombre = (m) => altoSensible(m.tipo) ? `${m.tipo} · ${med(m.alto)} ${unidad} alto` : m.tipo;
   // Precio base (tarifa) de una línea, con respaldo para pedidos antiguos.
   const baseDe = (l) => (l.precioBase != null ? l.precioBase : (coef ? (l.precio || 0) / coef : (l.precio || 0)));
@@ -292,11 +303,22 @@ const Cascos = ({ state }) => {
     if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
       try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 12, 32, 16); } catch {}
     } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+    const Hp = pdf.internal.pageSize.getHeight();
+    const sedeObj = SEDES.find(s => s.id === sede) || SEDES[0];
     pdf.setFontSize(16); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
     pdf.text('PEDIDO A PROVEEDOR', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
     pdf.setFontSize(10); pdf.setTextColor(120);
     pdf.text(`${cliente ? 'Ref. cliente: ' + cliente : ''}${ref ? '  ·  ' + ref : ''}`, W - M, 24, { align: 'right' });
     pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
+    // Dirección de entrega (sede elegida).
+    pdf.setFontSize(8); pdf.setTextColor(130); pdf.setFont(undefined, 'bold');
+    pdf.text('DIRECCIÓN DE ENTREGA', M, 37); pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(9.5); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
+    pdf.text(`LUIGGI HOME · ${sedeObj.label}`, M, 42.5); pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(8.5); pdf.setTextColor(70);
+    let ay = 47.5;
+    sedeObj.dir.forEach(line => { pdf.text(line, M, ay); ay += 4.4; });
+    const tableStart = Math.max(ay + 3, 56);
     const brutoP = cart.reduce((s, l) => s + baseDe(l) * l.qty, 0);
     const dtoP = brutoP * (d / 100);
     const subP = brutoP - dtoP;
@@ -306,22 +328,31 @@ const Cascos = ({ state }) => {
     try {
       await fetch(`${API_URL}/api/cascos/orders`, {
         method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'compra', expediente, cliente, ref, ivaRate, descuento: d, lines: cart, total: Math.round(totP * 100) / 100, userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }),
+        body: JSON.stringify({ kind: 'compra', expediente, cliente, ref, ivaRate, descuento: d, lines: cart, total: Math.round(totP * 100) / 100, sede: sedeObj.label, userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }),
       });
     } catch {}
     autoTable(pdf, {
-      startY: 38,
+      startY: tableStart,
+      theme: 'grid',
       head: [['Ud.', 'Módulo', 'Acabado', `Medidas Al×An×F (${unidad})`, 'Tarifa', 'Importe']],
       body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)}`, eur(baseDe(l)), eur(baseDe(l) * l.qty)]),
-      styles: { fontSize: 8.5, cellPadding: 1.8 },
-      headStyles: { fillColor: [30, 27, 65], textColor: [255, 255, 255] },
+      styles: { fontSize: 9, cellPadding: { top: 2.6, bottom: 2.6, left: 2.4, right: 2.4 }, valign: 'middle', lineColor: [209, 213, 219], lineWidth: 0.1, minCellHeight: 8 },
+      headStyles: { fillColor: [30, 27, 65], textColor: [255, 255, 255], fontSize: 9, halign: 'left', minCellHeight: 9 },
       alternateRowStyles: { fillColor: [245, 245, 250] },
-      columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 2: { fontStyle: 'bold', textColor: [49, 46, 129] }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 13 },
+        1: { cellWidth: 58, fontStyle: 'bold' },
+        2: { cellWidth: 36, fontStyle: 'bold', textColor: [49, 46, 129] },
+        3: { cellWidth: 35, halign: 'center' },
+        4: { halign: 'right', cellWidth: 20 },
+        5: { halign: 'right', cellWidth: 20, fontStyle: 'bold' },
+      },
       margin: { left: M, right: M },
     });
-    let y = (pdf.lastAutoTable?.finalY || 38) + 8;
+    let y = (pdf.lastAutoTable?.finalY || tableStart) + 8;
+    if (y > Hp - 50) { pdf.addPage(); y = 20; }
     const bx = W - M - 70;
-    pdf.setFontSize(10); pdf.setTextColor(40);
+    pdf.setFontSize(10); pdf.setTextColor(40); pdf.setFont(undefined, 'normal');
     pdf.text('Bruto tarifa', bx, y); pdf.text(eur(brutoP), W - M, y, { align: 'right' }); y += 6;
     pdf.text(`Descuento comercial ${d}%`, bx, y); pdf.text('-' + eur(dtoP), W - M, y, { align: 'right' }); y += 6;
     pdf.text('Base', bx, y); pdf.text(eur(subP), W - M, y, { align: 'right' }); y += 6;
@@ -329,6 +360,13 @@ const Cascos = ({ state }) => {
     pdf.setFillColor(30, 27, 65); pdf.roundedRect(bx - 4, y, 74 + 4, 11, 2, 2, 'F');
     pdf.setFontSize(13); pdf.setTextColor(255); pdf.setFont(undefined, 'bold');
     pdf.text('TOTAL', bx, y + 7.5); pdf.text(eur(totP), W - M, y + 7.5, { align: 'right' });
+    pdf.setFont(undefined, 'normal');
+    // Pie de página en todas las páginas: marca registrada (letra pequeña).
+    const np = pdf.getNumberOfPages();
+    for (let i = 1; i <= np; i++) {
+      pdf.setPage(i); pdf.setFontSize(7.5); pdf.setTextColor(150);
+      pdf.text(MARCA_REGISTRADA, W / 2, Hp - 8, { align: 'center' });
+    }
     pdf.save(`PedidoProveedor_${(cliente || 'cascos').replace(/\s+/g, '_')}.pdf`);
   };
 
@@ -622,6 +660,13 @@ const Cascos = ({ state }) => {
             <div className="grid grid-cols-2 gap-2">
               <button onClick={generarPedido} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50"><ClipboardList size={16} /> Pedido</button>
               <button onClick={exportarPDF} disabled={!cart.length} className="flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50"><Download size={16} /> PDF</button>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase shrink-0">Sede de entrega</label>
+              <select value={sede} onChange={e => setSede(e.target.value)} title="Dirección de entrega del pedido a proveedor"
+                className="flex-1 min-w-0 px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                {SEDES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
             </div>
             <button onClick={pedidoProveedor} disabled={!cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900 disabled:opacity-50"><ClipboardList size={16} /> Pedido a proveedor</button>
           </div>
