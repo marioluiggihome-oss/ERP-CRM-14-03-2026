@@ -447,19 +447,16 @@ const Cascos = ({ state }) => {
 
   return (
     <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-[#f0e9d8] overflow-y-auto">
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white p-5 mb-5 shadow-lg flex items-center justify-between gap-3 flex-wrap">
-        <div className="ml-16 sm:ml-16">
-          <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Box size={22} /> Cocina Desmontada</h1>
-          <p className="text-xs sm:text-sm text-white/80">Presupuestador de cascos: busca por tipo y medidas, monta el presupuesto y genera el pedido.</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Ventas: presupuestos"><FolderOpen size={16} /> Presupuestos</button>
-          <button onClick={() => openHistory('pedido')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Pedidos de venta (cliente)"><ClipboardList size={16} /> Pedidos Ventas</button>
-          <button onClick={() => openHistory('compra')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Pedidos de compra (proveedor)"><Download size={16} /> Pedidos Compras</button>
+      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white px-4 py-2.5 mb-4 shadow-lg flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="ml-14 sm:ml-2 text-base sm:text-lg font-black flex items-center gap-2 whitespace-nowrap"><Box size={18} /> Cocina Desmontada</h1>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs" title="Ventas: presupuestos"><FolderOpen size={15} /> Presupuestos</button>
+          <button onClick={() => openHistory('pedido')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs" title="Pedidos de venta (cliente)"><ClipboardList size={15} /> Pedidos Ventas</button>
+          <button onClick={() => openHistory('compra')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs" title="Pedidos de compra (proveedor)"><Download size={15} /> Pedidos Compras</button>
           {isAdmin && (
-          <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm disabled:opacity-50">{genCat ? <Loader size={16} className="animate-spin" /> : <Download size={16} />} Catálogo</button>
+          <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-bold text-xs disabled:opacity-50">{genCat ? <Loader size={15} className="animate-spin" /> : <Download size={15} />} Catálogo</button>
           )}
-          <button onClick={nuevoPedido} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white text-indigo-700 rounded-xl font-bold text-xs sm:text-sm hover:bg-indigo-50"><Plus size={16} /> Nuevo</button>
+          <button onClick={nuevoPedido} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-indigo-700 rounded-lg font-bold text-xs hover:bg-indigo-50"><Plus size={15} /> Nuevo</button>
         </div>
       </div>
 
