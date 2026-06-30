@@ -4,6 +4,7 @@
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, Plus, Trash2, RefreshCw, X, Euro, Upload, Sparkles, ArrowUp, ArrowDown, Filter, PackageCheck, Receipt, Truck } from 'lucide-react';
+import { getToken } from '../services/api';
 import RentabilidadLineas from './RentabilidadLineas';
 import ReportGenerator from './ReportGenerator';
 import IngresosACuenta from './IngresosACuenta';
@@ -62,12 +63,47 @@ const RentabilidadPanel = ({ currentUser }) => {
 
   useEffect(() => { load(); }, [load]);
 
+  const [compras, setCompras] = useState(null); // null = panel oculto
+  const [compraCat, setCompraCat] = useState('MOBILIARIO');
   const openCosts = async (row) => {
     setCostModal(row);
+    setCompras(null);
     try {
       const r = await fetch(`${API_URL}/api/project-costs?projectRef=${encodeURIComponent(row.ref)}`);
       setCosts(r.ok ? await r.json() : []);
     } catch (e) { setCosts([]); }
+  };
+
+  // Carga las compras (pedidos a proveedor de Cocina Desmontada) para asociar como coste.
+  const cargarCompras = async () => {
+    if (compras) { setCompras(null); return; }
+    try {
+      const tok = getToken();
+      const r = await fetch(`${API_URL}/api/cascos/orders?kind=compra`, { headers: tok ? { Authorization: `Bearer ${tok}` } : {} });
+      const d = r.ok ? await r.json() : { orders: [] };
+      const mine = normRef(costModal?.ref);
+      const list = (d.orders || []).sort((a, b) => (normRef(b.ref) === mine) - (normRef(a.ref) === mine));
+      setCompras(list);
+    } catch (e) { setCompras([]); }
+  };
+
+  // Asocia una compra como coste del proyecto, aplicando la partida elegida (importe = total de la compra).
+  const asociarCompra = async (o) => {
+    try {
+      const r = await fetch(`${API_URL}/api/project-costs`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectRef: costModal.ref,
+          proveedor: o.createdByName || 'Cascos (ACB)',
+          concepto: `Compra cascos ${o.expediente || ''} · ${(o.lines || []).length} líneas`.trim(),
+          categoria: compraCat,
+          importe: Number(o.total) || 0,
+          source: 'compra', compraId: o.id, expediente: o.expediente || '',
+        }),
+      });
+      if (r.ok) { setCompras(null); await openCosts(costModal); load(); }
+      else alert('No se pudo asociar la compra.');
+    } catch (e) { alert('No se pudo asociar la compra.'); }
   };
 
   const addCost = async () => {
@@ -666,6 +702,40 @@ const RentabilidadPanel = ({ currentUser }) => {
                 <input type="number" step="0.01" value={form.importe} onChange={e => setForm({ ...form, importe: e.target.value })} placeholder="EUR" className="px-2 py-2 border rounded-lg text-sm text-right" />
                 <button onClick={addCost} className="px-3 py-2 bg-emerald-600 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-1"><Plus size={14} /> Anadir</button>
               </div>
+
+              {/* Asociar una compra (pedido a proveedor de Cocina Desmontada) como coste por partida */}
+              <div className="border border-indigo-100 rounded-xl p-3 bg-indigo-50/40">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-indigo-800 uppercase">Asociar compra</span>
+                    <span className="text-[11px] text-slate-500">aplica el total a una partida</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select value={compraCat} onChange={e => setCompraCat(e.target.value)} className="px-2 py-1.5 border rounded-lg text-xs" title="Partida a la que se imputa la compra">
+                      {['MOBILIARIO','ELECTRODOMESTICOS','ENCIMERA','TRANSPORTE','MONTAJE','SUBCONTRATA','OTROS'].map(c => <option key={c}>{c}</option>)}
+                    </select>
+                    <button onClick={cargarCompras} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-bold text-xs flex items-center gap-1"><PackageCheck size={13} /> {compras ? 'Ocultar' : 'Buscar compras'}</button>
+                  </div>
+                </div>
+                {Array.isArray(compras) && (
+                  <div className="mt-3 max-h-48 overflow-y-auto divide-y divide-indigo-100">
+                    {compras.length === 0 && <p className="text-xs text-slate-400 py-3 text-center">No hay pedidos de compra guardados.</p>}
+                    {compras.map(o => {
+                      const match = normRef(o.ref) && normRef(o.ref) === normRef(costModal.ref);
+                      return (
+                        <div key={o.id} className="flex items-center gap-2 py-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-700 truncate">{o.cliente || 'Sin cliente'}{o.ref ? ` · ${o.ref}` : ''} {match && <span className="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[9px] font-black">↔ coincide</span>}</p>
+                            <p className="text-[10px] text-slate-400">{o.expediente ? `🔗 ${o.expediente} · ` : ''}{(o.lines || []).length} líneas · {o.createdAt ? new Date(o.createdAt).toLocaleDateString('es-ES') : ''}</p>
+                          </div>
+                          <span className="text-xs font-black text-slate-800">{eur(o.total)}</span>
+                          <button onClick={() => asociarCompra(o)} className="px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-[11px] font-bold hover:bg-emerald-700">Asociar</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               {/* Lista de costes */}
               <table className="w-full text-sm">
                 <thead className="text-slate-500"><tr><th className="text-left p-2 text-xs uppercase">Proveedor</th><th className="text-left p-2 text-xs uppercase">Concepto</th><th className="text-left p-2 text-xs uppercase">Cat.</th><th className="text-right p-2 text-xs uppercase">Importe</th><th></th></tr></thead>
@@ -673,7 +743,7 @@ const RentabilidadPanel = ({ currentUser }) => {
                   {costs.map(c => (
                     <tr key={c.id}>
                       <td className="p-2 font-medium">{c.proveedor || '-'}</td>
-                      <td className="p-2 text-slate-600">{c.concepto || '-'}</td>
+                      <td className="p-2 text-slate-600">{c.concepto || '-'}{c.expediente && <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black">🔗 {c.expediente}</span>}</td>
                       <td className="p-2 text-[11px] text-slate-500">{c.categoria}</td>
                       <td className="p-2 text-right font-mono font-bold text-orange-600">{eur(c.importe)}</td>
                       <td className="p-2 text-right"><button onClick={() => delCost(c.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button></td>

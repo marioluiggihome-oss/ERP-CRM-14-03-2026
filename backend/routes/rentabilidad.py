@@ -48,6 +48,8 @@ async def add_project_cost(cost: dict):
             "importe": float(cost.get("importe", 0) or 0),
             "fecha": cost.get("fecha", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "source": cost.get("source", "manual"),
+            "compraId": cost.get("compraId", ""),      # vínculo con pedido de compra (cascos)
+            "expediente": cost.get("expediente", ""),  # expediente que relaciona venta y compra
             "createdAt": datetime.now(timezone.utc).isoformat(),
         }
         await db.project_costs.insert_one(doc)
