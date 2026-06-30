@@ -188,7 +188,10 @@ const Cascos = ({ state }) => {
   // Nombre del casco, con la altura cuando es relevante (columnas/altillos),
   // para distinguir variantes como 200 vs 220 de altura.
   const altoSensible = (tp) => /columna|semicolumna|altillo/i.test(tp || '');
-  const nombre = (m) => altoSensible(m.tipo) ? `${m.tipo} · ${med(m.alto)} ${unidad} alto` : m.tipo;
+  // Quita rangos de altura del nombre (p. ej. "2000/2200", "1300/1500", "X580")
+  // porque la altura real se muestra aparte, de forma independiente.
+  const limpiaTipo = (tp) => String(tp || '').replace(/\s*\d{3,4}\/\d{3,4}\s*/g, ' ').replace(/\s*X\d{2,4}\s*/gi, ' ').replace(/\s{2,}/g, ' ').trim();
+  const nombre = (m) => altoSensible(m.tipo) ? `${limpiaTipo(m.tipo)} · ${med(m.alto)} ${unidad} alto` : m.tipo;
   // Precio base (tarifa) de una línea, con respaldo para pedidos antiguos.
   const baseDe = (l) => (l.precioBase != null ? l.precioBase : (coef ? (l.precio || 0) / coef : (l.precio || 0)));
   const setQty = (key, q) => setCart(prev => prev.map(l => l.key === key ? { ...l, qty: Math.max(1, parseInt(q) || 1) } : l));
@@ -297,6 +300,13 @@ const Cascos = ({ state }) => {
     pdf.setFontSize(10); pdf.setTextColor(120);
     pdf.text(`${cliente ? 'Ref. cliente: ' + cliente : ''}${ref ? '  ·  ' + ref : ''}`, W - M, 24, { align: 'right' });
     pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
+    // Datos de entrega / comprador (empresa) tomados de Ajustes
+    const cs = state?.settings || {};
+    const buyer = [cs.companyName || 'LUIGGI HOME', cs.companyAddress, cs.companyTaxId ? `CIF: ${cs.companyTaxId}` : '', cs.companyPhone].filter(Boolean);
+    pdf.setFontSize(8); pdf.setTextColor(110); pdf.setFont(undefined, 'bold');
+    pdf.text('DATOS DE ENTREGA / COMPRADOR', M, 36); pdf.setFont(undefined, 'normal'); pdf.setTextColor(70);
+    let yc = 40; buyer.forEach(l => { pdf.text(String(l), M, yc); yc += 4; });
+    const tableStart = Math.max(38, yc + 2);
     const brutoP = cart.reduce((s, l) => s + baseDe(l) * l.qty, 0);
     const dtoP = brutoP * (d / 100);
     const subP = brutoP - dtoP;
@@ -310,7 +320,7 @@ const Cascos = ({ state }) => {
       });
     } catch {}
     autoTable(pdf, {
-      startY: 38,
+      startY: tableStart,
       head: [['Ud.', 'Módulo', 'Acabado', `Medidas Al×An×F (${unidad})`, 'Tarifa', 'Importe']],
       body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)}`, eur(baseDe(l)), eur(baseDe(l) * l.qty)]),
       styles: { fontSize: 8.5, cellPadding: 1.8 },
