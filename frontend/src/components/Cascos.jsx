@@ -167,7 +167,7 @@ const Cascos = ({ state }) => {
     return g === 'kit' ? `${l.colorLabel} · ${l.grosor}mm` : `${gamaLabelOf(g)} · ${l.grosor}mm`;
   };
   // Muestra de color para el punto identificativo de cada acabado.
-  const SWATCH = { blanco: '#f1f5f9', aluminio: '#cbd5e1', grafito: '#374151', blancoHidrofugo: '#eef2ff', robleAurora: '#c8a063', spike: '#9ca3af', stone: '#a8a29e', roble: '#b07c4f', olmo: '#a8794e', blancoEsp: '#f8fafc' };
+  const SWATCH = { blanco: '#f1f5f9', aluminio: '#cbd5e1', grafito: '#202023', blancoHidrofugo: '#f6f6f4', robleAurora: '#d9c6a4', spike: '#b58d86', stone: '#c9c2b3', roble: '#b07c4f', olmo: '#a8794e', blancoEsp: '#f8fafc' };
 
   const addToCart = (m) => {
     const base = m.precios[colorActivo];        // precio de tarifa (puntos)
