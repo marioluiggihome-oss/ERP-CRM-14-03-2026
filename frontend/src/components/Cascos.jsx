@@ -454,8 +454,8 @@ const Cascos = ({ state }) => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => openHistory('presupuesto')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Ventas: presupuestos"><FolderOpen size={16} /> Presupuestos</button>
-          <button onClick={() => openHistory('pedido')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Ventas: pedidos de cliente"><ClipboardList size={16} /> Pedidos</button>
-          <button onClick={() => openHistory('compra')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Compras: pedidos a proveedor"><Download size={16} /> Compras</button>
+          <button onClick={() => openHistory('pedido')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Pedidos de venta (cliente)"><ClipboardList size={16} /> Pedidos Ventas</button>
+          <button onClick={() => openHistory('compra')} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm" title="Pedidos de compra (proveedor)"><Download size={16} /> Pedidos Compras</button>
           {isAdmin && (
           <button onClick={generarCatalogo} disabled={genCat} title="Descargar catálogo en puntos (PDF)" className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm disabled:opacity-50">{genCat ? <Loader size={16} className="animate-spin" /> : <Download size={16} />} Catálogo</button>
           )}
@@ -650,7 +650,7 @@ const Cascos = ({ state }) => {
         <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={() => setOrders(null)}>
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h3 className="font-black text-slate-800">{histKind === 'compra' ? 'Compras (proveedor)' : histKind === 'pedido' ? 'Pedidos (ventas)' : 'Presupuestos (ventas)'} de cascos</h3>
+              <h3 className="font-black text-slate-800">{histKind === 'compra' ? 'Pedidos Compras (proveedor)' : histKind === 'pedido' ? 'Pedidos Ventas (cliente)' : 'Presupuestos (ventas)'} de cascos</h3>
               <button onClick={() => setOrders(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
             </div>
             <div className="p-4 overflow-y-auto">
