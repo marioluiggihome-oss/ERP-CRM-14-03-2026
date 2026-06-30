@@ -436,7 +436,7 @@ const Cascos = ({ state }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-[#e9dcc3] overflow-y-auto">
+    <div className="h-full flex flex-col p-4 sm:p-6 pb-32 lg:pb-6 bg-[#f0e9d8] overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 text-white p-5 mb-5 shadow-lg flex items-center justify-between gap-3 flex-wrap">
         <div className="ml-16 sm:ml-16">
           <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Box size={22} /> Cocina Desmontada</h1>
@@ -478,7 +478,7 @@ const Cascos = ({ state }) => {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Color</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1 flex items-center gap-1.5">Color <span className="inline-block w-3 h-3 rounded-full border border-slate-300" style={{ background: SWATCH[colorActivo] || '#e2e8f0' }} /></label>
                 <select value={colorActivo} onChange={e => setColor(e.target.value)} disabled={colores.length <= 1} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white disabled:bg-slate-50 disabled:text-slate-400">
                   {colores.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
@@ -527,10 +527,10 @@ const Cascos = ({ state }) => {
             <div className="max-h-[55vh] overflow-y-auto divide-y divide-slate-100">
               {resultados.map(m => (
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
-                  className="w-full text-left flex items-center gap-3 p-3 hover:bg-indigo-50 transition-colors cursor-pointer group">
+                  className="w-full text-left flex items-center gap-3 p-3 odd:bg-white even:bg-[#f7f1e3] hover:bg-indigo-50 transition-colors cursor-pointer group">
                   <div className="w-14 h-20 shrink-0 bg-slate-50 rounded border border-slate-100"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-800 text-sm sm:text-base truncate">{nombre(m)} <span className="text-slate-400 font-normal text-xs">{m.grosor}mm</span></p>
+                    <p className="font-bold text-slate-800 text-sm sm:text-base truncate flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-full border border-slate-300 shrink-0" style={{ background: SWATCH[colorActivo] || '#e2e8f0' }} title={colorLabel(colorActivo)} />{nombre(m)} <span className="text-slate-400 font-normal text-xs">{m.grosor}mm</span></p>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {[['Alto', m.alto], ['Ancho', m.ancho], ['Fondo', m.fondo]].map(([lab, val]) => (
                         <span key={lab} className="inline-flex items-baseline gap-1 px-2.5 py-1 bg-slate-100 rounded-lg">
@@ -556,7 +556,7 @@ const Cascos = ({ state }) => {
               {resultados.map(m => (
                 <button key={m.id} type="button" onClick={() => addToCart(m)}
                   className="relative flex flex-col items-center text-center border border-slate-200 rounded-xl p-2.5 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md transition-all cursor-pointer group">
-                  <div className="w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /></div>
+                  <div className="relative w-full h-24 bg-slate-50 rounded-lg border border-slate-100 mb-2"><CascoDibujo dibujo={m.dibujo} tipo={m.tipo} alto={m.alto} ancho={m.ancho} fondo={m.fondo} unidad={unidad} /><span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full border border-slate-300 shadow-sm" style={{ background: SWATCH[colorActivo] || '#e2e8f0' }} title={colorLabel(colorActivo)} /></div>
                   <p className="font-bold text-slate-800 text-xs leading-tight line-clamp-2">{nombre(m)}</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">{med(m.alto)}×{med(m.ancho)}×{med(m.fondo)} {unidad} · {m.grosor}mm</p>
                   <p className="font-black text-indigo-700 text-sm mt-1">{eur(pc(m.precios[colorActivo]))}</p>
