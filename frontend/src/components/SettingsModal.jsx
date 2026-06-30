@@ -3251,6 +3251,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 </div>
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <h3 className="text-base font-black text-slate-900 uppercase mb-1">Centros / direcciones de envío</h3>
+                <p className="text-xs text-slate-500 mb-3">Uno por línea, con el formato <b>Nombre — Dirección completa</b>. Aparecerán como opciones de "Centro de envío" al generar pedidos a proveedor.</p>
+                <textarea rows={4} placeholder={"Central Cádiz — C/ Ejemplo 1, 11000 Cádiz\nAlmacén Sevilla — Pol. Ind. ..., 41000 Sevilla"}
+                  defaultValue={state.settings?.centrosEnvio || ''}
+                  onChange={async (e) => { try { await settingsAPI.update({ centrosEnvio: e.target.value }); } catch (err) { console.error(err); } }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono outline-none focus:border-indigo-500" />
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><RefreshCw size={18} /></div>
                   <h3 className="text-base font-black text-slate-900 uppercase">Email (envío de pedidos)</h3>

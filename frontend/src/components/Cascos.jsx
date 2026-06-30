@@ -9,6 +9,15 @@ const auth = () => ({ 'Authorization': `Bearer ${getToken()}` });
 // Normaliza para búsqueda sin acentos ni mayúsculas.
 const norm = (s) => String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
+// Secciones por proveedor dentro de Cocina Desmontada. CASCOS ya operativo;
+// el resto quedan listos para cargar su tarifa.
+const SECCIONES = [
+  { id: 'cascos', label: 'CASCOS', desc: 'Módulos / cuerpos de mueble' },
+  { id: 'blum', label: 'BLUM', desc: 'Bisagras, cajones y gavetas' },
+  { id: 'gtv', label: 'GTV', desc: 'Cajones y gavetas' },
+  { id: 'emuca', label: 'EMUCA', desc: 'Bisagras' },
+];
+
 // Dibujo esquemático (SVG) reconocible según el tipo de casco.
 function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
   const W = 120, H = 150, pad = 10;
@@ -74,6 +83,7 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
 
 const Cascos = ({ state }) => {
   const currentUser = state?.currentUser;
+  const [seccion, setSeccion] = useState('cascos'); // proveedor activo: cascos | blum | gtv | emuca
   const [gama, setGama] = useState('kit');
   const [q, setQ] = useState(''); // búsqueda por palabras (fregadero, campana, altillo…)
   const [tipo, setTipo] = useState('');
@@ -106,6 +116,9 @@ const Cascos = ({ state }) => {
   const userDtoDesmontada = Number(currentUser?.discountDesmontada ?? currentUser?.commercialDiscount ?? 0) || 0;
   const [descuento, setDescuento] = useState(userDtoDesmontada);
   const [descProveedor, setDescProveedor] = useState(0); // descuento comercial del proveedor
+  // Centros de envío configurados en Ajustes (uno por línea: "Nombre — Dirección").
+  const centros = String(state?.settings?.centrosEnvio || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const [centroEnvio, setCentroEnvio] = useState('');
   // Valor de punto (coeficiente) configurable en Master (Cocina Des-Montada); multiplica el precio de tarifa.
   const coef = Number(state?.pointValueDesmontada ?? state?.settings?.cascosPointValue) || 1;
   const pc = (base) => (base == null ? null : Math.round(base * coef * 100) / 100);
@@ -302,7 +315,8 @@ const Cascos = ({ state }) => {
     pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
     // Datos de entrega / comprador (empresa) tomados de Ajustes
     const cs = state?.settings || {};
-    const buyer = [cs.companyName || 'LUIGGI HOME', cs.companyAddress, cs.companyTaxId ? `CIF: ${cs.companyTaxId}` : '', cs.companyPhone].filter(Boolean);
+    const entrega = centroEnvio || cs.companyAddress;
+    const buyer = [cs.companyName || 'LUIGGI HOME', entrega, cs.companyTaxId ? `CIF: ${cs.companyTaxId}` : '', cs.companyPhone].filter(Boolean);
     pdf.setFontSize(8); pdf.setTextColor(110); pdf.setFont(undefined, 'bold');
     pdf.text('DATOS DE ENTREGA / COMPRADOR', M, 36); pdf.setFont(undefined, 'normal'); pdf.setTextColor(70);
     let yc = 40; buyer.forEach(l => { pdf.text(String(l), M, yc); yc += 4; });
@@ -464,6 +478,17 @@ const Cascos = ({ state }) => {
         {/* Buscador + resultados */}
         {!panelExpanded && (
         <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* Pestañas por proveedor */}
+          <div className="flex gap-1 bg-white/60 rounded-xl p-1 border border-slate-200 overflow-x-auto">
+            {SECCIONES.map(s => (
+              <button key={s.id} onClick={() => setSeccion(s.id)}
+                className={`flex-1 min-w-[88px] px-3 py-2 rounded-lg text-sm font-black transition-colors ${seccion === s.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {seccion === 'cascos' ? (<>
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="relative mb-3">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -574,6 +599,14 @@ const Cascos = ({ state }) => {
             </div>
           </div>
           )}
+          </>) : (
+            <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-indigo-50 flex items-center justify-center"><Box size={26} className="text-indigo-400" /></div>
+              <h3 className="text-lg font-black text-slate-800">{(SECCIONES.find(s => s.id === seccion) || {}).label}</h3>
+              <p className="text-sm text-slate-500 mt-1">{(SECCIONES.find(s => s.id === seccion) || {}).desc}</p>
+              <p className="text-xs text-slate-400 mt-3 max-w-sm mx-auto">Catálogo en preparación. En cuanto carguemos la tarifa de este proveedor podrás buscar sus productos y añadirlos al mismo presupuesto.</p>
+            </div>
+          )}
         </div>
         )}
 
@@ -624,6 +657,15 @@ const Cascos = ({ state }) => {
             <div className="flex justify-between text-slate-500 items-center"><span className="flex items-center gap-1">IVA <input type="number" value={ivaRate} onChange={e => setIvaRate(Number(e.target.value) || 0)} className="w-16 px-2 py-0.5 border border-slate-200 rounded text-center" />%</span><span className="font-bold">{eur(iva)}</span></div>
             <div className="flex justify-between text-slate-900 text-lg font-black pt-1 bg-orange-50 -mx-1 px-2 rounded-lg py-1"><span>TOTAL</span><span className="text-orange-600">{eur(total)}</span></div>
           </div>
+          {centros.length > 0 && (
+            <div className="mt-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Centro de envío (para pedido a proveedor)</label>
+              <select value={centroEnvio} onChange={e => setCentroEnvio(e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                <option value="">— Usar dirección fiscal —</option>
+                {centros.map((c, i) => <option key={i} value={c}>{c}</option>)}
+              </select>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-2 mt-3">
             <button onClick={guardarPresupuesto} disabled={saving || !cart.length} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-600 text-white rounded-xl font-bold text-sm hover:bg-cyan-700 disabled:opacity-50">{saving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />} Guardar presupuesto</button>
             <div className="grid grid-cols-2 gap-2">
