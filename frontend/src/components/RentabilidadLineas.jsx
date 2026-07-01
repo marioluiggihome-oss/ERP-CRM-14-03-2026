@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FileText, Upload, Sparkles, Plus, Trash2, X, Save, Euro,
   Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw,
-  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck
+  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck, Users
 } from 'lucide-react';
+import { clientsAPI } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -84,6 +85,14 @@ const RentabilidadLineas = ({ currentUser }) => {
   // Paginacion
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
+  // Clientes ya importados (para consultar y filtrar la tabla por cliente)
+  const [clientsModal, setClientsModal] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [clientsQ, setClientsQ] = useState('');
+  const openClients = async () => {
+    setClientsModal(true);
+    try { const c = await clientsAPI.getAll(true); setClients(c || []); } catch { setClients([]); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -473,6 +482,9 @@ const RentabilidadLineas = ({ currentUser }) => {
           );
         })}
         <div className="ml-auto flex items-center gap-2">
+          <button onClick={openClients} className="px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700">
+            <Users size={16} /> Clientes
+          </button>
           {/* Multi-upload: subir varios documentos del tipo activo a la vez */}
           <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${parsingMulti ? 'bg-green-200 text-green-600' : 'bg-green-600 text-white hover:bg-green-700'}`}>
             <Files size={16} className={parsingMulti ? 'animate-pulse' : ''} />
@@ -692,6 +704,51 @@ const RentabilidadLineas = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* ── Clientes importados ── */}
+      {clientsModal && (() => {
+        const qn = clientsQ.trim().toLowerCase();
+        const list = (clients || []).filter(c => !qn ||
+          (c.nombre || '').toLowerCase().includes(qn) ||
+          String(c.codigo || c.clientCode || '').toLowerCase().includes(qn) ||
+          (c.email || '').toLowerCase().includes(qn));
+        return (
+        <div className="fixed inset-0 bg-black/60 z-[150] flex items-center justify-center p-4" onClick={() => setClientsModal(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center shrink-0">
+              <h2 className="text-lg font-black flex items-center gap-2"><Users size={18} /> Clientes importados ({(clients || []).length})</h2>
+              <button onClick={() => setClientsModal(false)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
+            </div>
+            <div className="p-4 border-b border-slate-100">
+              <input value={clientsQ} onChange={e => setClientsQ(e.target.value)} placeholder="Buscar por nombre, código o email…"
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-400" autoFocus />
+            </div>
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500 sticky top-0"><tr>
+                  <th className="text-left p-2.5 text-[10px] font-black uppercase">Nombre</th>
+                  <th className="text-left p-2.5 text-[10px] font-black uppercase">Código</th>
+                  <th className="text-left p-2.5 text-[10px] font-black uppercase">Contacto</th>
+                  <th className="p-2.5"></th>
+                </tr></thead>
+                <tbody className="divide-y divide-slate-100">
+                  {list.map((c, k) => (
+                    <tr key={c.id || k} className="hover:bg-slate-50">
+                      <td className="p-2.5 font-bold text-slate-700">{c.nombre || '—'}</td>
+                      <td className="p-2.5 text-slate-500">{c.codigo || c.clientCode || '—'}</td>
+                      <td className="p-2.5 text-slate-500 text-xs">{[c.email, c.telefono || c.phone].filter(Boolean).join(' · ') || '—'}</td>
+                      <td className="p-2.5 text-right"><button onClick={() => { setColumnFilters(prev => ({ ...prev, cliente: c.nombre || '' })); setCurrentPage(1); setClientsModal(false); }}
+                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Ver documentos</button></td>
+                    </tr>
+                  ))}
+                  {list.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-slate-400 text-sm">Sin clientes.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* ── Editor de ficha ── */}
       {editor && (
