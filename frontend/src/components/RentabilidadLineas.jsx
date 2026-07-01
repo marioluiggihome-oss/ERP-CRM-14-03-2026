@@ -352,6 +352,13 @@ const RentabilidadLineas = ({ currentUser }) => {
     finally { setConverting(''); }
   };
 
+  // Salta al documento vinculado (origen/destino): cambia de pestaña y filtra por su ref.
+  const irADocumento = (tipo, ref) => {
+    if (tipo) setDocType(tipo);
+    setColumnFilters(prev => ({ ...prev, ref: ref || '' }));
+    setCurrentPage(1);
+  };
+
   const removeFicha = async (id) => {
     if (!window.confirm('Eliminar esta ficha y sus documentos?')) return;
     await fetch(`${API_URL}/api/rentabilidad/fichas/${id}`, { method: 'DELETE' });
@@ -648,8 +655,8 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <tr key={f.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openFicha(f.id)}>
                   <td className="p-3 font-black text-indigo-700">
                     {f.ref || '-'}
-                    {f.origenRef && <span className="block text-[9px] font-bold text-slate-400 mt-0.5" title="Documento de origen">↑ {(f.origenType || '').charAt(0).toUpperCase() + (f.origenType || '').slice(1)} {f.origenRef}</span>}
-                    {f.convertidoARef && <span className="block text-[9px] font-bold text-emerald-600 mt-0.5" title="Convertido a">→ {(f.convertidoAType || '').charAt(0).toUpperCase() + (f.convertidoAType || '').slice(1)} {f.convertidoARef}</span>}
+                    {f.origenRef && <button type="button" onClick={(e) => { e.stopPropagation(); irADocumento(f.origenType, f.origenRef); }} title="Ir al documento de origen" className="block text-[9px] font-bold text-slate-400 hover:text-indigo-600 hover:underline mt-0.5">↑ {(f.origenType || '').charAt(0).toUpperCase() + (f.origenType || '').slice(1)} {f.origenRef}</button>}
+                    {f.convertidoARef && <button type="button" onClick={(e) => { e.stopPropagation(); irADocumento(f.convertidoAType, f.convertidoARef); }} title="Ir al documento de destino" className="block text-[9px] font-bold text-emerald-600 hover:text-emerald-800 hover:underline mt-0.5">→ {(f.convertidoAType || '').charAt(0).toUpperCase() + (f.convertidoAType || '').slice(1)} {f.convertidoARef}</button>}
                   </td>
                   <td className="p-3 text-slate-700">
                     {f.cliente || '-'}
