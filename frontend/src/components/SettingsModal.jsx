@@ -591,8 +591,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     const query = userSearch.toLowerCase();
     return visibleUsers.filter(u => {
       // Filtro por búsqueda
-      const matchesSearch = u.username.toLowerCase().includes(query) || 
-        u.clientName.toLowerCase().includes(query);
+      const matchesSearch = (u.username || '').toLowerCase().includes(query) ||
+        (u.clientName || '').toLowerCase().includes(query);
       
       // Filtro por rol
       if (userRoleFilter === 'all') return matchesSearch;

@@ -217,6 +217,7 @@ const Cascos = ({ state }) => {
   const total = subtotal + iva;
 
   const [savedId, setSavedId] = useState(null);
+  const [savedKind, setSavedKind] = useState(null); // tipo del documento cargado/guardado (evita pisar entre presupuesto/pedido)
   const [histKind, setHistKind] = useState('presupuesto');
   // Expediente: código común que vincula la VENTA con su COMPRA a proveedor.
   const nuevoExpediente = () => `EXP-${Date.now().toString(36).toUpperCase()}`;
@@ -224,7 +225,7 @@ const Cascos = ({ state }) => {
 
   const nuevoPedido = () => {
     if (!window.confirm('¿Vaciar el presupuesto actual?')) return;
-    setCart([]); setCliente(''); setRef(''); setDescuento(userDtoDesmontada); setSavedId(null); setExpediente(nuevoExpediente());
+    setCart([]); setCliente(''); setRef(''); setDescuento(userDtoDesmontada); setSavedId(null); setSavedKind(null); setExpediente(nuevoExpediente());
   };
 
   // Guarda como presupuesto o pedido (mismo almacén, distinto 'kind').
@@ -235,14 +236,14 @@ const Cascos = ({ state }) => {
       const r = await fetch(`${API_URL}/api/cascos/orders`, {
         method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: savedId || undefined, kind, expediente, cliente, ref, ivaRate, descuento,
+          id: (savedId && kind === savedKind) ? savedId : undefined, kind, expediente, cliente, ref, ivaRate, descuento,
           lines: cart, total: Math.round(total * 100) / 100,
           userId: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
         }),
       });
       if (!r.ok) throw new Error('Error');
       const d = await r.json();
-      if (d.order?.id) setSavedId(d.order.id);
+      if (d.order?.id) { setSavedId(d.order.id); setSavedKind(kind); }
       return d.order;
     } catch { alert('No se pudo guardar.'); return null; }
     finally { setSaving(false); }
@@ -435,8 +436,8 @@ const Cascos = ({ state }) => {
     setCliente(o.cliente || ''); setRef(o.ref || ''); setIvaRate(o.ivaRate ?? 21);
     setCart(o.lines || []); setOrders(null);
     if (o.expediente) setExpediente(o.expediente);
-    if (o.kind === 'compra') { setDescProveedor(o.descuento || 0); }
-    else { setDescuento(o.descuento || 0); setSavedId(o.id); }  // solo las ventas reusan id
+    if (o.kind === 'compra') { setDescProveedor(o.descuento || 0); setSavedId(null); setSavedKind(null); }
+    else { setDescuento(o.descuento || 0); setSavedId(o.id); setSavedKind(o.kind); }  // solo reusa id dentro del mismo tipo
   };
   // Permiso para ver el documento vinculado (venta<->compra): master o usuarios autorizados.
   const puedeVerVinculados = isAdmin || currentUser?.canVerVinculadosCascos === true;

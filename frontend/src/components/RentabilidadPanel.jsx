@@ -889,6 +889,12 @@ const RentabilidadPanel = ({ currentUser }) => {
                       <td className="p-2 text-slate-600">{c.concepto || '—'} <span className="text-[10px] text-slate-400">· {c.categoria}</span>{c.expediente && <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black">🔗 {c.expediente}</span>}</td>
                       <td className="p-2 text-right font-mono font-bold text-orange-600">{eur(c.importe)}</td>
                       <td className="p-2 text-right">{c.docId && <button onClick={() => verCostDoc(c.docId)} title="Ver documento" className="text-slate-500 hover:text-indigo-600">📎</button>}</td></tr>
+                  ))}
+                  {(docsData.comprasCascos || []).map((o, k) => (
+                    <tr key={'cc' + k} className="bg-amber-50/40"><td className="p-2 font-medium">Cascos (ACB)</td>
+                      <td className="p-2 text-slate-600">Pedido a proveedor · {(o.lines || []).length} líneas {o.expediente && <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black">🔗 {o.expediente}</span>} <span className="text-[9px] text-slate-400">(no imputado como coste)</span></td>
+                      <td className="p-2 text-right font-mono font-bold text-slate-500">{eur(o.total)}</td>
+                      <td className="p-2"></td></tr>
                   ))}</tbody></table>
               )}
 
