@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Receipt, FileText, Target, CalendarDays, ShoppingBag, FolderOpen,
   TrendingUp, Layers, Shield, Sparkles, Image as ImageIcon, Box,
-  ScanLine, Wrench, Factory, PlayCircle, Briefcase, Palette, Hammer, Settings2
+  ScanLine, Wrench, Factory, PlayCircle, Briefcase, Palette, Hammer, Settings2, Building2
 } from 'lucide-react';
 
 // ⬇️ Enlace del vídeo promocional (YouTube, Vimeo o Google Drive). Si se deja
@@ -57,6 +57,7 @@ const MODULES = [
   { tab: 'rentabilidad',    label: 'Rentabilidad',    icon: TrendingUp,   color: 'bg-emerald-600', group: 'admin',  can: (u) => u?.canAccessRentabilidad === true },
   { tab: 'resumenCocinas',  label: 'Resumen Totales', icon: Layers,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canUseResumenTotales === true },
   { tab: 'cascos',          label: 'Cocina Desmontada',icon: Box,         color: 'bg-cyan-600',    group: 'ventas', can: (u) => !u?.isTienda && u?.canUseCascos === true },
+  { tab: 'propdata',        label: 'Obra Nueva (IA)', icon: Building2,    color: 'bg-sky-600',     group: 'ventas', can: (u) => !u?.isTienda && u?.canUsePropData === true },
   { tab: 'gastos',          label: 'Gastos',          icon: Receipt,      color: 'bg-indigo-600',  group: 'admin',  can: (u) => (u?.isAdmin || u?.isRepresentative || u?.isGerente || u?.isDirectorComercial) && u?.canAccessGastos !== false },
 
   // Diseño y Visualización

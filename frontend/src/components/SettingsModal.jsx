@@ -15,7 +15,7 @@ const CAPABILITY_KEYS = [
   'canManageArticles', 'canAccessFloor', 'canUseAIAnalysis', 'canUseKitchenDesigner', 'canUseDigitalizador',
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
-  'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos',
+  'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData',
 ];
 
 // Lista de provincias de España con sus códigos
@@ -156,6 +156,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canUseResumenTotales: false,
     canUseCascos: false,
     canVerVinculadosCascos: false,
+    canUsePropData: false,
     canUseDigitalizador: false,
     canAccessArmarios: false,
     canAccessFabrica: false,  // Acceso a Portal de Fábrica
@@ -744,6 +745,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canUseResumenTotales: false,
       canUseCascos: false,
       canVerVinculadosCascos: false,
+      canUsePropData: false,
       canUseDigitalizador: false,
       canAccessArmarios: false,
       canAccessFabrica: false,
@@ -2249,6 +2251,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
                               <span className="text-xs font-bold text-slate-700">Cascos: ver venta/compra vinculada</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canUsePropData}
+                                onChange={(e) => setUserForm({...userForm, canUsePropData: e.target.checked})}
+                                className="w-4 h-4 rounded accent-cyan-600"
+                              />
+                              <span className="text-xs font-bold text-slate-700">Prospección Obra Nueva (IA)</span>
                             </label>
                           </div>
                         </div>

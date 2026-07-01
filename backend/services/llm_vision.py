@@ -271,6 +271,66 @@ async def chat_with_gemini(
     )
 
 
+async def search_with_gemini(
+    prompt: str,
+    model: str = "gemini-2.5-flash",
+):
+    """Genera texto con Gemini usando Google Search (grounding). Devuelve
+    (texto, fuentes[{uri,title}]). Si la búsqueda falla por cuota/permiso, hace
+    fallback a generación sin búsqueda. Requiere GEMINI_API_KEY + google-genai."""
+    gemini_key = get_gemini_key()
+    if not (gemini_key and GOOGLE_GENAI_AVAILABLE):
+        raise RuntimeError("IA no disponible. Configura GEMINI_API_KEY en las variables de entorno.")
+    client = google_genai.Client(api_key=gemini_key)
+    requested = model or "gemini-2.5-flash"
+    candidates = []
+    for m in [requested, "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"]:
+        if m not in candidates:
+            candidates.append(m)
+
+    def _sync(model_name, with_search):
+        cfg = None
+        if with_search:
+            try:
+                tool = google_genai_types.Tool(google_search=google_genai_types.GoogleSearch())
+                cfg = google_genai_types.GenerateContentConfig(tools=[tool])
+            except Exception:
+                cfg = None
+        return client.models.generate_content(model=model_name, contents=prompt, config=cfg)
+
+    def _sources(resp):
+        out = []
+        try:
+            for cand in (getattr(resp, "candidates", None) or []):
+                gm = getattr(cand, "grounding_metadata", None)
+                for ch in (getattr(gm, "grounding_chunks", None) or []):
+                    web = getattr(ch, "web", None)
+                    if web and getattr(web, "uri", None):
+                        out.append({"uri": web.uri, "title": getattr(web, "title", "") or web.uri})
+        except Exception:
+            pass
+        return out
+
+    last_err = None
+    for model_name in candidates:
+        try:
+            resp = await asyncio.to_thread(_sync, model_name, True)
+            return (resp.text or "", _sources(resp), False)
+        except Exception as e:
+            msg = str(e)
+            if 'NOT_FOUND' in msg or '404' in msg or 'not found' in msg.lower() or 'not supported' in msg.lower():
+                last_err = e; continue
+            # Cuota/permiso de Google Search → fallback sin búsqueda
+            if any(x in msg for x in ('RESOURCE_EXHAUSTED', 'quota', 'PERMISSION_DENIED', 'permission', '429', '403')):
+                try:
+                    resp = await asyncio.to_thread(_sync, model_name, False)
+                    return (resp.text or "", [], True)
+                except Exception as e2:
+                    last_err = e2; continue
+            raise
+    raise last_err or RuntimeError("Ningún modelo de Gemini disponible para esta clave")
+
+
 # ============================================================================
 # GENERACIÓN DE IMÁGENES (render) con Gemini — usado por Render 3D y Armarios
 # ============================================================================

@@ -17,6 +17,7 @@ const CRMLayout = lazy(() => import('./components/CRMLayout'));
 const Digitalizador = lazy(() => import('./components/Digitalizador'));
 const ResumenCocinas = lazy(() => import('./components/ResumenCocinas'));
 const Cascos = lazy(() => import('./components/Cascos'));
+const PropData = lazy(() => import('./components/PropData'));
 const AgendaMontajes = lazy(() => import('./components/AgendaMontajes'));
 const AdminWorkView = lazy(() => import('./components/AdminWorkView'));
 const CommercialWorkView = lazy(() => import('./components/CommercialWorkView'));
@@ -1000,6 +1001,17 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Prospección de Obra Nueva (PropData IA) - permiso específico */}
+                    {!state.currentUser?.isTienda && state.currentUser?.canUsePropData === true && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'propdata'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'propdata' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <Building2 size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Obra Nueva</span>
+                      </button>
+                    )}
+
                     {/* Archivo - requiere permiso explícito (la casilla manda) */}
                     {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo === true && (
                       <button
@@ -1276,6 +1288,7 @@ const App = () => {
             {state.currentTab === 'library' && <ErrorBoundary><ProjectLibrary state={state} setState={setState} /></ErrorBoundary>}
             {state.currentTab === 'resumenCocinas' && state.currentUser?.canUseResumenTotales === true && <ErrorBoundary><ResumenCocinas state={state} /></ErrorBoundary>}
             {state.currentTab === 'cascos' && state.currentUser?.canUseCascos === true && <ErrorBoundary><Cascos state={state} /></ErrorBoundary>}
+            {state.currentTab === 'propdata' && state.currentUser?.canUsePropData === true && <ErrorBoundary><PropData state={state} /></ErrorBoundary>}
             {state.currentTab === 'backup' && <BackupManager />}
             {state.currentTab === 'invoices' && <ErrorBoundary><Invoices currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'rentabilidad' && <ErrorBoundary><RentabilidadPanel currentUser={state.currentUser} /></ErrorBoundary>}
