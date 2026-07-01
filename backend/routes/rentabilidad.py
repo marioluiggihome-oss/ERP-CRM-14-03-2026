@@ -10,7 +10,7 @@ Modelo de datos:
     { id, projectRef, proveedor, concepto, categoria, importe, fecha,
       createdAt, source }  (source: 'manual' | 'ia' | 'factura')
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 import uuid
@@ -21,7 +21,22 @@ import re
 from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["rentabilidad"])
+
+# Seguridad: todo el módulo de Rentabilidad exige token válido y acceso al módulo
+# (rol elevado o permiso canAccessRentabilidad), igual que la UI. Cierra el acceso
+# anónimo a costes, ingresos, fichas, márgenes y documentos adjuntos.
+try:
+    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS
+
+    async def require_rentabilidad(user: dict = Depends(require_auth)):
+        if any(user.get(f) for f in ADMIN_ROLE_FLAGS) or user.get("canAccessRentabilidad"):
+            return user
+        raise HTTPException(status_code=403, detail="Sin acceso al módulo de Rentabilidad")
+    _RENTA_DEPS = [Depends(require_rentabilidad)]
+except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    _RENTA_DEPS = []
+
+router = APIRouter(tags=["rentabilidad"], dependencies=_RENTA_DEPS)
 
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
