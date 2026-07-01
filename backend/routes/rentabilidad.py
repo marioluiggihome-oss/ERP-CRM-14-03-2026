@@ -938,8 +938,11 @@ async def save_ficha(payload: dict):
             "createdByName": payload.get("createdByName", ""),
             "updatedAt": datetime.now(timezone.utc).isoformat(),
         }
-        existing = await db.sale_fichas.find_one({"id": fid}, {"_id": 0, "createdAt": 1})
+        existing = await db.sale_fichas.find_one({"id": fid}, {"_id": 0})
         doc["createdAt"] = (existing or {}).get("createdAt") or doc["updatedAt"]
+        # Trazabilidad de conversión (documento de origen y de destino); se preserva si ya existía.
+        for k in ("origenId", "origenRef", "origenType", "convertidoAId", "convertidoARef", "convertidoAType"):
+            doc[k] = str(payload.get(k) or (existing or {}).get(k) or "")
 
         clienteCodigo = str(payload.get("clienteCodigo") or "")
         client_created = None
@@ -959,6 +962,16 @@ async def save_ficha(payload: dict):
     except Exception as e:
         logger.error(f"Save ficha error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/rentabilidad/fichas/{ficha_id}/trace")
+async def trace_ficha(ficha_id: str, payload: dict):
+    """Marca en la ficha de origen a qué documento se convirtió (trazabilidad)."""
+    upd = {k: str(v or "") for k, v in (payload or {}).items()
+           if k in ("convertidoAId", "convertidoARef", "convertidoAType", "origenId", "origenRef", "origenType")}
+    if upd:
+        await db.sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
+    return {"success": True}
 
 
 @router.delete("/rentabilidad/fichas/{ficha_id}")

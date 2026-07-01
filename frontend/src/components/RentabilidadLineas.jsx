@@ -323,16 +323,28 @@ const RentabilidadLineas = ({ currentUser }) => {
       // Traer la ficha completa (con sus líneas) por si la lista no las incluye
       let full = f;
       try { const d = await fetch(`${API_URL}/api/rentabilidad/fichas/${f.id}`); if (d.ok) full = await d.json(); } catch { /* usa f */ }
+      const destRef = newRef.trim() || full.ref;
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ref: newRef.trim() || full.ref, cliente: full.cliente,
+          ref: destRef, cliente: full.cliente,
           fecha: new Date().toISOString().slice(0, 10),
           docType: next, lines: full.lines || [], projectRef: full.projectRef || '',
           createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
+          // Trazabilidad: de qué documento procede este nuevo
+          origenId: full.id, origenRef: full.ref || '', origenType: cur,
         }),
       });
       if (!r.ok) throw new Error('Error');
+      const created = await r.json().catch(() => ({}));
+      const newId = created?.ficha?.id;
+      // Marcar en el documento de origen a qué se ha convertido
+      try {
+        await fetch(`${API_URL}/api/rentabilidad/fichas/${full.id}/trace`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ convertidoAId: newId || '', convertidoARef: destRef, convertidoAType: next }),
+        });
+      } catch { /* no crítico */ }
       setDocType(next);
       setCurrentPage(1);
       await load();
@@ -634,7 +646,11 @@ const RentabilidadLineas = ({ currentUser }) => {
               const tt = f.totals || totals(f.lines);
               return (
                 <tr key={f.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openFicha(f.id)}>
-                  <td className="p-3 font-black text-indigo-700">{f.ref || '-'}</td>
+                  <td className="p-3 font-black text-indigo-700">
+                    {f.ref || '-'}
+                    {f.origenRef && <span className="block text-[9px] font-bold text-slate-400 mt-0.5" title="Documento de origen">↑ {(f.origenType || '').charAt(0).toUpperCase() + (f.origenType || '').slice(1)} {f.origenRef}</span>}
+                    {f.convertidoARef && <span className="block text-[9px] font-bold text-emerald-600 mt-0.5" title="Convertido a">→ {(f.convertidoAType || '').charAt(0).toUpperCase() + (f.convertidoAType || '').slice(1)} {f.convertidoARef}</span>}
+                  </td>
                   <td className="p-3 text-slate-700">
                     {f.cliente || '-'}
                     {f.clienteCodigo && <span className="ml-1.5 text-[10px] font-bold text-indigo-500">({f.clienteCodigo})</span>}
