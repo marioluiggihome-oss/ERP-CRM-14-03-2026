@@ -5,9 +5,15 @@ import { getToken } from '../services/api';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const auth = () => ({ 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
 
-const TIPO_COLOR = {
-  Piso: 'bg-indigo-100 text-indigo-700', Chalet: 'bg-emerald-100 text-emerald-700',
-  Adosado: 'bg-amber-100 text-amber-700', Ático: 'bg-violet-100 text-violet-700', Otro: 'bg-slate-100 text-slate-600',
+const BADGES = [
+  'bg-indigo-100 text-indigo-700', 'bg-emerald-100 text-emerald-700', 'bg-amber-100 text-amber-700',
+  'bg-violet-100 text-violet-700', 'bg-sky-100 text-sky-700', 'bg-rose-100 text-rose-700',
+  'bg-teal-100 text-teal-700', 'bg-fuchsia-100 text-fuchsia-700',
+];
+const tipoBadge = (t) => {
+  const s = String(t || 'Otro');
+  let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return BADGES[h % BADGES.length];
 };
 
 const PropData = ({ state }) => {
@@ -18,6 +24,7 @@ const PropData = ({ state }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null); // {developments, summary, groundingSources, groundingFailed}
   const [error, setError] = useState('');
+  const [tipoFilter, setTipoFilter] = useState('all'); // all | pisos | chalets | otros
 
   const readFile = (file) => new Promise((res) => {
     const fr = new FileReader();
@@ -50,11 +57,27 @@ const PropData = ({ state }) => {
     finally { setLoading(false); }
   };
 
-  const devs = result?.developments || [];
+  const devsAll = result?.developments || [];
 
-  // Distribución por tipo (mini-gráfico sin dependencias)
+  // Categoría: pisos (piso/ático/estudio/dúplex) vs chalets (chalet/adosado/pareado/villa/unifamiliar)
+  const catOf = (t) => {
+    const s = String(t || '').toLowerCase();
+    if (/(chalet|adosad|paread|unifamiliar|villa)/.test(s)) return 'chalets';
+    if (/(piso|[aá]tico|estudio|d[uú]plex|apartament|vivienda)/.test(s)) return 'pisos';
+    return 'otros';
+  };
+  const nPisos = devsAll.filter(d => catOf(d.type) === 'pisos').length;
+  const nChalets = devsAll.filter(d => catOf(d.type) === 'chalets').length;
+  const nOtros = devsAll.length - nPisos - nChalets;
+  const devs = tipoFilter === 'all' ? devsAll : devsAll.filter(d => catOf(d.type) === tipoFilter);
+
+  // Distribución por tipo (mini-gráfico sin dependencias) — sobre lo visible
   const porTipo = devs.reduce((a, d) => { const t = d.type || 'Otro'; a[t] = (a[t] || 0) + 1; return a; }, {});
   const maxTipo = Math.max(1, ...Object.values(porTipo));
+  // Lo que predomina (tipo concreto más repetido en toda la búsqueda)
+  const porTipoAll = devsAll.reduce((a, d) => { const t = d.type || 'Otro'; a[t] = (a[t] || 0) + 1; return a; }, {});
+  const predomina = Object.entries(porTipoAll).sort((a, b) => b[1] - a[1])[0];
+  const catPredomina = nChalets > nPisos ? 'Chalets' : nPisos > 0 ? 'Pisos' : '—';
 
   const exportCSV = () => {
     const cols = ['name', 'promoter', 'type', 'location', 'priceStart', 'phone', 'address', 'startDate', 'deliveryDate', 'url'];
@@ -68,8 +91,16 @@ const PropData = ({ state }) => {
     a.click();
   };
 
+  // Acentos de color por tarjeta (se alternan para que cada obra destaque)
+  const ACCENTS = [
+    'border-l-indigo-400 bg-indigo-50/40', 'border-l-emerald-400 bg-emerald-50/40',
+    'border-l-amber-400 bg-amber-50/40', 'border-l-sky-400 bg-sky-50/50',
+    'border-l-fuchsia-400 bg-fuchsia-50/40', 'border-l-rose-400 bg-rose-50/40',
+    'border-l-teal-400 bg-teal-50/40', 'border-l-violet-400 bg-violet-50/40',
+  ];
+
   return (
-    <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-slate-50 overflow-y-auto">
+    <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-sky-50 overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
         <h1 className="ml-14 sm:ml-2 text-base sm:text-lg font-black flex items-center gap-2"><Building2 size={18} /> Prospección de Obra Nueva</h1>
         <p className="hidden sm:block text-xs text-white/80">Localiza promociones y promotores a los que ofrecer cocinas · IA (Gemini)</p>
@@ -112,8 +143,34 @@ const PropData = ({ state }) => {
         <div className="space-y-4">
           {result.groundingFailed && <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-2 text-xs font-bold">⚠️ Sin búsqueda web en tiempo real (límite de cuota): resultados orientativos/simulados.</div>}
 
+          {/* KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Promociones</p>
+              <p className="text-2xl font-black text-slate-800 mt-0.5">{devsAll.length}</p>
+            </div>
+            <div className="rounded-2xl p-4 text-white shadow bg-gradient-to-br from-indigo-500 to-violet-600">
+              <p className="text-[9px] font-black text-white/70 uppercase tracking-widest">Predomina</p>
+              <p className="text-lg font-black mt-0.5 leading-tight truncate">{predomina ? predomina[0] : '—'}</p>
+              <p className="text-[11px] text-white/80">{predomina ? `${predomina[1]} de ${devsAll.length} · ${catPredomina}` : ''}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pisos</p>
+              <p className="text-2xl font-black text-sky-600 mt-0.5">{nPisos}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Chalets</p>
+              <p className="text-2xl font-black text-emerald-600 mt-0.5">{nChalets}</p>
+            </div>
+          </div>
+
+          {/* Filtro + export */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-sm font-black text-slate-700">{devs.length} promociones encontradas</p>
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
+              {[['all', `Todos (${devsAll.length})`], ['pisos', `Pisos (${nPisos})`], ['chalets', `Chalets (${nChalets})`], ...(nOtros ? [['otros', `Otros (${nOtros})`]] : [])].map(([k, lab]) => (
+                <button key={k} onClick={() => setTipoFilter(k)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${tipoFilter === k ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}>{lab}</button>
+              ))}
+            </div>
             {devs.length > 0 && <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700"><Download size={14} /> Exportar CSV</button>}
           </div>
 
@@ -121,26 +178,29 @@ const PropData = ({ state }) => {
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
               <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Por tipo de vivienda</p>
               <div className="space-y-1.5">
-                {Object.entries(porTipo).sort((a, b) => b[1] - a[1]).map(([t, n]) => (
-                  <div key={t} className="flex items-center gap-2">
-                    <span className="w-20 text-xs font-bold text-slate-600 shrink-0">{t}</span>
-                    <div className="flex-1 bg-slate-100 rounded-full h-3"><div className="bg-indigo-500 h-3 rounded-full" style={{ width: `${(n / maxTipo) * 100}%` }} /></div>
-                    <span className="w-6 text-xs font-black text-slate-700 text-right">{n}</span>
-                  </div>
-                ))}
+                {Object.entries(porTipo).sort((a, b) => b[1] - a[1]).map(([t, n], bi) => {
+                  const bars = ['bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-sky-500', 'bg-fuchsia-500', 'bg-rose-500', 'bg-teal-500', 'bg-violet-500'];
+                  return (
+                    <div key={t} className="flex items-center gap-2">
+                      <span className="w-28 text-xs font-bold text-slate-600 shrink-0 truncate" title={t}>{t}</span>
+                      <div className="flex-1 bg-slate-100 rounded-full h-3"><div className={`${bars[bi % bars.length]} h-3 rounded-full`} style={{ width: `${(n / maxTipo) * 100}%` }} /></div>
+                      <span className="w-6 text-xs font-black text-slate-700 text-right">{n}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
           <div className="grid md:grid-cols-2 gap-3">
             {devs.map((d, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
+              <div key={i} className={`rounded-2xl border border-slate-200 border-l-4 p-4 hover:shadow-md transition-shadow ${ACCENTS[i % ACCENTS.length]}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-black text-slate-800 truncate">{d.name || 'Promoción'}</p>
                     <p className="text-xs text-slate-500 truncate">{d.promoter || '—'}</p>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black shrink-0 ${TIPO_COLOR[d.type] || TIPO_COLOR.Otro}`}>{d.type || 'Otro'}</span>
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black shrink-0 ${tipoBadge(d.type)}`}>{d.type || 'Otro'}</span>
                 </div>
                 <div className="mt-2 space-y-1 text-[12px] text-slate-600">
                   {d.location && <p className="flex items-center gap-1.5"><MapPin size={13} className="text-slate-400" /> {d.location}</p>}
