@@ -3183,6 +3183,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
           {/* Tab Armazones */}
           {activeTab === 'armazones' && (
+            <>
             <ArmazonesTab
               state={state}
               setState={setState}
@@ -3198,69 +3199,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               handleSaveMaterial={handleSaveMaterial}
               handleDeleteMaterial={handleDeleteMaterial}
             />
-          )}
-
-          {/* Tab Backups */}
-          {activeTab === 'billing' && (
             <div className="p-6 space-y-5 bg-slate-50">
-              <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><Building2 size={18} /></div>
-                  <h3 className="text-base font-black text-slate-900 uppercase">Datos de Facturación</h3>
-                </div>
-                <p className="text-xs text-slate-500 mb-5 ml-[52px]">Estos datos aparecerán en las facturas PDF generadas.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[
-                    { key: 'companyName', label: 'Nombre / Razón Social', placeholder: 'LUIGGI HOME S.L.' },
-                    { key: 'companyTaxId', label: 'NIF / CIF', placeholder: 'B12345678' },
-                    { key: 'companyAddress', label: 'Dirección fiscal', placeholder: 'Calle...' },
-                    { key: 'companyPhone', label: 'Teléfono', placeholder: '+34 600 000 000' },
-                    { key: 'companyEmail', label: 'Email de facturación', placeholder: 'facturacion@empresa.es' },
-                    { key: 'companyIban', label: 'IBAN (datos bancarios)', placeholder: 'ES00 0000 0000 00 0000000000' },
-                  ].map(field => (
-                    <div key={field.key} className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
-                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{field.label}</label>
-                      <input
-                        type="text"
-                        placeholder={field.placeholder}
-                        defaultValue={state.settings?.[field.key] || ''}
-                        onBlur={(e) => saveSetting({ [field.key]: e.target.value })}
-                        className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                <h3 className="text-base font-black text-slate-900 uppercase mb-1">Centros / direcciones de envío</h3>
-                <p className="text-xs text-slate-500 mb-3">Uno por línea, con el formato <b>Nombre — Dirección completa</b>. Aparecerán como opciones de "Centro de envío" al generar pedidos a proveedor.</p>
-                <textarea rows={4} placeholder={"Central Cádiz — C/ Ejemplo 1, 11000 Cádiz\nAlmacén Sevilla — Pol. Ind. ..., 41000 Sevilla"}
-                  defaultValue={state.settings?.centrosEnvio || ''}
-                  onBlur={(e) => saveSetting({ centrosEnvio: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono outline-none focus:border-indigo-500" />
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><RefreshCw size={18} /></div>
-                  <h3 className="text-base font-black text-slate-900 uppercase">Email (envío de pedidos)</h3>
-                </div>
-                <p className="text-xs text-slate-500 mb-5 ml-[52px]">Para que los pedidos confirmados se envíen por email. Si se deja vacío, el pedido se confirma igual pero sin email.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Email remitente</label>
-                    <input type="text" placeholder="no-reply@luiggihome.es" defaultValue={state.settings?.emailSender || ''}
-                      onBlur={(e) => saveSetting({ emailSender: e.target.value })}
-                      className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900" />
-                  </div>
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">SendGrid API Key</label>
-                    <input type="password" autoComplete="new-password"
-                      placeholder={state.settings?.sendgridConfigured ? '•••••••• (ya configurada)' : 'SG.xxxxx'}
-                      onBlur={async (e) => { if (!e.target.value) return; try { await settingsAPI.update({ sendgridApiKey: e.target.value }); } catch (err) { console.error(err); } }}
-                      className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
-                  </div>
-                </div>
-              </div>
               <div className="bg-white border border-slate-200 rounded-2xl p-5">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><Layers size={18} /></div>
@@ -3339,6 +3278,71 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 <div className="mt-6 pt-5 border-t border-slate-200">
                   <h3 className="text-base font-black text-slate-900 uppercase">Cocina Des-Montada (Cascos)</h3>
                   <p className="text-xs text-slate-500">El <b>valor de punto</b> de Des-Montada se configura en <b>Márgenes Maestros → Valor de Punto Base → Cocina Des-Montada</b>. El <b>descuento por usuario</b> se asigna en cada ficha de usuario.</p>
+                </div>
+              </div>
+            </div>
+            </>
+          )}
+
+          {/* Tab Backups */}
+          {activeTab === 'billing' && (
+            <div className="p-6 space-y-5 bg-slate-50">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><Building2 size={18} /></div>
+                  <h3 className="text-base font-black text-slate-900 uppercase">Datos de Facturación</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-5 ml-[52px]">Estos datos aparecerán en las facturas PDF generadas.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { key: 'companyName', label: 'Nombre / Razón Social', placeholder: 'LUIGGI HOME S.L.' },
+                    { key: 'companyTaxId', label: 'NIF / CIF', placeholder: 'B12345678' },
+                    { key: 'companyAddress', label: 'Dirección fiscal', placeholder: 'Calle...' },
+                    { key: 'companyPhone', label: 'Teléfono', placeholder: '+34 600 000 000' },
+                    { key: 'companyEmail', label: 'Email de facturación', placeholder: 'facturacion@empresa.es' },
+                    { key: 'companyIban', label: 'IBAN (datos bancarios)', placeholder: 'ES00 0000 0000 00 0000000000' },
+                  ].map(field => (
+                    <div key={field.key} className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{field.label}</label>
+                      <input
+                        type="text"
+                        placeholder={field.placeholder}
+                        defaultValue={state.settings?.[field.key] || ''}
+                        onBlur={(e) => saveSetting({ [field.key]: e.target.value })}
+                        className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <h3 className="text-base font-black text-slate-900 uppercase mb-1">Centros / direcciones de envío</h3>
+                <p className="text-xs text-slate-500 mb-3">Uno por línea, con el formato <b>Nombre — Dirección completa</b>. Aparecerán como opciones de "Centro de envío" al generar pedidos a proveedor.</p>
+                <textarea rows={4} placeholder={"Central Cádiz — C/ Ejemplo 1, 11000 Cádiz\nAlmacén Sevilla — Pol. Ind. ..., 41000 Sevilla"}
+                  defaultValue={state.settings?.centrosEnvio || ''}
+                  onBlur={(e) => saveSetting({ centrosEnvio: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono outline-none focus:border-indigo-500" />
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><RefreshCw size={18} /></div>
+                  <h3 className="text-base font-black text-slate-900 uppercase">Email (envío de pedidos)</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-5 ml-[52px]">Para que los pedidos confirmados se envíen por email. Si se deja vacío, el pedido se confirma igual pero sin email.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
+                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Email remitente</label>
+                    <input type="text" placeholder="no-reply@luiggihome.es" defaultValue={state.settings?.emailSender || ''}
+                      onBlur={(e) => saveSetting({ emailSender: e.target.value })}
+                      className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900" />
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
+                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">SendGrid API Key</label>
+                    <input type="password" autoComplete="new-password"
+                      placeholder={state.settings?.sendgridConfigured ? '•••••••• (ya configurada)' : 'SG.xxxxx'}
+                      onBlur={async (e) => { if (!e.target.value) return; try { await settingsAPI.update({ sendgridApiKey: e.target.value }); } catch (err) { console.error(err); } }}
+                      className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
+                  </div>
                 </div>
               </div>
             </div>
