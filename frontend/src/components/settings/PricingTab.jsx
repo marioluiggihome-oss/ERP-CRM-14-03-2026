@@ -10,23 +10,35 @@ const PricingTab = ({ state, setState }) => {
 
   const handleSavePricingSettings = async () => {
     setIsSavingSettings(true);
-    try {
-      await settingsAPI.update({
-        pointValueMontada: state.pointValueMontada,
-        pointValueDespiece: state.pointValueDespiece,
-        cascosPointValue: state.pointValueDesmontada,
-        specialIncrementWidth: state.specialIncrementWidth,
-        specialIncrementHeight: state.specialIncrementHeight,
-        specialIncrementDepth: state.specialIncrementDepth,
-        librarySpecialIncrements: state.librarySpecialIncrements,
-        vigaCutIncrement: state.vigaCutIncrement || 0,
-        libraryVigaCutIncrements: state.libraryVigaCutIncrements || { ZC: 0, MV: 0 },
-        defaultEdgeBandingPriceMl: state.defaultEdgeBandingPriceMl ?? 1.77
+    // Convierte a número válido; nunca envía NaN (rompería el guardado en el backend).
+    const num = (v, def = 0) => { const n = Number(v); return Number.isFinite(n) ? n : def; };
+    const numObj = (o, def = 0) => {
+      const out = {};
+      Object.entries(o || {}).forEach(([k, val]) => {
+        out[k] = (val && typeof val === 'object')
+          ? Object.fromEntries(Object.entries(val).map(([k2, v2]) => [k2, num(v2, def)]))
+          : num(val, def);
       });
+      return out;
+    };
+    try {
+      const payload = {
+        pointValueMontada: num(state.pointValueMontada, 1),
+        pointValueDespiece: num(state.pointValueDespiece, 0.88),
+        cascosPointValue: num(state.pointValueDesmontada, 1),
+        specialIncrementWidth: num(state.specialIncrementWidth, 45),
+        specialIncrementHeight: num(state.specialIncrementHeight, 45),
+        specialIncrementDepth: num(state.specialIncrementDepth, 45),
+        librarySpecialIncrements: numObj(state.librarySpecialIncrements, 45),
+        vigaCutIncrement: num(state.vigaCutIncrement, 0),
+        libraryVigaCutIncrements: numObj(state.libraryVigaCutIncrements || { ZC: 0, MV: 0 }, 0),
+        defaultEdgeBandingPriceMl: num(state.defaultEdgeBandingPriceMl, 1.77),
+      };
+      await settingsAPI.update(payload);
       alert('Configuración guardada correctamente');
     } catch (err) {
       console.error('Error saving settings:', err);
-      alert('Error al guardar la configuración');
+      alert('Error al guardar la configuración: ' + (err?.message || 'desconocido'));
     } finally {
       setIsSavingSettings(false);
     }

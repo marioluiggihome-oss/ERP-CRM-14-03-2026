@@ -730,7 +730,15 @@ const RentabilidadLineas = ({ currentUser }) => {
 
               {/* Tabla de lineas editable */}
               <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm table-fixed">
+                  <colgroup>
+                    <col style={{ width: '120px' }} />
+                    <col />
+                    <col style={{ width: '110px' }} />
+                    <col style={{ width: '110px' }} />
+                    <col style={{ width: '100px' }} />
+                    <col style={{ width: '40px' }} />
+                  </colgroup>
                   <thead className="bg-slate-100 text-slate-500">
                     <tr>
                       <th className="text-left p-2 text-[10px] font-black uppercase">Ref</th>
@@ -746,10 +754,10 @@ const RentabilidadLineas = ({ currentUser }) => {
                       const m = (Number(l.venta) || 0) - (Number(l.coste) || 0);
                       return (
                         <tr key={l.id || i}>
-                          <td className="p-1"><input value={l.ref} onChange={e => setLine(i, 'ref', e.target.value)} className="w-20 px-1.5 py-1 border rounded text-xs" /></td>
+                          <td className="p-1"><input value={l.ref} onChange={e => setLine(i, 'ref', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
                           <td className="p-1"><input value={l.concepto} onChange={e => setLine(i, 'concepto', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
-                          <td className="p-1"><input type="number" step="0.01" value={l.venta} onChange={e => setLine(i, 'venta', e.target.value)} className="w-24 px-1.5 py-1 border rounded text-xs text-right" /></td>
-                          <td className="p-1"><input type="number" step="0.01" value={l.coste} onChange={e => setLine(i, 'coste', e.target.value)} className={`w-24 px-1.5 py-1 border rounded text-xs text-right ${l._match ? 'bg-blue-50 border-blue-200' : ''}`} /></td>
+                          <td className="p-1"><input type="number" step="0.01" value={l.venta} onChange={e => setLine(i, 'venta', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs text-right" /></td>
+                          <td className="p-1"><input type="number" step="0.01" value={l.coste} onChange={e => setLine(i, 'coste', e.target.value)} className={`w-full px-1.5 py-1 border rounded text-xs text-right ${l._match ? 'bg-blue-50 border-blue-200' : ''}`} /></td>
                           <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
                           <td className="p-1 text-center"><button onClick={() => removeLine(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                         </tr>

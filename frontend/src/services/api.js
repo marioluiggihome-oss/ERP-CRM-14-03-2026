@@ -647,7 +647,11 @@ export const settingsAPI = {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(settings)
     });
-    if (!response.ok) throw new Error('Error al actualizar configuración');
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try { const e = await response.json(); detail = e.detail ? (typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)) : detail; } catch (_) {}
+      throw new Error(detail);
+    }
     return response.json();
   },
 
