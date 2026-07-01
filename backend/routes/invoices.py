@@ -59,6 +59,7 @@ class InvoiceCreate(BaseModel):
     lines: List[InvoiceLine] = []
     notes: Optional[str] = None
     vatRate: float = 21
+    irpfRate: float = 0                  # % retención IRPF
     # Estado
     status: str = "draft"               # draft | issued | paid | overdue | cancelled
 
@@ -70,6 +71,7 @@ class InvoiceUpdate(BaseModel):
     dueDate: Optional[str] = None
     lines: Optional[List[InvoiceLine]] = None
     notes: Optional[str] = None
+    irpfRate: Optional[float] = None
     status: Optional[str] = None
     paidAt: Optional[str] = None
 
@@ -94,8 +96,8 @@ async def next_invoice_number() -> str:
     return f"{prefix}{last_num + 1:03d}"
 
 
-def calc_totals(lines: list, default_vat: float = 21):
-    """Calcula subtotal, descuento, base imponible, IVA y total"""
+def calc_totals(lines: list, default_vat: float = 21, irpf_rate: float = 0):
+    """Calcula subtotal, descuento, base imponible, IVA, IRPF (retención) y total"""
     subtotal = 0
     total_discount = 0
     total_vat = 0
@@ -114,12 +116,15 @@ def calc_totals(lines: list, default_vat: float = 21):
         total_vat += vat_amt
         line_details.append({**line, "_gross": gross, "_disc": disc_amt, "_net": net, "_vat": vat_amt})
     base = subtotal - total_discount
-    total = base + total_vat
+    irpf_amt = base * (irpf_rate or 0) / 100
+    total = base + total_vat - irpf_amt
     return {
         "subtotal": round(subtotal, 2),
         "totalDiscount": round(total_discount, 2),
         "taxBase": round(base, 2),
         "totalVat": round(total_vat, 2),
+        "irpfRate": round(irpf_rate or 0, 2),
+        "totalIrpf": round(irpf_amt, 2),
         "total": round(total, 2),
         "lines": line_details
     }
@@ -215,7 +220,7 @@ def generate_invoice_pdf(invoice: dict, settings: dict) -> bytes:
     elems.append(Spacer(1, 8*mm))
 
     # ── LÍNEAS ─────────────────────────────────────────────────────────────
-    totals = calc_totals(invoice.get("lines", []), invoice.get("vatRate", 21))
+    totals = calc_totals(invoice.get("lines", []), invoice.get("vatRate", 21), invoice.get("irpfRate", 0))
 
     header_row = [
         Paragraph("DESCRIPCIÓN", ParagraphStyle("TH", parent=styles["Normal"], fontSize=8, fontName="Helvetica-Bold", textColor=colors.white)),
@@ -257,6 +262,8 @@ def generate_invoice_pdf(invoice: dict, settings: dict) -> bytes:
     ]
     if totals["totalDiscount"] > 0:
         totals_data.insert(0, ["Descuento total", f"-{totals['totalDiscount']:,.2f} €"])
+    if totals.get("totalIrpf", 0):
+        totals_data.append([f"IRPF ({totals.get('irpfRate', 0):.0f}%)", f"-{totals['totalIrpf']:,.2f} €"])
     totals_data.append(["TOTAL FACTURA", f"{totals['total']:,.2f} €"])
 
     totals_rows = []
@@ -401,7 +408,7 @@ async def create_invoice(invoice: InvoiceCreate):
                     "vatRate": 21,
                 })
 
-    totals = calc_totals(lines, invoice.vatRate)
+    totals = calc_totals(lines, invoice.vatRate, invoice.irpfRate)
 
     doc = {
         "id": f"inv-{uuid.uuid4().hex[:8]}",
@@ -512,8 +519,10 @@ async def update_invoice(invoice_id: str, update: InvoiceUpdate):
         raise HTTPException(404, "Factura no encontrada")
 
     data = {k: v for k, v in update.model_dump().items() if v is not None}
-    if "lines" in data:
-        totals = calc_totals(data["lines"], inv.get("vatRate", 21))
+    if "lines" in data or "irpfRate" in data:
+        eff_lines = data.get("lines", inv.get("lines", []))
+        eff_irpf = data.get("irpfRate", inv.get("irpfRate", 0))
+        totals = calc_totals(eff_lines, inv.get("vatRate", 21), eff_irpf)
         data.update({k: v for k, v in totals.items() if k != "lines"})
 
     data["updatedAt"] = datetime.now(timezone.utc).isoformat()

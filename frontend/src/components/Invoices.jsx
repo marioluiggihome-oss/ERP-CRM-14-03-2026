@@ -21,7 +21,7 @@ const EMPTY_FORM = {
   clientName: '', clientEmail: '', clientAddress: '', clientTaxId: '',
   invoiceNumber: '', issueDate: new Date().toISOString().split('T')[0],
   dueDate: new Date(Date.now() + 30*864e5).toISOString().split('T')[0],
-  vatRate: 21, notes: '', status: 'draft',
+  vatRate: 21, irpfRate: 0, notes: '', status: 'draft',
   lines: [{ description: '', quantity: 1, unitPrice: 0, discount: 0, vatRate: 21 }]
 };
 
@@ -71,7 +71,7 @@ const Invoices = ({ currentUser }) => {
       clientName: inv.clientName || '', clientEmail: inv.clientEmail || '',
       clientAddress: inv.clientAddress || '', clientTaxId: inv.clientTaxId || '',
       invoiceNumber: inv.invoiceNumber || '', issueDate: inv.issueDate || '',
-      dueDate: inv.dueDate || '', vatRate: inv.vatRate || 21,
+      dueDate: inv.dueDate || '', vatRate: inv.vatRate || 21, irpfRate: inv.irpfRate || 0,
       notes: inv.notes || '', status: inv.status || 'draft',
       lines: inv.lines?.length ? inv.lines : EMPTY_FORM.lines
     });
@@ -89,7 +89,7 @@ const Invoices = ({ currentUser }) => {
       clientAddress: inv.clientAddress || '', clientTaxId: inv.clientTaxId || '',
       invoiceNumber: nextNumber, issueDate: today,
       dueDate: new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0],
-      vatRate: inv.vatRate || 21, notes: inv.notes || '', status: 'draft',
+      vatRate: inv.vatRate || 21, irpfRate: inv.irpfRate || 0, notes: inv.notes || '', status: 'draft',
       lines: inv.lines?.length ? inv.lines.map(l => ({ ...l })) : EMPTY_FORM.lines,
     });
     setEditingId(null);
@@ -122,7 +122,8 @@ const Invoices = ({ currentUser }) => {
       const net = (l.quantity || 0) * (l.unitPrice || 0) * (1 - (l.discount || 0) / 100);
       base += net; vat += net * ((l.vatRate ?? 21) / 100);
     });
-    return { base, vat, total: base + vat };
+    const irpf = base * ((Number(form.irpfRate) || 0) / 100);
+    return { base, vat, irpf, total: base + vat - irpf };
   };
 
   const handleSave = async () => {
@@ -426,9 +427,13 @@ const Invoices = ({ currentUser }) => {
                 </div>
                 {(() => { const t = totalsBreakdown(); return (
                   <div className="mt-3 flex justify-end">
-                    <div className="w-full sm:w-64 space-y-1 text-sm">
+                    <div className="w-full sm:w-72 space-y-1 text-sm">
                       <div className="flex justify-between text-slate-500"><span>Base imponible</span><span className="font-bold">{fmt(t.base)}</span></div>
                       <div className="flex justify-between text-slate-500"><span>IVA</span><span className="font-bold">{fmt(t.vat)}</span></div>
+                      <div className="flex justify-between items-center text-slate-500">
+                        <span className="flex items-center gap-1">Retención IRPF <input type="number" step="0.01" value={form.irpfRate} onChange={e => setForm(f => ({ ...f, irpfRate: parseFloat(e.target.value) || 0 }))} className="w-14 px-1.5 py-0.5 border border-slate-200 rounded text-center" />%</span>
+                        <span className="font-bold text-rose-500">-{fmt(t.irpf)}</span>
+                      </div>
                       <div className="flex justify-between text-slate-900 text-lg font-black border-t border-slate-200 pt-1"><span>Total</span><span className="text-orange-600">{fmt(t.total)}</span></div>
                     </div>
                   </div>
