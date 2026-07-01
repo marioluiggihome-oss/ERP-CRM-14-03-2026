@@ -9,6 +9,7 @@ from typing import List, Optional
 import logging
 import uuid
 import os
+import re
 import bcrypt
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -113,7 +114,17 @@ def user_to_response(user_data: dict) -> dict:
     return response
 
 # Authentication dependency
-from services.jwt_service import get_current_user as _get_current_user
+from services.jwt_service import get_current_user as _get_current_user, ADMIN_ROLE_FLAGS
+
+
+def _is_user_manager(user: dict) -> bool:
+    """True si el usuario puede gestionar usuarios (rol elevado o permiso explícito)."""
+    if not user or user.get("_compat_mode"):
+        return False
+    if any(user.get(f) for f in ADMIN_ROLE_FLAGS):
+        return True
+    return bool(user.get("canManageUsers") or user.get("canAuthorizePermissions"))
+
 
 async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     """JWT opcional: para GET (lectura). Si hay token lo valida, si no devuelve dict compat."""
@@ -135,6 +146,14 @@ async def require_authenticated_user(credentials: Optional[HTTPAuthorizationCred
     return user
 
 
+async def require_user_manager(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Gestión de usuarios: exige token válido y rol/permiso de administración."""
+    user = await require_authenticated_user(credentials)
+    if not _is_user_manager(user):
+        raise HTTPException(status_code=403, detail="Se requiere rol de administrador para gestionar usuarios")
+    return user
+
+
 # Campos sensibles que se ocultan si no hay token JWT (modo compat con frontend viejo)
 SENSITIVE_USER_FIELDS = {
     "linkedClientId", "accessExpirationDate", "commercialDiscount",
@@ -151,7 +170,7 @@ def filter_sensitive_user_fields(user_data: dict) -> dict:
 async def get_users(current_user: dict = Depends(get_current_user)):
     """Obtener todos los usuarios (sin passwords). Si no hay JWT, oculta campos sensibles."""
     users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
-    if current_user.get("_compat_mode"):
+    if not _is_user_manager(current_user):
         users = [filter_sensitive_user_fields(u) for u in users]
     return users
 
@@ -162,19 +181,19 @@ async def get_user(user_id: str, current_user: dict = Depends(get_current_user))
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    if current_user.get("_compat_mode"):
+    if not _is_user_manager(current_user):
         user = filter_sensitive_user_fields(user)
     return user
 
 
 @router.post("", response_model=UserResponse)
-async def create_user(user: UserCreate, current_user: dict = Depends(get_current_user)):
+async def create_user(user: UserCreate, current_user: dict = Depends(require_user_manager)):
     """Crear un nuevo usuario con password hasheado.
 
     SEGURIDAD: Sin JWT, no se pueden crear usuarios con roles elevados (Admin, Gerente, etc.)
     ni permisos peligrosos (canManageUsers, canAuthorizePermissions, etc.)."""
     # Check if username exists (case insensitive)
-    existing = await db.users.find_one({"username": {"$regex": f"^{user.username}$", "$options": "i"}})
+    existing = await db.users.find_one({"username": {"$regex": f"^{re.escape(user.username)}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
 
@@ -206,7 +225,7 @@ async def create_user(user: UserCreate, current_user: dict = Depends(get_current
 
 
 @router.put("/{user_id}", response_model=UserResponse)
-async def update_user(user_id: str, user: UserUpdate, current_user: dict = Depends(get_current_user)):
+async def update_user(user_id: str, user: UserUpdate, current_user: dict = Depends(require_user_manager)):
     """Actualizar un usuario.
 
     SEGURIDAD: Sin JWT, no se pueden elevar permisos del usuario editado ni cambiar
@@ -249,7 +268,7 @@ async def update_user(user_id: str, user: UserUpdate, current_user: dict = Depen
 
 
 @router.delete("/{user_id}")
-async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_user(user_id: str, current_user: dict = Depends(require_user_manager)):
     """Eliminar un usuario.
 
     SEGURIDAD: Sin JWT, no se puede borrar el admin principal ni otros admins."""
