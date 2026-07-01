@@ -1,5 +1,10 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Hammer, Plus, Trash2, Download, Columns, Rows, Package, Ruler } from 'lucide-react';
+import { Hammer, Plus, Trash2, Download, Columns, Package, Ruler, Sparkles, Image as ImageIcon, Loader } from 'lucide-react';
+import { getToken } from '../services/api';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+const authH = () => ({ 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
+const DOOR_TYPES = [['open', 'Sin puertas'], ['sliding', 'Corredera'], ['hinged', 'Batiente'], ['folding', 'Plegable'], ['coplanar', 'Coplanar']];
 
 // ── Catálogo (tarifas reales Finsa) y precios de accesorios (opción B: determinista) ──
 const MATERIALS = [
@@ -22,8 +27,13 @@ const nid = () => `c${Date.now().toString(36)}${(_cid++)}`;
 const Armarios2 = ({ state }) => {
   const [cfg, setCfg] = useState({
     width: 2000, height: 2400, depth: 600, thickness: 19,
-    materialId: '010B', projectType: 'armario', adminMargin: 40, cliente: '', ref: '',
+    materialId: '010B', projectType: 'armario', doorType: 'open', adminMargin: 40, cliente: '', ref: '',
   });
+  const [planLoading, setPlanLoading] = useState(false);
+  const [renders, setRenders] = useState([]);
+  const [renderLoading, setRenderLoading] = useState(false);
+  const [editText, setEditText] = useState('');
+  const [aiError, setAiError] = useState('');
   const [comps, setComps] = useState([
     { id: nid(), type: 'divider-v', x: 50 },
     { id: nid(), type: 'shelf', y: 30, sectionIndex: 0 },
@@ -46,28 +56,34 @@ const Armarios2 = ({ state }) => {
   const svgRef = useRef(null);
   const box = useRef(null);
   const [drag, setDrag] = useState(null); // {id, axis}
-  const PAD = 48;
-  const [W, setW] = useState(520);
+  const PAD = 44, MAXH = 460;
+  const [W, setW] = useState(560);
   useEffect(() => {
-    const on = () => { if (box.current) setW(Math.max(300, Math.min(720, box.current.clientWidth - 24))); };
+    const on = () => { if (box.current) setW(Math.max(300, Math.min(760, box.current.clientWidth - 24))); };
     on(); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on);
   }, []);
   const ratio = cfg.height / cfg.width;
-  const innerW = W - PAD * 2;
-  const innerH = innerW * ratio;
-  const svgH = innerH + PAD * 2;
+  // Encaja el dibujo dentro del ancho disponible y de una altura máxima; luego se centra.
+  let innerW = W - PAD * 2;
+  let innerH = innerW * ratio;
+  if (innerH > MAXH) { innerH = MAXH; innerW = innerH / ratio; }
+  const vbW = innerW + PAD * 2;
+  const vbH = innerH + PAD * 2;
 
   const onMove = (e) => {
     if (!drag || !svgRef.current) return;
     const r = svgRef.current.getBoundingClientRect();
     const cx = ('touches' in e ? e.touches[0].clientX : e.clientX);
     const cy = ('touches' in e ? e.touches[0].clientY : e.clientY);
+    // El SVG puede estar escalado (maxWidth); mapear por fracción del área interior en px reales.
+    const padPxX = (PAD / vbW) * r.width, innerPxW = (innerW / vbW) * r.width;
+    const padPxY = (PAD / vbH) * r.height, innerPxH = (innerH / vbH) * r.height;
     if (drag.axis === 'y') {
-      let p = ((cy - r.top - PAD) / innerH) * 100;
+      let p = ((cy - r.top - padPxY) / innerPxH) * 100;
       p = Math.max(2, Math.min(98, p));
       setComps(cs => cs.map(c => c.id === drag.id ? { ...c, y: Math.round(p) } : c));
     } else {
-      let p = ((cx - r.left - PAD) / innerW) * 100;
+      let p = ((cx - r.left - padPxX) / innerPxW) * 100;
       p = Math.max(8, Math.min(92, p));
       setComps(cs => cs.map(c => c.id === drag.id ? { ...c, x: Math.round(p) } : c));
     }
@@ -111,6 +127,48 @@ const Armarios2 = ({ state }) => {
     return { baseCost, accesorios, coste, pvp: Math.round(pvp), counts, cut };
   }, [cfg, comps, material]);
 
+  const readFile = (file) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => res(null); fr.readAsDataURL(file); });
+
+  const subirPlano = async (file) => {
+    if (!file) return;
+    setPlanLoading(true); setAiError('');
+    try {
+      const b64 = await readFile(file);
+      const r = await fetch(`${API_URL}/api/armarios2/plan`, { method: 'POST', headers: authH(), body: JSON.stringify({ imageBase64: b64 }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Error');
+      setCfg(c => ({ ...c, width: d.width || c.width, height: d.height || c.height, depth: d.depth || c.depth }));
+    } catch (e) { setAiError(e.message || 'No se pudo analizar el plano.'); }
+    finally { setPlanLoading(false); }
+  };
+
+  const interiorResumen = () => {
+    const byType = {};
+    comps.filter(c => c.type !== 'divider-v').forEach(c => { byType[c.type] = (byType[c.type] || 0) + 1; });
+    const secc = comps.filter(c => c.type === 'divider-v').length + 1;
+    return `${secc} secciones. ` + Object.entries(byType).map(([t, n]) => `${n} ${LABELS[t] || t}`).join(', ');
+  };
+
+  const generarRender = async (edit) => {
+    setRenderLoading(true); setAiError('');
+    try {
+      const prev = edit && renders.length ? renders[renders.length - 1] : null;
+      const r = await fetch(`${API_URL}/api/armarios2/render`, {
+        method: 'POST', headers: authH(),
+        body: JSON.stringify({
+          width: cfg.width, height: cfg.height, depth: cfg.depth,
+          material: material.name, projectType: cfg.projectType, doorType: cfg.doorType,
+          interior: interiorResumen(), editInstruction: edit || '', previousImageBase64: prev,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Error');
+      if (d.imageUrl) setRenders(rs => [...rs, d.imageUrl]);
+      setEditText('');
+    } catch (e) { setAiError(e.message || 'No se pudo generar el render.'); }
+    finally { setRenderLoading(false); }
+  };
+
   const exportCut = () => {
     const rows = budget.cut.map(x => [x.p, x.q, x.w, x.h, material.name].join(';'));
     const csv = ['Pieza;Uds;Ancho(mm);Alto(mm);Material', ...rows].join('\n');
@@ -150,8 +208,16 @@ const Armarios2 = ({ state }) => {
               <select value={cfg.projectType} onChange={e => set('projectType', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
                 <option value="armario">Armario</option><option value="vestidor">Vestidor</option>
               </select></div>
+            <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Puerta</label>
+              <select value={cfg.doorType} onChange={e => set('doorType', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+                {DOOR_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select></div>
             <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Margen %</label>
               <input type="number" value={cfg.adminMargin} onChange={e => set('adminMargin', Number(e.target.value) || 0)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" /></div>
+            <label className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-slate-100 rounded-lg text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-200">
+              {planLoading ? <Loader size={14} className="animate-spin" /> : <Ruler size={14} />} Medidas desde plano (IA)
+              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) subirPlano(f); }} />
+            </label>
           </div>
 
           {/* Paleta */}
@@ -173,7 +239,7 @@ const Armarios2 = ({ state }) => {
 
           {/* Visor 2D con arrastre */}
           <div className="bg-white rounded-2xl border border-slate-200 p-3">
-            <svg ref={svgRef} width="100%" viewBox={`0 0 ${W} ${svgH}`} className="select-none touch-none"
+            <svg ref={svgRef} viewBox={`0 0 ${vbW} ${vbH}`} width={vbW} height={vbH} style={{ maxWidth: '100%', height: 'auto' }} className="select-none touch-none mx-auto block"
               onMouseMove={onMove} onTouchMove={onMove}>
               {/* Carcasa */}
               <rect x={PAD} y={PAD} width={innerW} height={innerH} fill={material.color} stroke="#334155" strokeWidth="3" rx="2" />
@@ -221,6 +287,27 @@ const Armarios2 = ({ state }) => {
           </div>
         </div>
 
+        <div className="space-y-4">
+        {/* Render IA */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm"><Sparkles size={16} className="text-fuchsia-600" /> Render IA</h3>
+            <button onClick={() => generarRender('')} disabled={renderLoading} className="flex items-center gap-1.5 px-3 py-1.5 bg-fuchsia-600 text-white rounded-lg text-xs font-bold hover:bg-fuchsia-700 disabled:opacity-50">{renderLoading ? <Loader size={14} className="animate-spin" /> : <ImageIcon size={14} />} Generar</button>
+          </div>
+          {renders.length > 0 ? (
+            <>
+              <img src={renders[renders.length - 1]} alt="Render armario" className="w-full rounded-xl border border-slate-100" />
+              <div className="flex gap-2 mt-2">
+                <input value={editText} onChange={e => setEditText(e.target.value)} placeholder="Editar: 'puertas correderas negras'…" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs" onKeyDown={e => { if (e.key === 'Enter' && editText.trim()) generarRender(editText.trim()); }} />
+                <button onClick={() => editText.trim() && generarRender(editText.trim())} disabled={renderLoading || !editText.trim()} className="px-3 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-50">Editar</button>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-slate-400 text-center py-6">Genera una imagen realista del armario con la configuración actual.</p>
+          )}
+          {aiError && <p className="text-xs text-rose-600 font-bold mt-2">{aiError}</p>}
+        </div>
+
         {/* Presupuesto */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 h-fit lg:sticky lg:top-4">
           <h3 className="font-black text-slate-800 flex items-center gap-2 mb-3"><Package size={18} /> Presupuesto</h3>
@@ -237,7 +324,8 @@ const Armarios2 = ({ state }) => {
             {Object.entries(budget.counts).map(([t, n]) => <div key={t} className="flex justify-between text-[11px] text-slate-500"><span>{LABELS[t] || t}</span><span>×{n}</span></div>)}
           </div>
           <button onClick={exportCut} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900"><Download size={15} /> Despiece (CSV)</button>
-          <p className="text-[10px] text-slate-400 mt-2">Render con IA y PDF: próxima fase. Precios por tarifas (opción B).</p>
+          <p className="text-[10px] text-slate-400 mt-2">PDF: próxima fase. Precios por tarifas (opción B).</p>
+        </div>
         </div>
       </div>
     </div>
