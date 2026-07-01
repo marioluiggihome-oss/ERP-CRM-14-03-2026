@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   FileText, Plus, Download, Send, CheckCircle, XCircle, Clock,
   Euro, Search, Loader2, Trash2, Edit2, X, Save, AlertTriangle,
-  ArrowUpRight, Receipt, Filter
+  ArrowUpRight, Receipt, Filter, Copy, Users
 } from 'lucide-react';
-import { invoicesAPI } from '../services/api';
+import { invoicesAPI, clientsAPI } from '../services/api';
 
 const STATUS_CONFIG = {
   draft:     { label: 'Borrador',  color: 'bg-slate-100 text-slate-600',   icon: FileText },
@@ -77,6 +77,52 @@ const Invoices = ({ currentUser }) => {
     });
     setEditingId(inv.id);
     setShowModal(true);
+  };
+
+  // Duplicar factura (como en Holded): copia datos y líneas como nuevo borrador.
+  const duplicateInvoice = async (inv) => {
+    let nextNumber = '';
+    try { nextNumber = (await invoicesAPI.getNextNumber())?.nextNumber || ''; } catch { /* */ }
+    const today = new Date().toISOString().split('T')[0];
+    setForm({
+      clientName: inv.clientName || '', clientEmail: inv.clientEmail || '',
+      clientAddress: inv.clientAddress || '', clientTaxId: inv.clientTaxId || '',
+      invoiceNumber: nextNumber, issueDate: today,
+      dueDate: new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0],
+      vatRate: inv.vatRate || 21, notes: inv.notes || '', status: 'draft',
+      lines: inv.lines?.length ? inv.lines.map(l => ({ ...l })) : EMPTY_FORM.lines,
+    });
+    setEditingId(null);
+    setShowModal(true);
+  };
+
+  // Cargar cliente desde los clientes importados (rellena los datos de la factura).
+  const [clientPicker, setClientPicker] = useState(false);
+  const [clientList, setClientList] = useState([]);
+  const [clientQ, setClientQ] = useState('');
+  const openClientPicker = async () => {
+    setClientPicker(true);
+    try { setClientList(await clientsAPI.getAll(true) || []); } catch { setClientList([]); }
+  };
+  const pickClient = (c) => {
+    setForm(f => ({
+      ...f,
+      clientName: c.nombre || f.clientName,
+      clientTaxId: c.cif || c.nif || c.codigo || f.clientTaxId,
+      clientEmail: c.email || f.clientEmail,
+      clientAddress: c.direccion || f.clientAddress,
+    }));
+    setClientPicker(false);
+  };
+
+  // Totales desglosados (base imponible, IVA, total) — estilo Holded.
+  const totalsBreakdown = () => {
+    let base = 0, vat = 0;
+    (form.lines || []).forEach(l => {
+      const net = (l.quantity || 0) * (l.unitPrice || 0) * (1 - (l.discount || 0) / 100);
+      base += net; vat += net * ((l.vatRate ?? 21) / 100);
+    });
+    return { base, vat, total: base + vat };
   };
 
   const handleSave = async () => {
@@ -172,7 +218,7 @@ const Invoices = ({ currentUser }) => {
             {[
               { label: 'Este mes', value: fmt(stats.monthTotal), color: 'text-indigo-600' },
               { label: 'Pendiente cobro', value: fmt(stats.pendingTotal), color: 'text-orange-600' },
-              { label: 'Emitidas', value: stats.issued, color: 'text-blue-600' },
+              { label: 'Vencido', value: fmt(invoices.filter(x => x.status === 'issued' && x.dueDate && new Date(x.dueDate) < new Date()).reduce((s, x) => s + (x.total || 0), 0)), color: 'text-red-600' },
               { label: 'Pagadas', value: stats.paid, color: 'text-green-600' },
             ].map((s, i) => (
               <div key={i} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
@@ -261,6 +307,10 @@ const Invoices = ({ currentUser }) => {
                           <CheckCircle className="w-4 h-4" />
                         </button>
                       )}
+                      <button onClick={() => duplicateInvoice(inv)}
+                        className="p-2 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 transition-all" title="Duplicar factura">
+                        <Copy className="w-4 h-4" />
+                      </button>
                       <button onClick={() => openEdit(inv)}
                         className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all" title="Editar">
                         <Edit2 className="w-4 h-4" />
@@ -314,7 +364,10 @@ const Invoices = ({ currentUser }) => {
 
               {/* Cliente */}
               <div className="bg-slate-50 rounded-2xl p-4 space-y-3">
-                <p className="text-[10px] font-black text-slate-400 uppercase">Datos del Cliente</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black text-slate-400 uppercase">Datos del Cliente</p>
+                  <button onClick={openClientPicker} type="button" className="flex items-center gap-1 text-[10px] font-black text-indigo-600 hover:text-indigo-700"><Users className="w-3.5 h-3.5" /> Cargar cliente</button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase">Nombre *</label>
@@ -371,9 +424,15 @@ const Invoices = ({ currentUser }) => {
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 text-right">
-                  <span className="text-lg font-black text-orange-600">Total: {fmt(calcTotal())}</span>
-                </div>
+                {(() => { const t = totalsBreakdown(); return (
+                  <div className="mt-3 flex justify-end">
+                    <div className="w-full sm:w-64 space-y-1 text-sm">
+                      <div className="flex justify-between text-slate-500"><span>Base imponible</span><span className="font-bold">{fmt(t.base)}</span></div>
+                      <div className="flex justify-between text-slate-500"><span>IVA</span><span className="font-bold">{fmt(t.vat)}</span></div>
+                      <div className="flex justify-between text-slate-900 text-lg font-black border-t border-slate-200 pt-1"><span>Total</span><span className="text-orange-600">{fmt(t.total)}</span></div>
+                    </div>
+                  </div>
+                ); })()}
               </div>
 
               {/* Notas */}
@@ -402,6 +461,37 @@ const Invoices = ({ currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Selector de cliente importado */}
+      {clientPicker && (() => {
+        const qn = clientQ.trim().toLowerCase();
+        const list = (clientList || []).filter(c => !qn ||
+          (c.nombre || '').toLowerCase().includes(qn) ||
+          String(c.cif || c.nif || c.codigo || '').toLowerCase().includes(qn));
+        return (
+          <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setClientPicker(false)}>
+            <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+                <h3 className="font-black text-slate-800 text-sm uppercase flex items-center gap-2"><Users className="w-4 h-4" /> Clientes ({(clientList || []).length})</h3>
+                <button onClick={() => setClientPicker(false)} className="p-1.5 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-3 border-b border-slate-100">
+                <input value={clientQ} onChange={e => setClientQ(e.target.value)} placeholder="Buscar por nombre o NIF…" autoFocus
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-orange-400" />
+              </div>
+              <div className="overflow-auto divide-y divide-slate-100">
+                {list.map((c, k) => (
+                  <button key={c.id || k} onClick={() => pickClient(c)} className="w-full text-left px-4 py-2.5 hover:bg-orange-50 flex items-center justify-between gap-2">
+                    <span className="font-bold text-slate-700 text-sm truncate">{c.nombre || '—'}</span>
+                    <span className="text-[11px] text-slate-400 shrink-0">{c.cif || c.nif || c.codigo || ''}</span>
+                  </button>
+                ))}
+                {list.length === 0 && <p className="p-6 text-center text-slate-400 text-sm">Sin clientes.</p>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
