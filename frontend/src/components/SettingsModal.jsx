@@ -248,30 +248,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
   const [maintenanceCreateBackup, setMaintenanceCreateBackup] = useState(true);
 
   // Settings saving state
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
 
-  // Function to save pricing settings
-  const handleSavePricingSettings = async () => {
-    setIsSavingSettings(true);
+  // Guarda un ajuste global y refresca el estado local (para que otras vistas,
+  // p.ej. Cocina Desmontada, vean el cambio sin recargar). Se usa en onBlur.
+  const saveSetting = async (patch) => {
     try {
-      await settingsAPI.update({
-        pointValueMontada: state.pointValueMontada,
-        pointValueDespiece: state.pointValueDespiece,
-        specialIncrementWidth: state.specialIncrementWidth,
-        specialIncrementHeight: state.specialIncrementHeight,
-        specialIncrementDepth: state.specialIncrementDepth,
-        librarySpecialIncrements: state.librarySpecialIncrements,
-        vigaCutIncrement: state.vigaCutIncrement || 0,
-        libraryVigaCutIncrements: state.libraryVigaCutIncrements || { ZC: 0, MV: 0 }
-      });
-      alert('✅ Configuración guardada correctamente');
-    } catch (err) {
-      console.error('Error saving settings:', err);
-      alert('❌ Error al guardar la configuración');
-    } finally {
-      setIsSavingSettings(false);
-    }
+      await settingsAPI.update(patch);
+      setState(prev => ({ ...prev, settings: { ...(prev.settings || {}), ...patch } }));
+    } catch (err) { console.error('Error guardando ajuste:', err); alert('No se pudo guardar el ajuste.'); }
   };
 
   // Load clients and segments when tab is active
@@ -3239,11 +3224,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                         type="text"
                         placeholder={field.placeholder}
                         defaultValue={state.settings?.[field.key] || ''}
-                        onChange={async (e) => {
-                          try {
-                            await settingsAPI.update({ [field.key]: e.target.value });
-                          } catch (err) { console.error(err); }
-                        }}
+                        onBlur={(e) => saveSetting({ [field.key]: e.target.value })}
                         className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900"
                       />
                     </div>
@@ -3255,7 +3236,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 <p className="text-xs text-slate-500 mb-3">Uno por línea, con el formato <b>Nombre — Dirección completa</b>. Aparecerán como opciones de "Centro de envío" al generar pedidos a proveedor.</p>
                 <textarea rows={4} placeholder={"Central Cádiz — C/ Ejemplo 1, 11000 Cádiz\nAlmacén Sevilla — Pol. Ind. ..., 41000 Sevilla"}
                   defaultValue={state.settings?.centrosEnvio || ''}
-                  onChange={async (e) => { try { await settingsAPI.update({ centrosEnvio: e.target.value }); } catch (err) { console.error(err); } }}
+                  onBlur={(e) => saveSetting({ centrosEnvio: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono outline-none focus:border-indigo-500" />
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl p-5">
@@ -3268,14 +3249,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
                     <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Email remitente</label>
                     <input type="text" placeholder="no-reply@luiggihome.es" defaultValue={state.settings?.emailSender || ''}
-                      onChange={async (e) => { try { await settingsAPI.update({ emailSender: e.target.value }); } catch (err) { console.error(err); } }}
+                      onBlur={(e) => saveSetting({ emailSender: e.target.value })}
                       className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-bold text-slate-900" />
                   </div>
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-emerald-300 transition-colors">
                     <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">SendGrid API Key</label>
                     <input type="password" autoComplete="new-password"
                       placeholder={state.settings?.sendgridConfigured ? '•••••••• (ya configurada)' : 'SG.xxxxx'}
-                      onChange={async (e) => { if (!e.target.value) return; try { await settingsAPI.update({ sendgridApiKey: e.target.value }); } catch (err) { console.error(err); } }}
+                      onBlur={async (e) => { if (!e.target.value) return; try { await settingsAPI.update({ sendgridApiKey: e.target.value }); } catch (err) { console.error(err); } }}
                       className="w-full mt-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
                   </div>
                 </div>
@@ -3308,7 +3289,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <div className="flex items-center gap-1 mt-1.5">
                         <input type="number" step="0.01" placeholder={String(f.def)}
                           defaultValue={state.settings?.['armPrice_' + f.k] ?? ''}
-                          onChange={async (e) => { try { await settingsAPI.update({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) }); } catch (err) { console.error(err); } }}
+                          onBlur={(e) => saveSetting({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) })}
                           className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
                         <span className="text-[10px] font-bold text-slate-400 shrink-0">{f.unit}</span>
                       </div>
@@ -3346,7 +3327,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       <div className="flex items-center gap-1 mt-1.5">
                         <input type="number" step="0.01" placeholder={String(f.def)}
                           defaultValue={state.settings?.['armPrice_' + f.k] ?? ''}
-                          onChange={async (e) => { try { await settingsAPI.update({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) }); } catch (err) { console.error(err); } }}
+                          onBlur={(e) => saveSetting({ ['armPrice_' + f.k]: e.target.value === '' ? null : Number(e.target.value) })}
                           className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
                         <span className="text-[10px] font-bold text-slate-400 shrink-0">€/m²</span>
                       </div>

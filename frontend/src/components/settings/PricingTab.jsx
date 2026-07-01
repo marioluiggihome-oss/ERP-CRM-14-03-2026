@@ -23,7 +23,7 @@ const PricingTab = ({ state, setState }) => {
     };
     try {
       const payload = {
-        pointValueMontada: num(state.pointValueMontada, 1),
+        // pointValueMontada se gestiona por biblioteca (librariesAPI), no aquí.
         pointValueDespiece: num(state.pointValueDespiece, 0.88),
         cascosPointValue: num(state.pointValueDesmontada, 1),
         specialIncrementWidth: num(state.specialIncrementWidth, 45),

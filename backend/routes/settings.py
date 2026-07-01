@@ -132,6 +132,11 @@ async def update_settings(settings: SettingsUpdate, current_user: dict = Depends
     updated = await db.settings.find_one({"id": "global-settings"}, {"_id": 0})
     if not updated:
         return {}
+    # No reflejar secretos en la respuesta (igual que en GET)
+    updated["sendgridConfigured"] = bool(updated.get("sendgridApiKey"))
+    updated["resendConfigured"] = bool(updated.get("resendApiKey"))
+    updated.pop("sendgridApiKey", None)
+    updated.pop("resendApiKey", None)
     return updated
 
 

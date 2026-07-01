@@ -24,6 +24,13 @@ logger = logging.getLogger(__name__)
 # Todos los pedidos de cascos requieren token válido (aislamiento por usuario dentro).
 router = APIRouter(tags=["cascos"], dependencies=_CASCOS_DEPS)
 
+
+def _safe_float(v, default=0.0):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
 mongo_url = os.environ.get('MONGO_URL')
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'luiggi_home')]
@@ -47,10 +54,10 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
             "expediente": str(payload.get("expediente") or ""),  # vínculo venta <-> compra
             "cliente": str(payload.get("cliente") or ""),
             "ref": str(payload.get("ref") or ""),
-            "ivaRate": float(payload.get("ivaRate") or 21),
-            "descuento": float(payload.get("descuento") or 0),
+            "ivaRate": _safe_float(payload.get("ivaRate"), 21),
+            "descuento": _safe_float(payload.get("descuento"), 0),
             "lines": payload.get("lines") or [],
-            "total": float(payload.get("total") or 0),
+            "total": _safe_float(payload.get("total"), 0),
             "createdByName": payload.get("createdByName", ""),
             "createdAt": (existing or {}).get("createdAt") or now,
             "updatedAt": now,
