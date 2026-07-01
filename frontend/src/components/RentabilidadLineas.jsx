@@ -695,8 +695,8 @@ const RentabilidadLineas = ({ currentUser }) => {
 
       {/* ── Editor de ficha ── */}
       {editor && (
-        <div className="fixed inset-0 bg-black/60 z-[140] flex items-center justify-center p-4" onClick={() => !saving && setEditor(null)}>
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 z-[140] flex items-center justify-center p-3 sm:p-6" onClick={() => !saving && setEditor(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-emerald-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
               <h2 className="text-lg font-black flex items-center gap-2"><FileText size={18} /> {TABS.find(t => t.key === editor.docType)?.label} - lineas y costes</h2>
               <button onClick={() => !saving && setEditor(null)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
