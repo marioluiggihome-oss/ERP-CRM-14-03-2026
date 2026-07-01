@@ -537,6 +537,16 @@ const Cascos = ({ state }) => {
                 </div>
               </div>
             </div>
+            {/* Accesos rápidos a las medidas más usadas */}
+            <div className="flex items-center gap-1.5 flex-wrap mb-3">
+              <span className="text-[10px] font-black text-slate-400 uppercase mr-1">Rápido:</span>
+              {[['Altos 90', 900], ['Altos 70', 700], ['Bajos 80', 800], ['Bajos 70', 700]].map(([lab, mm], i) => (
+                <button key={i} type="button" onClick={() => { setAltoMin(String(med(mm))); setAltoMax(String(med(mm))); }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100">{lab}</button>
+              ))}
+              <button type="button" onClick={() => { setQ(''); setTipo(''); setAltoMin(''); setAltoMax(''); setAnchoMin(''); setAnchoMax(''); }}
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center gap-1"><X size={12} /> Limpiar</button>
+            </div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="text-[11px] text-slate-400 flex items-center gap-1"><Search size={12} /> {resultados.length} cascos encontrados</p>
               <div className="flex items-center gap-2 flex-wrap">
