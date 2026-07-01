@@ -12,14 +12,17 @@ import uuid
 from motor.motor_asyncio import AsyncIOMotorClient
 
 try:
-    from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS
+    from services.jwt_service import get_current_user, require_auth, ADMIN_ROLE_FLAGS
+    _CASCOS_DEPS = [Depends(require_auth)]
 except Exception:
     async def get_current_user():
         return None
     ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
+    _CASCOS_DEPS = []
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["cascos"])
+# Todos los pedidos de cascos requieren token válido (aislamiento por usuario dentro).
+router = APIRouter(tags=["cascos"], dependencies=_CASCOS_DEPS)
 
 mongo_url = os.environ.get('MONGO_URL')
 client = AsyncIOMotorClient(mongo_url)
@@ -30,12 +33,16 @@ db = client[os.environ.get('DB_NAME', 'luiggi_home')]
 async def create_casco_order(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """Crea (guarda) un pedido de cascos."""
     try:
+        uid = (current_user or {}).get("id") or "anonymous"
         oid = (payload or {}).get("id") or f"casco-{uuid.uuid4().hex[:10]}"
         now = datetime.now(timezone.utc).isoformat()
-        existing = await db.cascos_orders.find_one({"id": oid}, {"_id": 0, "createdAt": 1})
+        existing = await db.cascos_orders.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
+        # Al re-guardar por id, comprobar propiedad (evita pisar el pedido de otro).
+        if existing and not _can_access(existing, current_user):
+            raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
         doc = {
             "id": oid,
-            "userId": payload.get("userId") or (current_user or {}).get("id") or "anonymous",
+            "userId": (existing or {}).get("userId") or uid,  # nunca se toma del payload
             "kind": str(payload.get("kind") or "pedido"),   # 'presupuesto' | 'pedido' | 'compra'
             "expediente": str(payload.get("expediente") or ""),  # vínculo venta <-> compra
             "cliente": str(payload.get("cliente") or ""),
@@ -51,6 +58,8 @@ async def create_casco_order(payload: dict, current_user: Optional[dict] = Depen
         await db.cascos_orders.update_one({"id": oid}, {"$set": doc}, upsert=True)
         doc.pop("_id", None)
         return {"success": True, "order": doc}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Create casco order error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -81,7 +90,7 @@ async def list_casco_orders(userId: Optional[str] = None, kind: Optional[str] = 
 def _can_access(order: dict, current_user: Optional[dict]) -> bool:
     """Admin/elevado ve todo; el resto solo sus propios pedidos."""
     if not current_user or not current_user.get("id"):
-        return True  # sin auth (modo compat); el aislamiento real lo da el listado
+        return False  # sin usuario autenticado no hay acceso
     if any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         return True
     return order.get("userId") == current_user["id"]
