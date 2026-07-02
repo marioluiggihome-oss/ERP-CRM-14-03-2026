@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Sparkles, Plus, Trash2, Play, RefreshCw, Download, CheckCircle,
-  AlertCircle, Clock, Loader, X, ChevronDown, ChevronUp, ZoomIn
+  AlertCircle, Clock, Loader, X, ChevronDown, ChevronUp, ZoomIn, Upload, Image
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
@@ -51,6 +51,8 @@ const PROYECTO_VACIO = () => ({
   descripcion: '',
   presupuesto: '',
   notas: '',
+  croquis: null,
+  croquisPrev: null,
 });
 
 function StatusIcon({ status }) {
@@ -62,6 +64,22 @@ function StatusIcon({ status }) {
 
 function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
   const [expanded, setExpanded] = useState(index === 0);
+  const fileRef = useRef(null);
+
+  const onFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      onChange({ ...proyecto, croquis: file, croquisPrev: reader.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeCroquis = (e) => {
+    e.stopPropagation();
+    onChange({ ...proyecto, croquis: null, croquisPrev: null });
+  };
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
       <div
@@ -143,6 +161,27 @@ function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
               placeholder="Encimera silestone, frentes lacados en mate…"
               className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
+          </div>
+          {/* Subida de croquis/plano */}
+          <div className="sm:col-span-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Croquis / Plano / Foto</label>
+            {proyecto.croquisPrev ? (
+              <div className="relative inline-block">
+                <img src={proyecto.croquisPrev} alt="Croquis" className="h-20 rounded-lg object-contain border border-slate-200" />
+                <button onClick={removeCroquis} className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-0.5 shadow">
+                  <X size={10} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-slate-300 rounded-xl text-sm text-slate-500 hover:border-amber-400 hover:text-amber-600 transition-colors w-full justify-center"
+              >
+                <Upload size={14} /> Subir croquis a boli, foto o plano
+              </button>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
           </div>
         </div>
       )}
@@ -284,7 +323,17 @@ export default function AgentesDisenadores({ state }) {
     setAgentes([]);
 
     try {
-      const resp = await apiPost('/agentes/lanzar', { proyectos: validos });
+      // Preparar proyectos con croquis en base64
+      const proyectosPayload = validos.map(p => ({
+        nombre_cliente: p.nombre_cliente,
+        medidas: p.medidas,
+        estilo: p.estilo,
+        descripcion: p.descripcion,
+        presupuesto: p.presupuesto,
+        notas: p.notas,
+        croquis_b64: p.croquisPrev || null,
+      }));
+      const resp = await apiPost('/agentes/lanzar', { proyectos: proyectosPayload });
       const agentesIniciales = (resp.agentes || []).map(a => ({
         ...a,
         estilo: validos.find(p => p.nombre_cliente === a.nombre_cliente)?.estilo || 'Moderno',
