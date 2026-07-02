@@ -145,22 +145,22 @@ const PropData = ({ state }) => {
 
           {/* KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Promociones</p>
-              <p className="text-2xl font-black text-slate-800 mt-0.5">{devsAll.length}</p>
+            <div className="rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br from-slate-700 to-slate-900">
+              <p className="text-[9px] font-black text-white/60 uppercase tracking-widest">Promociones</p>
+              <p className="text-3xl font-black mt-0.5">{devsAll.length}</p>
             </div>
-            <div className="rounded-2xl p-4 text-white shadow bg-gradient-to-br from-indigo-500 to-violet-600">
+            <div className="rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br from-fuchsia-500 to-indigo-600">
               <p className="text-[9px] font-black text-white/70 uppercase tracking-widest">Predomina</p>
               <p className="text-lg font-black mt-0.5 leading-tight truncate">{predomina ? predomina[0] : '—'}</p>
               <p className="text-[11px] text-white/80">{predomina ? `${predomina[1]} de ${devsAll.length} · ${catPredomina}` : ''}</p>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pisos</p>
-              <p className="text-2xl font-black text-sky-600 mt-0.5">{nPisos}</p>
+            <div className="rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br from-sky-500 to-cyan-600">
+              <p className="text-[9px] font-black text-white/70 uppercase tracking-widest">Pisos</p>
+              <p className="text-3xl font-black mt-0.5">{nPisos}</p>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Chalets</p>
-              <p className="text-2xl font-black text-emerald-600 mt-0.5">{nChalets}</p>
+            <div className="rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br from-emerald-500 to-teal-600">
+              <p className="text-[9px] font-black text-white/70 uppercase tracking-widest">Chalets</p>
+              <p className="text-3xl font-black mt-0.5">{nChalets}</p>
             </div>
           </div>
 
