@@ -1,21 +1,21 @@
 """
-Estudio de Cocinas — Router Maestro Unificado
-==============================================
-Consolida y orquesta todos los módulos de diseño de cocinas del ERP:
-  · cocinasai.py         → render desde planos (Gemini)
-  · ai_engine.py         → motor LuiggiAI (render por texto/voz, transcripción)
-  · kitchen_projects.py  → CRUD proyectos, medidas, muebles, aprobación
+3D Estudio — Router Maestro
+============================
+Módulo unificado de diseño de cocinas para el ERP.
+Todas las capacidades de IA pasan exclusivamente por el motor LuiggiAI
+(capa white-label sobre Manus API), usando la skill kitchen-3d-render
+para construir prompts de render de calidad profesional.
 
-Nuevas capacidades exclusivas de este módulo:
-  POST /estudio-cocinas/plano-2d          → Plano técnico 2D (matplotlib, base64 PNG)
-  POST /estudio-cocinas/ficha-tecnica     → Ficha técnica en Markdown
-  POST /estudio-cocinas/presentacion      → Presentación HTML para cliente
-  POST /estudio-cocinas/transcribir-audio → Transcripción de audio a texto (voz → descripción)
-  POST /estudio-cocinas/render-rapido     → Render rápido sin proyecto (texto libre)
-  GET  /estudio-cocinas/estado            → Estado del módulo y capacidades disponibles
-
-Todos los endpoints requieren JWT. El módulo no duplica lógica existente:
-reutiliza los servicios ya disponibles (llm_vision, luiggi_ai, kitchen_projects).
+Endpoints:
+  GET  /estudio-cocinas/estado
+  POST /estudio-cocinas/render          → Render fotorrealista (texto + croquis opcional)
+  POST /estudio-cocinas/render/editar   → Editar render existente en lenguaje natural
+  POST /estudio-cocinas/transcribir     → Transcribir audio/voz a texto
+  POST /estudio-cocinas/plano-2d        → Plano técnico acotado (matplotlib)
+  POST /estudio-cocinas/ficha-tecnica   → Ficha técnica en Markdown
+  POST /estudio-cocinas/presentacion    → Presentación HTML para cliente
+  GET  /estudio-cocinas/tarea/{id}      → Consultar estado de tarea asíncrona
+  GET  /estudio-cocinas/tarea/{id}/resultado → Obtener resultado de tarea completada
 """
 from __future__ import annotations
 
@@ -24,13 +24,13 @@ import base64
 import datetime
 import io
 import logging
-import math
 import os
 import re
+import sys
 import time
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("estudio_cocinas")
@@ -44,233 +44,375 @@ except Exception:
 
 router = APIRouter(
     prefix="/estudio-cocinas",
-    tags=["Estudio de Cocinas"],
+    tags=["3D Estudio"],
     dependencies=_DEPS,
 )
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── Motor LuiggiAI (Manus API white-label) ───────────────────────────────────
+def _get_engine():
+    """Obtiene la instancia del motor LuiggiAI."""
+    try:
+        from services.luiggi_ai.engine_core import LuiggiAICore
+        return LuiggiAICore()
+    except Exception as e:
+        logger.error(f"No se pudo inicializar LuiggiAI: {e}")
+        return None
 
-def _strip_b64(b64: str) -> str:
-    if isinstance(b64, str) and b64.startswith("data:"):
-        return b64.split(",", 1)[1]
-    return b64
+# ─── Skill: generador de prompts de cocinas ───────────────────────────────────
+_SKILL_DIR = os.path.join(os.path.dirname(__file__), "..", "services", "kitchen_skill")
+
+def _load_materials_guide() -> str:
+    """Carga la guía de materiales de la skill kitchen-3d-render."""
+    path = os.path.join(_SKILL_DIR, "references", "materials_guide.md")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return ""
+
+def _generate_render_prompt(layout: str, materials: str, style: str,
+                             extra: str = "") -> str:
+    """
+    Genera un prompt técnico de alta calidad usando el script de la skill.
+    Fallback manual si el script no está disponible.
+    """
+    try:
+        script_path = os.path.join(_SKILL_DIR, "scripts", "generate_kitchen_prompt.py")
+        spec = __import__("importlib.util", fromlist=["util"]).util.spec_from_file_location(
+            "gen_prompt", script_path)
+        mod = __import__("importlib.util", fromlist=["util"]).util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        base = mod.generate_prompt(layout, materials, style)
+    except Exception:
+        base = (
+            f"Fotorealistic 3D render of a kitchen, architectural photography, "
+            f"8k resolution, cinematic lighting. Layout: {layout}. "
+            f"Materials: {materials}. Cabinet style: {style}. "
+            "Soft natural light from a window, high-end appliances, "
+            "interior design magazine style, hyper-detailed textures, ray tracing."
+        )
+    if extra:
+        base += f" Additional details: {extra}"
+    return base
 
 
 def _parse_medidas(texto: str) -> dict:
-    """
-    Parsea texto libre de medidas y devuelve un dict con ancho, alto, isla_w, isla_h.
-    Soporta: "3x4m", "300x400cm", "Pared A: 3m, Pared B: 4m", etc.
-    """
+    """Parsea texto libre de medidas → dict con ancho, alto, isla_w, isla_h en cm."""
     nums = re.findall(r'(\d+(?:[.,]\d+)?)\s*(?:cm|m)?', (texto or "").lower())
     vals = [float(n.replace(',', '.')) for n in nums if float(n.replace(',', '.')) > 0]
-    # Convertir a cm si parecen metros (< 20)
     vals_cm = [int(v * 100) if v < 20 else int(v) for v in vals]
     return {
-        "ancho": vals_cm[0] if len(vals_cm) > 0 else 400,
-        "alto":  vals_cm[1] if len(vals_cm) > 1 else 350,
+        "ancho":  vals_cm[0] if len(vals_cm) > 0 else 400,
+        "alto":   vals_cm[1] if len(vals_cm) > 1 else 350,
         "isla_w": vals_cm[2] if len(vals_cm) > 2 else 200,
         "isla_h": vals_cm[3] if len(vals_cm) > 3 else 100,
     }
 
-
 # ─── Modelos ──────────────────────────────────────────────────────────────────
 
-class ProyectoBase(BaseModel):
-    nombre_cliente: Optional[str] = Field(default="Cliente", description="Nombre del cliente")
-    descripcion: Optional[str] = Field(default="", description="Descripción libre del proyecto")
+class RenderInput(BaseModel):
+    descripcion: str = Field(..., description="Descripción libre de la cocina")
     estilo: Optional[str] = Field(default="Moderno", description="Estilo de diseño")
-    notas: Optional[str] = Field(default="", description="Notas adicionales del cliente")
-    medidas: Optional[str] = Field(default="", description="Medidas en texto libre: '4x3m isla 2x1m'")
-    presupuesto: Optional[str] = Field(default="", description="Rango de presupuesto")
+    materiales: Optional[str] = Field(default="", description="Materiales específicos")
+    distribucion: Optional[str] = Field(default="", description="Distribución (L, U, isla...)")
     croquis_b64: Optional[str] = Field(default=None, description="Croquis en base64 (opcional)")
-
+    modo_async: Optional[bool] = Field(default=False, description="Si True devuelve task_id sin esperar")
 
 class EditarRenderInput(BaseModel):
-    render_b64: str = Field(..., description="Render previo en base64")
+    render_url: Optional[str] = Field(default=None, description="URL del render previo")
+    render_b64: Optional[str] = Field(default=None, description="Render previo en base64")
     instruccion: str = Field(..., description="Instrucción de edición en lenguaje natural")
+    modo_async: Optional[bool] = Field(default=False)
 
-
-class RenderRapidoInput(BaseModel):
-    descripcion: str = Field(..., description="Descripción en lenguaje natural")
+class ProyectoBase(BaseModel):
+    nombre_cliente: Optional[str] = Field(default="Cliente")
+    descripcion: Optional[str] = Field(default="")
     estilo: Optional[str] = Field(default="Moderno")
-    croquis_b64: Optional[str] = Field(default=None)
-
+    notas: Optional[str] = Field(default="")
+    medidas: Optional[str] = Field(default="")
+    presupuesto: Optional[str] = Field(default="")
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.get("/estado")
 async def estado_modulo():
-    """
-    Devuelve el estado del módulo y qué capacidades están disponibles
-    según las variables de entorno configuradas.
-    """
-    from services.llm_vision import get_gemini_key, GOOGLE_GENAI_AVAILABLE
-    gemini_ok = bool(get_gemini_key() and GOOGLE_GENAI_AVAILABLE)
-
-    manus_key = os.environ.get("MANUS_API_KEY", "")
-    manus_ok = bool(manus_key)
+    """Estado del módulo y disponibilidad del motor."""
+    engine = _get_engine()
+    if engine:
+        status = engine.get_status()
+        activo = status.get("status") == "active"
+    else:
+        activo = False
 
     return {
-        "modulo": "Estudio de Cocinas",
-        "version": "2.0.0",
+        "modulo": "3D Estudio",
+        "version": "3.0.0",
+        "motor": "LuiggiAI (Manus API)",
+        "motor_activo": activo,
+        "skill_render": os.path.exists(os.path.join(_SKILL_DIR, "SKILL.md")),
         "capacidades": {
-            "render_ia": gemini_ok or manus_ok,
-            "render_gemini": gemini_ok,
-            "render_luiggi_ai": manus_ok,
+            "render_fotorrealista": activo,
+            "edicion_render": activo,
+            "transcripcion_audio": activo,
             "plano_2d": True,
             "ficha_tecnica": True,
             "presentacion_html": True,
-            "transcripcion_audio": manus_ok,
         },
-        "motores_disponibles": (
-            ["Gemini"] if gemini_ok else []
-        ) + (
-            ["LuiggiAI"] if manus_ok else []
-        ),
     }
 
 
-@router.post("/render-rapido")
-async def render_rapido(payload: RenderRapidoInput):
+@router.post("/render")
+async def generar_render(payload: RenderInput):
     """
-    Genera un render fotorrealista de cocina a partir de descripción en texto libre.
-    Usa el motor disponible: LuiggiAI (Manus) si está configurado, Gemini como fallback.
-    Devuelve: { imageUrl, motor_usado, timestamp }
-    """
-    # Intentar primero con LuiggiAI (motor principal del ERP)
-    manus_key = os.environ.get("MANUS_API_KEY", "")
-    if manus_key:
-        try:
-            from services.luiggi_ai import get_render_service
-            render_svc = get_render_service()
-            result = await render_svc.generate_render(
-                description=payload.descripcion,
-                style=payload.estilo or "photorealistic",
-                reference_image_base64=_strip_b64(payload.croquis_b64) if payload.croquis_b64 else None,
-            )
-            if result and result.get("images"):
-                return {
-                    "imageUrl": result["images"][0],
-                    "motor_usado": "LuiggiAI",
-                    "timestamp": int(time.time()),
-                }
-        except Exception as e:
-            logger.warning(f"LuiggiAI render falló, intentando Gemini: {e}")
+    Genera un render fotorrealista de cocina usando Manus API (LuiggiAI).
+    Combina la descripción del usuario con la skill kitchen-3d-render
+    para construir un prompt técnico de alta calidad.
 
-    # Fallback: Gemini
-    try:
-        from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
-        if not (get_gemini_key() and GOOGLE_GENAI_AVAILABLE):
-            raise HTTPException(
-                status_code=503,
-                detail="Ningún motor de IA disponible. Configura MANUS_API_KEY o GEMINI_API_KEY."
-            )
-        prompt = (
-            f"Render fotorrealista de alta gama de una cocina estilo '{payload.estilo}'. "
-            f"Descripción: {payload.descripcion}. "
-            "Estilo Octane/Corona Renderer, iluminación natural, texturas premium, "
-            "perspectiva angular desde esquina, formato 16:9."
+    Si modo_async=True devuelve {task_id} inmediatamente.
+    Si modo_async=False (por defecto) espera el resultado (máx. 5 min).
+    """
+    engine = _get_engine()
+    if not engine or engine.get_status().get("status") != "active":
+        raise HTTPException(
+            status_code=503,
+            detail="Motor de IA no disponible. Verifica que MANUS_API_KEY esté configurada en Railway."
         )
-        refs = None
-        if payload.croquis_b64:
-            refs = [{"data": _strip_b64(payload.croquis_b64), "mime": "image/png"}]
-        data_url = await generate_image_with_gemini(prompt=prompt, reference_images=refs)
-        if not data_url:
-            raise HTTPException(status_code=502, detail="La IA no devolvió imagen.")
-        return {"imageUrl": data_url, "motor_usado": "Gemini", "timestamp": int(time.time())}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"render_rapido error: {e}")
-        raise HTTPException(status_code=500, detail=f"No se pudo generar el render: {e}")
+
+    # Construir prompt técnico usando la skill
+    distribucion = payload.distribucion or payload.descripcion
+    materiales = payload.materiales or "encimera de silestone, muebles lacados en mate"
+    estilo = payload.estilo or "Moderno"
+
+    prompt_tecnico = _generate_render_prompt(
+        layout=distribucion,
+        materials=materiales,
+        style=estilo,
+        extra=payload.descripcion if payload.distribucion else "",
+    )
+
+    # Instrucción completa para Manus
+    instruccion = (
+        f"Genera un render fotorrealista de alta gama de una cocina.\n\n"
+        f"DESCRIPCIÓN DEL PROYECTO:\n{payload.descripcion}\n\n"
+        f"PROMPT TÉCNICO DE RENDER:\n{prompt_tecnico}\n\n"
+        f"REQUISITOS:\n"
+        f"- Render fotorrealista 8K, iluminación cinematográfica\n"
+        f"- Perspectiva angular desde esquina, formato 16:9\n"
+        f"- Calidad de revista de interiorismo de lujo\n"
+        f"- Texturas hiper-detalladas con ray tracing\n"
+        f"- Devuelve SOLO la imagen generada, sin texto adicional"
+    )
+
+    # Adjuntar croquis si se proporcionó
+    files = []
+    if payload.croquis_b64:
+        try:
+            b64_data = payload.croquis_b64
+            if b64_data.startswith("data:"):
+                b64_data = b64_data.split(",", 1)[1]
+            img_bytes = base64.b64decode(b64_data)
+            upload = await engine.upload_file(img_bytes, "croquis_cocina.png")
+            if upload.get("success") and upload.get("file_id"):
+                files.append({"file_id": upload["file_id"]})
+        except Exception as e:
+            logger.warning(f"No se pudo adjuntar croquis: {e}")
+
+    # Crear tarea en Manus API
+    task = await engine.create_task(
+        prompt=instruccion,
+        files=files if files else None,
+    )
+
+    if not task.get("success"):
+        raise HTTPException(status_code=502, detail=task.get("error", "Error al crear tarea"))
+
+    task_id = task["task_id"]
+
+    if payload.modo_async:
+        return {"task_id": task_id, "status": "running", "motor": task.get("engine")}
+
+    # Esperar resultado (polling)
+    resultado = await engine.wait_for_completion(task_id, timeout=300, poll_interval=4)
+
+    if not resultado.get("success"):
+        raise HTTPException(
+            status_code=502,
+            detail=resultado.get("error", "La tarea no se completó correctamente")
+        )
+
+    images = resultado.get("result", {}).get("images", [])
+    return {
+        "imageUrl": images[0] if images else None,
+        "images": images,
+        "task_id": task_id,
+        "motor": resultado.get("engine"),
+        "duracion_segundos": resultado.get("duration_seconds"),
+        "timestamp": int(time.time()),
+    }
 
 
 @router.post("/render/editar")
 async def editar_render(payload: EditarRenderInput):
     """
-    Edita un render existente en lenguaje natural.
-    Ej: "Cambia los muebles a color antracita" o "Añade una ventana en la pared norte"
+    Edita un render existente en lenguaje natural usando Manus API.
+    Acepta la URL del render anterior o su base64.
     """
-    try:
-        from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
-        if not (get_gemini_key() and GOOGLE_GENAI_AVAILABLE):
-            raise HTTPException(status_code=503, detail="Generación de imágenes no disponible.")
-        prompt = (
-            f"Revisión técnica de proyecto de cocina. Modifica este render siguiendo: \"{payload.instruccion}\". "
-            "Mantén la distribución, muros, ventanas y puertas inalterados salvo que se indique explícitamente. "
-            "Conserva la iluminación fotorrealista y la calidad de los materiales. Formato 16:9."
-        )
-        data_url = await generate_image_with_gemini(
-            prompt=prompt,
-            reference_image_base64=_strip_b64(payload.render_b64),
-            reference_mime="image/png",
-        )
-        if not data_url:
-            raise HTTPException(status_code=502, detail="La IA no devolvió imagen.")
-        return {"imageUrl": data_url, "timestamp": int(time.time())}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"render/editar error: {e}")
-        raise HTTPException(status_code=500, detail=f"No se pudo editar el render: {e}")
+    engine = _get_engine()
+    if not engine or engine.get_status().get("status") != "active":
+        raise HTTPException(status_code=503, detail="Motor de IA no disponible.")
+
+    instruccion = (
+        f"Edita este render de cocina siguiendo exactamente esta instrucción: \"{payload.instruccion}\"\n\n"
+        f"REQUISITOS:\n"
+        f"- Mantén la distribución, estructura y dimensiones inalteradas salvo que se indique explícitamente\n"
+        f"- Conserva la iluminación fotorrealista y calidad de los materiales\n"
+        f"- El resultado debe ser un render 8K de calidad de revista de interiorismo\n"
+        f"- Devuelve SOLO la imagen editada"
+    )
+
+    files = []
+
+    # Subir imagen de referencia si viene en base64
+    if payload.render_b64:
+        try:
+            b64_data = payload.render_b64
+            if b64_data.startswith("data:"):
+                b64_data = b64_data.split(",", 1)[1]
+            img_bytes = base64.b64decode(b64_data)
+            upload = await engine.upload_file(img_bytes, "render_original.png")
+            if upload.get("success") and upload.get("file_id"):
+                files.append({"file_id": upload["file_id"]})
+        except Exception as e:
+            logger.warning(f"No se pudo subir render base64: {e}")
+
+    # Si viene como URL, incluirla en el prompt
+    if payload.render_url and not files:
+        instruccion = f"Render de referencia: {payload.render_url}\n\n" + instruccion
+
+    task = await engine.create_task(
+        prompt=instruccion,
+        files=files if files else None,
+    )
+
+    if not task.get("success"):
+        raise HTTPException(status_code=502, detail=task.get("error"))
+
+    task_id = task["task_id"]
+
+    if payload.modo_async:
+        return {"task_id": task_id, "status": "running"}
+
+    resultado = await engine.wait_for_completion(task_id, timeout=300, poll_interval=4)
+    if not resultado.get("success"):
+        raise HTTPException(status_code=502, detail=resultado.get("error"))
+
+    images = resultado.get("result", {}).get("images", [])
+    return {
+        "imageUrl": images[0] if images else None,
+        "images": images,
+        "task_id": task_id,
+        "timestamp": int(time.time()),
+    }
 
 
-@router.post("/transcribir-audio")
+@router.post("/transcribir")
 async def transcribir_audio(audio: UploadFile = File(...)):
     """
-    Transcribe un archivo de audio (voz del diseñador o del cliente) a texto.
-    Soporta: mp3, wav, m4a, webm, ogg.
-    Devuelve: { texto, duracion_estimada }
+    Transcribe un audio (nota de voz del diseñador o del cliente) a texto
+    usando Manus API. Soporta mp3, wav, m4a, webm, ogg.
     """
-    try:
-        from services.luiggi_ai import get_engine
-        engine = get_engine()
-        audio_bytes = await audio.read()
-        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-        result = await engine.transcribe_audio(
-            audio_base64=audio_b64,
-            mime_type=audio.content_type or "audio/mpeg",
-        )
-        return {
-            "texto": result.get("text", ""),
-            "idioma": result.get("language", "es"),
-            "duracion_estimada": result.get("duration_seconds"),
-        }
-    except Exception as e:
-        logger.error(f"transcribir_audio error: {e}")
-        raise HTTPException(status_code=500, detail=f"No se pudo transcribir el audio: {e}")
+    engine = _get_engine()
+    if not engine or engine.get_status().get("status") != "active":
+        raise HTTPException(status_code=503, detail="Motor de IA no disponible.")
+
+    audio_bytes = await audio.read()
+
+    # Subir el audio a Manus
+    upload = await engine.upload_file(audio_bytes, audio.filename or "audio.mp3")
+    if not upload.get("success"):
+        raise HTTPException(status_code=502, detail="No se pudo subir el audio.")
+
+    instruccion = (
+        "Transcribe exactamente el audio adjunto. "
+        "Devuelve SOLO el texto transcrito, sin comentarios ni explicaciones adicionales. "
+        "Si el audio describe medidas, distribución o materiales de una cocina, "
+        "extráelos también en un formato estructurado al final."
+    )
+
+    task = await engine.create_task(
+        prompt=instruccion,
+        files=[{"file_id": upload["file_id"]}],
+    )
+
+    if not task.get("success"):
+        raise HTTPException(status_code=502, detail=task.get("error"))
+
+    resultado = await engine.wait_for_completion(task["task_id"], timeout=120, poll_interval=3)
+    if not resultado.get("success"):
+        raise HTTPException(status_code=502, detail=resultado.get("error"))
+
+    # Extraer el texto del resultado
+    mensajes = resultado.get("result", {}).get("messages", [])
+    texto = ""
+    for msg in mensajes:
+        if isinstance(msg, dict) and msg.get("role") == "assistant":
+            contenido = msg.get("content", "")
+            if isinstance(contenido, str):
+                texto += contenido
+            elif isinstance(contenido, list):
+                for bloque in contenido:
+                    if isinstance(bloque, dict) and bloque.get("type") == "text":
+                        texto += bloque.get("text", "")
+
+    return {"texto": texto.strip(), "task_id": task["task_id"]}
+
+
+@router.get("/tarea/{task_id}")
+async def consultar_tarea(task_id: str):
+    """Consulta el estado de una tarea asíncrona."""
+    engine = _get_engine()
+    if not engine:
+        raise HTTPException(status_code=503, detail="Motor no disponible.")
+    status = await engine.get_task_status(task_id)
+    return status
+
+
+@router.get("/tarea/{task_id}/resultado")
+async def obtener_resultado(task_id: str):
+    """Obtiene el resultado completo de una tarea completada."""
+    engine = _get_engine()
+    if not engine:
+        raise HTTPException(status_code=503, detail="Motor no disponible.")
+    messages = await engine.get_task_messages(task_id)
+    images = messages.get("images", [])
+    return {
+        "task_id": task_id,
+        "imageUrl": images[0] if images else None,
+        "images": images,
+        "messages": messages.get("messages", []),
+    }
 
 
 @router.post("/plano-2d")
 async def generar_plano_2d(payload: ProyectoBase):
     """
-    Genera un plano 2D técnico acotado de la cocina usando matplotlib.
-    Parsea las medidas del texto libre del payload.
-    Devuelve: { planoBase64, medidas_parseadas }
+    Genera un plano 2D técnico acotado con matplotlib.
+    No requiere motor de IA — generación local instantánea.
     """
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         import matplotlib.patches as patches
-        from matplotlib.patches import FancyArrowPatch
 
         m = _parse_medidas(payload.medidas)
         ancho, alto, isla_w, isla_h = m["ancho"], m["alto"], m["isla_w"], m["isla_h"]
 
-        # ── Constantes de estilo ───────────────────────────────────────────
-        C_BG      = "#F8F6F2"
-        C_SUELO   = "#EDE8E0"
-        C_PARED   = "#2C2C2C"
-        C_MUEBLE  = "#D4C5A9"
-        C_BORDE   = "#8B7355"
-        C_ENCIM   = "#C8B89A"
-        C_ISLA    = "#E8DDD0"
-        C_COTA    = "#555555"
-        C_ACENTO  = "#8B7355"
-        C_GRID    = "#D8D0C4"
+        C_BG = "#F8F6F2"; C_SUELO = "#EDE8E0"; C_PARED = "#2C2C2C"
+        C_MUEBLE = "#D4C5A9"; C_BORDE = "#8B7355"; C_ENCIM = "#C8B89A"
+        C_ISLA = "#E8DDD0"; C_COTA = "#555555"; C_ACENTO = "#8B7355"
+        C_GRID = "#D8D0C4"
 
-        # ── Canvas ────────────────────────────────────────────────────────
         fig, ax = plt.subplots(figsize=(16, 11))
         fig.patch.set_facecolor(C_BG)
         ax.set_facecolor(C_BG)
@@ -279,33 +421,27 @@ async def generar_plano_2d(payload: ProyectoBase):
         W, H = ancho * scale, alto * scale
         ox, oy = 80, 70
 
-        ax.set_xlim(0, W + 160)
-        ax.set_ylim(0, H + 130)
-        ax.set_aspect("equal")
-        ax.axis("off")
+        ax.set_xlim(0, W + 160); ax.set_ylim(0, H + 130)
+        ax.set_aspect("equal"); ax.axis("off")
 
-        # ── Suelo ─────────────────────────────────────────────────────────
+        # Suelo + grid
         ax.add_patch(patches.Rectangle((ox, oy), W, H,
             linewidth=2, edgecolor=C_PARED, facecolor=C_SUELO, zorder=1))
         paso = max(30, int(min(ancho, alto) / 10)) * scale / 100 * 100
-        for x in range(int(ox), int(ox + W + 1), int(paso)):
+        for x in range(int(ox), int(ox + W + 1), max(1, int(paso))):
             ax.plot([x, x], [oy, oy + H], color=C_GRID, linewidth=0.3, zorder=1)
-        for y in range(int(oy), int(oy + H + 1), int(paso)):
+        for y in range(int(oy), int(oy + H + 1), max(1, int(paso))):
             ax.plot([ox, ox + W], [y, y], color=C_GRID, linewidth=0.3, zorder=1)
 
-        # ── Paredes ───────────────────────────────────────────────────────
+        # Paredes
         pw = max(6, int(0.015 * min(W, H)))
-        for rect in [
-            (ox, oy + H - pw, W, pw),   # Norte
-            (ox, oy, W, pw),             # Sur
-            (ox, oy, pw, H),             # Oeste
-            (ox + W - pw, oy, pw, H),    # Este
-        ]:
+        for rect in [(ox, oy + H - pw, W, pw), (ox, oy, W, pw),
+                     (ox, oy, pw, H), (ox + W - pw, oy, pw, H)]:
             ax.add_patch(patches.Rectangle(
                 (rect[0], rect[1]), rect[2], rect[3],
                 linewidth=0, facecolor=C_PARED, zorder=2))
 
-        # ── Módulos norte ─────────────────────────────────────────────────
+        # Módulos norte
         mod = 55 * scale / 100
         x = ox + pw
         while x + mod <= ox + W - pw:
@@ -316,7 +452,7 @@ async def generar_plano_2d(payload: ProyectoBase):
             (ox + pw, oy + H - pw - mod), W - 2 * pw, 3,
             linewidth=0, facecolor=C_ENCIM, alpha=0.7, zorder=4))
 
-        # ── Módulos oeste ─────────────────────────────────────────────────
+        # Módulos oeste
         y = oy + pw
         while y + mod <= oy + H - pw - mod:
             ax.add_patch(patches.Rectangle((ox + pw, y), mod, mod,
@@ -326,30 +462,25 @@ async def generar_plano_2d(payload: ProyectoBase):
             (ox + pw + mod, oy + pw), 3, H - 2 * pw - mod,
             linewidth=0, facecolor=C_ENCIM, alpha=0.7, zorder=4))
 
-        # ── Isla central ──────────────────────────────────────────────────
-        iw = isla_w * scale / 100
-        ih = isla_h * scale / 100
-        ix = ox + (W - iw) / 2
-        iy = oy + (H - ih) / 2 - 15
+        # Isla
+        iw = isla_w * scale / 100; ih = isla_h * scale / 100
+        ix = ox + (W - iw) / 2; iy = oy + (H - ih) / 2 - 15
         ax.add_patch(patches.Rectangle((ix, iy), iw, ih,
             linewidth=2, edgecolor=C_BORDE, facecolor=C_ISLA, zorder=3))
-        ax.text(ix + iw / 2, iy + ih / 2,
-            f"ISLA\n{isla_w}×{isla_h} cm",
+        ax.text(ix + iw / 2, iy + ih / 2, f"ISLA\n{isla_w}×{isla_h} cm",
             ha="center", va="center", fontsize=7.5, fontweight="bold",
             color="#1A1A1A", zorder=5)
 
-        # ── Fregadero (símbolo) ───────────────────────────────────────────
-        fx = ox + pw + mod / 2
-        fy = oy + H - pw - mod / 2
+        # Fregadero
+        fx = ox + pw + mod / 2; fy = oy + H - pw - mod / 2
         ax.add_patch(patches.FancyBboxPatch(
             (fx - 18 * scale / 100, fy - 12 * scale / 100),
             36 * scale / 100, 24 * scale / 100,
             boxstyle="round,pad=2", linewidth=1,
             edgecolor="#555", facecolor="#B8D4E0", zorder=5))
-        ax.text(fx, fy, "≈", ha="center", va="center",
-            fontsize=8, color="#555", zorder=6)
+        ax.text(fx, fy, "≈", ha="center", va="center", fontsize=8, color="#555", zorder=6)
 
-        # ── Etiquetas de paredes ──────────────────────────────────────────
+        # Etiquetas paredes
         for label, x_, y_, rot in [
             ("PARED NORTE", ox + W / 2, oy + H + 8, 0),
             ("PARED SUR",   ox + W / 2, oy - 8, 0),
@@ -359,63 +490,48 @@ async def generar_plano_2d(payload: ProyectoBase):
             ax.text(x_, y_, label, ha="center", va="center",
                 fontsize=5.5, color="#888", rotation=rot, zorder=6)
 
-        # ── Cotas ─────────────────────────────────────────────────────────
+        # Cotas
         arrow_kw = dict(arrowstyle="<->", color=C_COTA, lw=0.9)
-
         def cota_h(x1, x2, y, label):
-            ax.annotate("", xy=(x2, y), xytext=(x1, y),
-                arrowprops=arrow_kw)
-            ax.text((x1 + x2) / 2, y + 6, label,
-                ha="center", va="bottom", fontsize=6.5, color=C_COTA)
-
+            ax.annotate("", xy=(x2, y), xytext=(x1, y), arrowprops=arrow_kw)
+            ax.text((x1 + x2) / 2, y + 6, label, ha="center", va="bottom",
+                fontsize=6.5, color=C_COTA)
         def cota_v(x, y1, y2, label):
-            ax.annotate("", xy=(x, y2), xytext=(x, y1),
-                arrowprops=arrow_kw)
-            ax.text(x - 6, (y1 + y2) / 2, label,
-                ha="right", va="center", fontsize=6.5, color=C_COTA, rotation=90)
-
+            ax.annotate("", xy=(x, y2), xytext=(x, y1), arrowprops=arrow_kw)
+            ax.text(x - 6, (y1 + y2) / 2, label, ha="right", va="center",
+                fontsize=6.5, color=C_COTA, rotation=90)
         cota_h(ox, ox + W, oy - 22, f"{ancho} cm")
         cota_v(ox - 22, oy, oy + H, f"{alto} cm")
         cota_h(ix, ix + iw, iy - 12, f"{isla_w} cm")
         cota_v(ix + iw + 10, iy, iy + ih, f"{isla_h} cm")
 
-        # ── Leyenda ───────────────────────────────────────────────────────
-        leyenda_x = ox + W + 20
-        leyenda_y = oy + H - 10
-        items = [
-            (C_MUEBLE, C_BORDE, "Módulo bajo"),
-            (C_ENCIM,  C_BORDE, "Encimera"),
-            (C_ISLA,   C_BORDE, "Isla central"),
-            ("#B8D4E0", "#555",  "Fregadero"),
-        ]
-        ax.text(leyenda_x, leyenda_y + 15, "LEYENDA",
-            fontsize=7, fontweight="bold", color=C_ACENTO)
+        # Leyenda
+        lx = ox + W + 20; ly = oy + H - 10
+        items = [(C_MUEBLE, C_BORDE, "Módulo bajo"), (C_ENCIM, C_BORDE, "Encimera"),
+                 (C_ISLA, C_BORDE, "Isla central"), ("#B8D4E0", "#555", "Fregadero")]
+        ax.text(lx, ly + 15, "LEYENDA", fontsize=7, fontweight="bold", color=C_ACENTO)
         for i, (fc, ec, lbl) in enumerate(items):
-            yy = leyenda_y - i * 18
-            ax.add_patch(patches.Rectangle(
-                (leyenda_x, yy - 6), 12, 10,
+            yy = ly - i * 18
+            ax.add_patch(patches.Rectangle((lx, yy - 6), 12, 10,
                 linewidth=0.8, edgecolor=ec, facecolor=fc))
-            ax.text(leyenda_x + 16, yy, lbl,
-                fontsize=6.5, va="center", color=C_COTA)
+            ax.text(lx + 16, yy, lbl, fontsize=6.5, va="center", color=C_COTA)
 
-        # ── Cajetín del título ────────────────────────────────────────────
-        ax.add_patch(patches.Rectangle(
-            (ox, 0), W, 52,
+        # Cajetín
+        ax.add_patch(patches.Rectangle((ox, 0), W, 52,
             linewidth=1.2, edgecolor=C_ACENTO, facecolor="#F0EBE3", zorder=10))
         ax.plot([ox, ox + W], [30, 30], color=C_ACENTO, linewidth=0.7, zorder=11)
         ax.text(ox + W / 2, 42,
-            f"PLANO DE DISTRIBUCIÓN — {payload.nombre_cliente.upper()} · {(payload.estilo or 'MODERNO').upper()}",
+            f"PLANO DE DISTRIBUCIÓN — {(payload.nombre_cliente or 'CLIENTE').upper()} · {(payload.estilo or 'MODERNO').upper()}",
             ha="center", va="center", fontsize=9, fontweight="bold",
             color="#1A1A1A", zorder=12)
         ax.text(ox + 10, 18, f"MEDIDAS: {ancho}×{alto} cm",
             ha="left", va="center", fontsize=6.5, color=C_COTA, zorder=12)
         ax.text(ox + W / 2, 18, "ESCALA 1:20",
             ha="center", va="center", fontsize=6.5, color=C_COTA, zorder=12)
-        ax.text(ox + W - 10, 18, "ESTUDIO DE COCINAS",
+        ax.text(ox + W - 10, 18, "3D ESTUDIO",
             ha="right", va="center", fontsize=6.5, color=C_ACENTO,
             fontweight="bold", zorder=12)
 
-        # ── Exportar ──────────────────────────────────────────────────────
         buf = io.BytesIO()
         plt.tight_layout(pad=0)
         plt.savefig(buf, format="png", dpi=150, bbox_inches="tight",
@@ -423,10 +539,7 @@ async def generar_plano_2d(payload: ProyectoBase):
         plt.close(fig)
         buf.seek(0)
         b64 = base64.b64encode(buf.read()).decode("utf-8")
-        return {
-            "planoBase64": f"data:image/png;base64,{b64}",
-            "medidas_parseadas": m,
-        }
+        return {"planoBase64": f"data:image/png;base64,{b64}", "medidas_parseadas": m}
 
     except Exception as e:
         logger.error(f"plano-2d error: {e}")
@@ -435,10 +548,7 @@ async def generar_plano_2d(payload: ProyectoBase):
 
 @router.post("/ficha-tecnica")
 async def generar_ficha_tecnica(payload: ProyectoBase):
-    """
-    Genera una ficha técnica completa en Markdown.
-    Devuelve: { fichaMarkdown, referencia, fecha }
-    """
+    """Genera ficha técnica en Markdown. Generación local instantánea."""
     fecha = datetime.date.today().strftime("%d/%m/%Y")
     mes_anio = datetime.date.today().strftime("%B %Y")
     ref = f"COC-{datetime.date.today().strftime('%Y%m%d')}-{abs(hash(payload.nombre_cliente or '')) % 1000:03d}"
@@ -510,18 +620,14 @@ async def generar_ficha_tecnica(payload: ProyectoBase):
 
 ---
 
-*Ficha generada automáticamente · Estudio de Cocinas · {mes_anio}*
+*Ficha generada automáticamente · 3D Estudio · {mes_anio}*
 """
     return {"fichaMarkdown": md, "referencia": ref, "fecha": fecha}
 
 
 @router.post("/presentacion")
 async def generar_presentacion(payload: ProyectoBase):
-    """
-    Genera una presentación HTML completa lista para mostrar al cliente.
-    Incluye: portada, descripción, materiales, plazos y contacto.
-    Devuelve: { presentacionHtml, cliente, fecha }
-    """
+    """Genera presentación HTML para cliente. Generación local instantánea."""
     fecha = datetime.date.today().strftime("%d/%m/%Y")
     estilo = payload.estilo or "Moderno"
     cliente = payload.nombre_cliente or "Cliente"
@@ -552,12 +658,9 @@ async def generar_presentacion(payload: ProyectoBase):
   th{{color:#C8A96E;font-size:.8rem;text-transform:uppercase;letter-spacing:2px;padding-bottom:16px;border-bottom:2px solid #C8A96E;text-align:left;padding-right:16px}}
   td{{padding:16px 16px 16px 0;border-bottom:1px solid rgba(200,169,110,.15);font-size:.95rem;color:#C0B090;vertical-align:top}}
   td:first-child{{color:#fff;font-weight:600;width:28%}}
-  ul{{list-style:none;max-width:700px}}
-  li{{padding:14px 0;border-bottom:1px solid rgba(200,169,110,.12);font-size:.95rem;padding-left:28px;position:relative;color:#C0B090}}
-  li::before{{content:'';position:absolute;left:0;top:22px;width:8px;height:8px;background:#C8A96E;border-radius:50%}}
   .badge{{display:inline-block;background:rgba(200,169,110,.12);color:#C8A96E;font-size:.7rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:6px 18px;margin-bottom:28px;border:1px solid rgba(200,169,110,.3)}}
   .grid2{{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:960px;margin-top:16px}}
-  .card{{background:rgba(200,169,110,.06);border:1px solid rgba(200,169,110,.15);padding:28px;}}
+  .card{{background:rgba(200,169,110,.06);border:1px solid rgba(200,169,110,.15);padding:28px}}
   .card h3{{color:#C8A96E;font-size:.85rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}}
   .card p{{font-size:.9rem;color:#A09070;margin:0}}
   footer{{text-align:center;padding:80px 10%;background:#080808}}
@@ -566,33 +669,29 @@ async def generar_presentacion(payload: ProyectoBase):
 </style>
 </head>
 <body>
-
 <section style="background:linear-gradient(135deg,#111 50%,#1A1508 100%)">
   <div class="badge">Propuesta de Diseño · {fecha}</div>
   <div class="line"></div>
   <h1>Cocina <span class="accent">{estilo}</span></h1>
   <h1 style="font-size:clamp(1.2rem,3vw,2rem);font-weight:300;color:#888">{cliente}</h1>
-  <p style="margin-top:48px;color:#666;font-size:.9rem">Referencia · Estudio de Cocinas · {fecha}</p>
+  <p style="margin-top:48px;color:#666;font-size:.9rem">3D Estudio · {fecha}</p>
 </section>
-
 <section>
   <div class="line"></div>
   <h2>Su nueva cocina</h2>
   <p>{descripcion}</p>
-  {f'<p><strong class="accent">Medidas:</strong> {medidas_str}</p>'}
+  <p><strong class="accent">Medidas:</strong> {medidas_str}</p>
   {f'<p><strong class="accent">Notas:</strong> {notas}</p>' if notas else ''}
   <div class="grid2" style="margin-top:40px">
-    <div class="card"><h3>Distribución</h3><p>Optimizada para el flujo de trabajo en cocina con isla central y módulos en L</p></div>
+    <div class="card"><h3>Distribución</h3><p>Optimizada para el flujo de trabajo con isla central y módulos en L</p></div>
     <div class="card"><h3>Materiales</h3><p>Primera calidad con garantía de 10 años en todos los elementos fabricados</p></div>
     <div class="card"><h3>Electrodomésticos</h3><p>Alta gama totalmente integrados, selección personalizada según uso y presupuesto</p></div>
     <div class="card"><h3>Iluminación</h3><p>3 niveles: funcional bajo muebles, ambiental y decorativa sobre isla</p></div>
   </div>
 </section>
-
 <section>
   <div class="line"></div>
   <h2>Materiales y acabados</h2>
-  <p>Cada superficie ha sido seleccionada por su resistencia, facilidad de mantenimiento y valor estético a largo plazo.</p>
   <table>
     <thead><tr><th>Elemento</th><th>Material / Acabado</th><th>Característica clave</th></tr></thead>
     <tbody>
@@ -604,7 +703,6 @@ async def generar_presentacion(payload: ProyectoBase):
     </tbody>
   </table>
 </section>
-
 <section>
   <div class="line"></div>
   <h2>Proceso y plazos</h2>
@@ -620,14 +718,11 @@ async def generar_presentacion(payload: ProyectoBase):
   </table>
   {f'<p style="margin-top:32px"><strong class="accent">Inversión estimada:</strong> {presupuesto}</p>' if presupuesto != "A consultar" else ""}
 </section>
-
 <footer>
   <div class="line" style="margin:0 auto 24px"></div>
-  <p class="brand">Estudio de Cocinas</p>
-  <p>info@estudiococinas.es &nbsp;·&nbsp; +34 900 000 000</p>
-  <p style="margin-top:24px;font-size:.75rem;color:#333">Visita de medición gratuita · Propuesta en 48h · Garantía 2 años instalación</p>
+  <p class="brand">3D Estudio</p>
+  <p>Visita de medición gratuita · Propuesta en 48h · Garantía 2 años instalación</p>
 </footer>
-
 </body>
 </html>"""
 

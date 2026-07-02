@@ -1130,38 +1130,18 @@ const App = () => {
                       </button>
                     )}
                     
-                    {/* Render 3D Studio - Usuarios con acceso a IA (NO para Tienda) */}
-                    {state.currentUser?.canUseAIAnalysis && !state.currentUser?.isTienda && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'renderStudio'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'renderStudio' ? 'bg-purple-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="render-studio-nav-btn"
-                      >
-                        <Image size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Render 3D</span>
-                      </button>
-                    )}
-                    {/* Estudio de Cocinas — módulo unificado (proyectos, render, planos, presentaciones) */}
+                    {/* Render 3D Studio — APARCADO: integrado en 3D Estudio */}
+                    {/* Kitchen 3D Designer — APARCADO: integrado en 3D Estudio */}
+                    {/* 3D Estudio — Módulo unificado con Manus API (render, plano, ficha, presentación) */}
                     {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'estudioCocinas'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'estudioCocinas' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="estudio-cocinas-nav-btn"
-                        title="Estudio de Cocinas: Proyectos, Render, Planos y Presentaciones"
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'estudioCocinas' ? 'bg-amber-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="estudio-3d-nav-btn"
+                        title="3D Estudio: Renders Manus, Planos 2D, Fichas Técnicas y Presentaciones"
                       >
-                        <Layers size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Estudio</span>
-                      </button>
-                    )}
-                    {/* Kitchen 3D Designer - Panel de proyectos de cocinas (mantenido por compatibilidad) */}
-                    {(state.currentUser?.canUseKitchenDesigner) && !state.currentUser?.isTienda && (
-                      <button 
-                        onClick={() => setState(p => ({...p, currentTab: 'kitchenDesigner'}))} 
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'kitchenDesigner' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="kitchen-designer-nav-btn"
-                      >
-                        <Layers size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Cocinas 3D</span>
+                        <ChefHat size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">3D Estudio</span>
                       </button>
                     )}
                     
