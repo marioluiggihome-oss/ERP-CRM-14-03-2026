@@ -559,7 +559,7 @@ const Cascos = ({ state }) => {
           <div className="flex gap-1 bg-white/60 rounded-xl p-1 border border-slate-200 overflow-x-auto">
             {SECCIONES.map(s => (
               <button key={s.id} onClick={() => setSeccion(s.id)}
-                className={`flex-1 min-w-[88px] px-3 py-2 rounded-lg text-sm font-black transition-colors flex items-center justify-center gap-1.5 ${seccion === s.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}>
+                className={`flex-1 min-w-[88px] px-3 py-2 rounded-lg text-sm font-black transition-colors flex items-center justify-center gap-1.5 ${seccion === s.id ? (s.id === 'blum' ? 'bg-orange-500 text-white shadow' : 'bg-indigo-600 text-white shadow') : 'text-slate-500 hover:bg-slate-100'}`}>
                 {s.id === 'cascos' ? s.label : <ProviderLogo id={s.id} height={18} />}
               </button>
             ))}
@@ -700,15 +700,15 @@ const Cascos = ({ state }) => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {resultadosBlum.map(p => (
                   <button key={p.ref} onClick={() => addBlumToCart(p)}
-                    className="group text-left border border-slate-200 rounded-xl p-3 hover:border-rose-300 hover:bg-rose-50/40 transition-colors">
+                    className="group text-left border border-slate-200 rounded-xl p-3 hover:border-orange-300 hover:bg-orange-50/40 transition-colors">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-100 rounded px-1.5 py-0.5">{p.ref}</span>
+                      <span className="text-[10px] font-black text-orange-700 bg-orange-50 border border-orange-100 rounded px-1.5 py-0.5">{p.ref}</span>
                       <span className="text-[10px] font-bold text-slate-400 uppercase">{p.cat}</span>
                     </div>
                     <p className="text-xs font-bold text-slate-700 mt-1.5 leading-snug">{p.nombre}</p>
                     <div className="flex items-center justify-between mt-2">
-                      <p className="font-black text-rose-700 text-sm">{eur(p.precio)}</p>
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-rose-600 text-white rounded-lg text-[11px] font-bold group-hover:bg-rose-700"><Plus size={12} /> Añadir</span>
+                      <p className="font-black text-orange-700 text-sm">{eur(p.precio)}</p>
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-600 text-white rounded-lg text-[11px] font-bold group-hover:bg-orange-700"><Plus size={12} /> Añadir</span>
                     </div>
                   </button>
                 ))}
@@ -755,9 +755,9 @@ const Cascos = ({ state }) => {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-700 truncate">{l.accesorio ? l.tipo : nombre(l)}</p>
                   {l.accesorio ? (
-                    <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-50 border border-rose-100 max-w-full">
+                    <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-100 max-w-full">
                       <ProviderLogo id="blum" height={12} />
-                      <span className="text-[10px] font-black text-rose-700 truncate">{l.ref}</span>
+                      <span className="text-[10px] font-black text-orange-700 truncate">{l.ref}</span>
                     </span>
                   ) : (
                     <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 max-w-full">
