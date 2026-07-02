@@ -35,27 +35,34 @@ const BLUM_PRODUCTOS = [
 function ProviderLogo({ id, height = 20 }) {
   const box = { display: 'inline-flex', alignItems: 'center' };
   if (id === 'blum') {
+    // Caja naranja, "blum" en blanco itálico con flecha ascendente y ®.
     return (
-      <svg height={height} viewBox="0 0 120 40" style={box} aria-label="BLUM">
-        <rect x="0" y="0" width="120" height="40" rx="6" fill="#e2001a" />
-        <text x="60" y="28" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="24" fontWeight="700" fill="#ffffff" letterSpacing="1">blum</text>
+      <svg height={height} viewBox="0 0 200 84" style={box} aria-label="blum">
+        <rect x="0" y="0" width="200" height="84" rx="8" fill="#ee7203" />
+        <path d="M30 60 L30 24 M30 24 L22 33 M30 24 L38 33" fill="none" stroke="#ffffff" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="34" y="62" fontFamily="Arial, Helvetica, sans-serif" fontSize="52" fontStyle="italic" fontWeight="900" fill="#ffffff" letterSpacing="-1">blum</text>
+        <text x="182" y="30" fontFamily="Arial, sans-serif" fontSize="11" fill="#ffffff">®</text>
       </svg>
     );
   }
   if (id === 'gtv') {
+    // "GTV" en azul corporativo.
     return (
-      <svg height={height} viewBox="0 0 120 40" style={box} aria-label="GTV">
-        <rect x="0" y="0" width="120" height="40" rx="6" fill="#1a1a1a" />
-        <text x="58" y="29" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="24" fontWeight="800" fill="#ffffff" letterSpacing="2">GT</text>
-        <text x="92" y="29" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="24" fontWeight="800" fill="#e30613" letterSpacing="2">V</text>
+      <svg height={height} viewBox="0 0 200 84" style={box} aria-label="GTV">
+        <rect x="0" y="0" width="200" height="84" rx="8" fill="#ffffff" />
+        <text x="100" y="60" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="56" fontWeight="900" fill="#2e3192" letterSpacing="1">GTV</text>
       </svg>
     );
   }
   if (id === 'emuca') {
+    // "emuca" en gris con swoosh amarillo y claim.
     return (
-      <svg height={height} viewBox="0 0 120 40" style={box} aria-label="EMUCA">
-        <rect x="0" y="0" width="120" height="40" rx="6" fill="#ffffff" stroke="#e30613" strokeWidth="2" />
-        <text x="60" y="28" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="21" fontWeight="800" fill="#e30613" letterSpacing="1">emuca</text>
+      <svg height={height} viewBox="0 0 240 84" style={box} aria-label="emuca">
+        <rect x="0" y="0" width="240" height="84" rx="8" fill="#ffffff" />
+        <text x="12" y="52" fontFamily="Arial, Helvetica, sans-serif" fontSize="46" fontWeight="800" fill="#4d4d4f" letterSpacing="-1">emuca</text>
+        <path d="M205 40 q10 -18 24 -14 q-6 10 -18 22 q-8 4 -6 -8 Z" fill="#fdc300" />
+        <circle cx="223" cy="20" r="3.5" fill="#ffffff" />
+        <text x="12" y="72" fontFamily="Arial, Helvetica, sans-serif" fontSize="15" fill="#fdc300" letterSpacing="1">where creation begins</text>
       </svg>
     );
   }
