@@ -718,8 +718,7 @@ const Cascos = ({ state }) => {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
-              <div className="mx-auto mb-4 flex items-center justify-center"><ProviderLogo id={seccion} height={40} /></div>
-              <h3 className="text-lg font-black text-slate-800">{(SECCIONES.find(s => s.id === seccion) || {}).label}</h3>
+              <div className="mx-auto mb-4 flex items-center justify-center"><ProviderLogo id={seccion} height={44} /></div>
               <p className="text-sm text-slate-500 mt-1">{(SECCIONES.find(s => s.id === seccion) || {}).desc}</p>
               <p className="text-xs text-slate-400 mt-3 max-w-sm mx-auto">Catálogo en preparación. En cuanto carguemos la tarifa de este proveedor podrás buscar sus productos y añadirlos al mismo presupuesto.</p>
             </div>
