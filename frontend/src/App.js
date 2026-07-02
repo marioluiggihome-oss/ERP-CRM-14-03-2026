@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import GlobalEventReminder from './components/GlobalEventReminder';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat } from 'lucide-react';
 import "./App.css";
 
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
@@ -19,6 +19,7 @@ const ResumenCocinas = lazy(() => import('./components/ResumenCocinas'));
 const Cascos = lazy(() => import('./components/Cascos'));
 const PropData = lazy(() => import('./components/PropData'));
 const Armarios2 = lazy(() => import('./components/Armarios2'));
+const CocinasIA = lazy(() => import('./components/CocinasIA'));
 const AgendaMontajes = lazy(() => import('./components/AgendaMontajes'));
 const AdminWorkView = lazy(() => import('./components/AdminWorkView'));
 const CommercialWorkView = lazy(() => import('./components/CommercialWorkView'));
@@ -1024,6 +1025,16 @@ const App = () => {
                       </button>
                     )}
 
+                    {!state.currentUser?.isTienda && state.currentUser?.canUseCocinasAI === true && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'cocinasai'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cocinasai' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <ChefHat size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest text-center leading-tight">Cocinas IA 2</span>
+                      </button>
+                    )}
+
                     {/* Archivo - requiere permiso explícito (la casilla manda) */}
                     {!state.currentUser?.isTienda && state.currentUser?.canAccessArchivo === true && (
                       <button
@@ -1302,6 +1313,7 @@ const App = () => {
             {state.currentTab === 'cascos' && state.currentUser?.canUseCascos === true && <ErrorBoundary><Cascos state={state} /></ErrorBoundary>}
             {state.currentTab === 'propdata' && state.currentUser?.canUsePropData === true && <ErrorBoundary><PropData state={state} /></ErrorBoundary>}
             {state.currentTab === 'armarios2' && state.currentUser?.canUseArmarios2 === true && <ErrorBoundary><Armarios2 state={state} /></ErrorBoundary>}
+            {state.currentTab === 'cocinasai' && state.currentUser?.canUseCocinasAI === true && <ErrorBoundary><CocinasIA state={state} /></ErrorBoundary>}
             {state.currentTab === 'backup' && <BackupManager />}
             {state.currentTab === 'invoices' && <ErrorBoundary><Invoices currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'rentabilidad' && <ErrorBoundary><RentabilidadPanel currentUser={state.currentUser} /></ErrorBoundary>}

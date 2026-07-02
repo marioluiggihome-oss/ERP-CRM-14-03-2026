@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Receipt, FileText, Target, CalendarDays, ShoppingBag, FolderOpen,
   TrendingUp, Layers, Shield, Sparkles, Image as ImageIcon, Box,
-  ScanLine, Wrench, Factory, PlayCircle, Briefcase, Palette, Hammer, Settings2, Building2
+  ScanLine, Wrench, Factory, PlayCircle, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat
 } from 'lucide-react';
 
 // ⬇️ Enlace del vídeo promocional (YouTube, Vimeo o Google Drive). Si se deja
@@ -59,6 +59,7 @@ const MODULES = [
   { tab: 'cascos',          label: 'Cocina Desmontada',icon: Box,         color: 'bg-cyan-600',    group: 'ventas', can: (u) => !u?.isTienda && u?.canUseCascos === true },
   { tab: 'propdata',        label: 'Obra Nueva (IA)', icon: Building2,    color: 'bg-sky-600',     group: 'ventas', can: (u) => !u?.isTienda && u?.canUsePropData === true },
   { tab: 'armarios2',       label: 'Armarios 2 (IA)', icon: Hammer,       color: 'bg-fuchsia-600', group: 'ventas', can: (u) => !u?.isTienda && u?.canUseArmarios2 === true },
+  { tab: 'cocinasai',       label: 'Cocinas IA 2',    icon: ChefHat,      color: 'bg-orange-500',  group: 'ventas', can: (u) => !u?.isTienda && u?.canUseCocinasAI === true },
   { tab: 'gastos',          label: 'Gastos',          icon: Receipt,      color: 'bg-indigo-600',  group: 'admin',  can: (u) => (u?.isAdmin || u?.isRepresentative || u?.isGerente || u?.isDirectorComercial) && u?.canAccessGastos !== false },
 
   // Diseño y Visualización

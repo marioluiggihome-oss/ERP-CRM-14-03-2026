@@ -15,7 +15,7 @@ const CAPABILITY_KEYS = [
   'canManageArticles', 'canAccessFloor', 'canUseAIAnalysis', 'canUseKitchenDesigner', 'canUseDigitalizador',
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
-  'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2',
+  'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI',
 ];
 
 // Lista de provincias de España con sus códigos
@@ -158,6 +158,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canVerVinculadosCascos: false,
     canUsePropData: false,
     canUseArmarios2: false,
+    canUseCocinasAI: false,
     canUseDigitalizador: false,
     canAccessArmarios: false,
     canAccessFabrica: false,  // Acceso a Portal de Fábrica
@@ -748,6 +749,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canVerVinculadosCascos: false,
       canUsePropData: false,
       canUseArmarios2: false,
+      canUseCocinasAI: false,
       canUseDigitalizador: false,
       canAccessArmarios: false,
       canAccessFabrica: false,
@@ -2271,6 +2273,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
                               <span className="text-xs font-bold text-slate-700">Armarios 2 (diseñador IA)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canUseCocinasAI}
+                                onChange={(e) => setUserForm({...userForm, canUseCocinasAI: e.target.checked})}
+                                className="w-4 h-4 rounded accent-cyan-600"
+                              />
+                              <span className="text-xs font-bold text-slate-700">Cocinas IA 2 (render)</span>
                             </label>
                           </div>
                         </div>

@@ -87,6 +87,7 @@ from routes.floor import router as floor_router
 from routes.cascos import router as cascos_router
 from routes.propdata import router as propdata_router
 from routes.armarios2 import router as armarios2_router
+from routes.cocinasai import router as cocinasai_router
 from routes.reports import router as reports_router
 from routes.exports import router as exports_router
 from routes.maintenance import router as maintenance_router
@@ -258,6 +259,7 @@ api_router.include_router(floor_router)
 api_router.include_router(cascos_router)
 api_router.include_router(propdata_router)
 api_router.include_router(armarios2_router)
+api_router.include_router(cocinasai_router)
 api_router.include_router(reports_router)
 api_router.include_router(exports_router)
 api_router.include_router(maintenance_router)
