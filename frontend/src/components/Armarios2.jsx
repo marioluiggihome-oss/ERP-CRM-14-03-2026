@@ -57,6 +57,10 @@ const Armarios2 = ({ state }) => {
   const [savedId, setSavedId] = useState(null);
   const [designs, setDesigns] = useState(null); // null=oculto
   const [saving, setSaving] = useState(false);
+  const [snap, setSnap] = useState(true);       // ajuste a rejilla de 20 mm
+  const undoRef = useRef([]);
+  const pushUndo = () => { undoRef.current = [...undoRef.current.slice(-24), JSON.parse(JSON.stringify(comps))]; };
+  const undo = () => { const prev = undoRef.current.pop(); if (prev) { setComps(prev); setSelId(null); } };
   const set = (k, v) => setCfg(c => ({ ...c, [k]: v }));
   const material = MATERIALS.find(m => m.id === cfg.materialId) || MATERIALS[0];
 
@@ -97,11 +101,13 @@ const Armarios2 = ({ state }) => {
     if (drag.axis === 'y') {
       let p = ((cy - r.top - padPxY) / innerPxH) * 100;
       p = Math.max(2, Math.min(98, p));
-      setComps(cs => cs.map(c => c.id === drag.id ? { ...c, y: Math.round(p) } : c));
+      if (snap) { const mm = Math.round((p / 100 * cfg.height) / 20) * 20; p = (mm / cfg.height) * 100; }
+      setComps(cs => cs.map(c => c.id === drag.id ? { ...c, y: Math.round(p * 10) / 10 } : c));
     } else {
       let p = ((cx - r.left - padPxX) / innerPxW) * 100;
       p = Math.max(8, Math.min(92, p));
-      setComps(cs => cs.map(c => c.id === drag.id ? { ...c, x: Math.round(p) } : c));
+      if (snap) { const mm = Math.round((p / 100 * cfg.width) / 20) * 20; p = (mm / cfg.width) * 100; }
+      setComps(cs => cs.map(c => c.id === drag.id ? { ...c, x: Math.round(p * 10) / 10 } : c));
     }
   };
   useEffect(() => {
@@ -112,14 +118,28 @@ const Armarios2 = ({ state }) => {
   }, [drag]);
 
   const addComp = (type) => {
+    pushUndo();
     if (type === 'divider-v') { setComps(cs => [...cs, { id: nid(), type, x: 50 }]); return; }
     const c = { id: nid(), type, y: 40, sectionIndex: activeSection };
     setComps(cs => [...cs, c]); setSelId(c.id);
   };
-  const delComp = (id) => { setComps(cs => cs.filter(c => c.id !== id)); if (selId === id) setSelId(null); };
+  const delComp = (id) => { pushUndo(); setComps(cs => cs.filter(c => c.id !== id)); if (selId === id) setSelId(null); };
+  const duplicar = (id) => {
+    const c = comps.find(x => x.id === id); if (!c) return;
+    pushUndo();
+    const nc = { ...c, id: nid(), y: Math.min(96, (c.y ?? 40) + 8) };
+    setComps(cs => [...cs, nc]); setSelId(nc.id);
+  };
+  const PLANTILLAS = {
+    'Barra + 2 baldas': [{ type: 'hanging-rod', y: 15, sectionIndex: 0 }, { type: 'shelf', y: 35, sectionIndex: 0 }, { type: 'shelf', y: 50, sectionIndex: 0 }],
+    'Cajonera + barra': [{ type: 'drawer', y: 70, sectionIndex: 0 }, { type: 'drawer', y: 82, sectionIndex: 0 }, { type: 'hanging-rod', y: 20, sectionIndex: 0 }],
+    'Vestidor 3 cuerpos': [{ type: 'divider-v', x: 33 }, { type: 'divider-v', x: 66 }, { type: 'hanging-rod', y: 18, sectionIndex: 0 }, { type: 'shelf', y: 40, sectionIndex: 1 }, { type: 'shelf', y: 55, sectionIndex: 1 }, { type: 'drawer', y: 75, sectionIndex: 2 }, { type: 'drawer', y: 86, sectionIndex: 2 }],
+  };
+  const aplicarPlantilla = (name) => { const t = PLANTILLAS[name]; if (!t) return; pushUndo(); setComps(t.map(c => ({ ...c, id: nid() }))); setSelId(null); };
   // Coloca el elemento seleccionado (tool) donde hagas clic dentro del armario.
   const placeAt = (e) => {
     if (!tool || !svgRef.current) return;
+    pushUndo();
     const r = svgRef.current.getBoundingClientRect();
     const padPxX = (PAD / vbW) * r.width, innerPxW = (innerW / vbW) * r.width;
     const padPxY = (PAD / vbH) * r.height, innerPxH = (innerH / vbH) * r.height;
@@ -362,6 +382,13 @@ const Armarios2 = ({ state }) => {
             {PALETTE.map(t => (
               <button key={t} onClick={() => setTool(tool === t ? null : t)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${tool === t ? 'bg-fuchsia-600 text-white shadow' : 'bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100'}`}><Plus size={13} /> {LABELS[t]}</button>
             ))}
+            <span className="text-slate-200 mx-1">|</span>
+            <select onChange={e => { if (e.target.value) { aplicarPlantilla(e.target.value); e.target.value = ''; } }} className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 bg-white">
+              <option value="">Plantilla…</option>
+              {Object.keys(PLANTILLAS).map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <button onClick={() => setSnap(s => !s)} title="Ajustar a rejilla de 20 mm" className={`px-2.5 py-1.5 rounded-lg text-xs font-bold ${snap ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>Snap {snap ? 'ON' : 'OFF'}</button>
+            <button onClick={undo} disabled={!undoRef.current.length} title="Deshacer" className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40">↶ Deshacer</button>
             {tool && <span className="text-[11px] font-bold text-fuchsia-600 ml-1">👆 Haz clic en el armario para colocar «{LABELS[tool]}»</span>}
           </div>
 
@@ -393,8 +420,8 @@ const Armarios2 = ({ state }) => {
                 <rect x={PAD} y={PAD} width={t} height={innerH} /><rect x={PAD + innerW - t} y={PAD} width={t} height={innerH} />
                 <rect x={PAD} y={PAD} width={innerW} height={t} /><rect x={PAD} y={PAD + innerH - t} width={innerW} height={t} />
               </g>); })()}
-              {/* Sombreado suave por sección */}
-              {Array.from({ length: numSections }).map((_, i) => { const [a, b] = secX(i); return i % 2 ? <rect key={i} x={a} y={PAD} width={b - a} height={innerH} fill="#000" opacity="0.03" /> : null; })}
+              {/* Sombreado suave por sección + ancho de cada cuerpo en mm */}
+              {Array.from({ length: numSections }).map((_, i) => { const [a, b] = secX(i); const wmm = Math.round((boundaries[i + 1] - boundaries[i]) / 100 * cfg.width); return (<g key={i}>{i % 2 ? <rect x={a} y={PAD} width={b - a} height={innerH} fill="#000" opacity="0.03" /> : null}<text x={(a + b) / 2} y={PAD + 12} textAnchor="middle" fontSize="9" fontWeight="700" fill="#94a3b8">{wmm}</text></g>); })}
               {/* Cotas */}
               <text x={PAD + innerW / 2} y={PAD - 16} textAnchor="middle" fontSize="12" fontWeight="800" fill="#334155">{cfg.width} mm</text>
               <text x={PAD - 16} y={PAD + innerH / 2} textAnchor="middle" fontSize="12" fontWeight="800" fill="#334155" transform={`rotate(-90 ${PAD - 16} ${PAD + innerH / 2})`}>{cfg.height} mm</text>
@@ -446,8 +473,9 @@ const Armarios2 = ({ state }) => {
               })()}
             </svg>
             {selId && (
-              <div className="flex items-center justify-between mt-2 px-1">
+              <div className="flex items-center justify-between mt-2 px-1 gap-2">
                 <span className="text-xs font-bold text-slate-500">Seleccionado: {LABELS[(comps.find(c => c.id === selId) || {}).type] || '—'} · arrastra para mover</span>
+                <button onClick={() => duplicar(selId)} className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700"><Plus size={13} /> Duplicar</button>
                 <button onClick={() => delComp(selId)} className="flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-700"><Trash2 size={13} /> Eliminar</button>
               </div>
             )}
