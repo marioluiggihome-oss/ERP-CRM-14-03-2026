@@ -189,7 +189,7 @@ async function apiPost(endpoint, body) {
 }
 
 async function apiGet(endpoint) {
-  const res = await fetch(`${API}${endpoint}`, {
+  const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     headers: { Authorization: `Bearer ${getToken()}` },
   });
   const data = await res.json().catch(() => ({}));
