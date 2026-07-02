@@ -57,7 +57,7 @@ const Armarios2 = ({ state }) => {
   const [savedId, setSavedId] = useState(null);
   const [designs, setDesigns] = useState(null); // null=oculto
   const [saving, setSaving] = useState(false);
-  const [snap, setSnap] = useState(true);       // ajuste a rejilla de 20 mm
+  const [snapMm, setSnapMm] = useState(20);     // 0 = libre; si no, ajuste a rejilla (mm)
   const undoRef = useRef([]);
   const redoRef = useRef([]);
   const [, forceHist] = useState(0);
@@ -104,12 +104,12 @@ const Armarios2 = ({ state }) => {
     if (drag.axis === 'y') {
       let p = ((cy - r.top - padPxY) / innerPxH) * 100;
       p = Math.max(2, Math.min(98, p));
-      if (snap) { const mm = Math.round((p / 100 * cfg.height) / 20) * 20; p = (mm / cfg.height) * 100; }
+      if (snapMm) { const mm = Math.round((p / 100 * cfg.height) / snapMm) * snapMm; p = (mm / cfg.height) * 100; }
       setComps(cs => cs.map(c => c.id === drag.id ? { ...c, y: Math.round(p * 10) / 10 } : c));
     } else {
       let p = ((cx - r.left - padPxX) / innerPxW) * 100;
       p = Math.max(8, Math.min(92, p));
-      if (snap) { const mm = Math.round((p / 100 * cfg.width) / 20) * 20; p = (mm / cfg.width) * 100; }
+      if (snapMm) { const mm = Math.round((p / 100 * cfg.width) / snapMm) * snapMm; p = (mm / cfg.width) * 100; }
       setComps(cs => cs.map(c => c.id === drag.id ? { ...c, x: Math.round(p * 10) / 10 } : c));
     }
   };
@@ -328,6 +328,19 @@ const Armarios2 = ({ state }) => {
   };
   const nuevoDiseno = () => { setSavedId(null); setCfg(c => ({ ...c, cliente: '', ref: '' })); };
 
+  // Atajos de teclado: Ctrl+Z deshacer · Ctrl+Y/Ctrl+Shift+Z rehacer · Supr borrar seleccionado
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && selId) { e.preventDefault(); delComp(selId); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selId, comps]);
+
   // Render helpers
   const secX = (i) => [PAD + (boundaries[i] / 100) * innerW, PAD + (boundaries[i + 1] / 100) * innerW];
 
@@ -390,7 +403,9 @@ const Armarios2 = ({ state }) => {
               <option value="">Plantilla…</option>
               {Object.keys(PLANTILLAS).map(n => <option key={n} value={n}>{n}</option>)}
             </select>
-            <button onClick={() => setSnap(s => !s)} title="Ajustar a rejilla de 20 mm" className={`px-2.5 py-1.5 rounded-lg text-xs font-bold ${snap ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>Snap {snap ? 'ON' : 'OFF'}</button>
+            <select value={snapMm} onChange={e => setSnapMm(Number(e.target.value))} title="Ajuste a rejilla" className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 bg-white">
+              <option value={0}>Libre</option><option value={10}>Snap 10mm</option><option value={20}>Snap 20mm</option><option value={50}>Snap 50mm</option>
+            </select>
             <button onClick={undo} disabled={!undoRef.current.length} title="Deshacer" className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40">↶</button>
             <button onClick={redo} disabled={!redoRef.current.length} title="Rehacer" className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40">↷</button>
             {tool && <span className="text-[11px] font-bold text-fuchsia-600 ml-1">👆 Haz clic en el armario para colocar «{LABELS[tool]}»</span>}

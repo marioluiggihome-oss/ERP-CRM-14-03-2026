@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChefHat, Sparkles, Image as ImageIcon, Loader, Upload, Download, Maximize2, X, Trash2 } from 'lucide-react';
+import { ChefHat, Sparkles, Image as ImageIcon, Loader, Upload, Download, Maximize2, X, Trash2, FolderOpen, Save } from 'lucide-react';
 import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -20,6 +20,29 @@ const CocinasIA = ({ state }) => {
   const [editText, setEditText] = useState('');
   const [error, setError] = useState('');
   const [full, setFull] = useState(false);
+  const [savedId, setSavedId] = useState(null);
+  const [designs, setDesigns] = useState(null);
+  const [savingD, setSavingD] = useState(false);
+
+  const guardarDiseno = async () => {
+    setSavingD(true);
+    try {
+      const r = await fetch(`${API_URL}/api/cocinasai/designs`, { method: 'POST', headers: authH(), body: JSON.stringify({ id: savedId || undefined, cliente, ref, kitchenType, style, notes, renders }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Error');
+      if (d.design?.id) setSavedId(d.design.id);
+      alert('✅ Diseño guardado.');
+    } catch (e) { alert('No se pudo guardar: ' + (e.message || '')); }
+    finally { setSavingD(false); }
+  };
+  const openDesigns = async () => { try { const r = await fetch(`${API_URL}/api/cocinasai/designs`, { headers: authH() }); const d = await r.json(); setDesigns(d.designs || []); } catch { setDesigns([]); } };
+  const loadDesign = async (id) => {
+    try {
+      const r = await fetch(`${API_URL}/api/cocinasai/designs/${id}`, { headers: authH() }); const d = await r.json(); if (!r.ok) throw new Error();
+      setCliente(d.cliente || ''); setRef(d.ref || ''); setKitchenType(d.kitchenType || 'Cocina Sola'); setStyle(d.style || 'Moderno'); setNotes(d.notes || '');
+      setRenders(d.renders || []); setSel(0); setSavedId(d.id); setDesigns(null);
+    } catch { alert('No se pudo abrir el diseño.'); }
+  };
+  const deleteDesign = async (id) => { if (!window.confirm('¿Eliminar este diseño?')) return; try { await fetch(`${API_URL}/api/cocinasai/designs/${id}`, { method: 'DELETE', headers: authH() }); setDesigns(ds => (ds || []).filter(x => x.id !== id)); } catch {} };
 
   const readFile = (f) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => res(null); fr.readAsDataURL(f); });
   const addPlans = async (files) => {
@@ -55,13 +78,17 @@ const CocinasIA = ({ state }) => {
     const a = document.createElement('a'); a.href = renders[sel]; a.download = `cocina_${(ref || cliente || style).replace(/\s+/g, '_')}_${Date.now()}.png`; a.click();
   };
   const delRender = (i) => setRenders(rs => { const n = rs.filter((_, j) => j !== i); setSel(Math.max(0, Math.min(sel, n.length - 1))); return n; });
-  const nuevo = () => { if (renders.length && !window.confirm('¿Empezar de cero? Se perderán los renders no descargados.')) return; setRenders([]); setPlans([]); setNotes(''); setCliente(''); setRef(''); setSel(0); setError(''); };
+  const nuevo = () => { if (renders.length && !window.confirm('¿Empezar de cero? Se perderán los renders no descargados.')) return; setRenders([]); setPlans([]); setNotes(''); setCliente(''); setRef(''); setSel(0); setError(''); setSavedId(null); };
 
   return (
     <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-[#eef2ff] overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
         <h1 className="ml-14 sm:ml-2 text-base sm:text-lg font-black flex items-center gap-2"><ChefHat size={18} /> Cocinas IA 2 · Render desde plano</h1>
-        <button onClick={nuevo} className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50"><X size={14} /> Nuevo</button>
+        <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+          <button onClick={openDesigns} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold"><FolderOpen size={14} /> Mis diseños</button>
+          <button onClick={guardarDiseno} disabled={savingD || !renders.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold disabled:opacity-50">{savingD ? <Loader size={14} className="animate-spin" /> : <Save size={14} />} Guardar</button>
+          <button onClick={nuevo} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50"><X size={14} /> Nuevo</button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-[360px_1fr] gap-4 items-start">
@@ -143,6 +170,29 @@ const CocinasIA = ({ state }) => {
           )}
         </div>
       </div>
+
+      {Array.isArray(designs) && (
+        <div className="fixed inset-0 bg-black/50 z-[190] flex items-center justify-center p-4" onClick={() => setDesigns(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="font-black text-slate-800">Mis diseños de cocina</h3>
+              <button onClick={() => setDesigns(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              {designs.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">Aún no has guardado diseños.</p> : designs.map(o => (
+                <div key={o.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2 hover:bg-slate-50">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-700 text-sm truncate">{o.cliente || 'Sin cliente'}{o.ref ? ` · ${o.ref}` : ''}</p>
+                    <p className="text-[10px] text-slate-400">{o.style} · {o.kitchenType} · {o.updatedAt ? new Date(o.updatedAt).toLocaleDateString('es-ES') : ''}</p>
+                  </div>
+                  <button onClick={() => loadDesign(o.id)} className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600">Abrir</button>
+                  <button onClick={() => deleteDesign(o.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={15} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {full && renders[sel] && (
         <div className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4" onClick={() => setFull(false)}>
