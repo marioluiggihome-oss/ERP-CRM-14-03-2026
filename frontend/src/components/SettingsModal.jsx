@@ -1762,7 +1762,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               className="w-5 h-5 rounded border-2 border-blue-300"
                             />
                             <div>
-                              <span className="text-sm font-black text-slate-900">Gerente</span>
+                              <span title="Rol elevado: acceso casi total salvo lo reservado al admin principal." className="text-sm font-black text-slate-900">Gerente</span>
                               <p className="text-xs text-slate-500">Acceso total al sistema</p>
                             </div>
                           </label>
@@ -1775,7 +1775,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               className="w-5 h-5 rounded border-2 border-orange-300"
                             />
                             <div>
-                              <span className="text-sm font-black text-slate-900">Director Comercial</span>
+                              <span title="Dirección comercial: ve toda la red comercial y sus datos." className="text-sm font-black text-slate-900">Director Comercial</span>
                               <p className="text-xs text-slate-500">Ve todo el CRM y estadísticas</p>
                             </div>
                           </label>
@@ -1794,7 +1794,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               className="w-5 h-5 rounded border-2 border-cyan-300"
                             />
                             <div>
-                              <span className="text-sm font-black text-slate-900">Director de Fábrica</span>
+                              <span title="Dirección de fábrica: acceso a producción y fábrica." className="text-sm font-black text-slate-900">Director de Fábrica</span>
                               <p className="text-xs text-slate-500">Ve Dashboard Fábrica y gestiona producción</p>
                             </div>
                           </label>
@@ -1806,7 +1806,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               className="w-5 h-5 rounded border-2 border-orange-300"
                             />
                             <div>
-                              <span className="text-sm font-black text-slate-900">Comercial / Representante</span>
+                              <span title="Comercial: gestiona sus clientes y presupuestos." className="text-sm font-black text-slate-900">Comercial / Representante</span>
                               <p className="text-xs text-slate-500">Puede tener tiendas asignadas</p>
                             </div>
                           </label>
@@ -1830,7 +1830,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-5 h-5 rounded border-2 border-red-300"
                               />
                               <div>
-                                <span className="text-sm font-black text-slate-900">Responsable de Delegación</span>
+                                <span title="Responsable de una delegación: ve a su equipo y clientes." className="text-sm font-black text-slate-900">Responsable de Delegación</span>
                                 <p className="text-xs text-slate-500">Reporta al Director Comercial. Puede autorizar permisos a comerciales.</p>
                               </div>
                             </label>
@@ -1846,7 +1846,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-5 h-5 rounded border-2 border-amber-300"
                               />
                               <div>
-                                <span className="text-sm font-black text-slate-900">Colaborador Comercial</span>
+                                <span title="Prescriptor/colaborador externo: agenda de negocios limitada." className="text-sm font-black text-slate-900">Colaborador Comercial</span>
                                 <p className="text-xs text-slate-500">Solo aporta contactos/clientes potenciales</p>
                               </div>
                             </label>
@@ -1862,7 +1862,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-5 h-5 rounded border-2 border-green-300"
                               />
                               <div>
-                                <span className="text-sm font-black text-slate-900">Tienda / Punto de Venta</span>
+                                <span title="Punto de venta: acceso restringido de tienda." className="text-sm font-black text-slate-900">Tienda / Punto de Venta</span>
                                 <p className="text-xs text-slate-500">Solo acceso al presupuestador (sin CRM ni panel maestro)</p>
                               </div>
                             </label>
@@ -1973,7 +1973,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             onChange={() => handleToggleModule('montada')}
                             className="w-5 h-5 rounded border-2 border-indigo-300"
                           />
-                          <span className="text-sm font-black text-slate-900">Uso Cocina Montada</span>
+                          <span title="Habilita el presupuestador Cocina Montada." className="text-sm font-black text-slate-900">Uso Cocina Montada</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -1982,7 +1982,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             onChange={() => handleToggleModule('despiece')}
                             className="w-5 h-5 rounded border-2 border-indigo-300"
                           />
-                          <span className="text-sm font-black text-slate-900">Uso Formato Despiece</span>
+                          <span title="Habilita el formato de despiece en presupuestos." className="text-sm font-black text-slate-900">Uso Formato Despiece</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer bg-purple-100 px-3 py-1 rounded-lg border border-purple-200">
                           <input
@@ -1991,7 +1991,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                             onChange={(e) => setUserForm({...userForm, canAccessArmarios: e.target.checked})}
                             className="w-5 h-5 rounded border-2 border-purple-300"
                           />
-                          <span className="text-sm font-black text-purple-900">Diseñador Armarios</span>
+                          <span title="Acceso al configurador de Armarios (por m²)." className="text-sm font-black text-purple-900">Diseñador Armarios</span>
                         </label>
                       </div>
                     </div>
@@ -2048,6 +2048,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
                     {/* Technical Capabilities */}
                     <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                      <p className="text-[11px] text-purple-500 mb-2 italic">💡 Pasa el ratón sobre cada permiso para ver qué habilita.</p>
                       <div className="flex items-center justify-between mb-3 gap-2">
                         <h4 className="text-sm font-black text-purple-900 uppercase">Capacidades Técnicas</h4>
                         <div className="flex gap-1.5 shrink-0">
@@ -2071,7 +2072,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUsePresupuestador2: e.target.checked})}
                                 className="w-4 h-4 rounded accent-emerald-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Cocina Montada (principal)</span>
+                              <span title="Acceso al presupuestador principal (Cocina Montada / MV)." className="text-xs font-bold text-slate-700">Cocina Montada (principal)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2080,7 +2081,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUsePresupuestador1: e.target.checked})}
                                 className="w-4 h-4 rounded accent-brand"
                               />
-                              <span className="text-xs font-bold text-slate-700">Cocina Montada 2</span>
+                              <span title="Acceso al presupuestador secundario (Cocina Montada 2)." className="text-xs font-bold text-slate-700">Cocina Montada 2</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2089,7 +2090,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canSeeCost: e.target.checked})}
                                 className="w-4 h-4 rounded accent-purple-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Ver Costo</span>
+                              <span title="Permite ver el coste/escandallo de los productos." className="text-xs font-bold text-slate-700">Ver Costo</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2098,7 +2099,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canViewTechnicalDespiece: e.target.checked})}
                                 className="w-4 h-4 rounded accent-purple-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Informes</span>
+                              <span title="Ver informes técnicos y de despiece." className="text-xs font-bold text-slate-700">Informes</span>
                             </label>
                           </div>
                         </div>
@@ -2114,7 +2115,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canAccessCRM: e.target.checked})}
                                 className="w-4 h-4 rounded accent-blue-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">CRM</span>
+                              <span title="Acceso al CRM: clientes, oportunidades y agenda comercial." className="text-xs font-bold text-slate-700">CRM</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-indigo-50 px-2 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">
                               <input
@@ -2166,7 +2167,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, isMontador: e.target.checked})}
                                 className="w-4 h-4 rounded accent-rose-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Montador</span>
+                              <span title="Marca al usuario como montador (agenda de montajes)." className="text-xs font-bold text-slate-700">Montador</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2175,7 +2176,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canManageArticles: e.target.checked})}
                                 className="w-4 h-4 rounded accent-green-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Inventario</span>
+                              <span title="Gestionar artículos e inventario." className="text-xs font-bold text-slate-700">Inventario</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-amber-100 px-2 py-1.5 rounded-lg hover:bg-amber-200 transition-colors border border-amber-300">
                               <input
@@ -2209,7 +2210,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseAIAnalysis: e.target.checked})}
                                 className="w-4 h-4 rounded accent-purple-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">IA Lab</span>
+                              <span title="Herramientas de IA (análisis y laboratorio)." className="text-xs font-bold text-slate-700">IA Lab</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-emerald-100 px-2 py-1.5 rounded-lg hover:bg-emerald-200 transition-colors border border-emerald-300">
                               <input
@@ -2227,7 +2228,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseDigitalizador: e.target.checked})}
                                 className="w-4 h-4 rounded accent-orange-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Digitalizador</span>
+                              <span title="Digitalizador de presupuestos a partir de documentos." className="text-xs font-bold text-slate-700">Digitalizador</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2236,7 +2237,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseResumenTotales: e.target.checked})}
                                 className="w-4 h-4 rounded accent-indigo-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Resumen Totales</span>
+                              <span title="Resumen de cocinas con totales y forma de pago." className="text-xs font-bold text-slate-700">Resumen Totales</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2245,7 +2246,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseCascos: e.target.checked})}
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Cocina Desmontada (Cascos)</span>
+                              <span title="Presupuestador de cascos (Cocina Desmontada)." className="text-xs font-bold text-slate-700">Cocina Desmontada (Cascos)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2254,7 +2255,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canVerVinculadosCascos: e.target.checked})}
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Cascos: ver venta/compra vinculada</span>
+                              <span title="Abrir el documento vinculado (venta↔compra) por expediente." className="text-xs font-bold text-slate-700">Cascos: ver venta/compra vinculada</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2263,7 +2264,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUsePropData: e.target.checked})}
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Prospección Obra Nueva (IA)</span>
+                              <span title="Buscar promociones de obra nueva con IA (Gemini)." className="text-xs font-bold text-slate-700">Prospección Obra Nueva (IA)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2272,7 +2273,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseArmarios2: e.target.checked})}
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Armarios 2 (diseñador IA)</span>
+                              <span title="Diseñador de armarios con interior a medida y render IA." className="text-xs font-bold text-slate-700">Armarios 2 (diseñador IA)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2281,7 +2282,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseCocinasAI: e.target.checked})}
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Cocinas IA 2 (render)</span>
+                              <span title="Render fotorrealista de cocina a partir del plano (IA)." className="text-xs font-bold text-slate-700">Cocinas IA 2 (render)</span>
                             </label>
                           </div>
                         </div>
@@ -2306,7 +2307,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canAuthorizePermissions: e.target.checked})}
                                 className="w-4 h-4 rounded accent-red-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Autorizar</span>
+                              <span title="Autorizar y gestionar los permisos de otros usuarios." className="text-xs font-bold text-slate-700">Autorizar</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2315,7 +2316,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, useCustomBranding: e.target.checked})}
                                 className="w-4 h-4 rounded accent-pink-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Personalizar</span>
+                              <span title="Personalizar apariencia/marca del sistema." className="text-xs font-bold text-slate-700">Personalizar</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
@@ -2324,7 +2325,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canChangeLogo: e.target.checked})}
                                 className="w-4 h-4 rounded accent-pink-600"
                               />
-                              <span className="text-xs font-bold text-slate-700">Cambiar Logo</span>
+                              <span title="Cambiar el logo/marca del sistema." className="text-xs font-bold text-slate-700">Cambiar Logo</span>
                             </label>
                           </div>
                         </div>
