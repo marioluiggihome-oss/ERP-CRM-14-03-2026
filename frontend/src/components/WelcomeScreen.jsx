@@ -65,7 +65,7 @@ const MODULES = [
   // Diseño y Visualización
   { tab: 'visualizer',      label: 'IA Lab',          icon: Sparkles,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
   { tab: 'renderStudio',    label: 'Render 3D',       icon: ImageIcon,    color: 'bg-purple-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
-  { tab: 'kitchenDesigner', label: 'Cocinas 3D',      icon: Layers,       color: 'bg-emerald-600', group: 'diseno', can: (u) => u?.canUseKitchenDesigner && !u?.isTienda },
+  { tab: 'kitchenDesigner', label: '3D Estudio',      icon: Layers,       color: 'bg-emerald-600', group: 'diseno', can: (u) => u?.canUseKitchenDesigner && !u?.isTienda },
   { tab: 'armarios',        label: 'Armarios',        icon: Box,          color: 'bg-cyan-600',    group: 'diseno', can: (u) => u?.canAccessArmarios && !u?.isTienda },
   { tab: 'digitalizador',   label: 'Digitalizador',   icon: ScanLine,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseDigitalizador && !u?.isTienda },
 

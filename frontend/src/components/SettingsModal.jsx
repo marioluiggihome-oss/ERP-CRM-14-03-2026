@@ -1548,7 +1548,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.canAuthorizePermissions && <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-[9px] font-black">AUTORIZA</span>}
                               {user.canAccessArmarios && <span className="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-[9px] font-black">ARMARIOS</span>}
                               {user.canUseAIAnalysis && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-[9px] font-black">IA LAB</span>}
-                              {user.canUseKitchenDesigner && <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black">COCINAS 3D</span>}
+                              {user.canUseKitchenDesigner && <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-[9px] font-black">3D ESTUDIO</span>}
                               {user.canSeeCost && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">VER COSTO</span>}
                               {user.canViewTechnicalDespiece && <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-[9px] font-black">INFORMES</span>}
                               {user.canManageArticles && <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[9px] font-black">INVENTARIO</span>}
@@ -2219,7 +2219,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseKitchenDesigner: e.target.checked})}
                                 className="w-4 h-4 rounded accent-emerald-600"
                               />
-                              <span className="text-xs font-black text-emerald-800">Cocinas 3D</span>
+                              <span className="text-xs font-black text-amber-800">3D Estudio</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
