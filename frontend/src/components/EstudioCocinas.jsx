@@ -168,7 +168,13 @@ function getSavedThemeMode() {
 
 // ─── Helper: llamada al backend ───────────────────────────────────────────────
 function getToken() {
-  try { return localStorage.getItem('token') || sessionStorage.getItem('token') || ''; } catch { return ''; }
+  try {
+    return localStorage.getItem('luiggi_access_token')
+      || localStorage.getItem('token')
+      || localStorage.getItem('access_token')
+      || sessionStorage.getItem('token')
+      || '';
+  } catch { return ''; }
 }
 
 async function apiPost(endpoint, body) {
