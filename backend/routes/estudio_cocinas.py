@@ -914,3 +914,175 @@ async def galeria_favorito(render_id: str):
     nuevo_fav = not doc.get("favorito", False)
     await _galeria_db.update_one({"_id": oid}, {"$set": {"favorito": nuevo_fav}})
     return {"ok": True, "favorito": nuevo_fav}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AGENTES DISEÑADORES EN PARALELO
+# Permite lanzar 2-7 proyectos de diseño simultáneos, cada uno con su propio
+# agente Manus que genera render + ficha técnica + presupuesto estimado.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AgenteProyectoInput(BaseModel):
+    """Datos de un proyecto individual para el agente diseñador."""
+    nombre_cliente: str = Field(..., description="Nombre del cliente")
+    medidas: Optional[str] = Field(default="400x350cm", description="Medidas de la cocina")
+    estilo: Optional[str] = Field(default="Moderno", description="Estilo de diseño")
+    descripcion: Optional[str] = Field(default="", description="Descripción adicional")
+    presupuesto: Optional[str] = Field(default="", description="Presupuesto orientativo")
+    notas: Optional[str] = Field(default="", description="Materiales y notas")
+
+
+class AgentesLoteInput(BaseModel):
+    """Lote de proyectos para lanzar en paralelo."""
+    proyectos: List[AgenteProyectoInput] = Field(..., description="Lista de proyectos (2-7)")
+
+
+class AgenteEstado(BaseModel):
+    """Estado de un agente en ejecución."""
+    task_id: str
+    nombre_cliente: str
+    status: str  # pending | running | completed | error
+    imageUrl: Optional[str] = None
+    error: Optional[str] = None
+    duracion_segundos: Optional[float] = None
+
+
+def _build_agente_prompt(proyecto: AgenteProyectoInput) -> str:
+    """Construye el prompt completo para el agente diseñador."""
+    presupuesto_txt = f"\nPRESUPUESTO ORIENTATIVO: {proyecto.presupuesto}" if proyecto.presupuesto else ""
+    notas_txt = f"\nMATERIALES Y NOTAS: {proyecto.notas}" if proyecto.notas else ""
+    return (
+        f"Eres un diseñador de cocinas de lujo. Genera un render fotorrealista de alta gama para el siguiente proyecto:\n\n"
+        f"CLIENTE: {proyecto.nombre_cliente}\n"
+        f"MEDIDAS: {proyecto.medidas}\n"
+        f"ESTILO: {proyecto.estilo}\n"
+        f"DESCRIPCIÓN: {proyecto.descripcion or 'Cocina moderna de alta gama'}"
+        f"{presupuesto_txt}"
+        f"{notas_txt}\n\n"
+        f"REQUISITOS DEL RENDER:\n"
+        f"- Render fotorrealista 8K, iluminación cinematográfica natural\n"
+        f"- Perspectiva angular desde esquina, formato 16:9\n"
+        f"- Calidad de revista de interiorismo de lujo (AD, Elle Decoration)\n"
+        f"- Texturas hiper-detalladas, materiales con profundidad y reflexión\n"
+        f"- Electrodomésticos integrados visibles\n"
+        f"- Devuelve SOLO la imagen generada, sin texto adicional"
+    )
+
+
+@router.post("/agentes/lanzar")
+async def lanzar_agentes(payload: AgentesLoteInput):
+    """
+    Lanza múltiples agentes diseñadores en paralelo (2-7 proyectos).
+    Devuelve inmediatamente con los task_ids para hacer polling.
+    """
+    if len(payload.proyectos) < 1 or len(payload.proyectos) > 7:
+        raise HTTPException(status_code=400, detail="Se permiten entre 1 y 7 proyectos simultáneos.")
+
+    engine = _get_engine()
+    if not engine or engine.get_status().get("status") != "active":
+        raise HTTPException(status_code=503, detail="Motor de IA no disponible.")
+
+    agentes = []
+    for proyecto in payload.proyectos:
+        prompt = _build_agente_prompt(proyecto)
+        task = await engine.create_task(prompt=prompt)
+        if task.get("success"):
+            agentes.append({
+                "task_id": task["task_id"],
+                "nombre_cliente": proyecto.nombre_cliente,
+                "status": "running",
+                "estilo": proyecto.estilo,
+                "medidas": proyecto.medidas,
+            })
+        else:
+            agentes.append({
+                "task_id": None,
+                "nombre_cliente": proyecto.nombre_cliente,
+                "status": "error",
+                "error": task.get("error", "Error al crear tarea"),
+            })
+
+    return {
+        "ok": True,
+        "total": len(agentes),
+        "agentes": agentes,
+        "timestamp": int(time.time()),
+    }
+
+
+@router.get("/agentes/{task_id}/estado")
+async def estado_agente(task_id: str):
+    """
+    Consulta el estado de un agente diseñador individual.
+    Devuelve status + imageUrl si está completado.
+    """
+    engine = _get_engine()
+    if not engine:
+        raise HTTPException(status_code=503, detail="Motor no disponible.")
+
+    status_resp = await engine.get_task_status(task_id)
+    task_status = status_resp.get("status", "unknown")
+
+    if task_status == "stopped":
+        messages = await engine.get_task_messages(task_id)
+        images = messages.get("images", [])
+        return {
+            "task_id": task_id,
+            "status": "completed",
+            "imageUrl": images[0] if images else None,
+            "images": images,
+        }
+    elif task_status == "error":
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "error": status_resp.get("error", "La tarea falló."),
+        }
+    else:
+        return {
+            "task_id": task_id,
+            "status": "running",
+            "manus_status": task_status,
+        }
+
+
+@router.post("/agentes/lote-estado")
+async def estado_lote_agentes(body: dict):
+    """
+    Consulta el estado de múltiples agentes a la vez.
+    Recibe {"task_ids": ["id1", "id2", ...]} y devuelve el estado de cada uno.
+    """
+    task_ids = body.get("task_ids", [])
+    if not task_ids:
+        return {"agentes": []}
+
+    engine = _get_engine()
+    if not engine:
+        raise HTTPException(status_code=503, detail="Motor no disponible.")
+
+    resultados = []
+    for task_id in task_ids:
+        status_resp = await engine.get_task_status(task_id)
+        task_status = status_resp.get("status", "unknown")
+
+        if task_status == "stopped":
+            messages = await engine.get_task_messages(task_id)
+            images = messages.get("images", [])
+            resultados.append({
+                "task_id": task_id,
+                "status": "completed",
+                "imageUrl": images[0] if images else None,
+            })
+        elif task_status == "error":
+            resultados.append({
+                "task_id": task_id,
+                "status": "error",
+                "error": status_resp.get("error", "Error"),
+            })
+        else:
+            resultados.append({
+                "task_id": task_id,
+                "status": "running",
+            })
+
+    return {"agentes": resultados, "timestamp": int(time.time())}

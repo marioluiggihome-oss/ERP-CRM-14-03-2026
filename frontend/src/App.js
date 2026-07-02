@@ -32,6 +32,7 @@ const BackupManager = lazy(() => import('./components/BackupManager'));
 const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
 const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
+const AgentesDisenadores = lazy(() => import('./components/AgentesDisenadores')); // Agentes diseñadores en paralelo
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
 const GestionGastos = lazy(() => import('./components/GestionGastos'));
 const LuiggiFloor = lazy(() => import('./components/LuiggiFloor'));

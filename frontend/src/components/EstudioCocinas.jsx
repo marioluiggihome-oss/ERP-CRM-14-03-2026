@@ -365,7 +365,7 @@ export default function EstudioCocinas() {
 
   const stopRec = useCallback(() => { mrRef.current?.stop(); setRec(false); }, []);
 
-  // ── Render ──
+  // ── Render (modo asíncrono con polling) ──
   const genRender = useCallback(async () => {
     if (!proy.descripcion.trim()) {
       setRender(s => ({ ...s, status: 'error', msg: 'Escribe o dicta una descripción' }));
@@ -373,15 +373,45 @@ export default function EstudioCocinas() {
     }
     setRender(s => ({ ...s, status: 'loading', msg: 'Generando render… puede tardar 1-3 minutos', imageUrl: null }));
     try {
+      // 1) Lanzar tarea en modo asíncrono (respuesta inmediata con task_id)
       const r = await apiPost('/render', {
         descripcion: proy.descripcion,
         estilo: proy.estilo,
         materiales: proy.notas,
         distribucion: proy.medidas,
         croquis_b64: render.croquis || null,
-        modo_async: false,
+        modo_async: true,
       });
-      setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: r.imageUrl }));
+
+      if (!r.task_id) throw new Error(r.error || 'No se pudo iniciar el render');
+
+      // 2) Polling cada 8 segundos hasta completar (máx 5 min)
+      const taskId = r.task_id;
+      const maxAttempts = 38; // 38 × 8s ≈ 5 min
+      let attempts = 0;
+      const poll = async () => {
+        attempts++;
+        if (attempts > maxAttempts) {
+          setRender(s => ({ ...s, status: 'error', msg: 'El render tardó demasiado. Inténtalo de nuevo.' }));
+          return;
+        }
+        try {
+          const estado = await apiGet(`/tarea/${taskId}`);
+          if (estado.status === 'stopped') {
+            // Obtener resultado
+            const resultado = await apiGet(`/tarea/${taskId}/resultado`);
+            setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: resultado.imageUrl }));
+          } else if (estado.status === 'error') {
+            setRender(s => ({ ...s, status: 'error', msg: estado.error || 'Error al generar el render' }));
+          } else {
+            // Aún en proceso → seguir esperando
+            setTimeout(poll, 8000);
+          }
+        } catch (pollErr) {
+          setTimeout(poll, 8000); // Reintentar en caso de error de red
+        }
+      };
+      setTimeout(poll, 8000);
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
