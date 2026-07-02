@@ -31,6 +31,7 @@ const MisPedidos = lazy(() => import('./components/MisPedidos'));
 const BackupManager = lazy(() => import('./components/BackupManager'));
 const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
 const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
+const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
 const GestionGastos = lazy(() => import('./components/GestionGastos'));
 const LuiggiFloor = lazy(() => import('./components/LuiggiFloor'));
@@ -1140,7 +1141,19 @@ const App = () => {
                         <span className="text-[7px] font-black uppercase tracking-widest">Render 3D</span>
                       </button>
                     )}
-                    {/* Kitchen 3D Designer - Panel de proyectos de cocinas */}
+                    {/* Estudio de Cocinas — módulo unificado (proyectos, render, planos, presentaciones) */}
+                    {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && !state.currentUser?.isTienda && (
+                      <button 
+                        onClick={() => setState(p => ({...p, currentTab: 'estudioCocinas'}))} 
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'estudioCocinas' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="estudio-cocinas-nav-btn"
+                        title="Estudio de Cocinas: Proyectos, Render, Planos y Presentaciones"
+                      >
+                        <Layers size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Estudio</span>
+                      </button>
+                    )}
+                    {/* Kitchen 3D Designer - Panel de proyectos de cocinas (mantenido por compatibilidad) */}
                     {(state.currentUser?.canUseKitchenDesigner) && !state.currentUser?.isTienda && (
                       <button 
                         onClick={() => setState(p => ({...p, currentTab: 'kitchenDesigner'}))} 
@@ -1346,9 +1359,13 @@ const App = () => {
             {state.currentTab === 'renderStudio' && state.currentUser?.canUseAIAnalysis && (
               <AIRenderStudio state={state} />
             )}
-            {/* Kitchen 3D Designer - Panel de proyectos */}
+            {/* Kitchen 3D Designer - Panel de proyectos (mantenido por compatibilidad) */}
             {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner) && (
               <KitchenDesigner3D state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
+            )}
+            {/* Estudio de Cocinas — Módulo unificado */}
+            {state.currentTab === 'estudioCocinas' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && (
+              <EstudioCocinas state={state} setState={setState} />
             )}
 
             {/* Generador de Informes */}
