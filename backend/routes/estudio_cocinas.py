@@ -819,3 +819,98 @@ async def generar_instalaciones(payload: InstalacionesInput):
         "cliente": payload.nombre_cliente,
         "fecha": datetime.date.today().strftime("%d/%m/%Y"),
     }
+
+
+# ─── Galería de renders ────────────────────────────────────────────────────────
+
+from motor.motor_asyncio import AsyncIOMotorClient as _MotorClient
+from bson import ObjectId as _ObjectId
+
+_MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+_DB_NAME   = os.environ.get("DB_NAME", "luiggi_home")
+_mongo_client = _MotorClient(_MONGO_URL)
+_galeria_db   = _mongo_client[_DB_NAME]["renders_galeria"]
+
+
+class GaleriaGuardarPayload(BaseModel):
+    image_url: str
+    cliente: str = ""
+    descripcion: str = ""
+    estilo: str = ""
+    medidas: str = ""
+    presupuesto: str = ""
+
+
+@router.post("/galeria/guardar")
+async def galeria_guardar(payload: GaleriaGuardarPayload):
+    """Guarda un render generado en la galería MongoDB."""
+    doc = {
+        "image_url": payload.image_url,
+        "cliente": payload.cliente,
+        "descripcion": payload.descripcion,
+        "estilo": payload.estilo,
+        "medidas": payload.medidas,
+        "presupuesto": payload.presupuesto,
+        "fecha": datetime.datetime.utcnow(),
+        "favorito": False,
+    }
+    result = await _galeria_db.insert_one(doc)
+    return {"ok": True, "id": str(result.inserted_id)}
+
+
+@router.get("/galeria")
+async def galeria_listar(
+    cliente: str = "",
+    estilo: str = "",
+    page: int = 1,
+    limit: int = 20,
+):
+    """Lista los renders guardados en la galería con paginación."""
+    query: dict = {}
+    if cliente:
+        query["cliente"] = {"$regex": cliente, "$options": "i"}
+    if estilo:
+        query["estilo"] = estilo
+    skip = (page - 1) * limit
+    cursor = _galeria_db.find(query).sort("fecha", -1).skip(skip).limit(limit)
+    docs = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        if isinstance(doc.get("fecha"), datetime.datetime):
+            doc["fecha"] = doc["fecha"].strftime("%d/%m/%Y %H:%M")
+        docs.append(doc)
+    total = await _galeria_db.count_documents(query)
+    return {
+        "renders": docs,
+        "total": total,
+        "page": page,
+        "pages": max(1, -(-total // limit)),
+    }
+
+
+@router.delete("/galeria/{render_id}")
+async def galeria_eliminar(render_id: str):
+    """Elimina un render de la galería."""
+    try:
+        oid = _ObjectId(render_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    result = await _galeria_db.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Render no encontrado")
+    return {"ok": True}
+
+
+@router.patch("/galeria/{render_id}/favorito")
+async def galeria_favorito(render_id: str):
+    """Alterna el estado de favorito de un render."""
+    try:
+        oid = _ObjectId(render_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    doc = await _galeria_db.find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Render no encontrado")
+    nuevo_fav = not doc.get("favorito", False)
+    await _galeria_db.update_one({"_id": oid}, {"$set": {"favorito": nuevo_fav}})
+    return {"ok": True, "favorito": nuevo_fav}
