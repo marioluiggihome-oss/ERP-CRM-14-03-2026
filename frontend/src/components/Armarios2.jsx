@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Hammer, Plus, Trash2, Download, Columns, Package, Ruler, Sparkles, Image as ImageIcon, Loader } from 'lucide-react';
+import { Hammer, Plus, Trash2, Download, Columns, Package, Ruler, Sparkles, Image as ImageIcon, Loader, Lock, Maximize2, X } from 'lucide-react';
 import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +25,8 @@ let _cid = 0;
 const nid = () => `c${Date.now().toString(36)}${(_cid++)}`;
 
 const Armarios2 = ({ state }) => {
+  const isAdmin = state?.currentUser?.isAdmin === true;
+  const [fullImg, setFullImg] = useState(null);
   const [cfg, setCfg] = useState({
     width: 2000, height: 2400, depth: 600, thickness: 19,
     materialId: '010B', projectType: 'armario', doorType: 'open', adminMargin: 40, cliente: '', ref: '',
@@ -177,6 +179,24 @@ const Armarios2 = ({ state }) => {
     a.download = `despiece_armario_${(cfg.ref || 'proyecto')}.csv`; a.click();
   };
 
+  // Serializa el SVG del diseño a una imagen (para ampliar/descargar)
+  const svgToDataUrl = () => {
+    const svg = svgRef.current; if (!svg) return null;
+    const xml = new XMLSerializer().serializeToString(svg);
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+  };
+  const descargarDiseno = () => {
+    const url = svgToDataUrl(); if (!url) return;
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = vbW * 2; c.height = vbH * 2;
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = `armario_${cfg.ref || 'diseno'}.png`; a.click();
+    };
+    img.src = url;
+  };
+
   // Render helpers
   const secX = (i) => [PAD + (boundaries[i] / 100) * innerW, PAD + (boundaries[i + 1] / 100) * innerW];
 
@@ -212,8 +232,11 @@ const Armarios2 = ({ state }) => {
               <select value={cfg.doorType} onChange={e => set('doorType', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
                 {DOOR_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select></div>
-            <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Margen %</label>
-              <input type="number" value={cfg.adminMargin} onChange={e => set('adminMargin', Number(e.target.value) || 0)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" /></div>
+            <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">Margen % <Lock size={10} className="text-slate-400" /></label>
+              {isAdmin
+                ? <input type="number" value={cfg.adminMargin} onChange={e => set('adminMargin', Number(e.target.value) || 0)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm" />
+                : <div className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-400 flex items-center gap-1" title="Solo el administrador ve/edita el margen"><Lock size={12} /> Oculto</div>}
+            </div>
             <label className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-slate-100 rounded-lg text-xs font-bold text-slate-600 cursor-pointer hover:bg-slate-200">
               {planLoading ? <Loader size={14} className="animate-spin" /> : <Ruler size={14} />} Medidas desde plano (IA)
               <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) subirPlano(f); }} />
@@ -238,7 +261,14 @@ const Armarios2 = ({ state }) => {
           </div>
 
           {/* Visor 2D con arrastre */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-3">
+          <div className="bg-gradient-to-b from-white to-slate-50 rounded-2xl border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1 px-1">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alzado · interior a medida</span>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => setFullImg(svgToDataUrl())} title="Ampliar" className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"><Maximize2 size={14} /></button>
+                <button onClick={descargarDiseno} title="Descargar diseño" className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"><Download size={14} /></button>
+              </div>
+            </div>
             <svg ref={svgRef} viewBox={`0 0 ${vbW} ${vbH}`} width={vbW} height={vbH} style={{ maxWidth: '100%', height: 'auto' }} className="select-none touch-none mx-auto block"
               onMouseMove={onMove} onTouchMove={onMove}>
               {/* Carcasa */}
@@ -328,6 +358,14 @@ const Armarios2 = ({ state }) => {
         </div>
         </div>
       </div>
+
+      {fullImg && (
+        <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4" onClick={() => setFullImg(null)}>
+          <img src={fullImg} alt="Diseño armario" className="max-w-full max-h-full object-contain bg-white rounded-xl p-4" onClick={e => e.stopPropagation()} />
+          <button onClick={() => setFullImg(null)} className="absolute top-4 right-4 p-2 bg-white/20 text-white rounded-xl"><X size={22} /></button>
+          <button onClick={descargarDiseno} className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-xl font-bold"><Download size={16} /> Descargar</button>
+        </div>
+      )}
     </div>
   );
 };
