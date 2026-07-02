@@ -8,6 +8,8 @@ const TYPES = ['Cocina Sola', 'Salón-Cocina'];
 const STYLES = ['Moderno', 'Rústico', 'Minimalista', 'Industrial', 'Escandinavo'];
 
 const CocinasIA = ({ state }) => {
+  const [cliente, setCliente] = useState('');
+  const [ref, setRef] = useState('');
   const [kitchenType, setKitchenType] = useState('Cocina Sola');
   const [style, setStyle] = useState('Moderno');
   const [notes, setNotes] = useState('');
@@ -50,19 +52,25 @@ const CocinasIA = ({ state }) => {
   };
   const descargar = () => {
     if (!renders[sel]) return;
-    const a = document.createElement('a'); a.href = renders[sel]; a.download = `cocina_${style}_${Date.now()}.png`; a.click();
+    const a = document.createElement('a'); a.href = renders[sel]; a.download = `cocina_${(ref || cliente || style).replace(/\s+/g, '_')}_${Date.now()}.png`; a.click();
   };
+  const delRender = (i) => setRenders(rs => { const n = rs.filter((_, j) => j !== i); setSel(Math.max(0, Math.min(sel, n.length - 1))); return n; });
+  const nuevo = () => { if (renders.length && !window.confirm('¿Empezar de cero? Se perderán los renders no descargados.')) return; setRenders([]); setPlans([]); setNotes(''); setCliente(''); setRef(''); setSel(0); setError(''); };
 
   return (
     <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-[#eef2ff] overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
         <h1 className="ml-14 sm:ml-2 text-base sm:text-lg font-black flex items-center gap-2"><ChefHat size={18} /> Cocinas IA 2 · Render desde plano</h1>
-        <span className="text-[10px] font-black bg-white/20 px-2 py-0.5 rounded-full">PRUEBA</span>
+        <button onClick={nuevo} className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-white text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50"><X size={14} /> Nuevo</button>
       </div>
 
       <div className="grid lg:grid-cols-[360px_1fr] gap-4 items-start">
         {/* Configuración */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Cliente" className="px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-orange-400" />
+            <input value={ref} onChange={e => setRef(e.target.value)} placeholder="Referencia" className="px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-orange-400" />
+          </div>
           <div>
             <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tipo</label>
             <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
@@ -111,6 +119,7 @@ const CocinasIA = ({ state }) => {
             <>
               <div className="relative">
                 <img src={renders[sel]} alt="Render cocina" className="w-full rounded-xl border border-slate-100" />
+                {loading && <div className="absolute inset-0 bg-white/70 rounded-xl flex items-center justify-center"><span className="flex items-center gap-2 text-sm font-bold text-orange-700"><Loader className="animate-spin" size={18} /> Generando…</span></div>}
                 <div className="absolute top-2 right-2 flex gap-1.5">
                   <button onClick={() => setFull(true)} className="p-2 bg-black/50 text-white rounded-lg hover:bg-black/70" title="Pantalla completa"><Maximize2 size={15} /></button>
                   <button onClick={descargar} className="p-2 bg-black/50 text-white rounded-lg hover:bg-black/70" title="Descargar"><Download size={15} /></button>
@@ -118,7 +127,12 @@ const CocinasIA = ({ state }) => {
               </div>
               {renders.length > 1 && (
                 <div className="flex gap-2 mt-2 overflow-x-auto">
-                  {renders.map((r, i) => <img key={i} src={r} onClick={() => setSel(i)} alt="" className={`h-14 w-24 object-cover rounded-lg cursor-pointer border-2 ${sel === i ? 'border-orange-500' : 'border-transparent'}`} />)}
+                  {renders.map((r, i) => (
+                    <div key={i} className="relative group shrink-0">
+                      <img src={r} onClick={() => setSel(i)} alt="" className={`h-14 w-24 object-cover rounded-lg cursor-pointer border-2 ${sel === i ? 'border-orange-500' : 'border-transparent'}`} />
+                      <button onClick={() => delRender(i)} className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100"><X size={10} /></button>
+                    </div>
+                  ))}
                 </div>
               )}
               <div className="flex gap-2 mt-2">

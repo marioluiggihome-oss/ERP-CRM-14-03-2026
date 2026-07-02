@@ -59,8 +59,11 @@ const Armarios2 = ({ state }) => {
   const [saving, setSaving] = useState(false);
   const [snap, setSnap] = useState(true);       // ajuste a rejilla de 20 mm
   const undoRef = useRef([]);
-  const pushUndo = () => { undoRef.current = [...undoRef.current.slice(-24), JSON.parse(JSON.stringify(comps))]; };
-  const undo = () => { const prev = undoRef.current.pop(); if (prev) { setComps(prev); setSelId(null); } };
+  const redoRef = useRef([]);
+  const [, forceHist] = useState(0);
+  const pushUndo = () => { undoRef.current = [...undoRef.current.slice(-24), JSON.parse(JSON.stringify(comps))]; redoRef.current = []; };
+  const undo = () => { const prev = undoRef.current.pop(); if (prev) { redoRef.current.push(JSON.parse(JSON.stringify(comps))); setComps(prev); setSelId(null); forceHist(v => v + 1); } };
+  const redo = () => { const next = redoRef.current.pop(); if (next) { undoRef.current.push(JSON.parse(JSON.stringify(comps))); setComps(next); setSelId(null); forceHist(v => v + 1); } };
   const set = (k, v) => setCfg(c => ({ ...c, [k]: v }));
   const material = MATERIALS.find(m => m.id === cfg.materialId) || MATERIALS[0];
 
@@ -388,7 +391,8 @@ const Armarios2 = ({ state }) => {
               {Object.keys(PLANTILLAS).map(n => <option key={n} value={n}>{n}</option>)}
             </select>
             <button onClick={() => setSnap(s => !s)} title="Ajustar a rejilla de 20 mm" className={`px-2.5 py-1.5 rounded-lg text-xs font-bold ${snap ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>Snap {snap ? 'ON' : 'OFF'}</button>
-            <button onClick={undo} disabled={!undoRef.current.length} title="Deshacer" className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40">↶ Deshacer</button>
+            <button onClick={undo} disabled={!undoRef.current.length} title="Deshacer" className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40">↶</button>
+            <button onClick={redo} disabled={!redoRef.current.length} title="Rehacer" className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-40">↷</button>
             {tool && <span className="text-[11px] font-bold text-fuchsia-600 ml-1">👆 Haz clic en el armario para colocar «{LABELS[tool]}»</span>}
           </div>
 
@@ -455,7 +459,9 @@ const Armarios2 = ({ state }) => {
                   <g key={c.id} onMouseDown={() => { setDrag({ id: c.id, axis: 'y' }); setSelId(c.id); }} onTouchStart={() => { setDrag({ id: c.id, axis: 'y' }); setSelId(c.id); }} style={{ cursor: 'ns-resize' }}>
                     <rect x={xx} y={y - 9} width={w} height={22} fill="transparent" />
                     {shape}
-                    {sel && <text x={xx + 2} y={y - 12} fontSize="10" fontWeight="800" fill="#c026d3">{LABELS[c.type]} · {Math.round((100 - (c.y ?? 40)) / 100 * cfg.height)}mm</text>}
+                    {sel
+                      ? <text x={xx + 2} y={y - 12} fontSize="10" fontWeight="800" fill="#c026d3">{LABELS[c.type]} · {Math.round((100 - (c.y ?? 40)) / 100 * cfg.height)}mm</text>
+                      : <text x={x2 - 6} y={y - 3} textAnchor="end" fontSize="8" fontWeight="700" fill="#94a3b8">{Math.round((100 - (c.y ?? 40)) / 100 * cfg.height)}</text>}
                   </g>
                 );
               })}
