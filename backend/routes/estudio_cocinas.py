@@ -727,3 +727,95 @@ async def generar_presentacion(payload: ProyectoBase):
 </html>"""
 
     return {"presentacionHtml": html, "cliente": cliente, "fecha": fecha}
+
+
+# ─── Modelo para instalaciones ────────────────────────────────────────────────
+class InstalacionesInput(BaseModel):
+    medidas: Optional[str] = Field(default="400x350cm")
+    descripcion: Optional[str] = Field(default="")
+    estilo: Optional[str] = Field(default="Moderno")
+    nombre_cliente: Optional[str] = Field(default="Cliente")
+
+
+@router.post("/instalaciones")
+async def generar_instalaciones(payload: InstalacionesInput):
+    """
+    Genera el plan de instalaciones (eléctrica, fontanería, gas) para la cocina.
+    Generación local instantánea basada en las medidas y descripción.
+    """
+    m = _parse_medidas(payload.medidas)
+    ancho = m["ancho"]
+    alto = m["alto"]
+    tiene_isla = m["isla_w"] > 0 and m["isla_h"] > 0
+    desc_lower = (payload.descripcion or "").lower()
+    tiene_gas = any(w in desc_lower for w in ["gas", "placa gas", "cocina gas"])
+    tiene_vapor = any(w in desc_lower for w in ["vapor", "horno vapor"])
+    tiene_cafe = any(w in desc_lower for w in ["café", "cafe", "cafetera"])
+
+    # ── Puntos eléctricos ──
+    puntos_elec = [
+        {"tipo": "Enchufe encimera", "ubicacion": "Pared norte, cada 120 cm a 110 cm del suelo", "potencia": "16A"},
+        {"tipo": "Circuito horno", "ubicacion": "Columna de hornos, línea dedicada", "potencia": "20A"},
+        {"tipo": "Circuito lavavajillas", "ubicacion": "Bajo fregadero, línea dedicada", "potencia": "16A"},
+        {"tipo": "Circuito frigorífico", "ubicacion": "Columna frigorífico, línea dedicada", "potencia": "16A"},
+        {"tipo": "Circuito extractor/campana", "ubicacion": "Sobre placa, línea dedicada", "potencia": "10A"},
+        {"tipo": "Iluminación LED bajo muebles", "ubicacion": "Bajo muebles superiores, toda la longitud", "potencia": "5A"},
+        {"tipo": "Iluminación zona isla", "ubicacion": "Techo sobre isla central", "potencia": "5A"} if tiene_isla else None,
+        {"tipo": "Circuito placa inducción", "ubicacion": "Encimera, línea trifásica dedicada", "potencia": "32A"},
+    ]
+    if tiene_vapor:
+        puntos_elec.append({"tipo": "Circuito horno vapor", "ubicacion": "Columna hornos, línea dedicada", "potencia": "20A"})
+    if tiene_cafe:
+        puntos_elec.append({"tipo": "Circuito cafetera integrada", "ubicacion": "Columna hornos o mueble dedicado", "potencia": "16A"})
+
+    puntos_elec = [p for p in puntos_elec if p is not None]
+
+    circuitos_str = (
+        f"Se recomienda cuadro de distribución con {len(puntos_elec)} circuitos independientes. "
+        f"Potencia total estimada: {sum(int(p['potencia'].replace('A','')) for p in puntos_elec)} A. "
+        "Todos los circuitos con protección diferencial 30 mA."
+    )
+
+    # ── Fontanería ──
+    puntos_agua = [
+        {"tipo": "Toma de agua fría", "ubicacion": "Bajo fregadero, válvula de corte individual"},
+        {"tipo": "Toma de agua caliente", "ubicacion": "Bajo fregadero, válvula de corte individual"},
+        {"tipo": "Desagüe fregadero", "ubicacion": "Bajo fregadero, sifón con tapa de registro, ∅40 mm"},
+        {"tipo": "Desagüe lavavajillas", "ubicacion": "Junto al fregadero, conexión al sifón"},
+    ]
+    if tiene_isla:
+        puntos_agua.append({"tipo": "Toma de agua isla (opcional)", "ubicacion": "Bajo isla central, requiere paso por suelo"})
+    if tiene_vapor:
+        puntos_agua.append({"tipo": "Toma de agua horno vapor", "ubicacion": "Columna hornos, toma directa con filtro"})
+
+    # ── Gas ──
+    puntos_gas = []
+    if tiene_gas:
+        puntos_gas = [
+            {"tipo": "Toma de gas placa", "ubicacion": "Encimera, llave de corte individual bajo mueble"},
+            {"tipo": "Llave de paso general", "ubicacion": "Accesible, exterior al mueble de placa"},
+        ]
+
+    notas = (
+        f"Cocina de {ancho}×{alto} cm, estilo {payload.estilo or 'Moderno'}. "
+        "Todas las instalaciones deben ser realizadas por instaladores certificados. "
+        "Se recomienda dejar rozas en paredes antes del alicatado. "
+        "Verificar normativa local vigente (REBT para eléctrica, RITE para fontanería)."
+    )
+
+    return {
+        "electrica": {
+            "puntos": puntos_elec,
+            "circuitos": circuitos_str,
+        },
+        "fontaneria": {
+            "puntos": puntos_agua,
+        },
+        "gas": {
+            "puntos": puntos_gas,
+        } if tiene_gas else None,
+        "notas": notas,
+        "medidas_parseadas": m,
+        "cliente": payload.nombre_cliente,
+        "fecha": datetime.date.today().strftime("%d/%m/%Y"),
+    }

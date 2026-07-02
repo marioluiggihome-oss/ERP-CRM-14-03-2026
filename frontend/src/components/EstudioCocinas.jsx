@@ -1,14 +1,12 @@
 /**
  * 3D Estudio — Módulo unificado de diseño de cocinas
  * ====================================================
- * Todas las capacidades de IA (render, edición, transcripción)
- * pasan exclusivamente por Manus API a través del backend LuiggiAI.
- *
  * Pestañas:
- *   1. Render Manus   → Render fotorrealista por texto, voz o croquis
- *   2. Plano 2D       → Plano técnico acotado desde medidas en texto libre
- *   3. Ficha Técnica  → Ficha de materiales y plazos en Markdown
+ *   1. Render Manus   → Render fotorrealista + estilos rápidos
+ *   2. Plano 2D       → Plano técnico acotado
+ *   3. Ficha Técnica  → Ficha de materiales y plazos
  *   4. Presentación   → HTML de presentación para cliente
+ *   5. Instalaciones  → Puntos eléctricos, agua y gas
  *
  * Temas: Día / Noche / Auto (sistema operativo)
  */
@@ -18,7 +16,8 @@ import {
   ChefHat, Image, FileText, Mic, MicOff, Upload,
   Download, Loader2, RefreshCw, Maximize2, X,
   CheckCircle, AlertCircle, Sparkles, Edit3, ZoomIn,
-  Presentation, Eye, Sun, Moon, Monitor
+  Presentation, Eye, Sun, Moon, Monitor, Printer,
+  Zap, Droplets, Flame, LayoutGrid, Wand2
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
@@ -56,6 +55,14 @@ const THEMES = {
     code:        'text-amber-600 bg-amber-50',
     motorText:   'text-slate-400',
     title:       'text-slate-800',
+    styleBtn:    'bg-slate-100 border border-slate-200 text-slate-600 hover:bg-amber-50 hover:border-amber-400 hover:text-amber-700',
+    styleBtnAct: 'bg-amber-600 border border-amber-600 text-white',
+    instCard:    'bg-slate-50 border border-slate-200',
+    instBadge:   'bg-slate-200 text-slate-600',
+    instElec:    'bg-yellow-50 border border-yellow-200 text-yellow-700',
+    instWater:   'bg-blue-50 border border-blue-200 text-blue-700',
+    instGas:     'bg-orange-50 border border-orange-200 text-orange-700',
+    sectionBg:   'bg-slate-50 border border-slate-200',
   },
   night: {
     root:        'bg-[#0F0F0F] text-white',
@@ -88,8 +95,68 @@ const THEMES = {
     code:        'text-amber-400 bg-amber-500/10',
     motorText:   'text-slate-600',
     title:       'text-white',
+    styleBtn:    'bg-white/5 border border-white/10 text-slate-400 hover:bg-amber-600/20 hover:border-amber-500/30 hover:text-amber-400',
+    styleBtnAct: 'bg-amber-600 border border-amber-600 text-white',
+    instCard:    'bg-white/5 border border-white/10',
+    instBadge:   'bg-white/10 text-slate-400',
+    instElec:    'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400',
+    instWater:   'bg-blue-500/10 border border-blue-500/20 text-blue-400',
+    instGas:     'bg-orange-500/10 border border-orange-500/20 text-orange-400',
+    sectionBg:   'bg-white/5 border border-white/10',
   },
 };
+
+// ─── Estilos rápidos con prompts calibrados ───────────────────────────────────
+const ESTILOS_RAPIDOS = [
+  {
+    id: 'nordico',
+    label: 'Nórdico',
+    emoji: '🌿',
+    estilo: 'Nórdico',
+    descripcion: 'Cocina nórdica escandinava con muebles de madera de roble natural, frentes lisos sin tiradores en blanco roto, encimera de cuarzo blanco con vetas sutiles, suelo de madera clara, paredes blancas, iluminación cálida empotrada y plantas aromáticas en la ventana. Ambiente minimalista y acogedor.',
+    notas: 'Frentes: lacado blanco roto mate. Encimera: cuarzo blanco Silestone. Tiradores: push-to-open. Suelo: roble natural.',
+  },
+  {
+    id: 'industrial',
+    label: 'Industrial',
+    emoji: '⚙️',
+    estilo: 'Industrial',
+    descripcion: 'Cocina industrial urbana con muebles de acero inoxidable cepillado, frentes de madera oscura de nogal, encimera de cemento pulido gris, suelo de microcemento, iluminación con focos de riel negro mate, baldosas de metro blancas en el frente, tuberías vistas y detalles en hierro negro.',
+    notas: 'Frentes: madera nogal oscuro. Encimera: cemento pulido. Tiradores: barra acero inox. Grifo: industrial negro.',
+  },
+  {
+    id: 'clasico',
+    label: 'Clásico',
+    emoji: '🏛️',
+    estilo: 'Clásico',
+    descripcion: 'Cocina clásica elegante con muebles de madera pintada en blanco perla con molduras y paneles decorativos, encimera de mármol Carrara con vetas grises, suelo de baldosa hidráulica, campana decorativa de madera lacada, cristaleras en muebles superiores, tiradores de latón dorado envejecido.',
+    notas: 'Frentes: lacado blanco perla con molduras. Encimera: mármol Carrara. Tiradores: latón dorado. Campana: decorativa madera.',
+  },
+  {
+    id: 'lacado_blanco',
+    label: 'Lacado Blanco',
+    emoji: '⬜',
+    estilo: 'Minimalista',
+    descripcion: 'Cocina minimalista de alto brillo con frentes lacados en blanco brillante, encimera de Dekton blanco ultra-compacto, suelo porcelánico de gran formato gris claro, sin tiradores con apertura push, electrodomésticos integrados y ocultos, iluminación LED lineal bajo muebles superiores.',
+    notas: 'Frentes: lacado blanco alto brillo. Encimera: Dekton Zenith. Sin tiradores. Electrodomésticos: integrados.',
+  },
+  {
+    id: 'madera_natural',
+    label: 'Madera Natural',
+    emoji: '🪵',
+    estilo: 'Rústico',
+    descripcion: 'Cocina de madera natural con frentes de roble macizo veteado, encimera de madera de teca aceitada, suelo de barro cocido, vigas de madera en el techo, campana de obra revestida en piedra natural, iluminación cálida con lámparas de forja, estantes abiertos de madera flotante.',
+    notas: 'Frentes: roble macizo natural. Encimera: teca aceitada. Suelo: barro cocido. Campana: piedra natural.',
+  },
+  {
+    id: 'contemporaneo',
+    label: 'Contemporáneo',
+    emoji: '✨',
+    estilo: 'Contemporáneo',
+    descripcion: 'Cocina contemporánea de diseño con combinación de frentes en grafito mate y madera de fresno, encimera de cuarzo negro con vetas doradas, isla central con barra de desayuno, iluminación colgante de diseño sobre la isla, suelo de porcelánico imitación piedra, grifo de cuello alto negro mate.',
+    notas: 'Frentes: grafito mate + fresno natural. Encimera: cuarzo negro Silestone. Isla: con barra. Grifo: negro mate cuello alto.',
+  },
+];
 
 function getSystemTheme() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
@@ -109,6 +176,15 @@ async function apiPost(endpoint, body) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
     body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
+  return data;
+}
+
+async function apiGet(endpoint) {
+  const res = await fetch(`${API}${endpoint}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
@@ -167,13 +243,33 @@ function ThemeSelector({ mode, onChange, t }) {
   );
 }
 
+// ─── Botones de impresión / PDF ───────────────────────────────────────────────
+function PrintPdfBar({ onPrint, onPdf, t, extraBtns }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <button
+        onClick={onPrint}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}
+      >
+        <Printer size={11}/> Imprimir
+      </button>
+      <button
+        onClick={onPdf}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.presBtn}`}
+      >
+        <Download size={11}/> Exportar PDF
+      </button>
+      {extraBtns}
+    </div>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function EstudioCocinas() {
   const [tab, setTab] = useState('render');
   const [themeMode, setThemeMode] = useState(getSavedThemeMode);
   const [systemTheme, setSystemTheme] = useState(getSystemTheme);
 
-  // Escuchar cambios del sistema para modo Auto
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = e => setSystemTheme(e.matches ? 'night' : 'day');
@@ -198,15 +294,29 @@ export default function EstudioCocinas() {
     notas: '',
   });
 
+  const [selectedStyle, setSelectedStyle] = useState(null);
   const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false });
   const [plano,  setPlano]  = useState({ status: null, msg: '', b64: null, fs: false });
   const [ficha,  setFicha]  = useState({ status: null, msg: '', md: '', ref: '' });
   const [pres,   setPres]   = useState({ status: null, msg: '', html: '', preview: false });
+  const [inst,   setInst]   = useState({ status: null, msg: '', data: null });
   const [rec,    setRec]    = useState(false);
   const [transcrito, setTranscrito] = useState('');
   const mrRef     = useRef(null);
   const chunksRef = useRef([]);
   const croquisRef = useRef(null);
+  const printRef  = useRef(null);
+
+  // ── Estilo rápido ──
+  const applyStyle = useCallback(style => {
+    setSelectedStyle(style.id);
+    setProy(p => ({
+      ...p,
+      estilo: style.estilo,
+      descripcion: style.descripcion,
+      notas: style.notas,
+    }));
+  }, []);
 
   // ── Croquis ──
   const onCroquis = useCallback(e => {
@@ -319,6 +429,23 @@ export default function EstudioCocinas() {
     }
   }, [proy]);
 
+  // ── Instalaciones ──
+  const genInstalaciones = useCallback(async () => {
+    setInst(s => ({ ...s, status: 'loading', msg: 'Generando plan de instalaciones…' }));
+    try {
+      const r = await apiPost('/instalaciones', {
+        medidas: proy.medidas,
+        descripcion: proy.descripcion,
+        estilo: proy.estilo,
+        nombre_cliente: proy.nombre_cliente,
+      });
+      setInst(s => ({ ...s, status: 'success', msg: 'Plan de instalaciones generado', data: r }));
+    } catch (err) {
+      setInst(s => ({ ...s, status: 'error', msg: err.message }));
+    }
+  }, [proy]);
+
+  // ── Helpers ──
   const dl = (content, name, type) => {
     const a = Object.assign(document.createElement('a'), {
       href: URL.createObjectURL(new Blob([content], { type })),
@@ -327,11 +454,48 @@ export default function EstudioCocinas() {
     a.click();
   };
 
+  const handlePrint = useCallback((contentId) => {
+    const el = document.getElementById(contentId);
+    if (!el) { window.print(); return; }
+    const w = window.open('', '_blank');
+    w.document.write(`
+      <html><head><title>3D Estudio - ${proy.nombre_cliente || 'Proyecto'}</title>
+      <style>body{font-family:sans-serif;padding:20px;color:#333}pre{white-space:pre-wrap;font-size:12px}img{max-width:100%}@media print{button{display:none}}</style>
+      </head><body>${el.innerHTML}</body></html>
+    `);
+    w.document.close();
+    w.print();
+  }, [proy.nombre_cliente]);
+
+  const handlePdfExport = useCallback((content, filename) => {
+    // Abre el contenido en nueva ventana para imprimir como PDF
+    const w = window.open('', '_blank');
+    const isHtml = content && content.trim().startsWith('<');
+    w.document.write(`
+      <html><head><title>${filename}</title>
+      <style>
+        body{font-family:sans-serif;padding:30px;color:#333;max-width:900px;margin:0 auto}
+        pre{white-space:pre-wrap;font-size:12px;background:#f5f5f5;padding:15px;border-radius:8px}
+        img{max-width:100%;border-radius:8px}
+        h1,h2,h3{color:#b45309}
+        @media print{button{display:none}}
+      </style>
+      </head><body>
+      <h2 style="color:#b45309;margin-bottom:4px">3D Estudio — ${proy.nombre_cliente || 'Proyecto'}</h2>
+      <p style="color:#999;font-size:12px;margin-bottom:20px">${new Date().toLocaleDateString('es-ES')}</p>
+      ${isHtml ? content : `<pre>${content}</pre>`}
+      <script>window.onload=()=>{window.print()}<\/script>
+      </body></html>
+    `);
+    w.document.close();
+  }, [proy.nombre_cliente]);
+
   const TABS = [
     { id: 'render', label: 'Render Manus', icon: <Sparkles size={14}/> },
     { id: 'plano',  label: 'Plano 2D',     icon: <Image size={14}/> },
     { id: 'ficha',  label: 'Ficha Técnica', icon: <FileText size={14}/> },
     { id: 'pres',   label: 'Presentación',  icon: <Presentation size={14}/> },
+    { id: 'inst',   label: 'Instalaciones', icon: <Zap size={14}/> },
   ];
 
   const ESTILOS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Contemporáneo'];
@@ -440,9 +604,37 @@ export default function EstudioCocinas() {
               <div className="flex flex-col gap-4 max-w-2xl mx-auto">
                 <div>
                   <h2 className={`text-sm font-black mb-1 ${t.title}`}>Render fotorrealista con Manus</h2>
-                  <p className={`text-xs ${t.subtext}`}>Escribe o dicta la descripción. Sube un croquis a boli para mayor precisión.</p>
+                  <p className={`text-xs ${t.subtext}`}>Elige un estilo rápido o escribe tu propia descripción. Sube un croquis para mayor precisión.</p>
                 </div>
 
+                {/* Estilos rápidos */}
+                <div className={`rounded-xl p-4 ${t.sectionBg}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Wand2 size={13} className="text-amber-500"/>
+                    <p className={`text-[10px] font-black uppercase tracking-widest text-amber-500`}>Estilos Rápidos</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ESTILOS_RAPIDOS.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => applyStyle(s)}
+                        className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                          selectedStyle === s.id ? t.styleBtnAct : t.styleBtn
+                        }`}
+                      >
+                        <span className="text-base">{s.emoji}</span>
+                        <span>{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedStyle && (
+                    <p className={`text-[9px] mt-2 ${t.subtext}`}>
+                      ✓ Prompt calibrado aplicado. Puedes editar la descripción antes de generar.
+                    </p>
+                  )}
+                </div>
+
+                {/* Croquis */}
                 <div className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${t.uploadBorder}`}
                   onClick={() => croquisRef.current?.click()}>
                   {render.croquisPrev ? (
@@ -472,14 +664,26 @@ export default function EstudioCocinas() {
                 <StatusBadge status={render.status} message={render.msg} t={t} />
 
                 {render.imageUrl && (
-                  <div className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
-                    <img src={render.imageUrl} alt="Render Manus" className="w-full object-contain" />
-                    <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setRender(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><ZoomIn size={13}/></button>
-                      <a href={render.imageUrl} download="render_cocina.png" className={`p-1.5 rounded-lg block ${t.dlBtn}`}><Download size={13}/></a>
-                      <button onClick={() => setRender(s => ({ ...s, editMode: !s.editMode }))} className="bg-amber-600/80 p-1.5 rounded-lg hover:bg-amber-600 text-white"><Edit3 size={13}/></button>
+                  <>
+                    <PrintPdfBar
+                      t={t}
+                      onPrint={() => handlePrint('render-print-area')}
+                      onPdf={() => handlePdfExport(`<img src="${render.imageUrl}" style="width:100%"/>`, `render_${proy.nombre_cliente || 'cocina'}.pdf`)}
+                      extraBtns={
+                        <a href={render.imageUrl} download="render_cocina.png"
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                          <Download size={11}/> PNG
+                        </a>
+                      }
+                    />
+                    <div id="render-print-area" className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
+                      <img src={render.imageUrl} alt="Render Manus" className="w-full object-contain" />
+                      <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setRender(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><ZoomIn size={13}/></button>
+                        <button onClick={() => setRender(s => ({ ...s, editMode: !s.editMode }))} className="bg-amber-600/80 p-1.5 rounded-lg hover:bg-amber-600 text-white"><Edit3 size={13}/></button>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 {render.editMode && render.imageUrl && (
@@ -517,13 +721,25 @@ export default function EstudioCocinas() {
                 </button>
                 <StatusBadge status={plano.status} message={plano.msg} t={t} />
                 {plano.b64 && (
-                  <div className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
-                    <img src={plano.b64} alt="Plano 2D" className="w-full object-contain" />
-                    <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setPlano(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><Maximize2 size={13}/></button>
-                      <a href={plano.b64} download={`plano_${proy.nombre_cliente || 'cocina'}.png`} className={`p-1.5 rounded-lg block ${t.dlBtn}`}><Download size={13}/></a>
+                  <>
+                    <PrintPdfBar
+                      t={t}
+                      onPrint={() => handlePrint('plano-print-area')}
+                      onPdf={() => handlePdfExport(`<img src="${plano.b64}" style="width:100%"/>`, `plano_${proy.nombre_cliente || 'cocina'}.pdf`)}
+                      extraBtns={
+                        <a href={plano.b64} download={`plano_${proy.nombre_cliente || 'cocina'}.png`}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                          <Download size={11}/> PNG
+                        </a>
+                      }
+                    />
+                    <div id="plano-print-area" className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
+                      <img src={plano.b64} alt="Plano 2D" className="w-full object-contain" />
+                      <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setPlano(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><Maximize2 size={13}/></button>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
                 {plano.fs && (
                   <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onClick={() => setPlano(s => ({ ...s, fs: false }))}>
@@ -547,15 +763,24 @@ export default function EstudioCocinas() {
                 </button>
                 <StatusBadge status={ficha.status} message={ficha.msg} t={t} />
                 {ficha.md && (
-                  <div className="relative">
-                    <button onClick={() => dl(ficha.md, `ficha_${ficha.ref || 'cocina'}.md`, 'text/markdown')}
-                      className={`absolute top-3 right-3 p-1.5 rounded-lg flex items-center gap-1 text-[10px] ${t.dlBtn}`}>
-                      <Download size={11}/> .md
-                    </button>
-                    <pre className={`rounded-xl p-5 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap font-mono ${t.pre}`}>
-                      {ficha.md}
-                    </pre>
-                  </div>
+                  <>
+                    <PrintPdfBar
+                      t={t}
+                      onPrint={() => handlePrint('ficha-print-area')}
+                      onPdf={() => handlePdfExport(ficha.md, `ficha_${ficha.ref || 'cocina'}.pdf`)}
+                      extraBtns={
+                        <button onClick={() => dl(ficha.md, `ficha_${ficha.ref || 'cocina'}.md`, 'text/markdown')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                          <Download size={11}/> .md
+                        </button>
+                      }
+                    />
+                    <div id="ficha-print-area">
+                      <pre className={`rounded-xl p-5 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap font-mono ${t.pre}`}>
+                        {ficha.md}
+                      </pre>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -574,22 +799,152 @@ export default function EstudioCocinas() {
                 <StatusBadge status={pres.status} message={pres.msg} t={t} />
                 {pres.html && (
                   <div className="flex flex-col gap-3">
-                    <div className="flex gap-2 flex-wrap">
-                      <button onClick={() => setPres(s => ({ ...s, preview: !s.preview }))}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-                        <Eye size={12}/> {pres.preview ? 'Ocultar' : 'Vista previa'}
-                      </button>
-                      <button onClick={() => dl(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.html`, 'text/html')}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${t.presBtn}`}>
-                        <Download size={12}/> Descargar HTML
-                      </button>
-                    </div>
+                    <PrintPdfBar
+                      t={t}
+                      onPrint={() => handlePdfExport(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.pdf`)}
+                      onPdf={() => handlePdfExport(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.pdf`)}
+                      extraBtns={
+                        <>
+                          <button onClick={() => setPres(s => ({ ...s, preview: !s.preview }))}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                            <Eye size={11}/> {pres.preview ? 'Ocultar' : 'Vista previa'}
+                          </button>
+                          <button onClick={() => dl(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.html`, 'text/html')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.presBtn}`}>
+                            <Download size={11}/> HTML
+                          </button>
+                        </>
+                      }
+                    />
                     {pres.preview && (
                       <div className={`rounded-xl overflow-hidden border ${t.cardBorder}`} style={{ height: '560px' }}>
                         <iframe srcDoc={pres.html} title="Presentación" className="w-full h-full" sandbox="allow-same-origin" />
                       </div>
                     )}
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* ── INSTALACIONES ── */}
+            {tab === 'inst' && (
+              <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+                <div>
+                  <h2 className={`text-sm font-black mb-1 ${t.title}`}>Plan de instalaciones</h2>
+                  <p className={`text-xs ${t.subtext}`}>Genera el plan de puntos eléctricos, agua, desagüe y gas según la distribución de la cocina.</p>
+                </div>
+
+                <button onClick={genInstalaciones} disabled={inst.status === 'loading'}
+                  className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
+                  {inst.status === 'loading'
+                    ? <><Loader2 size={15} className="animate-spin"/> Generando plan…</>
+                    : <><LayoutGrid size={15}/> Generar Plan de Instalaciones</>}
+                </button>
+
+                <StatusBadge status={inst.status} message={inst.msg} t={t} />
+
+                {inst.data && (
+                  <>
+                    <PrintPdfBar
+                      t={t}
+                      onPrint={() => handlePrint('inst-print-area')}
+                      onPdf={() => handlePdfExport(
+                        JSON.stringify(inst.data, null, 2),
+                        `instalaciones_${proy.nombre_cliente || 'cocina'}.pdf`
+                      )}
+                    />
+
+                    <div id="inst-print-area" className="flex flex-col gap-4">
+
+                      {/* Eléctrica */}
+                      {inst.data.electrica && (
+                        <div className={`rounded-xl p-4 ${t.instCard}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instElec}`}>
+                              <Zap size={11}/> Instalación Eléctrica
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(inst.data.electrica.puntos || []).map((p, i) => (
+                              <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instElec}`}>
+                                <Zap size={11} className="flex-shrink-0 mt-0.5"/>
+                                <div>
+                                  <p className="text-[10px] font-bold">{p.tipo || p.nombre || `Punto ${i+1}`}</p>
+                                  <p className="text-[9px] opacity-70">{p.ubicacion || p.descripcion || ''}</p>
+                                </div>
+                              </div>
+                            ))}
+                            {inst.data.electrica.circuitos && (
+                              <div className={`col-span-2 p-2 rounded-lg ${t.instElec}`}>
+                                <p className="text-[10px] font-bold mb-1">Circuitos</p>
+                                <p className="text-[9px]">{inst.data.electrica.circuitos}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Fontanería */}
+                      {inst.data.fontaneria && (
+                        <div className={`rounded-xl p-4 ${t.instCard}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instWater}`}>
+                              <Droplets size={11}/> Fontanería
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(inst.data.fontaneria.puntos || []).map((p, i) => (
+                              <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instWater}`}>
+                                <Droplets size={11} className="flex-shrink-0 mt-0.5"/>
+                                <div>
+                                  <p className="text-[10px] font-bold">{p.tipo || p.nombre || `Punto ${i+1}`}</p>
+                                  <p className="text-[9px] opacity-70">{p.ubicacion || p.descripcion || ''}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Gas */}
+                      {inst.data.gas && (
+                        <div className={`rounded-xl p-4 ${t.instCard}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instGas}`}>
+                              <Flame size={11}/> Gas
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(inst.data.gas.puntos || []).map((p, i) => (
+                              <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instGas}`}>
+                                <Flame size={11} className="flex-shrink-0 mt-0.5"/>
+                                <div>
+                                  <p className="text-[10px] font-bold">{p.tipo || p.nombre || `Punto ${i+1}`}</p>
+                                  <p className="text-[9px] opacity-70">{p.ubicacion || p.descripcion || ''}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Notas generales */}
+                      {inst.data.notas && (
+                        <div className={`rounded-xl p-4 ${t.instCard}`}>
+                          <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${t.subtext}`}>Notas técnicas</p>
+                          <p className={`text-xs leading-relaxed ${t.subtext}`}>{inst.data.notas}</p>
+                        </div>
+                      )}
+
+                      {/* Fallback: mostrar JSON si la estructura no coincide */}
+                      {!inst.data.electrica && !inst.data.fontaneria && !inst.data.gas && (
+                        <pre className={`rounded-xl p-4 text-xs whitespace-pre-wrap font-mono ${t.pre}`}>
+                          {JSON.stringify(inst.data, null, 2)}
+                        </pre>
+                      )}
+
+                    </div>
+                  </>
                 )}
               </div>
             )}
