@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Search, Image as ImageIcon, Loader, ExternalLink, Phone, MapPin, Calendar, Tag, Download, X } from 'lucide-react';
+import { Building2, Search, Image as ImageIcon, Loader, ExternalLink, Phone, MapPin, Calendar, Tag, Download, X, Clock, Printer, CheckCircle2, CircleDashed } from 'lucide-react';
 import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +25,48 @@ const PropData = ({ state }) => {
   const [result, setResult] = useState(null); // {developments, summary, groundingSources, groundingFailed}
   const [error, setError] = useState('');
   const [tipoFilter, setTipoFilter] = useState('all'); // all | pisos | chalets | otros
+  const [estados, setEstados] = useState(() => { try { return JSON.parse(localStorage.getItem('propdata_estados') || '{}'); } catch { return {}; } });
+  const [historial, setHistorial] = useState(() => { try { return JSON.parse(localStorage.getItem('propdata_historial') || '[]'); } catch { return []; } });
+  const [showHist, setShowHist] = useState(false);
+
+  const keyOf = (d) => `${(d.name || '').toLowerCase()}|${(d.location || d.address || '').toLowerCase()}`;
+  const setEstado = (d, v) => setEstados(prev => {
+    const k = keyOf(d); const next = { ...prev }; if (next[k] === v) delete next[k]; else next[k] = v;
+    localStorage.setItem('propdata_estados', JSON.stringify(next)); return next;
+  });
+  const guardarHistorial = (loc, port, n) => setHistorial(prev => {
+    const entry = { location: loc, portal: port, count: n, at: new Date().toISOString() };
+    const next = [entry, ...prev.filter(h => !(h.location === loc && h.portal === port))].slice(0, 15);
+    localStorage.setItem('propdata_historial', JSON.stringify(next)); return next;
+  });
+  const mapUrl = (d) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([d.address, d.location, d.name].filter(Boolean).join(', ') || d.name || '')}`;
+
+  const imprimir = () => {
+    const rows = devs.map(d => `
+      <div class="obra">
+        <div class="top"><b>${d.name || 'Promoción'}</b><span class="tag">${d.type || ''}</span></div>
+        <div class="sub">${d.promoter || ''}</div>
+        <div class="det">${[d.location, d.address].filter(Boolean).join(' · ')}</div>
+        <div class="det">${d.phone ? '☎ ' + d.phone + '  ' : ''}${d.priceStart ? 'desde ' + d.priceStart : ''}</div>
+        <div class="det">${[d.startDate, d.deliveryDate].filter(Boolean).join(' → ')}</div>
+      </div>`).join('');
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`<html><head><title>Obra nueva · ${location}</title><style>
+      body{font-family:Arial,sans-serif;color:#1f2937;padding:24px}
+      h1{color:#312e81;font-size:20px;margin:0 0 4px} .meta{color:#64748b;font-size:12px;margin-bottom:16px}
+      .obra{border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px;break-inside:avoid}
+      .top{display:flex;justify-content:space-between;font-size:14px} .tag{color:#6d28d9;font-weight:700;font-size:11px}
+      .sub{color:#475569;font-size:12px} .det{color:#64748b;font-size:11px;margin-top:2px}
+      @media print{.no-print{display:none}}
+    </style></head><body>
+      <h1>Promociones de obra nueva — ${location}</h1>
+      <div class="meta">${devs.length} promociones${portal ? ' · ' + portal : ''} · ${new Date().toLocaleDateString('es-ES')}</div>
+      ${rows}
+      <script>window.onload=()=>window.print()<\/script>
+    </body></html>`);
+    w.document.close();
+  };
 
   const readFile = (file) => new Promise((res) => {
     const fr = new FileReader();
@@ -41,6 +83,7 @@ const PropData = ({ state }) => {
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || 'Error');
       setResult(d);
+      guardarHistorial(location.trim(), portal.trim(), (d.developments || []).length);
     } catch (e) { setError(e.message || 'No se pudo completar la búsqueda.'); }
     finally { setLoading(false); }
   };
@@ -107,9 +150,27 @@ const PropData = ({ state }) => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
-        <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-4">
-          <button onClick={() => setMode('search')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-bold ${mode === 'search' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}><Search size={15} /> Buscar por zona</button>
-          <button onClick={() => setMode('image')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-bold ${mode === 'image' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}><ImageIcon size={15} /> Desde captura</button>
+        <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+          <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+            <button onClick={() => setMode('search')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-bold ${mode === 'search' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}><Search size={15} /> Buscar por zona</button>
+            <button onClick={() => setMode('image')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-bold ${mode === 'image' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}><ImageIcon size={15} /> Desde captura</button>
+          </div>
+          {historial.length > 0 && (
+            <div className="relative">
+              <button onClick={() => setShowHist(v => !v)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200"><Clock size={14} /> Historial ({historial.length})</button>
+              {showHist && (
+                <div className="absolute right-0 mt-1 w-72 max-h-72 overflow-auto bg-white border border-slate-200 rounded-xl shadow-xl z-20 p-1">
+                  {historial.map((h, i) => (
+                    <button key={i} onClick={() => { setMode('search'); setLocation(h.location); setPortal(h.portal || ''); setShowHist(false); }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-sky-50 flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-slate-700 truncate">{h.location}{h.portal ? ` · ${h.portal}` : ''}</span>
+                      <span className="text-[10px] text-slate-400 shrink-0">{h.count} · {new Date(h.at).toLocaleDateString('es-ES')}</span>
+                    </button>
+                  ))}
+                  <button onClick={() => { setHistorial([]); localStorage.removeItem('propdata_historial'); setShowHist(false); }} className="w-full text-center text-[11px] text-rose-500 font-bold py-1.5 hover:bg-rose-50 rounded-lg">Borrar historial</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {mode === 'search' ? (
@@ -171,7 +232,10 @@ const PropData = ({ state }) => {
                 <button key={k} onClick={() => setTipoFilter(k)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${tipoFilter === k ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100'}`}>{lab}</button>
               ))}
             </div>
-            {devs.length > 0 && <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700"><Download size={14} /> Exportar CSV</button>}
+            {devs.length > 0 && <div className="flex items-center gap-2">
+              <button onClick={imprimir} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 text-white rounded-lg text-xs font-bold hover:bg-slate-800"><Printer size={14} /> Imprimir</button>
+              <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700"><Download size={14} /> Exportar CSV</button>
+            </div>}
           </div>
 
           {Object.keys(porTipo).length > 0 && (
@@ -193,8 +257,11 @@ const PropData = ({ state }) => {
           )}
 
           <div className="grid md:grid-cols-2 gap-3">
-            {devs.map((d, i) => (
-              <div key={i} className={`rounded-2xl border border-slate-200 border-l-4 p-4 hover:shadow-md transition-shadow ${ACCENTS[i % ACCENTS.length]}`}>
+            {devs.map((d, i) => {
+              const est = estados[keyOf(d)];
+              const ring = est === 'visited' ? 'border-l-emerald-500 bg-emerald-50/60 ring-1 ring-emerald-200' : est === 'todo' ? 'border-l-sky-500 bg-sky-50/70 ring-1 ring-sky-200' : ACCENTS[i % ACCENTS.length];
+              return (
+              <div key={i} className={`rounded-2xl border border-slate-200 border-l-4 p-4 hover:shadow-md transition-shadow ${ring}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-black text-slate-800 truncate">{d.name || 'Promoción'}</p>
@@ -210,9 +277,17 @@ const PropData = ({ state }) => {
                   {d.priceStart && <p className="flex items-center gap-1.5"><Tag size={13} className="text-slate-400" /> desde {d.priceStart}</p>}
                 </div>
                 {d.description && <p className="mt-2 text-[11px] text-slate-400 line-clamp-2">{d.description}</p>}
-                {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">Ver promoción <ExternalLink size={12} /></a>}
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <a href={mapUrl(d)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50"><MapPin size={13} className="text-rose-500" /> Ver en mapa</a>
+                  {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">Promoción <ExternalLink size={12} /></a>}
+                  <div className="ml-auto flex items-center gap-1">
+                    <button onClick={() => setEstado(d, 'visited')} title="Visitada" className={`p-1.5 rounded-lg ${est === 'visited' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}><CheckCircle2 size={15} /></button>
+                    <button onClick={() => setEstado(d, 'todo')} title="Por visitar" className={`p-1.5 rounded-lg ${est === 'todo' ? 'bg-sky-600 text-white' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'}`}><CircleDashed size={15} /></button>
+                  </div>
+                </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {result.summary && (
