@@ -6,17 +6,18 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const authH = () => ({ 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
 const DOOR_TYPES = [['open', 'Sin puertas'], ['sliding', 'Corredera'], ['hinged', 'Batiente'], ['folding', 'Plegable'], ['coplanar', 'Coplanar']];
 
-// ── Catálogo (tarifas reales Finsa) y precios de accesorios (opción B: determinista) ──
+// ── Materiales: color para el dibujo y categoría de suplemento (matSupp_* de Ajustes) ──
 const MATERIALS = [
-  { id: '010B', name: 'Blanco Standard', pricePerSqm: 28.0, color: '#ffffff' },
-  { id: '25V', name: 'Roble Virginia', pricePerSqm: 38.5, color: '#d4b483' },
-  { id: '17G', name: 'Pino Cervino', pricePerSqm: 36.2, color: '#e8e4d8' },
-  { id: '453B', name: 'Boeta Blanco', pricePerSqm: 34.5, color: '#f5f5f5' },
-  { id: '91Y', name: 'Roble Dafne', pricePerSqm: 39.0, color: '#e2d2ba' },
-  { id: '231N', name: 'Negro Liso', pricePerSqm: 32.5, color: '#1a1a1a' },
-  { id: '195G', name: 'Gris Sarela', pricePerSqm: 31.0, color: '#bcbcbc' },
+  { id: '010B', name: 'Blanco Standard', color: '#ffffff', supp: 'blancos' },
+  { id: '25V', name: 'Roble Virginia', color: '#d4b483', supp: 'maderas-medias' },
+  { id: '17G', name: 'Pino Cervino', color: '#e8e4d8', supp: 'maderas-claras' },
+  { id: '453B', name: 'Boeta Blanco', color: '#f5f5f5', supp: 'blancos' },
+  { id: '91Y', name: 'Roble Dafne', color: '#e2d2ba', supp: 'maderas-claras' },
+  { id: '231N', name: 'Negro Liso', color: '#1a1a1a', supp: 'grises' },
+  { id: '195G', name: 'Gris Sarela', color: '#bcbcbc', supp: 'grises' },
 ];
-const COMPONENT_PRICES = { shelf: 28, 'hanging-rod': 22, drawer: 115, 'divider-v': 65, 'shoe-rack': 110, 'pant-rack': 125, 'led-strip': 55 };
+// Mapa tipo de accesorio → clave de tarifa en Ajustes (armPrice_*) y valor por defecto.
+const ACC_TARIFA = { shelf: ['shelf', 25], 'hanging-rod': ['hangingRod', 35], drawer: ['drawer', 85], 'shoe-rack': ['shelf', 40], 'pant-rack': ['drawer', 60], 'led-strip': ['ledPerModule', 120], 'divider-v': ['shelf', 30] };
 const LABELS = { shelf: 'Balda', 'hanging-rod': 'Barra colgador', drawer: 'Cajón', 'divider-v': 'Divisor vertical', 'shoe-rack': 'Zapatero', 'pant-rack': 'Pantalonero', 'led-strip': 'LED' };
 const PALETTE = ['shelf', 'hanging-rod', 'drawer', 'shoe-rack', 'pant-rack', 'led-strip'];
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -52,6 +53,7 @@ const Armarios2 = ({ state }) => {
   ]);
   const [selId, setSelId] = useState(null);
   const [activeSection, setActiveSection] = useState(0);
+  const [tool, setTool] = useState(null); // tipo de elemento a colocar con clic
   const set = (k, v) => setCfg(c => ({ ...c, [k]: v }));
   const material = MATERIALS.find(m => m.id === cfg.materialId) || MATERIALS[0];
 
@@ -112,16 +114,36 @@ const Armarios2 = ({ state }) => {
     setComps(cs => [...cs, c]); setSelId(c.id);
   };
   const delComp = (id) => { setComps(cs => cs.filter(c => c.id !== id)); if (selId === id) setSelId(null); };
+  // Coloca el elemento seleccionado (tool) donde hagas clic dentro del armario.
+  const placeAt = (e) => {
+    if (!tool || !svgRef.current) return;
+    const r = svgRef.current.getBoundingClientRect();
+    const padPxX = (PAD / vbW) * r.width, innerPxW = (innerW / vbW) * r.width;
+    const padPxY = (PAD / vbH) * r.height, innerPxH = (innerH / vbH) * r.height;
+    const yp = Math.max(2, Math.min(98, ((e.clientY - r.top - padPxY) / innerPxH) * 100));
+    const xp = Math.max(0, Math.min(100, ((e.clientX - r.left - padPxX) / innerPxW) * 100));
+    let si = 0; for (let i = 0; i < numSections; i++) { if (xp >= boundaries[i] && xp <= boundaries[i + 1]) { si = i; break; } }
+    const c = { id: nid(), type: tool, y: Math.round(yp), sectionIndex: si };
+    setComps(cs => [...cs, c]); setSelId(c.id);
+  };
 
-  // ── Presupuesto determinista (opción B) ──
+  // Tarifas reales desde Ajustes → Armazones (armPrice_*), con valores por defecto.
+  const tarifa = (key, def) => { const v = state?.settings?.['armPrice_' + key]; const n = Number(v); return Number.isFinite(n) && v !== '' && v != null ? n : def; };
+
+  // ── Presupuesto determinista con TUS tarifas (opción B) ──
   const budget = useMemo(() => {
-    const priceSqm = material.pricePerSqm * (cfg.thickness / 19);
-    const areaM2 = (cfg.width * cfg.height * 3) / 1e6; // costados+techo+base aprox
-    const baseCost = areaM2 * priceSqm;
+    const frontM2 = (cfg.width * cfg.height) / 1e6;               // superficie de frente en m²
+    const basePerM2 = tarifa('basePerM2', 450);
+    const matSupp = tarifa('matSupp_' + (material.supp || 'blancos'), 0);
+    const depthSupp = cfg.depth > 600 ? (cfg.depth - 600) * tarifa('depthSuppPerMm', 0.5) : 0;
+    const baseCost = frontM2 * (basePerM2 + matSupp) + depthSupp;
     let accesorios = 0; const counts = {};
-    comps.forEach(c => { accesorios += COMPONENT_PRICES[c.type] || 0; counts[c.type] = (counts[c.type] || 0) + 1; });
+    comps.forEach(c => { const [k, d] = ACC_TARIFA[c.type] || [null, 0]; accesorios += k ? tarifa(k, d) : 0; counts[c.type] = (counts[c.type] || 0) + 1; });
+    // Puertas: €/m² de frente según tipo
+    const doorRate = cfg.doorType === 'sliding' ? tarifa('doorSlidingPerM2', 180) : (cfg.doorType === 'folding' || cfg.doorType === 'coplanar') ? tarifa('doorFoldingPerM2', 250) : cfg.doorType === 'hinged' ? tarifa('doorSlidingPerM2', 180) : 0;
+    const puertas = frontM2 * doorRate;
     const structAdj = cfg.projectType === 'vestidor' ? 0.9 : 1.0;
-    const coste = (baseCost * structAdj + accesorios + 350) * 1.35; // montaje/herrajes/transporte
+    const coste = baseCost * structAdj + accesorios + puertas;
     const pvp = coste * (1 + (Number(cfg.adminMargin) || 0) / 100);
     // Despiece
     const t = cfg.thickness; const cut = [
@@ -135,8 +157,8 @@ const Armarios2 = ({ state }) => {
       else if (c.type === 'shelf') cut.push({ p: 'Balda', q: 1, w: cfg.depth - 10, h: 400 });
       else if (c.type === 'drawer') cut.push({ p: 'Frente cajón', q: 1, w: 400, h: 180 });
     });
-    return { baseCost, accesorios, coste, pvp: Math.round(pvp), counts, cut };
-  }, [cfg, comps, material]);
+    return { baseCost, accesorios, puertas, coste, pvp: Math.round(pvp), counts, cut };
+  }, [cfg, comps, material, state?.settings]);
 
   const readFile = (file) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => res(null); fr.readAsDataURL(file); });
 
@@ -206,6 +228,50 @@ const Armarios2 = ({ state }) => {
     img.src = url;
   };
 
+  const generarPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = pdf.internal.pageSize.getWidth(); const M = 14;
+    const logo = state?.logo;
+    if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+      try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 12, 32, 16); } catch {}
+    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+    pdf.setFontSize(16); pdf.setTextColor(88, 28, 135); pdf.setFont(undefined, 'bold');
+    pdf.text('PRESUPUESTO ARMARIO', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(10); pdf.setTextColor(120);
+    pdf.text(`${cfg.cliente || ''}${cfg.ref ? '  ·  ' + cfg.ref : ''}`, W - M, 24, { align: 'right' });
+    pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 29, { align: 'right' });
+    // Imagen del diseño (SVG → PNG vía canvas)
+    const url = svgToDataUrl();
+    let y = 40;
+    if (url) {
+      try {
+        const png = await new Promise((res) => { const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = vbW * 2; c.height = vbH * 2; const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/png')); }; img.onerror = () => res(null); img.src = url; });
+        if (png) { const iw = 90, ih = iw * (vbH / vbW); pdf.addImage(png, 'PNG', M, y, iw, ih); }
+      } catch {}
+    }
+    pdf.setFontSize(10); pdf.setTextColor(40);
+    let ry = y + 6;
+    const spec = [['Medidas', `${cfg.width} × ${cfg.height} × ${cfg.depth} mm`], ['Material', material.name], ['Grosor', `${cfg.thickness} mm`], ['Tipo', cfg.projectType], ['Puertas', DOOR_TYPES.find(d => d[0] === cfg.doorType)?.[1]]];
+    spec.forEach(([k, v]) => { pdf.text(`${k}: ${v}`, M + 100, ry); ry += 6; });
+    ry += 2;
+    pdf.text(`Estructura: ${eur(budget.baseCost)}`, M + 100, ry); ry += 5;
+    pdf.text(`Accesorios: ${eur(budget.accesorios)}`, M + 100, ry); ry += 5;
+    if (budget.puertas > 0) { pdf.text(`Puertas: ${eur(budget.puertas)}`, M + 100, ry); ry += 5; }
+    pdf.setFont(undefined, 'bold'); pdf.setFontSize(13); pdf.setTextColor(234, 88, 12);
+    pdf.text(`PVP: ${eur(budget.pvp)}`, M + 100, ry + 3); pdf.setFont(undefined, 'normal'); pdf.setTextColor(40);
+    const tableY = Math.max(y + (vbH / vbW) * 90 + 8, ry + 12);
+    autoTable(pdf, {
+      startY: tableY,
+      head: [['Pieza', 'Uds', 'Ancho', 'Alto', 'Material']],
+      body: budget.cut.map(x => [x.p, String(x.q), `${x.w} mm`, `${x.h} mm`, material.name]),
+      styles: { fontSize: 8.5, cellPadding: 1.6 }, headStyles: { fillColor: [88, 28, 135], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [245, 243, 250] }, margin: { left: M, right: M },
+    });
+    pdf.save(`Armario_${(cfg.ref || cfg.cliente || 'presupuesto').replace(/\s+/g, '_')}.pdf`);
+  };
+
   // Render helpers
   const secX = (i) => [PAD + (boundaries[i] / 100) * innerW, PAD + (boundaries[i + 1] / 100) * innerW];
 
@@ -231,7 +297,7 @@ const Armarios2 = ({ state }) => {
               </select></div>
             <div className="col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Material</label>
               <select value={cfg.materialId} onChange={e => set('materialId', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
-                {MATERIALS.map(m => <option key={m.id} value={m.id}>{m.name} · {m.pricePerSqm}€/m²</option>)}
+                {MATERIALS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select></div>
             <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tipo</label>
               <select value={cfg.projectType} onChange={e => set('projectType', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
@@ -252,21 +318,14 @@ const Armarios2 = ({ state }) => {
             </label>
           </div>
 
-          {/* Paleta */}
+          {/* Paleta: elige un elemento y haz clic dentro del armario para colocarlo */}
           <div className="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap items-center gap-2">
-            <button onClick={() => addComp('divider-v')} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold"><Columns size={14} /> Divisor</button>
+            <button onClick={() => addComp('divider-v')} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold"><Columns size={14} /> + Divisor</button>
             <span className="text-slate-300">|</span>
-            {numSections > 1 && (
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase">Añadir en:</span>
-                {Array.from({ length: numSections }).map((_, i) => (
-                  <button key={i} onClick={() => setActiveSection(i)} className={`w-6 h-6 rounded text-xs font-black ${activeSection === i ? 'bg-fuchsia-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</button>
-                ))}
-              </div>
-            )}
             {PALETTE.map(t => (
-              <button key={t} onClick={() => addComp(t)} className="flex items-center gap-1.5 px-3 py-1.5 bg-fuchsia-50 text-fuchsia-700 rounded-lg text-xs font-bold hover:bg-fuchsia-100"><Plus size={13} /> {LABELS[t]}</button>
+              <button key={t} onClick={() => setTool(tool === t ? null : t)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${tool === t ? 'bg-fuchsia-600 text-white shadow' : 'bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100'}`}><Plus size={13} /> {LABELS[t]}</button>
             ))}
+            {tool && <span className="text-[11px] font-bold text-fuchsia-600 ml-1">👆 Haz clic en el armario para colocar «{LABELS[tool]}»</span>}
           </div>
 
           {/* Visor 2D con arrastre */}
@@ -292,7 +351,7 @@ const Armarios2 = ({ state }) => {
                 <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#0f172a" floodOpacity="0.18" /></filter>
               </defs>
               {/* Fondo trasero + carcasa con marco (costados/techo/base) */}
-              <rect x={PAD} y={PAD} width={innerW} height={innerH} rx="4" fill="url(#mat)" stroke="#1e293b" strokeWidth="1.5" filter="url(#sh)" />
+              <rect x={PAD} y={PAD} width={innerW} height={innerH} rx="4" fill="url(#mat)" stroke="#1e293b" strokeWidth="1.5" filter="url(#sh)" onClick={placeAt} style={{ cursor: tool ? 'crosshair' : 'default' }} />
               {(() => { const t = Math.max(6, cfg.thickness * 0.5); return (<g fill={shade(material.color, -0.22)} stroke="#1e293b" strokeWidth="0.6">
                 <rect x={PAD} y={PAD} width={t} height={innerH} /><rect x={PAD + innerW - t} y={PAD} width={t} height={innerH} />
                 <rect x={PAD} y={PAD} width={innerW} height={t} /><rect x={PAD} y={PAD + innerH - t} width={innerW} height={t} />
@@ -336,6 +395,18 @@ const Armarios2 = ({ state }) => {
                   </g>
                 );
               })}
+
+              {/* Puertas (representación en el alzado) */}
+              {cfg.doorType !== 'open' && (() => {
+                const nd = cfg.doorType === 'sliding' ? 2 : Math.max(2, Math.round(cfg.width / 500));
+                const dw = innerW / nd;
+                return Array.from({ length: nd }).map((_, i) => (
+                  <g key={'door' + i} pointerEvents="none">
+                    <rect x={PAD + i * dw + 1} y={PAD + 2} width={dw - 2} height={innerH - 4} fill={material.color} opacity={cfg.doorType === 'sliding' ? 0.55 : 0.72} stroke="#1e293b" strokeWidth="1" rx="2" />
+                    <line x1={PAD + i * dw + dw - 8} y1={PAD + innerH * 0.4} x2={PAD + i * dw + dw - 8} y2={PAD + innerH * 0.6} stroke="#0f172a" strokeWidth="2.5" opacity="0.6" strokeLinecap="round" />
+                  </g>
+                ));
+              })()}
             </svg>
             {selId && (
               <div className="flex items-center justify-between mt-2 px-1">
@@ -375,6 +446,7 @@ const Armarios2 = ({ state }) => {
           <div className="space-y-1 text-sm">
             <div className="flex justify-between text-slate-500"><span>Estructura ({material.name})</span><span className="font-bold">{eur(budget.baseCost)}</span></div>
             <div className="flex justify-between text-slate-500"><span>Accesorios interior</span><span className="font-bold">{eur(budget.accesorios)}</span></div>
+            {budget.puertas > 0 && <div className="flex justify-between text-slate-500"><span>Puertas ({DOOR_TYPES.find(d => d[0] === cfg.doorType)?.[1]})</span><span className="font-bold">{eur(budget.puertas)}</span></div>}
             <div className="flex justify-between text-slate-500"><span>Coste producción</span><span className="font-bold">{eur(budget.coste)}</span></div>
             <div className="flex justify-between text-slate-900 text-xl font-black pt-1 bg-orange-50 -mx-1 px-2 rounded-lg py-1"><span>PVP</span><span className="text-orange-600">{eur(budget.pvp)}</span></div>
           </div>
@@ -382,8 +454,11 @@ const Armarios2 = ({ state }) => {
             <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Interior</p>
             {Object.entries(budget.counts).map(([t, n]) => <div key={t} className="flex justify-between text-[11px] text-slate-500"><span>{LABELS[t] || t}</span><span>×{n}</span></div>)}
           </div>
-          <button onClick={exportCut} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900"><Download size={15} /> Despiece (CSV)</button>
-          <p className="text-[10px] text-slate-400 mt-2">PDF: próxima fase. Precios por tarifas (opción B).</p>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <button onClick={generarPDF} className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700"><Download size={15} /> PDF</button>
+            <button onClick={exportCut} className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-900"><Download size={15} /> Despiece</button>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-2">Precios según tus tarifas (Ajustes → Armazones).</p>
         </div>
         </div>
       </div>
