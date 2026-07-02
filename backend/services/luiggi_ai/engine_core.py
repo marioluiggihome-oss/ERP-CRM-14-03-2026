@@ -3,6 +3,13 @@ LuiggiAI Engine - Core
 =======================
 Motor central que gestiona la comunicación con la API del proveedor
 subyacente, sanitiza respuestas y mantiene la abstracción white-label.
+
+API v2: https://api.manus.ai/v2
+  - POST /v2/task.create        → {"message": {"content": [{"type":"text","text":"..."}]}}
+  - GET  /v2/task.detail        → ?task_id=xxx   (status: running|stopped|waiting|error)
+  - GET  /v2/task.listMessages  → ?task_id=xxx   (mensajes y adjuntos del agente)
+  - POST /v2/file.upload        → multipart form
+Auth: header x-manus-api-key: {key}
 """
 
 import asyncio
@@ -49,11 +56,10 @@ class LuiggiAICore:
         """Obtiene o crea el cliente HTTP."""
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
-                base_url=self.config.provider_base_url,
+                base_url="https://api.manus.ai",
                 headers={
-                    "Authorization": f"Bearer {self.config.provider_api_key}",
+                    "x-manus-api-key": self.config.provider_api_key,
                     "Content-Type": "application/json",
-                    "X-Client": self.config.brand_name,
                 },
                 timeout=120.0,
             )
@@ -169,7 +175,7 @@ class LuiggiAICore:
         structured_output_schema: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         """
-        Crea una tarea en el motor de IA.
+        Crea una tarea en el motor de IA usando la API v2 de Manus.
 
         Args:
             prompt: Instrucción para el motor
@@ -189,20 +195,46 @@ class LuiggiAICore:
         try:
             client = await self._get_client()
 
-            payload = {
-                "prompt": prompt,
+            # Formato correcto API v2: message.content como array de ContentPart
+            content = [{"type": "text", "text": prompt}]
+
+            # Adjuntar archivos si los hay (file_id o file_url)
+            if files:
+                for f in files:
+                    if f.get("file_id"):
+                        content.append({
+                            "type": "file",
+                            "file_id": f["file_id"]
+                        })
+                    elif f.get("file_url"):
+                        content.append({
+                            "type": "file",
+                            "file_url": f["file_url"]
+                        })
+
+            payload: Dict[str, Any] = {
+                "message": {
+                    "content": content,
+                },
+                "hide_in_task_list": True,  # No aparece en la lista de tareas del usuario
             }
 
-            if files:
-                payload["files"] = files
             if structured_output_schema:
                 payload["structured_output_schema"] = structured_output_schema
 
-            response = await client.post("/task.create", json=payload)
+            response = await client.post("/v2/task.create", json=payload)
 
             if response.status_code == 200:
                 data = response.json()
-                task_id = data.get("task_id") or data.get("id")
+                if not data.get("ok"):
+                    err = data.get("error", {})
+                    logger.error(f"Manus API error: {err}")
+                    return {
+                        "success": False,
+                        "error": err.get("message", "Error al crear tarea"),
+                        "engine": self.config.brand_name,
+                    }
+                task_id = data.get("task_id")
                 self._task_cache[task_id] = {
                     "status": "running",
                     "created_at": time.time(),
@@ -214,10 +246,16 @@ class LuiggiAICore:
                     "version": self.config.brand_version,
                 }
             else:
-                logger.error(f"Error creating task: {response.status_code} - {response.text}")
+                err_text = response.text
+                logger.error(f"Error creating task: {response.status_code} - {err_text}")
+                try:
+                    err_json = response.json()
+                    err_msg = err_json.get("error", {}).get("message", "Error al procesar la solicitud.")
+                except Exception:
+                    err_msg = "Error al procesar la solicitud. Intente de nuevo."
                 return {
                     "success": False,
-                    "error": "Error al procesar la solicitud. Intente de nuevo.",
+                    "error": err_msg,
                     "engine": self.config.brand_name,
                 }
 
@@ -236,21 +274,34 @@ class LuiggiAICore:
             }
 
     async def get_task_status(self, task_id: str) -> Dict[str, Any]:
-        """Consulta el estado de una tarea."""
+        """
+        Consulta el estado de una tarea usando task.detail.
+        Devuelve status: running | stopped | waiting | error
+        """
         try:
             client = await self._get_client()
-            response = await client.get(f"/task.get?task_id={task_id}")
+            response = await client.get(f"/v2/task.detail", params={"task_id": task_id})
 
             if response.status_code == 200:
                 data = response.json()
-                # Sanitizar toda la respuesta
-                sanitized = self._sanitize_dict(data)
-                sanitized["engine"] = self.config.brand_name
-                return sanitized
+                if not data.get("ok"):
+                    return {
+                        "success": False,
+                        "error": "No se pudo obtener el estado de la tarea.",
+                        "engine": self.config.brand_name,
+                    }
+                task = data.get("task", {})
+                return {
+                    "success": True,
+                    "status": task.get("status", "unknown"),
+                    "task_id": task_id,
+                    "engine": self.config.brand_name,
+                }
             else:
                 return {
                     "success": False,
                     "error": "No se pudo obtener el estado de la tarea.",
+                    "status": "error",
                     "engine": self.config.brand_name,
                 }
         except Exception as e:
@@ -258,25 +309,67 @@ class LuiggiAICore:
             return {
                 "success": False,
                 "error": "Error al consultar estado.",
+                "status": "error",
                 "engine": self.config.brand_name,
             }
 
     async def get_task_messages(self, task_id: str) -> Dict[str, Any]:
-        """Obtiene los mensajes/resultados de una tarea completada."""
+        """
+        Obtiene los mensajes/resultados de una tarea usando task.listMessages.
+        Extrae imágenes de los adjuntos del assistant_message.
+        """
         try:
             client = await self._get_client()
-            response = await client.get(f"/task.listMessages?task_id={task_id}")
+            response = await client.get(
+                "/v2/task.listMessages",
+                params={"task_id": task_id, "order": "asc", "limit": 50}
+            )
 
             if response.status_code == 200:
                 data = response.json()
-                # Extraer URLs de imagen del proveedor ANTES de sanitizar y
-                # servirlas por el proxy interno (oculta el origen real).
+                if not data.get("ok"):
+                    return {
+                        "success": False,
+                        "error": "No se pudieron obtener los resultados.",
+                        "engine": self.config.brand_name,
+                    }
+
+                messages = data.get("messages", [])
+
+                # Extraer URLs de imagen de los adjuntos del asistente
                 raw_images: List[str] = []
-                self._collect_image_urls(data, raw_images)
-                sanitized = self._sanitize_dict(data)
-                sanitized["engine"] = self.config.brand_name
-                sanitized["images"] = [self.proxy_url(u) for u in raw_images]
-                return {"success": True, **sanitized}
+                assistant_text = ""
+
+                for msg in messages:
+                    msg_type = msg.get("type", "")
+
+                    if msg_type == "assistant_message":
+                        am = msg.get("assistant_message", {})
+                        if am.get("content"):
+                            assistant_text = am["content"]
+                        for att in am.get("attachments", []):
+                            url = att.get("url", "")
+                            ct = att.get("content_type", "")
+                            if url and (att.get("type") == "image" or "image" in ct or _IMG_EXT_RE.search(url)):
+                                if url not in raw_images:
+                                    raw_images.append(url)
+
+                    elif msg_type == "error_message":
+                        em = msg.get("error_message", {})
+                        logger.warning(f"Task error message: {em}")
+
+                # También buscar imágenes en el texto (URLs inline)
+                self._collect_image_urls(assistant_text, raw_images)
+
+                sanitized_text = self._sanitize_response(assistant_text)
+
+                return {
+                    "success": True,
+                    "content": sanitized_text,
+                    "images": [self.proxy_url(u) for u in raw_images],
+                    "raw_images": raw_images,
+                    "engine": self.config.brand_name,
+                }
             else:
                 return {
                     "success": False,
@@ -295,7 +388,9 @@ class LuiggiAICore:
         self, task_id: str, timeout: int = 300, poll_interval: int = 5
     ) -> Dict[str, Any]:
         """
-        Espera a que una tarea se complete (polling).
+        Espera a que una tarea se complete (polling sobre task.detail).
+        Estados terminales: stopped | error
+        Estado de progreso: running | waiting
 
         Args:
             task_id: ID de la tarea
@@ -307,11 +402,12 @@ class LuiggiAICore:
         """
         start = time.time()
         while time.time() - start < timeout:
-            status = await self.get_task_status(task_id)
+            status_resp = await self.get_task_status(task_id)
 
-            task_status = status.get("status", "unknown")
-            if task_status in ("completed", "done", "finished"):
-                # Obtener mensajes/resultados
+            task_status = status_resp.get("status", "unknown")
+
+            if task_status == "stopped":
+                # Tarea completada — obtener mensajes
                 messages = await self.get_task_messages(task_id)
                 return {
                     "success": True,
@@ -320,14 +416,19 @@ class LuiggiAICore:
                     "engine": self.config.brand_name,
                     "duration_seconds": round(time.time() - start, 1),
                 }
-            elif task_status in ("failed", "error", "cancelled"):
+            elif task_status == "error":
                 return {
                     "success": False,
-                    "status": task_status,
-                    "error": status.get("error", "La tarea falló."),
+                    "status": "error",
+                    "error": status_resp.get("error", "La tarea falló."),
                     "engine": self.config.brand_name,
                 }
+            elif task_status == "waiting":
+                # El agente necesita confirmación — para renders no interactivos
+                # esto no debería ocurrir, pero si ocurre esperamos un poco más
+                logger.info(f"Task {task_id} is waiting for user input")
 
+            # running o waiting → seguir esperando
             await asyncio.sleep(poll_interval)
 
         return {
@@ -338,19 +439,34 @@ class LuiggiAICore:
         }
 
     async def upload_file(self, file_data: bytes, filename: str) -> Dict[str, Any]:
-        """Sube un archivo al motor para procesamiento."""
+        """Sube un archivo al motor para procesamiento usando file.upload."""
         try:
-            client = await self._get_client()
-            files = {"file": (filename, file_data)}
-            response = await client.post("/file.upload", files=files)
+            # Para file.upload necesitamos multipart, sin el header Content-Type JSON
+            if self._client is None or self._client.is_closed:
+                self._client = httpx.AsyncClient(
+                    base_url="https://api.manus.ai",
+                    headers={"x-manus-api-key": self.config.provider_api_key},
+                    timeout=120.0,
+                )
+            client = self._client
+
+            files = {"file": (filename, file_data, "image/png")}
+            response = await client.post("/v2/file.upload", files=files)
 
             if response.status_code == 200:
                 data = response.json()
-                return {
-                    "success": True,
-                    "file_id": data.get("file_id") or data.get("id"),
-                    "engine": self.config.brand_name,
-                }
+                if data.get("ok"):
+                    return {
+                        "success": True,
+                        "file_id": data.get("file_id") or data.get("id"),
+                        "engine": self.config.brand_name,
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": data.get("error", {}).get("message", "Error al subir el archivo."),
+                        "engine": self.config.brand_name,
+                    }
             else:
                 return {
                     "success": False,
@@ -389,7 +505,7 @@ _engine: Optional[LuiggiAICore] = None
 
 
 def get_engine() -> LuiggiAICore:
-    """Obtiene la instancia del motor (singleton)."""
+    """Obtiene la instancia singleton del motor."""
     global _engine
     if _engine is None:
         _engine = LuiggiAICore()
