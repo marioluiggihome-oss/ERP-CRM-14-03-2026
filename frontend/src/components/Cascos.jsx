@@ -18,6 +18,38 @@ const SECCIONES = [
   { id: 'emuca', label: 'EMUCA', desc: 'Bisagras' },
 ];
 
+// Logotipos de proveedor (wordmarks SVG inline en colores de marca; sin hotlinking
+// externo para evitar problemas de CSP / enlaces rotos).
+function ProviderLogo({ id, height = 20 }) {
+  const box = { display: 'inline-flex', alignItems: 'center' };
+  if (id === 'blum') {
+    return (
+      <svg height={height} viewBox="0 0 120 40" style={box} aria-label="BLUM">
+        <rect x="0" y="0" width="120" height="40" rx="6" fill="#e2001a" />
+        <text x="60" y="28" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="24" fontWeight="700" fill="#ffffff" letterSpacing="1">blum</text>
+      </svg>
+    );
+  }
+  if (id === 'gtv') {
+    return (
+      <svg height={height} viewBox="0 0 120 40" style={box} aria-label="GTV">
+        <rect x="0" y="0" width="120" height="40" rx="6" fill="#1a1a1a" />
+        <text x="58" y="29" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="24" fontWeight="800" fill="#ffffff" letterSpacing="2">GT</text>
+        <text x="92" y="29" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="24" fontWeight="800" fill="#e30613" letterSpacing="2">V</text>
+      </svg>
+    );
+  }
+  if (id === 'emuca') {
+    return (
+      <svg height={height} viewBox="0 0 120 40" style={box} aria-label="EMUCA">
+        <rect x="0" y="0" width="120" height="40" rx="6" fill="#ffffff" stroke="#e30613" strokeWidth="2" />
+        <text x="60" y="28" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="21" fontWeight="800" fill="#e30613" letterSpacing="1">emuca</text>
+      </svg>
+    );
+  }
+  return null;
+}
+
 // Dibujo esquemático (SVG) reconocible según el tipo de casco.
 function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
   const W = 120, H = 150, pad = 10;
@@ -483,8 +515,8 @@ const Cascos = ({ state }) => {
           <div className="flex gap-1 bg-white/60 rounded-xl p-1 border border-slate-200 overflow-x-auto">
             {SECCIONES.map(s => (
               <button key={s.id} onClick={() => setSeccion(s.id)}
-                className={`flex-1 min-w-[88px] px-3 py-2 rounded-lg text-sm font-black transition-colors ${seccion === s.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}>
-                {s.label}
+                className={`flex-1 min-w-[88px] px-3 py-2 rounded-lg text-sm font-black transition-colors flex items-center justify-center gap-1.5 ${seccion === s.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100'}`}>
+                {s.id === 'cascos' ? s.label : <ProviderLogo id={s.id} height={18} />}
               </button>
             ))}
           </div>
@@ -612,7 +644,7 @@ const Cascos = ({ state }) => {
           )}
           </>) : (
             <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
-              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-indigo-50 flex items-center justify-center"><Box size={26} className="text-indigo-400" /></div>
+              <div className="mx-auto mb-4 flex items-center justify-center"><ProviderLogo id={seccion} height={40} /></div>
               <h3 className="text-lg font-black text-slate-800">{(SECCIONES.find(s => s.id === seccion) || {}).label}</h3>
               <p className="text-sm text-slate-500 mt-1">{(SECCIONES.find(s => s.id === seccion) || {}).desc}</p>
               <p className="text-xs text-slate-400 mt-3 max-w-sm mx-auto">Catálogo en preparación. En cuanto carguemos la tarifa de este proveedor podrás buscar sus productos y añadirlos al mismo presupuesto.</p>
