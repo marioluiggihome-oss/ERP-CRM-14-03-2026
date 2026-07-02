@@ -10,6 +10,17 @@ const BADGES = [
   'bg-violet-100 text-violet-700', 'bg-sky-100 text-sky-700', 'bg-rose-100 text-rose-700',
   'bg-teal-100 text-teal-700', 'bg-fuchsia-100 text-fuchsia-700',
 ];
+// Sanea la URL de la promoción: añade protocolo si falta y descarta enlaces
+// inválidos (placeholders o texto sin dominio) para no acabar en el login del ERP.
+const safeUrl = (u) => {
+  let v = String(u || '').trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) { /* ok */ }
+  else if (/^www\./i.test(v) || /^[\w-]+\.[a-z]{2,}(\/|$)/i.test(v)) v = 'https://' + v;
+  else return null; // no parece una URL real
+  if (/ejemplo|example|\.\.\.|no especificad|consultar/i.test(v) || v.length < 12) return null;
+  return v;
+};
 const tipoBadge = (t) => {
   const s = String(t || 'Otro');
   let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
@@ -279,7 +290,7 @@ const PropData = ({ state }) => {
                 {d.description && <p className="mt-2 text-[11px] text-slate-400 line-clamp-2">{d.description}</p>}
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                   <a href={mapUrl(d)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50"><MapPin size={13} className="text-rose-500" /> Ver en mapa</a>
-                  {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">Promoción <ExternalLink size={12} /></a>}
+                  {safeUrl(d.url) && <a href={safeUrl(d.url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">Promoción <ExternalLink size={12} /></a>}
                   <div className="ml-auto flex items-center gap-1">
                     <button onClick={() => setEstado(d, 'visited')} title="Visitada" className={`p-1.5 rounded-lg ${est === 'visited' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}><CheckCircle2 size={15} /></button>
                     <button onClick={() => setEstado(d, 'todo')} title="Por visitar" className={`p-1.5 rounded-lg ${est === 'todo' ? 'bg-sky-600 text-white' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'}`}><CircleDashed size={15} /></button>
