@@ -354,7 +354,7 @@ export default function EstudioCocinas() {
       <div className="flex flex-1 overflow-hidden min-h-0">
 
         {/* Sidebar */}
-        <div className={`w-60 flex-shrink-0 p-4 flex flex-col gap-3 overflow-y-auto transition-colors duration-200 ${t.sidebar}`}>
+        <div className={`w-56 flex-shrink-0 p-4 flex flex-col gap-3 overflow-y-auto scrollbar-thin transition-colors duration-200 ${t.sidebar}`} style={{overflowY:'auto', overflowX:'hidden'}}>
           <p className={`text-[9px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Proyecto</p>
 
           {[
