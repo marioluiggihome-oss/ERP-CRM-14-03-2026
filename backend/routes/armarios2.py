@@ -5,20 +5,80 @@ Armarios 2 — Diseñador de armarios con IA (Gemini). Endpoints:
 Reutiliza la IA del servidor (services.llm_vision) con GEMINI_API_KEY.
 """
 from fastapi import APIRouter, HTTPException, Depends
+from datetime import datetime, timezone
 from typing import Optional
+import os
+import uuid
 import json
 import re
 import logging
+from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
 
 try:
-    from services.jwt_service import require_auth
+    from services.jwt_service import require_auth, get_current_user, ADMIN_ROLE_FLAGS
     _DEPS = [Depends(require_auth)]
 except Exception:
+    async def get_current_user():
+        return None
+    ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
     _DEPS = []
 
 router = APIRouter(tags=["armarios2"], dependencies=_DEPS)
+
+_client = AsyncIOMotorClient(os.environ.get('MONGO_URL'))
+_db = _client[os.environ.get('DB_NAME', 'luiggi_home')]
+
+
+@router.post("/armarios2/designs")
+async def save_design(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Guarda (o actualiza) un diseño de armario del usuario."""
+    p = payload or {}
+    oid = p.get("id") or f"arm-{uuid.uuid4().hex[:10]}"
+    now = datetime.now(timezone.utc).isoformat()
+    existing = await _db.armarios2_designs.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
+    if existing and existing.get("userId") and current_user and current_user.get("id") \
+       and existing["userId"] != current_user["id"] and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
+        raise HTTPException(status_code=403, detail="Sin acceso a este diseño")
+    doc = {
+        "id": oid,
+        "userId": (existing or {}).get("userId") or (current_user or {}).get("id") or "anonymous",
+        "cliente": str(p.get("cliente") or ""),
+        "ref": str(p.get("ref") or ""),
+        "cfg": p.get("cfg") or {},
+        "comps": p.get("comps") or [],
+        "pvp": float(p.get("pvp") or 0),
+        "createdByName": (current_user or {}).get("clientName") or (current_user or {}).get("username") or "",
+        "createdAt": (existing or {}).get("createdAt") or now,
+        "updatedAt": now,
+    }
+    await _db.armarios2_designs.update_one({"id": oid}, {"$set": doc}, upsert=True)
+    doc.pop("_id", None)
+    return {"success": True, "design": doc}
+
+
+@router.get("/armarios2/designs")
+async def list_designs(current_user: Optional[dict] = Depends(get_current_user)):
+    query = {}
+    if current_user and current_user.get("id") and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
+        query["userId"] = current_user["id"]
+    items = await _db.armarios2_designs.find(query, {"_id": 0, "cfg": 0, "comps": 0}).sort("updatedAt", -1).to_list(300)
+    return {"success": True, "designs": items}
+
+
+@router.get("/armarios2/designs/{design_id}")
+async def get_design(design_id: str):
+    d = await _db.armarios2_designs.find_one({"id": design_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(status_code=404, detail="Diseño no encontrado")
+    return d
+
+
+@router.delete("/armarios2/designs/{design_id}")
+async def delete_design(design_id: str):
+    await _db.armarios2_designs.delete_one({"id": design_id})
+    return {"success": True}
 
 
 def _num(v):
