@@ -559,7 +559,7 @@ const Cascos = ({ state }) => {
           <div className="flex gap-1 bg-white/60 rounded-xl p-1 border border-slate-200 overflow-x-auto">
             {SECCIONES.map(s => (
               <button key={s.id} onClick={() => setSeccion(s.id)}
-                className={`flex-1 min-w-[88px] px-3 py-2 rounded-lg text-sm font-black transition-colors flex items-center justify-center gap-1.5 ${seccion === s.id ? (s.id === 'blum' ? 'bg-orange-500 text-white shadow' : 'bg-indigo-600 text-white shadow') : 'text-slate-500 hover:bg-slate-100'}`}>
+                className={`flex-1 min-w-[88px] px-3 py-2 rounded-lg text-sm font-black transition-colors flex items-center justify-center gap-1.5 ${seccion === s.id ? (s.id === 'blum' ? 'bg-orange-500 text-white shadow' : s.id === 'gtv' ? 'bg-blue-700 text-white shadow' : s.id === 'emuca' ? 'bg-slate-700 text-white shadow' : 'bg-indigo-600 text-white shadow') : 'text-slate-500 hover:bg-slate-100'}`}>
                 {s.id === 'cascos' ? s.label : <ProviderLogo id={s.id} height={18} />}
               </button>
             ))}
