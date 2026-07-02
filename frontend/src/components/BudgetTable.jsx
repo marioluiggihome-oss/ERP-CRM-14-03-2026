@@ -69,6 +69,21 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
     quantity: 1
   });
   const [isDespieceWizardOpen, setIsDespieceWizardOpen] = useState(false);
+  const [isCostadosWizardOpen, setIsCostadosWizardOpen] = useState(false);
+  const [costadosWizard, setCostadosWizard] = useState({
+    altoCocina: 236,        // cm — altura total del mueble (sin zócalo)
+    zocalo: 10,             // cm — altura del zócalo
+    profBajos: 60,          // cm — profundidad muebles bajos
+    profAltos: 35,          // cm — profundidad muebles altos
+    tieneColumna: false,    // columna frigorífico/horno
+    alturaColumna: 210,     // cm — altura de la columna
+    profColumna: 60,        // cm — profundidad de la columna
+    remateIzq: false,       // costado remate lado izquierdo
+    remateDer: false,       // costado remate lado derecho
+    tipoRemate: 'bajo',     // 'bajo' | 'alto' | 'ambos'
+    altoCampana: 0,         // cm — alto del hueco entre muebles altos (zona campana)
+    costadoCampana: false,  // costado entre muebles altos zona campana
+  });
   const [isConfirmOrderOpen, setIsConfirmOrderOpen] = useState(false);
   const [orderAttachments, setOrderAttachments] = useState([]);
   const [orderEmail, setOrderEmail] = useState('');
@@ -1613,7 +1628,7 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
               )}
 
               {/* Botón para añadir línea manual */}
-              <section className="pt-2 border-t border-orange-100">
+              <section className="pt-2 border-t border-orange-100 space-y-1.5">
                 <button 
                   onClick={addManualItemToBudget}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 transition-colors"
@@ -1621,7 +1636,14 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
                 >
                   <Plus size={14}/> LÍNEA MANUAL
                 </button>
-                <p className="text-[7px] text-orange-400 italic mt-0.5 text-center">Añadir concepto libre</p>
+                <button
+                  onClick={() => setIsCostadosWizardOpen(true)}
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-2 rounded-xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 transition-all shadow-md"
+                  title="Calcular costados automáticamente según la configuración de la cocina"
+                >
+                  <Scissors size={14}/> WIZARD COSTADOS
+                </button>
+                <p className="text-[7px] text-orange-400 italic mt-0.5 text-center">Calcular costados automáticamente</p>
               </section>
 
               <section className="space-y-1.5 pt-2 border-t border-orange-100">
@@ -3230,6 +3252,252 @@ ${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCa
           </div>
         </div>
       )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          WIZARD DE COSTADOS
+          Modal que calcula automáticamente qué costados necesita la cocina
+          y los añade como líneas manuales al presupuesto.
+      ═══════════════════════════════════════════════════════════════════ */}
+      {isCostadosWizardOpen && (() => {
+        // ── Lógica de cálculo ──────────────────────────────────────────────
+        const cw = costadosWizard;
+        const altoBajos = cw.altoCocina; // altura visible del mueble bajo (sin zócalo)
+        const lineas = [];
+
+        // 1. COLUMNA (frigo / horno-micro)
+        if (cw.tieneColumna) {
+          lineas.push({
+            tipo: 'Costado Columna',
+            ancho: cw.profColumna,
+            alto: cw.alturaColumna,
+            qty: 2,
+            nota: `Columna ${cw.profColumna}×${cw.alturaColumna} cm`,
+          });
+        }
+
+        // 2. REMATES BAJOS (extremos sin mueble)
+        if (cw.remateIzq || cw.remateDer) {
+          const qty = (cw.remateIzq ? 1 : 0) + (cw.remateDer ? 1 : 0);
+          if (cw.tipoRemate === 'bajo' || cw.tipoRemate === 'ambos') {
+            lineas.push({
+              tipo: 'Costado Remate Bajo',
+              ancho: cw.profBajos,
+              alto: altoBajos + cw.zocalo,
+              qty,
+              nota: `Remate bajo ${cw.profBajos}×${altoBajos + cw.zocalo} cm`,
+            });
+          }
+          if (cw.tipoRemate === 'alto' || cw.tipoRemate === 'ambos') {
+            lineas.push({
+              tipo: 'Costado Remate Alto',
+              ancho: cw.profAltos,
+              alto: altoBajos,
+              qty,
+              nota: `Remate alto ${cw.profAltos}×${altoBajos} cm`,
+            });
+          }
+        }
+
+        // 3. COSTADO ZONA CAMPANA (entre muebles altos)
+        if (cw.costadoCampana && cw.altoCampana > 0) {
+          lineas.push({
+            tipo: 'Costado Zona Campana',
+            ancho: cw.profAltos,
+            alto: cw.altoCampana,
+            qty: 2,
+            nota: `Campana ${cw.profAltos}×${cw.altoCampana} cm`,
+          });
+        }
+
+        const handleAplicar = () => {
+          if (lineas.length === 0) {
+            alert('No hay costados que añadir con la configuración actual.');
+            return;
+          }
+          const nuevasLineas = lineas.map(l => ({
+            id: Math.random().toString(36).substr(2, 9),
+            productId: `MANUAL-${Date.now()}-${Math.random().toString(36).substr(2,4)}`,
+            catalogId: 'manual',
+            quantity: l.qty,
+            customReference: '',
+            customWidth: l.ancho,
+            customHeight: l.alto,
+            customDepth: 1.8,
+            openingDirection: 'N/A',
+            notes: l.nota,
+            isManual: true,
+            manualDescription: l.tipo,
+            hasVigaCut: false,
+            manualPoints: 0,
+          }));
+          setState(prev => ({
+            ...prev,
+            [budgetKey]: [...prev[budgetKey], ...nuevasLineas],
+          }));
+          setIsCostadosWizardOpen(false);
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Scissors size={20} className="text-white" />
+                  <div>
+                    <h2 className="text-white font-black uppercase text-sm tracking-wider">Wizard de Costados</h2>
+                    <p className="text-orange-100 text-[10px] font-bold">Calcula y añade costados automáticamente</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsCostadosWizardOpen(false)} className="text-white hover:text-orange-200">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+
+                {/* Medidas generales */}
+                <div>
+                  <h3 className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-3">Medidas generales</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Alto mueble bajo (cm)</label>
+                      <input type="number" value={cw.altoCocina}
+                        onChange={e => setCostadosWizard(p => ({...p, altoCocina: +e.target.value}))}
+                        className="w-full border-2 border-orange-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-orange-500" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Zócalo (cm)</label>
+                      <input type="number" value={cw.zocalo}
+                        onChange={e => setCostadosWizard(p => ({...p, zocalo: +e.target.value}))}
+                        className="w-full border-2 border-orange-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-orange-500" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Prof. muebles bajos (cm)</label>
+                      <input type="number" value={cw.profBajos}
+                        onChange={e => setCostadosWizard(p => ({...p, profBajos: +e.target.value}))}
+                        className="w-full border-2 border-orange-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-orange-500" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Prof. muebles altos (cm)</label>
+                      <input type="number" value={cw.profAltos}
+                        onChange={e => setCostadosWizard(p => ({...p, profAltos: +e.target.value}))}
+                        className="w-full border-2 border-orange-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-orange-500" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Columna */}
+                <div className="border border-amber-200 rounded-xl p-4 bg-amber-50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <input type="checkbox" id="tieneColumna" checked={cw.tieneColumna}
+                      onChange={e => setCostadosWizard(p => ({...p, tieneColumna: e.target.checked}))}
+                      className="w-4 h-4 accent-amber-500" />
+                    <label htmlFor="tieneColumna" className="text-[10px] font-black text-amber-800 uppercase cursor-pointer">Columna (frigo / horno-micro)</label>
+                  </div>
+                  {cw.tieneColumna && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Alto columna (cm)</label>
+                        <input type="number" value={cw.alturaColumna}
+                          onChange={e => setCostadosWizard(p => ({...p, alturaColumna: +e.target.value}))}
+                          className="w-full border-2 border-amber-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-amber-500" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Prof. columna (cm)</label>
+                        <input type="number" value={cw.profColumna}
+                          onChange={e => setCostadosWizard(p => ({...p, profColumna: +e.target.value}))}
+                          className="w-full border-2 border-amber-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-amber-500" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Remates */}
+                <div className="border border-orange-200 rounded-xl p-4 bg-orange-50">
+                  <h3 className="text-[10px] font-black text-orange-700 uppercase tracking-widest mb-3">Remates laterales</h3>
+                  <div className="flex gap-4 mb-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={cw.remateIzq}
+                        onChange={e => setCostadosWizard(p => ({...p, remateIzq: e.target.checked}))}
+                        className="w-4 h-4 accent-orange-500" />
+                      <span className="text-[10px] font-bold text-orange-800">Izquierdo</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={cw.remateDer}
+                        onChange={e => setCostadosWizard(p => ({...p, remateDer: e.target.checked}))}
+                        className="w-4 h-4 accent-orange-500" />
+                      <span className="text-[10px] font-bold text-orange-800">Derecho</span>
+                    </label>
+                  </div>
+                  {(cw.remateIzq || cw.remateDer) && (
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Tipo de remate</label>
+                      <select value={cw.tipoRemate}
+                        onChange={e => setCostadosWizard(p => ({...p, tipoRemate: e.target.value}))}
+                        className="w-full border-2 border-orange-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-orange-500 bg-white">
+                        <option value="bajo">Solo bajo ({cw.profBajos}×{cw.altoCocina + cw.zocalo} cm)</option>
+                        <option value="alto">Solo alto ({cw.profAltos}×{cw.altoCocina} cm)</option>
+                        <option value="ambos">Bajo + Alto</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Zona campana */}
+                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <input type="checkbox" id="costadoCampana" checked={cw.costadoCampana}
+                      onChange={e => setCostadosWizard(p => ({...p, costadoCampana: e.target.checked}))}
+                      className="w-4 h-4 accent-slate-500" />
+                    <label htmlFor="costadoCampana" className="text-[10px] font-black text-slate-700 uppercase cursor-pointer">Costados zona campana (entre altos)</label>
+                  </div>
+                  {cw.costadoCampana && (
+                    <div>
+                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Alto hueco campana (cm)</label>
+                      <input type="number" value={cw.altoCampana}
+                        onChange={e => setCostadosWizard(p => ({...p, altoCampana: +e.target.value}))}
+                        className="w-full border-2 border-slate-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-slate-400" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Vista previa de costados calculados */}
+                {lineas.length > 0 && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                    <h3 className="text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-3">Vista previa — {lineas.reduce((s,l)=>s+l.qty,0)} costados</h3>
+                    <div className="space-y-2">
+                      {lineas.map((l, i) => (
+                        <div key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-indigo-100">
+                          <div>
+                            <p className="text-[10px] font-black text-indigo-900">{l.tipo}</p>
+                            <p className="text-[9px] text-indigo-500 font-bold">{l.ancho} × {l.alto} cm · fondo 1.8 cm</p>
+                          </div>
+                          <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-1 rounded-lg">×{l.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-orange-100 flex gap-3">
+                <button onClick={() => setIsCostadosWizardOpen(false)}
+                  className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all">
+                  Cancelar
+                </button>
+                <button onClick={handleAplicar}
+                  disabled={lineas.length === 0}
+                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-xl font-black text-sm uppercase tracking-wider hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  <Plus size={16}/> Añadir {lineas.reduce((s,l)=>s+l.qty,0)} costados
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 };
