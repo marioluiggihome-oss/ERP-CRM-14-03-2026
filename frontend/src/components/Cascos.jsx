@@ -18,6 +18,18 @@ const SECCIONES = [
   { id: 'emuca', label: 'EMUCA', desc: 'Bisagras' },
 ];
 
+// Catálogo BLUM (bisagras y bases). Precio = tarifa SIN descuento (el descuento de
+// proveedor/cliente se aplica luego en el presupuesto). Importado del albarán de venta.
+const BLUM_PRODUCTOS = [
+  { ref: '17-71B3550 NIQ', nombre: 'Bisagra Recta 110º Blumotion Atornillar Níquel', precio: 7.103, cat: 'Bisagras' },
+  { ref: '17-71T3550 NIQ', nombre: 'Bisagra Recta 110º Con Muelle Atornillar Níquel', precio: 4.305, cat: 'Bisagras' },
+  { ref: '17-70T3580T LN', nombre: 'Bisagra Recta 110º Sin Muelle Taco 8mm Níquel', precio: 4.883, cat: 'Bisagras' },
+  { ref: '17-71B758E NIQ', nombre: 'Bisagra Recta 155º Ang.0º Blumotion Taco 8mm EXPANDO Níquel', precio: 19.438, cat: 'Bisagras' },
+  { ref: '17-79B9550 NIQ', nombre: 'Bisagra 95º Rincón Ciego Blumotion Recubri.Inter. Atornillar Níquel', precio: 17.177, cat: 'Bisagras' },
+  { ref: '17-173H7100 NQ', nombre: 'Base Bisagra Cruz Excéntrica Alt.0mm Atornillar Níquel', precio: 1.26, cat: 'Bases' },
+  { ref: '17-173L6130 NQ', nombre: 'Base Bisagra Cruz Altura 3mm Atornillar Níquel', precio: 0.789, cat: 'Bases' },
+];
+
 // Logotipos de proveedor (wordmarks SVG inline en colores de marca; sin hotlinking
 // externo para evitar problemas de CSP / enlaces rotos).
 function ProviderLogo({ id, height = 20 }) {
@@ -139,6 +151,7 @@ const Cascos = ({ state }) => {
     setAltoMin(conv); setAltoMax(conv); setAnchoMin(conv); setAnchoMax(conv);
     setUnidad(next);
   };
+  const [qBlum, setQBlum] = useState(''); // búsqueda en el catálogo BLUM
   const [cart, setCart] = useState([]);
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
@@ -208,9 +221,12 @@ const Cascos = ({ state }) => {
   const gamaLabelOf = (gid) => CASCOS_GAMAS.find(g => g.id === gid)?.label || '';
   // Acabado legible para diferenciar líneas mezcladas en el pedido.
   const acabadoOf = (l) => {
+    if (l.accesorio) return l.ref || 'BLUM';
     const g = l.gama || 'kit';
     return g === 'kit' ? `${l.colorLabel} · ${l.grosor}mm` : `${gamaLabelOf(g)} · ${l.grosor}mm`;
   };
+  // Cadena de medidas para una línea (accesorios BLUM no tienen dimensiones).
+  const dimStr = (l) => l.accesorio ? '—' : `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)}`;
   // Muestra de color para el punto identificativo de cada acabado.
   const SWATCH = { blanco: '#f1f5f9', aluminio: '#cbd5e1', grafito: '#202023', blancoHidrofugo: '#f6f6f4', robleAurora: '#d9c6a4', spike: '#b58d86', stone: '#c9c2b3', roble: '#b07c4f', olmo: '#a8794e', blancoEsp: '#f8fafc' };
 
@@ -230,6 +246,27 @@ const Cascos = ({ state }) => {
       }];
     });
   };
+  // Resultados del catálogo BLUM filtrados por texto (ref o nombre).
+  const resultadosBlum = useMemo(() => {
+    const t = norm(qBlum);
+    return BLUM_PRODUCTOS.filter(p => !t || norm(p.ref).includes(t) || norm(p.nombre).includes(t));
+  }, [qBlum]);
+
+  // Añade un accesorio BLUM al presupuesto. Precio = tarifa (sin descuento); el
+  // descuento se aplica luego globalmente. No lleva medidas ni acabado de color.
+  const addBlumToCart = (p) => {
+    const sig = `blum|${p.ref}`;
+    setCart(prev => {
+      const i = prev.findIndex(l => l.sig === sig);
+      if (i >= 0) { const c = [...prev]; c[i] = { ...c[i], qty: (c[i].qty || 1) + 1 }; return c; }
+      return [...prev, {
+        key: `${sig}-${Date.now()}`, sig, accesorio: true,
+        tipo: p.nombre, ref: p.ref, gama: 'blum',
+        precio: p.precio, precioBase: p.precio, qty: 1,
+      }];
+    });
+  };
+
   // Nombre del casco, con la altura cuando es relevante (columnas/altillos),
   // para distinguir variantes como 200 vs 220 de altura.
   const altoSensible = (tp) => /columna|semicolumna|altillo/i.test(tp || '');
@@ -300,7 +337,7 @@ const Cascos = ({ state }) => {
     autoTable(pdf, {
       startY: 38,
       head: [['Ud.', 'Módulo', 'Acabado', `Medidas Al×An×F (${unidad})`, 'Precio', 'Importe']],
-      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)}`, eur(l.precio), eur(l.precio * l.qty)]),
+      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), dimStr(l), eur(l.precio), eur(l.precio * l.qty)]),
       styles: { fontSize: 8.5, cellPadding: 1.8 },
       headStyles: { fillColor: [49, 46, 129], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 250] },
@@ -369,7 +406,7 @@ const Cascos = ({ state }) => {
     autoTable(pdf, {
       startY: tableStart,
       head: [['Ud.', 'Módulo', 'Acabado', `Medidas Al×An×F (${unidad})`, 'Tarifa', 'Importe']],
-      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)}`, eur(baseDe(l)), eur(baseDe(l) * l.qty)]),
+      body: cart.map(l => [String(l.qty), nombre(l), acabadoOf(l), dimStr(l), eur(baseDe(l)), eur(baseDe(l) * l.qty)]),
       styles: { fontSize: 8.5, cellPadding: 1.8 },
       headStyles: { fillColor: [30, 27, 65], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 250] },
@@ -642,7 +679,37 @@ const Cascos = ({ state }) => {
             </div>
           </div>
           )}
-          </>) : (
+          </>) : seccion === 'blum' ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <ProviderLogo id="blum" height={24} />
+                <span className="text-xs text-slate-400">{resultadosBlum.length} de {BLUM_PRODUCTOS.length} artículos</span>
+              </div>
+              <div className="relative mb-3">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input value={qBlum} onChange={e => setQBlum(e.target.value)} placeholder="Buscar por referencia o descripción (bisagra, base, 110º…)"
+                  className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {resultadosBlum.map(p => (
+                  <button key={p.ref} onClick={() => addBlumToCart(p)}
+                    className="group text-left border border-slate-200 rounded-xl p-3 hover:border-rose-300 hover:bg-rose-50/40 transition-colors">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-100 rounded px-1.5 py-0.5">{p.ref}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">{p.cat}</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-700 mt-1.5 leading-snug">{p.nombre}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="font-black text-rose-700 text-sm">{eur(p.precio)}</p>
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-rose-600 text-white rounded-lg text-[11px] font-bold group-hover:bg-rose-700"><Plus size={12} /> Añadir</span>
+                    </div>
+                  </button>
+                ))}
+                {resultadosBlum.length === 0 && <p className="col-span-full p-8 text-center text-slate-400 text-sm">No hay artículos BLUM con esa búsqueda.</p>}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-3">Precios de tarifa sin descuento. El descuento se aplica en el presupuesto (campo «Descuento»).</p>
+            </div>
+          ) : (
             <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
               <div className="mx-auto mb-4 flex items-center justify-center"><ProviderLogo id={seccion} height={40} /></div>
               <h3 className="text-lg font-black text-slate-800">{(SECCIONES.find(s => s.id === seccion) || {}).label}</h3>
@@ -679,12 +746,19 @@ const Cascos = ({ state }) => {
             {cart.map(l => (
               <div key={l.key} className="flex items-center gap-2 border border-slate-100 rounded-lg p-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-700 truncate">{nombre(l)}</p>
-                  <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 max-w-full">
-                    <span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: SWATCH[l.color] || '#e2e8f0' }} />
-                    <span className="text-[11px] font-black text-indigo-800 truncate">{acabadoOf(l)}</span>
-                  </span>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{med(l.alto)}×{med(l.ancho)}×{med(l.fondo)} {unidad} · {eur(l.precio)}</p>
+                  <p className="text-xs font-bold text-slate-700 truncate">{l.accesorio ? l.tipo : nombre(l)}</p>
+                  {l.accesorio ? (
+                    <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-50 border border-rose-100 max-w-full">
+                      <ProviderLogo id="blum" height={12} />
+                      <span className="text-[10px] font-black text-rose-700 truncate">{l.ref}</span>
+                    </span>
+                  ) : (
+                    <span className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 max-w-full">
+                      <span className="inline-block w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: SWATCH[l.color] || '#e2e8f0' }} />
+                      <span className="text-[11px] font-black text-indigo-800 truncate">{acabadoOf(l)}</span>
+                    </span>
+                  )}
+                  <p className="text-[10px] text-slate-400 mt-0.5">{l.accesorio ? eur(l.precio) : `${med(l.alto)}×${med(l.ancho)}×${med(l.fondo)} ${unidad} · ${eur(l.precio)}`}</p>
                 </div>
                 <input type="number" value={l.qty} onChange={e => setQty(l.key, e.target.value)} className="w-12 px-1 py-1 border border-slate-200 rounded text-sm text-center" />
                 <span className="w-20 text-right text-xs font-bold text-slate-700">{eur(l.precio * l.qty)}</span>
