@@ -2,7 +2,7 @@
  * 3D Estudio — Módulo unificado de diseño de cocinas
  * ====================================================
  * Pestañas:
- *   1. Render Manus   → Render fotorrealista + estilos rápidos
+ *   1. Render 3D      → Render fotorrealista + estilos rápidos
  *   2. Plano 2D       → Plano técnico acotado
  *   3. Ficha Técnica  → Ficha de materiales y plazos
  *   4. Presentación   → HTML de presentación para cliente
@@ -339,7 +339,7 @@ export default function EstudioCocinas() {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const fd = new FormData();
         fd.append('audio', blob, 'nota.webm');
-        setRender(s => ({ ...s, status: 'loading', msg: 'Transcribiendo audio con Manus…' }));
+        setRender(s => ({ ...s, status: 'loading', msg: 'Transcribiendo audio…' }));
         try {
           const r = await apiPostForm('/transcribir', fd);
           setTranscrito(r.texto || '');
@@ -365,7 +365,7 @@ export default function EstudioCocinas() {
       setRender(s => ({ ...s, status: 'error', msg: 'Escribe o dicta una descripción' }));
       return;
     }
-    setRender(s => ({ ...s, status: 'loading', msg: 'Enviando a Manus… puede tardar 1-3 minutos', imageUrl: null }));
+    setRender(s => ({ ...s, status: 'loading', msg: 'Generando render… puede tardar 1-3 minutos', imageUrl: null }));
     try {
       const r = await apiPost('/render', {
         descripcion: proy.descripcion,
@@ -375,7 +375,7 @@ export default function EstudioCocinas() {
         croquis_b64: render.croquis || null,
         modo_async: false,
       });
-      setRender(s => ({ ...s, status: 'success', msg: 'Render generado por Manus', imageUrl: r.imageUrl }));
+      setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: r.imageUrl }));
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
@@ -383,7 +383,7 @@ export default function EstudioCocinas() {
 
   const editRender = useCallback(async () => {
     if (!render.editTxt.trim()) return;
-    setRender(s => ({ ...s, status: 'loading', msg: 'Editando render con Manus…' }));
+    setRender(s => ({ ...s, status: 'loading', msg: 'Editando render…' }));
     try {
       const r = await apiPost('/render/editar', { render_url: render.imageUrl, instruccion: render.editTxt, modo_async: false });
       setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: r.imageUrl, editMode: false, editTxt: '' }));
@@ -491,7 +491,7 @@ export default function EstudioCocinas() {
   }, [proy.nombre_cliente]);
 
   const TABS = [
-    { id: 'render', label: 'Render Manus', icon: <Sparkles size={14}/> },
+    { id: 'render', label: 'Render 3D', icon: <Sparkles size={14}/> },
     { id: 'plano',  label: 'Plano 2D',     icon: <Image size={14}/> },
     { id: 'ficha',  label: 'Ficha Técnica', icon: <FileText size={14}/> },
     { id: 'pres',   label: 'Presentación',  icon: <Presentation size={14}/> },
@@ -510,7 +510,7 @@ export default function EstudioCocinas() {
         </div>
         <div className="flex-1">
           <h1 className={`text-xs font-black uppercase tracking-widest ${t.title}`}>3D Estudio</h1>
-          <p className={`text-[9px] font-medium ${t.motorText}`}>Motor: LuiggiAI · Manus API</p>
+          <p className={`text-[9px] font-medium ${t.motorText}`}>Motor: LuiggiAI</p>
         </div>
         <ThemeSelector mode={themeMode} onChange={handleThemeChange} t={t} />
       </div>
@@ -603,7 +603,7 @@ export default function EstudioCocinas() {
             {tab === 'render' && (
               <div className="flex flex-col gap-4 max-w-2xl mx-auto">
                 <div>
-                  <h2 className={`text-sm font-black mb-1 ${t.title}`}>Render fotorrealista con Manus</h2>
+                  <h2 className={`text-sm font-black mb-1 ${t.title}`}>Render fotorrealista 3D</h2>
                   <p className={`text-xs ${t.subtext}`}>Elige un estilo rápido o escribe tu propia descripción. Sube un croquis para mayor precisión.</p>
                 </div>
 
@@ -657,7 +657,7 @@ export default function EstudioCocinas() {
                 <button onClick={genRender} disabled={render.status === 'loading'}
                   className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
                   {render.status === 'loading'
-                    ? <><Loader2 size={15} className="animate-spin"/> Generando con Manus…</>
+                    ? <><Loader2 size={15} className="animate-spin"/> Generando render…</>
                     : <><Sparkles size={15}/> Generar Render</>}
                 </button>
 
@@ -677,7 +677,7 @@ export default function EstudioCocinas() {
                       }
                     />
                     <div id="render-print-area" className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
-                      <img src={render.imageUrl} alt="Render Manus" className="w-full object-contain" />
+                      <img src={render.imageUrl} alt="Render 3D" className="w-full object-contain" />
                       <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setRender(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><ZoomIn size={13}/></button>
                         <button onClick={() => setRender(s => ({ ...s, editMode: !s.editMode }))} className="bg-amber-600/80 p-1.5 rounded-lg hover:bg-amber-600 text-white"><Edit3 size={13}/></button>
@@ -688,7 +688,7 @@ export default function EstudioCocinas() {
 
                 {render.editMode && render.imageUrl && (
                   <div className={`rounded-xl p-4 flex flex-col gap-3 ${t.editBox}`}>
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${t.editLabel}`}>Editar render con Manus</p>
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${t.editLabel}`}>Editar render</p>
                     <input className={`w-full rounded-lg px-3 py-2 text-xs focus:outline-none transition-colors ${t.input}`}
                       placeholder="Ej: Cambia los muebles a blanco mate"
                       value={render.editTxt} onChange={e => setRender(s => ({ ...s, editTxt: e.target.value }))} />
