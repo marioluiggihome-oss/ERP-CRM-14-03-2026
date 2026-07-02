@@ -91,7 +91,7 @@ const RentabilidadLineas = ({ currentUser }) => {
   const [clientsQ, setClientsQ] = useState('');
   const openClients = async () => {
     setClientsModal(true);
-    try { const c = await clientsAPI.getAll(true); setClients(c || []); } catch { setClients([]); }
+    try { const c = await clientsAPI.getAll(); setClients(c || []); } catch { setClients([]); }
   };
 
   const load = useCallback(async () => {

@@ -893,6 +893,7 @@ async def _ensure_client_for_invoice(nombre: str, codigo: str = ""):
         "id": f"cli-{uuid.uuid4().hex[:8]}",
         "codigo": codigo,
         "nombre": nombre,
+        "activo": True,   # para que aparezca en los listados de clientes activos
         "createdAt": datetime.now(timezone.utc).isoformat(),
         "updatedAt": datetime.now(timezone.utc).isoformat(),
         "origenAutoFactura": True,
