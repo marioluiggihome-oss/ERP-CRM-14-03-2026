@@ -18,6 +18,7 @@ const TABS = [
 const NEXT_DOC_TYPE = { presupuesto: 'pedido', pedido: 'albaran', albaran: 'factura' };
 
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC`;
+const normRef = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const fileToB64 = (file) => new Promise((res, rej) => {
   const fr = new FileReader();
@@ -292,6 +293,20 @@ const RentabilidadLineas = ({ currentUser }) => {
   const addLine = () => setEditor({ ...editor, lines: [...editor.lines, { id: `ln-${Date.now()}`, ref: '', concepto: '', cantidad: 1, venta: 0, coste: 0 }] });
   const removeLine = (i) => setEditor({ ...editor, lines: editor.lines.filter((_, x) => x !== i) });
 
+  // Busca un documento del MISMO tipo con el MISMO número (para avisar de duplicado).
+  const findDup = (dType, ref, excludeId) => {
+    const rn = normRef(ref); if (!rn) return null;
+    return (fichas || []).find(f => f.id !== excludeId && (f.docType || 'factura') === dType && normRef(f.ref) === rn) || null;
+  };
+  // Devuelve el id a usar (sobreescribir) o '' (nuevo), o null si el usuario cancela.
+  const resolverNumero = (dType, ref, excludeId) => {
+    const dup = findDup(dType, ref, excludeId);
+    if (!dup) return '';
+    const label = TABS.find(t => t.key === dType)?.label || dType;
+    const ok = window.confirm(`Ya existe un ${label.toLowerCase()} con el número «${ref}» (cliente: ${dup.cliente || '—'}).\n\n¿Sobreescribirlo?\n\nAceptar = sobreescribir · Cancelar = no guardar.`);
+    return ok ? dup.id : null;
+  };
+
   const saveFicha = async () => {
     if (!editor) return;
     if (editor.docType === 'factura' && editor.cliente) {
@@ -304,12 +319,19 @@ const RentabilidadLineas = ({ currentUser }) => {
         }
       } catch { /* si falla la comprobacion, seguimos con el guardado normal */ }
     }
+    // Aviso de numeración duplicada (solo al crear uno nuevo)
+    let overwriteId = editor.id;
+    if (!editor.id) {
+      const res = resolverNumero(editor.docType, editor.ref, editor.id);
+      if (res === null) return; // usuario canceló
+      overwriteId = res || undefined;
+    }
     setSaving(true);
     try {
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: editor.id, ref: editor.ref, cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
+          id: overwriteId, ref: editor.ref, cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
           docType: editor.docType, lines: editor.lines,
           createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
         }),
@@ -359,6 +381,9 @@ const RentabilidadLineas = ({ currentUser }) => {
     const nextLabel = TABS.find(t => t.key === next)?.label || next;
     const newRef = window.prompt(`Serie/número del nuevo ${nextLabel.toLowerCase()} (a partir de "${f.ref || ''}"):`, f.ref || '');
     if (newRef === null) return; // cancelado
+    const destRef0 = (newRef.trim() || f.ref || '');
+    const overwriteId = resolverNumero(next, destRef0);
+    if (overwriteId === null) return; // usuario canceló ante duplicado
     setConverting(f.id);
     try {
       // Traer la ficha completa (con sus líneas) por si la lista no las incluye
@@ -368,6 +393,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: overwriteId || undefined,
           ref: destRef, cliente: full.cliente,
           fecha: new Date().toISOString().slice(0, 10),
           docType: next, lines: full.lines || [], projectRef: full.projectRef || '',
