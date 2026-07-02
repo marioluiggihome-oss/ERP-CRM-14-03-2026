@@ -387,7 +387,7 @@ export default function EstudioCocinas() {
             <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Descripción</label>
             <textarea
               className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none resize-none transition-colors duration-200 ${t.input}`}
-              rows={4} placeholder="Describe la cocina o dicta por voz…"
+              rows={6} placeholder="Describe la cocina o dicta por voz…"
               value={proy.descripcion}
               onChange={e => setProy(p => ({ ...p, descripcion: e.target.value }))} />
           </div>
@@ -396,7 +396,7 @@ export default function EstudioCocinas() {
             <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Materiales / Notas</label>
             <textarea
               className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none resize-none transition-colors duration-200 ${t.input}`}
-              rows={2} placeholder="Encimera silestone, frentes lacados…"
+              rows={4} placeholder="Encimera silestone, frentes lacados…"
               value={proy.notas}
               onChange={e => setProy(p => ({ ...p, notas: e.target.value }))} />
           </div>
