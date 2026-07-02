@@ -302,9 +302,16 @@ const PropData = ({ state }) => {
           </div>
 
           {result.summary && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Resumen del mercado</p>
-              <p className="text-sm text-slate-600 whitespace-pre-line">{result.summary}</p>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3">Resumen del mercado</p>
+              <div className="space-y-2.5">
+                {result.summary.split('\n').map(l => l.trim()).filter(Boolean).map((line, i) => {
+                  const h = line.match(/^#{1,4}\s+(.*)$/);
+                  if (h) return <h4 key={i} className="text-sm font-black text-slate-800 pt-1">{h[1]}</h4>;
+                  const parts = line.replace(/^[-*]\s+/, '• ').split(/(\*\*[^*]+\*\*)/g).map((p, k) => p.startsWith('**') && p.endsWith('**') ? <b key={k} className="text-slate-800">{p.slice(2, -2)}</b> : p);
+                  return <p key={i} className="text-sm text-slate-600 leading-relaxed">{parts}</p>;
+                })}
+              </div>
             </div>
           )}
 
