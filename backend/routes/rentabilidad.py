@@ -544,6 +544,63 @@ async def _find_project_matches(detected_ref: str, limit: int = 6) -> List[Dict[
     return scored[:limit]
 
 
+_INBOX_PROMPT = (
+    "Eres el clasificador de la bandeja de entrada de un ERP de cocinas. Analiza el documento y decide QUÉ ES y DÓNDE colocarlo.\n"
+    "Tipos posibles (campo kind):\n"
+    "- 'venta': presupuesto, pedido, albarán o factura DE VENTA (emitida al cliente). Indica docType: presupuesto|pedido|albaran|factura.\n"
+    "- 'coste': factura o ticket DE PROVEEDOR (compra/gasto imputable a un proyecto).\n"
+    "- 'ingreso': justificante de pago/anticipo del cliente (ingreso a cuenta, transferencia recibida).\n"
+    "Extrae: cliente (si venta/ingreso), proveedor (si coste), ref/numero, fecha (YYYY-MM-DD), total (número), "
+    "projectRef (referencia de obra/proyecto si aparece), categoria (solo coste: MOBILIARIO|ELECTRODOMESTICOS|ENCIMERA|TRANSPORTE|MONTAJE|SUBCONTRATA|OTROS), "
+    "y lines (lista de {concepto, importe}). Añade un 'resumen' de una frase.\n"
+    "Devuelve SOLO un bloque JSON: {\"kind\":\"\",\"docType\":\"\",\"cliente\":\"\",\"proveedor\":\"\",\"ref\":\"\",\"fecha\":\"\",\"total\":0,\"projectRef\":\"\",\"categoria\":\"\",\"lines\":[],\"resumen\":\"\"}."
+)
+
+
+@router.post("/rentabilidad/inbox-classify")
+async def inbox_classify(payload: dict):
+    """Bandeja IA: clasifica un documento arrastrado (venta/coste/ingreso), extrae
+    sus datos y propone dónde colocarlo, para que el usuario lo autorice."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    mime = _data_url_mime(b64)
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        from services.pdf_utils import is_pdf_base64, pdf_base64_to_text, pdf_base64_to_png_base64
+        from services.llm_vision import chat_with_gemini, analyze_image_with_gemini
+        parsed = None
+        is_pdf = (mime == "application/pdf") or ("pdf" in b64[:60].lower()) or is_pdf_base64(stripped)
+        if is_pdf:
+            text = pdf_base64_to_text(stripped) or ""
+            if len(text.strip()) >= 50:
+                resp = await chat_with_gemini(prompt=_INBOX_PROMPT + "\n\nTEXTO:\n\n" + text[:30000],
+                                              system_message="Clasificas documentos de un ERP.", model="gemini-2.5-flash")
+                parsed = _parse_json_loose(_clean_json(resp))
+        if parsed is None:
+            img = stripped
+            image_mime = mime if mime and mime.startswith("image/") else "image/jpeg"
+            if is_pdf:
+                pages = pdf_base64_to_png_base64(stripped, dpi=180, max_pages=1) or []
+                if pages:
+                    img = pages[0]; image_mime = "image/png"
+            resp = await analyze_image_with_gemini(image_base64=img, prompt=_INBOX_PROMPT,
+                                                   session_id=f"inbox-{uuid.uuid4().hex[:8]}", model="gemini-2.5-flash", image_mime=image_mime)
+            parsed = _parse_json_loose(_clean_json(resp))
+        if not parsed:
+            return {"success": False, "error": "No se pudo clasificar el documento"}
+        kind = str(parsed.get("kind") or "").lower()
+        if kind not in ("venta", "coste", "ingreso"):
+            kind = "coste" if parsed.get("proveedor") else "venta"
+            parsed["kind"] = kind
+        return {"success": True, "proposal": parsed}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"inbox_classify error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/rentabilidad/parse-invoice")
 async def parse_invoice(payload: dict):
     """Lee una factura de proveedor (PDF/imagen en base64) con IA y devuelve los

@@ -94,6 +94,47 @@ const RentabilidadLineas = ({ currentUser }) => {
     try { const c = await clientsAPI.getAll(); setClients(c || []); } catch { setClients([]); }
   };
 
+  // ── Bandeja IA: arrastrar documento → clasificar → autorizar destino ──
+  const [inbox, setInbox] = useState(null); // { fileB64, mime, name, loading, prop, saving, error }
+  const [dragOver, setDragOver] = useState(false);
+  const readAsB64 = (file) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => res(null); fr.readAsDataURL(file); });
+  const clasificarDoc = async (file) => {
+    if (!file) return;
+    const b64 = await readAsB64(file);
+    setInbox({ fileB64: b64, mime: file.type, name: file.name, loading: true, prop: null, error: '' });
+    try {
+      const r = await fetch(`${API_URL}/api/rentabilidad/inbox-classify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileBase64: b64 }) });
+      const d = await r.json();
+      if (!r.ok || !d.success) throw new Error(d.detail || d.error || 'No se pudo clasificar');
+      setInbox(s => ({ ...s, loading: false, prop: { ...d.proposal, clientCode: '' } }));
+    } catch (e) { setInbox(s => ({ ...s, loading: false, error: e.message })); }
+  };
+  const setProp = (k, v) => setInbox(s => ({ ...s, prop: { ...s.prop, [k]: v } }));
+  const confirmarInbox = async () => {
+    const p = inbox?.prop; if (!p) return;
+    setInbox(s => ({ ...s, saving: true, error: '' }));
+    try {
+      if (p.kind === 'coste') {
+        const r = await fetch(`${API_URL}/api/project-costs`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectRef: p.projectRef || p.ref, proveedor: p.proveedor || '', concepto: p.resumen || p.ref || 'Factura proveedor', categoria: p.categoria || 'OTROS', importe: Number(p.total) || 0, source: 'ia', docBase64: inbox.fileB64, docMime: inbox.mime, docName: inbox.name }) });
+        if (!r.ok) throw new Error((await r.json()).detail || 'Error');
+      } else if (p.kind === 'ingreso') {
+        const r = await fetch(`${API_URL}/api/rentabilidad/ingresos`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ importe: Number(p.total) || 0, cliente: p.cliente || '', clientCode: p.clientCode || '', projectRef: p.projectRef || '', fecha: p.fecha || '', docBase64: inbox.fileB64, docMime: inbox.mime, docName: inbox.name, createdBy: currentUser?.id }) });
+        if (!r.ok) throw new Error((await r.json()).detail || 'Error');
+      } else { // venta
+        const lines = (p.lines && p.lines.length) ? p.lines.map(l => ({ concepto: l.concepto || '', venta: Number(l.importe || l.venta) || 0, coste: 0 })) : [{ concepto: p.resumen || 'Documento', venta: Number(p.total) || 0, coste: 0 }];
+        const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ docType: p.docType || 'factura', ref: p.ref || '', cliente: p.cliente || '', clienteCodigo: p.clientCode || '', fecha: p.fecha || '', lines, projectRef: p.projectRef || '', createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }) });
+        if (!r.ok) throw new Error((await r.json()).detail || 'Error');
+        const created = await r.json().catch(() => ({}));
+        const fid = created?.ficha?.id;
+        if (fid && inbox.fileB64) { try { await fetch(`${API_URL}/api/rentabilidad/fichas/${fid}/docs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileBase64: inbox.fileB64, docMime: inbox.mime, docName: inbox.name }) }); } catch {} }
+      }
+      setInbox(null); load();
+    } catch (e) { setInbox(s => ({ ...s, saving: false, error: e.message })); }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -504,6 +545,10 @@ const RentabilidadLineas = ({ currentUser }) => {
           <button onClick={openClients} className="px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700">
             <Users size={16} /> Clientes
           </button>
+          <label className="px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white hover:opacity-90 cursor-pointer">
+            <Sparkles size={16} /> Bandeja IA
+            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) clasificarDoc(f); }} />
+          </label>
           {/* Multi-upload: subir varios documentos del tipo activo a la vez */}
           <label className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 cursor-pointer ${parsingMulti ? 'bg-green-200 text-green-600' : 'bg-green-600 text-white hover:bg-green-700'}`}>
             <Files size={16} className={parsingMulti ? 'animate-pulse' : ''} />
@@ -520,6 +565,15 @@ const RentabilidadLineas = ({ currentUser }) => {
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
+      </div>
+
+      {/* Bandeja IA: zona de arrastrar y soltar */}
+      <div
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) clasificarDoc(f); }}
+        className={`mb-4 rounded-2xl border-2 border-dashed px-4 py-3 flex items-center justify-center gap-2 text-sm font-bold transition-colors ${dragOver ? 'border-fuchsia-500 bg-fuchsia-50 text-fuchsia-700' : 'border-slate-200 text-slate-400'}`}>
+        <Sparkles size={16} /> Arrastra aquí un documento (factura, pedido, albarán, ingreso…) y la IA detectará qué es y dónde colocarlo.
       </div>
 
       {/* Barra de filtros activos */}
@@ -724,6 +778,57 @@ const RentabilidadLineas = ({ currentUser }) => {
             >
               <ChevronRight size={14} />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bandeja IA: revisión y autorización ── */}
+      {inbox && (
+        <div className="fixed inset-0 bg-black/60 z-[150] flex items-center justify-center p-4" onClick={() => !inbox.saving && setInbox(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white px-5 py-3 flex items-center justify-between">
+              <h3 className="font-black text-sm uppercase flex items-center gap-2"><Sparkles size={16} /> Bandeja IA · Propuesta</h3>
+              <button onClick={() => setInbox(null)} className="p-1.5 hover:bg-white/20 rounded-lg"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              {inbox.loading ? (
+                <p className="text-center text-slate-400 py-8 text-sm flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={18} /> Analizando «{inbox.name}»…</p>
+              ) : inbox.error && !inbox.prop ? (
+                <p className="text-rose-600 font-bold text-sm py-4">{inbox.error}</p>
+              ) : inbox.prop && (() => { const p = inbox.prop; return (
+                <>
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">{p.resumen || 'Documento analizado.'}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><label className="text-[10px] font-black text-slate-400 uppercase">Destino</label>
+                      <select value={p.kind} onChange={e => setProp('kind', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm">
+                        <option value="venta">Venta (ficha)</option><option value="coste">Coste (proveedor)</option><option value="ingreso">Ingreso a cuenta</option>
+                      </select></div>
+                    {p.kind === 'venta' && <div><label className="text-[10px] font-black text-slate-400 uppercase">Tipo</label>
+                      <select value={p.docType || 'factura'} onChange={e => setProp('docType', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm">
+                        {['presupuesto', 'pedido', 'albaran', 'factura'].map(t => <option key={t} value={t}>{t}</option>)}
+                      </select></div>}
+                    {p.kind === 'coste' && <div><label className="text-[10px] font-black text-slate-400 uppercase">Partida</label>
+                      <select value={p.categoria || 'OTROS'} onChange={e => setProp('categoria', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm">
+                        {['MOBILIARIO', 'ELECTRODOMESTICOS', 'ENCIMERA', 'TRANSPORTE', 'MONTAJE', 'SUBCONTRATA', 'OTROS'].map(c => <option key={c}>{c}</option>)}
+                      </select></div>}
+                    <div><label className="text-[10px] font-black text-slate-400 uppercase">{p.kind === 'coste' ? 'Proveedor' : 'Cliente'}</label>
+                      <input value={p.kind === 'coste' ? (p.proveedor || '') : (p.cliente || '')} onChange={e => setProp(p.kind === 'coste' ? 'proveedor' : 'cliente', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="text-[10px] font-black text-slate-400 uppercase">Proyecto (ref)</label>
+                      <input value={p.projectRef || ''} onChange={e => setProp('projectRef', e.target.value)} placeholder="LG26/…" className="w-full px-2 py-2 border rounded-lg text-sm" /></div>
+                    {p.kind === 'ingreso' && <div><label className="text-[10px] font-black text-slate-400 uppercase">Código cliente</label>
+                      <input value={p.clientCode || ''} onChange={e => setProp('clientCode', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" /></div>}
+                    <div><label className="text-[10px] font-black text-slate-400 uppercase">Nº / Ref</label>
+                      <input value={p.ref || ''} onChange={e => setProp('ref', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="text-[10px] font-black text-slate-400 uppercase">Importe €</label>
+                      <input type="number" step="0.01" value={p.total || 0} onChange={e => setProp('total', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm text-right" /></div>
+                  </div>
+                  {inbox.error && <p className="text-rose-600 font-bold text-xs">{inbox.error}</p>}
+                  <button onClick={confirmarInbox} disabled={inbox.saving} className="w-full py-2.5 bg-emerald-600 text-white rounded-xl font-black text-sm hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                    {inbox.saving ? <Loader2 className="animate-spin" size={16} /> : <FileCheck size={16} />} Autorizar y colocar
+                  </button>
+                </>
+              ); })()}
+            </div>
           </div>
         </div>
       )}
