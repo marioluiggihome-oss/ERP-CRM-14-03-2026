@@ -17,7 +17,8 @@ import {
   Download, Loader2, RefreshCw, Maximize2, X,
   CheckCircle, AlertCircle, Sparkles, Edit3, ZoomIn,
   Presentation, Eye, Sun, Moon, Monitor, Printer,
-  Zap, Droplets, Flame, LayoutGrid, Wand2
+  Zap, Droplets, Flame, LayoutGrid, Wand2,
+  Heart, Trash2, FolderOpen, Save
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
@@ -283,6 +284,11 @@ export default function EstudioCocinas() {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  // Cargar galería al entrar en la pestaña
+  useEffect(() => {
+    if (tab === 'galeria') loadGaleria(1);
+  }, [tab, loadGaleria]);
+
   const handleThemeChange = useCallback(mode => {
     setThemeMode(mode);
     try { localStorage.setItem('estudio3d_theme', mode); } catch {}
@@ -308,10 +314,58 @@ export default function EstudioCocinas() {
   const [inst,   setInst]   = useState({ status: null, msg: '', data: null });
   const [rec,    setRec]    = useState(false);
   const [transcrito, setTranscrito] = useState('');
+  const [galeria, setGaleria] = useState({ renders: [], total: 0, page: 1, loading: false, fsImg: null });
   const mrRef     = useRef(null);
   const chunksRef = useRef([]);
   const croquisRef = useRef(null);
   const printRef  = useRef(null);
+
+  // ── Galería de renders ──
+  const loadGaleria = useCallback(async (page = 1) => {
+    setGaleria(g => ({ ...g, loading: true }));
+    try {
+      const data = await apiGet(`/galeria?page=${page}&limit=12`);
+      setGaleria(g => ({ ...g, renders: data.renders || [], total: data.total || 0, page: data.page || 1, loading: false }));
+    } catch {
+      setGaleria(g => ({ ...g, loading: false }));
+    }
+  }, []);
+
+  const guardarEnGaleria = useCallback(async () => {
+    if (!render.imageUrl) return;
+    try {
+      await apiPost('/galeria/guardar', {
+        image_url: render.imageUrl,
+        cliente: proy.nombre_cliente,
+        descripcion: proy.descripcion,
+        estilo: proy.estilo,
+        medidas: proy.medidas,
+        presupuesto: proy.presupuesto,
+      });
+      setRender(s => ({ ...s, status: 'success', msg: 'Render guardado en galería' }));
+    } catch (err) {
+      setRender(s => ({ ...s, status: 'error', msg: err.message }));
+    }
+  }, [render.imageUrl, proy]);
+
+  const toggleFavorito = useCallback(async (id) => {
+    try {
+      const res = await fetch(`${API}/api/estudio-cocinas/galeria/${id}/favorito`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) loadGaleria(galeria.page);
+    } catch {}
+  }, [galeria.page, loadGaleria]);
+
+  const eliminarRender = useCallback(async (id) => {
+    if (!window.confirm('¿Eliminar este render de la galería?')) return;
+    try {
+      const res = await fetch(`${API}/api/estudio-cocinas/galeria/${id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) loadGaleria(galeria.page);
+    } catch {}
+  }, [galeria.page, loadGaleria]);
 
   // ── Estilo rápido ──
   const applyStyle = useCallback(style => {
@@ -532,6 +586,7 @@ export default function EstudioCocinas() {
     { id: 'ficha',  label: 'Ficha Técnica', icon: <FileText size={14}/> },
     { id: 'pres',   label: 'Presentación',  icon: <Presentation size={14}/> },
     { id: 'inst',   label: 'Instalaciones', icon: <Zap size={14}/> },
+    { id: 'galeria', label: 'Galería',     icon: <FolderOpen size={14}/> },
   ];
 
   const ESTILOS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Contemporáneo'];
@@ -706,10 +761,16 @@ export default function EstudioCocinas() {
                       onPrint={() => handlePrint('render-print-area')}
                       onPdf={() => handlePdfExport(`<img src="${render.imageUrl}" style="width:100%"/>`, `render_${proy.nombre_cliente || 'cocina'}.pdf`)}
                       extraBtns={
-                        <a href={render.imageUrl} download="render_cocina.png"
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-                          <Download size={11}/> PNG
-                        </a>
+                        <>
+                          <a href={render.imageUrl} download="render_cocina.png"
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                            <Download size={11}/> PNG
+                          </a>
+                          <button onClick={guardarEnGaleria}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white transition-all">
+                            <Save size={11}/> Guardar
+                          </button>
+                        </>
                       }
                     />
                     <div id="render-print-area" className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
@@ -981,6 +1042,106 @@ export default function EstudioCocinas() {
 
                     </div>
                   </>
+                )}
+              </div>
+            )}
+
+            {/* ── GALERÍA DE RENDERS ── */}
+            {tab === 'galeria' && (
+              <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className={`text-sm font-black mb-1 ${t.title}`}>Galería de Renders</h2>
+                    <p className={`text-xs ${t.subtext}`}>Renders guardados de tus proyectos. Haz clic en la imagen para ampliar.</p>
+                  </div>
+                  <button onClick={() => loadGaleria(1)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-600 hover:bg-amber-500 text-white transition-all">
+                    <RefreshCw size={11}/> Actualizar
+                  </button>
+                </div>
+
+                {galeria.loading && (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 size={24} className="animate-spin text-amber-500" />
+                  </div>
+                )}
+
+                {!galeria.loading && galeria.renders.length === 0 && (
+                  <div className={`text-center py-12 rounded-xl ${t.card}`}>
+                    <FolderOpen size={32} className="mx-auto mb-3 text-slate-400" />
+                    <p className={`text-sm font-bold ${t.subtext}`}>Aún no hay renders guardados</p>
+                    <p className={`text-xs mt-1 ${t.subtext}`}>Genera un render y pulsa "Guardar" para añadirlo aquí.</p>
+                  </div>
+                )}
+
+                {!galeria.loading && galeria.renders.length > 0 && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {galeria.renders.map(r => (
+                        <div key={r._id} className={`relative group rounded-xl overflow-hidden border ${t.cardBorder} transition-shadow hover:shadow-lg`}>
+                          <img
+                            src={r.image_url}
+                            alt={r.cliente || 'Render'}
+                            className="w-full h-40 object-cover cursor-pointer"
+                            onClick={() => setGaleria(g => ({ ...g, fsImg: r.image_url }))}
+                          />
+                          {/* Marca de agua */}
+                          <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">
+                            3D Estudio
+                          </div>
+                          {/* Controles */}
+                          <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => toggleFavorito(r._id)}
+                              className={`p-1 rounded-lg ${r.favorito ? 'bg-red-500 text-white' : 'bg-white/80 text-slate-600 hover:bg-red-100'}`}>
+                              <Heart size={11} fill={r.favorito ? 'currentColor' : 'none'} />
+                            </button>
+                            <button onClick={() => eliminarRender(r._id)}
+                              className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-red-100 hover:text-red-600">
+                              <Trash2 size={11} />
+                            </button>
+                            <a href={r.image_url} download className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-emerald-100">
+                              <Download size={11} />
+                            </a>
+                          </div>
+                          {/* Info */}
+                          <div className="p-2">
+                            <p className={`text-[10px] font-bold truncate ${t.title}`}>{r.cliente || 'Sin cliente'}</p>
+                            <p className={`text-[9px] ${t.subtext}`}>{r.estilo} · {r.fecha}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Paginación */}
+                    {galeria.total > 12 && (
+                      <div className="flex justify-center gap-2 mt-4">
+                        <button
+                          disabled={galeria.page <= 1}
+                          onClick={() => loadGaleria(galeria.page - 1)}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold ${galeria.page <= 1 ? 'opacity-30' : 'hover:bg-slate-200'} ${t.card}`}>
+                          ← Anterior
+                        </button>
+                        <span className={`px-3 py-1 text-xs font-bold ${t.subtext}`}>Pág {galeria.page}</span>
+                        <button
+                          disabled={galeria.page * 12 >= galeria.total}
+                          onClick={() => loadGaleria(galeria.page + 1)}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold ${galeria.page * 12 >= galeria.total ? 'opacity-30' : 'hover:bg-slate-200'} ${t.card}`}>
+                          Siguiente →
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Fullscreen de galería */}
+                {galeria.fsImg && (
+                  <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onClick={() => setGaleria(g => ({ ...g, fsImg: null }))}>
+                    <img src={galeria.fsImg} alt="Render" className="max-w-full max-h-full object-contain rounded-xl" />
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
+                      3D Estudio · Luiggi Home
+                    </div>
+                    <button className="absolute top-4 right-4 bg-white/10 p-2 rounded-full text-white hover:bg-white/20"><X size={18}/></button>
+                  </div>
                 )}
               </div>
             )}

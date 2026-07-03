@@ -15,7 +15,7 @@ const CAPABILITY_KEYS = [
   'canManageArticles', 'canAccessFloor', 'canUseAIAnalysis', 'canUseKitchenDesigner', 'canUseDigitalizador',
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
-  'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI',
+  'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
 ];
 
 // Lista de provincias de España con sus códigos
@@ -168,6 +168,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canAccessMaster: true,  // Acceso al Panel MASTER (config) - visible por defecto
     canAccessGastos: true,  // Acceso al módulo de Gastos - visible por defecto
     canAccessFloor: false,  // Luiggi Floor - opt-in por usuario (red de distribución)
+    canUseAgentesIA: false,  // Agentes IA - diseño en paralelo con IA
     floorOnly: false,  // Usuario SOLO Luiggi Floor (entra directo, sin otros presupuestadores)
     crmOnly: false,    // Usuario SOLO CRM (entra directo, sin barra de navegación)
     canAuthorizePermissions: false,
@@ -759,6 +760,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canAccessMaster: true,
       canAccessGastos: true,
       canAccessFloor: false,
+      canUseAgentesIA: false,
       floorOnly: false,
       crmOnly: false,
       canAuthorizePermissions: false,
@@ -2195,6 +2197,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-amber-600"
                               />
                               <span className="text-xs font-black text-amber-700">Solo Floor (directo)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-purple-100 px-2 py-1.5 rounded-lg hover:bg-purple-200 transition-colors border border-purple-300">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canUseAgentesIA}
+                                onChange={(e) => setUserForm({...userForm, canUseAgentesIA: e.target.checked})}
+                                className="w-4 h-4 rounded accent-purple-600"
+                              />
+                              <span className="text-xs font-black text-purple-800">Agentes IA</span>
                             </label>
                           </div>
                         </div>

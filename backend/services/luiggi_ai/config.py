@@ -25,12 +25,13 @@ class AIConfig:
 
     # ─── API del proveedor subyacente (oculto) ─────────────────────────────
     provider_api_key: str = field(default_factory=lambda: os.environ.get("MANUS_API_KEY", ""))
-    provider_base_url: str = "https://api.manus.im/v2"
+    provider_base_url: str = "https://api.manus.ai/v2"
 
     # Dominios del proveedor cuyos assets (imágenes/archivos) deben servirse
     # SIEMPRE a través del proxy interno para que el navegador del cliente no
     # vea nunca el origen real. Cualquier URL que apunte aquí se reescribe.
     provider_asset_hosts: List[str] = field(default_factory=lambda: [
+        "manus.ai",
         "manus.im",
         "manus.computer",
         "manuscdn.com",
@@ -74,6 +75,7 @@ class AIConfig:
         "manus team": "LuiggiAI team",
         "manuscdn.com": "luiggihome.es",
         "manus.computer": "luiggihome.es",
+        "manus.ai": "luiggihome.es",
         "manus.im": "luiggihome.es",
         "manus ai": "LuiggiAI",
         "manus": "LuiggiAI",

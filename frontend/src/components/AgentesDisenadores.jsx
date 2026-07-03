@@ -366,14 +366,14 @@ export default function AgentesDisenadores({ state }) {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-6 py-4 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
             <Sparkles size={22} className="text-white" />
           </div>
           <div>
             <h1 className="text-xl font-black text-white">Agentes Diseñadores</h1>
-            <p className="text-amber-100 text-xs">Lanza hasta 7 proyectos en paralelo · Motor: LuiggiAI</p>
+            <p className="text-amber-100 text-xs">Lanza hasta 7 proyectos de diseño en paralelo con IA</p>
           </div>
         </div>
         {hayResultados && (
@@ -390,7 +390,7 @@ export default function AgentesDisenadores({ state }) {
         )}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Panel izquierdo: configuración de proyectos */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -429,7 +429,7 @@ export default function AgentesDisenadores({ state }) {
           <button
             onClick={lanzarAgentes}
             disabled={lanzando || proyectos.filter(p => p.nombre_cliente.trim()).length === 0}
-            className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-black text-base hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-900/30 transition-all"
+            className="w-full flex items-center justify-center gap-2 py-3 sm:py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-black text-sm sm:text-base hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-900/30 transition-all"
           >
             {lanzando
               ? <><Loader size={18} className="animate-spin" /> Lanzando agentes…</>
@@ -460,7 +460,7 @@ export default function AgentesDisenadores({ state }) {
           </div>
 
           {!hayResultados && (
-            <div className="flex flex-col items-center justify-center h-64 bg-slate-900 rounded-2xl border border-slate-800 text-slate-500">
+            <div className="flex flex-col items-center justify-center h-48 sm:h-64 bg-slate-900 rounded-2xl border border-slate-800 text-slate-500">
               <Sparkles size={40} className="mb-3 opacity-30" />
               <p className="text-sm font-medium">Los renders aparecerán aquí</p>
               <p className="text-xs mt-1 opacity-70">Configura los proyectos y pulsa Lanzar</p>

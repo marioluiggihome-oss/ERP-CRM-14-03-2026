@@ -73,6 +73,7 @@ const MODULES = [
   { tab: 'fabrica',         label: 'Fábrica',         icon: Factory,      color: 'bg-emerald-600', group: 'produccion', can: (u) => u?.canAccessFabrica === true },
   { tab: 'montajes',        label: 'Montajes',        icon: Wrench,       color: 'bg-orange-600',  group: 'produccion', can: (u, s) => s?.montajesEnabled && (u?.canAccessMontajes || u?.isMontador) },
   { tab: 'luiggifloor',     label: 'Luiggi Floor',    icon: Layers,       color: 'bg-amber-500',   group: 'produccion', can: (u) => u?.canAccessFloor === true },
+  { tab: 'agentesDisenadores', label: 'Agentes IA', icon: Sparkles, color: 'bg-purple-600', group: 'produccion', can: (u) => (u?.canUseAgentesIA || u?.isAdmin) && !u?.isTienda },
 
   // Administración
   { tab: 'command',         label: 'Panel de Mando',  icon: Shield,       color: 'bg-slate-700',   group: 'admin', can: (u) => u?.canAccessMando === true },

@@ -1146,17 +1146,7 @@ const App = () => {
                       </button>
                     )}
                     
-                    {/* Agentes Diseñadores en Paralelo */}
-                    {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && !state.currentUser?.isTienda && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'agentesDisenadores'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'agentesDisenadores' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        title="Agentes Diseñadores: lanza hasta 7 proyectos en paralelo"
-                      >
-                        <Sparkles size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Agentes</span>
-                      </button>
-                    )}
+
 
                     {/* Diseñador de Armarios */}
                     {state.currentUser?.canAccessArmarios && !state.currentUser?.isTienda && (
@@ -1204,6 +1194,19 @@ const App = () => {
                       >
                         <Factory size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Fábrica</span>
+                      </button>
+                    )}
+
+                    {/* Agentes Diseñadores IA - sección Producción */}
+                    {(state.currentUser?.canUseAgentesIA || state.currentUser?.isAdmin) && !state.currentUser?.isTienda && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'agentesDisenadores'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'agentesDisenadores' ? 'bg-purple-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        title="Agentes Diseñadores: lanza hasta 7 proyectos en paralelo"
+                        data-testid="agentes-ia-nav-btn"
+                      >
+                        <Sparkles size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Agentes</span>
                       </button>
                     )}
 
@@ -1362,7 +1365,7 @@ const App = () => {
             )}
 
             {/* Agentes Diseñadores en Paralelo */}
-            {state.currentTab === 'agentesDisenadores' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && (
+            {state.currentTab === 'agentesDisenadores' && (state.currentUser?.canUseAgentesIA || state.currentUser?.isAdmin) && (
               <ErrorBoundary><AgentesDisenadores state={state} /></ErrorBoundary>
             )}
 

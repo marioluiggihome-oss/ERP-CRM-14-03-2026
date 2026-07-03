@@ -58,6 +58,8 @@ const Armarios2 = ({ state }) => {
   const [designs, setDesigns] = useState(null); // null=oculto
   const [saving, setSaving] = useState(false);
   const [snapMm, setSnapMm] = useState(20);     // 0 = libre; si no, ajuste a rejilla (mm)
+  const [leftOpen, setLeftOpen] = useState(true);   // Panel izquierdo (configuración)
+  const [rightOpen, setRightOpen] = useState(true); // Panel derecho (render + presupuesto)
   const undoRef = useRef([]);
   const redoRef = useRef([]);
   const [, forceHist] = useState(0);
@@ -355,9 +357,14 @@ const Armarios2 = ({ state }) => {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_360px] gap-4 items-start">
-        {/* Configurador */}
-        <div ref={box} className="space-y-4">
+      <div className="flex gap-3 items-start relative">
+        {/* Panel izquierdo: Configuración (colapsable) */}
+        <div className={`transition-all duration-300 flex-shrink-0 ${leftOpen ? 'w-full lg:w-[320px]' : 'w-0 lg:w-10 overflow-hidden'}`}>
+          <button onClick={() => setLeftOpen(!leftOpen)} className="absolute top-0 left-0 z-10 p-1.5 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 transition-colors" title={leftOpen ? 'Ocultar configuración' : 'Mostrar configuración'}>
+            <Columns size={14} />
+          </button>
+          {leftOpen && (
+          <div className="space-y-3 pt-8 lg:pt-0">
           {/* Medidas y material */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[['Ancho (mm)', 'width'], ['Alto (mm)', 'height'], ['Fondo (mm)', 'depth']].map(([lab, k]) => (
@@ -391,6 +398,12 @@ const Armarios2 = ({ state }) => {
             </label>
           </div>
 
+          </div>
+          )}
+        </div>
+
+        {/* Centro: Dibujo del armario (protagonista) */}
+        <div ref={box} className="flex-1 min-w-0 space-y-3">
           {/* Paleta: elige un elemento y haz clic dentro del armario para colocarlo */}
           <div className="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap items-center gap-2">
             <button onClick={() => addComp('divider-v')} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold"><Columns size={14} /> + Divisor</button>
@@ -503,7 +516,13 @@ const Armarios2 = ({ state }) => {
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* Panel derecho: Render IA + Presupuesto (colapsable) */}
+        <div className={`transition-all duration-300 flex-shrink-0 ${rightOpen ? 'w-full lg:w-[340px]' : 'w-0 lg:w-10 overflow-hidden'}`}>
+          <button onClick={() => setRightOpen(!rightOpen)} className="absolute top-0 right-0 z-10 p-1.5 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 transition-colors" title={rightOpen ? 'Ocultar panel' : 'Mostrar panel'}>
+            <Columns size={14} />
+          </button>
+          {rightOpen && (
+          <div className="space-y-4">
         {/* Render IA */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
           <div className="flex items-center justify-between mb-2">
@@ -546,6 +565,8 @@ const Armarios2 = ({ state }) => {
           </div>
           <p className="text-[10px] text-slate-400 mt-2">Precios según tus tarifas (Ajustes → Armazones).</p>
         </div>
+        </div>
+          )}
         </div>
       </div>
 
