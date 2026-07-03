@@ -1563,6 +1563,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                   FÁBRICA{user.factoryId && factories.find(f => f.id === user.factoryId) ? ` (${factories.find(f => f.id === user.factoryId).code})` : ''}
                                 </span>
                               )}
+                              {user.canUseAgentesIA && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-[9px] font-black">AGENTES IA</span>}
                               {user.canAccessMontajes && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">MONTAJES</span>}
                               {user.isMontador && <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[9px] font-black">MONTADOR</span>}
                               {user.useCustomBranding && <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded text-[9px] font-black">PERSONALIZAR</span>}
