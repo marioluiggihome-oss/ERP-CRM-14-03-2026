@@ -33,6 +33,8 @@ const ResumenCocinas = ({ state }) => {
     { id: uid(), label: '5% al terminar', percent: 5 },
   ]);
   const [exporting, setExporting] = useState(false);
+  const [ivaIncluido, setIvaIncluido] = useState(true); // los importes ya llevan IVA
+  const [ivaRate, setIvaRate] = useState(21);            // tipo de IVA
   const [bancoId, setBancoId] = useState('');     // cuenta bancaria elegida
   const [docName, setDocName] = useState('');     // nombre con el que se guarda
   const [savedId, setSavedId] = useState(null);
@@ -51,7 +53,7 @@ const ResumenCocinas = ({ state }) => {
     try {
       const r = await fetch(`${API_URL}/api/resumen-totales`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: savedId || undefined, userId: uidUser, name, data: { cliente, fecha, cocinas, pagos, bancoId } }),
+        body: JSON.stringify({ id: savedId || undefined, userId: uidUser, name, data: { cliente, fecha, cocinas, pagos, bancoId, ivaIncluido, ivaRate } }),
       });
       const d = await r.json();
       if (d.id) { setSavedId(d.id); setDocName(name); alert('✅ Resumen guardado. Lo tienes en "Mis resúmenes".'); }
@@ -73,6 +75,7 @@ const ResumenCocinas = ({ state }) => {
       const data = doc.data || {};
       setCliente(data.cliente || ''); setFecha(data.fecha || today);
       setCocinas(data.cocinas || []); setPagos(data.pagos || []); setBancoId(data.bancoId || '');
+      setIvaIncluido(data.ivaIncluido !== false); setIvaRate(data.ivaRate ?? 21);
       setSavedId(doc.id); setDocName(doc.name || ''); setSavedList(null);
     } catch { alert('No se pudo abrir el resumen.'); }
   };
@@ -89,6 +92,7 @@ const ResumenCocinas = ({ state }) => {
       { id: uid(), label: '45% a la entrega de materiales', percent: 45 },
       { id: uid(), label: '5% al terminar', percent: 5 },
     ]);
+    setIvaIncluido(true); setIvaRate(21);
   };
 
   const deleteResumen = async (id, name) => {
@@ -102,6 +106,12 @@ const ResumenCocinas = ({ state }) => {
 
   const cocinaTotal = (c) => (c.lineas || []).reduce((s, l) => s + (Number(l.importe) || 0), 0);
   const totalGeneral = useMemo(() => cocinas.reduce((s, c) => s + cocinaTotal(c), 0), [cocinas]);
+  // Desglose de impuestos. Si el IVA va incluido, base = total / (1+tipo); si no,
+  // el total mostrado es base y el IVA se suma aparte.
+  const r = (Number(ivaRate) || 0) / 100;
+  const baseImponible = ivaIncluido ? totalGeneral / (1 + r) : totalGeneral;
+  const cuotaIva = ivaIncluido ? totalGeneral - baseImponible : totalGeneral * r;
+  const totalConIva = baseImponible + cuotaIva;
 
   // ── edición ──
   const addCocina = () => setCocinas(prev => [...prev, { id: uid(), nombre: `COCINA ${prev.length + 1}`, lineas: [
@@ -216,12 +226,20 @@ const ResumenCocinas = ({ state }) => {
         y += 12;
       });
 
+      // Desglose de impuestos (base + IVA)
+      ensure(16);
+      pdf.setFontSize(10.5); pdf.setTextColor(60);
+      pdf.text('Base imponible', M + 4, y);
+      pdf.text(eur(baseImponible), W - M - 2, y, { align: 'right' }); y += 6;
+      pdf.text(`IVA (${ivaRate}%)`, M + 4, y);
+      pdf.text(eur(cuotaIva), W - M - 2, y, { align: 'right' }); y += 8;
+
       // total general (caja naranja)
       ensure(18);
       pdf.setFillColor(234, 120, 40); pdf.roundedRect(M, y, W - 2 * M, 13, 2, 2, 'F');
       pdf.setFontSize(12); pdf.setTextColor(255); pdf.setFont(undefined, 'bold');
-      pdf.text('TOTAL GENERAL', M + 4, y + 8.5);
-      pdf.setFontSize(14); pdf.text(eur(totalGeneral), W - M - 3, y + 8.5, { align: 'right' });
+      pdf.text(`TOTAL GENERAL (IVA ${ivaRate}% incl.)`, M + 4, y + 8.5);
+      pdf.setFontSize(14); pdf.text(eur(totalConIva), W - M - 3, y + 8.5, { align: 'right' });
       pdf.setFont(undefined, 'normal'); y += 20;
 
       // forma de pago
@@ -233,7 +251,7 @@ const ResumenCocinas = ({ state }) => {
         pdf.setFontSize(10.5); pdf.setTextColor(60);
         pagosValidos.forEach(p => {
           pdf.text(p.label || '', M + 4, y);
-          pdf.text(eur(totalGeneral * (Number(p.percent) || 0) / 100), W - M - 2, y, { align: 'right' });
+          pdf.text(eur(totalConIva * (Number(p.percent) || 0) / 100), W - M - 2, y, { align: 'right' });
           y += 6.5;
         });
       }
@@ -368,10 +386,31 @@ const ResumenCocinas = ({ state }) => {
         ))}
         <button onClick={addCocina} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-sm"><Plus size={16} /> Añadir cocina</button>
 
+        {/* Impuestos */}
+        <div className="rounded-xl border border-slate-200 p-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-600 cursor-pointer">
+            <input type="checkbox" checked={ivaIncluido} onChange={e => setIvaIncluido(e.target.checked)} className="w-4 h-4 accent-orange-600" />
+            Los importes ya incluyen IVA
+          </label>
+          <div className="flex items-center gap-1 text-sm text-slate-600">
+            <span className="font-bold">Tipo IVA</span>
+            <input type="number" value={ivaRate} onChange={e => setIvaRate(e.target.value)} className="w-16 px-2 py-1 border border-slate-200 rounded-lg text-right" />
+            <span className="text-slate-400">%</span>
+          </div>
+          <div className="ml-auto text-right text-sm text-slate-500">
+            <span>Base imponible: <b className="text-slate-700">{eur(baseImponible)}</b></span>
+            <span className="mx-2">·</span>
+            <span>IVA ({ivaRate}%): <b className="text-slate-700">{eur(cuotaIva)}</b></span>
+          </div>
+        </div>
+
         {/* Total general */}
         <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-4 flex items-center justify-between">
-          <span className="font-black uppercase tracking-wide">Total general</span>
-          <span className="text-2xl font-black">{eur(totalGeneral)}</span>
+          <div>
+            <span className="font-black uppercase tracking-wide">Total general</span>
+            <span className="block text-xs font-bold text-orange-100 normal-case">IVA ({ivaRate}%) incluido</span>
+          </div>
+          <span className="text-2xl font-black">{eur(totalConIva)}</span>
         </div>
 
         {/* Forma de pago */}
@@ -396,7 +435,7 @@ const ResumenCocinas = ({ state }) => {
                     className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right" />
                   <span className="text-xs text-slate-400">%</span>
                 </div>
-                <span className="w-32 text-right text-sm font-bold text-slate-700">{eur(totalGeneral * (Number(p.percent) || 0) / 100)}</span>
+                <span className="w-32 text-right text-sm font-bold text-slate-700">{eur(totalConIva * (Number(p.percent) || 0) / 100)}</span>
                 <button onClick={() => removePago(p.id)} className="p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>
               </div>
             ))}
