@@ -110,11 +110,18 @@ def _parse_medidas(texto: str) -> dict:
 
 # ─── Modelos ──────────────────────────────────────────────────────────────────
 
+class DistribucionEstructurada(BaseModel):
+    tipo: Optional[str] = Field(default="lineal", description="Tipo: lineal, l, u, paralela, isla, g")
+    paredes: Optional[list] = Field(default=[], description="Lista de paredes [{nombre, ancho, alto}]")
+    isla: Optional[dict] = Field(default={}, description="{ancho, largo} de la isla si existe")
+    elementos: Optional[list] = Field(default=[], description="Lista de elementos [{id, label, pared_idx, ancho}]")
+
 class RenderInput(BaseModel):
     descripcion: str = Field(..., description="Descripción libre de la cocina")
     estilo: Optional[str] = Field(default="Moderno", description="Estilo de diseño")
     materiales: Optional[str] = Field(default="", description="Materiales específicos")
     distribucion: Optional[str] = Field(default="", description="Distribución (L, U, isla...)")
+    distribucion_estructurada: Optional[DistribucionEstructurada] = Field(default=None, description="Distribución estructurada con paredes y elementos")
     croquis_b64: Optional[str] = Field(default=None, description="Croquis en base64 (opcional)")
     modo_async: Optional[bool] = Field(default=False, description="Si True devuelve task_id sin esperar")
     free_design: Optional[bool] = Field(default=False, description="Si True, la IA diseña libremente sin respetar el croquis")
@@ -132,6 +139,7 @@ class ProyectoBase(BaseModel):
     notas: Optional[str] = Field(default="")
     medidas: Optional[str] = Field(default="")
     presupuesto: Optional[str] = Field(default="")
+    distribucion_estructurada: Optional[DistribucionEstructurada] = Field(default=None, description="Distribución estructurada")
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
@@ -180,9 +188,35 @@ async def generar_render(payload: RenderInput):
         )
 
     # Construir prompt técnico usando la skill
-    distribucion = payload.distribucion or payload.descripcion
     materiales = payload.materiales or "encimera de silestone, muebles lacados en mate"
     estilo = payload.estilo or "Moderno"
+
+    # Construir descripción de distribución a partir de datos estructurados
+    dist_struct = payload.distribucion_estructurada
+    if dist_struct and dist_struct.tipo:
+        dist_labels = {'lineal': 'LINEAL (una sola pared)', 'l': 'EN L (dos paredes en esquina)',
+                       'u': 'EN U (tres paredes)', 'paralela': 'PARALELA (dos paredes enfrentadas)',
+                       'isla': 'CON ISLA CENTRAL', 'g': 'EN G (tres paredes + península)'}
+        dist_desc = f"Distribución {dist_labels.get(dist_struct.tipo, dist_struct.tipo.upper())}\n"
+        if dist_struct.paredes:
+            for i, p in enumerate(dist_struct.paredes):
+                nombre = p.get('nombre', f'Pared {i+1}')
+                ancho = p.get('ancho', 0)
+                alto = p.get('alto', 240)
+                dist_desc += f"  - {nombre}: {ancho}cm de ancho x {alto}cm de alto\n"
+        if dist_struct.isla and dist_struct.isla.get('ancho', 0) > 0:
+            dist_desc += f"  - Isla central: {dist_struct.isla['ancho']}cm x {dist_struct.isla.get('largo', 0)}cm\n"
+        if dist_struct.elementos:
+            dist_desc += "  Elementos posicionados:\n"
+            for el in dist_struct.elementos:
+                label = el.get('label', el.get('id', '?'))
+                ancho_el = el.get('ancho', 60)
+                pared_idx = el.get('pared_idx', 0)
+                pared_nombre = dist_struct.paredes[pared_idx].get('nombre', f'Pared {pared_idx+1}') if pared_idx < len(dist_struct.paredes or []) else 'Pared principal'
+                dist_desc += f"    • {label} ({ancho_el}cm) en {pared_nombre}\n"
+        distribucion = dist_desc
+    else:
+        distribucion = payload.distribucion or payload.descripcion
 
     prompt_tecnico = _generate_render_prompt(
         layout=distribucion,
@@ -427,6 +461,7 @@ async def obtener_resultado(task_id: str):
 async def generar_plano_2d(payload: ProyectoBase):
     """
     Genera un plano 2D técnico acotado con matplotlib.
+    Usa la distribución estructurada si está disponible.
     No requiere motor de IA — generación local instantánea.
     """
     try:
@@ -435,35 +470,74 @@ async def generar_plano_2d(payload: ProyectoBase):
         import matplotlib.pyplot as plt
         import matplotlib.patches as patches
 
-        m = _parse_medidas(payload.medidas)
-        ancho, alto, isla_w, isla_h = m["ancho"], m["alto"], m["isla_w"], m["isla_h"]
-
+        # Colores profesionales
         C_BG = "#F8F6F2"; C_SUELO = "#EDE8E0"; C_PARED = "#2C2C2C"
         C_MUEBLE = "#D4C5A9"; C_BORDE = "#8B7355"; C_ENCIM = "#C8B89A"
         C_ISLA = "#E8DDD0"; C_COTA = "#555555"; C_ACENTO = "#8B7355"
         C_GRID = "#D8D0C4"
+        C_ELEM = {"fregadero": "#B8D4E0", "placa": "#E8B4B4", "horno": "#D4A574",
+                  "frigorifico": "#A8C8D8", "lavavajillas": "#B8D0B8", "campana": "#D0D0D0",
+                  "microondas": "#D4A574", "columna_hornos": "#C8A882"}
+        ELEM_SYMBOLS = {"fregadero": "≈", "placa": "○○", "horno": "□", "frigorifico": "❄",
+                        "lavavajillas": "≡", "campana": "▽", "microondas": "□", "columna_hornos": "┃"}
 
+        # Obtener distribución
+        dist = payload.distribucion_estructurada
+        if dist and dist.tipo:
+            tipo = dist.tipo
+            paredes_data = dist.paredes or [{'nombre': 'Pared principal', 'ancho': 400, 'alto': 240}]
+            isla_data = dist.isla or {'ancho': 0, 'largo': 0}
+            elementos = dist.elementos or []
+        else:
+            # Fallback al parser de texto
+            m = _parse_medidas(payload.medidas)
+            tipo = 'l'  # default legacy
+            paredes_data = [{'nombre': 'Pared norte', 'ancho': m['ancho'], 'alto': 240},
+                           {'nombre': 'Pared oeste', 'ancho': m['alto'], 'alto': 240}]
+            isla_data = {'ancho': m['isla_w'], 'largo': m['isla_h']}
+            elementos = []
+
+        # Calcular dimensiones del espacio
+        if tipo == 'lineal':
+            room_w = paredes_data[0].get('ancho', 400)
+            room_h = max(250, int(room_w * 0.6))
+        elif tipo in ('l', 'g'):
+            room_w = max(p.get('ancho', 300) for p in paredes_data)
+            room_h = max(250, paredes_data[1].get('ancho', 250) if len(paredes_data) > 1 else 300)
+        elif tipo == 'u':
+            room_w = paredes_data[1].get('ancho', 400) if len(paredes_data) > 1 else 400
+            room_h = max(paredes_data[0].get('ancho', 250), paredes_data[2].get('ancho', 250) if len(paredes_data) > 2 else 250)
+        elif tipo == 'paralela':
+            room_w = max(p.get('ancho', 400) for p in paredes_data)
+            room_h = max(300, int(room_w * 0.7))
+        elif tipo == 'isla':
+            room_w = paredes_data[0].get('ancho', 400)
+            room_h = max(350, int(room_w * 0.8))
+        else:
+            room_w = 400; room_h = 350
+
+        # Setup figure
         fig, ax = plt.subplots(figsize=(16, 11))
         fig.patch.set_facecolor(C_BG)
         ax.set_facecolor(C_BG)
 
-        scale = min(560 / ancho, 420 / alto)
-        W, H = ancho * scale, alto * scale
+        scale = min(560 / room_w, 420 / room_h)
+        W, H = room_w * scale, room_h * scale
         ox, oy = 80, 70
 
-        ax.set_xlim(0, W + 160); ax.set_ylim(0, H + 130)
+        ax.set_xlim(0, W + 180); ax.set_ylim(-20, H + 130)
         ax.set_aspect("equal"); ax.axis("off")
 
         # Suelo + grid
         ax.add_patch(patches.Rectangle((ox, oy), W, H,
             linewidth=2, edgecolor=C_PARED, facecolor=C_SUELO, zorder=1))
-        paso = max(30, int(min(ancho, alto) / 10)) * scale / 100 * 100
-        for x in range(int(ox), int(ox + W + 1), max(1, int(paso))):
-            ax.plot([x, x], [oy, oy + H], color=C_GRID, linewidth=0.3, zorder=1)
-        for y in range(int(oy), int(oy + H + 1), max(1, int(paso))):
-            ax.plot([ox, ox + W], [y, y], color=C_GRID, linewidth=0.3, zorder=1)
+        paso = max(30, int(min(room_w, room_h) / 10)) * scale / 100 * 100
+        for gx in range(int(ox), int(ox + W + 1), max(1, int(paso))):
+            ax.plot([gx, gx], [oy, oy + H], color=C_GRID, linewidth=0.3, zorder=1)
+        for gy in range(int(oy), int(oy + H + 1), max(1, int(paso))):
+            ax.plot([ox, ox + W], [gy, gy], color=C_GRID, linewidth=0.3, zorder=1)
 
-        # Paredes
+        # Paredes (contorno)
         pw = max(6, int(0.015 * min(W, H)))
         for rect in [(ox, oy + H - pw, W, pw), (ox, oy, W, pw),
                      (ox, oy, pw, H), (ox + W - pw, oy, pw, H)]:
@@ -471,54 +545,120 @@ async def generar_plano_2d(payload: ProyectoBase):
                 (rect[0], rect[1]), rect[2], rect[3],
                 linewidth=0, facecolor=C_PARED, zorder=2))
 
-        # Módulos norte
-        mod = 55 * scale / 100
-        x = ox + pw
-        while x + mod <= ox + W - pw:
-            ax.add_patch(patches.Rectangle((x, oy + H - pw - mod), mod, mod,
-                linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
-            x += mod
-        ax.add_patch(patches.Rectangle(
-            (ox + pw, oy + H - pw - mod), W - 2 * pw, 3,
-            linewidth=0, facecolor=C_ENCIM, alpha=0.7, zorder=4))
+        # Dibujar módulos según distribución
+        mod_depth = 60 * scale / 100  # 60cm profundidad estándar
 
-        # Módulos oeste
-        y = oy + pw
-        while y + mod <= oy + H - pw - mod:
-            ax.add_patch(patches.Rectangle((ox + pw, y), mod, mod,
-                linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
-            y += mod
-        ax.add_patch(patches.Rectangle(
-            (ox + pw + mod, oy + pw), 3, H - 2 * pw - mod,
-            linewidth=0, facecolor=C_ENCIM, alpha=0.7, zorder=4))
+        def draw_modules_on_wall(start_x, start_y, length_cm, direction, pared_idx):
+            """Dibuja módulos a lo largo de una pared."""
+            length_px = length_cm * scale
+            mod_w = 55 * scale / 100  # 55cm ancho módulo
+            # Obtener elementos asignados a esta pared
+            pared_elems = [e for e in elementos if e.get('pared_idx', 0) == pared_idx]
+            
+            if direction == 'north':  # Módulos en pared norte (arriba)
+                x = start_x
+                while x + mod_w <= start_x + length_px:
+                    ax.add_patch(patches.Rectangle((x, start_y - mod_depth), mod_w, mod_depth,
+                        linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
+                    x += mod_w
+                # Encimera
+                ax.add_patch(patches.Rectangle(
+                    (start_x, start_y - mod_depth - 3), length_px, 3,
+                    linewidth=0, facecolor=C_ENCIM, alpha=0.8, zorder=4))
+                # Elementos
+                elem_x = start_x + mod_w * 0.5
+                for el in pared_elems:
+                    ew = el.get('ancho', 60) * scale / 100
+                    color = C_ELEM.get(el.get('id', ''), '#B8D4E0')
+                    symbol = ELEM_SYMBOLS.get(el.get('id', ''), '?')
+                    ax.add_patch(patches.FancyBboxPatch(
+                        (elem_x - ew/2, start_y - mod_depth/2 - ew*0.3),
+                        ew, ew*0.6, boxstyle="round,pad=2", linewidth=1,
+                        edgecolor="#555", facecolor=color, zorder=5))
+                    ax.text(elem_x, start_y - mod_depth/2, symbol,
+                        ha="center", va="center", fontsize=7, color="#333", zorder=6)
+                    ax.text(elem_x, start_y - mod_depth - 10, el.get('label', ''),
+                        ha="center", va="top", fontsize=5, color="#666", zorder=6)
+                    elem_x += ew + 10
 
-        # Isla
-        iw = isla_w * scale / 100; ih = isla_h * scale / 100
-        ix = ox + (W - iw) / 2; iy = oy + (H - ih) / 2 - 15
-        ax.add_patch(patches.Rectangle((ix, iy), iw, ih,
-            linewidth=2, edgecolor=C_BORDE, facecolor=C_ISLA, zorder=3))
-        ax.text(ix + iw / 2, iy + ih / 2, f"ISLA\n{isla_w}×{isla_h} cm",
-            ha="center", va="center", fontsize=7.5, fontweight="bold",
-            color="#1A1A1A", zorder=5)
+            elif direction == 'south':  # Módulos en pared sur (abajo)
+                x = start_x
+                while x + mod_w <= start_x + length_px:
+                    ax.add_patch(patches.Rectangle((x, start_y), mod_w, mod_depth,
+                        linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
+                    x += mod_w
+                ax.add_patch(patches.Rectangle(
+                    (start_x, start_y + mod_depth), length_px, 3,
+                    linewidth=0, facecolor=C_ENCIM, alpha=0.8, zorder=4))
 
-        # Fregadero
-        fx = ox + pw + mod / 2; fy = oy + H - pw - mod / 2
-        ax.add_patch(patches.FancyBboxPatch(
-            (fx - 18 * scale / 100, fy - 12 * scale / 100),
-            36 * scale / 100, 24 * scale / 100,
-            boxstyle="round,pad=2", linewidth=1,
-            edgecolor="#555", facecolor="#B8D4E0", zorder=5))
-        ax.text(fx, fy, "≈", ha="center", va="center", fontsize=8, color="#555", zorder=6)
+            elif direction == 'west':  # Módulos en pared oeste (izquierda)
+                y = start_y
+                while y + mod_w <= start_y + length_px:
+                    ax.add_patch(patches.Rectangle((start_x, y), mod_depth, mod_w,
+                        linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
+                    y += mod_w
+                ax.add_patch(patches.Rectangle(
+                    (start_x + mod_depth, start_y), 3, length_px,
+                    linewidth=0, facecolor=C_ENCIM, alpha=0.8, zorder=4))
 
-        # Etiquetas paredes
-        for label, x_, y_, rot in [
-            ("PARED NORTE", ox + W / 2, oy + H + 8, 0),
-            ("PARED SUR",   ox + W / 2, oy - 8, 0),
-            ("PARED OESTE", ox - 8, oy + H / 2, 90),
-            ("PARED ESTE",  ox + W + 8, oy + H / 2, 90),
-        ]:
-            ax.text(x_, y_, label, ha="center", va="center",
-                fontsize=5.5, color="#888", rotation=rot, zorder=6)
+            elif direction == 'east':  # Módulos en pared este (derecha)
+                y = start_y
+                while y + mod_w <= start_y + length_px:
+                    ax.add_patch(patches.Rectangle((start_x - mod_depth, y), mod_depth, mod_w,
+                        linewidth=0.8, edgecolor=C_BORDE, facecolor=C_MUEBLE, zorder=3))
+                    y += mod_w
+                ax.add_patch(patches.Rectangle(
+                    (start_x - mod_depth - 3, start_y), 3, length_px,
+                    linewidth=0, facecolor=C_ENCIM, alpha=0.8, zorder=4))
+
+        # Dibujar según tipo de distribución
+        if tipo == 'lineal':
+            pared_w = paredes_data[0].get('ancho', 400)
+            draw_modules_on_wall(ox + pw, oy + H - pw, pared_w, 'north', 0)
+        elif tipo == 'l':
+            pared_w = paredes_data[0].get('ancho', 400)
+            pared_h = paredes_data[1].get('ancho', 250) if len(paredes_data) > 1 else 250
+            draw_modules_on_wall(ox + pw, oy + H - pw, pared_w, 'north', 0)
+            draw_modules_on_wall(ox + pw, oy + pw, pared_h, 'west', 1)
+        elif tipo == 'u':
+            pared_izq = paredes_data[0].get('ancho', 250)
+            pared_fondo = paredes_data[1].get('ancho', 400) if len(paredes_data) > 1 else 400
+            pared_der = paredes_data[2].get('ancho', 250) if len(paredes_data) > 2 else 250
+            draw_modules_on_wall(ox + pw, oy + H - pw, pared_fondo, 'north', 1)
+            draw_modules_on_wall(ox + pw, oy + pw, pared_izq, 'west', 0)
+            draw_modules_on_wall(ox + W - pw, oy + pw, pared_der, 'east', 2)
+        elif tipo == 'paralela':
+            pared_n = paredes_data[0].get('ancho', 400)
+            pared_s = paredes_data[1].get('ancho', 400) if len(paredes_data) > 1 else 400
+            draw_modules_on_wall(ox + pw, oy + H - pw, pared_n, 'north', 0)
+            draw_modules_on_wall(ox + pw, oy + pw, pared_s, 'south', 1)
+        elif tipo == 'isla':
+            pared_w_val = paredes_data[0].get('ancho', 400)
+            draw_modules_on_wall(ox + pw, oy + H - pw, pared_w_val, 'north', 0)
+            # Isla central
+            iw = isla_data.get('ancho', 120) * scale / 100
+            ih = isla_data.get('largo', 200) * scale / 100
+            ix = ox + (W - iw) / 2; iy = oy + (H - ih) / 2 - 15
+            ax.add_patch(patches.Rectangle((ix, iy), iw, ih,
+                linewidth=2, edgecolor=C_BORDE, facecolor=C_ISLA, zorder=3))
+            ax.text(ix + iw / 2, iy + ih / 2,
+                f"ISLA\n{isla_data.get('ancho', 120)}×{isla_data.get('largo', 200)} cm",
+                ha="center", va="center", fontsize=7.5, fontweight="bold",
+                color="#1A1A1A", zorder=5)
+        elif tipo == 'g':
+            pared_izq = paredes_data[0].get('ancho', 250)
+            pared_fondo = paredes_data[1].get('ancho', 400) if len(paredes_data) > 1 else 400
+            pared_der = paredes_data[2].get('ancho', 200) if len(paredes_data) > 2 else 200
+            draw_modules_on_wall(ox + pw, oy + H - pw, pared_fondo, 'north', 1)
+            draw_modules_on_wall(ox + pw, oy + pw, pared_izq, 'west', 0)
+            draw_modules_on_wall(ox + W - pw, oy + pw, pared_der, 'east', 2)
+            # Península
+            pen_w = 120 * scale / 100; pen_h = mod_depth
+            px = ox + W - pw - pen_w; py = oy + pw + pared_der * scale / 100
+            ax.add_patch(patches.Rectangle((px, py), pen_w, pen_h,
+                linewidth=1.5, edgecolor=C_BORDE, facecolor=C_ISLA, zorder=3))
+            ax.text(px + pen_w / 2, py + pen_h / 2, "PENÍNSULA",
+                ha="center", va="center", fontsize=6, fontweight="bold", color="#1A1A1A", zorder=5)
 
         # Cotas
         arrow_kw = dict(arrowstyle="<->", color=C_COTA, lw=0.9)
@@ -530,35 +670,53 @@ async def generar_plano_2d(payload: ProyectoBase):
             ax.annotate("", xy=(x, y2), xytext=(x, y1), arrowprops=arrow_kw)
             ax.text(x - 6, (y1 + y2) / 2, label, ha="right", va="center",
                 fontsize=6.5, color=C_COTA, rotation=90)
-        cota_h(ox, ox + W, oy - 22, f"{ancho} cm")
-        cota_v(ox - 22, oy, oy + H, f"{alto} cm")
-        cota_h(ix, ix + iw, iy - 12, f"{isla_w} cm")
-        cota_v(ix + iw + 10, iy, iy + ih, f"{isla_h} cm")
+        cota_h(ox, ox + W, oy - 22, f"{room_w} cm")
+        cota_v(ox - 22, oy, oy + H, f"{room_h} cm")
+        # Cotas por pared
+        for i, p in enumerate(paredes_data):
+            ancho_p = p.get('ancho', 0)
+            if ancho_p > 0:
+                ax.text(ox + W + 20, oy + H - 20 - i * 16,
+                    f"{p.get('nombre', f'Pared {i+1}')}: {ancho_p}cm",
+                    fontsize=6, color=C_COTA, va="center", zorder=6)
 
         # Leyenda
-        lx = ox + W + 20; ly = oy + H - 10
-        items = [(C_MUEBLE, C_BORDE, "Módulo bajo"), (C_ENCIM, C_BORDE, "Encimera"),
-                 (C_ISLA, C_BORDE, "Isla central"), ("#B8D4E0", "#555", "Fregadero")]
+        lx = ox + W + 20; ly = oy + H - 20 - len(paredes_data) * 16 - 20
+        items = [(C_MUEBLE, C_BORDE, "Módulo bajo"), (C_ENCIM, C_BORDE, "Encimera")]
+        if tipo == 'isla' or (isla_data.get('ancho', 0) > 0):
+            items.append((C_ISLA, C_BORDE, "Isla central"))
+        if tipo == 'g':
+            items.append((C_ISLA, C_BORDE, "Península"))
+        if elementos:
+            for el in elementos[:4]:
+                color = C_ELEM.get(el.get('id', ''), '#B8D4E0')
+                items.append((color, "#555", el.get('label', '')))
         ax.text(lx, ly + 15, "LEYENDA", fontsize=7, fontweight="bold", color=C_ACENTO)
         for i, (fc, ec, lbl) in enumerate(items):
-            yy = ly - i * 18
-            ax.add_patch(patches.Rectangle((lx, yy - 6), 12, 10,
+            yy = ly - i * 16
+            ax.add_patch(patches.Rectangle((lx, yy - 5), 10, 8,
                 linewidth=0.8, edgecolor=ec, facecolor=fc))
-            ax.text(lx + 16, yy, lbl, fontsize=6.5, va="center", color=C_COTA)
+            ax.text(lx + 14, yy, lbl, fontsize=5.5, va="center", color=C_COTA)
+
+        # Título distribución
+        dist_labels = {'lineal': 'LINEAL', 'l': 'EN L', 'u': 'EN U',
+                       'paralela': 'PARALELA', 'isla': 'CON ISLA', 'g': 'EN G'}
+        tipo_label = dist_labels.get(tipo, tipo.upper())
 
         # Cajetín
-        ax.add_patch(patches.Rectangle((ox, 0), W, 52,
+        ax.add_patch(patches.Rectangle((ox, -10), W, 52,
             linewidth=1.2, edgecolor=C_ACENTO, facecolor="#F0EBE3", zorder=10))
-        ax.plot([ox, ox + W], [30, 30], color=C_ACENTO, linewidth=0.7, zorder=11)
-        ax.text(ox + W / 2, 42,
-            f"PLANO DE DISTRIBUCIÓN — {(payload.nombre_cliente or 'CLIENTE').upper()} · {(payload.estilo or 'MODERNO').upper()}",
+        ax.plot([ox, ox + W], [20, 20], color=C_ACENTO, linewidth=0.7, zorder=11)
+        ax.text(ox + W / 2, 32,
+            f"PLANO DE DISTRIBUCIÓN {tipo_label} — {(payload.nombre_cliente or 'CLIENTE').upper()} · {(payload.estilo or 'MODERNO').upper()}",
             ha="center", va="center", fontsize=9, fontweight="bold",
             color="#1A1A1A", zorder=12)
-        ax.text(ox + 10, 18, f"MEDIDAS: {ancho}×{alto} cm",
-            ha="left", va="center", fontsize=6.5, color=C_COTA, zorder=12)
-        ax.text(ox + W / 2, 18, "ESCALA 1:20",
+        medidas_txt = ' | '.join([f"{p.get('nombre','')}: {p.get('ancho',0)}cm" for p in paredes_data])
+        ax.text(ox + 10, 8, f"MEDIDAS: {medidas_txt}",
+            ha="left", va="center", fontsize=5.5, color=C_COTA, zorder=12)
+        ax.text(ox + W / 2, 8, "ESCALA 1:20",
             ha="center", va="center", fontsize=6.5, color=C_COTA, zorder=12)
-        ax.text(ox + W - 10, 18, "3D ESTUDIO",
+        ax.text(ox + W - 10, 8, "3D ESTUDIO",
             ha="right", va="center", fontsize=6.5, color=C_ACENTO,
             fontweight="bold", zorder=12)
 
@@ -569,7 +727,7 @@ async def generar_plano_2d(payload: ProyectoBase):
         plt.close(fig)
         buf.seek(0)
         b64 = base64.b64encode(buf.read()).decode("utf-8")
-        return {"planoBase64": f"data:image/png;base64,{b64}", "medidas_parseadas": m}
+        return {"planoBase64": f"data:image/png;base64,{b64}", "tipo_distribucion": tipo}
 
     except Exception as e:
         logger.error(f"plano-2d error: {e}")
@@ -578,11 +736,103 @@ async def generar_plano_2d(payload: ProyectoBase):
 
 @router.post("/ficha-tecnica")
 async def generar_ficha_tecnica(payload: ProyectoBase):
-    """Genera ficha técnica en Markdown. Generación local instantánea."""
+    """Genera ficha técnica en Markdown usando datos reales del proyecto."""
     fecha = datetime.date.today().strftime("%d/%m/%Y")
     mes_anio = datetime.date.today().strftime("%B %Y")
     ref = f"COC-{datetime.date.today().strftime('%Y%m%d')}-{abs(hash(payload.nombre_cliente or '')) % 1000:03d}"
-    m = _parse_medidas(payload.medidas)
+
+    # Obtener distribución estructurada
+    dist = payload.distribucion_estructurada
+    if dist and dist.tipo:
+        dist_labels = {'lineal': 'Lineal', 'l': 'En L', 'u': 'En U',
+                       'paralela': 'Paralela', 'isla': 'Con isla central', 'g': 'En G'}
+        tipo_label = dist_labels.get(dist.tipo, dist.tipo.upper())
+        paredes = dist.paredes or []
+        isla = dist.isla or {}
+        elementos = dist.elementos or []
+
+        # Calcular metros lineales totales
+        ml_total = sum(p.get('ancho', 0) for p in paredes) / 100
+        if isla.get('ancho', 0) > 0:
+            ml_total += (isla['ancho'] * 2 + isla.get('largo', 0) * 2) / 100
+
+        medidas_section = f"| **Distribución** | {tipo_label} |"
+        for i, p in enumerate(paredes):
+            medidas_section += f"\n| **{p.get('nombre', f'Pared {i+1}')}** | {p.get('ancho', 0)} cm (ancho) × {p.get('alto', 240)} cm (alto) |"
+        if isla.get('ancho', 0) > 0:
+            medidas_section += f"\n| **Isla central** | {isla['ancho']} × {isla.get('largo', 0)} cm |"
+        medidas_section += f"\n| **Metros lineales totales** | {ml_total:.1f} m.l. |"
+    else:
+        m = _parse_medidas(payload.medidas)
+        tipo_label = 'Personalizada'
+        medidas_section = f"| **Medidas** | {m['ancho']}×{m['alto']} cm |"
+        if m['isla_w'] > 0:
+            medidas_section += f"\n| **Isla** | {m['isla_w']}×{m['isla_h']} cm |"
+        elementos = []
+        paredes = []
+        ml_total = (m['ancho'] + m['alto']) / 100
+
+    # Parsear materiales del campo notas/descripción
+    materiales_raw = payload.notas or payload.descripcion or ""
+    mat_lines = [l.strip() for l in materiales_raw.replace('. ', '.\n').split('\n') if l.strip()]
+
+    # Generar tabla de materiales dinámica
+    mat_table = ""
+    mat_keywords = {
+        'frente': 'Frentes', 'lacado': 'Frentes', 'puerta': 'Frentes',
+        'encimera': 'Encimera', 'silestone': 'Encimera', 'dekton': 'Encimera', 'granito': 'Encimera', 'cuarzo': 'Encimera',
+        'tirador': 'Tiradores', 'gola': 'Tiradores', 'push': 'Tiradores',
+        'suelo': 'Suelo', 'porcelánico': 'Suelo', 'tarima': 'Suelo',
+        'zócalo': 'Zócalos',
+    }
+    materiales_detectados = {}
+    for line in mat_lines:
+        for kw, cat in mat_keywords.items():
+            if kw in line.lower():
+                materiales_detectados[cat] = line
+                break
+
+    if materiales_detectados:
+        mat_table = "| Elemento | Material / Acabado |\n|:--|:--|\n"
+        for cat, desc in materiales_detectados.items():
+            mat_table += f"| **{cat}** | {desc} |\n"
+    else:
+        mat_table = """| Elemento | Material / Acabado |
+|:--|:--|
+| **Frentes** | Según selección del cliente |
+| **Encimera** | Según selección del cliente |
+| **Tiradores** | Según selección del cliente |
+| **Suelo** | Existente / a definir |
+"""
+
+    # Generar sección de electrodomésticos basada en elementos reales
+    electro_section = ""
+    elem_labels = {e.get('id', ''): e.get('label', '') for e in elementos}
+    if elementos:
+        electro_section = "## Electrodomésticos Incluidos\n\n"
+        for el in elementos:
+            eid = el.get('id', '')
+            label = el.get('label', eid)
+            ancho = el.get('ancho', 60)
+            pared_idx = el.get('pared_idx', 0)
+            pared_nombre = paredes[pared_idx].get('nombre', f'Pared {pared_idx+1}') if pared_idx < len(paredes) else 'Pared principal'
+            electro_section += f"- **{label}** ({ancho} cm) — ubicado en {pared_nombre}\n"
+    else:
+        electro_section = """## Electrodomésticos
+
+*A definir según necesidades del cliente.*
+"""
+
+    # Generar instalaciones basadas en elementos
+    inst_section = "## Instalaciones Necesarias\n\n| Elemento | Especificación |\n|:--|:--|\n"
+    if 'fregadero' in elem_labels or not elementos:
+        inst_section += "| **Toma de agua** | Fría + caliente + desagüe bajo fregadero |\n"
+    if 'placa' in elem_labels or 'horno' in elem_labels or not elementos:
+        inst_section += "| **Ventilación** | Salida de humos ∅150 mm o recirculación |\n"
+    if 'lavavajillas' in elem_labels:
+        inst_section += "| **Lavavajillas** | Toma de agua + desagüe + enchufe dedicado |\n"
+    inst_section += f"| **Enchufes** | 1 cada 120 cm a 110 cm del suelo (línea 16A) |\n"
+    inst_section += f"| **Iluminación** | LED 3.000K bajo muebles altos |\n"
 
     md = f"""# Ficha Técnica — Cocina {payload.estilo or 'Moderna'} · {payload.nombre_cliente or 'Cliente'}
 
@@ -592,7 +842,7 @@ async def generar_ficha_tecnica(payload: ProyectoBase):
 | **Fecha** | {fecha} |
 | **Cliente** | {payload.nombre_cliente or '—'} |
 | **Estilo** | {payload.estilo or 'Moderno'} |
-| **Medidas** | {m['ancho']}×{m['alto']} cm (isla: {m['isla_w']}×{m['isla_h']} cm) |
+{medidas_section}
 | **Presupuesto** | {payload.presupuesto or 'A consultar'} |
 
 ---
@@ -605,37 +855,17 @@ async def generar_ficha_tecnica(payload: ProyectoBase):
 
 ---
 
-## Materiales y Acabados Propuestos
+## Materiales y Acabados
 
-| Elemento | Material / Acabado | Referencia | Garantía |
-|:--|:--|:--|:--|
-| **Frentes bajos** | Laca seda anti-huellas | LACA-BL-01 | 10 años |
-| **Frentes altos** | Chapa de roble natural | ROBLE-NAT-05 | 10 años |
-| **Encimera** | Silestone Calacatta Gold 20 mm | SIL-CAL-GOLD | 25 años |
-| **Tiradores** | Sistema Gola integrado | GOLA-ALU-BL | 10 años |
-| **Zócalos** | Aluminio lacado 10 cm | ZOC-ALU-10 | 10 años |
-| **Suelo** | Porcelánico gran formato 120×60 | PORC-GF-GR | — |
+{mat_table}
 
 ---
 
-## Electrodomésticos Propuestos
-
-- **Frigorífico:** Combi integrable 90 cm — Liebherr / Miele
-- **Horno:** Multifunción pirolítico 60 cm — Siemens iQ700
-- **Placa:** Inducción con extractor integrado 80 cm — Bora / Neff
-- **Lavavajillas:** Totalmente integrable 60 cm — Bosch Serie 8
-- **Fregadero:** Bajo encimera, grifería latón cepillado — Blanco / Franke
+{electro_section}
 
 ---
 
-## Instalaciones
-
-| Elemento | Especificación |
-|:--|:--|
-| **Enchufes encimera** | 1 cada 120 cm a 110 cm del suelo (línea dedicada 16A) |
-| **Toma de agua** | Fría + caliente + desagüe bajo fregadero |
-| **Extractor** | Salida de humos ∅150 mm o recirculación |
-| **Iluminación** | LED 3.000K bajo muebles + colgante isla |
+{inst_section}
 
 ---
 
@@ -657,15 +887,33 @@ async def generar_ficha_tecnica(payload: ProyectoBase):
 
 @router.post("/presentacion")
 async def generar_presentacion(payload: ProyectoBase):
-    """Genera presentación HTML para cliente. Generación local instantánea."""
+    """Genera presentación HTML para cliente usando datos reales del proyecto."""
     fecha = datetime.date.today().strftime("%d/%m/%Y")
     estilo = payload.estilo or "Moderno"
     cliente = payload.nombre_cliente or "Cliente"
-    m = _parse_medidas(payload.medidas)
-    medidas_str = f"{m['ancho']}×{m['alto']} cm"
     presupuesto = payload.presupuesto or "A consultar"
     descripcion = payload.descripcion or f"Una cocina de diseño {estilo.lower()} pensada para adaptarse perfectamente a su espacio y estilo de vida."
     notas = payload.notas or ""
+
+    # Obtener distribución estructurada
+    dist = payload.distribucion_estructurada
+    if dist and dist.tipo:
+        dist_labels = {'lineal': 'Lineal', 'l': 'En L', 'u': 'En U',
+                       'paralela': 'Paralela', 'isla': 'Con isla central', 'g': 'En G'}
+        tipo_label = dist_labels.get(dist.tipo, dist.tipo.upper())
+        paredes = dist.paredes or []
+        elementos = dist.elementos or []
+        medidas_str = ' + '.join([f"{p.get('nombre','')}: {p.get('ancho',0)}cm" for p in paredes])
+        dist_card = f"Distribución {tipo_label} con {len(paredes)} pared{'es' if len(paredes) > 1 else ''}"
+        electro_card = f"{len(elementos)} electrodoméstico{'s' if len(elementos) != 1 else ''} integrado{'s' if len(elementos) != 1 else ''}: " + ', '.join([e.get('label','') for e in elementos[:3]]) if elementos else 'A definir según necesidades'
+    else:
+        m = _parse_medidas(payload.medidas)
+        medidas_str = f"{m['ancho']}×{m['alto']} cm"
+        tipo_label = 'Personalizada'
+        dist_card = 'Optimizada para el flujo de trabajo'
+        electro_card = 'Alta gama totalmente integrados'
+        elementos = []
+        paredes = []
 
     html = f"""<!DOCTYPE html>
 <html lang="es">
@@ -713,10 +961,10 @@ async def generar_presentacion(payload: ProyectoBase):
   <p><strong class="accent">Medidas:</strong> {medidas_str}</p>
   {f'<p><strong class="accent">Notas:</strong> {notas}</p>' if notas else ''}
   <div class="grid2" style="margin-top:40px">
-    <div class="card"><h3>Distribución</h3><p>Optimizada para el flujo de trabajo con isla central y módulos en L</p></div>
+    <div class="card"><h3>Distribución</h3><p>{dist_card}</p></div>
     <div class="card"><h3>Materiales</h3><p>Primera calidad con garantía de 10 años en todos los elementos fabricados</p></div>
-    <div class="card"><h3>Electrodomésticos</h3><p>Alta gama totalmente integrados, selección personalizada según uso y presupuesto</p></div>
-    <div class="card"><h3>Iluminación</h3><p>3 niveles: funcional bajo muebles, ambiental y decorativa sobre isla</p></div>
+    <div class="card"><h3>Electrodomésticos</h3><p>{electro_card}</p></div>
+    <div class="card"><h3>Iluminación</h3><p>LED funcional bajo muebles + ambiental decorativa</p></div>
   </div>
 </section>
 <section>

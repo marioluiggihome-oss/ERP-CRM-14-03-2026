@@ -157,6 +157,67 @@ const ESTILOS_RAPIDOS = [
     descripcion: 'Cocina contemporánea de diseño con combinación de frentes en grafito mate y madera de fresno, encimera de cuarzo negro con vetas doradas, isla central con barra de desayuno, iluminación colgante de diseño sobre la isla, suelo de porcelánico imitación piedra, grifo de cuello alto negro mate.',
     notas: 'Frentes: grafito mate + fresno natural. Encimera: cuarzo negro Silestone. Isla: con barra. Grifo: negro mate cuello alto.',
   },
+  {
+    id: 'japandi',
+    label: 'Japandi',
+    emoji: '🎍',
+    estilo: 'Japandi',
+    descripcion: 'Cocina Japandi que fusiona minimalismo japonés con calidez escandinava. Frentes lisos de madera de fresno claro con acabado natural, encimera de piedra caliza beige pulida, suelo de madera de bambú, paredes en blanco cálido, estantes abiertos de madera con cerámica artesanal, iluminación difusa con lámparas de papel washi, líneas puras sin ornamentación.',
+    notas: 'Frentes: fresno claro natural. Encimera: piedra caliza beige. Tiradores: perfil integrado madera. Suelo: bambú. Estantes abiertos.',
+  },
+  {
+    id: 'mediterraneo',
+    label: 'Mediterráneo',
+    emoji: '☀️',
+    estilo: 'Mediterráneo',
+    descripcion: 'Cocina mediterránea luminosa con muebles pintados en azul índigo deslavado, encimera de mármol blanco Macael, suelo de baldosa hidráulica con motivos geométricos en azul y blanco, paredes de estuco blanco texturizado, campana de obra encalada, estantes abiertos con cerámica artesanal, grifo de latón envejecido, ventana con contraventanas de madera.',
+    notas: 'Frentes: lacado azul índigo mate. Encimera: mármol Macael. Suelo: hidráulico azul/blanco. Campana: obra encalada. Grifo: latón.',
+  },
+  {
+    id: 'hightech',
+    label: 'High-Tech',
+    emoji: '🚀',
+    estilo: 'High-Tech',
+    descripcion: 'Cocina high-tech futurista con frentes de cristal ahumado negro retroiluminado, encimera de Dekton Kelya ultra-negro, isla con inducción invisible integrada en la superficie, suelo de resina epoxi gris antracita, iluminación LED RGB programable en zócalos y estantes, electrodomésticos con pantalla táctil integrada, grifo con sensor de movimiento.',
+    notas: 'Frentes: cristal ahumado negro. Encimera: Dekton Kelya. Suelo: resina epoxi antracita. LED RGB. Electrodomésticos: pantalla táctil.',
+  },
+  {
+    id: 'provenzal',
+    label: 'Provenzal',
+    emoji: '🌻',
+    estilo: 'Provenzal',
+    descripcion: 'Cocina provenzal francesa con muebles de madera pintada en verde salvia con pátina envejecida, encimera de piedra natural caliza con bordes redondeados, suelo de terracota hexagonal, campana de cobre martillado, fregadero cerámico tipo Belfast, estantes abiertos con cestas de mimbre, cortinas de lino natural en la ventana, tiradores de porcelana blanca.',
+    notas: 'Frentes: madera pintada verde salvia patinado. Encimera: piedra caliza. Suelo: terracota. Campana: cobre. Fregadero: cerámico Belfast.',
+  },
+  {
+    id: 'wabisabi',
+    label: 'Wabi-Sabi',
+    emoji: '🌊',
+    estilo: 'Wabi-Sabi',
+    descripcion: 'Cocina Wabi-Sabi que celebra la belleza de la imperfeción. Frentes de madera de cedro sin tratar con nudos visibles y veta irregular, encimera de hormigón pulido con bordes imperfectos, suelo de piedra natural irregular, paredes de arcilla cruda texturizada en tono arena, estantes de madera recuperada, cerámica artesanal hecha a mano, iluminación tenue con lámparas de fibra natural.',
+    notas: 'Frentes: cedro sin tratar. Encimera: hormigón pulido artesanal. Suelo: piedra irregular. Paredes: arcilla cruda. Cerámica artesanal.',
+  },
+];
+
+// ─── Distribuciones de cocina ─────────────────────────────────────────────────
+const DISTRIBUCIONES = [
+  { id: 'lineal', label: 'Lineal', icon: '━━━', paredes: 1, desc: 'Una sola pared' },
+  { id: 'l', label: 'En L', icon: '┗━━', paredes: 2, desc: 'Dos paredes en esquina' },
+  { id: 'u', label: 'En U', icon: '┗━┛', paredes: 3, desc: 'Tres paredes' },
+  { id: 'paralela', label: 'Paralela', icon: '═══\n═══', paredes: 2, desc: 'Dos paredes enfrentadas' },
+  { id: 'isla', label: 'Con Isla', icon: '━━━\n □', paredes: 1, desc: 'Pared + isla central' },
+  { id: 'g', label: 'En G', icon: '┗━┓', paredes: 3, desc: 'Tres paredes + península' },
+];
+
+const ELEMENTOS_COCINA = [
+  { id: 'fregadero', label: 'Fregadero', emoji: '🚰', ancho_default: 80 },
+  { id: 'placa', label: 'Placa/Vitro', emoji: '🔥', ancho_default: 60 },
+  { id: 'horno', label: 'Horno', emoji: '♨️', ancho_default: 60 },
+  { id: 'frigorifico', label: 'Frigorífico', emoji: '🧊', ancho_default: 70 },
+  { id: 'lavavajillas', label: 'Lavavajillas', emoji: '🫧', ancho_default: 60 },
+  { id: 'campana', label: 'Campana', emoji: '💨', ancho_default: 60 },
+  { id: 'microondas', label: 'Microondas', emoji: '📡', ancho_default: 60 },
+  { id: 'columna_hornos', label: 'Col. Hornos', emoji: '🗄️', ancho_default: 60 },
 ];
 
 function getSystemTheme() {
@@ -331,7 +392,67 @@ export default function EstudioCocinas({ state, setState }) {
   });
 
   const [selectedStyle, setSelectedStyle] = useState(null);
-  const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false });
+
+  // ── Distribución estructurada ──
+  const [distribucion, setDistribucion] = useState({
+    tipo: 'lineal',
+    paredes: [{ nombre: 'Pared principal', ancho: 400, alto: 240 }],
+    isla: { ancho: 0, largo: 0 },
+    elementos: [], // [{id, pared_idx, posicion_cm}]
+  });
+
+  const handleDistChange = useCallback((tipo) => {
+    const dist = DISTRIBUCIONES.find(d => d.id === tipo);
+    let paredes = [];
+    switch (tipo) {
+      case 'lineal': paredes = [{ nombre: 'Pared principal', ancho: 400, alto: 240 }]; break;
+      case 'l': paredes = [{ nombre: 'Pared larga', ancho: 400, alto: 240 }, { nombre: 'Pared corta', ancho: 250, alto: 240 }]; break;
+      case 'u': paredes = [{ nombre: 'Pared izquierda', ancho: 250, alto: 240 }, { nombre: 'Pared fondo', ancho: 400, alto: 240 }, { nombre: 'Pared derecha', ancho: 250, alto: 240 }]; break;
+      case 'paralela': paredes = [{ nombre: 'Pared norte', ancho: 400, alto: 240 }, { nombre: 'Pared sur', ancho: 400, alto: 240 }]; break;
+      case 'isla': paredes = [{ nombre: 'Pared principal', ancho: 400, alto: 240 }]; break;
+      case 'g': paredes = [{ nombre: 'Pared izquierda', ancho: 250, alto: 240 }, { nombre: 'Pared fondo', ancho: 400, alto: 240 }, { nombre: 'Pared derecha', ancho: 200, alto: 240 }]; break;
+      default: paredes = [{ nombre: 'Pared principal', ancho: 400, alto: 240 }];
+    }
+    const isla = (tipo === 'isla') ? { ancho: 120, largo: 200 } : { ancho: 0, largo: 0 };
+    setDistribucion({ tipo, paredes, isla, elementos: [] });
+    // Actualizar medidas en formato texto para compatibilidad
+    const medStr = paredes.map(p => `${p.nombre}: ${p.ancho}cm`).join(' | ') + (isla.ancho > 0 ? ` | Isla: ${isla.ancho}x${isla.largo}cm` : '');
+    setProy(p => ({ ...p, medidas: medStr }));
+  }, []);
+
+  const updatePared = useCallback((idx, field, value) => {
+    setDistribucion(d => {
+      const paredes = [...d.paredes];
+      paredes[idx] = { ...paredes[idx], [field]: parseInt(value) || 0 };
+      const medStr = paredes.map(p => `${p.nombre}: ${p.ancho}cm`).join(' | ') + (d.isla.ancho > 0 ? ` | Isla: ${d.isla.ancho}x${d.isla.largo}cm` : '');
+      setProy(p => ({ ...p, medidas: medStr }));
+      return { ...d, paredes };
+    });
+  }, []);
+
+  const updateIsla = useCallback((field, value) => {
+    setDistribucion(d => {
+      const isla = { ...d.isla, [field]: parseInt(value) || 0 };
+      const medStr = d.paredes.map(p => `${p.nombre}: ${p.ancho}cm`).join(' | ') + (isla.ancho > 0 ? ` | Isla: ${isla.ancho}x${isla.largo}cm` : '');
+      setProy(p => ({ ...p, medidas: medStr }));
+      return { ...d, isla };
+    });
+  }, []);
+
+  const addElemento = useCallback((elemId, paredIdx) => {
+    const elem = ELEMENTOS_COCINA.find(e => e.id === elemId);
+    if (!elem) return;
+    setDistribucion(d => ({
+      ...d,
+      elementos: [...d.elementos, { id: elemId, label: elem.label, emoji: elem.emoji, pared_idx: paredIdx, ancho: elem.ancho_default }]
+    }));
+  }, []);
+
+  const removeElemento = useCallback((idx) => {
+    setDistribucion(d => ({ ...d, elementos: d.elementos.filter((_, i) => i !== idx) }));
+  }, []);
+
+  const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false });
   const [freeDesign, setFreeDesign] = useState(false); // false = respetar plano, true = diseño libre IA
   const [plano,  setPlano]  = useState({ status: null, msg: '', b64: null, fs: false });
   const [ficha,  setFicha]  = useState({ status: null, msg: '', md: '', ref: '' });
@@ -436,7 +557,7 @@ export default function EstudioCocinas({ state, setState }) {
     if (!render.imageUrl) return;
     try {
       await apiPost('/galeria/guardar', {
-        image_url: render.imageUrl,
+        image_url: render.originalUrl || render.imageUrl,
         cliente: proy.nombre_cliente,
         descripcion: proy.descripcion,
         estilo: proy.estilo,
@@ -539,6 +660,7 @@ export default function EstudioCocinas({ state, setState }) {
         estilo: proy.estilo,
         materiales: proy.notas,
         distribucion: proy.medidas,
+        distribucion_estructurada: distribucion,
         croquis_b64: render.croquis || null,
         modo_async: true,
         free_design: freeDesign,
@@ -562,8 +684,9 @@ export default function EstudioCocinas({ state, setState }) {
             // Obtener resultado
             const resultado = await apiGet(`/tarea/${taskId}/resultado`);
             // Convertir a blob URL para evitar problemas CORS con <img> cross-origin
-            const blobUrl = await fetchAsBlob(resultado.imageUrl);
-            setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: blobUrl || imgSrc(resultado.imageUrl) }));
+            const originalProxyUrl = resultado.imageUrl;
+            const blobUrl = await fetchAsBlob(originalProxyUrl);
+            setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: blobUrl || imgSrc(originalProxyUrl), originalUrl: originalProxyUrl }));
           } else if (estado.status === 'error') {
             setRender(s => ({ ...s, status: 'error', msg: estado.error || 'Error al generar el render' }));
           } else {
@@ -578,15 +701,15 @@ export default function EstudioCocinas({ state, setState }) {
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [proy, render.croquis]);
+  }, [proy, render.croquis, freeDesign, distribucion]);
 
   const editRender = useCallback(async () => {
     if (!render.editTxt.trim()) return;
     setRender(s => ({ ...s, status: 'loading', msg: 'Editando render…' }));
     try {
-      const r = await apiPost('/render/editar', { render_url: render.imageUrl, instruccion: render.editTxt, modo_async: false });
+      const r = await apiPost('/render/editar', { render_url: render.originalUrl || render.imageUrl, instruccion: render.editTxt, modo_async: false });
       const blobUrl = await fetchAsBlob(r.imageUrl);
-      setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: blobUrl || imgSrc(r.imageUrl), editMode: false, editTxt: '' }));
+      setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: blobUrl || imgSrc(r.imageUrl), originalUrl: r.imageUrl, editMode: false, editTxt: '' }));
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
@@ -600,34 +723,34 @@ export default function EstudioCocinas({ state, setState }) {
     }
     setPlano(s => ({ ...s, status: 'loading', msg: 'Generando plano técnico…', b64: null }));
     try {
-      const r = await apiPost('/plano-2d', proy);
+      const r = await apiPost('/plano-2d', { ...proy, distribucion_estructurada: distribucion });
       setPlano(s => ({ ...s, status: 'success', msg: 'Plano generado', b64: r.planoBase64 }));
     } catch (err) {
       setPlano(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [proy]);
+  }, [proy, distribucion]);
 
   // ── Ficha ──
   const genFicha = useCallback(async () => {
     setFicha(s => ({ ...s, status: 'loading', msg: 'Generando ficha técnica…' }));
     try {
-      const r = await apiPost('/ficha-tecnica', proy);
+      const r = await apiPost('/ficha-tecnica', { ...proy, distribucion_estructurada: distribucion });
       setFicha(s => ({ ...s, status: 'success', msg: `Ficha generada · ${r.referencia}`, md: r.fichaMarkdown, ref: r.referencia }));
     } catch (err) {
       setFicha(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [proy]);
+  }, [proy, distribucion]);
 
   // ── Presentación ──
   const genPres = useCallback(async () => {
     setPres(s => ({ ...s, status: 'loading', msg: 'Generando presentación…' }));
     try {
-      const r = await apiPost('/presentacion', proy);
+      const r = await apiPost('/presentacion', { ...proy, distribucion_estructurada: distribucion });
       setPres(s => ({ ...s, status: 'success', msg: 'Presentación lista', html: r.presentacionHtml }));
     } catch (err) {
       setPres(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [proy]);
+  }, [proy, distribucion]);
 
   // ── Instalaciones ──
   const genInstalaciones = useCallback(async () => {
@@ -638,6 +761,7 @@ export default function EstudioCocinas({ state, setState }) {
         descripcion: proy.descripcion,
         estilo: proy.estilo,
         nombre_cliente: proy.nombre_cliente,
+        distribucion_estructurada: distribucion,
       });
       setInst(s => ({ ...s, status: 'success', msg: 'Plan de instalaciones generado', data: r }));
     } catch (err) {
@@ -699,7 +823,7 @@ export default function EstudioCocinas({ state, setState }) {
     { id: 'galeria', label: 'Galería',     icon: <FolderOpen size={14}/> },
   ];
 
-  const ESTILOS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Contemporáneo'];
+  const ESTILOS = ['Moderno', 'Nórdico', 'Minimalista', 'Industrial', 'Clásico', 'Rústico', 'Contemporáneo', 'Japandi', 'Mediterráneo', 'High-Tech', 'Provenzal', 'Wabi-Sabi'];
 
   return (
     <div className={`flex flex-col h-full overflow-hidden transition-colors duration-200 ${t.root}`}>
@@ -711,7 +835,6 @@ export default function EstudioCocinas({ state, setState }) {
         </div>
         <div className="flex-1">
           <h1 className={`text-xs font-black uppercase tracking-widest ${t.title}`}>3D Estudio</h1>
-          <p className={`text-[9px] font-medium ${t.motorText}`}>Motor: LuiggiAI</p>
         </div>
         <ThemeSelector mode={themeMode} onChange={handleThemeChange} t={t} />
       </div>
@@ -722,21 +845,86 @@ export default function EstudioCocinas({ state, setState }) {
         <div className={`w-56 flex-shrink-0 p-4 flex flex-col gap-3 overflow-y-auto scrollbar-thin transition-colors duration-200 ${t.sidebar}`} style={{overflowY:'auto', overflowX:'hidden'}}>
           <p className={`text-[9px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Proyecto</p>
 
-          {[
-            { key: 'nombre_cliente', label: 'Cliente',    ph: 'Nombre del cliente',        type: 'input' },
-            { key: 'medidas',        label: 'Medidas',    ph: '400x350cm isla 200x100cm',  type: 'input' },
-            { key: 'presupuesto',    label: 'Presupuesto', ph: 'Ej: 18.000€',              type: 'input' },
-          ].map(f => (
-            <div key={f.key}>
-              <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>{f.label}</label>
-              <input
-                className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
-                placeholder={f.ph}
-                value={proy[f.key]}
-                onChange={e => setProy(p => ({ ...p, [f.key]: e.target.value }))}
-              />
+          {/* Cliente */}
+          <div>
+            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Cliente</label>
+            <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
+              placeholder="Nombre del cliente" value={proy.nombre_cliente}
+              onChange={e => setProy(p => ({ ...p, nombre_cliente: e.target.value }))} />
+          </div>
+
+          {/* Presupuesto */}
+          <div>
+            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Presupuesto</label>
+            <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
+              placeholder="Ej: 18.000€" value={proy.presupuesto}
+              onChange={e => setProy(p => ({ ...p, presupuesto: e.target.value }))} />
+          </div>
+
+          {/* Distribución */}
+          <p className={`text-[9px] font-black uppercase tracking-widest mt-2 ${t.sidebarSect}`}>Distribución</p>
+          <div className="grid grid-cols-3 gap-1">
+            {DISTRIBUCIONES.map(d => (
+              <button key={d.id} onClick={() => handleDistChange(d.id)}
+                className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg text-[8px] font-bold transition-all ${
+                  distribucion.tipo === d.id ? 'bg-amber-600 text-white' : `${t.input} hover:opacity-80`
+                }`}>
+                <span className="text-sm leading-none whitespace-pre">{d.icon}</span>
+                <span>{d.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Medidas por pared */}
+          <div className="flex flex-col gap-1.5">
+            {distribucion.paredes.map((p, i) => (
+              <div key={i} className={`rounded-lg p-1.5 ${t.input}`}>
+                <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>{p.nombre}</p>
+                <div className="flex gap-1 mt-1">
+                  <input type="number" className={`w-full rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                    value={p.ancho} onChange={e => updatePared(i, 'ancho', e.target.value)} />
+                  <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
+                </div>
+              </div>
+            ))}
+            {distribucion.tipo === 'isla' && (
+              <div className={`rounded-lg p-1.5 ${t.input}`}>
+                <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>Isla central</p>
+                <div className="flex gap-1 mt-1">
+                  <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                    placeholder="Ancho" value={distribucion.isla.ancho} onChange={e => updateIsla('ancho', e.target.value)} />
+                  <span className={`text-[8px] self-center ${t.sidebarLabel}`}>×</span>
+                  <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                    placeholder="Largo" value={distribucion.isla.largo} onChange={e => updateIsla('largo', e.target.value)} />
+                  <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Elementos */}
+          <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${t.sidebarSect}`}>Elementos</p>
+          <div className="flex flex-wrap gap-1">
+            {ELEMENTOS_COCINA.map(e => (
+              <button key={e.id} onClick={() => addElemento(e.id, 0)}
+                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${t.input} hover:opacity-80`}
+                title={`Añadir ${e.label} (${e.ancho_default}cm)`}>
+                <span>{e.emoji}</span>
+              </button>
+            ))}
+          </div>
+          {distribucion.elementos.length > 0 && (
+            <div className="flex flex-col gap-0.5">
+              {distribucion.elementos.map((el, i) => (
+                <div key={i} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] ${t.input}`}>
+                  <span>{el.emoji}</span>
+                  <span className="flex-1 truncate">{el.label}</span>
+                  <span className={`${t.sidebarLabel}`}>{el.ancho}cm</span>
+                  <button onClick={() => removeElemento(i)} className="text-red-400 hover:text-red-300 text-[10px]">×</button>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
 
           <div>
             <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Estilo</label>
