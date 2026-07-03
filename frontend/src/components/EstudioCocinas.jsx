@@ -284,10 +284,6 @@ export default function EstudioCocinas() {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  // Cargar galería al entrar en la pestaña
-  useEffect(() => {
-    if (tab === 'galeria') loadGaleria(1);
-  }, [tab, loadGaleria]);
 
   const handleThemeChange = useCallback(mode => {
     setThemeMode(mode);
@@ -366,6 +362,11 @@ export default function EstudioCocinas() {
       if (res.ok) loadGaleria(galeria.page);
     } catch {}
   }, [galeria.page, loadGaleria]);
+
+  // Cargar galería al entrar en la pestaña
+  useEffect(() => {
+    if (tab === 'galeria') loadGaleria(1);
+  }, [tab, loadGaleria]);
 
   // ── Estilo rápido ──
   const applyStyle = useCallback(style => {
