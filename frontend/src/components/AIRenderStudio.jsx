@@ -189,6 +189,13 @@ const MATERIALS = {
     { id: 'aerial', label: 'Cenital elevada', prompt: 'vista ligeramente cenital y elevada, tipo axonométrica, para mostrar la distribución' },
     { id: 'detail', label: 'Detalle zona trabajo', prompt: 'plano de detalle de la zona de trabajo (encimera, fregadero y placa)' },
   ],
+  lighting: [
+    { id: 'natural', label: 'Natural (día)', prompt: 'luz natural de día entrando por las ventanas, cálida y equilibrada' },
+    { id: 'sunset', label: 'Atardecer cálido', prompt: 'luz cálida de atardecer, tonos dorados, ambiente acogedor' },
+    { id: 'neutral', label: 'Neutra estudio', prompt: 'iluminación neutra de estudio/catálogo, sin sombras duras' },
+    { id: 'night', label: 'Nocturna', prompt: 'ambiente nocturno con la iluminación de la cocina encendida (luces LED bajo altos y focos)' },
+    { id: 'bright', label: 'Muy iluminada', prompt: 'estancia muy luminosa y clara, luz difusa abundante' },
+  ],
 };
 
 // Cabecera de paso numerada para ordenar la petición de datos del render.
@@ -241,6 +248,7 @@ export default function AIRenderStudio({ state }) {
     handles: 'bar_black',
     floor: 'wood_oak',
     style: 'photorealistic',
+    lighting: 'natural',
     additional_details: '',
   });
 
@@ -308,8 +316,12 @@ export default function AIRenderStudio({ state }) {
     const c = MATERIALS.cameras.find(x => x.id === camera);
     return c ? `Punto de vista: ${c.prompt}. ` : '';
   };
+  const luzTexto = () => {
+    const l = MATERIALS.lighting.find(x => x.id === params.lighting);
+    return l ? `Iluminación: ${l.prompt}. ` : '';
+  };
   const conMedidas = (desc) => {
-    const extra = `${medidasTexto()}${electrosTexto()}${camaraTexto()}`.trim();
+    const extra = `${medidasTexto()}${electrosTexto()}${camaraTexto()}${luzTexto()}`.trim();
     return extra ? `${extra}\n${desc}` : desc;
   };
   const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -786,6 +798,17 @@ export default function AIRenderStudio({ state }) {
                   ))}
                 </div>
               </div>
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Iluminación</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {MATERIALS.lighting.map(l => (
+                    <button key={l.id} onClick={() => setParams(p => ({ ...p, lighting: l.id }))}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${params.lighting === l.id ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* PASO 3 — Medidas de la estancia (opcional, para escala real) */}
               <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
@@ -1144,20 +1167,24 @@ export default function AIRenderStudio({ state }) {
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Historial reciente</h4>
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {renderHistory.map((item, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setRenderResult(item)}
-                    className="shrink-0 w-16 h-16 bg-slate-200 rounded-xl overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all"
-                    title={item.description}
-                  >
-                    {item?.result?.images?.[0] ? (
-                      <img src={assetSrc(item.result.images[0])} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400">
-                        <Image size={16} />
-                      </div>
-                    )}
-                  </button>
+                  <div key={i} className="relative shrink-0 group">
+                    <button
+                      onClick={() => setRenderResult(item)}
+                      className="w-16 h-16 bg-slate-200 rounded-xl overflow-hidden hover:ring-2 hover:ring-indigo-300 transition-all block"
+                      title={item.description}
+                    >
+                      {item?.result?.images?.[0] ? (
+                        <img src={assetSrc(item.result.images[0])} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                          <Image size={16} />
+                        </div>
+                      )}
+                    </button>
+                    <button onClick={() => setRenderHistory(prev => prev.filter((_, idx) => idx !== i))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Quitar del historial"><X size={11} /></button>
+                  </div>
                 ))}
               </div>
             </div>
