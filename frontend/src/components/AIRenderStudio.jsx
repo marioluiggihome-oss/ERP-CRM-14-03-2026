@@ -638,8 +638,8 @@ export default function AIRenderStudio({ state }) {
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 px-8 py-5 bg-white border-b border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between">
+      <div className="shrink-0 px-4 sm:px-8 py-4 sm:py-5 bg-white border-b border-slate-200 shadow-sm">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
               <Wand2 size={20} className="text-white" />
@@ -686,9 +686,9 @@ export default function AIRenderStudio({ state }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Panel izquierdo - Entrada */}
-        <div className="w-[420px] shrink-0 border-r border-slate-200 bg-white flex flex-col overflow-y-auto">
+        <div className="w-full lg:w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col lg:overflow-y-auto">
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
             <div className="flex-1 flex flex-col p-6 gap-5">
@@ -1025,7 +1025,7 @@ export default function AIRenderStudio({ state }) {
         </div>
 
         {/* Panel derecho - Resultado */}
-        <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        <div className="flex-1 flex flex-col p-4 sm:p-6 min-h-[60vh] lg:min-h-0 lg:overflow-hidden">
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
               <span className="text-red-500 font-bold">Error:</span> {error}
