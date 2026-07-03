@@ -393,6 +393,17 @@ export default function EstudioCocinas({ state, setState }) {
 
   const [selectedStyle, setSelectedStyle] = useState(null);
 
+  // ── Orden del sidebar (drag & drop, persistido en localStorage) ──
+  const DEFAULT_SIDEBAR_ORDER = ['cliente', 'presupuesto', 'medidas', 'distribucion', 'estilo', 'descripcion', 'notas'];
+  const [sidebarOrder, setSidebarOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('estudio_sidebar_order');
+      if (saved) { const arr = JSON.parse(saved); if (Array.isArray(arr) && arr.length === 7) return arr; }
+    } catch(e) {}
+    return DEFAULT_SIDEBAR_ORDER;
+  });
+  const [dragField, setDragField] = useState(null);
+
   // ── Distribución estructurada (null = modo texto libre) ──
   const [distribucion, setDistribucion] = useState(null);
 
@@ -845,126 +856,149 @@ export default function EstudioCocinas({ state, setState }) {
         <div className={`w-56 flex-shrink-0 p-4 flex flex-col gap-3 overflow-y-auto scrollbar-thin transition-colors duration-200 ${t.sidebar}`} style={{overflowY:'auto', overflowX:'hidden'}}>
           <p className={`text-[9px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Proyecto</p>
 
-          {/* Cliente */}
-          <div>
-            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Cliente</label>
-            <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
-              placeholder="Nombre del cliente" value={proy.nombre_cliente}
-              onChange={e => setProy(p => ({ ...p, nombre_cliente: e.target.value }))} />
-          </div>
+          {/* Campos reordenables */}
+          {sidebarOrder.map((fieldId) => {
+            const dragHandleProps = {
+              draggable: true,
+              onDragStart: (e) => { e.dataTransfer.setData('text/plain', fieldId); setDragField(fieldId); },
+              onDragEnd: () => setDragField(null),
+              onDragOver: (e) => { e.preventDefault(); },
+              onDrop: (e) => {
+                e.preventDefault();
+                const from = e.dataTransfer.getData('text/plain');
+                if (from === fieldId) return;
+                setSidebarOrder(prev => {
+                  const arr = [...prev];
+                  const fi = arr.indexOf(from), ti = arr.indexOf(fieldId);
+                  arr.splice(fi, 1); arr.splice(ti, 0, from);
+                  localStorage.setItem('estudio_sidebar_order', JSON.stringify(arr));
+                  return arr;
+                });
+                setDragField(null);
+              },
+            };
+            const dragStyle = dragField === fieldId ? { opacity: 0.4 } : {};
+            const handleClass = `cursor-grab active:cursor-grabbing text-[8px] ${t.sidebarLabel} select-none`;
 
-          {/* Presupuesto */}
-          <div>
-            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Presupuesto</label>
-            <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
-              placeholder="Ej: 18.000€" value={proy.presupuesto}
-              onChange={e => setProy(p => ({ ...p, presupuesto: e.target.value }))} />
-          </div>
-
-          {/* Medidas - campo texto libre */}
-          <div>
-            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Medidas</label>
-            <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
-              placeholder="Ej: 400x350cm isla 200x100cm" value={proy.medidas}
-              onChange={e => setProy(p => ({ ...p, medidas: e.target.value }))} />
-          </div>
-
-          {/* Distribución (opcional) */}
-          <p className={`text-[9px] font-black uppercase tracking-widest mt-2 ${t.sidebarSect}`}>Distribución <span className={`font-normal ${t.sidebarLabel}`}>(opcional)</span></p>
-          <div className="grid grid-cols-3 gap-1">
-            {DISTRIBUCIONES.map(d => (
-              <button key={d.id} onClick={() => handleDistChange(d.id)}
-                className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg text-[8px] font-bold transition-all ${
-                  distribucion && distribucion.tipo === d.id ? 'bg-amber-600 text-white' : `${t.input} hover:opacity-80`
-                }`}>
-                <span className="text-sm leading-none whitespace-pre">{d.icon}</span>
-                <span>{d.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Medidas por pared - solo si hay distribución seleccionada */}
-          {distribucion && (
-            <>
-              <div className="flex flex-col gap-1.5">
-                {distribucion.paredes.map((p, i) => (
-                  <div key={i} className={`rounded-lg p-1.5 ${t.input}`}>
-                    <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>{p.nombre}</p>
-                    <div className="flex gap-1 mt-1">
-                      <input type="number" className={`w-full rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
-                        value={p.ancho} onChange={e => updatePared(i, 'ancho', e.target.value)} />
-                      <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
-                    </div>
+            switch (fieldId) {
+              case 'cliente':
+                return <div key={fieldId} {...dragHandleProps} style={dragStyle}>
+                  <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}><span className={handleClass}>≡ </span>Cliente</label>
+                  <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
+                    placeholder="Nombre del cliente" value={proy.nombre_cliente}
+                    onChange={e => setProy(p => ({ ...p, nombre_cliente: e.target.value }))} />
+                </div>;
+              case 'presupuesto':
+                return <div key={fieldId} {...dragHandleProps} style={dragStyle}>
+                  <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}><span className={handleClass}>≡ </span>Presupuesto</label>
+                  <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
+                    placeholder="Ej: 18.000€" value={proy.presupuesto}
+                    onChange={e => setProy(p => ({ ...p, presupuesto: e.target.value }))} />
+                </div>;
+              case 'medidas':
+                return <div key={fieldId} {...dragHandleProps} style={dragStyle}>
+                  <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}><span className={handleClass}>≡ </span>Medidas</label>
+                  <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
+                    placeholder="Ej: 400x350cm isla 200x100cm" value={proy.medidas}
+                    onChange={e => setProy(p => ({ ...p, medidas: e.target.value }))} />
+                </div>;
+              case 'distribucion':
+                return <div key={fieldId} {...dragHandleProps} style={dragStyle}>
+                  <p className={`text-[9px] font-black uppercase tracking-widest mt-2 ${t.sidebarSect}`}><span className={handleClass}>≡ </span>Distribución <span className={`font-normal ${t.sidebarLabel}`}>(opcional)</span></p>
+                  <div className="grid grid-cols-3 gap-1">
+                    {DISTRIBUCIONES.map(d => (
+                      <button key={d.id} onClick={() => handleDistChange(d.id)}
+                        className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg text-[8px] font-bold transition-all ${
+                          distribucion && distribucion.tipo === d.id ? 'bg-amber-600 text-white' : `${t.input} hover:opacity-80`
+                        }`}>
+                        <span className="text-sm leading-none whitespace-pre">{d.icon}</span>
+                        <span>{d.label}</span>
+                      </button>
+                    ))}
                   </div>
-                ))}
-                {distribucion.tipo === 'isla' && (
-                  <div className={`rounded-lg p-1.5 ${t.input}`}>
-                    <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>Isla central</p>
-                    <div className="flex gap-1 mt-1">
-                      <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
-                        placeholder="Ancho" value={distribucion.isla.ancho} onChange={e => updateIsla('ancho', e.target.value)} />
-                      <span className={`text-[8px] self-center ${t.sidebarLabel}`}>×</span>
-                      <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
-                        placeholder="Largo" value={distribucion.isla.largo} onChange={e => updateIsla('largo', e.target.value)} />
-                      <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Elementos */}
-              <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${t.sidebarSect}`}>Elementos</p>
-              <div className="flex flex-wrap gap-1">
-                {ELEMENTOS_COCINA.map(e => (
-                  <button key={e.id} onClick={() => addElemento(e.id, 0)}
-                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${t.input} hover:opacity-80`}
-                    title={`Añadir ${e.label} (${e.ancho_default}cm)`}>
-                    <span>{e.emoji}</span>
-                  </button>
-                ))}
-              </div>
-              {distribucion.elementos.length > 0 && (
-                <div className="flex flex-col gap-0.5">
-                  {distribucion.elementos.map((el, i) => (
-                    <div key={i} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] ${t.input}`}>
-                      <span>{el.emoji}</span>
-                      <span className="flex-1 truncate">{el.label}</span>
-                      <span className={`${t.sidebarLabel}`}>{el.ancho}cm</span>
-                      <button onClick={() => removeElemento(i)} className="text-red-400 hover:text-red-300 text-[10px]">×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          <div>
-            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Estilo</label>
-            <select
-              className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.select}`}
-              value={proy.estilo}
-              onChange={e => setProy(p => ({ ...p, estilo: e.target.value }))}>
-              {ESTILOS.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Descripción</label>
-            <textarea
-              className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none resize-none transition-colors duration-200 ${t.input}`}
-              rows={6} placeholder="Describe la cocina o dicta por voz…"
-              value={proy.descripcion}
-              onChange={e => setProy(p => ({ ...p, descripcion: e.target.value }))} />
-          </div>
-
-          <div>
-            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Materiales / Notas</label>
-            <textarea
-              className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none resize-none transition-colors duration-200 ${t.input}`}
-              rows={4} placeholder="Encimera silestone, frentes lacados…"
-              value={proy.notas}
-              onChange={e => setProy(p => ({ ...p, notas: e.target.value }))} />
-          </div>
+                  {distribucion && (
+                    <>
+                      <div className="flex flex-col gap-1.5 mt-2">
+                        {distribucion.paredes.map((p, i) => (
+                          <div key={i} className={`rounded-lg p-1.5 ${t.input}`}>
+                            <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>{p.nombre}</p>
+                            <div className="flex gap-1 mt-1">
+                              <input type="number" className={`w-full rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                                value={p.ancho} onChange={e => updatePared(i, 'ancho', e.target.value)} />
+                              <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
+                            </div>
+                          </div>
+                        ))}
+                        {distribucion.tipo === 'isla' && (
+                          <div className={`rounded-lg p-1.5 ${t.input}`}>
+                            <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>Isla central</p>
+                            <div className="flex gap-1 mt-1">
+                              <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                                placeholder="Ancho" value={distribucion.isla.ancho} onChange={e => updateIsla('ancho', e.target.value)} />
+                              <span className={`text-[8px] self-center ${t.sidebarLabel}`}>×</span>
+                              <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                                placeholder="Largo" value={distribucion.isla.largo} onChange={e => updateIsla('largo', e.target.value)} />
+                              <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${t.sidebarSect}`}>Elementos</p>
+                      <div className="flex flex-wrap gap-1">
+                        {ELEMENTOS_COCINA.map(e => (
+                          <button key={e.id} onClick={() => addElemento(e.id, 0)}
+                            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${t.input} hover:opacity-80`}
+                            title={`Añadir ${e.label} (${e.ancho_default}cm)`}>
+                            <span>{e.emoji}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {distribucion.elementos.length > 0 && (
+                        <div className="flex flex-col gap-0.5">
+                          {distribucion.elementos.map((el, i) => (
+                            <div key={i} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] ${t.input}`}>
+                              <span>{el.emoji}</span>
+                              <span className="flex-1 truncate">{el.label}</span>
+                              <span className={`${t.sidebarLabel}`}>{el.ancho}cm</span>
+                              <button onClick={() => removeElemento(i)} className="text-red-400 hover:text-red-300 text-[10px]">×</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>;
+              case 'estilo':
+                return <div key={fieldId} {...dragHandleProps} style={dragStyle}>
+                  <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}><span className={handleClass}>≡ </span>Estilo</label>
+                  <select
+                    className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.select}`}
+                    value={proy.estilo}
+                    onChange={e => setProy(p => ({ ...p, estilo: e.target.value }))}>
+                    {ESTILOS.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>;
+              case 'descripcion':
+                return <div key={fieldId} {...dragHandleProps} style={dragStyle}>
+                  <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}><span className={handleClass}>≡ </span>Descripción</label>
+                  <textarea
+                    className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none resize-none transition-colors duration-200 ${t.input}`}
+                    rows={6} placeholder="Describe la cocina o dicta por voz…"
+                    value={proy.descripcion}
+                    onChange={e => setProy(p => ({ ...p, descripcion: e.target.value }))} />
+                </div>;
+              case 'notas':
+                return <div key={fieldId} {...dragHandleProps} style={dragStyle}>
+                  <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}><span className={handleClass}>≡ </span>Materiales / Notas</label>
+                  <textarea
+                    className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none resize-none transition-colors duration-200 ${t.input}`}
+                    rows={4} placeholder="Encimera silestone, frentes lacados…"
+                    value={proy.notas}
+                    onChange={e => setProy(p => ({ ...p, notas: e.target.value }))} />
+                </div>;
+              default: return null;
+            }
+          })}
 
           <button
             onClick={rec ? stopRec : startRec}
