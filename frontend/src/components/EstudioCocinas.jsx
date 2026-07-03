@@ -192,6 +192,7 @@ async function apiPost(endpoint, body) {
 /** Añade el token JWT como query param a URLs del proxy de assets (las <img> no envían cabeceras). */
 function imgSrc(url) {
   if (!url) return '';
+  if (url.startsWith('blob:')) return url; // ya es un blob URL
   const t = getToken();
   // Si la URL es relativa (/api/...), prefijar con el backend URL
   let fullUrl = url;
@@ -200,6 +201,20 @@ function imgSrc(url) {
   }
   if (!t) return fullUrl;
   return `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}t=${encodeURIComponent(t)}`;
+}
+
+/** Descarga una imagen del proxy como blob URL para evitar problemas CORS en <img> */
+async function fetchAsBlob(url) {
+  try {
+    const fullUrl = imgSrc(url);
+    if (!fullUrl) return null;
+    const resp = await fetch(fullUrl);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
 }
 
 async function apiGet(endpoint) {
@@ -468,7 +483,9 @@ export default function EstudioCocinas() {
           if (estado.status === 'stopped') {
             // Obtener resultado
             const resultado = await apiGet(`/tarea/${taskId}/resultado`);
-            setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: resultado.imageUrl }));
+            // Convertir a blob URL para evitar problemas CORS con <img> cross-origin
+            const blobUrl = await fetchAsBlob(resultado.imageUrl);
+            setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: blobUrl || imgSrc(resultado.imageUrl) }));
           } else if (estado.status === 'error') {
             setRender(s => ({ ...s, status: 'error', msg: estado.error || 'Error al generar el render' }));
           } else {
@@ -490,7 +507,8 @@ export default function EstudioCocinas() {
     setRender(s => ({ ...s, status: 'loading', msg: 'Editando render…' }));
     try {
       const r = await apiPost('/render/editar', { render_url: render.imageUrl, instruccion: render.editTxt, modo_async: false });
-      setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: r.imageUrl, editMode: false, editTxt: '' }));
+      const blobUrl = await fetchAsBlob(r.imageUrl);
+      setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: blobUrl || imgSrc(r.imageUrl), editMode: false, editTxt: '' }));
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }

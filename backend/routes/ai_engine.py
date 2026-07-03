@@ -431,7 +431,10 @@ async def proxy_asset(
     return Response(
         content=resp.content,
         media_type=content_type,
-        headers={"Cache-Control": "private, max-age=3600"},
+        headers={
+            "Cache-Control": "private, max-age=3600",
+            "Access-Control-Allow-Origin": "*",
+        },
     )
 
 
