@@ -393,15 +393,15 @@ export default function EstudioCocinas({ state, setState }) {
 
   const [selectedStyle, setSelectedStyle] = useState(null);
 
-  // ── Distribución estructurada ──
-  const [distribucion, setDistribucion] = useState({
-    tipo: 'lineal',
-    paredes: [{ nombre: 'Pared principal', ancho: 400, alto: 240 }],
-    isla: { ancho: 0, largo: 0 },
-    elementos: [], // [{id, pared_idx, posicion_cm}]
-  });
+  // ── Distribución estructurada (null = modo texto libre) ──
+  const [distribucion, setDistribucion] = useState(null);
 
   const handleDistChange = useCallback((tipo) => {
+    // Si pulsas el mismo tipo, deselecciona y vuelve a modo texto libre
+    if (distribucion && distribucion.tipo === tipo) {
+      setDistribucion(null);
+      return;
+    }
     const dist = DISTRIBUCIONES.find(d => d.id === tipo);
     let paredes = [];
     switch (tipo) {
@@ -418,7 +418,7 @@ export default function EstudioCocinas({ state, setState }) {
     // Actualizar medidas en formato texto para compatibilidad
     const medStr = paredes.map(p => `${p.nombre}: ${p.ancho}cm`).join(' | ') + (isla.ancho > 0 ? ` | Isla: ${isla.ancho}x${isla.largo}cm` : '');
     setProy(p => ({ ...p, medidas: medStr }));
-  }, []);
+  }, [distribucion]);
 
   const updatePared = useCallback((idx, field, value) => {
     setDistribucion(d => {
@@ -861,13 +861,21 @@ export default function EstudioCocinas({ state, setState }) {
               onChange={e => setProy(p => ({ ...p, presupuesto: e.target.value }))} />
           </div>
 
-          {/* Distribución */}
-          <p className={`text-[9px] font-black uppercase tracking-widest mt-2 ${t.sidebarSect}`}>Distribución</p>
+          {/* Medidas - campo texto libre */}
+          <div>
+            <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}>Medidas</label>
+            <input className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.input}`}
+              placeholder="Ej: 400x350cm isla 200x100cm" value={proy.medidas}
+              onChange={e => setProy(p => ({ ...p, medidas: e.target.value }))} />
+          </div>
+
+          {/* Distribución (opcional) */}
+          <p className={`text-[9px] font-black uppercase tracking-widest mt-2 ${t.sidebarSect}`}>Distribución <span className={`font-normal ${t.sidebarLabel}`}>(opcional)</span></p>
           <div className="grid grid-cols-3 gap-1">
             {DISTRIBUCIONES.map(d => (
               <button key={d.id} onClick={() => handleDistChange(d.id)}
                 className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg text-[8px] font-bold transition-all ${
-                  distribucion.tipo === d.id ? 'bg-amber-600 text-white' : `${t.input} hover:opacity-80`
+                  distribucion && distribucion.tipo === d.id ? 'bg-amber-600 text-white' : `${t.input} hover:opacity-80`
                 }`}>
                 <span className="text-sm leading-none whitespace-pre">{d.icon}</span>
                 <span>{d.label}</span>
@@ -875,55 +883,59 @@ export default function EstudioCocinas({ state, setState }) {
             ))}
           </div>
 
-          {/* Medidas por pared */}
-          <div className="flex flex-col gap-1.5">
-            {distribucion.paredes.map((p, i) => (
-              <div key={i} className={`rounded-lg p-1.5 ${t.input}`}>
-                <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>{p.nombre}</p>
-                <div className="flex gap-1 mt-1">
-                  <input type="number" className={`w-full rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
-                    value={p.ancho} onChange={e => updatePared(i, 'ancho', e.target.value)} />
-                  <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
-                </div>
+          {/* Medidas por pared - solo si hay distribución seleccionada */}
+          {distribucion && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                {distribucion.paredes.map((p, i) => (
+                  <div key={i} className={`rounded-lg p-1.5 ${t.input}`}>
+                    <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>{p.nombre}</p>
+                    <div className="flex gap-1 mt-1">
+                      <input type="number" className={`w-full rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                        value={p.ancho} onChange={e => updatePared(i, 'ancho', e.target.value)} />
+                      <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
+                    </div>
+                  </div>
+                ))}
+                {distribucion.tipo === 'isla' && (
+                  <div className={`rounded-lg p-1.5 ${t.input}`}>
+                    <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>Isla central</p>
+                    <div className="flex gap-1 mt-1">
+                      <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                        placeholder="Ancho" value={distribucion.isla.ancho} onChange={e => updateIsla('ancho', e.target.value)} />
+                      <span className={`text-[8px] self-center ${t.sidebarLabel}`}>×</span>
+                      <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
+                        placeholder="Largo" value={distribucion.isla.largo} onChange={e => updateIsla('largo', e.target.value)} />
+                      <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-            {distribucion.tipo === 'isla' && (
-              <div className={`rounded-lg p-1.5 ${t.input}`}>
-                <p className={`text-[8px] font-bold ${t.sidebarLabel}`}>Isla central</p>
-                <div className="flex gap-1 mt-1">
-                  <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
-                    placeholder="Ancho" value={distribucion.isla.ancho} onChange={e => updateIsla('ancho', e.target.value)} />
-                  <span className={`text-[8px] self-center ${t.sidebarLabel}`}>×</span>
-                  <input type="number" className={`w-1/2 rounded px-1.5 py-0.5 text-[10px] ${t.input}`}
-                    placeholder="Largo" value={distribucion.isla.largo} onChange={e => updateIsla('largo', e.target.value)} />
-                  <span className={`text-[8px] self-center ${t.sidebarLabel}`}>cm</span>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* Elementos */}
-          <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${t.sidebarSect}`}>Elementos</p>
-          <div className="flex flex-wrap gap-1">
-            {ELEMENTOS_COCINA.map(e => (
-              <button key={e.id} onClick={() => addElemento(e.id, 0)}
-                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${t.input} hover:opacity-80`}
-                title={`Añadir ${e.label} (${e.ancho_default}cm)`}>
-                <span>{e.emoji}</span>
-              </button>
-            ))}
-          </div>
-          {distribucion.elementos.length > 0 && (
-            <div className="flex flex-col gap-0.5">
-              {distribucion.elementos.map((el, i) => (
-                <div key={i} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] ${t.input}`}>
-                  <span>{el.emoji}</span>
-                  <span className="flex-1 truncate">{el.label}</span>
-                  <span className={`${t.sidebarLabel}`}>{el.ancho}cm</span>
-                  <button onClick={() => removeElemento(i)} className="text-red-400 hover:text-red-300 text-[10px]">×</button>
+              {/* Elementos */}
+              <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${t.sidebarSect}`}>Elementos</p>
+              <div className="flex flex-wrap gap-1">
+                {ELEMENTOS_COCINA.map(e => (
+                  <button key={e.id} onClick={() => addElemento(e.id, 0)}
+                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${t.input} hover:opacity-80`}
+                    title={`Añadir ${e.label} (${e.ancho_default}cm)`}>
+                    <span>{e.emoji}</span>
+                  </button>
+                ))}
+              </div>
+              {distribucion.elementos.length > 0 && (
+                <div className="flex flex-col gap-0.5">
+                  {distribucion.elementos.map((el, i) => (
+                    <div key={i} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] ${t.input}`}>
+                      <span>{el.emoji}</span>
+                      <span className="flex-1 truncate">{el.label}</span>
+                      <span className={`${t.sidebarLabel}`}>{el.ancho}cm</span>
+                      <button onClick={() => removeElemento(i)} className="text-red-400 hover:text-red-300 text-[10px]">×</button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
 
           <div>
