@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader, ChevronUp, ChevronDown, GripVertical, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader, ChevronUp, ChevronDown, GripVertical, AlignLeft, AlignCenter, AlignRight, Move, RotateCcw } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -44,6 +44,31 @@ const ResumenCocinas = ({ state }) => {
   const [align, setAlign] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('resumen_align')) || 'center');
   const alignCls = align === 'left' ? 'mr-auto ml-0' : align === 'right' ? 'ml-auto mr-0' : 'mx-auto';
   const setAlignPersist = (a) => { setAlign(a); try { localStorage.setItem('resumen_align', a); } catch (_) {} };
+  // Desplazamiento horizontal fino (arrastrar), en píxeles, recordado.
+  const [offsetX, setOffsetX] = useState(() => Number((typeof localStorage !== 'undefined' && localStorage.getItem('resumen_offsetX')) || 0) || 0);
+  const dragPos = useRef(null);
+  const startDrag = (e) => {
+    const cx = e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? 0;
+    dragPos.current = { startX: cx, startOffset: offsetX };
+    const onMove = (ev) => {
+      if (!dragPos.current) return;
+      const x = ev.clientX ?? (ev.touches && ev.touches[0]?.clientX) ?? 0;
+      const next = Math.max(-600, Math.min(600, dragPos.current.startOffset + (x - dragPos.current.startX)));
+      setOffsetX(next);
+    };
+    const onUp = () => {
+      dragPos.current = null;
+      try { localStorage.setItem('resumen_offsetX', String(offsetXRef.current)); } catch (_) {}
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp);
+    };
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onUp);
+  };
+  const offsetXRef = useRef(offsetX);
+  offsetXRef.current = offsetX;
+  const resetPos = () => { setOffsetX(0); setAlignPersist('center'); try { localStorage.setItem('resumen_offsetX', '0'); } catch (_) {} };
+  const dragStyle = offsetX ? { transform: `translateX(${offsetX}px)` } : undefined;
   const uidUser = state?.currentUser?.id || 'anonymous';
   // Origen del arrastre (drag & drop). {kind:'linea'|'pago', cid, id}
   const dragRef = useRef(null);
@@ -283,7 +308,7 @@ const ResumenCocinas = ({ state }) => {
 
   return (
     <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
-      <div className={`w-full max-w-4xl ${alignCls} flex items-center justify-between mb-1 gap-3 flex-wrap`}>
+      <div style={dragStyle} className={`w-full max-w-4xl ${alignCls} flex items-center justify-between mb-1 gap-3 flex-wrap`}>
         <h1 className="text-2xl font-black text-slate-800 ml-16 flex items-center gap-2"><Layers size={22} /> Resumen Totales</h1>
         <div className="flex items-center gap-2 flex-wrap">
           <input value={docName} onChange={e => setDocName(e.target.value)} placeholder="Nombre del resumen…"
@@ -329,17 +354,23 @@ const ResumenCocinas = ({ state }) => {
           </div>
         </div>
       )}
-      <div className={`w-full max-w-4xl ${alignCls} flex items-center gap-3 mb-5`}>
+      <div style={dragStyle} className={`w-full max-w-4xl ${alignCls} flex items-center gap-3 mb-5`}>
         <p className="text-sm text-slate-500 flex-1">Junta partidas por cocina, suma totales y forma de pago, y preséntalo con tu logo.</p>
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 shrink-0" title="Colocar el contenido a la izquierda, centro o derecha">
           {[['left', AlignLeft, 'Izquierda'], ['center', AlignCenter, 'Centro'], ['right', AlignRight, 'Derecha']].map(([a, Icon, lbl]) => (
             <button key={a} onClick={() => setAlignPersist(a)} title={lbl}
               className={`p-1.5 rounded-md ${align === a ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}><Icon size={15} /></button>
           ))}
+          <span className="w-px h-5 bg-slate-200 mx-0.5" />
+          <button onMouseDown={startDrag} onTouchStart={startDrag} title="Arrastra para mover el contenido a un lado u otro"
+            className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 cursor-grab active:cursor-grabbing"><Move size={15} /></button>
+          {(offsetX !== 0 || align !== 'center') && (
+            <button onClick={resetPos} title="Volver al centro" className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100"><RotateCcw size={14} /></button>
+          )}
         </div>
       </div>
 
-      <div className={`bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-4xl ${alignCls} space-y-6`}>
+      <div style={dragStyle} className={`bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-4xl ${alignCls} space-y-6`}>
         {/* Cliente + fecha */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
