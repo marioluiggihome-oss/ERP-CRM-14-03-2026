@@ -117,6 +117,7 @@ class RenderInput(BaseModel):
     distribucion: Optional[str] = Field(default="", description="Distribución (L, U, isla...)")
     croquis_b64: Optional[str] = Field(default=None, description="Croquis en base64 (opcional)")
     modo_async: Optional[bool] = Field(default=False, description="Si True devuelve task_id sin esperar")
+    free_design: Optional[bool] = Field(default=False, description="Si True, la IA diseña libremente sin respetar el croquis")
 
 class EditarRenderInput(BaseModel):
     render_url: Optional[str] = Field(default=None, description="URL del render previo")
@@ -194,7 +195,8 @@ async def generar_render(payload: RenderInput):
     tiene_croquis = bool(payload.croquis_b64)
 
     instrucciones_croquis = ""
-    if tiene_croquis:
+    es_libre = getattr(payload, 'free_design', False)
+    if tiene_croquis and not es_libre:
         instrucciones_croquis = (
             "\n\nIMPORTANTE - CROQUIS/PLANO ADJUNTO:\n"
             "Se adjunta un croquis/plano técnico de la cocina. DEBES respetar ESTRICTAMENTE:\n"
@@ -205,6 +207,13 @@ async def generar_render(payload: RenderInput):
             "- NO inventes elementos que no aparecen en el plano (ej: no añadas isla si no la hay)\n"
             "- NO cambies la distribución a una más 'bonita' — respeta el diseño del cliente\n"
             "- Usa el croquis como PLANTA/ALZADO de referencia obligatoria\n"
+        )
+    elif tiene_croquis and es_libre:
+        instrucciones_croquis = (
+            "\n\nNOTA: Se adjunta un croquis como REFERENCIA VISUAL del espacio, pero tienes LIBERTAD CREATIVA\n"
+            "total para proponer tu propio diseño. Usa el croquis solo para entender las dimensiones\n"
+            "del espacio disponible, pero crea una distribución y diseño originales a tu criterio\n"
+            "como diseñador profesional de cocinas de alta gama.\n"
         )
 
     instruccion = (

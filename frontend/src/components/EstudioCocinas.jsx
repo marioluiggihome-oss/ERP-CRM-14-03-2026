@@ -332,6 +332,7 @@ export default function EstudioCocinas({ state, setState }) {
 
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false });
+  const [freeDesign, setFreeDesign] = useState(false); // false = respetar plano, true = diseño libre IA
   const [plano,  setPlano]  = useState({ status: null, msg: '', b64: null, fs: false });
   const [ficha,  setFicha]  = useState({ status: null, msg: '', md: '', ref: '' });
   const [pres,   setPres]   = useState({ status: null, msg: '', html: '', preview: false });
@@ -540,6 +541,7 @@ export default function EstudioCocinas({ state, setState }) {
         distribucion: proy.medidas,
         croquis_b64: render.croquis || null,
         modo_async: true,
+        free_design: freeDesign,
       });
 
       if (!r.task_id) throw new Error(r.error || 'No se pudo iniciar el render');
@@ -852,6 +854,29 @@ export default function EstudioCocinas({ state, setState }) {
                   )}
                   <input ref={croquisRef} type="file" accept="image/*" className="hidden" onChange={onCroquis} />
                 </div>
+
+                {/* Toggle: Respetar plano vs Diseño libre IA */}
+                <div className={`flex items-center gap-2 p-2 rounded-lg ${t.card}`}>
+                  <button
+                    onClick={() => setFreeDesign(false)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                      !freeDesign ? 'bg-amber-600 text-white shadow-lg' : `${t.tabInactive}`
+                    }`}>
+                    <LayoutGrid size={12}/> Respetar plano
+                  </button>
+                  <button
+                    onClick={() => setFreeDesign(true)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                      freeDesign ? 'bg-purple-600 text-white shadow-lg' : `${t.tabInactive}`
+                    }`}>
+                    <Wand2 size={12}/> Diseño libre IA
+                  </button>
+                </div>
+                {freeDesign && (
+                  <p className="text-[10px] text-purple-500 font-medium px-1">
+                    La IA generará un diseño a su criterio sin seguir el plano adjunto
+                  </p>
+                )}
 
                 <button onClick={genRender} disabled={render.status === 'loading'}
                   className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
