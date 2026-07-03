@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus } from 'lucide-react';
 import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -177,6 +177,13 @@ export default function AIRenderStudio({ state }) {
   const [error, setError] = useState(null);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [analyzingRef, setAnalyzingRef] = useState(false);
+  // Guardado de proyectos (cliente + referencia) y descarga.
+  const [cliente, setCliente] = useState('');
+  const [ref, setRef] = useState('');
+  const [savedId, setSavedId] = useState(null);
+  const [savedList, setSavedList] = useState(null); // null = oculto
+  const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [params, setParams] = useState({
     layout: 'L-shape',
     countertop: 'quartz_white',
@@ -211,6 +218,121 @@ export default function AIRenderStudio({ state }) {
       return `${API_URL}${path}&t=${encodeURIComponent(token)}`;
     }
     return path;
+  };
+
+  // Descarga la imagen del render (o de una miniatura) como dataURL, para
+  // guardar/PDF. Sirve tanto para dataURL directas como para el proxy con token.
+  const imageToDataUrl = async (path) => {
+    if (!path) return null;
+    if (typeof path === 'string' && path.startsWith('data:')) return path;
+    const resp = await fetch(assetSrc(path));
+    const blob = await resp.blob();
+    return await new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = rej;
+      fr.readAsDataURL(blob);
+    });
+  };
+
+  const currentImage = () => renderResult?.result?.images?.[0] || null;
+
+  const nombreArchivo = (ext) => {
+    const base = (cliente || ref || 'render-3d').trim().replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
+    return `${base || 'render-3d'}.${ext}`;
+  };
+
+  // ─── Descargar el render (PNG) ──────────────────────────────────────────────
+  const downloadRender = async () => {
+    const img = currentImage();
+    if (!img) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const a = document.createElement('a');
+      a.href = dataUrl; a.download = nombreArchivo('png');
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch { setError('No se pudo descargar la imagen.'); }
+    finally { setDownloading(false); }
+  };
+
+  // ─── Exportar PDF de presentación (con logo) ────────────────────────────────
+  const exportPDF = async () => {
+    const img = currentImage();
+    if (!img) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const H = pdf.internal.pageSize.getHeight();
+      const M = 12;
+      // Cabecera: logo o nombre
+      const logo = state?.logo;
+      if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+        try { const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG'); pdf.addImage(logo, fmt, M, 8, 30, 15); } catch (_) {}
+      } else { pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 17); pdf.setFont(undefined, 'normal'); }
+      pdf.setFontSize(16); pdf.setTextColor(60, 40, 120); pdf.setFont(undefined, 'bold');
+      pdf.text('PROPUESTA DE DISEÑO 3D', W - M, 15, { align: 'right' });
+      pdf.setFont(undefined, 'normal'); pdf.setFontSize(10); pdf.setTextColor(120);
+      if (cliente) pdf.text(cliente, W - M, 21, { align: 'right' });
+      pdf.text(new Date().toLocaleDateString('es-ES'), W - M, 26, { align: 'right' });
+      // Imagen del render (encajada manteniendo proporción)
+      const areaY = 32, areaH = H - areaY - 16, areaW = W - 2 * M;
+      const props = pdf.getImageProperties(dataUrl);
+      const ratio = Math.min(areaW / props.width, areaH / props.height);
+      const iw = props.width * ratio, ih = props.height * ratio;
+      pdf.addImage(dataUrl, 'PNG', M + (areaW - iw) / 2, areaY, iw, ih);
+      // Pie con descripción
+      const desc = (renderResult?.description || description || '').trim();
+      if (desc) { pdf.setFontSize(8.5); pdf.setTextColor(110); pdf.text(pdf.splitTextToSize(desc, W - 2 * M).slice(0, 2), M, H - 8); }
+      pdf.save(nombreArchivo('pdf'));
+    } catch (e) { setError('No se pudo generar el PDF: ' + (e.message || '')); }
+    finally { setDownloading(false); }
+  };
+
+  // ─── Guardar / abrir proyectos ──────────────────────────────────────────────
+  const saveDesign = async () => {
+    const img = currentImage();
+    if (!img) { setError('Genera un render antes de guardar.'); return; }
+    if (!(cliente || ref).trim()) { setError('Pon un cliente o referencia para guardar el proyecto.'); return; }
+    setBusy(true); setError(null);
+    try {
+      const r = await fetch(`${API_URL}/api/ai-engine/designs`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ id: savedId || undefined, cliente, ref, description: renderResult?.description || description, style: params.style, images: [img] }),
+      });
+      const d = await r.json();
+      if (d.success) { setSavedId(d.design.id); }
+      else setError(d.error || 'No se pudo guardar.');
+    } catch { setError('Error al guardar el proyecto.'); }
+    finally { setBusy(false); }
+  };
+  const openList = async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/ai-engine/designs`, { headers: getAuthHeaders() });
+      const d = await r.json();
+      setSavedList(d.designs || []);
+    } catch { setError('No se pudo cargar la lista.'); }
+  };
+  const loadDesign = (dsg) => {
+    setCliente(dsg.cliente || ''); setRef(dsg.ref || ''); setDescription(dsg.description || '');
+    if (dsg.style) setParams(p => ({ ...p, style: dsg.style }));
+    setSavedId(dsg.id); setSavedList(null);
+    if (dsg.images?.[0]) setRenderResult({ success: true, result: { images: dsg.images }, description: dsg.description });
+  };
+  const deleteDesign = async (id) => {
+    if (!window.confirm('¿Eliminar este proyecto guardado?')) return;
+    try {
+      await fetch(`${API_URL}/api/ai-engine/designs/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+      setSavedList(prev => (prev || []).filter(x => x.id !== id));
+      if (savedId === id) setSavedId(null);
+    } catch { setError('No se pudo eliminar.'); }
+  };
+  const nuevoProyecto = () => {
+    setCliente(''); setRef(''); setSavedId(null); setRenderResult(null);
+    setDescription(''); setRefImage(null); setFloorPlan(null); setWallSketches([]); setError(null);
   };
 
   // ─── Subir imagen/PDF de referencia → la IA la describe y enriquece el prompt ───
@@ -390,9 +512,20 @@ export default function AIRenderStudio({ state }) {
               <Wand2 size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-black text-slate-900 uppercase tracking-wide">Render 3D Studio</h1>
+              <h1 className="text-lg font-black text-slate-900 uppercase tracking-wide">Estudio 3D</h1>
               <p className="text-xs text-slate-500 font-medium">Powered by LuiggiAI Engine</p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Cliente / referencia del proyecto */}
+            <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Cliente"
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm w-36" />
+            <input value={ref} onChange={e => setRef(e.target.value)} placeholder="Referencia"
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm w-28" />
+            <button onClick={nuevoProyecto} title="Nuevo proyecto" className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50"><Plus size={14} /> Nuevo</button>
+            <button onClick={openList} title="Mis proyectos guardados" className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-50"><FolderOpen size={14} /> Proyectos</button>
+            <button onClick={saveDesign} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">{busy ? <Loader size={14} className="animate-spin" /> : <Save size={14} />} Guardar</button>
           </div>
 
           {/* Mode Toggle */}
@@ -724,6 +857,14 @@ export default function AIRenderStudio({ state }) {
               <div className="flex items-center justify-between shrink-0">
                 <h3 className="font-black text-slate-700 uppercase tracking-wider text-sm">Resultado</h3>
                 <div className="flex gap-2">
+                  <button onClick={downloadRender} disabled={downloading || !currentImage()}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
+                    {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar
+                  </button>
+                  <button onClick={exportPDF} disabled={downloading || !currentImage()}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
+                    <FileText size={14} /> PDF
+                  </button>
                   <button
                     onClick={() => setShowFullscreen(true)}
                     className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
@@ -791,7 +932,7 @@ export default function AIRenderStudio({ state }) {
                 <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center">
                   <Image size={36} className="text-indigo-500" />
                 </div>
-                <h3 className="font-black text-slate-700 uppercase tracking-wider mb-2">Render 3D Studio</h3>
+                <h3 className="font-black text-slate-700 uppercase tracking-wider mb-2">Estudio 3D</h3>
                 <p className="text-sm text-slate-500 leading-relaxed">
                   Describe lo que quieres (cocina, armario empotrado, baño, dormitorio, mueble a medida…) usando voz o texto, o selecciona materiales manualmente.
                   LuiggiAI generará un render fotorrealista en segundos.
@@ -826,6 +967,35 @@ export default function AIRenderStudio({ state }) {
           )}
         </div>
       </div>
+
+      {/* Mis proyectos guardados */}
+      {Array.isArray(savedList) && (
+        <div className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-4" onClick={() => setSavedList(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="font-black text-slate-800">Mis proyectos 3D</h3>
+              <button onClick={() => setSavedList(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              {savedList.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-8">No tienes proyectos guardados todavía.</p>
+              ) : savedList.map(d => (
+                <div key={d.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2 hover:bg-slate-50">
+                  <div className="w-12 h-12 shrink-0 bg-slate-200 rounded-lg overflow-hidden">
+                    {d.images?.[0] ? <img src={assetSrc(d.images[0])} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400"><Image size={16} /></div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-700 text-sm truncate">{d.cliente || 'Sin cliente'}{d.ref ? ` · ${d.ref}` : ''}</p>
+                    {d.updatedAt && <p className="text-[10px] text-slate-400">{new Date(d.updatedAt).toLocaleString('es-ES')}</p>}
+                  </div>
+                  <button onClick={() => loadDesign(d)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
+                  <button onClick={() => deleteDesign(d.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fullscreen Modal */}
       {showFullscreen && renderResult?.result?.images?.[0] && (
