@@ -279,7 +279,7 @@ const ResumenCocinas = ({ state }) => {
 
   return (
     <div className="h-full min-h-screen flex flex-col p-6 bg-slate-50 overflow-y-auto">
-      <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
+      <div className="w-full max-w-4xl mx-auto flex items-center justify-between mb-1 gap-3 flex-wrap">
         <h1 className="text-2xl font-black text-slate-800 ml-16 flex items-center gap-2"><Layers size={22} /> Resumen Totales</h1>
         <div className="flex items-center gap-2 flex-wrap">
           <input value={docName} onChange={e => setDocName(e.target.value)} placeholder="Nombre del resumen…"
@@ -325,9 +325,9 @@ const ResumenCocinas = ({ state }) => {
           </div>
         </div>
       )}
-      <p className="text-sm text-slate-500 mb-5">Junta partidas por cocina, suma totales y forma de pago, y preséntalo con tu logo.</p>
+      <p className="text-sm text-slate-500 mb-5 w-full max-w-4xl mx-auto">Junta partidas por cocina, suma totales y forma de pago, y preséntalo con tu logo.</p>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-4xl space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 w-full max-w-4xl mx-auto space-y-6">
         {/* Cliente + fecha */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
