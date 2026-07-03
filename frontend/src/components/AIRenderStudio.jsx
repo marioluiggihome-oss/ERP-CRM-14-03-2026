@@ -100,6 +100,14 @@ const MATERIALS = {
     { id: 'peninsula', label: 'Península', icon: '⊏' },
   ],
   countertops: [
+    // Acabados reales de Luiggi Home (los más presupuestados) ─────────────
+    { id: 'neolith_iron_corten', label: 'Neolith Iron Corten', erp: true },
+    { id: 'neolith_calacatta', label: 'Neolith Calacatta', erp: true },
+    { id: 'dekton_kelya', label: 'Dekton Kelya', erp: true },
+    { id: 'dekton_sirius', label: 'Dekton Sirius (negro)', erp: true },
+    { id: 'silestone_blanco', label: 'Silestone Blanco', erp: true },
+    { id: 'porcelanico_marmol', label: 'Porcelánico efecto mármol', erp: true },
+    // Genéricos ───────────────────────────────────────────────────────────
     { id: 'marble_white', label: 'Mármol Blanco' },
     { id: 'marble_black', label: 'Mármol Negro' },
     { id: 'granite_black', label: 'Granito Negro' },
@@ -112,6 +120,13 @@ const MATERIALS = {
     { id: 'stainless_steel', label: 'Acero Inoxidable' },
   ],
   cabinets: [
+    // Puertas reales de Luiggi Home ─────────────────────────────────────────
+    { id: 'zenit_antracita', label: 'Puerta Zenit Antracita', erp: true },
+    { id: 'mattdeco_cashmere', label: 'Puerta Mattdeco Cashmere', erp: true },
+    { id: 'mattdeco_blanco', label: 'Puerta Mattdeco Blanco', erp: true },
+    { id: 'spike', label: 'Puerta Spike', erp: true },
+    { id: 'roble_aurora', label: 'Roble Aurora', erp: true },
+    // Genéricos ─────────────────────────────────────────────────────────────
     { id: 'oak_natural', label: 'Roble Natural' },
     { id: 'oak_dark', label: 'Roble Oscuro' },
     { id: 'walnut', label: 'Nogal' },
@@ -124,6 +139,11 @@ const MATERIALS = {
     { id: 'black_matte', label: 'Negro Mate' },
   ],
   handles: [
+    // Tiradores reales de Luiggi Home ───────────────────────────────────────
+    { id: 'mallorca_negro', label: 'Tirador Mallorca Negro', erp: true },
+    { id: 'gola', label: 'Perfil Gola (integrado)', erp: true },
+    { id: 'fresado', label: 'Fresado (uñero)', erp: true },
+    // Genéricos ─────────────────────────────────────────────────────────────
     { id: 'none', label: 'Sin Tirador (Push)' },
     { id: 'integrated', label: 'Integrado (Gola)' },
     { id: 'bar_black', label: 'Barra Negro' },
@@ -184,6 +204,11 @@ export default function AIRenderStudio({ state }) {
   const [savedList, setSavedList] = useState(null); // null = oculto
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  // Captura de medidas de la estancia (para proporción/escala reales).
+  const [medidas, setMedidas] = useState({ ancho: '', fondo: '', altura: '', aberturas: '' });
+  // Edición del render en lenguaje natural (iterar sin empezar de cero).
+  const [editInstruction, setEditInstruction] = useState('');
+  const [editing, setEditing] = useState(false);
   const [params, setParams] = useState({
     layout: 'L-shape',
     countertop: 'quartz_white',
@@ -236,6 +261,46 @@ export default function AIRenderStudio({ state }) {
   };
 
   const currentImage = () => renderResult?.result?.images?.[0] || null;
+
+  // Construye una frase con las medidas de la estancia para dar escala real al
+  // render (proporción de muebles, altura de altos, pasillos, etc.).
+  const medidasTexto = () => {
+    const parts = [];
+    if (medidas.ancho) parts.push(`ancho ${medidas.ancho} cm`);
+    if (medidas.fondo) parts.push(`fondo ${medidas.fondo} cm`);
+    if (medidas.altura) parts.push(`altura de techo ${medidas.altura} cm`);
+    let t = '';
+    if (parts.length) t += `Medidas reales de la estancia: ${parts.join(', ')}. Respeta estas proporciones y la escala del mobiliario. `;
+    if (medidas.aberturas.trim()) t += `Ventanas/puertas: ${medidas.aberturas.trim()}. `;
+    return t;
+  };
+  const conMedidas = (desc) => { const m = medidasTexto(); return m ? `${m}\n${desc}` : desc; };
+
+  // ─── Editar el render existente en lenguaje natural ─────────────────────────
+  const editRender = async () => {
+    const img = currentImage();
+    if (!img || !editInstruction.trim()) return;
+    setEditing(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({
+          description: `Modifica el render adjunto manteniendo el mismo diseño, encuadre e iluminación. Cambio solicitado: ${editInstruction.trim()}. No cambies nada más.`,
+          style: params.style,
+          referenceImage: dataUrl,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        const merged = { ...data, description: `${renderResult?.description || description}\n[Edición] ${editInstruction.trim()}` };
+        setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
+        setEditInstruction('');
+      } else setError(data.error || 'No se pudo editar el render');
+    } catch { setError('Error de conexión al editar el render.'); }
+    finally { setEditing(false); }
+  };
 
   const nombreArchivo = (ext) => {
     const base = (cliente || ref || 'render-3d').trim().replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
@@ -403,7 +468,7 @@ export default function AIRenderStudio({ state }) {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          description: description.trim(),
+          description: conMedidas(description.trim()),
           style: params.style,
           floorPlan: floorPlan || undefined,
           wallSketches,
@@ -444,7 +509,7 @@ export default function AIRenderStudio({ state }) {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          description: description.trim(),
+          description: conMedidas(description.trim()),
           style: params.style,
           referenceImage: refImage || undefined,
         }),
@@ -642,9 +707,31 @@ export default function AIRenderStudio({ state }) {
                 </div>
               </div>
 
-              {/* PASO 3 — Plano + bocetos por pared (opcional, máxima fidelidad) */}
+              {/* PASO 3 — Medidas de la estancia (opcional, para escala real) */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
+                <StepHeader n={3} title="Medidas de la estancia" hint="Opcional, pero da escala y proporción reales al render." />
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Ancho (cm)</span>
+                    <input type="number" value={medidas.ancho} onChange={e => setMedidas(m => ({ ...m, ancho: e.target.value }))} placeholder="360" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Fondo (cm)</span>
+                    <input type="number" value={medidas.fondo} onChange={e => setMedidas(m => ({ ...m, fondo: e.target.value }))} placeholder="300" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Techo (cm)</span>
+                    <input type="number" value={medidas.altura} onChange={e => setMedidas(m => ({ ...m, altura: e.target.value }))} placeholder="250" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
+                  </label>
+                </div>
+                <input value={medidas.aberturas} onChange={e => setMedidas(m => ({ ...m, aberturas: e.target.value }))}
+                  placeholder="Ventanas/puertas: ej. ventana 120 cm en pared izquierda, puerta al fondo"
+                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm" />
+              </div>
+
+              {/* PASO 4 — Plano + bocetos por pared (opcional, máxima fidelidad) */}
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 flex flex-col gap-2.5">
-                <StepHeader n={3} title="Plano + bocetos (opcional)" hint="Para máxima fidelidad: sube el plano en planta y un boceto por cada pared." />
+                <StepHeader n={4} title="Plano + bocetos (opcional)" hint="Para máxima fidelidad: sube el plano en planta y un boceto por cada pared." />
                 <p className="text-[11px] text-slate-500">
                   El render seguirá la distribución del plano y el diseño de cada pared, con el acabado descrito en el paso 1.
                 </p>
@@ -730,7 +817,7 @@ export default function AIRenderStudio({ state }) {
                   onChange={(e) => setParams(p => ({ ...p, countertop: e.target.value }))}
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 >
-                  {MATERIALS.countertops.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  {MATERIALS.countertops.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
                 </select>
               </div>
 
@@ -742,7 +829,7 @@ export default function AIRenderStudio({ state }) {
                   onChange={(e) => setParams(p => ({ ...p, cabinets: e.target.value }))}
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 >
-                  {MATERIALS.cabinets.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  {MATERIALS.cabinets.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
                 </select>
               </div>
 
@@ -754,7 +841,7 @@ export default function AIRenderStudio({ state }) {
                   onChange={(e) => setParams(p => ({ ...p, handles: e.target.value }))}
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 >
-                  {MATERIALS.handles.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  {MATERIALS.handles.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
                 </select>
               </div>
 
@@ -766,7 +853,7 @@ export default function AIRenderStudio({ state }) {
                   onChange={(e) => setParams(p => ({ ...p, floor: e.target.value }))}
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 >
-                  {MATERIALS.floors.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  {MATERIALS.floors.map(m => <option key={m.id} value={m.id}>{m.erp ? "★ " : ""}{m.label}</option>)}
                 </select>
               </div>
 
@@ -913,6 +1000,21 @@ export default function AIRenderStudio({ state }) {
                   </span>
                 </div>
               </div>
+
+              {/* Editar el render en lenguaje natural */}
+              {currentImage() && (
+                <div className="shrink-0 flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-2">
+                  <Wand2 size={16} className="text-purple-500 shrink-0 ml-1" />
+                  <input value={editInstruction} onChange={e => setEditInstruction(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !editing && editInstruction.trim()) editRender(); }}
+                    placeholder="Editar: p. ej. 'haz la isla más grande', 'cambia los muebles a azul navy', 'añade una campana de isla'"
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
+                  <button onClick={editRender} disabled={editing || !editInstruction.trim()}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50 shrink-0">
+                    {editing ? <><Loader size={14} className="animate-spin" /> Aplicando…</> : <><Send size={14} /> Aplicar cambio</>}
+                  </button>
+                </div>
+              )}
 
               {/* Info del render */}
               {renderResult?.duration_seconds && (
