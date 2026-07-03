@@ -193,8 +193,13 @@ async function apiPost(endpoint, body) {
 function imgSrc(url) {
   if (!url) return '';
   const t = getToken();
-  if (!t) return url;
-  return `${url}${url.includes('?') ? '&' : '?'}t=${encodeURIComponent(t)}`;
+  // Si la URL es relativa (/api/...), prefijar con el backend URL
+  let fullUrl = url;
+  if (url.startsWith('/api/')) {
+    fullUrl = `${API}${url}`;
+  }
+  if (!t) return fullUrl;
+  return `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}t=${encodeURIComponent(t)}`;
 }
 
 async function apiGet(endpoint) {
