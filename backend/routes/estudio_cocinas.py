@@ -191,16 +191,37 @@ async def generar_render(payload: RenderInput):
     )
 
     # Instrucción completa para Manus
+    tiene_croquis = bool(payload.croquis_b64)
+
+    instrucciones_croquis = ""
+    if tiene_croquis:
+        instrucciones_croquis = (
+            "\n\nIMPORTANTE - CROQUIS/PLANO ADJUNTO:\n"
+            "Se adjunta un croquis/plano técnico de la cocina. DEBES respetar ESTRICTAMENTE:\n"
+            "- La DISTRIBUCIÓN EXACTA del plano (lineal, en L, en U, con isla, etc.)\n"
+            "- La POSICIÓN de cada elemento (columna de hornos, fregadero, placa, etc.)\n"
+            "- Las PROPORCIONES y MEDIDAS relativas entre módulos\n"
+            "- El NÚMERO de muebles altos y bajos visible en el croquis\n"
+            "- NO inventes elementos que no aparecen en el plano (ej: no añadas isla si no la hay)\n"
+            "- NO cambies la distribución a una más 'bonita' — respeta el diseño del cliente\n"
+            "- Usa el croquis como PLANTA/ALZADO de referencia obligatoria\n"
+        )
+
     instruccion = (
         f"Genera un render fotorrealista de alta gama de una cocina.\n\n"
         f"DESCRIPCIÓN DEL PROYECTO:\n{payload.descripcion}\n\n"
+        f"MATERIALES Y ACABADOS:\n{materiales}\n\n"
+        f"ESTILO: {estilo}\n\n"
+        f"DISTRIBUCIÓN: {distribucion}\n\n"
         f"PROMPT TÉCNICO DE RENDER:\n{prompt_tecnico}\n\n"
-        f"REQUISITOS:\n"
-        f"- Render fotorrealista 8K, iluminación cinematográfica\n"
-        f"- Perspectiva angular desde esquina, formato 16:9\n"
-        f"- Calidad de revista de interiorismo de lujo\n"
-        f"- Texturas hiper-detalladas con ray tracing\n"
+        f"REQUISITOS TÉCNICOS:\n"
+        f"- Render fotorrealista 8K, iluminación natural cinematográfica\n"
+        f"- Perspectiva angular desde esquina a altura de ojos (~160cm), formato 16:9\n"
+        f"- Calidad de revista de interiorismo de lujo (Architectural Digest, Elle Decor)\n"
+        f"- Texturas hiper-detalladas: vetas de madera, brillos de encimera, reflejos metálicos\n"
+        f"- Profundidad de campo sutil, sin distorsión de lente\n"
         f"- Devuelve SOLO la imagen generada, sin texto adicional"
+        f"{instrucciones_croquis}"
     )
 
     # Adjuntar croquis si se proporcionó

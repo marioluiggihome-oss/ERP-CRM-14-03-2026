@@ -3,17 +3,42 @@ import sys
 def generate_prompt(layout, materials, style):
     """
     Genera un prompt optimizado para renderizado de cocinas.
+    Incluye instrucciones específicas de distribución y materiales
+    para que el motor de IA respete fielmente el diseño.
     """
-    base_prompt = "Fotorrealistic 3D render of a modern kitchen, architectural photography, 8k resolution, cinematic lighting. "
-    
-    layout_desc = f"Layout: {layout}. "
-    materials_desc = f"Materials and textures: {materials}. "
-    style_desc = f"Cabinet style: {style}. "
-    
-    technical_specs = "Soft natural light from a window, high-end appliances, interior design magazine style, hyper-detailed textures, ray tracing."
-    
-    full_prompt = f"{base_prompt}{layout_desc}{materials_desc}{style_desc}{technical_specs}"
-    return full_prompt
+
+    # Mapeo de estilos a descriptores visuales
+    style_map = {
+        "nórdico": "Scandinavian design with light wood tones, white surfaces, minimal hardware, organic textures, hygge atmosphere",
+        "nordico": "Scandinavian design with light wood tones, white surfaces, minimal hardware, organic textures, hygge atmosphere",
+        "industrial": "Industrial style with exposed metal, dark matte finishes, concrete textures, Edison bulbs, raw materials",
+        "clásico": "Classic traditional style with raised panel doors, crown molding, marble countertops, warm wood tones",
+        "clasico": "Classic traditional style with raised panel doors, crown molding, marble countertops, warm wood tones",
+        "lacado blanco": "All-white lacquered cabinets, handleless push-to-open, ultra-clean minimalist, high gloss or matte finish",
+        "madera natural": "Natural solid wood cabinets, visible grain, warm earth tones, artisan craftsmanship, oil-finished surfaces",
+        "contemporáneo": "Contemporary design with mixed materials, geometric patterns, bold accent colors, integrated lighting",
+        "contemporaneo": "Contemporary design with mixed materials, geometric patterns, bold accent colors, integrated lighting",
+        "moderno": "Modern minimalist with flat-panel doors, integrated handles, neutral palette, clean geometric lines",
+    }
+
+    style_desc = style_map.get(style.lower().strip(), f"Kitchen style: {style}")
+
+    base_prompt = (
+        f"Photorealistic 3D architectural render of a kitchen interior. "
+        f"Professional interior photography quality, 8K resolution. "
+        f"\n\nLAYOUT AND DISTRIBUTION (MUST FOLLOW EXACTLY): {layout}. "
+        f"\n\nMATERIALS AND FINISHES: {materials}. "
+        f"\n\nDESIGN STYLE: {style_desc}. "
+        f"\n\nTECHNICAL RENDER SETTINGS: "
+        f"Natural daylight entering from window, supplemented by warm under-cabinet LED strips. "
+        f"Camera at eye level (~160cm height), slight wide-angle perspective (24-35mm equivalent). "
+        f"Shallow depth of field for cinematic feel. Ray-traced reflections on countertops and appliances. "
+        f"Hyper-detailed material textures: wood grain, stone veining, brushed metal. "
+        f"Interior design magazine quality (Architectural Digest, Elle Decor level)."
+    )
+
+    return base_prompt
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:

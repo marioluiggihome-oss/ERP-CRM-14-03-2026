@@ -18,7 +18,7 @@ import {
   CheckCircle, AlertCircle, Sparkles, Edit3, ZoomIn,
   Presentation, Eye, Sun, Moon, Monitor, Printer,
   Zap, Droplets, Flame, LayoutGrid, Wand2,
-  Heart, Trash2, FolderOpen, Save
+  Heart, Trash2, FolderOpen, Save, Stamp, ImagePlus
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
@@ -300,7 +300,7 @@ function PrintPdfBar({ onPrint, onPdf, t, extraBtns }) {
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export default function EstudioCocinas() {
+export default function EstudioCocinas({ state, setState }) {
   const [tab, setTab] = useState('render');
   const [themeMode, setThemeMode] = useState(getSavedThemeMode);
   const [systemTheme, setSystemTheme] = useState(getSystemTheme);
@@ -339,6 +339,82 @@ export default function EstudioCocinas() {
   const [rec,    setRec]    = useState(false);
   const [transcrito, setTranscrito] = useState('');
   const [galeria, setGaleria] = useState({ renders: [], total: 0, page: 1, loading: false, fsImg: null });
+  // ── Marca de agua ──
+  // watermark: 'none' | 'default' | 'custom'
+  const [watermark, setWatermark] = useState({ mode: 'default', customLogo: null, customLogoPreview: null });
+  const watermarkInputRef = useRef(null);
+
+  // Logo por defecto = logo del ERP (state.logo)
+  const defaultLogo = state?.logo || null;
+
+  const handleCustomLogoUpload = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setWatermark(w => ({ ...w, mode: 'custom', customLogo: ev.target.result, customLogoPreview: ev.target.result }));
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  /** Aplica marca de agua a una imagen (blob URL o data URL) y devuelve un nuevo blob URL */
+  const applyWatermark = useCallback(async (imgUrl) => {
+    if (watermark.mode === 'none') return imgUrl;
+    const logoSrc = watermark.mode === 'custom' ? watermark.customLogo : defaultLogo;
+    if (!logoSrc) return imgUrl; // Sin logo disponible, devolver sin marca
+
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        // Cargar logo
+        const logo = new window.Image();
+        logo.crossOrigin = 'anonymous';
+        logo.onload = () => {
+          // Marca de agua: esquina inferior derecha, 15% del ancho de la imagen
+          const logoW = Math.round(canvas.width * 0.15);
+          const logoH = Math.round(logoW * (logo.naturalHeight / logo.naturalWidth));
+          const padding = Math.round(canvas.width * 0.02);
+          const x = canvas.width - logoW - padding;
+          const y = canvas.height - logoH - padding;
+
+          // Fondo semitransparente detrás del logo
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.roundRect(x - 8, y - 8, logoW + 16, logoH + 16, 8);
+          ctx.fill();
+
+          ctx.globalAlpha = 0.85;
+          ctx.drawImage(logo, x, y, logoW, logoH);
+          ctx.globalAlpha = 1.0;
+
+          canvas.toBlob((blob) => {
+            resolve(blob ? URL.createObjectURL(blob) : imgUrl);
+          }, 'image/png');
+        };
+        logo.onerror = () => resolve(imgUrl);
+        logo.src = logoSrc;
+      };
+      img.onerror = () => resolve(imgUrl);
+      img.src = imgUrl;
+    });
+  }, [watermark.mode, watermark.customLogo, defaultLogo]);
+
+  /** Descarga el render con o sin marca de agua */
+  const downloadWithWatermark = useCallback(async () => {
+    if (!render.imageUrl) return;
+    const finalUrl = await applyWatermark(render.imageUrl);
+    const a = document.createElement('a');
+    a.href = finalUrl;
+    a.download = `render_${proy.nombre_cliente || 'cocina'}.png`;
+    a.click();
+  }, [render.imageUrl, applyWatermark, proy.nombre_cliente]);
+
   const mrRef     = useRef(null);
   const chunksRef = useRef([]);
   const croquisRef = useRef(null);
@@ -788,16 +864,47 @@ export default function EstudioCocinas() {
 
                 {render.imageUrl && (
                   <>
+                    {/* Selector de marca de agua */}
+                    <div className={`flex items-center gap-3 flex-wrap p-2 rounded-lg ${t.card}`}>
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${t.label || 'text-slate-500'}`}>
+                        <Stamp size={11} className="inline mr-1"/> Marca de agua:
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setWatermark(w => ({ ...w, mode: 'none' }))}
+                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${
+                            watermark.mode === 'none' ? 'bg-red-500 text-white' : `${t.tabInactive}`
+                          }`}>Sin marca</button>
+                        <button onClick={() => setWatermark(w => ({ ...w, mode: 'default' }))}
+                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${
+                            watermark.mode === 'default' ? 'bg-amber-600 text-white' : `${t.tabInactive}`
+                          }`}>
+                          {defaultLogo && <img src={defaultLogo} alt="" className="inline h-3 mr-1 object-contain"/>}
+                          Logo ERP
+                        </button>
+                        <button onClick={() => watermarkInputRef.current?.click()}
+                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${
+                            watermark.mode === 'custom' ? 'bg-purple-600 text-white' : `${t.tabInactive}`
+                          }`}>
+                          <ImagePlus size={10} className="inline mr-1"/>
+                          {watermark.customLogoPreview ? 'Cambiar' : 'Personalizar'}
+                        </button>
+                        <input ref={watermarkInputRef} type="file" accept="image/*" className="hidden" onChange={handleCustomLogoUpload}/>
+                      </div>
+                      {watermark.mode === 'custom' && watermark.customLogoPreview && (
+                        <img src={watermark.customLogoPreview} alt="Logo custom" className="h-6 object-contain rounded"/>
+                      )}
+                    </div>
+
                     <PrintPdfBar
                       t={t}
                       onPrint={() => handlePrint('render-print-area')}
                       onPdf={() => handlePdfExport(`<img src="${imgSrc(render.imageUrl)}" style="width:100%"/>`, `render_${proy.nombre_cliente || 'cocina'}.pdf`)}
                       extraBtns={
                         <>
-                          <a href={imgSrc(render.imageUrl)} download="render_cocina.png"
+                          <button onClick={downloadWithWatermark}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
                             <Download size={11}/> PNG
-                          </a>
+                          </button>
                           <button onClick={guardarEnGaleria}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white transition-all">
                             <Save size={11}/> Guardar
