@@ -16,19 +16,75 @@ Endpoints:
 
 import logging
 import io
+import os
+import uuid
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 from typing import Optional, List
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+from motor.motor_asyncio import AsyncIOMotorClient
 
 from services.jwt_service import require_auth, verify_access_token
 from services.luiggi_ai import get_engine, get_render_service, get_ai_config
 
+try:
+    from services.jwt_service import get_current_user, ADMIN_ROLE_FLAGS
+except Exception:  # pragma: no cover
+    async def get_current_user():
+        return None
+    ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
+
 logger = logging.getLogger("luiggi_ai.router")
 
 ai_engine_router = APIRouter(prefix="/ai-engine", tags=["LuiggiAI Engine"])
+
+_db = AsyncIOMotorClient(os.environ.get('MONGO_URL'))[os.environ.get('DB_NAME', 'luiggi_home')]
+
+
+# ─── Proyectos de render 3D (guardar / historial persistente) ─────────────────
+@ai_engine_router.post("/designs")
+async def save_render_design(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Guarda (o actualiza) un proyecto de render 3D del usuario."""
+    p = payload or {}
+    oid = p.get("id") or f"r3d-{uuid.uuid4().hex[:10]}"
+    now = datetime.now(timezone.utc).isoformat()
+    existing = await _db.render3d_designs.find_one({"id": oid}, {"_id": 0, "createdAt": 1, "userId": 1})
+    if existing and existing.get("userId") and current_user and current_user.get("id") \
+       and existing["userId"] != current_user["id"] and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
+        raise HTTPException(status_code=403, detail="Sin acceso a este proyecto")
+    doc = {
+        "id": oid,
+        "userId": (existing or {}).get("userId") or (current_user or {}).get("id") or "anonymous",
+        "cliente": str(p.get("cliente") or ""),
+        "ref": str(p.get("ref") or ""),
+        "description": str(p.get("description") or ""),
+        "style": str(p.get("style") or ""),
+        "images": (p.get("images") or [])[:12],
+        "createdByName": (current_user or {}).get("clientName") or (current_user or {}).get("username") or "",
+        "createdAt": (existing or {}).get("createdAt") or now,
+        "updatedAt": now,
+    }
+    await _db.render3d_designs.update_one({"id": oid}, {"$set": doc}, upsert=True)
+    doc.pop("_id", None)
+    return {"success": True, "design": doc}
+
+
+@ai_engine_router.get("/designs")
+async def list_render_designs(current_user: Optional[dict] = Depends(get_current_user)):
+    query = {}
+    if current_user and current_user.get("id") and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
+        query["userId"] = current_user["id"]
+    items = await _db.render3d_designs.find(query, {"_id": 0}).sort("updatedAt", -1).to_list(300)
+    return {"success": True, "designs": items}
+
+
+@ai_engine_router.delete("/designs/{design_id}")
+async def delete_render_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    await _db.render3d_designs.delete_one({"id": design_id})
+    return {"success": True}
 
 
 # ─── Modelos de Request/Response ──────────────────────────────────────────────
