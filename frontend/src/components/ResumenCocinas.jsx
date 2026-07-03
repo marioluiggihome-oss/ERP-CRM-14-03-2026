@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader, ChevronUp, ChevronDown, GripVertical, AlignLeft, AlignCenter, AlignRight, Move, RotateCcw } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -68,6 +68,12 @@ const ResumenCocinas = ({ state }) => {
   const offsetXRef = useRef(offsetX);
   offsetXRef.current = offsetX;
   const resetPos = () => { setOffsetX(0); setAlignPersist('center'); try { localStorage.setItem('resumen_offsetX', '0'); } catch (_) {} };
+  // Render 3D adjuntado desde Estudio 3D (se incluye en el PDF si el usuario quiere).
+  const [render3d, setRender3d] = useState(null);
+  useEffect(() => {
+    try { const raw = localStorage.getItem('render3d_attach'); if (raw) setRender3d(JSON.parse(raw)); } catch (_) {}
+  }, []);
+  const quitarRender3d = () => { setRender3d(null); try { localStorage.removeItem('render3d_attach'); } catch (_) {} };
   const dragStyle = offsetX ? { transform: `translateX(${offsetX}px)` } : undefined;
   const uidUser = state?.currentUser?.id || 'anonymous';
   // Origen del arrastre (drag & drop). {kind:'linea'|'pago', cid, id}
@@ -300,6 +306,20 @@ const ResumenCocinas = ({ state }) => {
         y += 6;
       }
 
+      // Render 3D adjunto (si lo hay): en página aparte a tamaño grande.
+      if (render3d?.image) {
+        try {
+          pdf.addPage();
+          const props = pdf.getImageProperties(render3d.image);
+          const areaW = W - 2 * M, areaH = pageH - 40;
+          const ratio = Math.min(areaW / props.width, areaH / props.height);
+          const iw = props.width * ratio, ih = props.height * ratio;
+          pdf.setFontSize(13); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
+          pdf.text('Propuesta de diseño 3D', M, 20); pdf.setFont(undefined, 'normal');
+          pdf.addImage(render3d.image, 'PNG', M + (areaW - iw) / 2, 26, iw, ih);
+        } catch (_) { /* omitir si la imagen no es válida */ }
+      }
+
       pdf.save(`Presupuesto_${(cliente || 'cocinas').replace(/\s+/g, '_')}.pdf`);
     } catch (e) {
       alert('No se pudo generar el PDF: ' + (e.message || ''));
@@ -455,6 +475,18 @@ const ResumenCocinas = ({ state }) => {
           </div>
           <span className="text-2xl font-black">{eur(totalConIva)}</span>
         </div>
+
+        {/* Render 3D adjunto desde Estudio 3D */}
+        {render3d?.image && (
+          <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-black text-orange-600 uppercase">Render 3D adjunto (se incluye en el PDF)</p>
+              <button onClick={quitarRender3d} className="text-slate-400 hover:text-red-500" title="Quitar render"><Trash2 size={15} /></button>
+            </div>
+            <img src={render3d.image} alt="Render 3D" className="max-h-48 rounded-lg border border-orange-200" />
+            {render3d.cliente && <p className="text-[11px] text-slate-500 mt-1">{render3d.cliente}{render3d.ref ? ` · ${render3d.ref}` : ''}</p>}
+          </div>
+        )}
 
         {/* Forma de pago */}
         <div className="rounded-xl border border-slate-200 p-3">

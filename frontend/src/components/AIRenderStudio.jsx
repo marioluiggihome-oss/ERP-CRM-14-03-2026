@@ -169,6 +169,26 @@ const MATERIALS = {
     { id: 'warm', label: 'Cálido' },
     { id: 'industrial', label: 'Industrial' },
   ],
+  appliances: [
+    { id: 'fregadero_bajo', label: 'Fregadero bajo encimera', prompt: 'fregadero bajo encimera' },
+    { id: 'grifo_extraible', label: 'Grifo extraíble', prompt: 'grifo monomando extraíble' },
+    { id: 'placa_induccion', label: 'Placa de inducción', prompt: 'placa de inducción integrada en la encimera' },
+    { id: 'campana_isla', label: 'Campana de isla', prompt: 'campana extractora de isla suspendida del techo' },
+    { id: 'campana_decorativa', label: 'Campana decorativa', prompt: 'campana decorativa de pared' },
+    { id: 'campana_integrada', label: 'Campana integrada', prompt: 'campana integrada oculta en el mueble' },
+    { id: 'horno', label: 'Horno', prompt: 'horno empotrado en columna' },
+    { id: 'microondas', label: 'Microondas', prompt: 'microondas empotrado' },
+    { id: 'nevera_integrada', label: 'Nevera integrada', prompt: 'frigorífico integrado tras puerta de mueble' },
+    { id: 'nevera_libre', label: 'Nevera libre (inox)', prompt: 'frigorífico americano de acero inoxidable' },
+    { id: 'lavavajillas', label: 'Lavavajillas integrado', prompt: 'lavavajillas integrado' },
+    { id: 'vinoteca', label: 'Vinoteca', prompt: 'vinoteca climatizada' },
+  ],
+  cameras: [
+    { id: 'eyelevel', label: 'A la altura de los ojos', prompt: 'cámara a la altura de los ojos (1,6 m), vista desde la entrada de la estancia' },
+    { id: 'wide', label: 'Gran angular', prompt: 'objetivo gran angular que muestra toda la estancia en una sola toma' },
+    { id: 'aerial', label: 'Cenital elevada', prompt: 'vista ligeramente cenital y elevada, tipo axonométrica, para mostrar la distribución' },
+    { id: 'detail', label: 'Detalle zona trabajo', prompt: 'plano de detalle de la zona de trabajo (encimera, fregadero y placa)' },
+  ],
 };
 
 // Cabecera de paso numerada para ordenar la petición de datos del render.
@@ -209,6 +229,11 @@ export default function AIRenderStudio({ state }) {
   // Edición del render en lenguaje natural (iterar sin empezar de cero).
   const [editInstruction, setEditInstruction] = useState('');
   const [editing, setEditing] = useState(false);
+  // Electrodomésticos, cámara y nº de variaciones (Tanda 3).
+  const [electros, setElectros] = useState([]);
+  const [camera, setCamera] = useState('eyelevel');
+  const [variantCount, setVariantCount] = useState(1);
+  const [attached, setAttached] = useState(false);
   const [params, setParams] = useState({
     layout: 'L-shape',
     countertop: 'quartz_white',
@@ -274,7 +299,20 @@ export default function AIRenderStudio({ state }) {
     if (medidas.aberturas.trim()) t += `Ventanas/puertas: ${medidas.aberturas.trim()}. `;
     return t;
   };
-  const conMedidas = (desc) => { const m = medidasTexto(); return m ? `${m}\n${desc}` : desc; };
+  // Electrodomésticos y punto de vista → frase para el prompt.
+  const electrosTexto = () => {
+    const sel = MATERIALS.appliances.filter(a => electros.includes(a.id)).map(a => a.prompt);
+    return sel.length ? `Incluye estos electrodomésticos: ${sel.join(', ')}. ` : '';
+  };
+  const camaraTexto = () => {
+    const c = MATERIALS.cameras.find(x => x.id === camera);
+    return c ? `Punto de vista: ${c.prompt}. ` : '';
+  };
+  const conMedidas = (desc) => {
+    const extra = `${medidasTexto()}${electrosTexto()}${camaraTexto()}`.trim();
+    return extra ? `${extra}\n${desc}` : desc;
+  };
+  const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   // ─── Editar el render existente en lenguaje natural ─────────────────────────
   const editRender = async () => {
@@ -395,6 +433,20 @@ export default function AIRenderStudio({ state }) {
       if (savedId === id) setSavedId(null);
     } catch { setError('No se pudo eliminar.'); }
   };
+  // ─── Adjuntar el render al presupuesto (Resumen Totales) ────────────────────
+  const attachToBudget = async () => {
+    const img = currentImage();
+    if (!img) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      localStorage.setItem('render3d_attach', JSON.stringify({ image: dataUrl, cliente, ref, ts: Date.now() }));
+      setAttached(true);
+      setTimeout(() => setAttached(false), 4000);
+    } catch { setError('No se pudo adjuntar el render.'); }
+    finally { setDownloading(false); }
+  };
+
   const nuevoProyecto = () => {
     setCliente(''); setRef(''); setSavedId(null); setRenderResult(null);
     setDescription(''); setRefImage(null); setFloorPlan(null); setWallSketches([]); setError(null);
@@ -504,24 +556,28 @@ export default function AIRenderStudio({ state }) {
     setIsGenerating(true);
     setError(null);
 
-    try {
+    const n = Math.max(1, Math.min(3, variantCount));
+    const oneRender = async (i) => {
+      const hint = n > 1 ? ` (Variación ${i + 1} de ${n}: propón una composición e iluminación ligeramente distintas, mismo brief y materiales.)` : '';
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
+        method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
-          description: conMedidas(description.trim()),
+          description: conMedidas(description.trim()) + hint,
           style: params.style,
           referenceImage: refImage || undefined,
         }),
       });
+      return response.json();
+    };
 
-      const data = await response.json();
-
-      if (data.success) {
-        setRenderResult(data);
-        setRenderHistory(prev => [{ ...data, description, timestamp: new Date() }, ...prev].slice(0, 10));
+    try {
+      const results = await Promise.all(Array.from({ length: n }, (_, i) => oneRender(i).catch(() => null)));
+      const ok = results.filter(d => d && d.success);
+      if (ok.length) {
+        setRenderResult(ok[0]);
+        setRenderHistory(prev => [...ok.map(d => ({ ...d, description, timestamp: new Date() })), ...prev].slice(0, 12));
       } else {
-        setError(data.error || 'Error al generar el render');
+        setError((results.find(Boolean) || {}).error || 'Error al generar el render');
       }
     } catch (err) {
       setError('Error de conexión. Verifique su conexión a internet.');
@@ -707,6 +763,30 @@ export default function AIRenderStudio({ state }) {
                 </div>
               </div>
 
+              {/* Electrodomésticos + punto de vista */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Electrodomésticos</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {MATERIALS.appliances.map(a => (
+                    <button key={a.id} onClick={() => toggleElectro(a.id)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${electros.includes(a.id) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Punto de vista (cámara)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {MATERIALS.cameras.map(c => (
+                    <button key={c.id} onClick={() => setCamera(c.id)}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${camera === c.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* PASO 3 — Medidas de la estancia (opcional, para escala real) */}
               <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
                 <StepHeader n={3} title="Medidas de la estancia" hint="Opcional, pero da escala y proporción reales al render." />
@@ -766,6 +846,17 @@ export default function AIRenderStudio({ state }) {
                 <span className="flex-1 h-px bg-slate-200" /> o <span className="flex-1 h-px bg-slate-200" />
               </div>
 
+              {/* Nº de variaciones */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Variaciones</span>
+                <div className="flex bg-slate-100 rounded-lg p-1">
+                  {[1, 2, 3].map(n => (
+                    <button key={n} onClick={() => setVariantCount(n)}
+                      className={`w-9 py-1.5 rounded-md text-xs font-black transition-all ${variantCount === n ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{n}</button>
+                  ))}
+                </div>
+              </div>
+
               {/* Botón generar (solo desde la descripción del paso 1) */}
               <button
                 onClick={handleGenerateNatural}
@@ -775,12 +866,12 @@ export default function AIRenderStudio({ state }) {
                 {isGenerating ? (
                   <>
                     <Loader size={18} className="animate-spin" />
-                    Generando render...
+                    Generando {variantCount > 1 ? `${variantCount} variaciones` : 'render'}...
                   </>
                 ) : (
                   <>
                     <Send size={18} />
-                    Generar desde la descripción
+                    {variantCount > 1 ? `Generar ${variantCount} variaciones` : 'Generar desde la descripción'}
                   </>
                 )}
               </button>
@@ -951,6 +1042,10 @@ export default function AIRenderStudio({ state }) {
                   <button onClick={exportPDF} disabled={downloading || !currentImage()}
                     className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
                     <FileText size={14} /> PDF
+                  </button>
+                  <button onClick={attachToBudget} disabled={downloading || !currentImage()}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`} title="Adjuntar este render al presupuesto (Resumen Totales)">
+                    {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> Al presupuesto</>}
                   </button>
                   <button
                     onClick={() => setShowFullscreen(true)}
