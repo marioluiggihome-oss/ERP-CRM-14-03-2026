@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader } from 'lucide-react';
+import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader, ChevronUp, ChevronDown } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -110,6 +110,16 @@ const ResumenCocinas = ({ state }) => {
   const setCocinaNombre = (id, nombre) => setCocinas(prev => prev.map(c => c.id === id ? { ...c, nombre } : c));
   const addLinea = (cid) => setCocinas(prev => prev.map(c => c.id === cid ? { ...c, lineas: [...c.lineas, { id: uid(), concepto: '', importe: '' }] } : c));
   const removeLinea = (cid, lid) => setCocinas(prev => prev.map(c => c.id === cid ? { ...c, lineas: c.lineas.filter(l => l.id !== lid) } : c));
+  // Mueve una partida arriba/abajo dentro de su cocina (dir = -1 sube, +1 baja).
+  const moveLinea = (cid, lid, dir) => setCocinas(prev => prev.map(c => {
+    if (c.id !== cid) return c;
+    const i = c.lineas.findIndex(l => l.id === lid);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= c.lineas.length) return c;
+    const lineas = [...c.lineas];
+    [lineas[i], lineas[j]] = [lineas[j], lineas[i]];
+    return { ...c, lineas };
+  }));
   const setLinea = (cid, lid, field, val) => setCocinas(prev => prev.map(c => c.id === cid ? { ...c, lineas: c.lineas.map(l => l.id === lid ? { ...l, [field]: val } : l) } : c));
 
   const addPago = () => setPagos(prev => [...prev, { id: uid(), label: '', percent: 0 }]);
@@ -282,8 +292,14 @@ const ResumenCocinas = ({ state }) => {
               <button onClick={() => removeCocina(c.id)} className="text-slate-300 hover:text-red-400" title="Quitar cocina"><Trash2 size={15} /></button>
             </div>
             <div className="p-3 space-y-2">
-              {c.lineas.map(l => (
+              {c.lineas.map((l, i) => (
                 <div key={l.id} className="flex items-center gap-2">
+                  <div className="flex flex-col -my-1">
+                    <button onClick={() => moveLinea(c.id, l.id, -1)} disabled={i === 0} title="Subir partida"
+                      className="text-slate-300 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-300"><ChevronUp size={14} /></button>
+                    <button onClick={() => moveLinea(c.id, l.id, 1)} disabled={i === c.lineas.length - 1} title="Bajar partida"
+                      className="text-slate-300 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-300"><ChevronDown size={14} /></button>
+                  </div>
                   <input value={l.concepto} onChange={e => setLinea(c.id, l.id, 'concepto', e.target.value)} placeholder="Concepto (ej. MUEBLES)"
                     className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg text-sm" />
                   <input type="number" value={l.importe} onChange={e => setLinea(c.id, l.id, 'importe', e.target.value)} placeholder="0,00"
