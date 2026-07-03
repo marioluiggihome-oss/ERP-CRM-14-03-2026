@@ -241,6 +241,7 @@ export default function AIRenderStudio({ state }) {
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
   const [attached, setAttached] = useState(false);
+  const [compareOn, setCompareOn] = useState(false); // ver referencia vs render
   const [params, setParams] = useState({
     layout: 'L-shape',
     countertop: 'quartz_white',
@@ -254,11 +255,14 @@ export default function AIRenderStudio({ state }) {
 
   const { isListening, transcript, isSupported, startListening, stopListening, resetTranscript, setTranscript } = useSpeechRecognition();
   const textareaRef = useRef(null);
+  // Texto que había en el campo al empezar a dictar: la voz se AÑADE a él, no lo pisa.
+  const baseTextRef = useRef('');
 
-  // Sincronizar transcript de voz con el campo de descripción
+  // La transcripción se concatena al texto base (lo escrito antes de dictar).
   useEffect(() => {
     if (transcript) {
-      setDescription(transcript);
+      const base = baseTextRef.current;
+      setDescription(base ? `${base.trim()} ${transcript}` : transcript);
     }
   }, [transcript]);
 
@@ -630,6 +634,7 @@ export default function AIRenderStudio({ state }) {
     if (isListening) {
       stopListening();
     } else {
+      baseTextRef.current = description || '';  // conserva lo ya escrito
       resetTranscript();
       startListening();
     }
@@ -749,7 +754,7 @@ export default function AIRenderStudio({ state }) {
                 <textarea
                   ref={textareaRef}
                   value={description}
-                  onChange={(e) => { setDescription(e.target.value); setTranscript(e.target.value); }}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe lo que quieres: cocina, armario empotrado, baño, dormitorio, estantería... Ej: 'Armario empotrado con puertas blancas lacadas, tirador fresado en los laterales color madera, interior con columna de baldas'"
                   className="flex-1 min-h-[150px] p-4 border border-slate-200 rounded-xl text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all"
                 />
@@ -1070,6 +1075,13 @@ export default function AIRenderStudio({ state }) {
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`} title="Adjuntar este render al presupuesto (Resumen Totales)">
                     {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> Al presupuesto</>}
                   </button>
+                  {refImage && (
+                    <button onClick={() => setCompareOn(v => !v)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                      title="Comparar la referencia con el render">
+                      <Image size={14} /> Comparar
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowFullscreen(true)}
                     className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
@@ -1087,7 +1099,20 @@ export default function AIRenderStudio({ state }) {
                 </div>
               </div>
 
-              {/* Imagen del render */}
+              {/* Comparativa referencia vs render */}
+              {compareOn && refImage && renderResult?.result?.images?.[0] ? (
+                <div className="flex-1 grid grid-cols-2 gap-3 overflow-hidden">
+                  <div className="bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center relative">
+                    <img src={refImage} alt="Referencia" className="w-full h-full object-contain" />
+                    <span className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] font-black text-white uppercase tracking-widest">Referencia</span>
+                  </div>
+                  <div className="bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center relative">
+                    <img src={assetSrc(renderResult.result.images[0])} alt="Render" className="w-full h-full object-contain" />
+                    <span className="absolute top-2 left-2 px-2 py-1 bg-indigo-600 rounded text-[10px] font-black text-white uppercase tracking-widest">Render</span>
+                  </div>
+                </div>
+              ) : (
+              /* Imagen del render */
               <div className="flex-1 bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center relative">
                 {renderResult?.result?.images?.[0] ? (
                   <img
@@ -1118,6 +1143,7 @@ export default function AIRenderStudio({ state }) {
                   </span>
                 </div>
               </div>
+              )}
 
               {/* Editar el render en lenguaje natural */}
               {currentImage() && (
