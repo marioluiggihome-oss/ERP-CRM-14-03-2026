@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader, ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { Plus, Trash2, Download, Layers, FileText, Save, FolderOpen, X, Loader, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -39,6 +39,9 @@ const ResumenCocinas = ({ state }) => {
   const [savedList, setSavedList] = useState(null); // null = oculto
   const [busy, setBusy] = useState(false);
   const uidUser = state?.currentUser?.id || 'anonymous';
+  // Origen del arrastre (drag & drop). {kind:'linea'|'pago', cid, id}
+  const dragRef = useRef(null);
+  const [dragKey, setDragKey] = useState(null); // para feedback visual de la fila arrastrada
 
   // ── guardar / historial ──
   const saveResumen = async () => {
@@ -110,21 +113,58 @@ const ResumenCocinas = ({ state }) => {
   const setCocinaNombre = (id, nombre) => setCocinas(prev => prev.map(c => c.id === id ? { ...c, nombre } : c));
   const addLinea = (cid) => setCocinas(prev => prev.map(c => c.id === cid ? { ...c, lineas: [...c.lineas, { id: uid(), concepto: '', importe: '' }] } : c));
   const removeLinea = (cid, lid) => setCocinas(prev => prev.map(c => c.id === cid ? { ...c, lineas: c.lineas.filter(l => l.id !== lid) } : c));
-  // Mueve una partida arriba/abajo dentro de su cocina (dir = -1 sube, +1 baja).
+  // Helpers de reordenación (intercambio por flechas / colocación por arrastre).
+  const swap = (arr, i, j) => { const a = [...arr]; [a[i], a[j]] = [a[j], a[i]]; return a; };
+  // Coloca el elemento fromId justo en la posición del toId (arrastrar y soltar).
+  const reorder = (arr, fromId, toId) => {
+    const from = arr.findIndex(x => x.id === fromId);
+    const to = arr.findIndex(x => x.id === toId);
+    if (from < 0 || to < 0 || from === to) return arr;
+    const a = [...arr];
+    const [m] = a.splice(from, 1);
+    a.splice(to, 0, m);
+    return a;
+  };
+
+  // ── Partidas (dentro de una cocina) ──
   const moveLinea = (cid, lid, dir) => setCocinas(prev => prev.map(c => {
     if (c.id !== cid) return c;
-    const i = c.lineas.findIndex(l => l.id === lid);
-    const j = i + dir;
+    const i = c.lineas.findIndex(l => l.id === lid); const j = i + dir;
     if (i < 0 || j < 0 || j >= c.lineas.length) return c;
-    const lineas = [...c.lineas];
-    [lineas[i], lineas[j]] = [lineas[j], lineas[i]];
-    return { ...c, lineas };
+    return { ...c, lineas: swap(c.lineas, i, j) };
   }));
+  const reorderLinea = (cid, fromId, toId) => setCocinas(prev => prev.map(c =>
+    c.id === cid ? { ...c, lineas: reorder(c.lineas, fromId, toId) } : c));
+
+  // ── Cocinas ──
+  const moveCocina = (id, dir) => setCocinas(prev => {
+    const i = prev.findIndex(c => c.id === id); const j = i + dir;
+    if (i < 0 || j < 0 || j >= prev.length) return prev;
+    return swap(prev, i, j);
+  });
+  const reorderCocina = (fromId, toId) => setCocinas(prev => reorder(prev, fromId, toId));
+
+  // ── Drag & drop genérico ──
+  const onDragStartRow = (kind, cid, id) => (e) => { dragRef.current = { kind, cid, id }; setDragKey(id); e.dataTransfer.effectAllowed = 'move'; };
+  const onDropRow = (kind, cid, toId) => (e) => {
+    e.preventDefault(); const d = dragRef.current; dragRef.current = null; setDragKey(null);
+    if (!d || d.kind !== kind || d.id === toId) return;
+    if (kind === 'linea') { if (d.cid !== cid) return; reorderLinea(cid, d.id, toId); }
+    else if (kind === 'cocina') reorderCocina(d.id, toId);
+    else if (kind === 'pago') reorderPagoDD(d.id, toId);
+  };
+  const allowDrop = (e) => e.preventDefault();
   const setLinea = (cid, lid, field, val) => setCocinas(prev => prev.map(c => c.id === cid ? { ...c, lineas: c.lineas.map(l => l.id === lid ? { ...l, [field]: val } : l) } : c));
 
   const addPago = () => setPagos(prev => [...prev, { id: uid(), label: '', percent: 0 }]);
   const removePago = (id) => setPagos(prev => prev.filter(p => p.id !== id));
   const setPago = (id, field, val) => setPagos(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p));
+  const movePago = (id, dir) => setPagos(prev => {
+    const i = prev.findIndex(p => p.id === id); const j = i + dir;
+    if (i < 0 || j < 0 || j >= prev.length) return prev;
+    return swap(prev, i, j);
+  });
+  const reorderPagoDD = (fromId, toId) => setPagos(prev => reorder(prev, fromId, toId));
 
   // ── PDF ──
   const exportPDF = async () => {
@@ -284,16 +324,28 @@ const ResumenCocinas = ({ state }) => {
         </div>
 
         {/* Cocinas */}
-        {cocinas.map(c => (
-          <div key={c.id} className="rounded-xl border border-slate-200 overflow-hidden">
+        {cocinas.map((c, ci) => (
+          <div key={c.id} onDragOver={allowDrop} onDrop={onDropRow('cocina', null, c.id)}
+            className={`rounded-xl border border-slate-200 overflow-hidden ${dragKey === c.id ? 'opacity-50' : ''}`}>
             <div className="flex items-center gap-2 bg-slate-800 px-3 py-2">
+              <span draggable onDragStart={onDragStartRow('cocina', null, c.id)} onDragEnd={() => { dragRef.current = null; setDragKey(null); }}
+                className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-white" title="Arrastra para reordenar la cocina"><GripVertical size={16} /></span>
+              <div className="flex flex-col -my-1">
+                <button onClick={() => moveCocina(c.id, -1)} disabled={ci === 0} title="Subir cocina"
+                  className="text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400"><ChevronUp size={13} /></button>
+                <button onClick={() => moveCocina(c.id, 1)} disabled={ci === cocinas.length - 1} title="Bajar cocina"
+                  className="text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400"><ChevronDown size={13} /></button>
+              </div>
               <input value={c.nombre} onChange={e => setCocinaNombre(c.id, e.target.value)}
                 className="flex-1 bg-transparent text-white font-black uppercase text-sm outline-none placeholder-slate-400" placeholder="NOMBRE COCINA" />
               <button onClick={() => removeCocina(c.id)} className="text-slate-300 hover:text-red-400" title="Quitar cocina"><Trash2 size={15} /></button>
             </div>
             <div className="p-3 space-y-2">
               {c.lineas.map((l, i) => (
-                <div key={l.id} className="flex items-center gap-2">
+                <div key={l.id} onDragOver={allowDrop} onDrop={onDropRow('linea', c.id, l.id)}
+                  className={`flex items-center gap-2 rounded-lg ${dragKey === l.id ? 'opacity-50' : ''}`}>
+                  <span draggable onDragStart={onDragStartRow('linea', c.id, l.id)} onDragEnd={() => { dragRef.current = null; setDragKey(null); }}
+                    className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-600" title="Arrastra para reordenar la partida"><GripVertical size={15} /></span>
                   <div className="flex flex-col -my-1">
                     <button onClick={() => moveLinea(c.id, l.id, -1)} disabled={i === 0} title="Subir partida"
                       className="text-slate-300 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-300"><ChevronUp size={14} /></button>
@@ -326,8 +378,17 @@ const ResumenCocinas = ({ state }) => {
         <div className="rounded-xl border border-slate-200 p-3">
           <p className="text-xs font-black text-slate-500 uppercase mb-2">Forma de pago</p>
           <div className="space-y-2">
-            {pagos.map(p => (
-              <div key={p.id} className="flex items-center gap-2">
+            {pagos.map((p, pi) => (
+              <div key={p.id} onDragOver={allowDrop} onDrop={onDropRow('pago', null, p.id)}
+                className={`flex items-center gap-2 rounded-lg ${dragKey === p.id ? 'opacity-50' : ''}`}>
+                <span draggable onDragStart={onDragStartRow('pago', null, p.id)} onDragEnd={() => { dragRef.current = null; setDragKey(null); }}
+                  className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-600" title="Arrastra para reordenar el plazo"><GripVertical size={15} /></span>
+                <div className="flex flex-col -my-1">
+                  <button onClick={() => movePago(p.id, -1)} disabled={pi === 0} title="Subir plazo"
+                    className="text-slate-300 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-300"><ChevronUp size={14} /></button>
+                  <button onClick={() => movePago(p.id, 1)} disabled={pi === pagos.length - 1} title="Bajar plazo"
+                    className="text-slate-300 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-300"><ChevronDown size={14} /></button>
+                </div>
                 <input value={p.label} onChange={e => setPago(p.id, 'label', e.target.value)} placeholder="Ej: 50% al hacer pedido"
                   className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg text-sm" />
                 <div className="flex items-center gap-1">
