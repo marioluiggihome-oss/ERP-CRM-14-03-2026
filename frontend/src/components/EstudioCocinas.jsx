@@ -189,6 +189,14 @@ async function apiPost(endpoint, body) {
   return data;
 }
 
+/** Añade el token JWT como query param a URLs del proxy de assets (las <img> no envían cabeceras). */
+function imgSrc(url) {
+  if (!url) return '';
+  const t = getToken();
+  if (!t) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}t=${encodeURIComponent(t)}`;
+}
+
 async function apiGet(endpoint) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     headers: { Authorization: `Bearer ${getToken()}` },
@@ -760,10 +768,10 @@ export default function EstudioCocinas() {
                     <PrintPdfBar
                       t={t}
                       onPrint={() => handlePrint('render-print-area')}
-                      onPdf={() => handlePdfExport(`<img src="${render.imageUrl}" style="width:100%"/>`, `render_${proy.nombre_cliente || 'cocina'}.pdf`)}
+                      onPdf={() => handlePdfExport(`<img src="${imgSrc(render.imageUrl)}" style="width:100%"/>`, `render_${proy.nombre_cliente || 'cocina'}.pdf`)}
                       extraBtns={
                         <>
-                          <a href={render.imageUrl} download="render_cocina.png"
+                          <a href={imgSrc(render.imageUrl)} download="render_cocina.png"
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
                             <Download size={11}/> PNG
                           </a>
@@ -775,7 +783,7 @@ export default function EstudioCocinas() {
                       }
                     />
                     <div id="render-print-area" className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
-                      <img src={render.imageUrl} alt="Render 3D" className="w-full object-contain" />
+                      <img src={imgSrc(render.imageUrl)} alt="Render 3D" className="w-full object-contain" />
                       <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setRender(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><ZoomIn size={13}/></button>
                         <button onClick={() => setRender(s => ({ ...s, editMode: !s.editMode }))} className="bg-amber-600/80 p-1.5 rounded-lg hover:bg-amber-600 text-white"><Edit3 size={13}/></button>
@@ -799,7 +807,7 @@ export default function EstudioCocinas() {
 
                 {render.fs && (
                   <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onClick={() => setRender(s => ({ ...s, fs: false }))}>
-                    <img src={render.imageUrl} alt="Render" className="max-w-full max-h-full object-contain rounded-xl" />
+                    <img src={imgSrc(render.imageUrl)} alt="Render" className="max-w-full max-h-full object-contain rounded-xl" />
                     <button className="absolute top-4 right-4 bg-white/10 p-2 rounded-full text-white"><X size={18}/></button>
                   </div>
                 )}
@@ -1081,7 +1089,7 @@ export default function EstudioCocinas() {
                       {galeria.renders.map(r => (
                         <div key={r._id} className={`relative group rounded-xl overflow-hidden border ${t.cardBorder} transition-shadow hover:shadow-lg`}>
                           <img
-                            src={r.image_url}
+                            src={imgSrc(r.image_url)}
                             alt={r.cliente || 'Render'}
                             className="w-full h-40 object-cover cursor-pointer"
                             onClick={() => setGaleria(g => ({ ...g, fsImg: r.image_url }))}
@@ -1100,7 +1108,7 @@ export default function EstudioCocinas() {
                               className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-red-100 hover:text-red-600">
                               <Trash2 size={11} />
                             </button>
-                            <a href={r.image_url} download className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-emerald-100">
+                            <a href={imgSrc(r.image_url)} download className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-emerald-100">
                               <Download size={11} />
                             </a>
                           </div>
@@ -1137,7 +1145,7 @@ export default function EstudioCocinas() {
                 {/* Fullscreen de galería */}
                 {galeria.fsImg && (
                   <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onClick={() => setGaleria(g => ({ ...g, fsImg: null }))}>
-                    <img src={galeria.fsImg} alt="Render" className="max-w-full max-h-full object-contain rounded-xl" />
+                    <img src={imgSrc(galeria.fsImg)} alt="Render" className="max-w-full max-h-full object-contain rounded-xl" />
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
                       3D Estudio · Luiggi Home
                     </div>
