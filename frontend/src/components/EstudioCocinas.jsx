@@ -608,8 +608,15 @@ export default function EstudioCocinas({ state, setState }) {
   // ── Estilo rápido ──
   const applyStyle = useCallback(style => {
     setSelectedStyle(style.id);
-    setProy(p => ({ ...p, estilo: style.estilo, descripcion: style.descripcion, notas: style.notas }));
-  }, []);
+    setProy(p => ({
+      ...p,
+      estilo: style.estilo,
+      notas: style.notas,
+      // Con croquis subido, el estilo solo aporta acabado/materiales: NO se pisa la
+      // descripción (que puede llevar tu diseño) para no alterar la distribución.
+      descripcion: render.croquis ? p.descripcion : style.descripcion,
+    }));
+  }, [render.croquis]);
 
   // ── Croquis ──
   const onCroquis = useCallback(e => {
