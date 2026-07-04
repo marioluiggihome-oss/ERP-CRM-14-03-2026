@@ -242,6 +242,7 @@ export default function AIRenderStudio({ state }) {
   const [variantCount, setVariantCount] = useState(1);
   const [attached, setAttached] = useState(false);
   const [compareOn, setCompareOn] = useState(false); // ver referencia vs render
+  const [imgError, setImgError] = useState(false);    // la imagen del render no cargó
   const [params, setParams] = useState({
     layout: 'L-shape',
     countertop: 'quartz_white',
@@ -257,6 +258,9 @@ export default function AIRenderStudio({ state }) {
   const textareaRef = useRef(null);
   // Texto que había en el campo al empezar a dictar: la voz se AÑADE a él, no lo pisa.
   const baseTextRef = useRef('');
+
+  // Al cambiar de render, reseteamos el aviso de imagen no cargada.
+  useEffect(() => { setImgError(false); }, [renderResult]);
 
   // La transcripción se concatena al texto base (lo escrito antes de dictar).
   useEffect(() => {
@@ -1114,12 +1118,19 @@ export default function AIRenderStudio({ state }) {
               ) : (
               /* Imagen del render */
               <div className="flex-1 bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center relative">
-                {renderResult?.result?.images?.[0] ? (
+                {renderResult?.result?.images?.[0] && !imgError ? (
                   <img
                     src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
                     className="w-full h-full object-contain"
+                    onError={() => setImgError(true)}
                   />
+                ) : imgError ? (
+                  <div className="text-center p-8 max-w-sm">
+                    <Image size={40} className="text-slate-500 mx-auto mb-3" />
+                    <p className="text-slate-300 text-sm font-bold mb-1">No se pudo cargar la imagen del render</p>
+                    <p className="text-slate-500 text-xs">El motor devolvió el render pero la imagen no se pudo mostrar. Vuelve a generar; si persiste, avísanos para revisar el motor.</p>
+                  </div>
                 ) : (
                   <div className="text-center p-8">
                     <Image size={48} className="text-slate-600 mx-auto mb-4" />
