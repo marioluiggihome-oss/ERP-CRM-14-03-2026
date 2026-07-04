@@ -807,10 +807,7 @@ class Render3DService:
         si no está configurado o falla, usa Gemini como respaldo.
         Configurable con la variable de entorno KITCHEN_RENDER_PROVIDER=manus|gemini."""
         import os
-        # Por defecto GEMINI: devuelve la imagen incrustada (data URL), se ve siempre
-        # y es más rápido. Manus solo se usa si se fuerza con KITCHEN_RENDER_PROVIDER=manus
-        # (su imagen depende del proxy y a veces no carga → recuadro negro).
-        provider = (os.environ.get("KITCHEN_RENDER_PROVIDER") or "gemini").lower()
+        provider = (os.environ.get("KITCHEN_RENDER_PROVIDER") or "manus").lower()
         manus_ready = bool(getattr(self.config, "provider_api_key", ""))
 
         if provider == "manus" and manus_ready:
