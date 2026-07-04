@@ -230,7 +230,17 @@ function StepHeader({ n, title, hint }) {
 }
 
 // ─── Componente Principal ────────────────────────────────────────────────────
-export default function AIRenderStudio({ state }) {
+export default function AIRenderStudio({ state, setState }) {
+  const isMaster = state?.currentUser?.isAdmin === true;
+  // Accesos temporales a otras herramientas de diseño (para el master), mientras
+  // se unifica todo en Estudio 3D + Agentes.
+  const OTRAS_HERRAMIENTAS = [
+    { tab: 'agentesDisenadores', label: 'Agentes' },
+    { tab: 'cocinasai', label: 'Cocinas IA 2' },
+    { tab: 'kitchenDesigner', label: 'Diseñador 3D' },
+    { tab: 'estudioCocinas', label: 'Estudio técnico' },
+  ];
+  const irA = (tab) => setState && setState(p => ({ ...p, currentTab: tab }));
   const [mode, setMode] = useState('natural'); // 'natural' | 'params'
   const [description, setDescription] = useState('');
   const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) para que el modelo la "vea"
@@ -759,6 +769,19 @@ export default function AIRenderStudio({ state }) {
           </div>
         </div>
       </div>
+
+      {/* Barra temporal de accesos a otras herramientas (solo master) */}
+      {isMaster && setState && (
+        <div className="shrink-0 flex items-center gap-2 flex-wrap px-4 sm:px-8 py-2 bg-amber-50 border-b border-amber-200">
+          <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider">Otras herramientas (temporal · master)</span>
+          {OTRAS_HERRAMIENTAS.map(h => (
+            <button key={h.tab} onClick={() => irA(h.tab)}
+              className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-white border border-amber-200 text-amber-700 hover:bg-amber-100">
+              {h.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">

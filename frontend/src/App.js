@@ -1323,7 +1323,7 @@ const App = () => {
             {state.currentTab === 'cascos' && state.currentUser?.canUseCascos === true && <ErrorBoundary><Cascos state={state} /></ErrorBoundary>}
             {state.currentTab === 'propdata' && state.currentUser?.canUsePropData === true && <ErrorBoundary><PropData state={state} /></ErrorBoundary>}
             {state.currentTab === 'armarios2' && state.currentUser?.canUseArmarios2 === true && <ErrorBoundary><Armarios2 state={state} /></ErrorBoundary>}
-            {state.currentTab === 'cocinasai' && state.currentUser?.canUseCocinasAI === true && <ErrorBoundary><CocinasIA state={state} /></ErrorBoundary>}
+            {state.currentTab === 'cocinasai' && (state.currentUser?.canUseCocinasAI === true || state.currentUser?.isAdmin) && <ErrorBoundary><CocinasIA state={state} /></ErrorBoundary>}
             {state.currentTab === 'backup' && <BackupManager />}
             {state.currentTab === 'invoices' && <ErrorBoundary><Invoices currentUser={state.currentUser} /></ErrorBoundary>}
             {state.currentTab === 'rentabilidad' && <ErrorBoundary><RentabilidadPanel currentUser={state.currentUser} /></ErrorBoundary>}
@@ -1354,10 +1354,10 @@ const App = () => {
             
             {/* Render 3D Studio */}
             {state.currentTab === 'renderStudio' && state.currentUser?.canUseAIAnalysis && (
-              <AIRenderStudio state={state} />
+              <AIRenderStudio state={state} setState={setState} />
             )}
             {/* Kitchen 3D Designer - Panel de proyectos (mantenido por compatibilidad) */}
-            {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner) && (
+            {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && (
               <KitchenDesigner3D state={state} setState={setState} onAddToBudget={handleAddFromVisualizer} />
             )}
             {/* Estudio de Cocinas — Módulo unificado */}
