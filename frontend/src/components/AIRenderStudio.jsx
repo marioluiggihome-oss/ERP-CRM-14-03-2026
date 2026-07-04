@@ -334,6 +334,41 @@ export default function AIRenderStudio({ state }) {
   };
   const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
+  // Paleta rápida de colores de mueble para generar variantes de color en 1 clic.
+  const COLORS_VARIANTES = [
+    { label: 'Blanco mate', hex: '#f1f5f9' },
+    { label: 'Antracita', hex: '#3f3f46' },
+    { label: 'Azul navy', hex: '#1e293b' },
+    { label: 'Verde sage', hex: '#8a9a5b' },
+    { label: 'Roble natural', hex: '#c8a26a' },
+    { label: 'Negro mate', hex: '#18181b' },
+  ];
+
+  // Genera una variante del render actual cambiando SOLO el color de los muebles.
+  const colorVariant = async (colorLabel) => {
+    const img = currentImage();
+    if (!img || editing) return;
+    setEditing(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({
+          description: `Cambia ÚNICAMENTE el color/acabado de los frentes de los muebles a "${colorLabel}", manteniendo EXACTAMENTE el mismo diseño, distribución, encimera, tiradores, electrodomésticos, suelo, cámara e iluminación. No cambies nada más.`,
+          style: params.style,
+          referenceImage: dataUrl,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        const merged = { ...data, description: `${renderResult?.description || description}\n[Color] ${colorLabel}` };
+        setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
+      } else setError(data.error || 'No se pudo generar la variante de color');
+    } catch { setError('Error de conexión al generar la variante.'); }
+    finally { setEditing(false); }
+  };
+
   // ─── Editar el render existente en lenguaje natural ─────────────────────────
   const editRender = async () => {
     const img = currentImage();
@@ -764,56 +799,52 @@ export default function AIRenderStudio({ state }) {
                 />
               </div>
 
-              {/* PASO 2 — Estilo de render */}
-              <div className="flex flex-col gap-2">
-                <StepHeader n={2} title="Estilo de render" hint="Cómo quieres que se vea la imagen final." />
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {MATERIALS.styles.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={() => setParams(p => ({ ...p, style: s.id }))}
-                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                        params.style === s.id
-                          ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300'
-                          : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+              {/* PASO 2 — Estilo y ambiente (agrupado) */}
+              <div className="rounded-xl border border-slate-200 p-3 flex flex-col gap-3">
+                <StepHeader n={2} title="Estilo y ambiente" hint="Aspecto, punto de vista e iluminación del render." />
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Estilo</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {MATERIALS.styles.map(s => (
+                      <button key={s.id} onClick={() => setParams(p => ({ ...p, style: s.id }))}
+                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${params.style === s.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Punto de vista (cámara)</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {MATERIALS.cameras.map(c => (
+                      <button key={c.id} onClick={() => setCamera(c.id)}
+                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${camera === c.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Iluminación</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MATERIALS.lighting.map(l => (
+                      <button key={l.id} onClick={() => setParams(p => ({ ...p, lighting: l.id }))}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${params.lighting === l.id ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Electrodomésticos + punto de vista */}
-              <div className="flex flex-col gap-2">
+              {/* Equipamiento */}
+              <div className="rounded-xl border border-slate-200 p-3 flex flex-col gap-2">
                 <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Electrodomésticos</p>
                 <div className="flex flex-wrap gap-1.5">
                   {MATERIALS.appliances.map(a => (
                     <button key={a.id} onClick={() => toggleElectro(a.id)}
                       className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${electros.includes(a.id) ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                       {a.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Punto de vista (cámara)</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {MATERIALS.cameras.map(c => (
-                    <button key={c.id} onClick={() => setCamera(c.id)}
-                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${camera === c.id ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Iluminación</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {MATERIALS.lighting.map(l => (
-                    <button key={l.id} onClick={() => setParams(p => ({ ...p, lighting: l.id }))}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${params.lighting === l.id ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                      {l.label}
                     </button>
                   ))}
                 </div>
@@ -878,35 +909,29 @@ export default function AIRenderStudio({ state }) {
                 <span className="flex-1 h-px bg-slate-200" /> o <span className="flex-1 h-px bg-slate-200" />
               </div>
 
-              {/* Nº de variaciones */}
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Variaciones</span>
-                <div className="flex bg-slate-100 rounded-lg p-1">
-                  {[1, 2, 3].map(n => (
-                    <button key={n} onClick={() => setVariantCount(n)}
-                      className={`w-9 py-1.5 rounded-md text-xs font-black transition-all ${variantCount === n ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{n}</button>
-                  ))}
+              {/* Acción principal — barra fija siempre visible */}
+              <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-gradient-to-t from-white via-white to-white/70 backdrop-blur flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Variaciones</span>
+                  <div className="flex bg-slate-100 rounded-lg p-1">
+                    {[1, 2, 3].map(n => (
+                      <button key={n} onClick={() => setVariantCount(n)}
+                        className={`w-9 py-1.5 rounded-md text-xs font-black transition-all ${variantCount === n ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{n}</button>
+                    ))}
+                  </div>
                 </div>
+                <button
+                  onClick={handleGenerateNatural}
+                  disabled={!description.trim() || isGenerating}
+                  className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+                >
+                  {isGenerating ? (
+                    <><Loader size={18} className="animate-spin" /> Generando {variantCount > 1 ? `${variantCount} variaciones` : 'render'}...</>
+                  ) : (
+                    <><Send size={18} /> {variantCount > 1 ? `Generar ${variantCount} variaciones` : 'Generar desde la descripción'}</>
+                  )}
+                </button>
               </div>
-
-              {/* Botón generar (solo desde la descripción del paso 1) */}
-              <button
-                onClick={handleGenerateNatural}
-                disabled={!description.trim() || isGenerating}
-                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader size={18} className="animate-spin" />
-                    Generando {variantCount > 1 ? `${variantCount} variaciones` : 'render'}...
-                  </>
-                ) : (
-                  <>
-                    <Send size={18} />
-                    {variantCount > 1 ? `Generar ${variantCount} variaciones` : 'Generar desde la descripción'}
-                  </>
-                )}
-              </button>
             </div>
           ) : (
             /* ─── Modo Parámetros/Materiales ─── */
@@ -1154,6 +1179,20 @@ export default function AIRenderStudio({ state }) {
                   </span>
                 </div>
               </div>
+              )}
+
+              {/* Variantes de color en 1 clic */}
+              {currentImage() && (
+                <div className="shrink-0 flex items-center gap-2 flex-wrap bg-white border border-slate-200 rounded-xl p-2">
+                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1">Variar color</span>
+                  {COLORS_VARIANTES.map(c => (
+                    <button key={c.label} onClick={() => colorVariant(c.label)} disabled={editing}
+                      title={`Muebles en ${c.label}`}
+                      className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-slate-300 shadow hover:scale-110 transition-transform disabled:opacity-40"
+                      style={{ background: c.hex }} />
+                  ))}
+                  {editing && <span className="text-[11px] text-slate-400 flex items-center gap-1"><Loader size={12} className="animate-spin" /> generando…</span>}
+                </div>
               )}
 
               {/* Editar el render en lenguaje natural */}
