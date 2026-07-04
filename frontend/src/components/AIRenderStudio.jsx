@@ -15,6 +15,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus } from 'lucide-react';
 import { getToken } from '../services/api';
+import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -243,33 +244,44 @@ function precioEncimeraMl(id) {
 }
 const eur0 = (n) => `${Math.round(Number(n) || 0).toLocaleString('es-ES')} €`;
 
-// Precio real €/metro lineal de los muebles del Presupuestador 1: usa los productos
-// del catálogo activo (bajos/altos/columnas), su nº de puntos y el valor de punto.
-// Devuelve la mediana €/ml (robusta) o null si no hay catálogo utilizable.
+// Precio orientativo €/metro lineal de los muebles del Presupuestador 1, RESPETANDO
+// la librería activa (MV = tarifas T1..T21 / ZC = zonas Z1..Z12), el bloque de tarifa
+// según el acabado activo y el valor de punto POR librería. Mediana robusta.
 function catalogoPrecioMuebleMl(state) {
   try {
     const cats = state?.catalogs || [];
     const active = state?.activeCatalogIds || [];
-    const pv = Number(state?.pointValueMontada) || 0;
-    if (!pv || !cats.length) return null;
+    if (!cats.length) return null;
+    const lib = state?.currentLibrary || 'ZC';
+    const isMV = lib === 'MV';
+    const pv = Number(state?.libraryPointValues?.[lib]) || Number(state?.pointValueMontada) || 0;
+    if (!pv) return null;
+    // Columna de tarifa/zona activa según el acabado (globalFinish); si no, base.
+    const finishName = state?.globalFinish;
+    const table = isMV ? MV_TARIFFS : DOOR_FINISHES;
+    const group = (table.find(f => f.name === finishName) || {}).group || (isMV ? 'T1' : 'Z1');
+    // El ancho del producto puede venir en cm (p. ej. 60) o mm (600).
+    const anchoM = (w) => (w >= 100 ? w / 1000 : w / 100);
     const prods = cats
       .filter(c => active.includes(c.id) && (c.module === 'montada' || !c.module))
       .flatMap(c => c.products || []);
     const vals = [];
     for (const p of prods) {
       const cat = String(p.category || '').toUpperCase();
-      if (!/BAJOS|ALTOS|COLUMNA|SEMICOLUMNA/.test(cat)) continue;
+      if (!/BAJO|ALTO|COLUMNA|SEMICOLUMNA/.test(cat)) continue;
       const w = Number(p.width) || 0;
-      if (w < 100) continue; // ancho en mm
-      let pts = 0;
-      if (typeof p.points === 'number') pts = p.points;
-      else if (p.points && typeof p.points === 'object') pts = p.points.Z1 || p.points.T1 || 0;
+      if (w <= 0) continue;
+      const zp = p.zonePoints || {};
+      let pts = zp[group];
+      if (pts == null) pts = (typeof p.points === 'number') ? p.points : (p.points?.[group] ?? p.points?.[isMV ? 'T1' : 'Z1']);
+      pts = Number(pts) || 0;
       if (!pts) continue;
-      vals.push((pts * pv) / (w / 1000)); // €/ml
+      const ml = anchoM(w);
+      if (ml > 0) vals.push((pts * pv) / ml); // €/ml
     }
     if (vals.length < 3) return null;
     vals.sort((a, b) => a - b);
-    return Math.round(vals[Math.floor(vals.length / 2)]);
+    return { eurMl: Math.round(vals[Math.floor(vals.length / 2)]), lib, group };
   } catch { return null; }
 }
 
@@ -429,8 +441,8 @@ export default function AIRenderStudio({ state, setState }) {
     if (!ml) ml = 4; // por defecto si no hay medidas
     ml = Math.min(Math.max(ml, 2), 14);
     const tier = CAB_TIER[params.cabinets] || 'medio';
-    const catMl = catalogoPrecioMuebleMl(state); // €/ml real del Presupuestador 1
-    const precioMuebleMl = catMl || PRECIO_MUEBLE_ML[tier] || PRECIO_MUEBLE_ML.medio;
+    const cat = catalogoPrecioMuebleMl(state); // {eurMl, lib, group} del Presupuestador 1
+    const precioMuebleMl = (cat && cat.eurMl) || PRECIO_MUEBLE_ML[tier] || PRECIO_MUEBLE_ML.medio;
     const muebles = ml * precioMuebleMl;
     const encimera = ml * precioEncimeraMl(params.countertop);
     const electro = electros.reduce((s, id) => s + (PRECIO_ELECTRO[id] || 0), 0);
@@ -442,7 +454,8 @@ export default function AIRenderStudio({ state, setState }) {
       ml: Math.round(ml * 10) / 10,
       muebles, encimera, electro, tiradores, montaje,
       min: round100(subtotal * 0.9), max: round100(subtotal * 1.15),
-      deCatalogo: !!catMl, precioMuebleMl,
+      deCatalogo: !!(cat && cat.eurMl), precioMuebleMl,
+      lib: cat?.lib, group: cat?.group,
     };
   };
   const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -1079,7 +1092,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <p className="text-sm font-black text-emerald-700">{eur0(e.min)} – {eur0(e.max)}</p>
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">≈ {e.ml} m.l. · muebles {eur0(e.muebles)} · encimera {eur0(e.encimera)} · electro {eur0(e.electro)} · montaje {eur0(e.montaje)}</p>
-                  <p className="text-[10px] text-slate-400 mt-1">{e.deCatalogo ? `Muebles a ${eur0(e.precioMuebleMl)}/m.l. según tu catálogo del Presupuestador 1.` : 'Precios medios orientativos (activa un catálogo en el Presupuestador 1 para usar tus tarifas).'} El presupuesto real se cierra en el Presupuestador 1.</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{e.deCatalogo ? `Muebles ≈ ${eur0(e.precioMuebleMl)}/m.l. (librería ${e.lib}, bloque ${e.group}) según tu catálogo del Presupuestador 1.` : 'Precios medios orientativos (activa un catálogo en el Presupuestador 1 para usar tus tarifas).'} El precio exacto se cierra en el Presupuestador 1, mueble a mueble.</p>
                   {setState && (
                     <button onClick={() => setState(p => ({ ...p, currentTab: 'budget', renderReturn: true }))}
                       className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">
