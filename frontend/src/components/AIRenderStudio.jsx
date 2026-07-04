@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -328,6 +328,18 @@ export default function AIRenderStudio({ state, setState }) {
   const providerOf = () => (motor === 'ia2' ? 'manus' : 'gemini');
   const [attached, setAttached] = useState(false);
   const [compareOn, setCompareOn] = useState(false); // ver referencia vs render
+  // Panel izquierdo redimensionable/ocultable (solo en pantallas grandes).
+  const [panelW, setPanelW] = useState(420);
+  const [panelHidden, setPanelHidden] = useState(false);
+  const resizingPanel = useRef(false);
+  const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
+  useEffect(() => {
+    const onMove = (e) => { if (resizingPanel.current) setPanelW(Math.max(300, Math.min(760, e.clientX - 8))); };
+    const onUp = () => { if (resizingPanel.current) { resizingPanel.current = false; document.body.style.userSelect = ''; } };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
   const [imgError, setImgError] = useState(false);    // la imagen del render no cargó
   const [params, setParams] = useState({
     layout: 'L-shape',
@@ -423,6 +435,7 @@ export default function AIRenderStudio({ state, setState }) {
   const estimarPrecio = () => {
     const anchoM = (Number(medidas.ancho) || 0) / 100;
     const fondoM = (Number(medidas.fondo) || 0) / 100;
+    const sinMedidas = !anchoM && !fondoM;
     let ml = anchoM + (fondoM > 0 ? fondoM : 0);
     if (!ml) ml = 4; // por defecto si no hay medidas
     ml = Math.min(Math.max(ml, 2), 14);
@@ -441,7 +454,7 @@ export default function AIRenderStudio({ state, setState }) {
       muebles, encimera, electro, tiradores, montaje,
       min: round100(subtotal * 0.9), max: round100(subtotal * 1.15),
       deCatalogo: !!(cat && cat.eurMl), precioMuebleMl,
-      lib: cat?.lib, group: cat?.group,
+      lib: cat?.lib, group: cat?.group, sinMedidas,
     };
   };
   const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -873,7 +886,8 @@ export default function AIRenderStudio({ state, setState }) {
       {/* Content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Panel izquierdo - Entrada */}
-        <div className="w-full lg:w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto">
+        <div className={`${panelHidden ? 'lg:hidden' : ''} w-full lg:w-auto shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto`}
+          style={isWide() && !panelHidden ? { width: panelW } : undefined}>
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
             <div className="flex-1 flex flex-col p-6 gap-5">
@@ -1077,7 +1091,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <p className="text-[11px] font-black text-emerald-700 uppercase tracking-wider">Precio orientativo</p>
                     <p className="text-sm font-black text-emerald-700">{eur0(e.min)} – {eur0(e.max)}</p>
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1">≈ {e.ml} m.l. · muebles {eur0(e.muebles)} · encimera {eur0(e.encimera)} · electro {eur0(e.electro)} · montaje {eur0(e.montaje)}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">≈ {e.ml} m.l.{e.sinMedidas ? ' (por defecto — pon ancho/fondo)' : ''} · muebles {eur0(e.muebles)} · encimera {eur0(e.encimera)} · electro {eur0(e.electro)} · montaje {eur0(e.montaje)}</p>
                   <p className="text-[10px] text-slate-400 mt-1">{e.deCatalogo ? `Muebles ≈ ${eur0(e.precioMuebleMl)}/m.l. (librería ${e.lib}, bloque ${e.group}) según tu catálogo del Presupuestador 1.` : 'Precios medios orientativos (activa un catálogo en el Presupuestador 1 para usar tus tarifas).'} El precio exacto se cierra en el Presupuestador 1, mueble a mueble.</p>
                   {setState && (
                     <button onClick={() => setState(p => ({ ...p, currentTab: 'budget', renderReturn: true }))}
@@ -1245,6 +1259,24 @@ export default function AIRenderStudio({ state, setState }) {
             </div>
           )}
         </div>
+
+        {/* Divisor redimensionable + ocultar panel (solo pantallas grandes) */}
+        {!panelHidden ? (
+          <div className="hidden lg:flex shrink-0 relative items-stretch">
+            <div onMouseDown={() => { resizingPanel.current = true; document.body.style.userSelect = 'none'; }}
+              title="Arrastra para redimensionar"
+              className="w-1.5 cursor-ew-resize bg-slate-100 hover:bg-indigo-400 transition-colors" />
+            <button onClick={() => setPanelHidden(true)} title="Ocultar panel de características"
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-12 bg-white border border-slate-200 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow">
+              <ChevronLeft size={15} />
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setPanelHidden(false)} title="Mostrar panel de características"
+            className="hidden lg:flex shrink-0 self-stretch items-center px-1 bg-white border-r border-slate-200 text-slate-400 hover:text-indigo-600">
+            <ChevronRight size={18} />
+          </button>
+        )}
 
         {/* Panel derecho - Resultado */}
         <div className="flex-1 flex flex-col p-4 sm:p-6 min-h-[60vh] lg:min-h-0 lg:overflow-hidden">
