@@ -216,6 +216,33 @@ const QUICK_PHRASES = [
   'despensa/columna de almacenaje', 'copete a juego con la encimera', 'zócalo retranqueado',
 ];
 
+// ─── Estimación de precio ORIENTATIVA (no es presupuesto) ────────────────────
+// Precios medios por metro lineal / unidad; sirven para dar una cifra de partida
+// al comercial. El presupuesto real se cierra en Resumen Totales / Cocina Desmontada.
+const PRECIO_MUEBLE_ML = { premium: 980, medio: 730, base: 560 };
+const CAB_TIER = {
+  zenit_antracita: 'premium', mattdeco_cashmere: 'premium', mattdeco_blanco: 'premium',
+  spike: 'premium', roble_aurora: 'premium', walnut: 'premium',
+  oak_natural: 'medio', oak_dark: 'medio', white_gloss: 'medio', anthracite: 'medio',
+  navy_blue: 'medio', sage_green: 'medio', black_matte: 'medio',
+  white_matte: 'base', grey_matte: 'base',
+};
+const PRECIO_ELECTRO = {
+  placa_induccion: 500, horno: 600, microondas: 300, campana_isla: 700,
+  campana_decorativa: 400, campana_integrada: 350, nevera_integrada: 950,
+  nevera_libre: 800, lavavajillas: 500, fregadero_bajo: 220, grifo_extraible: 150, vinoteca: 600,
+};
+function precioEncimeraMl(id) {
+  const s = String(id || '').toLowerCase();
+  if (s.includes('neolith') || s.includes('dekton')) return 350;
+  if (s.includes('marble') || s.includes('marmol') || s.includes('calacatta')) return 400;
+  if (s.includes('silestone') || s.includes('quartz') || s.includes('cuarzo')) return 260;
+  if (s.includes('wood') || s.includes('madera')) return 210;
+  if (s.includes('concrete') || s.includes('steel')) return 300;
+  return 190; // porcelánico / genérico
+}
+const eur0 = (n) => `${Math.round(Number(n) || 0).toLocaleString('es-ES')} €`;
+
 // Cabecera de paso numerada para ordenar la petición de datos del render.
 function StepHeader({ n, title, hint }) {
   return (
@@ -362,6 +389,28 @@ export default function AIRenderStudio({ state, setState }) {
   const conMedidas = (desc) => {
     const extra = `${medidasTexto()}${electrosTexto()}${camaraTexto()}${luzTexto()}`.trim();
     return extra ? `${extra}\n${desc}` : desc;
+  };
+
+  // Estimación de precio ORIENTATIVA a partir de medidas + materiales + equipamiento.
+  const estimarPrecio = () => {
+    const anchoM = (Number(medidas.ancho) || 0) / 100;
+    const fondoM = (Number(medidas.fondo) || 0) / 100;
+    let ml = anchoM + (fondoM > 0 ? fondoM : 0);
+    if (!ml) ml = 4; // por defecto si no hay medidas
+    ml = Math.min(Math.max(ml, 2), 14);
+    const tier = CAB_TIER[params.cabinets] || 'medio';
+    const muebles = ml * (PRECIO_MUEBLE_ML[tier] || PRECIO_MUEBLE_ML.medio);
+    const encimera = ml * precioEncimeraMl(params.countertop);
+    const electro = electros.reduce((s, id) => s + (PRECIO_ELECTRO[id] || 0), 0);
+    const tiradores = (params.handles === 'none' || params.handles === 'gola') ? ml * 45 : ml * 25;
+    const montaje = 350;
+    const subtotal = muebles + encimera + electro + tiradores + montaje;
+    const round100 = (v) => Math.round(v / 100) * 100;
+    return {
+      ml: Math.round(ml * 10) / 10,
+      muebles, encimera, electro, tiradores, montaje,
+      min: round100(subtotal * 0.9), max: round100(subtotal * 1.15),
+    };
   };
   const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   // Aplica una plantilla: rellena la descripción (si está vacía) y ajusta ambiente.
@@ -988,6 +1037,18 @@ export default function AIRenderStudio({ state, setState }) {
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
                 <span className="flex-1 h-px bg-slate-200" /> o <span className="flex-1 h-px bg-slate-200" />
               </div>
+
+              {/* Precio orientativo (estimación, no presupuesto) */}
+              {(() => { const e = estimarPrecio(); return (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-black text-emerald-700 uppercase tracking-wider">Precio orientativo</p>
+                    <p className="text-sm font-black text-emerald-700">{eur0(e.min)} – {eur0(e.max)}</p>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">≈ {e.ml} m.l. · muebles {eur0(e.muebles)} · encimera {eur0(e.encimera)} · electro {eur0(e.electro)} · montaje {eur0(e.montaje)}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Estimación automática con precios medios. El presupuesto real se cierra en Resumen Totales / Cocina Desmontada.</p>
+                </div>
+              ); })()}
 
               {/* Acción principal — barra fija siempre visible */}
               <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-gradient-to-t from-white via-white to-white/70 backdrop-blur flex flex-col gap-2">
