@@ -7,6 +7,13 @@
  *   3. Ficha Técnica  → Ficha de materiales y plazos
  *   4. Presentación   → HTML de presentación para cliente
  *   5. Instalaciones  → Puntos eléctricos, agua y gas
+ *   6. Galería        → Renders guardados
+ *
+ * Funcionalidades migradas de AIRenderStudio:
+ *   - Adjuntar render al presupuesto (localStorage → ResumenCocinas)
+ *   - Guardar/abrir proyectos (persistencia en MongoDB via /api/ai-engine/designs)
+ *   - Voz Web Speech API (se añade al texto, no lo pisa)
+ *   - Comparativa croquis vs render (toggle lado a lado)
  *
  * Temas: Día / Noche / Auto (sistema operativo)
  */
@@ -18,10 +25,71 @@ import {
   CheckCircle, AlertCircle, Sparkles, Edit3, ZoomIn,
   Presentation, Eye, Sun, Moon, Monitor, Printer,
   Zap, Droplets, Flame, LayoutGrid, Wand2,
-  Heart, Trash2, FolderOpen, Save, Stamp, ImagePlus
+  Heart, Trash2, FolderOpen, Save, Stamp, ImagePlus,
+  Send, Plus
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
+
+// ─── Hook Web Speech API (voz que se AÑADE al texto, no lo pisa) ─────────────
+function useSpeechRecognition() {
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [isSupported, setIsSupported] = useState(false);
+  const recognitionRef = useRef(null);
+  const finalRef = useRef('');
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setIsSupported(true);
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'es-ES';
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalRef.current += result[0].transcript;
+          } else {
+            interimTranscript += result[0].transcript;
+          }
+        }
+        setTranscript(finalRef.current + interimTranscript);
+      };
+
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const startListening = useCallback(() => {
+    if (recognitionRef.current) {
+      finalRef.current = '';
+      setTranscript('');
+      try { recognitionRef.current.start(); } catch (_) {}
+      setIsListening(true);
+    }
+  }, []);
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+  }, []);
+
+  const resetTranscript = useCallback(() => {
+    finalRef.current = '';
+    setTranscript('');
+  }, []);
+
+  return { isListening, transcript, isSupported, startListening, stopListening, resetTranscript };
+}
 
 // ─── Temas ────────────────────────────────────────────────────────────────────
 const THEMES = {
@@ -109,94 +177,17 @@ const THEMES = {
 
 // ─── Estilos rápidos con prompts calibrados ───────────────────────────────────
 const ESTILOS_RAPIDOS = [
-  {
-    id: 'nordico',
-    label: 'Nórdico',
-    emoji: '🌿',
-    estilo: 'Nórdico',
-    descripcion: 'Cocina nórdica escandinava con muebles de madera de roble natural, frentes lisos sin tiradores en blanco roto, encimera de cuarzo blanco con vetas sutiles, suelo de madera clara, paredes blancas, iluminación cálida empotrada y plantas aromáticas en la ventana. Ambiente minimalista y acogedor.',
-    notas: 'Frentes: lacado blanco roto mate. Encimera: cuarzo blanco Silestone. Tiradores: push-to-open. Suelo: roble natural.',
-  },
-  {
-    id: 'industrial',
-    label: 'Industrial',
-    emoji: '⚙️',
-    estilo: 'Industrial',
-    descripcion: 'Cocina industrial urbana con muebles de acero inoxidable cepillado, frentes de madera oscura de nogal, encimera de cemento pulido gris, suelo de microcemento, iluminación con focos de riel negro mate, baldosas de metro blancas en el frente, tuberías vistas y detalles en hierro negro.',
-    notas: 'Frentes: madera nogal oscuro. Encimera: cemento pulido. Tiradores: barra acero inox. Grifo: industrial negro.',
-  },
-  {
-    id: 'clasico',
-    label: 'Clásico',
-    emoji: '🏛️',
-    estilo: 'Clásico',
-    descripcion: 'Cocina clásica elegante con muebles de madera pintada en blanco perla con molduras y paneles decorativos, encimera de mármol Carrara con vetas grises, suelo de baldosa hidráulica, campana decorativa de madera lacada, cristaleras en muebles superiores, tiradores de latón dorado envejecido.',
-    notas: 'Frentes: lacado blanco perla con molduras. Encimera: mármol Carrara. Tiradores: latón dorado. Campana: decorativa madera.',
-  },
-  {
-    id: 'lacado_blanco',
-    label: 'Lacado Blanco',
-    emoji: '⬜',
-    estilo: 'Minimalista',
-    descripcion: 'Cocina minimalista de alto brillo con frentes lacados en blanco brillante, encimera de Dekton blanco ultra-compacto, suelo porcelánico de gran formato gris claro, sin tiradores con apertura push, electrodomésticos integrados y ocultos, iluminación LED lineal bajo muebles superiores.',
-    notas: 'Frentes: lacado blanco alto brillo. Encimera: Dekton Zenith. Sin tiradores. Electrodomésticos: integrados.',
-  },
-  {
-    id: 'madera_natural',
-    label: 'Madera Natural',
-    emoji: '🪵',
-    estilo: 'Rústico',
-    descripcion: 'Cocina de madera natural con frentes de roble macizo veteado, encimera de madera de teca aceitada, suelo de barro cocido, vigas de madera en el techo, campana de obra revestida en piedra natural, iluminación cálida con lámparas de forja, estantes abiertos de madera flotante.',
-    notas: 'Frentes: roble macizo natural. Encimera: teca aceitada. Suelo: barro cocido. Campana: piedra natural.',
-  },
-  {
-    id: 'contemporaneo',
-    label: 'Contemporáneo',
-    emoji: '✨',
-    estilo: 'Contemporáneo',
-    descripcion: 'Cocina contemporánea de diseño con combinación de frentes en grafito mate y madera de fresno, encimera de cuarzo negro con vetas doradas, isla central con barra de desayuno, iluminación colgante de diseño sobre la isla, suelo de porcelánico imitación piedra, grifo de cuello alto negro mate.',
-    notas: 'Frentes: grafito mate + fresno natural. Encimera: cuarzo negro Silestone. Isla: con barra. Grifo: negro mate cuello alto.',
-  },
-  {
-    id: 'japandi',
-    label: 'Japandi',
-    emoji: '🎍',
-    estilo: 'Japandi',
-    descripcion: 'Cocina Japandi que fusiona minimalismo japonés con calidez escandinava. Frentes lisos de madera de fresno claro con acabado natural, encimera de piedra caliza beige pulida, suelo de madera de bambú, paredes en blanco cálido, estantes abiertos de madera con cerámica artesanal, iluminación difusa con lámparas de papel washi, líneas puras sin ornamentación.',
-    notas: 'Frentes: fresno claro natural. Encimera: piedra caliza beige. Tiradores: perfil integrado madera. Suelo: bambú. Estantes abiertos.',
-  },
-  {
-    id: 'mediterraneo',
-    label: 'Mediterráneo',
-    emoji: '☀️',
-    estilo: 'Mediterráneo',
-    descripcion: 'Cocina mediterránea luminosa con muebles pintados en azul índigo deslavado, encimera de mármol blanco Macael, suelo de baldosa hidráulica con motivos geométricos en azul y blanco, paredes de estuco blanco texturizado, campana de obra encalada, estantes abiertos con cerámica artesanal, grifo de latón envejecido, ventana con contraventanas de madera.',
-    notas: 'Frentes: lacado azul índigo mate. Encimera: mármol Macael. Suelo: hidráulico azul/blanco. Campana: obra encalada. Grifo: latón.',
-  },
-  {
-    id: 'hightech',
-    label: 'High-Tech',
-    emoji: '🚀',
-    estilo: 'High-Tech',
-    descripcion: 'Cocina high-tech futurista con frentes de cristal ahumado negro retroiluminado, encimera de Dekton Kelya ultra-negro, isla con inducción invisible integrada en la superficie, suelo de resina epoxi gris antracita, iluminación LED RGB programable en zócalos y estantes, electrodomésticos con pantalla táctil integrada, grifo con sensor de movimiento.',
-    notas: 'Frentes: cristal ahumado negro. Encimera: Dekton Kelya. Suelo: resina epoxi antracita. LED RGB. Electrodomésticos: pantalla táctil.',
-  },
-  {
-    id: 'provenzal',
-    label: 'Provenzal',
-    emoji: '🌻',
-    estilo: 'Provenzal',
-    descripcion: 'Cocina provenzal francesa con muebles de madera pintada en verde salvia con pátina envejecida, encimera de piedra natural caliza con bordes redondeados, suelo de terracota hexagonal, campana de cobre martillado, fregadero cerámico tipo Belfast, estantes abiertos con cestas de mimbre, cortinas de lino natural en la ventana, tiradores de porcelana blanca.',
-    notas: 'Frentes: madera pintada verde salvia patinado. Encimera: piedra caliza. Suelo: terracota. Campana: cobre. Fregadero: cerámico Belfast.',
-  },
-  {
-    id: 'wabisabi',
-    label: 'Wabi-Sabi',
-    emoji: '🌊',
-    estilo: 'Wabi-Sabi',
-    descripcion: 'Cocina Wabi-Sabi que celebra la belleza de la imperfeción. Frentes de madera de cedro sin tratar con nudos visibles y veta irregular, encimera de hormigón pulido con bordes imperfectos, suelo de piedra natural irregular, paredes de arcilla cruda texturizada en tono arena, estantes de madera recuperada, cerámica artesanal hecha a mano, iluminación tenue con lámparas de fibra natural.',
-    notas: 'Frentes: cedro sin tratar. Encimera: hormigón pulido artesanal. Suelo: piedra irregular. Paredes: arcilla cruda. Cerámica artesanal.',
-  },
+  { id: 'nordico', label: 'Nórdico', emoji: '🌿', estilo: 'Nórdico', descripcion: 'Cocina nórdica escandinava con muebles de madera de roble natural, frentes lisos sin tiradores en blanco roto, encimera de cuarzo blanco con vetas sutiles, suelo de madera clara, paredes blancas, iluminación cálida empotrada y plantas aromáticas en la ventana. Ambiente minimalista y acogedor.', notas: 'Frentes: lacado blanco roto mate. Encimera: cuarzo blanco Silestone. Tiradores: push-to-open. Suelo: roble natural.' },
+  { id: 'industrial', label: 'Industrial', emoji: '⚙️', estilo: 'Industrial', descripcion: 'Cocina industrial urbana con muebles de acero inoxidable cepillado, frentes de madera oscura de nogal, encimera de cemento pulido gris, suelo de microcemento, iluminación con focos de riel negro mate, baldosas de metro blancas en el frente, tuberías vistas y detalles en hierro negro.', notas: 'Frentes: madera nogal oscuro. Encimera: cemento pulido. Tiradores: barra acero inox. Grifo: industrial negro.' },
+  { id: 'clasico', label: 'Clásico', emoji: '🏛️', estilo: 'Clásico', descripcion: 'Cocina clásica elegante con muebles de madera pintada en blanco perla con molduras y paneles decorativos, encimera de mármol Carrara con vetas grises, suelo de baldosa hidráulica, campana decorativa de madera lacada, cristaleras en muebles superiores, tiradores de latón dorado envejecido.', notas: 'Frentes: lacado blanco perla con molduras. Encimera: mármol Carrara. Tiradores: latón dorado. Campana: decorativa madera.' },
+  { id: 'lacado_blanco', label: 'Lacado Blanco', emoji: '⬜', estilo: 'Minimalista', descripcion: 'Cocina minimalista de alto brillo con frentes lacados en blanco brillante, encimera de Dekton blanco ultra-compacto, suelo porcelánico de gran formato gris claro, sin tiradores con apertura push, electrodomésticos integrados y ocultos, iluminación LED lineal bajo muebles superiores.', notas: 'Frentes: lacado blanco alto brillo. Encimera: Dekton Zenith. Sin tiradores. Electrodomésticos: integrados.' },
+  { id: 'madera_natural', label: 'Madera Natural', emoji: '🪵', estilo: 'Rústico', descripcion: 'Cocina de madera natural con frentes de roble macizo veteado, encimera de madera de teca aceitada, suelo de barro cocido, vigas de madera en el techo, campana de obra revestida en piedra natural, iluminación cálida con lámparas de forja, estantes abiertos de madera flotante.', notas: 'Frentes: roble macizo natural. Encimera: teca aceitada. Suelo: barro cocido. Campana: piedra natural.' },
+  { id: 'contemporaneo', label: 'Contemporáneo', emoji: '✨', estilo: 'Contemporáneo', descripcion: 'Cocina contemporánea de diseño con combinación de frentes en grafito mate y madera de fresno, encimera de cuarzo negro con vetas doradas, isla central con barra de desayuno, iluminación colgante de diseño sobre la isla, suelo de porcelánico imitación piedra, grifo de cuello alto negro mate.', notas: 'Frentes: grafito mate + fresno natural. Encimera: cuarzo negro Silestone. Isla: con barra. Grifo: negro mate cuello alto.' },
+  { id: 'japandi', label: 'Japandi', emoji: '🎍', estilo: 'Japandi', descripcion: 'Cocina Japandi que fusiona minimalismo japonés con calidez escandinava. Frentes lisos de madera de fresno claro con acabado natural, encimera de piedra caliza beige pulida, suelo de madera de bambú, paredes en blanco cálido, estantes abiertos de madera con cerámica artesanal, iluminación difusa con lámparas de papel washi, líneas puras sin ornamentación.', notas: 'Frentes: fresno claro natural. Encimera: piedra caliza beige. Tiradores: perfil integrado madera. Suelo: bambú. Estantes abiertos.' },
+  { id: 'mediterraneo', label: 'Mediterráneo', emoji: '☀️', estilo: 'Mediterráneo', descripcion: 'Cocina mediterránea luminosa con muebles pintados en azul índigo deslavado, encimera de mármol blanco Macael, suelo de baldosa hidráulica con motivos geométricos en azul y blanco, paredes de estuco blanco texturizado, campana de obra encalada, estantes abiertos con cerámica artesanal, grifo de latón envejecido, ventana con contraventanas de madera.', notas: 'Frentes: lacado azul índigo mate. Encimera: mármol Macael. Suelo: hidráulico azul/blanco. Campana: obra encalada. Grifo: latón.' },
+  { id: 'hightech', label: 'High-Tech', emoji: '🚀', estilo: 'High-Tech', descripcion: 'Cocina high-tech futurista con frentes de cristal ahumado negro retroiluminado, encimera de Dekton Kelya ultra-negro, isla con inducción invisible integrada en la superficie, suelo de resina epoxi gris antracita, iluminación LED RGB programable en zócalos y estantes, electrodomésticos con pantalla táctil integrada, grifo con sensor de movimiento.', notas: 'Frentes: cristal ahumado negro. Encimera: Dekton Kelya. Suelo: resina epoxi antracita. LED RGB. Electrodomésticos: pantalla táctil.' },
+  { id: 'provenzal', label: 'Provenzal', emoji: '🌻', estilo: 'Provenzal', descripcion: 'Cocina provenzal francesa con muebles de madera pintada en verde salvia con pátina envejecida, encimera de piedra natural caliza con bordes redondeados, suelo de terracota hexagonal, campana de cobre martillado, fregadero cerámico tipo Belfast, estantes abiertos con cestas de mimbre, cortinas de lino natural en la ventana, tiradores de porcelana blanca.', notas: 'Frentes: madera pintada verde salvia patinado. Encimera: piedra caliza. Suelo: terracota. Campana: cobre. Fregadero: cerámico Belfast.' },
+  { id: 'wabisabi', label: 'Wabi-Sabi', emoji: '🌊', estilo: 'Wabi-Sabi', descripcion: 'Cocina Wabi-Sabi que celebra la belleza de la imperfeción. Frentes de madera de cedro sin tratar con nudos visibles y veta irregular, encimera de hormigón pulido con bordes imperfectos, suelo de piedra natural irregular, paredes de arcilla cruda texturizada en tono arena, estantes de madera recuperada, cerámica artesanal hecha a mano, iluminación tenue con lámparas de fibra natural.', notas: 'Frentes: cedro sin tratar. Encimera: hormigón pulido artesanal. Suelo: piedra irregular. Paredes: arcilla cruda. Cerámica artesanal.' },
 ];
 
 // ─── Distribuciones de cocina ─────────────────────────────────────────────────
@@ -250,12 +241,31 @@ async function apiPost(endpoint, body) {
   return data;
 }
 
+async function apiGet(endpoint) {
+  const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
+  return data;
+}
+
+async function apiPostForm(endpoint, formData) {
+  const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: formData,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
+  return data;
+}
+
 /** Añade el token JWT como query param a URLs del proxy de assets (las <img> no envían cabeceras). */
 function imgSrc(url) {
   if (!url) return '';
-  if (url.startsWith('blob:')) return url; // ya es un blob URL
+  if (url.startsWith('blob:')) return url;
   const t = getToken();
-  // Si la URL es relativa (/api/...), prefijar con el backend URL
   let fullUrl = url;
   if (url.startsWith('/api/')) {
     fullUrl = `${API}${url}`;
@@ -278,24 +288,19 @@ async function fetchAsBlob(url) {
   }
 }
 
-async function apiGet(endpoint) {
-  const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
+/** Convierte una imagen (proxy URL o blob) a dataURL para guardar/PDF */
+async function imageToDataUrl(url) {
+  if (!url) return null;
+  if (typeof url === 'string' && url.startsWith('data:')) return url;
+  const fullUrl = imgSrc(url);
+  const resp = await fetch(fullUrl);
+  const blob = await resp.blob();
+  return await new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = rej;
+    fr.readAsDataURL(blob);
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
-  return data;
-}
-
-async function apiPostForm(endpoint, formData) {
-  const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
-    body: formData,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
-  return data;
 }
 
 // ─── Badge de estado ──────────────────────────────────────────────────────────
@@ -343,16 +348,10 @@ function ThemeSelector({ mode, onChange, t }) {
 function PrintPdfBar({ onPrint, onPdf, t, extraBtns }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <button
-        onClick={onPrint}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}
-      >
+      <button onClick={onPrint} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
         <Printer size={11}/> Imprimir
       </button>
-      <button
-        onClick={onPdf}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.presBtn}`}
-      >
+      <button onClick={onPdf} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.presBtn}`}>
         <Download size={11}/> Exportar PDF
       </button>
       {extraBtns}
@@ -372,7 +371,6 @@ export default function EstudioCocinas({ state, setState }) {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-
 
   const handleThemeChange = useCallback(mode => {
     setThemeMode(mode);
@@ -408,12 +406,7 @@ export default function EstudioCocinas({ state, setState }) {
   const [distribucion, setDistribucion] = useState(null);
 
   const handleDistChange = useCallback((tipo) => {
-    // Si pulsas el mismo tipo, deselecciona y vuelve a modo texto libre
-    if (distribucion && distribucion.tipo === tipo) {
-      setDistribucion(null);
-      return;
-    }
-    const dist = DISTRIBUCIONES.find(d => d.id === tipo);
+    if (distribucion && distribucion.tipo === tipo) { setDistribucion(null); return; }
     let paredes = [];
     switch (tipo) {
       case 'lineal': paredes = [{ nombre: 'Pared principal', ancho: 400, alto: 240 }]; break;
@@ -426,7 +419,6 @@ export default function EstudioCocinas({ state, setState }) {
     }
     const isla = (tipo === 'isla') ? { ancho: 120, largo: 200 } : { ancho: 0, largo: 0 };
     setDistribucion({ tipo, paredes, isla, elementos: [] });
-    // Actualizar medidas en formato texto para compatibilidad
     const medStr = paredes.map(p => `${p.nombre}: ${p.ancho}cm`).join(' | ') + (isla.ancho > 0 ? ` | Isla: ${isla.ancho}x${isla.largo}cm` : '');
     setProy(p => ({ ...p, medidas: medStr }));
   }, [distribucion]);
@@ -464,7 +456,7 @@ export default function EstudioCocinas({ state, setState }) {
   }, []);
 
   const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false });
-  const [freeDesign, setFreeDesign] = useState(false); // false = respetar plano, true = diseño libre IA
+  const [freeDesign, setFreeDesign] = useState(false);
   const [plano,  setPlano]  = useState({ status: null, msg: '', b64: null, fs: false });
   const [ficha,  setFicha]  = useState({ status: null, msg: '', md: '', ref: '' });
   const [pres,   setPres]   = useState({ status: null, msg: '', html: '', preview: false });
@@ -472,13 +464,30 @@ export default function EstudioCocinas({ state, setState }) {
   const [rec,    setRec]    = useState(false);
   const [transcrito, setTranscrito] = useState('');
   const [galeria, setGaleria] = useState({ renders: [], total: 0, page: 1, loading: false, fsImg: null });
+
   // ── Marca de agua ──
-  // watermark: 'none' | 'default' | 'custom'
   const [watermark, setWatermark] = useState({ mode: 'default', customLogo: null, customLogoPreview: null });
   const watermarkInputRef = useRef(null);
-
-  // Logo por defecto = logo del ERP (state.logo)
   const defaultLogo = state?.logo || null;
+
+  // ── Nuevas funcionalidades migradas ──
+  const [attached, setAttached] = useState(false);       // Adjuntado al presupuesto
+  const [compareOn, setCompareOn] = useState(false);     // Comparativa croquis vs render
+  const [savedId, setSavedId] = useState(null);          // ID del proyecto guardado
+  const [savedList, setSavedList] = useState(null);      // Lista de proyectos (null = modal oculto)
+  const [busySave, setBusySave] = useState(false);       // Guardando proyecto
+
+  // ── Web Speech API (voz que se añade al texto) ──
+  const { isListening, transcript: speechTranscript, isSupported: speechSupported, startListening, stopListening } = useSpeechRecognition();
+  const baseTextRef = useRef('');
+
+  // Cuando la transcripción cambia, se AÑADE al texto de descripción (no lo pisa)
+  useEffect(() => {
+    if (speechTranscript) {
+      const base = baseTextRef.current;
+      setProy(p => ({ ...p, descripcion: base ? `${base.trim()} ${speechTranscript}` : speechTranscript }));
+    }
+  }, [speechTranscript]);
 
   const handleCustomLogoUpload = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -494,7 +503,7 @@ export default function EstudioCocinas({ state, setState }) {
   const applyWatermark = useCallback(async (imgUrl) => {
     if (watermark.mode === 'none') return imgUrl;
     const logoSrc = watermark.mode === 'custom' ? watermark.customLogo : defaultLogo;
-    if (!logoSrc) return imgUrl; // Sin logo disponible, devolver sin marca
+    if (!logoSrc) return imgUrl;
 
     return new Promise((resolve) => {
       const img = new window.Image();
@@ -505,27 +514,20 @@ export default function EstudioCocinas({ state, setState }) {
         canvas.height = img.naturalHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-
-        // Cargar logo
         const logo = new window.Image();
         logo.crossOrigin = 'anonymous';
         logo.onload = () => {
-          // Marca de agua: esquina inferior derecha, 15% del ancho de la imagen
           const logoW = Math.round(canvas.width * 0.15);
           const logoH = Math.round(logoW * (logo.naturalHeight / logo.naturalWidth));
           const padding = Math.round(canvas.width * 0.02);
           const x = canvas.width - logoW - padding;
           const y = canvas.height - logoH - padding;
-
-          // Fondo semitransparente detrás del logo
           ctx.fillStyle = 'rgba(255,255,255,0.7)';
           ctx.roundRect(x - 8, y - 8, logoW + 16, logoH + 16, 8);
           ctx.fill();
-
           ctx.globalAlpha = 0.85;
           ctx.drawImage(logo, x, y, logoW, logoH);
           ctx.globalAlpha = 1.0;
-
           canvas.toBlob((blob) => {
             resolve(blob ? URL.createObjectURL(blob) : imgUrl);
           }, 'image/png');
@@ -538,7 +540,6 @@ export default function EstudioCocinas({ state, setState }) {
     });
   }, [watermark.mode, watermark.customLogo, defaultLogo]);
 
-  /** Descarga el render con o sin marca de agua */
   const downloadWithWatermark = useCallback(async () => {
     if (!render.imageUrl) return;
     const finalUrl = await applyWatermark(render.imageUrl);
@@ -579,7 +580,7 @@ export default function EstudioCocinas({ state, setState }) {
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [render.imageUrl, proy]);
+  }, [render.imageUrl, render.originalUrl, proy]);
 
   const toggleFavorito = useCallback(async (id) => {
     try {
@@ -600,7 +601,6 @@ export default function EstudioCocinas({ state, setState }) {
     } catch {}
   }, [galeria.page, loadGaleria]);
 
-  // Cargar galería al entrar en la pestaña
   useEffect(() => {
     if (tab === 'galeria') loadGaleria(1);
   }, [tab, loadGaleria]);
@@ -608,12 +608,7 @@ export default function EstudioCocinas({ state, setState }) {
   // ── Estilo rápido ──
   const applyStyle = useCallback(style => {
     setSelectedStyle(style.id);
-    setProy(p => ({
-      ...p,
-      estilo: style.estilo,
-      descripcion: style.descripcion,
-      notas: style.notas,
-    }));
+    setProy(p => ({ ...p, estilo: style.estilo, descripcion: style.descripcion, notas: style.notas }));
   }, []);
 
   // ── Croquis ──
@@ -625,7 +620,7 @@ export default function EstudioCocinas({ state, setState }) {
     fr.readAsDataURL(f);
   }, []);
 
-  // ── Voz ──
+  // ── Voz (grabación de audio para transcripción backend) ──
   const startRec = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -641,7 +636,7 @@ export default function EstudioCocinas({ state, setState }) {
         try {
           const r = await apiPostForm('/transcribir', fd);
           setTranscrito(r.texto || '');
-          setProy(p => ({ ...p, descripcion: r.texto || p.descripcion }));
+          setProy(p => ({ ...p, descripcion: p.descripcion ? `${p.descripcion} ${r.texto || ''}` : (r.texto || '') }));
           setRender(s => ({ ...s, status: 'success', msg: 'Audio transcrito' }));
         } catch (err) {
           setRender(s => ({ ...s, status: 'error', msg: err.message }));
@@ -665,7 +660,6 @@ export default function EstudioCocinas({ state, setState }) {
     }
     setRender(s => ({ ...s, status: 'loading', msg: 'Generando render… puede tardar 1-3 minutos', imageUrl: null }));
     try {
-      // 1) Lanzar tarea en modo asíncrono (respuesta inmediata con task_id)
       const r = await apiPost('/render', {
         descripcion: proy.descripcion,
         estilo: proy.estilo,
@@ -679,9 +673,8 @@ export default function EstudioCocinas({ state, setState }) {
 
       if (!r.task_id) throw new Error(r.error || 'No se pudo iniciar el render');
 
-      // 2) Polling cada 8 segundos hasta completar (máx 5 min)
       const taskId = r.task_id;
-      const maxAttempts = 38; // 38 × 8s ≈ 5 min
+      const maxAttempts = 38;
       let attempts = 0;
       const poll = async () => {
         attempts++;
@@ -692,20 +685,17 @@ export default function EstudioCocinas({ state, setState }) {
         try {
           const estado = await apiGet(`/tarea/${taskId}`);
           if (estado.status === 'stopped') {
-            // Obtener resultado
             const resultado = await apiGet(`/tarea/${taskId}/resultado`);
-            // Convertir a blob URL para evitar problemas CORS con <img> cross-origin
             const originalProxyUrl = resultado.imageUrl;
             const blobUrl = await fetchAsBlob(originalProxyUrl);
             setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: blobUrl || imgSrc(originalProxyUrl), originalUrl: originalProxyUrl }));
           } else if (estado.status === 'error') {
             setRender(s => ({ ...s, status: 'error', msg: estado.error || 'Error al generar el render' }));
           } else {
-            // Aún en proceso → seguir esperando
             setTimeout(poll, 8000);
           }
         } catch (pollErr) {
-          setTimeout(poll, 8000); // Reintentar en caso de error de red
+          setTimeout(poll, 8000);
         }
       };
       setTimeout(poll, 8000);
@@ -724,14 +714,105 @@ export default function EstudioCocinas({ state, setState }) {
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [render.imageUrl, render.editTxt]);
+  }, [render.imageUrl, render.originalUrl, render.editTxt]);
+
+  // ── MIGRADO: Adjuntar render al presupuesto ──
+  const attachToBudget = useCallback(async () => {
+    if (!render.imageUrl) return;
+    try {
+      const dataUrl = await imageToDataUrl(render.imageUrl);
+      localStorage.setItem('render3d_attach', JSON.stringify({
+        image: dataUrl,
+        cliente: proy.nombre_cliente,
+        ref: `${proy.estilo} - ${proy.medidas}`,
+        ts: Date.now()
+      }));
+      setAttached(true);
+      setTimeout(() => setAttached(false), 4000);
+      setRender(s => ({ ...s, status: 'success', msg: 'Render adjuntado al presupuesto' }));
+    } catch (err) {
+      setRender(s => ({ ...s, status: 'error', msg: 'No se pudo adjuntar el render' }));
+    }
+  }, [render.imageUrl, proy]);
+
+  // ── MIGRADO: Guardar proyecto en MongoDB ──
+  const saveProject = useCallback(async () => {
+    if (!render.imageUrl && !proy.descripcion.trim()) {
+      setRender(s => ({ ...s, status: 'error', msg: 'No hay datos para guardar' }));
+      return;
+    }
+    setBusySave(true);
+    try {
+      const images = render.originalUrl ? [render.originalUrl] : [];
+      const res = await fetch(`${API}/api/ai-engine/designs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          id: savedId || undefined,
+          cliente: proy.nombre_cliente,
+          ref: `${proy.estilo} - ${proy.medidas}`,
+          description: proy.descripcion,
+          style: proy.estilo,
+          images,
+        }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setSavedId(d.design.id);
+        setRender(s => ({ ...s, status: 'success', msg: 'Proyecto guardado correctamente' }));
+      } else {
+        setRender(s => ({ ...s, status: 'error', msg: d.error || 'No se pudo guardar' }));
+      }
+    } catch (err) {
+      setRender(s => ({ ...s, status: 'error', msg: 'Error al guardar el proyecto' }));
+    }
+    setBusySave(false);
+  }, [render.imageUrl, render.originalUrl, proy, savedId]);
+
+  // ── MIGRADO: Abrir lista de proyectos ──
+  const openProjectList = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/ai-engine/designs`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const d = await res.json();
+      setSavedList(d.designs || []);
+    } catch {
+      setRender(s => ({ ...s, status: 'error', msg: 'No se pudo cargar la lista de proyectos' }));
+    }
+  }, []);
+
+  const loadProject = useCallback((dsg) => {
+    setProy(p => ({
+      ...p,
+      nombre_cliente: dsg.cliente || '',
+      descripcion: dsg.description || '',
+      estilo: dsg.style || 'Moderno',
+    }));
+    setSavedId(dsg.id);
+    setSavedList(null);
+    if (dsg.images?.[0]) {
+      fetchAsBlob(dsg.images[0]).then(blobUrl => {
+        setRender(s => ({ ...s, imageUrl: blobUrl || imgSrc(dsg.images[0]), originalUrl: dsg.images[0], status: 'success', msg: 'Proyecto cargado' }));
+      });
+    }
+  }, []);
+
+  const deleteProject = useCallback(async (id) => {
+    if (!window.confirm('¿Eliminar este proyecto guardado?')) return;
+    try {
+      await fetch(`${API}/api/ai-engine/designs/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      setSavedList(prev => (prev || []).filter(x => x.id !== id));
+      if (savedId === id) setSavedId(null);
+    } catch {}
+  }, [savedId]);
 
   // ── Plano ──
   const genPlano = useCallback(async () => {
-    if (!proy.medidas.trim()) {
-      setPlano(s => ({ ...s, status: 'error', msg: 'Introduce las medidas' }));
-      return;
-    }
+    if (!proy.medidas.trim()) { setPlano(s => ({ ...s, status: 'error', msg: 'Introduce las medidas' })); return; }
     setPlano(s => ({ ...s, status: 'loading', msg: 'Generando plano técnico…', b64: null }));
     try {
       const r = await apiPost('/plano-2d', { ...proy, distribucion_estructurada: distribucion });
@@ -768,23 +849,19 @@ export default function EstudioCocinas({ state, setState }) {
     setInst(s => ({ ...s, status: 'loading', msg: 'Generando plan de instalaciones…' }));
     try {
       const r = await apiPost('/instalaciones', {
-        medidas: proy.medidas,
-        descripcion: proy.descripcion,
-        estilo: proy.estilo,
-        nombre_cliente: proy.nombre_cliente,
-        distribucion_estructurada: distribucion,
+        medidas: proy.medidas, descripcion: proy.descripcion, estilo: proy.estilo,
+        nombre_cliente: proy.nombre_cliente, distribucion_estructurada: distribucion,
       });
       setInst(s => ({ ...s, status: 'success', msg: 'Plan de instalaciones generado', data: r }));
     } catch (err) {
       setInst(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [proy]);
+  }, [proy, distribucion]);
 
   // ── Helpers ──
   const dl = (content, name, type) => {
     const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob([content], { type })),
-      download: name,
+      href: URL.createObjectURL(new Blob([content], { type })), download: name,
     });
     a.click();
   };
@@ -793,35 +870,14 @@ export default function EstudioCocinas({ state, setState }) {
     const el = document.getElementById(contentId);
     if (!el) { window.print(); return; }
     const w = window.open('', '_blank');
-    w.document.write(`
-      <html><head><title>3D Estudio - ${proy.nombre_cliente || 'Proyecto'}</title>
-      <style>body{font-family:sans-serif;padding:20px;color:#333}pre{white-space:pre-wrap;font-size:12px}img{max-width:100%}@media print{button{display:none}}</style>
-      </head><body>${el.innerHTML}</body></html>
-    `);
-    w.document.close();
-    w.print();
+    w.document.write(`<html><head><title>3D Estudio - ${proy.nombre_cliente || 'Proyecto'}</title><style>body{font-family:sans-serif;padding:20px;color:#333}pre{white-space:pre-wrap;font-size:12px}img{max-width:100%}@media print{button{display:none}}</style></head><body>${el.innerHTML}</body></html>`);
+    w.document.close(); w.print();
   }, [proy.nombre_cliente]);
 
   const handlePdfExport = useCallback((content, filename) => {
-    // Abre el contenido en nueva ventana para imprimir como PDF
     const w = window.open('', '_blank');
     const isHtml = content && content.trim().startsWith('<');
-    w.document.write(`
-      <html><head><title>${filename}</title>
-      <style>
-        body{font-family:sans-serif;padding:30px;color:#333;max-width:900px;margin:0 auto}
-        pre{white-space:pre-wrap;font-size:12px;background:#f5f5f5;padding:15px;border-radius:8px}
-        img{max-width:100%;border-radius:8px}
-        h1,h2,h3{color:#b45309}
-        @media print{button{display:none}}
-      </style>
-      </head><body>
-      <h2 style="color:#b45309;margin-bottom:4px">3D Estudio — ${proy.nombre_cliente || 'Proyecto'}</h2>
-      <p style="color:#999;font-size:12px;margin-bottom:20px">${new Date().toLocaleDateString('es-ES')}</p>
-      ${isHtml ? content : `<pre>${content}</pre>`}
-      <script>window.onload=()=>{window.print()}<\/script>
-      </body></html>
-    `);
+    w.document.write(`<html><head><title>${filename}</title><style>body{font-family:sans-serif;padding:30px;color:#333;max-width:900px;margin:0 auto}pre{white-space:pre-wrap;font-size:12px;background:#f5f5f5;padding:15px;border-radius:8px}img{max-width:100%;border-radius:8px}h1,h2,h3{color:#b45309}@media print{button{display:none}}</style></head><body><h2 style="color:#b45309;margin-bottom:4px">3D Estudio — ${proy.nombre_cliente || 'Proyecto'}</h2><p style="color:#999;font-size:12px;margin-bottom:20px">${new Date().toLocaleDateString('es-ES')}</p>${isHtml ? content : `<pre>${content}</pre>`}<script>window.onload=()=>{window.print()}<\/script></body></html>`);
     w.document.close();
   }, [proy.nombre_cliente]);
 
@@ -846,6 +902,18 @@ export default function EstudioCocinas({ state, setState }) {
         </div>
         <div className="flex-1">
           <h1 className={`text-xs font-black uppercase tracking-widest ${t.title}`}>3D Estudio</h1>
+        </div>
+        {/* Botones de proyecto */}
+        <div className="flex items-center gap-1.5">
+          <button onClick={openProjectList} title="Abrir proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+            <FolderOpen size={12}/> <span className="hidden md:inline">Proyectos</span>
+          </button>
+          <button onClick={saveProject} disabled={busySave} title="Guardar proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${savedId ? 'bg-emerald-600 text-white' : t.dlBtn}`}>
+            {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} <span className="hidden md:inline">{savedId ? 'Guardado' : 'Guardar'}</span>
+          </button>
+          <button onClick={() => { setProy({ nombre_cliente: '', descripcion: '', estilo: 'Moderno', medidas: '400x350cm isla 200x100cm', presupuesto: '', notas: '' }); setSavedId(null); setRender({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false }); setDistribucion(null); setSelectedStyle(null); }} title="Nuevo proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+            <Plus size={12}/> <span className="hidden md:inline">Nuevo</span>
+          </button>
         </div>
         <ThemeSelector mode={themeMode} onChange={handleThemeChange} t={t} />
       </div>
@@ -971,10 +1039,8 @@ export default function EstudioCocinas({ state, setState }) {
               case 'estilo':
                 return <div key={fieldId} {...dragHandleProps} style={dragStyle}>
                   <label className={`text-[9px] uppercase tracking-wider font-bold ${t.sidebarLabel}`}><span className={handleClass}>≡ </span>Estilo</label>
-                  <select
-                    className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.select}`}
-                    value={proy.estilo}
-                    onChange={e => setProy(p => ({ ...p, estilo: e.target.value }))}>
+                  <select className={`w-full mt-1 rounded-lg px-2 py-1.5 text-xs focus:outline-none transition-colors duration-200 ${t.select}`}
+                    value={proy.estilo} onChange={e => setProy(p => ({ ...p, estilo: e.target.value }))}>
                     {ESTILOS.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>;
@@ -1000,14 +1066,34 @@ export default function EstudioCocinas({ state, setState }) {
             }
           })}
 
-          <button
-            onClick={rec ? stopRec : startRec}
-            className={`flex items-center justify-center gap-2 w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-              rec ? 'bg-red-600 text-white animate-pulse' : t.micIdle
-            }`}
-          >
-            {rec ? <><MicOff size={13}/> Detener</> : <><Mic size={13}/> Dictar</>}
-          </button>
+          {/* Botones de voz */}
+          <div className="flex gap-1">
+            {/* Grabación backend (transcripción IA) */}
+            <button
+              onClick={rec ? stopRec : startRec}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                rec ? 'bg-red-600 text-white animate-pulse' : t.micIdle
+              }`}
+              title="Grabar audio y transcribir con IA"
+            >
+              {rec ? <><MicOff size={12}/> Parar</> : <><Mic size={12}/> Grabar</>}
+            </button>
+            {/* Web Speech API (tiempo real, se añade al texto) */}
+            {speechSupported && (
+              <button
+                onClick={() => {
+                  if (isListening) { stopListening(); }
+                  else { baseTextRef.current = proy.descripcion; startListening(); }
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                  isListening ? 'bg-emerald-600 text-white animate-pulse' : t.micIdle
+                }`}
+                title="Dictar en tiempo real (se añade al texto)"
+              >
+                {isListening ? <><MicOff size={12}/> Dictando…</> : <><Mic size={12}/> Dictar</>}
+              </button>
+            )}
+          </div>
 
           {transcrito && (
             <div className={`rounded-lg p-2 ${t.transcBg}`}>
@@ -1050,13 +1136,10 @@ export default function EstudioCocinas({ state, setState }) {
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {ESTILOS_RAPIDOS.map(s => (
-                      <button
-                        key={s.id}
-                        onClick={() => applyStyle(s)}
+                      <button key={s.id} onClick={() => applyStyle(s)}
                         className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                           selectedStyle === s.id ? t.styleBtnAct : t.styleBtn
-                        }`}
-                      >
+                        }`}>
                         <span className="text-base">{s.emoji}</span>
                         <span>{s.label}</span>
                       </button>
@@ -1064,7 +1147,7 @@ export default function EstudioCocinas({ state, setState }) {
                   </div>
                   {selectedStyle && (
                     <p className={`text-[9px] mt-2 ${t.subtext}`}>
-                      ✓ Prompt calibrado aplicado. Puedes editar la descripción antes de generar.
+                      Prompt calibrado aplicado. Puedes editar la descripción antes de generar.
                     </p>
                   )}
                 </div>
@@ -1091,15 +1174,13 @@ export default function EstudioCocinas({ state, setState }) {
 
                 {/* Toggle: Respetar plano vs Diseño libre IA */}
                 <div className={`flex items-center gap-2 p-2 rounded-lg ${t.card}`}>
-                  <button
-                    onClick={() => setFreeDesign(false)}
+                  <button onClick={() => setFreeDesign(false)}
                     className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                       !freeDesign ? 'bg-amber-600 text-white shadow-lg' : `${t.tabInactive}`
                     }`}>
                     <LayoutGrid size={12}/> Respetar plano
                   </button>
-                  <button
-                    onClick={() => setFreeDesign(true)}
+                  <button onClick={() => setFreeDesign(true)}
                     className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                       freeDesign ? 'bg-purple-600 text-white shadow-lg' : `${t.tabInactive}`
                     }`}>
@@ -1123,74 +1204,96 @@ export default function EstudioCocinas({ state, setState }) {
 
                 {render.imageUrl && (
                   <>
+                    {/* Barra de acciones del render */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button onClick={downloadWithWatermark}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
+                        <Download size={11}/> PNG
+                      </button>
+                      <button onClick={guardarEnGaleria}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white transition-all">
+                        <Save size={11}/> Galería
+                      </button>
+                      <button onClick={attachToBudget}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                          attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'
+                        }`}
+                        title="Adjuntar este render al presupuesto (Resumen Totales)">
+                        {attached ? <><CheckCircle size={11}/> Adjuntado</> : <><Send size={11}/> Al presupuesto</>}
+                      </button>
+                      {render.croquisPrev && (
+                        <button onClick={() => setCompareOn(v => !v)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                            compareOn ? 'bg-slate-800 text-white' : t.dlBtn
+                          }`}
+                          title="Comparar croquis original con el render">
+                          <Image size={11}/> Comparar
+                        </button>
+                      )}
+                      <button onClick={() => setRender(s => ({ ...s, editMode: !s.editMode }))}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${render.editMode ? 'bg-amber-600 text-white' : t.dlBtn}`}>
+                        <Edit3 size={11}/> Editar
+                      </button>
+                    </div>
+
                     {/* Selector de marca de agua */}
                     <div className={`flex items-center gap-3 flex-wrap p-2 rounded-lg ${t.card}`}>
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${t.label || 'text-slate-500'}`}>
-                        <Stamp size={11} className="inline mr-1"/> Marca de agua:
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${t.sidebarLabel}`}>
+                        <Stamp size={11} className="inline mr-1"/> Marca:
                       </span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setWatermark(w => ({ ...w, mode: 'none' }))}
-                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${
-                            watermark.mode === 'none' ? 'bg-red-500 text-white' : `${t.tabInactive}`
-                          }`}>Sin marca</button>
+                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${watermark.mode === 'none' ? 'bg-red-500 text-white' : `${t.tabInactive}`}`}>Sin marca</button>
                         <button onClick={() => setWatermark(w => ({ ...w, mode: 'default' }))}
-                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${
-                            watermark.mode === 'default' ? 'bg-amber-600 text-white' : `${t.tabInactive}`
-                          }`}>
-                          {defaultLogo && <img src={defaultLogo} alt="" className="inline h-3 mr-1 object-contain"/>}
+                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${watermark.mode === 'default' ? 'bg-amber-600 text-white' : `${t.tabInactive}`}`}>
                           Logo ERP
                         </button>
                         <button onClick={() => watermarkInputRef.current?.click()}
-                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${
-                            watermark.mode === 'custom' ? 'bg-purple-600 text-white' : `${t.tabInactive}`
-                          }`}>
+                          className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${watermark.mode === 'custom' ? 'bg-purple-600 text-white' : `${t.tabInactive}`}`}>
                           <ImagePlus size={10} className="inline mr-1"/>
                           {watermark.customLogoPreview ? 'Cambiar' : 'Personalizar'}
                         </button>
                         <input ref={watermarkInputRef} type="file" accept="image/*" className="hidden" onChange={handleCustomLogoUpload}/>
                       </div>
-                      {watermark.mode === 'custom' && watermark.customLogoPreview && (
-                        <img src={watermark.customLogoPreview} alt="Logo custom" className="h-6 object-contain rounded"/>
-                      )}
                     </div>
 
-                    <PrintPdfBar
-                      t={t}
-                      onPrint={() => handlePrint('render-print-area')}
-                      onPdf={() => handlePdfExport(`<img src="${imgSrc(render.imageUrl)}" style="width:100%"/>`, `render_${proy.nombre_cliente || 'cocina'}.pdf`)}
-                      extraBtns={
-                        <>
-                          <button onClick={downloadWithWatermark}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-                            <Download size={11}/> PNG
-                          </button>
-                          <button onClick={guardarEnGaleria}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-purple-600 hover:bg-purple-500 text-white transition-all">
-                            <Save size={11}/> Guardar
-                          </button>
-                        </>
-                      }
-                    />
-                    <div id="render-print-area" className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
-                      <img src={imgSrc(render.imageUrl)} alt="Render 3D" className="w-full object-contain" />
-                      <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setRender(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><ZoomIn size={13}/></button>
-                        <button onClick={() => setRender(s => ({ ...s, editMode: !s.editMode }))} className="bg-amber-600/80 p-1.5 rounded-lg hover:bg-amber-600 text-white"><Edit3 size={13}/></button>
+                    {/* Comparativa croquis vs render */}
+                    {compareOn && render.croquisPrev ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className={`rounded-xl overflow-hidden border ${t.cardBorder} relative`}>
+                          <img src={render.croquisPrev} alt="Croquis original" className="w-full object-contain" />
+                          <span className={`absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[9px] font-black text-white uppercase tracking-widest`}>Croquis</span>
+                        </div>
+                        <div className={`rounded-xl overflow-hidden border ${t.cardBorder} relative`}>
+                          <img src={imgSrc(render.imageUrl)} alt="Render 3D" className="w-full object-contain" />
+                          <span className={`absolute top-2 left-2 px-2 py-1 bg-amber-600 rounded text-[9px] font-black text-white uppercase tracking-widest`}>Render</span>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div id="render-print-area" className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
+                        <img src={imgSrc(render.imageUrl)} alt="Render 3D" className="w-full object-contain" />
+                        <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setRender(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><ZoomIn size={13}/></button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
 
+                {/* Editor de render en lenguaje natural */}
                 {render.editMode && render.imageUrl && (
                   <div className={`rounded-xl p-4 flex flex-col gap-3 ${t.editBox}`}>
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${t.editLabel}`}>Editar render</p>
-                    <input className={`w-full rounded-lg px-3 py-2 text-xs focus:outline-none transition-colors ${t.input}`}
-                      placeholder="Ej: Cambia los muebles a blanco mate"
-                      value={render.editTxt} onChange={e => setRender(s => ({ ...s, editTxt: e.target.value }))} />
-                    <button onClick={editRender} disabled={render.status === 'loading'}
-                      className="flex items-center justify-center gap-2 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 rounded-xl text-xs font-black uppercase tracking-widest text-white">
-                      <RefreshCw size={12}/> Aplicar edición
-                    </button>
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${t.editLabel}`}>Editar render en lenguaje natural</p>
+                    <div className="flex gap-2">
+                      <input className={`flex-1 rounded-lg px-3 py-2 text-xs focus:outline-none transition-colors ${t.input}`}
+                        placeholder="Ej: Cambia los muebles a blanco mate, haz la isla más grande…"
+                        value={render.editTxt} onChange={e => setRender(s => ({ ...s, editTxt: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter' && render.editTxt.trim()) editRender(); }} />
+                      <button onClick={editRender} disabled={render.status === 'loading' || !render.editTxt.trim()}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 rounded-xl text-xs font-black uppercase tracking-widest text-white">
+                        <Send size={12}/> Aplicar
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -1217,17 +1320,8 @@ export default function EstudioCocinas({ state, setState }) {
                 <StatusBadge status={plano.status} message={plano.msg} t={t} />
                 {plano.b64 && (
                   <>
-                    <PrintPdfBar
-                      t={t}
-                      onPrint={() => handlePrint('plano-print-area')}
-                      onPdf={() => handlePdfExport(`<img src="${plano.b64}" style="width:100%"/>`, `plano_${proy.nombre_cliente || 'cocina'}.pdf`)}
-                      extraBtns={
-                        <a href={plano.b64} download={`plano_${proy.nombre_cliente || 'cocina'}.png`}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-                          <Download size={11}/> PNG
-                        </a>
-                      }
-                    />
+                    <PrintPdfBar t={t} onPrint={() => handlePrint('plano-print-area')} onPdf={() => handlePdfExport(`<img src="${plano.b64}" style="width:100%"/>`, `plano_${proy.nombre_cliente || 'cocina'}.pdf`)}
+                      extraBtns={<a href={plano.b64} download={`plano_${proy.nombre_cliente || 'cocina'}.png`} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}><Download size={11}/> PNG</a>} />
                     <div id="plano-print-area" className={`relative group rounded-xl overflow-hidden border ${t.cardBorder}`}>
                       <img src={plano.b64} alt="Plano 2D" className="w-full object-contain" />
                       <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1259,21 +1353,10 @@ export default function EstudioCocinas({ state, setState }) {
                 <StatusBadge status={ficha.status} message={ficha.msg} t={t} />
                 {ficha.md && (
                   <>
-                    <PrintPdfBar
-                      t={t}
-                      onPrint={() => handlePrint('ficha-print-area')}
-                      onPdf={() => handlePdfExport(ficha.md, `ficha_${ficha.ref || 'cocina'}.pdf`)}
-                      extraBtns={
-                        <button onClick={() => dl(ficha.md, `ficha_${ficha.ref || 'cocina'}.md`, 'text/markdown')}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-                          <Download size={11}/> .md
-                        </button>
-                      }
-                    />
+                    <PrintPdfBar t={t} onPrint={() => handlePrint('ficha-print-area')} onPdf={() => handlePdfExport(ficha.md, `ficha_${ficha.ref || 'cocina'}.pdf`)}
+                      extraBtns={<button onClick={() => dl(ficha.md, `ficha_${ficha.ref || 'cocina'}.md`, 'text/markdown')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}><Download size={11}/> .md</button>} />
                     <div id="ficha-print-area">
-                      <pre className={`rounded-xl p-5 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap font-mono ${t.pre}`}>
-                        {ficha.md}
-                      </pre>
+                      <pre className={`rounded-xl p-5 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap font-mono ${t.pre}`}>{ficha.md}</pre>
                     </div>
                   </>
                 )}
@@ -1294,23 +1377,11 @@ export default function EstudioCocinas({ state, setState }) {
                 <StatusBadge status={pres.status} message={pres.msg} t={t} />
                 {pres.html && (
                   <div className="flex flex-col gap-3">
-                    <PrintPdfBar
-                      t={t}
-                      onPrint={() => handlePdfExport(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.pdf`)}
-                      onPdf={() => handlePdfExport(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.pdf`)}
-                      extraBtns={
-                        <>
-                          <button onClick={() => setPres(s => ({ ...s, preview: !s.preview }))}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
-                            <Eye size={11}/> {pres.preview ? 'Ocultar' : 'Vista previa'}
-                          </button>
-                          <button onClick={() => dl(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.html`, 'text/html')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.presBtn}`}>
-                            <Download size={11}/> HTML
-                          </button>
-                        </>
-                      }
-                    />
+                    <PrintPdfBar t={t} onPrint={() => handlePdfExport(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.pdf`)} onPdf={() => handlePdfExport(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.pdf`)}
+                      extraBtns={<>
+                        <button onClick={() => setPres(s => ({ ...s, preview: !s.preview }))} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}><Eye size={11}/> {pres.preview ? 'Ocultar' : 'Vista previa'}</button>
+                        <button onClick={() => dl(pres.html, `presentacion_${proy.nombre_cliente || 'cliente'}.html`, 'text/html')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.presBtn}`}><Download size={11}/> HTML</button>
+                      </>} />
                     {pres.preview && (
                       <div className={`rounded-xl overflow-hidden border ${t.cardBorder}`} style={{ height: '560px' }}>
                         <iframe srcDoc={pres.html} title="Presentación" className="w-full h-full" sandbox="allow-same-origin" />
@@ -1328,116 +1399,70 @@ export default function EstudioCocinas({ state, setState }) {
                   <h2 className={`text-sm font-black mb-1 ${t.title}`}>Plan de instalaciones</h2>
                   <p className={`text-xs ${t.subtext}`}>Genera el plan de puntos eléctricos, agua, desagüe y gas según la distribución de la cocina.</p>
                 </div>
-
                 <button onClick={genInstalaciones} disabled={inst.status === 'loading'}
                   className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
-                  {inst.status === 'loading'
-                    ? <><Loader2 size={15} className="animate-spin"/> Generando plan…</>
-                    : <><LayoutGrid size={15}/> Generar Plan de Instalaciones</>}
+                  {inst.status === 'loading' ? <><Loader2 size={15} className="animate-spin"/> Generando plan…</> : <><LayoutGrid size={15}/> Generar Plan de Instalaciones</>}
                 </button>
-
                 <StatusBadge status={inst.status} message={inst.msg} t={t} />
-
                 {inst.data && (
                   <>
-                    <PrintPdfBar
-                      t={t}
-                      onPrint={() => handlePrint('inst-print-area')}
-                      onPdf={() => handlePdfExport(
-                        JSON.stringify(inst.data, null, 2),
-                        `instalaciones_${proy.nombre_cliente || 'cocina'}.pdf`
-                      )}
-                    />
-
+                    <PrintPdfBar t={t} onPrint={() => handlePrint('inst-print-area')} onPdf={() => handlePdfExport(JSON.stringify(inst.data, null, 2), `instalaciones_${proy.nombre_cliente || 'cocina'}.pdf`)} />
                     <div id="inst-print-area" className="flex flex-col gap-4">
-
-                      {/* Eléctrica */}
                       {inst.data.electrica && (
                         <div className={`rounded-xl p-4 ${t.instCard}`}>
                           <div className="flex items-center gap-2 mb-3">
-                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instElec}`}>
-                              <Zap size={11}/> Instalación Eléctrica
-                            </div>
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instElec}`}><Zap size={11}/> Instalación Eléctrica</div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {(inst.data.electrica.puntos || []).map((p, i) => (
                               <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instElec}`}>
                                 <Zap size={11} className="flex-shrink-0 mt-0.5"/>
-                                <div>
-                                  <p className="text-[10px] font-bold">{p.tipo || p.nombre || `Punto ${i+1}`}</p>
-                                  <p className="text-[9px] opacity-70">{p.ubicacion || p.descripcion || ''}</p>
-                                </div>
+                                <div><p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}</p><p className="text-[9px] opacity-70">{p.ubicacion || ''}</p></div>
                               </div>
                             ))}
-                            {inst.data.electrica.circuitos && (
-                              <div className={`col-span-2 p-2 rounded-lg ${t.instElec}`}>
-                                <p className="text-[10px] font-bold mb-1">Circuitos</p>
-                                <p className="text-[9px]">{inst.data.electrica.circuitos}</p>
-                              </div>
-                            )}
+                            {inst.data.electrica.circuitos && (<div className={`col-span-2 p-2 rounded-lg ${t.instElec}`}><p className="text-[10px] font-bold mb-1">Circuitos</p><p className="text-[9px]">{inst.data.electrica.circuitos}</p></div>)}
                           </div>
                         </div>
                       )}
-
-                      {/* Fontanería */}
                       {inst.data.fontaneria && (
                         <div className={`rounded-xl p-4 ${t.instCard}`}>
                           <div className="flex items-center gap-2 mb-3">
-                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instWater}`}>
-                              <Droplets size={11}/> Fontanería
-                            </div>
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instWater}`}><Droplets size={11}/> Fontanería</div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {(inst.data.fontaneria.puntos || []).map((p, i) => (
                               <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instWater}`}>
                                 <Droplets size={11} className="flex-shrink-0 mt-0.5"/>
-                                <div>
-                                  <p className="text-[10px] font-bold">{p.tipo || p.nombre || `Punto ${i+1}`}</p>
-                                  <p className="text-[9px] opacity-70">{p.ubicacion || p.descripcion || ''}</p>
-                                </div>
+                                <div><p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}</p><p className="text-[9px] opacity-70">{p.ubicacion || ''}</p></div>
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
-
-                      {/* Gas */}
                       {inst.data.gas && (
                         <div className={`rounded-xl p-4 ${t.instCard}`}>
                           <div className="flex items-center gap-2 mb-3">
-                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instGas}`}>
-                              <Flame size={11}/> Gas
-                            </div>
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.instGas}`}><Flame size={11}/> Gas</div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {(inst.data.gas.puntos || []).map((p, i) => (
                               <div key={i} className={`flex items-start gap-2 p-2 rounded-lg ${t.instGas}`}>
                                 <Flame size={11} className="flex-shrink-0 mt-0.5"/>
-                                <div>
-                                  <p className="text-[10px] font-bold">{p.tipo || p.nombre || `Punto ${i+1}`}</p>
-                                  <p className="text-[9px] opacity-70">{p.ubicacion || p.descripcion || ''}</p>
-                                </div>
+                                <div><p className="text-[10px] font-bold">{p.tipo || `Punto ${i+1}`}</p><p className="text-[9px] opacity-70">{p.ubicacion || ''}</p></div>
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
-
-                      {/* Notas generales */}
                       {inst.data.notas && (
                         <div className={`rounded-xl p-4 ${t.instCard}`}>
                           <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${t.subtext}`}>Notas técnicas</p>
                           <p className={`text-xs leading-relaxed ${t.subtext}`}>{inst.data.notas}</p>
                         </div>
                       )}
-
-                      {/* Fallback: mostrar JSON si la estructura no coincide */}
                       {!inst.data.electrica && !inst.data.fontaneria && !inst.data.gas && (
-                        <pre className={`rounded-xl p-4 text-xs whitespace-pre-wrap font-mono ${t.pre}`}>
-                          {JSON.stringify(inst.data, null, 2)}
-                        </pre>
+                        <pre className={`rounded-xl p-4 text-xs whitespace-pre-wrap font-mono ${t.pre}`}>{JSON.stringify(inst.data, null, 2)}</pre>
                       )}
-
                     </div>
                   </>
                 )}
@@ -1450,58 +1475,33 @@ export default function EstudioCocinas({ state, setState }) {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className={`text-sm font-black mb-1 ${t.title}`}>Galería de Renders</h2>
-                    <p className={`text-xs ${t.subtext}`}>Renders guardados de tus proyectos. Haz clic en la imagen para ampliar.</p>
+                    <p className={`text-xs ${t.subtext}`}>Renders guardados de tus proyectos.</p>
                   </div>
-                  <button onClick={() => loadGaleria(1)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-600 hover:bg-amber-500 text-white transition-all">
+                  <button onClick={() => loadGaleria(1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-600 hover:bg-amber-500 text-white transition-all">
                     <RefreshCw size={11}/> Actualizar
                   </button>
                 </div>
-
-                {galeria.loading && (
-                  <div className="flex items-center justify-center py-10">
-                    <Loader2 size={24} className="animate-spin text-amber-500" />
-                  </div>
-                )}
-
+                {galeria.loading && (<div className="flex items-center justify-center py-10"><Loader2 size={24} className="animate-spin text-amber-500" /></div>)}
                 {!galeria.loading && galeria.renders.length === 0 && (
                   <div className={`text-center py-12 rounded-xl ${t.card}`}>
                     <FolderOpen size={32} className="mx-auto mb-3 text-slate-400" />
                     <p className={`text-sm font-bold ${t.subtext}`}>Aún no hay renders guardados</p>
-                    <p className={`text-xs mt-1 ${t.subtext}`}>Genera un render y pulsa "Guardar" para añadirlo aquí.</p>
+                    <p className={`text-xs mt-1 ${t.subtext}`}>Genera un render y pulsa "Galería" para añadirlo aquí.</p>
                   </div>
                 )}
-
                 {!galeria.loading && galeria.renders.length > 0 && (
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {galeria.renders.map(r => (
                         <div key={r._id} className={`relative group rounded-xl overflow-hidden border ${t.cardBorder} transition-shadow hover:shadow-lg`}>
-                          <img
-                            src={imgSrc(r.image_url)}
-                            alt={r.cliente || 'Render'}
-                            className="w-full h-40 object-cover cursor-pointer"
-                            onClick={() => setGaleria(g => ({ ...g, fsImg: r.image_url }))}
-                          />
-                          {/* Marca de agua */}
-                          <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">
-                            3D Estudio
-                          </div>
-                          {/* Controles */}
+                          <img src={imgSrc(r.image_url)} alt={r.cliente || 'Render'} className="w-full h-40 object-cover cursor-pointer"
+                            onClick={() => setGaleria(g => ({ ...g, fsImg: r.image_url }))} />
+                          <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">3D Estudio</div>
                           <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => toggleFavorito(r._id)}
-                              className={`p-1 rounded-lg ${r.favorito ? 'bg-red-500 text-white' : 'bg-white/80 text-slate-600 hover:bg-red-100'}`}>
-                              <Heart size={11} fill={r.favorito ? 'currentColor' : 'none'} />
-                            </button>
-                            <button onClick={() => eliminarRender(r._id)}
-                              className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-red-100 hover:text-red-600">
-                              <Trash2 size={11} />
-                            </button>
-                            <a href={imgSrc(r.image_url)} download className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-emerald-100">
-                              <Download size={11} />
-                            </a>
+                            <button onClick={() => toggleFavorito(r._id)} className={`p-1 rounded-lg ${r.favorito ? 'bg-red-500 text-white' : 'bg-white/80 text-slate-600 hover:bg-red-100'}`}><Heart size={11} fill={r.favorito ? 'currentColor' : 'none'} /></button>
+                            <button onClick={() => eliminarRender(r._id)} className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-red-100 hover:text-red-600"><Trash2 size={11} /></button>
+                            <a href={imgSrc(r.image_url)} download className="p-1 rounded-lg bg-white/80 text-slate-600 hover:bg-emerald-100"><Download size={11} /></a>
                           </div>
-                          {/* Info */}
                           <div className="p-2">
                             <p className={`text-[10px] font-bold truncate ${t.title}`}>{r.cliente || 'Sin cliente'}</p>
                             <p className={`text-[9px] ${t.subtext}`}>{r.estilo} · {r.fecha}</p>
@@ -1509,35 +1509,18 @@ export default function EstudioCocinas({ state, setState }) {
                         </div>
                       ))}
                     </div>
-
-                    {/* Paginación */}
                     {galeria.total > 12 && (
                       <div className="flex justify-center gap-2 mt-4">
-                        <button
-                          disabled={galeria.page <= 1}
-                          onClick={() => loadGaleria(galeria.page - 1)}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold ${galeria.page <= 1 ? 'opacity-30' : 'hover:bg-slate-200'} ${t.card}`}>
-                          ← Anterior
-                        </button>
+                        <button disabled={galeria.page <= 1} onClick={() => loadGaleria(galeria.page - 1)} className={`px-3 py-1 rounded-lg text-xs font-bold ${galeria.page <= 1 ? 'opacity-30' : 'hover:bg-slate-200'} ${t.card}`}>← Anterior</button>
                         <span className={`px-3 py-1 text-xs font-bold ${t.subtext}`}>Pág {galeria.page}</span>
-                        <button
-                          disabled={galeria.page * 12 >= galeria.total}
-                          onClick={() => loadGaleria(galeria.page + 1)}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold ${galeria.page * 12 >= galeria.total ? 'opacity-30' : 'hover:bg-slate-200'} ${t.card}`}>
-                          Siguiente →
-                        </button>
+                        <button disabled={galeria.page * 12 >= galeria.total} onClick={() => loadGaleria(galeria.page + 1)} className={`px-3 py-1 rounded-lg text-xs font-bold ${galeria.page * 12 >= galeria.total ? 'opacity-30' : 'hover:bg-slate-200'} ${t.card}`}>Siguiente →</button>
                       </div>
                     )}
                   </>
                 )}
-
-                {/* Fullscreen de galería */}
                 {galeria.fsImg && (
                   <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onClick={() => setGaleria(g => ({ ...g, fsImg: null }))}>
                     <img src={imgSrc(galeria.fsImg)} alt="Render" className="max-w-full max-h-full object-contain rounded-xl" />
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
-                      3D Estudio · Luiggi Home
-                    </div>
                     <button className="absolute top-4 right-4 bg-white/10 p-2 rounded-full text-white hover:bg-white/20"><X size={18}/></button>
                   </div>
                 )}
@@ -1547,6 +1530,35 @@ export default function EstudioCocinas({ state, setState }) {
           </div>
         </div>
       </div>
+
+      {/* Modal: Lista de proyectos guardados */}
+      {Array.isArray(savedList) && (
+        <div className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-4" onClick={() => setSavedList(null)}>
+          <div className={`rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col ${t.root === 'bg-white text-slate-800' ? 'bg-white' : 'bg-[#1A1A1A]'}`} onClick={e => e.stopPropagation()}>
+            <div className={`flex items-center justify-between px-5 py-4 border-b ${t.cardBorder}`}>
+              <h3 className={`font-black ${t.title}`}>Mis proyectos 3D</h3>
+              <button onClick={() => setSavedList(null)} className={`p-1.5 ${t.subtext} hover:opacity-70`}><X size={18} /></button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              {savedList.length === 0 ? (
+                <p className={`text-sm text-center py-8 ${t.subtext}`}>No tienes proyectos guardados todavía.</p>
+              ) : savedList.map(d => (
+                <div key={d.id} className={`flex items-center gap-3 border rounded-xl p-2 mb-2 ${t.cardBorder} hover:opacity-90`}>
+                  <div className={`w-12 h-12 shrink-0 rounded-lg overflow-hidden ${t.card}`}>
+                    {d.images?.[0] ? <img src={imgSrc(d.images[0])} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Image size={16} className={t.subtext} /></div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-bold text-sm truncate ${t.title}`}>{d.cliente || 'Sin cliente'}{d.ref ? ` · ${d.ref}` : ''}</p>
+                    {d.updatedAt && <p className={`text-[10px] ${t.subtext}`}>{new Date(d.updatedAt).toLocaleString('es-ES')}</p>}
+                  </div>
+                  <button onClick={() => loadProject(d)} className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-500">Abrir</button>
+                  <button onClick={() => deleteProject(d.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

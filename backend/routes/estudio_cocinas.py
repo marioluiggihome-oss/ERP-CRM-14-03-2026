@@ -191,33 +191,103 @@ async def generar_render(payload: RenderInput):
     materiales = payload.materiales or "encimera de silestone, muebles lacados en mate"
     estilo = payload.estilo or "Moderno"
 
-    # Construir descripción de distribución a partir de datos estructurados
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PROMPT POSICIONAL ULTRA-DETALLADO
+    # Describe la cocina módulo a módulo, de izquierda a derecha, con restricciones
+    # negativas explícitas para que la IA respete la distribución exacta.
+    # ═══════════════════════════════════════════════════════════════════════════
     dist_struct = payload.distribucion_estructurada
-    if dist_struct and dist_struct.tipo:
-        dist_labels = {'lineal': 'LINEAL (una sola pared)', 'l': 'EN L (dos paredes en esquina)',
-                       'u': 'EN U (tres paredes)', 'paralela': 'PARALELA (dos paredes enfrentadas)',
-                       'isla': 'CON ISLA CENTRAL', 'g': 'EN G (tres paredes + península)'}
-        dist_desc = f"Distribución {dist_labels.get(dist_struct.tipo, dist_struct.tipo.upper())}\n"
-        if dist_struct.paredes:
-            for i, p in enumerate(dist_struct.paredes):
-                nombre = p.get('nombre', f'Pared {i+1}')
-                ancho = p.get('ancho', 0)
-                alto = p.get('alto', 240)
-                dist_desc += f"  - {nombre}: {ancho}cm de ancho x {alto}cm de alto\n"
-        if dist_struct.isla and dist_struct.isla.get('ancho', 0) > 0:
-            dist_desc += f"  - Isla central: {dist_struct.isla['ancho']}cm x {dist_struct.isla.get('largo', 0)}cm\n"
-        if dist_struct.elementos:
-            dist_desc += "  Elementos posicionados:\n"
-            for el in dist_struct.elementos:
-                label = el.get('label', el.get('id', '?'))
-                ancho_el = el.get('ancho', 60)
-                pared_idx = el.get('pared_idx', 0)
-                pared_nombre = dist_struct.paredes[pared_idx].get('nombre', f'Pared {pared_idx+1}') if pared_idx < len(dist_struct.paredes or []) else 'Pared principal'
-                dist_desc += f"    • {label} ({ancho_el}cm) en {pared_nombre}\n"
-        distribucion = dist_desc
+    es_libre = getattr(payload, 'free_design', False)
+    tiene_croquis = bool(payload.croquis_b64)
+
+    # --- Construir descripción posicional detallada ---
+    if dist_struct and dist_struct.tipo and not es_libre:
+        tipo = dist_struct.tipo
+        paredes = dist_struct.paredes or []
+        isla_data = dist_struct.isla or {}
+        elementos = dist_struct.elementos or []
+        tiene_isla = tipo == 'isla' or (isla_data.get('ancho', 0) > 0)
+
+        dist_labels = {
+            'lineal': 'LINEAL (todos los módulos en una sola pared recta)',
+            'l': 'EN L (dos paredes formando esquina de 90°)',
+            'u': 'EN U (tres paredes formando U)',
+            'paralela': 'PARALELA (dos paredes enfrentadas con pasillo central)',
+            'isla': 'CON ISLA CENTRAL (pared de módulos + isla exenta en el centro)',
+            'g': 'EN G (tres paredes + península que cierra parcialmente)'
+        }
+
+        # Restricciones negativas según tipo
+        restricciones_negativas = []
+        if tipo != 'isla' and not tiene_isla:
+            restricciones_negativas.append("NO hay isla central — NO dibujes ninguna isla ni mueble exento en el centro")
+        if tipo == 'lineal':
+            restricciones_negativas.append("NO hay muebles en más de una pared — TODO está en una sola pared recta")
+            restricciones_negativas.append("NO hay esquinas de cocina — es una línea recta")
+        if tipo == 'paralela':
+            restricciones_negativas.append("NO hay esquinas — son dos líneas rectas paralelas enfrentadas")
+        if tipo in ('lineal', 'l', 'paralela'):
+            restricciones_negativas.append("NO hay península")
+
+        # Siempre añadir restricciones sobre ventanas/puertas inventadas
+        restricciones_negativas.append("NO inventes ventanas grandes centrales si no se mencionan")
+        restricciones_negativas.append("NO añadas puertas, arcos ni aberturas que no se describan")
+        restricciones_negativas.append("NO cambies la distribución por una que te parezca más bonita")
+
+        # Descripción posicional módulo a módulo
+        posicional_desc = f"DISTRIBUCIÓN EXACTA: {dist_labels.get(tipo, tipo.upper())}\n\n"
+
+        # Describir cada pared con sus elementos de izquierda a derecha
+        for i, pared in enumerate(paredes):
+            nombre_p = pared.get('nombre', f'Pared {i+1}')
+            ancho_p = pared.get('ancho', 0)
+            alto_p = pared.get('alto', 240)
+            posicional_desc += f"PARED {i+1} — {nombre_p} ({ancho_p}cm de ancho × {alto_p}cm de alto):\n"
+
+            # Obtener elementos de esta pared en orden
+            elems_pared = sorted(
+                [e for e in elementos if e.get('pared_idx', 0) == i],
+                key=lambda e: e.get('posicion_cm', 0)
+            )
+
+            if elems_pared:
+                posicional_desc += "  Secuencia de módulos DE IZQUIERDA A DERECHA:\n"
+                pos_acum = 0
+                for j, el in enumerate(elems_pared):
+                    label = el.get('label', el.get('id', '?'))
+                    ancho_el = el.get('ancho', 60)
+                    posicional_desc += f"    {j+1}. {label} — {ancho_el}cm de ancho (posición: {pos_acum}cm a {pos_acum + ancho_el}cm)\n"
+                    pos_acum += ancho_el
+                espacio_libre = ancho_p - pos_acum
+                if espacio_libre > 0:
+                    posicional_desc += f"    → Espacio libre restante: {espacio_libre}cm (módulos de almacenaje estándar)\n"
+            else:
+                posicional_desc += f"  Módulos de almacenaje estándar a lo largo de toda la pared ({ancho_p}cm)\n"
+            posicional_desc += "\n"
+
+        # Isla si existe
+        if tiene_isla:
+            iw = isla_data.get('ancho', 120)
+            il = isla_data.get('largo', 200)
+            posicional_desc += f"ISLA CENTRAL (exenta en el centro de la habitación):\n"
+            posicional_desc += f"  Dimensiones: {iw}cm × {il}cm\n"
+            posicional_desc += f"  Separada de la pared principal por al menos 90cm de pasillo\n\n"
+
+        # Restricciones negativas
+        posicional_desc += "RESTRICCIONES OBLIGATORIAS (NO VIOLAR NINGUNA):\n"
+        for r in restricciones_negativas:
+            posicional_desc += f"  ✗ {r}\n"
+
+        distribucion = posicional_desc
+    elif dist_struct and dist_struct.tipo and es_libre:
+        # Modo libre: solo dar dimensiones como referencia
+        paredes = dist_struct.paredes or []
+        dims = ' + '.join([f"{p.get('nombre','Pared')}: {p.get('ancho',0)}cm" for p in paredes])
+        distribucion = f"Espacio disponible: {dims}. LIBERTAD CREATIVA TOTAL para proponer tu propio diseño."
     else:
         distribucion = payload.distribucion or payload.descripcion
 
+    # --- Prompt técnico de render ---
     prompt_tecnico = _generate_render_prompt(
         layout=distribucion,
         materials=materiales,
@@ -225,45 +295,55 @@ async def generar_render(payload: RenderInput):
         extra=payload.descripcion if payload.distribucion else "",
     )
 
-    # Instrucción completa para Manus
-    tiene_croquis = bool(payload.croquis_b64)
-
+    # --- Instrucciones sobre croquis adjunto ---
     instrucciones_croquis = ""
-    es_libre = getattr(payload, 'free_design', False)
     if tiene_croquis and not es_libre:
         instrucciones_croquis = (
-            "\n\nIMPORTANTE - CROQUIS/PLANO ADJUNTO:\n"
+            "\n\n═══ CROQUIS/PLANO ADJUNTO — REFERENCIA OBLIGATORIA ═══\n"
             "Se adjunta un croquis/plano técnico de la cocina. DEBES respetar ESTRICTAMENTE:\n"
-            "- La DISTRIBUCIÓN EXACTA del plano (lineal, en L, en U, con isla, etc.)\n"
-            "- La POSICIÓN de cada elemento (columna de hornos, fregadero, placa, etc.)\n"
-            "- Las PROPORCIONES y MEDIDAS relativas entre módulos\n"
-            "- El NÚMERO de muebles altos y bajos visible en el croquis\n"
-            "- NO inventes elementos que no aparecen en el plano (ej: no añadas isla si no la hay)\n"
-            "- NO cambies la distribución a una más 'bonita' — respeta el diseño del cliente\n"
-            "- Usa el croquis como PLANTA/ALZADO de referencia obligatoria\n"
+            "1. La DISTRIBUCIÓN EXACTA visible en el plano (lineal, en L, en U, etc.)\n"
+            "2. La POSICIÓN RELATIVA de cada electrodoméstico y módulo\n"
+            "3. Las PROPORCIONES entre módulos (un módulo de 80cm debe verse más ancho que uno de 60cm)\n"
+            "4. El NÚMERO EXACTO de muebles altos y bajos\n"
+            "5. La AUSENCIA de elementos: si no hay isla en el plano, NO la añadas\n"
+            "6. Si no hay ventana central en el plano, NO la inventes\n"
+            "7. Respeta la FORMA de la habitación tal como aparece en el croquis\n"
+            "\nEl croquis es la VERDAD ABSOLUTA de la distribución. Tu trabajo es SOLO\n"
+            "aplicar el estilo visual y los materiales, NO rediseñar la distribución.\n"
         )
     elif tiene_croquis and es_libre:
         instrucciones_croquis = (
-            "\n\nNOTA: Se adjunta un croquis como REFERENCIA VISUAL del espacio, pero tienes LIBERTAD CREATIVA\n"
-            "total para proponer tu propio diseño. Usa el croquis solo para entender las dimensiones\n"
-            "del espacio disponible, pero crea una distribución y diseño originales a tu criterio\n"
-            "como diseñador profesional de cocinas de alta gama.\n"
+            "\n\nNOTA: Se adjunta un croquis como REFERENCIA del espacio disponible.\n"
+            "Tienes LIBERTAD CREATIVA total para proponer tu propio diseño.\n"
+            "Usa el croquis solo para entender las dimensiones del espacio.\n"
         )
 
+    # --- Instrucción final completa ---
     instruccion = (
         f"Genera un render fotorrealista de alta gama de una cocina.\n\n"
-        f"DESCRIPCIÓN DEL PROYECTO:\n{payload.descripcion}\n\n"
-        f"MATERIALES Y ACABADOS:\n{materiales}\n\n"
-        f"ESTILO: {estilo}\n\n"
-        f"DISTRIBUCIÓN: {distribucion}\n\n"
-        f"PROMPT TÉCNICO DE RENDER:\n{prompt_tecnico}\n\n"
-        f"REQUISITOS TÉCNICOS:\n"
+        f"══════════════════════════════════════════════════\n"
+        f"DISTRIBUCIÓN Y POSICIÓN DE MÓDULOS (RESPETAR AL 100%):\n"
+        f"══════════════════════════════════════════════════\n"
+        f"{distribucion}\n\n"
+        f"══════════════════════════════════════════════════\n"
+        f"ESTILO Y MATERIALES:\n"
+        f"══════════════════════════════════════════════════\n"
+        f"Estilo: {estilo}\n"
+        f"Materiales: {materiales}\n"
+        f"Descripción adicional: {payload.descripcion}\n\n"
+        f"══════════════════════════════════════════════════\n"
+        f"REQUISITOS TÉCNICOS DEL RENDER:\n"
+        f"══════════════════════════════════════════════════\n"
         f"- Render fotorrealista 8K, iluminación natural cinematográfica\n"
         f"- Perspectiva angular desde esquina a altura de ojos (~160cm), formato 16:9\n"
         f"- Calidad de revista de interiorismo de lujo (Architectural Digest, Elle Decor)\n"
         f"- Texturas hiper-detalladas: vetas de madera, brillos de encimera, reflejos metálicos\n"
         f"- Profundidad de campo sutil, sin distorsión de lente\n"
-        f"- Devuelve SOLO la imagen generada, sin texto adicional"
+        f"- Devuelve SOLO la imagen generada, sin texto adicional\n"
+        f"\n══════════════════════════════════════════════════\n"
+        f"PROMPT TÉCNICO:\n"
+        f"══════════════════════════════════════════════════\n"
+        f"{prompt_tecnico}"
         f"{instrucciones_croquis}"
     )
 
