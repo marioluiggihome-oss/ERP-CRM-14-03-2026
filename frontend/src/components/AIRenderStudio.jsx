@@ -1224,15 +1224,28 @@ export default function AIRenderStudio({ state }) {
           ) : (
             /* Estado vacío */
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center max-w-sm">
-                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center">
-                  <Image size={36} className="text-indigo-500" />
+              <div className="text-center max-w-md">
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Wand2 size={36} className="text-white" />
                 </div>
-                <h3 className="font-black text-slate-700 uppercase tracking-wider mb-2">Estudio 3D</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  Describe lo que quieres (cocina, armario empotrado, baño, dormitorio, mueble a medida…) usando voz o texto, o selecciona materiales manualmente.
-                  LuiggiAI generará un render fotorrealista en segundos.
+                <h3 className="font-black text-slate-800 uppercase tracking-wider mb-2 text-lg">Estudio 3D</h3>
+                <p className="text-sm text-slate-500 leading-relaxed mb-6">
+                  Describe tu diseño (cocina, armario, baño, mueble a medida…) por voz o texto, o elige materiales.
+                  Genera un render fotorrealista en segundos y preséntalo al cliente.
                 </p>
+                <div className="grid grid-cols-3 gap-3 text-left">
+                  {[
+                    { n: '1', t: 'Describe', d: 'Voz o texto' },
+                    { n: '2', t: 'Ajusta', d: 'Estilo y medidas' },
+                    { n: '3', t: 'Genera', d: 'Descarga o PDF' },
+                  ].map(s => (
+                    <div key={s.n} className="rounded-xl border border-slate-200 bg-white p-3">
+                      <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center mb-2">{s.n}</span>
+                      <p className="text-xs font-black text-slate-700">{s.t}</p>
+                      <p className="text-[11px] text-slate-400">{s.d}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
