@@ -873,7 +873,7 @@ export default function AIRenderStudio({ state, setState }) {
       {/* Content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Panel izquierdo - Entrada */}
-        <div className="w-full lg:w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col lg:overflow-y-auto">
+        <div className="w-full lg:w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto">
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
             <div className="flex-1 flex flex-col p-6 gap-5">
