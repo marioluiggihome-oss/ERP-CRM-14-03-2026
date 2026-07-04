@@ -268,6 +268,9 @@ export default function AIRenderStudio({ state, setState }) {
   const [electros, setElectros] = useState([]);
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
+  // Motor de render: 'ia1' = Manus (por defecto), 'ia2' = Gemini. Sin exponer nombres.
+  const [motor, setMotor] = useState('ia1');
+  const providerOf = () => (motor === 'ia2' ? 'gemini' : 'manus');
   const [attached, setAttached] = useState(false);
   const [compareOn, setCompareOn] = useState(false); // ver referencia vs render
   const [imgError, setImgError] = useState(false);    // la imagen del render no cargó
@@ -397,6 +400,7 @@ export default function AIRenderStudio({ state, setState }) {
         body: JSON.stringify({
           description: `Cambia ÚNICAMENTE el color/acabado de los frentes de los muebles a "${colorLabel}", manteniendo EXACTAMENTE el mismo diseño, distribución, encimera, tiradores, electrodomésticos, suelo, cámara e iluminación. No cambies nada más.`,
           style: params.style,
+          provider: providerOf(),
           referenceImage: dataUrl,
         }),
       });
@@ -422,6 +426,7 @@ export default function AIRenderStudio({ state, setState }) {
         body: JSON.stringify({
           description: `Modifica el render adjunto manteniendo el mismo diseño, encuadre e iluminación. Cambio solicitado: ${editInstruction.trim()}. No cambies nada más.`,
           style: params.style,
+          provider: providerOf(),
           referenceImage: dataUrl,
         }),
       });
@@ -660,6 +665,7 @@ export default function AIRenderStudio({ state, setState }) {
         body: JSON.stringify({
           description: conMedidas(description.trim()) + hint,
           style: params.style,
+          provider: providerOf(),
           referenceImage: refImage || undefined,
         }),
       });
@@ -985,6 +991,15 @@ export default function AIRenderStudio({ state, setState }) {
 
               {/* Acción principal — barra fija siempre visible */}
               <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-gradient-to-t from-white via-white to-white/70 backdrop-blur flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Motor</span>
+                  <div className="flex bg-slate-100 rounded-lg p-1">
+                    {[['ia1', 'IA 1'], ['ia2', 'IA 2']].map(([id, lbl]) => (
+                      <button key={id} onClick={() => setMotor(id)} title={id === 'ia1' ? 'Motor principal' : 'Motor alternativo (más rápido y estable)'}
+                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-200'}`}>{lbl}</button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Variaciones</span>
                   <div className="flex bg-slate-100 rounded-lg p-1">

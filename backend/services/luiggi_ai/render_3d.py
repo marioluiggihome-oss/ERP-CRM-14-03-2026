@@ -470,6 +470,7 @@ class Render3DService:
         params_override: Optional[Dict[str, Any]] = None,
         reference_image: Optional[str] = None,
         reference_mime: Optional[str] = None,
+        provider: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -539,6 +540,7 @@ class Render3DService:
         return await self._render_dispatch(
             task_prompt, prompt, parsed_params,
             reference_image_base64=ref_b64, reference_mime=ref_mime,
+            provider=provider,
         )
 
     async def generate_render_composed(
@@ -802,12 +804,14 @@ class Render3DService:
     async def _render_dispatch(self, task_prompt: str, prompt: str,
                                parsed_params: Optional[Dict[str, Any]] = None,
                                reference_image_base64: Optional[str] = None,
-                               reference_mime: str = "image/png") -> Dict[str, Any]:
+                               reference_mime: str = "image/png",
+                               provider: Optional[str] = None) -> Dict[str, Any]:
         """Elige el motor de render. Por defecto MANUS (preferencia del usuario);
-        si no está configurado o falla, usa Gemini como respaldo.
-        Configurable con la variable de entorno KITCHEN_RENDER_PROVIDER=manus|gemini."""
+        si no está configurado o falla, usa Gemini como respaldo. El parámetro
+        `provider` (por petición) tiene prioridad sobre la variable de entorno
+        KITCHEN_RENDER_PROVIDER=manus|gemini."""
         import os
-        provider = (os.environ.get("KITCHEN_RENDER_PROVIDER") or "manus").lower()
+        provider = (provider or os.environ.get("KITCHEN_RENDER_PROVIDER") or "manus").lower()
         manus_ready = bool(getattr(self.config, "provider_api_key", ""))
 
         if provider == "manus" and manus_ready:
