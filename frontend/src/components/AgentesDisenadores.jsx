@@ -301,6 +301,7 @@ export default function AgentesDisenadores({ state }) {
   const [lanzando, setLanzando] = useState(false);
   const [error, setError] = useState('');
   const [zoom, setZoom] = useState(null); // { url, nombre }
+  const [motor, setMotor] = useState('ia1'); // 'ia1' = principal, 'ia2' = alternativo
   const pollingRef = useRef(null);
 
   // Polling automático cada 8 segundos mientras haya agentes en running
@@ -365,7 +366,7 @@ export default function AgentesDisenadores({ state }) {
         notas: p.notas,
         croquis_b64: p.croquisPrev || null,
       }));
-      const resp = await apiPost('/agentes/lanzar', { proyectos: proyectosPayload });
+      const resp = await apiPost('/agentes/lanzar', { proyectos: proyectosPayload, provider: motor === 'ia2' ? 'gemini' : 'manus' });
       const agentesIniciales = (resp.agentes || []).map(a => ({
         ...a,
         estilo: validos.find(p => p.nombre_cliente === a.nombre_cliente)?.estilo || 'Moderno',
@@ -457,6 +458,16 @@ export default function AgentesDisenadores({ state }) {
               {error}
             </div>
           )}
+
+          <div className="flex items-center justify-between gap-2 px-1">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Motor</span>
+            <div className="flex bg-slate-800 rounded-lg p-1">
+              {[['ia1', 'IA 1'], ['ia2', 'IA 2']].map(([id, lbl]) => (
+                <button key={id} onClick={() => setMotor(id)} title={id === 'ia1' ? 'Motor principal' : 'Motor alternativo (más rápido y estable)'}
+                  className={`px-3 py-1 rounded-md text-xs font-black transition-all ${motor === id ? 'bg-amber-500 text-white' : 'text-slate-400 hover:bg-slate-700'}`}>{lbl}</button>
+              ))}
+            </div>
+          </div>
 
           <button
             onClick={lanzarAgentes}

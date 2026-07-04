@@ -1293,6 +1293,7 @@ class AgenteProyectoInput(BaseModel):
 class AgentesLoteInput(BaseModel):
     """Lote de proyectos para lanzar en paralelo."""
     proyectos: List[AgenteProyectoInput] = Field(..., description="Lista de proyectos (2-7)")
+    provider: Optional[str] = Field(default=None, description="Motor: manus (por defecto) | gemini")
 
 
 class AgenteEstado(BaseModel):
@@ -1327,43 +1328,72 @@ def _build_agente_prompt(proyecto: AgenteProyectoInput) -> str:
     )
 
 
+async def _lanzar_gemini(proyecto, idx: int) -> dict:
+    """Genera el render con el motor alternativo (Gemini) de forma síncrona y
+    devuelve el agente ya 'completado' con la imagen incrustada (sin polling)."""
+    base = {"task_id": f"gem-{int(time.time())}-{idx}", "nombre_cliente": proyecto.nombre_cliente,
+            "estilo": proyecto.estilo, "medidas": proyecto.medidas}
+    try:
+        from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
+        if not (get_gemini_key() and GOOGLE_GENAI_AVAILABLE):
+            return {**base, "status": "error", "error": "Motor alternativo no disponible."}
+        prompt = _build_agente_prompt(proyecto)
+        data_url = await asyncio.wait_for(generate_image_with_gemini(prompt), timeout=180)
+        if data_url:
+            return {**base, "status": "completed", "imageUrl": data_url}
+        return {**base, "status": "error", "error": "El motor no devolvió imagen."}
+    except asyncio.TimeoutError:
+        return {**base, "status": "error", "error": "El motor tardó demasiado."}
+    except Exception as e:
+        logger.error(f"agente gemini error: {e}")
+        return {**base, "status": "error", "error": "No se pudo generar el render."}
+
+
+async def _lanzar_manus(engine, proyecto) -> dict:
+    """Crea la tarea en Manus con tiempo límite y devuelve el agente en 'running'."""
+    base = {"task_id": None, "nombre_cliente": proyecto.nombre_cliente,
+            "estilo": proyecto.estilo, "medidas": proyecto.medidas}
+    try:
+        prompt = _build_agente_prompt(proyecto)
+        task = await asyncio.wait_for(engine.create_task(prompt=prompt), timeout=30)
+    except asyncio.TimeoutError:
+        return {**base, "status": "error", "error": "El motor tardó demasiado en iniciar. Reinténtalo."}
+    except Exception as e:
+        logger.error(f"agente manus error: {e}")
+        return {**base, "status": "error", "error": "No se pudo iniciar el render."}
+    if task.get("success"):
+        return {**base, "task_id": task["task_id"], "status": "running"}
+    return {**base, "status": "error", "error": task.get("error", "Error al crear tarea")}
+
+
 @router.post("/agentes/lanzar")
 async def lanzar_agentes(payload: AgentesLoteInput):
     """
-    Lanza múltiples agentes diseñadores en paralelo (2-7 proyectos).
-    Devuelve inmediatamente con los task_ids para hacer polling.
+    Lanza múltiples agentes diseñadores en paralelo (1-7 proyectos).
+    Crea las tareas de forma CONCURRENTE y con tiempo límite para responder rápido
+    (evita que una llamada lenta al motor deje la petición colgada → NetworkError).
     """
     if len(payload.proyectos) < 1 or len(payload.proyectos) > 7:
         raise HTTPException(status_code=400, detail="Se permiten entre 1 y 7 proyectos simultáneos.")
 
-    engine = _get_engine()
-    if not engine or engine.get_status().get("status") != "active":
-        raise HTTPException(status_code=503, detail="Motor de IA no disponible.")
+    provider = (payload.provider or "manus").lower()
 
-    agentes = []
-    for proyecto in payload.proyectos:
-        prompt = _build_agente_prompt(proyecto)
-        task = await engine.create_task(prompt=prompt)
-        if task.get("success"):
-            agentes.append({
-                "task_id": task["task_id"],
-                "nombre_cliente": proyecto.nombre_cliente,
-                "status": "running",
-                "estilo": proyecto.estilo,
-                "medidas": proyecto.medidas,
-            })
-        else:
-            agentes.append({
-                "task_id": None,
-                "nombre_cliente": proyecto.nombre_cliente,
-                "status": "error",
-                "error": task.get("error", "Error al crear tarea"),
-            })
+    if provider == "gemini":
+        agentes = await asyncio.gather(*[
+            _lanzar_gemini(p, i) for i, p in enumerate(payload.proyectos)
+        ])
+    else:
+        engine = _get_engine()
+        if not engine or engine.get_status().get("status") != "active":
+            raise HTTPException(status_code=503, detail="Motor de IA no disponible.")
+        agentes = await asyncio.gather(*[
+            _lanzar_manus(engine, p) for p in payload.proyectos
+        ])
 
     return {
         "ok": True,
         "total": len(agentes),
-        "agentes": agentes,
+        "agentes": list(agentes),
         "timestamp": int(time.time()),
     }
 
