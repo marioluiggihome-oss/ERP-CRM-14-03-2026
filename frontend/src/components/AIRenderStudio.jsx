@@ -198,6 +198,24 @@ const MATERIALS = {
   ],
 };
 
+// Plantillas rápidas: escenas premium que los comerciales usan a menudo. Un clic
+// rellena la descripción base y ajusta estilo, iluminación, cámara y equipamiento.
+const PRESETS = [
+  { id: 'blanca_isla', label: '⬜ Blanca con isla', desc: 'Cocina moderna con isla central, muebles lacados blanco mate sin tiradores (apertura push), encimera de piedra técnica blanca con canto recto e isla con zona de fregadero y taburetes.', style: 'photorealistic', lighting: 'natural', camera: 'wide', electros: ['fregadero_bajo', 'placa_induccion', 'campana_isla', 'horno', 'nevera_integrada'] },
+  { id: 'antracita_office', label: '⬛ Antracita + office', desc: 'Cocina en L con office, frentes antracita mate, columna de horno y microondas, encimera oscura tipo Dekton, tirador gola integrado y banco de office con mesa.', style: 'photorealistic', lighting: 'sunset', camera: 'eyelevel', electros: ['fregadero_bajo', 'placa_induccion', 'campana_decorativa', 'horno', 'microondas'] },
+  { id: 'madera_u', label: '🟫 Madera cálida en U', desc: 'Cocina en U de estilo cálido, frentes de roble natural con veta visible, encimera clara, tirador tipo uñero y luz LED bajo los muebles altos.', style: 'warm', lighting: 'sunset', camera: 'wide', electros: ['fregadero_bajo', 'placa_induccion', 'campana_integrada', 'horno'] },
+  { id: 'min_negra', label: '◼ Minimalista negra', desc: 'Cocina minimalista lineal, frentes negro mate sin tiradores, encimera de piedra técnica negra continua con copete, campana integrada y electrodomésticos enrasados.', style: 'minimalist', lighting: 'neutral', camera: 'eyelevel', electros: ['fregadero_bajo', 'placa_induccion', 'campana_integrada', 'horno', 'nevera_integrada'] },
+  { id: 'peninsula_gris', label: '▦ Península gris', desc: 'Cocina con península abierta al salón, frentes gris mate, encimera de cuarzo claro con canto recto, tiradores tipo barra negros y taburetes en la península.', style: 'magazine', lighting: 'bright', camera: 'wide', electros: ['fregadero_bajo', 'placa_induccion', 'campana_isla', 'horno', 'lavavajillas'] },
+];
+
+// Frases rápidas para enriquecer la descripción con un clic (detalles habituales).
+const QUICK_PHRASES = [
+  'isla central', 'península abierta al salón', 'columna de horno y microondas',
+  'campana de isla', 'encimera volada para taburetes', 'zona de office con banco',
+  'luz LED bajo los altos', 'fregadero bajo encimera', 'vinoteca integrada',
+  'despensa/columna de almacenaje', 'copete a juego con la encimera', 'zócalo retranqueado',
+];
+
 // Cabecera de paso numerada para ordenar la petición de datos del render.
 function StepHeader({ n, title, hint }) {
   return (
@@ -333,6 +351,19 @@ export default function AIRenderStudio({ state }) {
     return extra ? `${extra}\n${desc}` : desc;
   };
   const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  // Aplica una plantilla: rellena la descripción (si está vacía) y ajusta ambiente.
+  const applyPreset = (p) => {
+    setDescription(prev => prev.trim() ? `${prev.trim()}\n${p.desc}` : p.desc);
+    setParams(prm => ({ ...prm, style: p.style, lighting: p.lighting }));
+    setCamera(p.camera);
+    setElectros(p.electros || []);
+  };
+  // Añade una frase rápida al final de la descripción.
+  const addPhrase = (t) => setDescription(prev => {
+    const has = prev.toLowerCase().includes(t.toLowerCase());
+    if (has) return prev;
+    return prev.trim() ? `${prev.trim()}, ${t}` : t;
+  });
 
   // Paleta rápida de colores de mueble para generar variantes de color en 1 clic.
   const COLORS_VARIANTES = [
@@ -739,6 +770,19 @@ export default function AIRenderStudio({ state }) {
               {/* PASO 1 — Describe el diseño */}
               <StepHeader n={1} title="Describe el diseño" hint="Cocina, armario, baño o mueble a medida. Puedes hablar o escribir." />
 
+              {/* Plantillas rápidas (arranque en 1 clic) */}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Plantillas rápidas</p>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                  {PRESETS.map(p => (
+                    <button key={p.id} onClick={() => applyPreset(p)} title={p.desc}
+                      className="shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 whitespace-nowrap">
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Botón de micrófono grande */}
               <div className="flex justify-center">
                 <button
@@ -797,6 +841,13 @@ export default function AIRenderStudio({ state }) {
                   placeholder="Describe lo que quieres: cocina, armario empotrado, baño, dormitorio, estantería... Ej: 'Armario empotrado con puertas blancas lacadas, tirador fresado en los laterales color madera, interior con columna de baldas'"
                   className="flex-1 min-h-[150px] p-4 border border-slate-200 rounded-xl text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all"
                 />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {QUICK_PHRASES.map(t => (
+                    <button key={t} onClick={() => addPhrase(t)}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      title="Añadir a la descripción">+ {t}</button>
+                  ))}
+                </div>
               </div>
 
               {/* PASO 2 — Estilo y ambiente (agrupado) */}
