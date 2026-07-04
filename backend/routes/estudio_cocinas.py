@@ -347,6 +347,30 @@ async def generar_render(payload: RenderInput):
         f"{instrucciones_croquis}"
     )
 
+    # Con CROQUIS adjunto (y sin diseño libre): un prompt CORTO y 100% FIEL al dibujo
+    # funciona mucho mejor que la dirección de arte larga (que hace que el modelo
+    # invente una cocina genérica que no se parece al croquis). Es un re-render fiel
+    # del croquis; solo se aplican acabado/estilo, sin cambiar la distribución.
+    if tiene_croquis and not es_libre:
+        instruccion = (
+            "Tienes adjunto un CROQUIS/plano dibujado a mano de UNA cocina concreta. "
+            "Conviértelo en una FOTOGRAFÍA fotorrealista de ESA MISMA cocina, 100% FIEL al dibujo. "
+            "Es un RE-RENDER del croquis, NO un diseño nuevo: copia lo que muestra el croquis.\n\n"
+            "REPRODUCE EXACTAMENTE del croquis:\n"
+            "- La forma de la habitación y la DISTRIBUCIÓN (paredes, esquinas; en L / U / lineal tal cual).\n"
+            "- La POSICIÓN, el ORDEN de izquierda a derecha y el TAMAÑO RELATIVO de cada módulo (bajos, altos, columnas).\n"
+            "- La UBICACIÓN EXACTA de la columna de horno/microondas, del frigorífico, del fregadero, de la placa y de la campana, donde aparecen en el dibujo.\n"
+            "- Las VENTANAS y PUERTAS en la MISMA pared y posición del croquis (no las muevas ni inventes ventanas nuevas).\n"
+            "- Las medidas/proporciones anotadas: un módulo ancho debe verse ancho.\n\n"
+            "PROHIBIDO: añadir, quitar, mover o redistribuir cualquier elemento que no esté en el croquis; "
+            "inventar isla, ventana central o electrodomésticos extra; cambiar la distribución por otra que te parezca más bonita.\n\n"
+            f"Aplica ÚNICAMENTE el acabado y estilo sobre esa distribución fiel — Estilo: {estilo}; Materiales: {materiales}; "
+            f"{payload.descripcion or ''}.\n\n"
+            "Resultado: fotografía de interiorismo fotorrealista, iluminación natural realista, materiales PBR con textura real, "
+            "perspectiva desde una esquina a la altura de los ojos (~160 cm) que muestre TODA la cocina, formato 16:9. "
+            "Sin texto, marcas de agua ni logotipos."
+        )
+
     # Adjuntar croquis si se proporcionó
     files = []
     if payload.croquis_b64:
