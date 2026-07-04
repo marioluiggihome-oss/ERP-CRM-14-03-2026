@@ -26,7 +26,7 @@ import {
   Presentation, Eye, Sun, Moon, Monitor, Printer,
   Zap, Droplets, Flame, LayoutGrid, Wand2,
   Heart, Trash2, FolderOpen, Save, Stamp, ImagePlus,
-  Send, Plus
+  Send, Plus, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
@@ -476,6 +476,18 @@ export default function EstudioCocinas({ state, setState }) {
   const [savedId, setSavedId] = useState(null);          // ID del proyecto guardado
   const [savedList, setSavedList] = useState(null);      // Lista de proyectos (null = modal oculto)
   const [busySave, setBusySave] = useState(false);       // Guardando proyecto
+  // Panel lateral redimensionable/ocultable (solo pantallas grandes).
+  const [panelW, setPanelW] = useState(224);
+  const [panelHidden, setPanelHidden] = useState(false);
+  const resizingPanel = useRef(false);
+  const isWide = () => typeof window !== 'undefined' && window.innerWidth >= 1024;
+  useEffect(() => {
+    const onMove = (e) => { if (resizingPanel.current) setPanelW(Math.max(180, Math.min(520, e.clientX))); };
+    const onUp = () => { if (resizingPanel.current) { resizingPanel.current = false; document.body.style.userSelect = ''; } };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
 
   // ── Web Speech API (voz que se añade al texto) ──
   const { isListening, transcript: speechTranscript, isSupported: speechSupported, startListening, stopListening } = useSpeechRecognition();
@@ -952,7 +964,7 @@ export default function EstudioCocinas({ state, setState }) {
       <div className="flex flex-1 overflow-hidden min-h-0">
 
         {/* Sidebar */}
-        <div className={`w-56 flex-shrink-0 min-h-0 p-4 flex flex-col gap-3 overflow-y-auto scrollbar-thin transition-colors duration-200 ${t.sidebar}`} style={{overflowY:'auto', overflowX:'hidden'}}>
+        <div className={`${panelHidden ? 'lg:hidden' : ''} w-56 lg:w-auto flex-shrink-0 min-h-0 p-4 flex flex-col gap-3 overflow-y-auto scrollbar-thin transition-colors duration-200 ${t.sidebar}`} style={{overflowY:'auto', overflowX:'hidden', ...(isWide() && !panelHidden ? { width: panelW } : {})}}>
           <p className={`text-[9px] font-black uppercase tracking-widest ${t.sidebarSect}`}>Proyecto</p>
 
           {/* Campos reordenables */}
@@ -1133,6 +1145,24 @@ export default function EstudioCocinas({ state, setState }) {
             </div>
           )}
         </div>
+
+        {/* Divisor redimensionable + ocultar panel (pantallas grandes) */}
+        {!panelHidden ? (
+          <div className="hidden lg:flex shrink-0 relative items-stretch">
+            <div onMouseDown={() => { resizingPanel.current = true; document.body.style.userSelect = 'none'; }}
+              title="Arrastra para redimensionar"
+              className="w-1.5 cursor-ew-resize bg-slate-200/60 hover:bg-amber-400 transition-colors" />
+            <button onClick={() => setPanelHidden(true)} title="Ocultar panel"
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-12 bg-white border border-slate-200 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-amber-600 shadow">
+              <ChevronLeft size={15} />
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setPanelHidden(false)} title="Mostrar panel"
+            className="hidden lg:flex shrink-0 self-stretch items-center px-1 bg-white border-r border-slate-200 text-slate-400 hover:text-amber-600">
+            <ChevronRight size={18} />
+          </button>
+        )}
 
         {/* Main */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
