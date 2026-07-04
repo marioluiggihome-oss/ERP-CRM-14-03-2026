@@ -1046,7 +1046,13 @@ export default function AIRenderStudio({ state, setState }) {
                     <p className="text-sm font-black text-emerald-700">{eur0(e.min)} – {eur0(e.max)}</p>
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">≈ {e.ml} m.l. · muebles {eur0(e.muebles)} · encimera {eur0(e.encimera)} · electro {eur0(e.electro)} · montaje {eur0(e.montaje)}</p>
-                  <p className="text-[10px] text-slate-400 mt-1">Estimación automática con precios medios. El presupuesto real se cierra en Resumen Totales / Cocina Desmontada.</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Estimación automática con precios medios. El presupuesto real se cierra en el Presupuestador 1.</p>
+                  {setState && (
+                    <button onClick={() => setState(p => ({ ...p, currentTab: 'budget', renderReturn: true }))}
+                      className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">
+                      <FileText size={14} /> Presupuestar en Presupuestador 1
+                    </button>
+                  )}
                 </div>
               ); })()}
 
