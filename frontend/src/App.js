@@ -1027,7 +1027,8 @@ const App = () => {
                       </button>
                     )}
 
-                    {!state.currentUser?.isTienda && state.currentUser?.canUseCocinasAI === true && (
+                    {/* Cocinas IA 2 oculta: unificado en Estudio 3D + Agentes (reversible) */}
+                    {false && !state.currentUser?.isTienda && state.currentUser?.canUseCocinasAI === true && (
                       <button
                         onClick={() => setState(p => ({...p, currentTab: 'cocinasai'}))}
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'cocinasai' ? 'bg-brand text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
