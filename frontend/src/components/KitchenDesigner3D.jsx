@@ -1066,7 +1066,7 @@ function LegacyKitchenDesigner({ state, setState, onAddToBudget }) {
 
   // ─── Vista: Detalle de Proyecto ────────────────────────────────────────────
   if (view === 'detail' && selectedProject) {
-    return <ProjectDetail project={selectedProject} onBack={() => { setView('list'); loadProjects(); }} onUpdate={(p) => setSelectedProject(p)} onDumpToBudget={dumpToBudget} />;
+    return <ProjectDetail project={selectedProject} onBack={() => { setView('list'); loadProjects(); }} onUpdate={(p) => setSelectedProject(p)} onDumpToBudget={dumpToBudget} libraryPointValues={state?.libraryPointValues} />;
   }
 
   return null;
@@ -1166,7 +1166,7 @@ function NewProjectForm({ onBack, onCreated }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // DETALLE DE PROYECTO
 // ═══════════════════════════════════════════════════════════════════════════════
-function ProjectDetail({ project: initialProject, onBack, onUpdate, onDumpToBudget }) {
+function ProjectDetail({ project: initialProject, onBack, onUpdate, onDumpToBudget, libraryPointValues }) {
   const [project, setProject] = useState(initialProject);
   const [activeTab, setActiveTab] = useState('files');
   const [isLoading, setIsLoading] = useState(false);
@@ -1225,7 +1225,7 @@ function ProjectDetail({ project: initialProject, onBack, onUpdate, onDumpToBudg
         {activeTab === 'measurements' && <MeasurementsTab project={project} onRefresh={refreshProject} />}
         {activeTab === 'cabinets' && <CabinetsTab project={project} onRefresh={refreshProject} />}
         {activeTab === 'renders' && <RendersTab project={project} onRefresh={refreshProject} />}
-        {activeTab === 'docs' && <TechnicalDocsTab project={project} onRefresh={refreshProject} onDumpToBudget={onDumpToBudget} />}
+        {activeTab === 'docs' && <TechnicalDocsTab project={project} onRefresh={refreshProject} onDumpToBudget={onDumpToBudget} libraryPointValues={libraryPointValues} />}
       </div>
     </div>
   );
@@ -1887,7 +1887,7 @@ function RendersTab({ project, onRefresh }) {
 
 
 // ─── Tab: Documentación Técnica ──────────────────────────────────────────────
-function TechnicalDocsTab({ project, onRefresh, onDumpToBudget }) {
+function TechnicalDocsTab({ project, onRefresh, onDumpToBudget, libraryPointValues }) {
   const [library, setLibrary] = useState('ZC');
   const [isApproving, setIsApproving] = useState(false);
   const [expandedDoc, setExpandedDoc] = useState(null);
@@ -1935,8 +1935,8 @@ function TechnicalDocsTab({ project, onRefresh, onDumpToBudget }) {
           <div className="flex items-center gap-3">
             <select value={library} onChange={e => setLibrary(e.target.value)}
               className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
-              <option value="ZC">Biblioteca ZC (1.00€/punto)</option>
-              <option value="MV">Biblioteca MV (1.15€/punto)</option>
+              <option value="ZC">Biblioteca ZC ({(libraryPointValues?.ZC ?? 1.0).toFixed(2)}€/punto)</option>
+              <option value="MV">Biblioteca MV ({(libraryPointValues?.MV ?? 1.0).toFixed(2)}€/punto)</option>
             </select>
             <button onClick={handleApprove} disabled={isApproving}
               className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 disabled:opacity-50">

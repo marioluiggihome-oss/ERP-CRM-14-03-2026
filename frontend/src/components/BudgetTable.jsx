@@ -5,6 +5,7 @@ import axios from 'axios';
 import { exportToPdf } from '../utils/pdfHelper';
 import { generateBudgetPDF } from '../services/pdfGenerator';
 import { DOOR_FINISHES, MV_TARIFFS, CabinetCategory } from '../constants';
+import { computeUnitPrice } from '../utils/pricing';
 import Logo from './Logo';
 import DespieceModal from './DespieceModal';
 import DespieceCatalog from './DespieceCatalog';
@@ -750,101 +751,53 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
      const currentLibrary = state.currentLibrary || 'ZC';
      const libraryPointValue = state.libraryPointValues?.[currentLibrary] || state.pointValueMontada || 1.0;
      const pointValue = state.currentModule === 'montada' ? libraryPointValue : state.pointValueDespiece;
-     
-     let usedPoints = 0;
-     let carcassCost = 0;
-     let cutsCost = 0;
-     let cuts = [];
-     let finalProductName = "";
 
-     if (item.isManual) {
-         usedPoints = item.manualPoints || 0;
-         finalProductName = item.manualDescription || "Concepto Manual";
-     } else {
-         if (!product) return { total: 0, breakdown: '', hasExtras: false, usedPoints: 0 };
-         
-         const currentFinish = item.specificFinish || state.globalFinish;
-         const isMV = state.currentLibrary === 'MV';
-         
-         // Para MV, buscar en MV_TARIFFS; para ZC, buscar en DOOR_FINISHES
-         const finishObj = isMV 
-           ? (MV_TARIFFS.find(f => f.name === currentFinish) || MV_TARIFFS[0])
-           : (DOOR_FINISHES.find(f => f.name === currentFinish) || DOOR_FINISHES[0]);
-         
-         let productBasePoints = 100;
-         if (typeof product.points === 'number') productBasePoints = product.points;
-         else if (typeof product.points === 'object' && product.points !== null) {
-           // Para MV usar T1, para ZC usar Z1
-           productBasePoints = isMV 
-             ? (product.points.T1 || product.points.Z1 || 100) 
-             : (product.points.Z1 || 100);
-         }
-         
-         usedPoints = product.zonePoints?.[finishObj.group] ?? productBasePoints;
-         finalProductName = product.name;
-
-         // NO aplicar incrementos por medidas en COSTADOS y REGLETAS
-         const categoryUpper = (product.category || '').toUpperCase();
-         const isExcludedCategory = categoryUpper.includes('COSTADO') || categoryUpper.includes('REGLETA');
-         
-         // Obtener incrementos de la biblioteca activa (o usar los globales como fallback)
-         const currentLibrary = state.currentLibrary || 'ZC';
-         const libIncrements = state.librarySpecialIncrements?.[currentLibrary] || {
-           width: state.specialIncrementWidth,
-           height: state.specialIncrementHeight,
-           depth: state.specialIncrementDepth
-         };
-         
-         if (!isExcludedCategory) {
-           if (Number(item.customWidth) !== Number(product.width)) { cutsCost += libIncrements.width; cuts.push('Ancho'); }
-           if (Number(item.customHeight) !== Number(product.height)) { cutsCost += libIncrements.height; cuts.push('Alto'); }
-           if (Number(item.customDepth) !== Number(product.depth)) { cutsCost += libIncrements.depth; cuts.push('Fondo'); }
-         }
-
-         const selectedMaterial = state.carcassMaterials.find(m => m.id === state.selectedCarcassMaterialId);
-         carcassCost = selectedMaterial?.fixedIncrement || 0;
+     // Guarda idéntica al original: línea de librería sin producto -> total 0
+     if (!item.isManual && !product) {
+       return { total: 0, breakdown: '', hasExtras: false, usedPoints: 0 };
      }
-     
-     // Añadir incremento por corte de viga si está marcado (por biblioteca)
-     // Usamos currentLibrary ya declarada arriba
+
+     const currentFinish = item.specificFinish || state.globalFinish;
+
+     // Obtener incrementos de la biblioteca activa (o usar los globales como fallback)
+     const libIncrements = state.librarySpecialIncrements?.[currentLibrary] || {
+       width: state.specialIncrementWidth,
+       height: state.specialIncrementHeight,
+       depth: state.specialIncrementDepth
+     };
+
+     const selectedMaterial = state.carcassMaterials.find(m => m.id === state.selectedCarcassMaterialId);
+     const carcassIncrement = selectedMaterial?.fixedIncrement || 0;
+
+     // Incremento por corte de viga (por biblioteca, con fallback global)
      const vigaCutValue = state.libraryVigaCutIncrements?.[currentLibrary] || state.vigaCutIncrement || 0;
-     const vigaCost = item.hasVigaCut ? vigaCutValue : 0;
-     
-     // LÍNEAS MANUALES: El valor introducido es directamente en €, NO se multiplica por punto
-     // LÍNEAS DE LIBRERÍA: Se multiplica puntos × valor del punto
-     const pointsCost = item.isManual ? usedPoints : (usedPoints * pointValue);
-     const unitPrice = item.isManual 
-       ? pointsCost  // Manual: valor directo en €, sin extras ni incrementos
-       : (pointsCost + cutsCost + carcassCost + vigaCost);  // Librería: con extras
-     
+
      // Usar descuento específico según el módulo actual
      // IMPORTANTE: Usar ?? en lugar de || para respetar 0 como valor válido
-     const discountPct = state.currentModule === 'despiece' 
+     const discountPct = state.currentModule === 'despiece'
        ? (state.currentUser?.discountDespiece ?? state.currentUser?.commercialDiscount ?? 0)
        : (state.currentUser?.discountMontada ?? state.currentUser?.commercialDiscount ?? 0);
-     // Las líneas manuales NUNCA tienen descuento ni se afectan por modo PVP/COSTO
-     const discountFactor = (item.isManual) ? 1 : (state.showDistributorPrice ? (1 - discountPct / 100) : 1);
-     
-     const finalPrice = (unitPrice * item.quantity) * discountFactor;
 
-     const breakdown = `
-DESGLOSE DE PRECIO:
--------------------
-${item.isManual ? `• Valor Manual: ${usedPoints.toFixed(2)} €` : `• Puntos Base: ${usedPoints} pts
-• Valor Punto: ${pointValue.toFixed(2)} €/pt
-  (Subtotal Mueble: ${pointsCost.toFixed(2)}€)`}
+     // Delegar en el motor de precio puro (utils/pricing.js), preservando el
+     // comportamiento al 100% (misma fórmula, extras, descuento y breakdown).
+     const { usedPoints, breakdown, hasExtras, vigaCost, finalPrice } = computeUnitPrice(product, {
+       isManual: !!item.isManual,
+       manualPoints: item.manualPoints,
+       library: currentLibrary,
+       module: state.currentModule,
+       finishName: currentFinish,
+       pointValue,
+       increments: libIncrements,
+       carcassIncrement,
+       vigaIncrement: vigaCutValue,
+       hasVigaCut: item.hasVigaCut,
+       customDims: { width: item.customWidth, height: item.customHeight, depth: item.customDepth },
+       showDistributorPrice: state.showDistributorPrice,
+       discountPct,
+       quantity: item.quantity,
+     });
 
-${!item.isManual ? `EXTRAS APLICADOS:
-• Armazón: +${carcassCost.toFixed(2)}€
-• Cortes Especiales (${cuts.length}): +${cutsCost.toFixed(2)}€${vigaCost > 0 ? `
-• Corte Viga: +${vigaCost.toFixed(2)}€` : ''}` : '• (Artículo Manual / Neto)'}
-
-PRECIO UNITARIO: ${unitPrice.toFixed(2)}€
-CANTIDAD: x${item.quantity}
-${state.showDistributorPrice ? `DTO. COMERCIAL (${state.currentModule?.toUpperCase()}): -${discountPct}%` : ''}
-`.trim();
-
-     return { total: finalPrice, breakdown, hasExtras: (carcassCost > 0 || cutsCost > 0 || vigaCost > 0), usedPoints, vigaCost };
+     return { total: finalPrice, breakdown, hasExtras, usedPoints, vigaCost };
   }, [state.globalFinish, state.currentModule, state.pointValueMontada, state.pointValueDespiece, state.libraryPointValues, state.currentLibrary, state.specialIncrementWidth, state.specialIncrementHeight, state.specialIncrementDepth, state.librarySpecialIncrements, state.showDistributorPrice, state.currentUser?.commercialDiscount, state.currentUser?.discountMontada, state.currentUser?.discountDespiece, state.selectedCarcassMaterialId, state.carcassMaterials, state.vigaCutIncrement, state.libraryVigaCutIncrements]);
 
 
