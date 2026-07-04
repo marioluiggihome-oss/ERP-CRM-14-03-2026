@@ -43,6 +43,35 @@ async function apiGet(endpoint) {
 
 const ESTILOS = ['Moderno', 'Nórdico', 'Industrial', 'Clásico', 'Lacado Blanco', 'Madera Natural', 'Contemporáneo'];
 
+// Comprime/redimensiona una imagen (foto/croquis) a un tamaño manejable antes de
+// enviarla en base64. Una foto de móvil son varios MB y hace que la petición JSON
+// se corte ("NetworkError"); aquí la reducimos a ~1600px y JPEG de calidad media.
+function compressImage(file, maxDim = 1600, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const r = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * r); height = Math.round(height * r);
+        }
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (e) { resolve(reader.result); } // si falla el canvas, usa el original
+      };
+      img.onerror = () => resolve(reader.result);
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 const PROYECTO_VACIO = () => ({
   id: Date.now() + Math.random(),
   nombre_cliente: '',
@@ -66,14 +95,17 @@ function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
   const [expanded, setExpanded] = useState(index === 0);
   const fileRef = useRef(null);
 
-  const onFileChange = (e) => {
+  const onFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      onChange({ ...proyecto, croquis: file, croquisPrev: reader.result });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const dataUrl = await compressImage(file);
+      onChange({ ...proyecto, croquis: file, croquisPrev: dataUrl });
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => onChange({ ...proyecto, croquis: file, croquisPrev: reader.result });
+      reader.readAsDataURL(file);
+    }
   };
 
   const removeCroquis = (e) => {
@@ -112,7 +144,7 @@ function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
               value={proyecto.nombre_cliente}
               onChange={e => onChange({ ...proyecto, nombre_cliente: e.target.value })}
               placeholder="Nombre del cliente"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
           <div>
@@ -121,7 +153,7 @@ function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
               value={proyecto.medidas}
               onChange={e => onChange({ ...proyecto, medidas: e.target.value })}
               placeholder="400×350cm isla 200×100cm"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
           <div>
@@ -129,7 +161,7 @@ function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
             <select
               value={proyecto.estilo}
               onChange={e => onChange({ ...proyecto, estilo: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
             >
               {ESTILOS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -140,7 +172,7 @@ function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
               value={proyecto.presupuesto}
               onChange={e => onChange({ ...proyecto, presupuesto: e.target.value })}
               placeholder="Ej: 18.000€"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
           <div className="sm:col-span-2">
@@ -150,7 +182,7 @@ function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
               onChange={e => onChange({ ...proyecto, descripcion: e.target.value })}
               placeholder="Encimera calacatta, puertas en zenit by alvic, perfil gola…"
               rows={2}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
             />
           </div>
           <div className="sm:col-span-2">
@@ -159,7 +191,7 @@ function ProyectoCard({ proyecto, index, onChange, onRemove, canRemove }) {
               value={proyecto.notas}
               onChange={e => onChange({ ...proyecto, notas: e.target.value })}
               placeholder="Encimera silestone, frentes lacados en mate…"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
           {/* Subida de croquis/plano */}
