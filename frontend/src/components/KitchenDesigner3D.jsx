@@ -500,13 +500,26 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       const catProducts = (state.catalogs || [])
         .filter(c => (state.activeCatalogIds || []).includes(c.id) && (c.module === 'montada' || !c.module))
         .flatMap(c => (c.products || []).map(p => ({ ...p, catalogId: c.id })));
+      // Prioriza el product_id que ya emparejó el backend; solo si ese id no
+      // está en los catálogos activos se intenta por código (el del catálogo
+      // antes que el sugerido por la IA). Así no se degrada a manual un mueble
+      // que el backend sí cotizó.
       const findProd = (f) => {
         const pid = f.product_id || f.productId;
-        const code = f.codigo_catalogo || f.codigo_sugerido;
-        return (pid && catProducts.find(p => p.id === pid))
-          || (code && catProducts.find(p => p.code === code || p.reference === code))
-          || null;
+        if (pid) {
+          const byId = catProducts.find(p => p.id === pid);
+          if (byId) return byId;
+        }
+        const codes = [f.codigo_catalogo, f.codigo_sugerido].filter(Boolean);
+        for (const c of codes) {
+          const m = catProducts.find(p => p.code === c || p.reference === c);
+          if (m) return m;
+        }
+        return null;
       };
+      // Valor de punto de la biblioteca activa (para el fallback si el backend
+      // devolviera puntos en lugar de euros).
+      const libPointValue = Number(state?.libraryPointValues?.[lib]) || 1;
       const rid = () => Math.random().toString(36).substr(2, 9);
       const budgetLines = cotizables.map(f => {
         const prod = findProd(f);
@@ -531,7 +544,11 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
           openingDirection: 'N/A', notes: 'Sin emparejar con catálogo',
           isManual: true,
           manualDescription: f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
-          hasVigaCut: false, manualPoints: Number(f.precio_pvp) || 0,
+          // El motor trata manualPoints como EUROS. El backend ya envía
+          // precio_pvp en euros (puntos × valor punto); si solo llegaran puntos,
+          // se convierten con el valor de punto de la biblioteca activa.
+          hasVigaCut: false,
+          manualPoints: (f.precio_pvp != null ? Number(f.precio_pvp) : (Number(f.puntos) || 0) * libPointValue) || 0,
         };
       });
       const emparejados = budgetLines.filter(l => !l.isManual).length;

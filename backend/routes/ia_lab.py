@@ -57,6 +57,25 @@ def _resolve_price(p, library=None):
     return price
 
 
+async def _get_point_value(library: str = None) -> float:
+    """Valor de 1 punto en EUR para la biblioteca (misma fuente que el frontend:
+    la colección `libraries`, campo `pointValue`). Se usa para convertir los
+    PUNTOS del catálogo a EUR (precio_pvp = puntos × pointValue).
+
+    ASUNCIÓN: el flujo de análisis de plano NO recibe acabado/tarifa, así que los
+    PUNTOS provienen de la columna por defecto del producto (`points`, con
+    fallback T1/Z1). Aquí solo se convierte esa cifra de puntos a euros; la
+    valoración exacta por acabado/tarifa la hace el Presupuestador al volcar.
+    Si no se puede resolver el valor de punto, se devuelve 1.0 (puntos == euros).
+    """
+    try:
+        lib = await db.libraries.find_one({"code": (library or 'ZC').upper()}, {"_id": 0})
+        pv = float((lib or {}).get('pointValue', 1.0) or 1.0)
+        return pv if pv > 0 else 1.0
+    except Exception:
+        return 1.0
+
+
 def _to_cm(v):
     """Normaliza una medida a cm. La IA detecta anchos/altos en mm (p.ej. 600)
     y el catálogo los guarda en cm (p.ej. 60); si el valor es 'grande' se asume
@@ -173,6 +192,9 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
     """
     enriched = []
 
+    # Valor de punto de la biblioteca (EUR/punto) para convertir puntos → euros.
+    point_value = await _get_point_value(library)
+
     # Tipos/subtipos que son electrodomésticos o accesorios, NO muebles del catálogo.
     # No deben contar como "producto no encontrado".
     APPLIANCE_TIPOS = {'ELECTRODOMESTICO', 'ELECTRODOMÉSTICO'}
@@ -219,9 +241,10 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
             enriched_item['producto_encontrado'] = True
             enriched_item['codigo_catalogo'] = catalog_product.get('code', code)
             enriched_item['nombre_catalogo'] = catalog_product.get('name', '')
-            _precio = _resolve_price(catalog_product, library)
-            enriched_item['puntos'] = _precio
-            enriched_item['precio_pvp'] = _precio
+            # `puntos` = puntos del catálogo; `precio_pvp` = EUR (puntos × valor punto).
+            _puntos = _resolve_price(catalog_product, library)
+            enriched_item['puntos'] = _puntos
+            enriched_item['precio_pvp'] = round(_puntos * point_value, 2)
             enriched_item['categoria'] = catalog_product.get('category', '')
             enriched_item['programa'] = catalog_product.get('programa', 'ESTÁNDAR')
             enriched_item['ancho_real'] = catalog_product.get('width', width)
