@@ -493,20 +493,54 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       const cotizables = muebles.filter(m => !m.es_electrodomestico);
       setDetected({ total: muebles.length, cotizables: cotizables.length, lib, muebles });
       if (!cotizables.length) { alert('No se detectaron muebles cotizables en el plano. Revisa la imagen.'); return; }
-      // Volcar SIEMPRE al Presupuestador 1 (tab 'presupuestador2' = "Presup.")
-      // mediante p2PendingLines, que el componente resuelve con su catálogo.
-      const lines = cotizables.map(f => ({
-        productId: f.product_id || f.productId || null,
-        code: f.codigo_catalogo || f.codigo_sugerido || lib,
-        name: f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
-        price: Number(f.precio_pvp) || 0,
-        qty: 1,
-        width: f.ancho_real || f.ancho_estimado,
-        height: f.alto_real || f.alto_estimado,
-        depth: f.fondo_real || f.fondo_estimado,
+      // Volcar al Presupuestador 1 (tab 'budget' = BudgetTable). Emparejamos cada
+      // mueble con el catálogo activo para que BudgetTable lo precie EXACTO
+      // (calculateLineDetails). Los que no casan entran como línea manual con el
+      // precio orientativo del backend, para no perderlos.
+      const catProducts = (state.catalogs || [])
+        .filter(c => (state.activeCatalogIds || []).includes(c.id) && (c.module === 'montada' || !c.module))
+        .flatMap(c => (c.products || []).map(p => ({ ...p, catalogId: c.id })));
+      const findProd = (f) => {
+        const pid = f.product_id || f.productId;
+        const code = f.codigo_catalogo || f.codigo_sugerido;
+        return (pid && catProducts.find(p => p.id === pid))
+          || (code && catProducts.find(p => p.code === code || p.reference === code))
+          || null;
+      };
+      const rid = () => Math.random().toString(36).substr(2, 9);
+      const budgetLines = cotizables.map(f => {
+        const prod = findProd(f);
+        const w = f.ancho_real || f.ancho_estimado;
+        const h = f.alto_real || f.alto_estimado;
+        const d = f.fondo_real || f.fondo_estimado;
+        if (prod) {
+          return {
+            id: rid(), productId: prod.id, catalogId: prod.catalogId,
+            quantity: 1, customReference: '',
+            customWidth: Number(w) || Number(prod.width),
+            customHeight: Number(h) || Number(prod.height),
+            customDepth: Number(d) || Number(prod.depth),
+            openingDirection: 'N/A', notes: '', isManual: false,
+            hasVigaCut: false, manualPoints: 0,
+          };
+        }
+        return {
+          id: rid(), productId: `MANUAL-${Date.now()}-${rid()}`, catalogId: 'manual',
+          quantity: 1, customReference: '',
+          customWidth: Number(w) || 0, customHeight: Number(h) || 0, customDepth: Number(d) || 0,
+          openingDirection: 'N/A', notes: 'Sin emparejar con catálogo',
+          isManual: true,
+          manualDescription: f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
+          hasVigaCut: false, manualPoints: Number(f.precio_pvp) || 0,
+        };
+      });
+      const emparejados = budgetLines.filter(l => !l.isManual).length;
+      setState(p => ({
+        ...p, currentLibrary: lib, currentModule: 'montada',
+        budgetItemsMontada: [...(p.budgetItemsMontada || []), ...budgetLines],
+        currentTab: 'budget',
       }));
-      setState(p => ({ ...p, currentLibrary: lib, p2PendingLines: [...(p.p2PendingLines || []), ...lines], currentTab: 'presupuestador2' }));
-      alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (catálogo ${lib}).`);
+      alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (catálogo ${lib}). ${emparejados} con precio exacto de catálogo${cotizables.length - emparejados ? `, ${cotizables.length - emparejados} como línea manual (sin emparejar)` : ''}.`);
     } catch (e) { alert('No se pudo analizar el plano: ' + (e.message || '')); }
     finally { setIsBudgeting(false); }
   };
