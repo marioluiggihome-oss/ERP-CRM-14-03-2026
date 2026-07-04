@@ -16,6 +16,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
+import { avgEurPerMl } from '../utils/pricing';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -260,28 +261,13 @@ function catalogoPrecioMuebleMl(state) {
     const finishName = state?.globalFinish;
     const table = isMV ? MV_TARIFFS : DOOR_FINISHES;
     const group = (table.find(f => f.name === finishName) || {}).group || (isMV ? 'T1' : 'Z1');
-    // El ancho del producto puede venir en cm (p. ej. 60) o mm (600).
-    const anchoM = (w) => (w >= 100 ? w / 1000 : w / 100);
     const prods = cats
       .filter(c => active.includes(c.id) && (c.module === 'montada' || !c.module))
       .flatMap(c => c.products || []);
-    const vals = [];
-    for (const p of prods) {
-      const cat = String(p.category || '').toUpperCase();
-      if (!/BAJO|ALTO|COLUMNA|SEMICOLUMNA/.test(cat)) continue;
-      const w = Number(p.width) || 0;
-      if (w <= 0) continue;
-      const zp = p.zonePoints || {};
-      let pts = zp[group];
-      if (pts == null) pts = (typeof p.points === 'number') ? p.points : (p.points?.[group] ?? p.points?.[isMV ? 'T1' : 'Z1']);
-      pts = Number(pts) || 0;
-      if (!pts) continue;
-      const ml = anchoM(w);
-      if (ml > 0) vals.push((pts * pv) / ml); // €/ml
-    }
-    if (vals.length < 3) return null;
-    vals.sort((a, b) => a - b);
-    return { eurMl: Math.round(vals[Math.floor(vals.length / 2)]), lib, group };
+    // Usa el MISMO motor de precio del Presupuestador 1 (fuente única).
+    const eurMl = avgEurPerMl(prods, { library: lib, finishName, pointValue: pv });
+    if (!eurMl) return null;
+    return { eurMl: Math.round(eurMl), lib, group };
   } catch { return null; }
 }
 
