@@ -811,7 +811,9 @@ class Render3DService:
         `provider` (por petición) tiene prioridad sobre la variable de entorno
         KITCHEN_RENDER_PROVIDER=manus|gemini."""
         import os
-        provider = (provider or os.environ.get("KITCHEN_RENDER_PROVIDER") or "manus").lower()
+        # Gemini por defecto (mucho más fiel al croquis/referencia y devuelve la
+        # imagen incrustada). Manus solo si se pide expresamente (IA 2) o por env.
+        provider = (provider or os.environ.get("KITCHEN_RENDER_PROVIDER") or "gemini").lower()
         manus_ready = bool(getattr(self.config, "provider_api_key", ""))
 
         if provider == "manus" and manus_ready:

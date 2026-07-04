@@ -686,6 +686,14 @@ export default function EstudioCocinas({ state, setState }) {
         free_design: freeDesign,
       });
 
+      // Motor Gemini (IA 1): la imagen vuelve directa (data URL), sin tarea que sondear.
+      if (r.imageUrl && !r.task_id) {
+        const u = r.imageUrl;
+        const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
+        setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: shown, originalUrl: u }));
+        return;
+      }
+
       if (!r.task_id) throw new Error(r.error || 'No se pudo iniciar el render');
 
       const taskId = r.task_id;
@@ -723,7 +731,15 @@ export default function EstudioCocinas({ state, setState }) {
     if (!render.editTxt.trim()) return;
     setRender(s => ({ ...s, status: 'loading', msg: 'Editando render…' }));
     try {
-      const r = await apiPost('/render/editar', { render_url: render.originalUrl || render.imageUrl, instruccion: render.editTxt, modo_async: false });
+      // Enviar la imagen actual en base64 para que el motor la "vea" y edite
+      // manteniendo la coherencia (antes solo mandaba una URL que no podía descargar).
+      const prevB64 = await imageToDataUrl(render.imageUrl).catch(() => null);
+      const r = await apiPost('/render/editar', {
+        render_b64: prevB64 || undefined,
+        render_url: render.originalUrl || render.imageUrl,
+        instruccion: render.editTxt,
+        modo_async: false,
+      });
       const blobUrl = await fetchAsBlob(r.imageUrl);
       setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: blobUrl || imgSrc(r.imageUrl), originalUrl: r.imageUrl, editMode: false, editTxt: '' }));
     } catch (err) {

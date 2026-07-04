@@ -323,9 +323,9 @@ export default function AIRenderStudio({ state, setState }) {
   const [electros, setElectros] = useState([]);
   const [camera, setCamera] = useState('eyelevel');
   const [variantCount, setVariantCount] = useState(1);
-  // Motor de render: 'ia1' = Manus (por defecto), 'ia2' = Gemini. Sin exponer nombres.
+  // Motor de render: 'ia1' = Gemini (por defecto, más fiel), 'ia2' = Manus. Sin exponer nombres.
   const [motor, setMotor] = useState('ia1');
-  const providerOf = () => (motor === 'ia2' ? 'gemini' : 'manus');
+  const providerOf = () => (motor === 'ia2' ? 'manus' : 'gemini');
   const [attached, setAttached] = useState(false);
   const [compareOn, setCompareOn] = useState(false); // ver referencia vs render
   const [imgError, setImgError] = useState(false);    // la imagen del render no cargó

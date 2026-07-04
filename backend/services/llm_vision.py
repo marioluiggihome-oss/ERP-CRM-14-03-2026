@@ -445,8 +445,20 @@ async def generate_image_with_gemini(
             logger.warning(f"Imagen de referencia ignorada: {e}")
     contents.append(prompt)
 
+    # Encuadre 16:9 apaisado (por defecto el modelo genera cuadrado y recorta la
+    # cocina). Se aplica de forma defensiva: si la versión del SDK no soporta
+    # ImageConfig/aspect_ratio, se cae al config normal sin romper.
+    def _make_cfg():
+        try:
+            return google_genai_types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"],
+                image_config=google_genai_types.ImageConfig(aspect_ratio="16:9"),
+            )
+        except Exception:
+            return google_genai_types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"])
+
     def _sync_call(model_name):
-        cfg = google_genai_types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"])
+        cfg = _make_cfg()
         resp = client.models.generate_content(model=model_name, contents=contents, config=cfg)
         return _extract_inline_image(resp)
 

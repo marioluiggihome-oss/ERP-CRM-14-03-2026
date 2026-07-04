@@ -125,6 +125,7 @@ class RenderInput(BaseModel):
     croquis_b64: Optional[str] = Field(default=None, description="Croquis en base64 (opcional)")
     modo_async: Optional[bool] = Field(default=False, description="Si True devuelve task_id sin esperar")
     free_design: Optional[bool] = Field(default=False, description="Si True, la IA diseña libremente sin respetar el croquis")
+    provider: Optional[str] = Field(default=None, description="Motor: gemini (por defecto, más fiel) | manus")
 
 class EditarRenderInput(BaseModel):
     render_url: Optional[str] = Field(default=None, description="URL del render previo")
@@ -388,7 +389,34 @@ async def generar_render(payload: RenderInput):
         except Exception as e:
             logger.warning(f"No se pudo adjuntar croquis: {e}")
 
-    # Crear tarea en Manus API
+    # Motor GEMINI por defecto (mucho más fiel al croquis y devuelve la imagen
+    # incrustada, sin proxy ni polling). Manus solo si se pide expresamente.
+    _provider = (payload.provider or "gemini").lower()
+    if _provider != "manus":
+        try:
+            from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
+            if get_gemini_key() and GOOGLE_GENAI_AVAILABLE:
+                ref_b64 = None
+                if payload.croquis_b64:
+                    ref_b64 = payload.croquis_b64.split(",", 1)[1] if payload.croquis_b64.startswith("data:") else payload.croquis_b64
+                data_url = await generate_image_with_gemini(
+                    prompt=instruccion,
+                    reference_image_base64=ref_b64,
+                    reference_mime="image/png",
+                )
+                if data_url:
+                    return {
+                        "imageUrl": data_url,
+                        "images": [data_url],
+                        "status": "completed",
+                        "motor": "LuiggiAI",
+                        "timestamp": int(time.time()),
+                    }
+                logger.warning("Gemini no devolvió imagen; se intenta con Manus.")
+        except Exception as e:
+            logger.warning(f"Render con Gemini falló ({e}); se intenta con Manus.")
+
+    # Crear tarea en Manus API (respaldo o IA 2)
     task = await engine.create_task(
         prompt=instruccion,
         files=files if files else None,
@@ -429,8 +457,6 @@ async def editar_render(payload: EditarRenderInput):
     Acepta la URL del render anterior o su base64.
     """
     engine = _get_engine()
-    if not engine or engine.get_status().get("status") != "active":
-        raise HTTPException(status_code=503, detail="Motor de IA no disponible.")
 
     instruccion = (
         f"Edita este render de cocina siguiendo exactamente esta instrucción: \"{payload.instruccion}\"\n\n"
@@ -455,6 +481,25 @@ async def editar_render(payload: EditarRenderInput):
                 files.append({"file_id": upload["file_id"]})
         except Exception as e:
             logger.warning(f"No se pudo subir render base64: {e}")
+
+    # Motor GEMINI por defecto: edita "viendo" el render anterior (render_b64).
+    _provider = (getattr(payload, "provider", None) or "gemini").lower()
+    if _provider != "manus" and payload.render_b64:
+        try:
+            from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
+            if get_gemini_key() and GOOGLE_GENAI_AVAILABLE:
+                ref = payload.render_b64.split(",", 1)[1] if payload.render_b64.startswith("data:") else payload.render_b64
+                data_url = await generate_image_with_gemini(
+                    prompt=instruccion, reference_image_base64=ref, reference_mime="image/png",
+                )
+                if data_url:
+                    return {"imageUrl": data_url, "images": [data_url], "status": "completed", "timestamp": int(time.time())}
+        except Exception as e:
+            logger.warning(f"Edición con Gemini falló ({e}); se intenta con Manus.")
+
+    # Respaldo/IA 2: Manus (requiere motor activo)
+    if not engine or engine.get_status().get("status") != "active":
+        raise HTTPException(status_code=503, detail="Motor de IA no disponible.")
 
     # Si viene como URL, incluirla en el prompt
     if payload.render_url and not files:

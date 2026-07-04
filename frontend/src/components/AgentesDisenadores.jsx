@@ -389,7 +389,7 @@ export default function AgentesDisenadores({ state }) {
         notas: p.notas,
         croquis_b64: p.croquisPrev || null,
       }));
-      const resp = await apiPost('/agentes/lanzar', { proyectos: proyectosPayload, provider: motor === 'ia2' ? 'gemini' : 'manus' });
+      const resp = await apiPost('/agentes/lanzar', { proyectos: proyectosPayload, provider: motor === 'ia2' ? 'manus' : 'gemini' });
       const agentesIniciales = (resp.agentes || []).map(a => ({
         ...a,
         estilo: validos.find(p => p.nombre_cliente === a.nombre_cliente)?.estilo || 'Moderno',
