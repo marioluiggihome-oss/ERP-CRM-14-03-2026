@@ -243,6 +243,36 @@ function precioEncimeraMl(id) {
 }
 const eur0 = (n) => `${Math.round(Number(n) || 0).toLocaleString('es-ES')} €`;
 
+// Precio real €/metro lineal de los muebles del Presupuestador 1: usa los productos
+// del catálogo activo (bajos/altos/columnas), su nº de puntos y el valor de punto.
+// Devuelve la mediana €/ml (robusta) o null si no hay catálogo utilizable.
+function catalogoPrecioMuebleMl(state) {
+  try {
+    const cats = state?.catalogs || [];
+    const active = state?.activeCatalogIds || [];
+    const pv = Number(state?.pointValueMontada) || 0;
+    if (!pv || !cats.length) return null;
+    const prods = cats
+      .filter(c => active.includes(c.id) && (c.module === 'montada' || !c.module))
+      .flatMap(c => c.products || []);
+    const vals = [];
+    for (const p of prods) {
+      const cat = String(p.category || '').toUpperCase();
+      if (!/BAJOS|ALTOS|COLUMNA|SEMICOLUMNA/.test(cat)) continue;
+      const w = Number(p.width) || 0;
+      if (w < 100) continue; // ancho en mm
+      let pts = 0;
+      if (typeof p.points === 'number') pts = p.points;
+      else if (p.points && typeof p.points === 'object') pts = p.points.Z1 || p.points.T1 || 0;
+      if (!pts) continue;
+      vals.push((pts * pv) / (w / 1000)); // €/ml
+    }
+    if (vals.length < 3) return null;
+    vals.sort((a, b) => a - b);
+    return Math.round(vals[Math.floor(vals.length / 2)]);
+  } catch { return null; }
+}
+
 // Cabecera de paso numerada para ordenar la petición de datos del render.
 function StepHeader({ n, title, hint }) {
   return (
@@ -399,7 +429,9 @@ export default function AIRenderStudio({ state, setState }) {
     if (!ml) ml = 4; // por defecto si no hay medidas
     ml = Math.min(Math.max(ml, 2), 14);
     const tier = CAB_TIER[params.cabinets] || 'medio';
-    const muebles = ml * (PRECIO_MUEBLE_ML[tier] || PRECIO_MUEBLE_ML.medio);
+    const catMl = catalogoPrecioMuebleMl(state); // €/ml real del Presupuestador 1
+    const precioMuebleMl = catMl || PRECIO_MUEBLE_ML[tier] || PRECIO_MUEBLE_ML.medio;
+    const muebles = ml * precioMuebleMl;
     const encimera = ml * precioEncimeraMl(params.countertop);
     const electro = electros.reduce((s, id) => s + (PRECIO_ELECTRO[id] || 0), 0);
     const tiradores = (params.handles === 'none' || params.handles === 'gola') ? ml * 45 : ml * 25;
@@ -410,6 +442,7 @@ export default function AIRenderStudio({ state, setState }) {
       ml: Math.round(ml * 10) / 10,
       muebles, encimera, electro, tiradores, montaje,
       min: round100(subtotal * 0.9), max: round100(subtotal * 1.15),
+      deCatalogo: !!catMl, precioMuebleMl,
     };
   };
   const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -1046,7 +1079,7 @@ export default function AIRenderStudio({ state, setState }) {
                     <p className="text-sm font-black text-emerald-700">{eur0(e.min)} – {eur0(e.max)}</p>
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">≈ {e.ml} m.l. · muebles {eur0(e.muebles)} · encimera {eur0(e.encimera)} · electro {eur0(e.electro)} · montaje {eur0(e.montaje)}</p>
-                  <p className="text-[10px] text-slate-400 mt-1">Estimación automática con precios medios. El presupuesto real se cierra en el Presupuestador 1.</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{e.deCatalogo ? `Muebles a ${eur0(e.precioMuebleMl)}/m.l. según tu catálogo del Presupuestador 1.` : 'Precios medios orientativos (activa un catálogo en el Presupuestador 1 para usar tus tarifas).'} El presupuesto real se cierra en el Presupuestador 1.</p>
                   {setState && (
                     <button onClick={() => setState(p => ({ ...p, currentTab: 'budget', renderReturn: true }))}
                       className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">
