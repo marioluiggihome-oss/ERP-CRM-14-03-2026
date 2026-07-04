@@ -500,6 +500,34 @@ class Render3DService:
         ref_b64, ref_mime = self._prepare_reference(reference_image, reference_mime)
         parsed_params["hasReference"] = bool(ref_b64)
 
+        # ── CON REFERENCIA = edición / re-render FIEL ──────────────────────────
+        # La imagen manda. NO expandimos el brief ni inyectamos principios de
+        # diseño (harían que el modelo REDISEÑE en vez de mantener la cocina y
+        # aplicar solo el cambio pedido, p. ej. el color de las puertas).
+        if ref_b64:
+            change = (description or "").strip()
+            parsed_params["briefExpanded"] = False
+            task_prompt = (
+                "You are given a reference image of an EXISTING kitchen/furniture design. "
+                "Your job is to EDIT that exact image applying ONLY the change described below, "
+                "keeping EVERYTHING ELSE strictly identical to the reference: the SAME layout and "
+                "room shape, the SAME modules (number, order, position and size of every base unit, "
+                "wall unit and tall column), the SAME appliances in the same places, the SAME sink, "
+                "hob, hood, windows and doors, and the SAME camera angle, framing and perspective. "
+                "Do NOT redesign, reorganize, add, remove, move, resize or 'improve' anything that "
+                "is not explicitly requested.\n\n"
+                f"Requested change (apply ONLY this): {change or 'no change, just re-render faithfully'}.\n\n"
+                "Photorealistic result identical in composition to the reference, realistic PBR "
+                "materials, natural light and shadows, 16:9. It must look like the SAME kitchen as "
+                "the reference, only with the requested change. No text, watermarks or logos."
+            )
+            return await self._render_dispatch(
+                task_prompt, task_prompt, parsed_params,
+                reference_image_base64=ref_b64, reference_mime=ref_mime,
+                provider=provider,
+            )
+
+        # ── SIN REFERENCIA = diseño desde cero ─────────────────────────────────
         # Expandir el brief con un LLM potente (gemini-2.5-pro) para que las órdenes
         # sean mucho más explícitas y el render obedezca con detalle.
         expanded_brief = await self._expand_brief(description, space_type)
