@@ -667,12 +667,20 @@ export default function EstudioCocinas({ state, setState }) {
     }
     setRender(s => ({ ...s, status: 'loading', msg: 'Generando render… puede tardar 1-3 minutos', imageUrl: null }));
     try {
+      // Con croquis, quitamos del texto de materiales/descripción los fragmentos que
+      // meten distribución (isla, ventana…) para que NO alteren el diseño del croquis,
+      // y no enviamos medidas/distribución (que también pueden llevar "isla").
+      const stripLayout = (t) => String(t || '')
+        .split(/[.·|;]/).map(s => s.trim())
+        .filter(s => s && !/^(isla|island|ventanal?|window)\b/i.test(s))
+        .join('. ');
+      const conCroquis = !!render.croquis && !freeDesign;
       const r = await apiPost('/render', {
-        descripcion: proy.descripcion,
+        descripcion: conCroquis ? stripLayout(proy.descripcion) : proy.descripcion,
         estilo: proy.estilo,
-        materiales: proy.notas,
-        distribucion: proy.medidas,
-        distribucion_estructurada: distribucion,
+        materiales: conCroquis ? stripLayout(proy.notas) : proy.notas,
+        distribucion: conCroquis ? '' : proy.medidas,
+        distribucion_estructurada: conCroquis ? null : distribucion,
         croquis_b64: render.croquis || null,
         modo_async: true,
         free_design: freeDesign,
