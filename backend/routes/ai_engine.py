@@ -458,13 +458,14 @@ async def proxy_asset(
         raise HTTPException(status_code=400, detail="Recurso no válido")
 
     host = ""
+    parsed = None
     try:
         parsed = urlparse(original_url)
         host = parsed.netloc.split("@")[-1].split(":")[0].lower()
     except Exception:
         host = ""
 
-    if parsed.scheme not in ("http", "https") or not engine._is_provider_host(host):
+    if parsed is None or parsed.scheme not in ("http", "https") or not engine._is_provider_host(host):
         # Nunca permitir URLs arbitrarias (protección anti-SSRF).
         raise HTTPException(status_code=403, detail="Recurso no autorizado")
 

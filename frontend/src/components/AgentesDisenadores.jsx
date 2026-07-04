@@ -21,6 +21,32 @@ function getToken() {
   } catch { return ''; }
 }
 
+// Las imágenes del motor Manus llegan como ruta del proxy interno sin prefijo de
+// API ni token; un <img> no puede enviar cabeceras, así que el JWT viaja por query.
+// Las de Gemini (IA 2) son data URLs y se devuelven tal cual.
+function imgSrc(url) {
+  if (!url || typeof url !== 'string') return url;
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http')) return url;
+  if (url.startsWith('/api/ai-engine/asset')) {
+    const sep = url.includes('?') ? '&' : '?';
+    return `${API}${url}${sep}t=${encodeURIComponent(getToken() || '')}`;
+  }
+  return url.startsWith('/api/') ? `${API}${url}` : url;
+}
+
+// Descarga robusta (blob) para servir tanto data URLs como rutas del proxy con token.
+async function downloadImg(url, filename) {
+  try {
+    const resp = await fetch(imgSrc(url));
+    const blob = await resp.blob();
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href; a.download = filename || 'render.jpg';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(href), 4000);
+  } catch { window.open(imgSrc(url), '_blank'); }
+}
+
 async function apiPost(endpoint, body) {
   const res = await fetch(`${API}/api/estudio-cocinas${endpoint}`, {
     method: 'POST',
@@ -249,7 +275,7 @@ function ResultadoCard({ agente, onZoom }) {
       {agente.status === 'completed' && agente.imageUrl && (
         <div className="relative group">
           <img
-            src={agente.imageUrl}
+            src={imgSrc(agente.imageUrl)}
             alt={`Render ${agente.nombre_cliente}`}
             className="w-full object-cover"
             style={{ maxHeight: '220px', objectFit: 'cover' }}
@@ -261,15 +287,12 @@ function ResultadoCard({ agente, onZoom }) {
             >
               <ZoomIn size={18} className="text-slate-800" />
             </button>
-            <a
-              href={agente.imageUrl}
-              download={`render_${agente.nombre_cliente.replace(/\s+/g, '_')}.jpg`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              onClick={() => downloadImg(agente.imageUrl, `render_${agente.nombre_cliente.replace(/\s+/g, '_')}.jpg`)}
               className="p-2 bg-white rounded-xl shadow-lg hover:bg-slate-100"
             >
               <Download size={18} className="text-slate-800" />
-            </a>
+            </button>
           </div>
           <div className="px-4 py-2 bg-white border-t border-slate-100 flex items-center justify-between">
             <span className="text-xs text-emerald-600 font-bold">✓ Completado</span>
@@ -532,7 +555,7 @@ export default function AgentesDisenadores({ state }) {
         >
           <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
             <img
-              src={zoom.url}
+              src={imgSrc(zoom.url)}
               alt={zoom.nombre}
               className="w-full rounded-2xl shadow-2xl"
             />
@@ -545,16 +568,12 @@ export default function AgentesDisenadores({ state }) {
             >
               <X size={18} />
             </button>
-            <a
-              href={zoom.url}
-              download={`render_${zoom.nombre.replace(/\s+/g, '_')}.jpg`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              onClick={(e) => { e.stopPropagation(); downloadImg(zoom.url, `render_${zoom.nombre.replace(/\s+/g, '_')}.jpg`); }}
               className="absolute bottom-3 right-3 flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600"
-              onClick={e => e.stopPropagation()}
             >
               <Download size={15} /> Descargar
-            </a>
+            </button>
           </div>
         </div>
       )}

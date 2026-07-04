@@ -28,7 +28,7 @@ import os
 import re
 import sys
 import time
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
@@ -622,6 +622,11 @@ async def generar_plano_2d(payload: ProyectoBase):
             room_h = max(350, int(room_w * 0.8))
         else:
             room_w = 400; room_h = 350
+
+        # Evitar dimensiones 0 o negativas (una pared con ancho 0 provocaría
+        # una división por cero al calcular la escala).
+        room_w = room_w if room_w and room_w > 0 else 400
+        room_h = room_h if room_h and room_h > 0 else 350
 
         # Setup figure
         fig, ax = plt.subplots(figsize=(16, 11))
