@@ -257,8 +257,11 @@ const _c1puertas = [
 
 // COLORES 1 = todo Alvic (melamina/lacado + puertas madera/laca/polilaminado).
 export const COLORES_1 = [..._c1base, ..._c1puertas];
-// COLORES 2 = ACB. Pendiente de recibir el catálogo del fabricante.
-export const COLORES_2 = [];
+// COLORES 2 = ACB: modelos de puerta (por orden alfabético; el color/acabado se
+// elige según tarifa). Agrupados por inicial para que las gamas no ocupen espacio.
+export const COLORES_2 = _acbModels.map(m => ({
+  gama: (m[0] || '#').toUpperCase(), label: m, bg: '#cfcdc6',
+}));
 
 // Agrupa una lista de acabados por gama preservando el orden de aparición.
 export function porGama(list) {

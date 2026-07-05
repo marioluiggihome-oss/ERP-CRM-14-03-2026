@@ -541,10 +541,48 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         };
       });
       const emparejados = cotizables.filter(f => findProd(f)).length;
+
+      // Si el usuario tiene Cocina Desmontada (Cascos), preguntar destino.
+      const tieneDesmontada = state?.currentUser?.canUseCascos === true;
+      const irDesmontada = tieneDesmontada && !window.confirm(
+        '¿A qué presupuesto llevamos el diseño?\n\nAceptar = COCINA MONTADA (módulos completos)\nCancelar = COCINA DESMONTADA (cascos + herraje estimado)'
+      );
+
+      if (irDesmontada) {
+        // Estimar herraje a partir de los módulos detectados (aprox.).
+        let puertas = 0, cajones = 0, bajos = 0;
+        for (const f of cotizables) {
+          const s = `${f.tipo || ''} ${f.subtipo || ''} ${f.nombre_catalogo || ''}`.toLowerCase();
+          const esBajo = /bajo|columna|semicolumna|fregadero|horno|encimera/.test(s);
+          if (esBajo) bajos++;
+          const mCaj = s.match(/(\d+)\s*(cajon|cajón|gaveta)/);
+          const esCajonera = /cajoner|gaveter/.test(s);
+          if (mCaj) cajones += parseInt(mCaj[1]) || 0;
+          else if (esCajonera) cajones += 3;
+          const mPu = s.match(/(\d+)\s*p(uerta)?s?\b/);
+          if (mPu) puertas += parseInt(mPu[1]) || 0;
+          else if (/puerta/.test(s)) puertas += 1;
+          else if (esBajo && !mCaj && !esCajonera) puertas += 1;
+        }
+        const rid = () => Math.random().toString(36).slice(2, 8);
+        const mkH = (tipo, qty) => ({ key: `h-${rid()}`, sig: `herraje|${tipo}`, accesorio: true, estimado: true, tipo, ref: 'ESTIMADO', gama: 'herraje', precio: 0, precioBase: 0, qty });
+        const hLines = [];
+        if (puertas > 0) hLines.push(mkH('Bisagra (estimada del plano)', puertas * 2));
+        if (cajones > 0) hLines.push(mkH('Juego de cajón/gaveta (estimado)', cajones));
+        if (bajos > 0) hLines.push(mkH('Pata regulable (estimada)', bajos * 4));
+        setState(p => ({
+          ...p,
+          cascosPendingLines: [...(p.cascosPendingLines || []), ...hLines],
+          currentTab: 'cascos', renderReturn: true,
+        }));
+        alert(`✅ Volcado a Cocina Desmontada. Herraje estimado del plano: ${puertas * 2} bisagras, ${cajones} juego(s) de cajón/gaveta, ${bajos * 4} patas.\n\nSon estimaciones (líneas a precio 0); ajústalas y sustitúyelas por los productos reales cuando estén cargados en Desmontada.`);
+        return;
+      }
+
       setState(p => ({
         ...p, currentLibrary: lib,
         p2PendingLines: [...(p.p2PendingLines || []), ...p2Lines],
-        currentTab: 'presupuestador2',
+        currentTab: 'presupuestador2', renderReturn: true,
       }));
       alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (Cocina Montada, catálogo ${lib}). ${emparejados} emparejado(s) con el catálogo${cotizables.length - emparejados ? `, ${cotizables.length - emparejados} sin emparejar (precio orientativo)` : ''}.`);
     } catch (e) { alert('No se pudo analizar el plano: ' + (e.message || '')); }

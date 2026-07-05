@@ -1341,7 +1341,7 @@ const App = () => {
                     className="px-3 py-1 rounded-full text-[11px] font-bold bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">Quedarme en Cocina Desmontada</button>
                 </div>
               )}
-              <Cascos state={state} />
+              <Cascos state={state} setState={setState} />
               </ErrorBoundary>
             )}
             {state.currentTab === 'propdata' && state.currentUser?.canUsePropData === true && <ErrorBoundary><PropData state={state} /></ErrorBoundary>}

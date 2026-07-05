@@ -132,7 +132,7 @@ function CascoDibujo({ dibujo, tipo, alto, ancho, fondo, unidad = 'mm' }) {
   );
 }
 
-const Cascos = ({ state }) => {
+const Cascos = ({ state, setState }) => {
   const currentUser = state?.currentUser;
   const [seccion, setSeccion] = useState('cascos'); // proveedor activo: cascos | blum | gtv | emuca
   const [gama, setGama] = useState('kit');
@@ -160,6 +160,14 @@ const Cascos = ({ state }) => {
   };
   const [qBlum, setQBlum] = useState(''); // búsqueda en el catálogo BLUM
   const [cart, setCart] = useState([]);
+  // Consume el herraje estimado que llega desde el diseñador 3D (líneas de plano).
+  useEffect(() => {
+    const pend = state?.cascosPendingLines;
+    if (pend && pend.length) {
+      setCart(prev => [...prev, ...pend]);
+      if (setState) setState(p => ({ ...p, cascosPendingLines: null }));
+    }
+  }, [state?.cascosPendingLines, setState]);
   const [cliente, setCliente] = useState('');
   const [ref, setRef] = useState('');
   const [ivaRate, setIvaRate] = useState(21);
