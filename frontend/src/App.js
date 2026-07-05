@@ -1295,15 +1295,6 @@ const App = () => {
             )}
             {state.currentTab === 'budget' && (state.currentUser?.canUsePresupuestador1 !== false) && (
               <ErrorBoundary>
-              {state.renderReturn && (
-                <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-indigo-50 border-b border-indigo-200">
-                  <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Vienes de Estudio 3D</span>
-                  <button onClick={() => setState(p => ({ ...p, currentTab: 'renderStudio' }))}
-                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700">← Volver a Estudio 3D</button>
-                  <button onClick={() => setState(p => ({ ...p, renderReturn: false }))}
-                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">Quedarme en Presupuestador 1</button>
-                </div>
-              )}
               <BudgetTable
                 items={state.currentModule === 'montada' ? state.budgetItemsMontada : state.budgetItemsDespiece} 
                 catalogs={state.catalogs} 
@@ -1315,7 +1306,17 @@ const App = () => {
               </ErrorBoundary>
             )}
             {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 !== false) && (
-              <ErrorBoundary><Presupuestador2
+              <ErrorBoundary>
+              {state.renderReturn && (
+                <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-indigo-50 border-b border-indigo-200">
+                  <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Vienes de Estudio 3D</span>
+                  <button onClick={() => setState(p => ({ ...p, currentTab: 'renderStudio' }))}
+                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700">← Volver a Estudio 3D</button>
+                  <button onClick={() => setState(p => ({ ...p, renderReturn: false }))}
+                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">Quedarme en Presupuestador 1</button>
+                </div>
+              )}
+              <Presupuestador2
                 currentUser={state.currentUser}
                 logo={state.logo}
                 incomingProject={state.p2IncomingProject}

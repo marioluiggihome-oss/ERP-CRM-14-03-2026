@@ -520,44 +520,33 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       // Valor de punto de la biblioteca activa (para el fallback si el backend
       // devolviera puntos en lugar de euros).
       const libPointValue = Number(state?.libraryPointValues?.[lib]) || 1;
-      const rid = () => Math.random().toString(36).substr(2, 9);
-      const budgetLines = cotizables.map(f => {
+      // Formato de líneas del Presupuestador 1 (pestaña 'presupuestador2' = "Cocina
+      // Montada"): las resuelve contra su catálogo (por productId) y las precia con
+      // su tarifa. El `price` es el orientativo en euros por si no encuentra el id.
+      const p2Lines = cotizables.map(f => {
         const prod = findProd(f);
         const w = f.ancho_real || f.ancho_estimado;
         const h = f.alto_real || f.alto_estimado;
         const d = f.fondo_real || f.fondo_estimado;
-        if (prod) {
-          return {
-            id: rid(), productId: prod.id, catalogId: prod.catalogId,
-            quantity: 1, customReference: '',
-            customWidth: Number(w) || Number(prod.width),
-            customHeight: Number(h) || Number(prod.height),
-            customDepth: Number(d) || Number(prod.depth),
-            openingDirection: 'N/A', notes: '', isManual: false,
-            hasVigaCut: false, manualPoints: 0,
-          };
-        }
+        const precioEur = (f.precio_pvp != null ? Number(f.precio_pvp) : (Number(f.puntos) || 0) * libPointValue) || 0;
         return {
-          id: rid(), productId: `MANUAL-${Date.now()}-${rid()}`, catalogId: 'manual',
-          quantity: 1, customReference: '',
-          customWidth: Number(w) || 0, customHeight: Number(h) || 0, customDepth: Number(d) || 0,
-          openingDirection: 'N/A', notes: 'Sin emparejar con catálogo',
-          isManual: true,
-          manualDescription: f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
-          // El motor trata manualPoints como EUROS. El backend ya envía
-          // precio_pvp en euros (puntos × valor punto); si solo llegaran puntos,
-          // se convierten con el valor de punto de la biblioteca activa.
-          hasVigaCut: false,
-          manualPoints: (f.precio_pvp != null ? Number(f.precio_pvp) : (Number(f.puntos) || 0) * libPointValue) || 0,
+          productId: prod?.id || f.product_id || f.productId || null,
+          code: prod?.code || f.codigo_catalogo || f.codigo_sugerido || lib,
+          name: prod?.name || f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
+          price: precioEur,
+          qty: 1,
+          width: Number(w) || Number(prod?.width) || undefined,
+          height: Number(h) || Number(prod?.height) || undefined,
+          depth: Number(d) || Number(prod?.depth) || undefined,
         };
       });
-      const emparejados = budgetLines.filter(l => !l.isManual).length;
+      const emparejados = cotizables.filter(f => findProd(f)).length;
       setState(p => ({
-        ...p, currentLibrary: lib, currentModule: 'montada',
-        budgetItemsMontada: [...(p.budgetItemsMontada || []), ...budgetLines],
-        currentTab: 'budget',
+        ...p, currentLibrary: lib,
+        p2PendingLines: [...(p.p2PendingLines || []), ...p2Lines],
+        currentTab: 'presupuestador2',
       }));
-      alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (catálogo ${lib}). ${emparejados} con precio exacto de catálogo${cotizables.length - emparejados ? `, ${cotizables.length - emparejados} como línea manual (sin emparejar)` : ''}.`);
+      alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (Cocina Montada, catálogo ${lib}). ${emparejados} emparejado(s) con el catálogo${cotizables.length - emparejados ? `, ${cotizables.length - emparejados} sin emparejar (precio orientativo)` : ''}.`);
     } catch (e) { alert('No se pudo analizar el plano: ' + (e.message || '')); }
     finally { setIsBudgeting(false); }
   };

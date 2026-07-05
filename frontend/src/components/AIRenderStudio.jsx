@@ -1094,7 +1094,7 @@ export default function AIRenderStudio({ state, setState }) {
                   <p className="text-[10px] text-slate-500 mt-1">≈ {e.ml} m.l.{e.sinMedidas ? ' (por defecto — pon ancho/fondo)' : ''} · muebles {eur0(e.muebles)} · encimera {eur0(e.encimera)} · electro {eur0(e.electro)} · montaje {eur0(e.montaje)}</p>
                   <p className="text-[10px] text-slate-400 mt-1">{e.deCatalogo ? `Muebles ≈ ${eur0(e.precioMuebleMl)}/m.l. (librería ${e.lib}, bloque ${e.group}) según tu catálogo del Presupuestador 1.` : 'Precios medios orientativos (activa un catálogo en el Presupuestador 1 para usar tus tarifas).'} El precio exacto se cierra en el Presupuestador 1, mueble a mueble.</p>
                   {setState && (
-                    <button onClick={() => setState(p => ({ ...p, currentTab: 'budget', renderReturn: true }))}
+                    <button onClick={() => setState(p => ({ ...p, currentTab: 'presupuestador2', renderReturn: true }))}
                       className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">
                       <FileText size={14} /> Presupuestar en Presupuestador 1
                     </button>
