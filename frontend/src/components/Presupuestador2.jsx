@@ -92,7 +92,7 @@ const isFlatPanel = (category) => FLAT_PANEL_RE.test(String(category || '').toUp
  * product.zonePoints[tarifa]. PDF con formato del Presupuestador 1 y guardado
  * en proyectos.
  */
-const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed, incomingLines, onLinesConsumed }) => {
+const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed, incomingLines, incomingLibrary, onLinesConsumed }) => {
   const [libraryCode, setLibraryCode] = useState(() => localStorage.getItem('p2_library') || 'MV');
   const [availableLibraries, setAvailableLibraries] = useState([]);
   const [library, setLibrary] = useState(null);
@@ -366,6 +366,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   // librería, manual:false); solo si no se encuentra entra como línea manual.
   useEffect(() => {
     if (!incomingLines || !incomingLines.length) return;
+    // Si el volcado viene de otra librería, cambiamos a ELLA antes de emparejar
+    // (si no, los productId no existirían en el catálogo activo y todo caería a
+    // manual). Al cambiar libraryCode se recargan products y el efecto re-corre.
+    if (incomingLibrary && incomingLibrary !== libraryCode) { setLibraryCode(incomingLibrary); return; }
     if (!products || !products.length) return; // espera a que cargue el catálogo
     const norm = (c) => (c == null ? '' : String(c)).trim().toUpperCase();
     setCart(prev => [...prev, ...incomingLines.map((l, idx) => {
@@ -377,15 +381,18 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         null;
       if (prod) {
         // Línea de CATÁLOGO: el precio lo calcula la propia tarifa (unitPriceOf).
+        // NO se pasan medidas custom: la medida detectada por IA casi nunca
+        // coincide al cm con el nominal y dispararía un recargo de "medida
+        // especial" fantasma. Se usa el nominal del catálogo (custom = '').
         return {
           id: prod.id,
           code: prod.code,
           name: prod.name,
           qty: Number(l.qty) || 1,
           manual: false,
-          customWidth: l.width != null ? Number(l.width) : '',
-          customHeight: l.height != null ? Number(l.height) : '',
-          customDepth: l.depth != null ? Number(l.depth) : '',
+          customWidth: '',
+          customHeight: '',
+          customDepth: '',
         };
       }
       // No encontrado: línea manual (igual que antes).

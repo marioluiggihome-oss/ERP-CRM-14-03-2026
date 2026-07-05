@@ -660,18 +660,30 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         if (puertas > 0) hLines.push(mkH('Bisagra (estimada del plano)', puertas * 2));
         if (cajones > 0) hLines.push(mkH('Juego de cajón/gaveta (estimado)', cajones));
         if (bajos > 0) hLines.push(mkH('Pata regulable (estimada)', bajos * 4));
+        // MUEBLES (cascos): se pasan los detectados para que Cascos los empareje
+        // con SU catálogo (tipo + ancho más cercano, color/grosor activos). Antes
+        // no se volcaba ningún casco → faltaba el 90% del pedido.
+        const cabs = cotizables.map(f => ({
+          tipo: (f.tipo || f.subtipo || f.nombre_catalogo || 'Bajo').toString(),
+          ancho: toCm(f.ancho_real || f.ancho_estimado, null),
+          alto: toCm(f.alto_real || f.alto_estimado, null),
+          fondo: toCm(f.fondo_real || f.fondo_estimado, null),
+          qty: Number(f.cantidad) || Number(f.qty) || 1,
+        }));
         setState(p => ({
           ...p,
           cascosPendingLines: [...(p.cascosPendingLines || []), ...hLines],
+          cascosPendingCabinets: [...(p.cascosPendingCabinets || []), ...cabs],
           currentTab: 'cascos', renderReturn: true,
         }));
-        alert(`✅ Volcado a Cocina Desmontada. Herraje estimado del plano: ${puertas * 2} bisagras, ${cajones} juego(s) de cajón/gaveta, ${bajos * 4} patas.\n\nSon estimaciones (líneas a precio 0); ajústalas y sustitúyelas por los productos reales cuando estén cargados en Desmontada.`);
+        alert(`✅ Volcado a Cocina Desmontada.\n\n• ${cabs.length} mueble(s) → se emparejan con el catálogo de Cascos (tipo y ancho).\n• Herraje estimado del plano: ${puertas * 2} bisagras, ${cajones} juego(s) de cajón/gaveta, ${bajos * 4} patas (líneas a 0€ para ajustar).`);
         return;
       }
 
       setState(p => ({
         ...p, currentLibrary: lib,
         p2PendingLines: [...(p.p2PendingLines || []), ...p2Lines],
+        p2PendingLibrary: lib,   // fuerza al Presupuestador 1 a la misma librería
         currentTab: 'presupuestador2', renderReturn: true,
       }));
       alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (Cocina Montada, catálogo ${lib}). ${emparejados} emparejado(s) con el catálogo${cotizables.length - emparejados ? `, ${cotizables.length - emparejados} sin emparejar (precio orientativo)` : ''}.`);
