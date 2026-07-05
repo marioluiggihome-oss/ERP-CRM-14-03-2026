@@ -257,11 +257,72 @@ const _c1puertas = [
 
 // COLORES 1 = todo Alvic (melamina/lacado + puertas madera/laca/polilaminado).
 export const COLORES_1 = [..._c1base, ..._c1puertas];
-// COLORES 2 = ACB: modelos de puerta (por orden alfabético; el color/acabado se
-// elige según tarifa). Agrupados por inicial para que las gamas no ocupen espacio.
-export const COLORES_2 = _acbModels.map(m => ({
-  gama: (m[0] || '#').toUpperCase(), label: m, bg: '#cfcdc6',
-}));
+
+// ── COLORES 2 = GRUPO ACB (por material → acabado, ordenado por número) ────────
+// Extraído de las páginas 1000139335–354 y 1000139446–465. Estructurado por
+// categoría de material; los acabados con código numérico van ordenados por su
+// número. FALTAN las páginas 1000139355–445 (hueco del catálogo) → ampliar aquí.
+// Helpers para generar rangos numéricos de acabados de forma compacta.
+const _num = (n, digits = 2) => String(n).padStart(digits, '0');
+const _range = (from, to, mk) => {
+  const out = [];
+  for (let i = from; i <= to; i++) out.push(mk(i));
+  return out;
+};
+
+const _c2acb = [
+  // ── MADERA (escala válida SOLO para puertas de madera) ──────────────────────
+  // Fresno F01–F16
+  ..._range(1, 16, i => ({ gama: 'Madera · Fresno', label: `Fresno F${_num(i)}`, bg: 'linear-gradient(90deg,#cdbb9e,#dccaa9,#cdbb9e)' })),
+  // Élite 300–307
+  ..._range(300, 307, i => ({ gama: 'Madera · Élite', label: `Élite ${i}`, bg: 'linear-gradient(90deg,#a98a63,#bb9c73,#a98a63)' })),
+  // Roble T-xx (serie; se ampliará con los números exactos de las páginas que faltan)
+  ..._range(1, 12, i => ({ gama: 'Madera · Roble', label: `Roble T${_num(i)}`, bg: 'linear-gradient(90deg,#b89968,#c8a878,#b89968)' })),
+  // Roble nudos H-xx
+  ..._range(1, 8, i => ({ gama: 'Madera · Roble nudos', label: `Roble nudos H${_num(i)}`, bg: 'linear-gradient(90deg,#a67f4c,#b88f5c,#8a6838)' })),
+  // Nogal N-xx
+  ..._range(1, 12, i => ({ gama: 'Madera · Nogal', label: `Nogal N${_num(i)}`, bg: 'linear-gradient(90deg,#6b4a2e,#7c583a,#6b4a2e)' })),
+  { gama: 'Madera · Naturalnet', label: 'Naturalnet', bg: 'linear-gradient(90deg,#c9b696,#d7c4a4,#c9b696)' },
+  { gama: 'Madera · Xolid', label: 'Xolid', bg: 'linear-gradient(90deg,#b7a488,#c5b296,#b7a488)' },
+
+  // ── LACA ────────────────────────────────────────────────────────────────────
+  { gama: 'Laca mate', label: 'Blanco', bg: '#ffffff' },
+  { gama: 'Laca mate', label: 'Hueso', bg: '#efe9db' },
+  { gama: 'Laca mate', label: 'Gris', bg: '#b0b2b1' },
+  { gama: 'Laca mate', label: 'Antracita', bg: '#3b3d3d' },
+  { gama: 'Laca mate', label: 'Negro', bg: '#0a0a0a' },
+  { gama: 'Laca brillo', label: 'Brillo G2', bg: 'linear-gradient(135deg,#f4f4f2,#e8e8e6,#fafafa)' },
+  { gama: 'Laca · Xolid', label: 'Xolid', bg: '#dad4c8' },
+
+  // ── POLILAMINADO ──────────────────────────────────────────────────────────────
+  { gama: 'Polilaminado', label: 'Blanco', bg: '#fbfdff' },
+  { gama: 'Polilaminado', label: 'Naturalnet', bg: 'linear-gradient(90deg,#c9b696,#d7c4a4,#c9b696)' },
+
+  // ── CANTEADO (frente de tablero con canto perimetral) ─────────────────────────
+  { gama: 'Canteado', label: 'Canteado (color a definir)', bg: '#cfcdc6' },
+
+  // ── METAL ─────────────────────────────────────────────────────────────────────
+  { gama: 'Metal', label: 'Acero inox', bg: 'linear-gradient(135deg,#b9bcbe,#d2d5d7,#a9acae)' },
+
+  // ── SERIE SLATE (versátil; ordenada por código numérico) ──────────────────────
+  { gama: 'Serie Slate', label: 'Roble 3822', bg: 'linear-gradient(90deg,#b89968,#c8a878,#b89968)' },
+  { gama: 'Serie Slate', label: 'Roble 3823', bg: 'linear-gradient(90deg,#a98a63,#bb9c73,#a98a63)' },
+  { gama: 'Serie Slate', label: 'Haya 3596', bg: 'linear-gradient(90deg,#d8c3a2,#e4d2b4,#d8c3a2)' },
+  { gama: 'Serie Slate', label: 'Cosmos 1049', bg: '#6f6d68' },
+  { gama: 'Serie Slate', label: 'Decorado 4569', bg: '#8a8378' },
+  { gama: 'Serie Slate', label: 'Decorado 4673', bg: '#9a9188' },
+  { gama: 'Serie Slate', label: 'Nogal N4671', bg: 'linear-gradient(90deg,#6b4a2e,#7c583a,#6b4a2e)' },
+  { gama: 'Serie Slate', label: 'Nogal N4677', bg: 'linear-gradient(90deg,#5f4128,#704e34,#5f4128)' },
+  { gama: 'Serie Slate', label: 'Nogal N4692', bg: 'linear-gradient(90deg,#553a24,#664830,#553a24)' },
+  { gama: 'Serie Slate', label: 'Nogal N4701', bg: 'linear-gradient(90deg,#4d3420,#5e422c,#4d3420)' },
+  { gama: 'Serie Slate', label: 'Eucalipto', bg: 'linear-gradient(90deg,#b7a888,#c5b696,#b7a888)' },
+  { gama: 'Serie Slate', label: 'Blanco Nórdico', bg: '#f1efe9' },
+  { gama: 'Serie Slate', label: 'Nieve', bg: '#f6f5f1' },
+];
+
+// COLORES 2 = ACB por material/acabado (ver arriba). El nombre del acabado se
+// aplica tal cual al render al seleccionarlo.
+export const COLORES_2 = _c2acb;
 
 // Agrupa una lista de acabados por gama preservando el orden de aparición.
 export function porGama(list) {
