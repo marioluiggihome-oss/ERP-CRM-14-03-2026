@@ -677,83 +677,72 @@ export default function EstudioCocinas({ state, setState }) {
       setRender(s => ({ ...s, status: 'error', msg: 'Escribe o dicta una descripción' }));
       return;
     }
-    setRender(s => ({ ...s, status: 'loading', msg: 'Generando render… puede tardar 1-3 minutos', imageUrl: null }));
+    setRender(s => ({ ...s, status: 'loading', msg: 'Generando render…', imageUrl: null }));
     try {
       // Con croquis, quitamos del texto de materiales/descripción los fragmentos que
-      // meten distribución (isla, ventana…) para que NO alteren el diseño del croquis,
-      // y no enviamos medidas/distribución (que también pueden llevar "isla").
+      // meten distribución (isla, ventana…) para que NO alteren el diseño del croquis.
       const stripLayout = (t) => String(t || '')
         .split(/[.·|;]/).map(s => s.trim())
         .filter(s => s && !/^(isla|island|ventanal?|window)\b/i.test(s))
         .join('. ');
       const conCroquis = !!render.croquis && !freeDesign;
-      const r = await apiPost('/render', {
-        descripcion: conCroquis ? stripLayout(proy.descripcion) : proy.descripcion,
-        estilo: proy.estilo,
-        materiales: conCroquis ? stripLayout(proy.notas) : proy.notas,
-        distribucion: conCroquis ? '' : proy.medidas,
-        distribucion_estructurada: conCroquis ? null : distribucion,
-        croquis_b64: render.croquis || null,
-        modo_async: true,
-        free_design: freeDesign,
-      });
 
-      // Motor Gemini (IA 1): la imagen vuelve directa (data URL), sin tarea que sondear.
-      if (r.imageUrl && !r.task_id) {
-        const u = r.imageUrl;
-        const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
-        setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: shown, originalUrl: u }));
-        return;
+      // Construimos una descripción única y usamos el MISMO pipeline que la sección
+      // "Estudio 3D" (endpoint /api/ai-engine/render, motor Gemini), que sí funciona.
+      const partes = [];
+      partes.push(conCroquis ? stripLayout(proy.descripcion) : proy.descripcion);
+      const mats = conCroquis ? stripLayout(proy.notas) : proy.notas;
+      if (mats && mats.trim()) partes.push(`Materiales y acabados: ${mats.trim()}`);
+      if (!conCroquis && proy.medidas && proy.medidas.trim()) partes.push(`Distribución y medidas: ${proy.medidas.trim()}`);
+      let descripcion = partes.filter(Boolean).join('. ');
+      if (conCroquis) {
+        descripcion = `Genera un render 3D fotorrealista RESPETANDO FIELMENTE el croquis/plano adjunto: misma distribución, mismos módulos (altos, bajos, columnas), mismas proporciones y posiciones. No añadas ni quites muebles, no añadas isla ni ventanas que no estén en el croquis. ${descripcion}`;
       }
 
-      if (!r.task_id) throw new Error(r.error || 'No se pudo iniciar el render');
+      const res = await fetch(`${API}/api/ai-engine/render`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          description: descripcion,
+          style: proy.estilo || undefined,
+          provider: 'gemini',
+          referenceImage: conCroquis ? render.croquis : undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || data.detail || 'No se pudo generar el render');
 
-      const taskId = r.task_id;
-      const maxAttempts = 38;
-      let attempts = 0;
-      const poll = async () => {
-        attempts++;
-        if (attempts > maxAttempts) {
-          setRender(s => ({ ...s, status: 'error', msg: 'El render tardó demasiado. Inténtalo de nuevo.' }));
-          return;
-        }
-        try {
-          const estado = await apiGet(`/tarea/${taskId}`);
-          if (estado.status === 'stopped') {
-            const resultado = await apiGet(`/tarea/${taskId}/resultado`);
-            const originalProxyUrl = resultado.imageUrl;
-            const blobUrl = await fetchAsBlob(originalProxyUrl);
-            setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: blobUrl || imgSrc(originalProxyUrl), originalUrl: originalProxyUrl }));
-          } else if (estado.status === 'error') {
-            setRender(s => ({ ...s, status: 'error', msg: estado.error || 'Error al generar el render' }));
-          } else {
-            setTimeout(poll, 8000);
-          }
-        } catch (pollErr) {
-          setTimeout(poll, 8000);
-        }
-      };
-      setTimeout(poll, 8000);
+      const u = data.result?.images?.[0] || data.imageUrl;
+      if (!u) throw new Error('El motor no devolvió ninguna imagen');
+      const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
+      setRender(s => ({ ...s, status: 'success', msg: 'Render generado correctamente', imageUrl: shown, originalUrl: u }));
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
-  }, [proy, render.croquis, freeDesign, distribucion]);
+  }, [proy, render.croquis, freeDesign]);
 
   const editRender = useCallback(async () => {
     if (!render.editTxt.trim()) return;
     setRender(s => ({ ...s, status: 'loading', msg: 'Editando render…' }));
     try {
-      // Enviar la imagen actual en base64 para que el motor la "vea" y edite
-      // manteniendo la coherencia (antes solo mandaba una URL que no podía descargar).
+      // Mismo pipeline que "Estudio 3D": mandamos la imagen actual como referencia
+      // (en base64) y una instrucción de edición fiel al motor Gemini.
       const prevB64 = await imageToDataUrl(render.imageUrl).catch(() => null);
-      const r = await apiPost('/render/editar', {
-        render_b64: prevB64 || undefined,
-        render_url: render.originalUrl || render.imageUrl,
-        instruccion: render.editTxt,
-        modo_async: false,
+      const res = await fetch(`${API}/api/ai-engine/render`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          description: `Modifica el render adjunto manteniendo EXACTAMENTE el mismo diseño, distribución, encuadre, cámara e iluminación. Cambio solicitado: ${render.editTxt.trim()}. No cambies nada más.`,
+          provider: 'gemini',
+          referenceImage: prevB64 || undefined,
+        }),
       });
-      const blobUrl = await fetchAsBlob(r.imageUrl);
-      setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: blobUrl || imgSrc(r.imageUrl), originalUrl: r.imageUrl, editMode: false, editTxt: '' }));
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok || !r.success) throw new Error(r.error || r.detail || 'No se pudo editar el render');
+      const u = r.result?.images?.[0] || r.imageUrl;
+      if (!u) throw new Error('El motor no devolvió ninguna imagen');
+      const shown = String(u).startsWith('data:') ? u : ((await fetchAsBlob(u)) || imgSrc(u));
+      setRender(s => ({ ...s, status: 'success', msg: 'Render editado', imageUrl: shown, originalUrl: u, editMode: false, editTxt: '' }));
     } catch (err) {
       setRender(s => ({ ...s, status: 'error', msg: err.message }));
     }
