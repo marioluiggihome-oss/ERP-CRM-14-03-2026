@@ -165,12 +165,19 @@ const Armarios2 = ({ state }) => {
     const baseCost = frontM2 * (basePerM2 + matSupp) + depthSupp;
     let accesorios = 0; const counts = {};
     comps.forEach(c => { const [k, d] = ACC_TARIFA[c.type] || [null, 0]; accesorios += k ? tarifa(k, d) : 0; counts[c.type] = (counts[c.type] || 0) + 1; });
-    // Puertas: €/m² de frente según tipo
-    const doorRate = cfg.doorType === 'sliding' ? tarifa('doorSlidingPerM2', 180) : (cfg.doorType === 'folding' || cfg.doorType === 'coplanar') ? tarifa('doorFoldingPerM2', 250) : cfg.doorType === 'hinged' ? tarifa('doorSlidingPerM2', 180) : 0;
+    // Puertas: €/m² de frente según tipo. MISMO criterio que el configurador
+    // Armarios (unificación): abatible/sin puertas = 0 (es la base); corredera
+    // = doorSlidingPerM2; plegable/coplanar = doorFoldingPerM2.
+    const doorRate = cfg.doorType === 'sliding' ? tarifa('doorSlidingPerM2', 180)
+      : (cfg.doorType === 'folding' || cfg.doorType === 'coplanar') ? tarifa('doorFoldingPerM2', 250)
+      : 0; // hinged / open
     const puertas = frontM2 * doorRate;
     const structAdj = cfg.projectType === 'vestidor' ? 0.9 : 1.0;
     const coste = baseCost * structAdj + accesorios + puertas;
-    const pvp = coste * (1 + (Number(cfg.adminMargin) || 0) / 100);
+    // PVP con IVA, como en Armarios (antes v2 no aplicaba IVA → cifras no comparables).
+    const ivaRate = tarifa('ivaRate', 21);
+    const base = coste * (1 + (Number(cfg.adminMargin) || 0) / 100); // base imponible (coste+margen)
+    const pvp = base * (1 + ivaRate / 100);
     // Despiece
     const t = cfg.thickness; const cut = [
       { p: 'Costado Izq.', q: 1, w: cfg.depth, h: cfg.height },
@@ -183,7 +190,7 @@ const Armarios2 = ({ state }) => {
       else if (c.type === 'shelf') cut.push({ p: 'Balda', q: 1, w: cfg.depth - 10, h: 400 });
       else if (c.type === 'drawer') cut.push({ p: 'Frente cajón', q: 1, w: 400, h: 180 });
     });
-    return { baseCost, accesorios, puertas, coste, pvp: Math.round(pvp), counts, cut };
+    return { baseCost, accesorios, puertas, coste, base: Math.round(base), iva: Math.round(pvp - base), ivaRate, pvp: Math.round(pvp), counts, cut };
   }, [cfg, comps, material, state?.settings]);
 
   const readFile = (file) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => res(null); fr.readAsDataURL(file); });

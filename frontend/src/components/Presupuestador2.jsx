@@ -626,7 +626,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   // de la tarifa). precio P1 = manualPoints * pointValue * qty → manualPoints = precio/pointValue
   const buildMontadaItems = useCallback(() => cart.map((it, idx) => {
     const prod = !it.manual ? products.find(p => p.id === it.id) : null;
-    const unit = unitFull(it);
+    // El descuento de distribuidor (modo COSTO) debe reflejarse en TODOS los
+    // canales (PDF, guardado, email de pedido), no solo en el total de pantalla.
+    // Las líneas manuales nunca llevan descuento (misma regla que lineTotal).
+    const unit = unitFull(it) * (it.manual ? 1 : discountFactor);
     const pts = pointValue ? (unit / pointValue) : unit;
     return {
       id: `p2-${idx}-${it.id}`,
@@ -646,7 +649,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       itemType: it.itemType || null,
       finish: it.finish || null,
     };
-  }), [cart, products, pointValue, unitFull]);
+  }), [cart, products, pointValue, unitFull, discountFactor]);
 
   // Items para el DESPIECE (reutiliza el motor/modal del Presupuestador 1).
   // Las medidas salen del catálogo MV; el backend clasifica por nombre/código.

@@ -567,6 +567,14 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       // Formato de líneas del Presupuestador 1 (pestaña 'presupuestador2' = "Cocina
       // Montada"): las resuelve contra su catálogo (por productId) y las precia con
       // su tarifa. El `price` es el orientativo en euros por si no encuentra el id.
+      // El catálogo del Presupuestador trabaja en CENTÍMETROS, pero las medidas
+      // detectadas llegan en mm. Normalizamos a cm (heurística: >320 = mm → /10)
+      // para no disparar recargos de "corte especial" fantasma en cada módulo.
+      const toCm = (v, fbCm) => {
+        const n = Number(v);
+        if (!n || n <= 0) return fbCm != null ? Number(fbCm) : undefined;
+        return n > 320 ? Math.round(n / 10) : Math.round(n);
+      };
       const p2Lines = cotizables.map(f => {
         const prod = findProd(f);
         const w = f.ancho_real || f.ancho_estimado;
@@ -578,10 +586,10 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
           code: prod?.code || f.codigo_catalogo || f.codigo_sugerido || lib,
           name: prod?.name || f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
           price: precioEur,
-          qty: 1,
-          width: Number(w) || Number(prod?.width) || undefined,
-          height: Number(h) || Number(prod?.height) || undefined,
-          depth: Number(d) || Number(prod?.depth) || undefined,
+          qty: Number(f.cantidad) || Number(f.qty) || 1,
+          width: toCm(w, prod?.width),
+          height: toCm(h, prod?.height),
+          depth: toCm(d, prod?.depth),
         };
       });
       const emparejados = cotizables.filter(f => findProd(f)).length;

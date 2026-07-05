@@ -71,7 +71,13 @@ const ResumenCocinas = ({ state }) => {
   // Render 3D adjuntado desde Estudio 3D (se incluye en el PDF si el usuario quiere).
   const [render3d, setRender3d] = useState(null);
   useEffect(() => {
-    try { const raw = localStorage.getItem('render3d_attach'); if (raw) setRender3d(JSON.parse(raw)); } catch (_) {}
+    // El render pendiente es una transferencia ÚNICA desde Estudio 3D: se consume
+    // y se BORRA del localStorage para que no reaparezca en el resumen de otro
+    // cliente. A partir de aquí vive scopeado a este resumen (se guarda con él).
+    try {
+      const raw = localStorage.getItem('render3d_attach');
+      if (raw) { setRender3d(JSON.parse(raw)); localStorage.removeItem('render3d_attach'); }
+    } catch (_) {}
   }, []);
   const quitarRender3d = () => { setRender3d(null); try { localStorage.removeItem('render3d_attach'); } catch (_) {} };
   const dragStyle = offsetX ? { transform: `translateX(${offsetX}px)` } : undefined;
@@ -88,7 +94,7 @@ const ResumenCocinas = ({ state }) => {
     try {
       const r = await fetch(`${API_URL}/api/resumen-totales`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: savedId || undefined, userId: uidUser, name, data: { cliente, fecha, cocinas, pagos, bancoId, ivaIncluido, ivaRate } }),
+        body: JSON.stringify({ id: savedId || undefined, userId: uidUser, name, data: { cliente, fecha, cocinas, pagos, bancoId, ivaIncluido, ivaRate, render3d } }),
       });
       const d = await r.json();
       if (d.id) { setSavedId(d.id); setDocName(name); alert('✅ Resumen guardado. Lo tienes en "Mis resúmenes".'); }
@@ -111,12 +117,14 @@ const ResumenCocinas = ({ state }) => {
       setCliente(data.cliente || ''); setFecha(data.fecha || today);
       setCocinas(data.cocinas || []); setPagos(data.pagos || []); setBancoId(data.bancoId || '');
       setIvaIncluido(data.ivaIncluido !== false); setIvaRate(data.ivaRate ?? 21);
+      setRender3d(data.render3d || null);   // el render pertenece a ESTE resumen
       setSavedId(doc.id); setDocName(doc.name || ''); setSavedList(null);
     } catch { alert('No se pudo abrir el resumen.'); }
   };
   const nuevoResumen = () => {
     if (!window.confirm('¿Empezar un resumen nuevo en blanco? Se perderá lo no guardado.')) return;
     setCliente(''); setFecha(today); setDocName(''); setSavedId(null);
+    setRender3d(null); try { localStorage.removeItem('render3d_attach'); } catch (_) {}
     setCocinas([{ id: uid(), nombre: 'COCINA PRINCIPAL', lineas: [
       { id: uid(), concepto: 'MUEBLES', importe: '' },
       { id: uid(), concepto: 'ELECTRODOMÉSTICOS', importe: '' },
