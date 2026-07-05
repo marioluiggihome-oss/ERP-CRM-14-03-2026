@@ -490,16 +490,24 @@ export default function AIRenderStudio({ state, setState }) {
   ];
 
   // Genera una variante del render actual cambiando SOLO el color de los muebles.
-  const colorVariant = async (colorLabel) => {
+  const colorVariant = async (colorInput) => {
     const img = currentImage();
     if (!img || editing) return;
+    // Acepta una etiqueta simple o un objeto de acabado {label, modelo, forma}.
+    const fin = (colorInput && typeof colorInput === 'object') ? colorInput : { label: colorInput };
+    const colorLabel = fin.label || '';
+    // Si el acabado lleva modelo+forma de puerta, se lo indicamos al render para
+    // que cambie también la forma del frente, no solo el color.
+    const cambio = (fin.modelo || fin.forma)
+      ? `Cambia los frentes de los muebles al modelo de puerta "${fin.modelo || colorLabel}" (forma: ${fin.forma || 'según catálogo'})${fin.material ? `, en ${fin.material}` : ''}, con acabado/color "${colorLabel}". Respeta EXACTAMENTE la misma distribución, medidas, encimera, electrodomésticos, suelo, cámara e iluminación; solo cambian los frentes (forma y color).`
+      : `Cambia ÚNICAMENTE el color/acabado de los frentes de los muebles a "${colorLabel}", manteniendo EXACTAMENTE el mismo diseño, distribución, encimera, tiradores, electrodomésticos, suelo, cámara e iluminación. No cambies nada más.`;
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
-          description: `Cambia ÚNICAMENTE el color/acabado de los frentes de los muebles a "${colorLabel}", manteniendo EXACTAMENTE el mismo diseño, distribución, encimera, tiradores, electrodomésticos, suelo, cámara e iluminación. No cambies nada más.`,
+          description: cambio,
           style: params.style,
           provider: providerOf(),
           referenceImage: dataUrl,
@@ -507,7 +515,8 @@ export default function AIRenderStudio({ state, setState }) {
       });
       const data = await response.json();
       if (data.success) {
-        const merged = { ...data, description: `${renderResult?.description || description}\n[Color] ${colorLabel}` };
+        const etiqueta = (fin.modelo || fin.forma) ? `${fin.modelo || ''} · ${colorLabel}`.trim() : colorLabel;
+        const merged = { ...data, description: `${renderResult?.description || description}\n[Puerta] ${etiqueta}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
       } else setError(data.error || 'No se pudo generar la variante de color');
@@ -1457,8 +1466,8 @@ export default function AIRenderStudio({ state, setState }) {
                             {openGama === g.gama && (
                               <div className="px-2.5 pb-2 grid grid-cols-1 gap-1">
                                 {g.items.map(c => (
-                                  <button key={c.label} onClick={() => colorVariant(`${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim())} disabled={editing}
-                                    title={`Muebles en ${c.label}`}
+                                  <button key={c.label} onClick={() => colorVariant(c.modelo || c.forma ? { ...c, label: `${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim() } : `${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim())} disabled={editing}
+                                    title={c.forma ? `${c.modelo || c.label} — ${c.forma}` : `Muebles en ${c.label}`}
                                     className="flex items-center gap-2 text-left px-1.5 py-1 rounded hover:bg-indigo-50 disabled:opacity-40">
                                     <span className="w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: c.bg }} />
                                     <span className="text-[11px] text-slate-600 truncate">{c.label}</span>

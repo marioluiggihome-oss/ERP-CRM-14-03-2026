@@ -184,20 +184,23 @@ const _c1base = [
 ];
 
 // Puertas Alvic (madera / laca / polilaminado): modelos y cartas de color → Colores 1.
+// IMPORTANTE: cada MODELO lleva su FORMA de puerta (lisa / con marco y plafón /
+// ranurada / gola…) además del material. El render usa modelo + forma + color,
+// no solo el color. Extraído del catálogo Alvic "Puertas Madera/Laca/Polilaminado".
 const _c1puertas = [
-  { gama: 'Madera (modelo)', label: 'Alcaudete (Nogal · Castaña)', bg: 'linear-gradient(90deg,#6e4426,#8a5a34,#6e4426)' },
-  { gama: 'Madera (modelo)', label: 'Bordeaux (Castaño · Café)', bg: 'linear-gradient(90deg,#4a3122,#5c4030,#4a3122)' },
-  { gama: 'Madera (modelo)', label: 'Bayonne (Castaño · Almendra)', bg: 'linear-gradient(90deg,#b89a6f,#c6a97e,#b89a6f)' },
-  { gama: 'Madera (modelo)', label: 'Toulouse (Castaño · Tabaco)', bg: 'linear-gradient(90deg,#5a3a24,#6a4a32,#5a3a24)' },
-  { gama: 'Madera (modelo)', label: 'Montpellier (Fresno Olivato · Nieve)', bg: 'linear-gradient(90deg,#f2efe9,#e8e4dc,#f2efe9)' },
-  { gama: 'Madera (modelo)', label: 'Doral (Roble · Buganvilla)', bg: '#c76a5a' },
-  { gama: 'Madera (modelo)', label: 'Vic (Leño · Nuez)', bg: 'linear-gradient(90deg,#b98f5a,#c79d68,#b98f5a)' },
-  { gama: 'Madera (modelo)', label: 'La Carolina (Nogal · Castaña)', bg: 'repeating-linear-gradient(90deg,#6e4426,#6e4426 8px,#3a2515 10px)' },
-  { gama: 'Madera (modelo)', label: 'Pompano (Fresno Olivato · Verde Abeto)', bg: '#3f5346' },
-  { gama: 'Madera (modelo)', label: 'Avignon (Fresno Olivato · Beige Poro Marrón)', bg: '#d8c4a8' },
-  { gama: 'Madera (modelo)', label: 'Tampa (Roble · Ceniza)', bg: 'linear-gradient(90deg,#cfd0cf,#dcdddc,#cfd0cf)' },
-  { gama: 'Madera (modelo)', label: 'Las Vegas (Castaño · Tabaco)', bg: 'linear-gradient(90deg,#5a3a24,#6a4a32,#5a3a24)' },
-  { gama: 'Madera (modelo)', label: 'Solsona (Fresno Olivato · Manzana)', bg: '#7fae82' },
+  { gama: 'Madera (modelo)', modelo: 'Alcaudete', material: 'madera de nogal', forma: 'lisa sin marco con tirador gola integrado en el canto superior, veta de nogal marcada', label: 'Alcaudete (Nogal · Castaña)', bg: 'linear-gradient(90deg,#6e4426,#8a5a34,#6e4426)' },
+  { gama: 'Madera (modelo)', modelo: 'Bordeaux', material: 'madera de castaño', forma: 'con marco y plafón central rehundido, moldura perimetral clásica', label: 'Bordeaux (Castaño · Café)', bg: 'linear-gradient(90deg,#4a3122,#5c4030,#4a3122)' },
+  { gama: 'Madera (modelo)', modelo: 'Bayonne', material: 'madera de castaño', forma: 'con marco y plafón central rehundido, moldura biselada interior', label: 'Bayonne (Castaño · Almendra)', bg: 'linear-gradient(90deg,#b89a6f,#c6a97e,#b89a6f)' },
+  { gama: 'Madera (modelo)', modelo: 'Toulouse', material: 'madera de castaño', forma: 'lisa sin marco, canto biselado a 45°, veta de madera', label: 'Toulouse (Castaño · Tabaco)', bg: 'linear-gradient(90deg,#5a3a24,#6a4a32,#5a3a24)' },
+  { gama: 'Madera (modelo)', modelo: 'Montpellier', material: 'madera de fresno olivato', forma: 'con marco ancho biselado y plafón central rehundido, tirador integrado oculto', label: 'Montpellier (Fresno Olivato · Nieve)', bg: 'linear-gradient(90deg,#f2efe9,#e8e4dc,#f2efe9)' },
+  { gama: 'Madera (modelo)', modelo: 'Doral', material: 'madera de roble', forma: 'con marco y plafón central rehundido (Shaker), poro de madera visible bajo laca de color', label: 'Doral (Roble · Buganvilla)', bg: '#c76a5a' },
+  { gama: 'Madera (modelo)', modelo: 'Vic', material: 'madera de leño', forma: 'lisa sin marco, canto recto, veta natural rústica con nudos', label: 'Vic (Leño · Nuez)', bg: 'linear-gradient(90deg,#b98f5a,#c79d68,#b98f5a)' },
+  { gama: 'Madera (modelo)', modelo: 'La Carolina', material: 'madera de nogal', forma: 'ranurada/listelada vertical (duelas sobre soporte oscuro), veta de nogal', label: 'La Carolina (Nogal · Castaña)', bg: 'repeating-linear-gradient(90deg,#6e4426,#6e4426 8px,#3a2515 10px)' },
+  { gama: 'Madera (modelo)', modelo: 'Pompano', material: 'madera de fresno olivato', forma: 'con marco y plafón central rehundido, tirador integrado oculto', label: 'Pompano (Fresno Olivato · Verde Abeto)', bg: '#3f5346' },
+  { gama: 'Madera (modelo)', modelo: 'Avignon', material: 'madera de fresno olivato', forma: 'con marco y plafón central rehundido (Shaker), tirador integrado oculto', label: 'Avignon (Fresno Olivato · Beige Poro Marrón)', bg: '#d8c4a8' },
+  { gama: 'Madera (modelo)', modelo: 'Tampa', material: 'madera de roble', forma: 'con marco estrecho y plafón central rehundido, poro de madera muy marcado', label: 'Tampa (Roble · Ceniza)', bg: 'linear-gradient(90deg,#cfd0cf,#dcdddc,#cfd0cf)' },
+  { gama: 'Madera (modelo)', modelo: 'Las Vegas', material: 'madera de castaño', forma: 'lisa con marco superior y tirador gola rehundido en la parte alta', label: 'Las Vegas (Castaño · Tabaco)', bg: 'linear-gradient(90deg,#5a3a24,#6a4a32,#5a3a24)' },
+  { gama: 'Madera (modelo)', modelo: 'Solsona', material: 'madera de fresno olivato', forma: 'con marco ancho de bisel pronunciado y plafón central rehundido', label: 'Solsona (Fresno Olivato · Manzana)', bg: '#7fae82' },
   { gama: 'Madera (color)', label: 'Castaña', bg: '#6e4426' },
   { gama: 'Madera (color)', label: 'Almendra', bg: '#b89a6f' },
   { gama: 'Madera (color)', label: 'Tabaco', bg: '#5a3a24' },
