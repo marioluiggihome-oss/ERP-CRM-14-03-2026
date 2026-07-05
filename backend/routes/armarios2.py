@@ -67,16 +67,32 @@ async def list_designs(current_user: Optional[dict] = Depends(get_current_user))
     return {"success": True, "designs": items}
 
 
+def _owns(doc, current_user) -> bool:
+    if not doc:
+        return False
+    if any((current_user or {}).get(f) for f in ADMIN_ROLE_FLAGS):
+        return True
+    owner = doc.get("userId")
+    return (not owner) or owner == (current_user or {}).get("id")
+
+
 @router.get("/armarios2/designs/{design_id}")
-async def get_design(design_id: str):
+async def get_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
     d = await _db.armarios2_designs.find_one({"id": design_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Diseño no encontrado")
+    if not _owns(d, current_user):
+        raise HTTPException(status_code=403, detail="Sin acceso a este diseño")
     return d
 
 
 @router.delete("/armarios2/designs/{design_id}")
-async def delete_design(design_id: str):
+async def delete_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    d = await _db.armarios2_designs.find_one({"id": design_id}, {"_id": 0, "userId": 1})
+    if not d:
+        raise HTTPException(status_code=404, detail="Diseño no encontrado")
+    if not _owns(d, current_user):
+        raise HTTPException(status_code=403, detail="Sin acceso a este diseño")
     await _db.armarios2_designs.delete_one({"id": design_id})
     return {"success": True}
 

@@ -980,6 +980,8 @@ class ArmarioModuleConfig(BaseModel):
     drawers: int = 0
     hangingRods: int = 1
     hangingHeight: int = 1200
+    maletero: bool = False
+    layout: List[str] = []
     extras: Dict = {}
 
 
@@ -992,6 +994,7 @@ class ArmarioProject(BaseModel):
     height: int = 2400
     depth: int = 600
     modules: int = 3
+    numDoors: int = 3
     doorType: str = "sliding"
     exteriorColor: str = "010"
     interiorColor: str = "010"
@@ -1001,6 +1004,7 @@ class ArmarioProject(BaseModel):
     moduleConfigs: List[ArmarioModuleConfig] = []
     extras: Dict = {}
     ivaRate: float = 21.0
+    armDiscount: float = 0.0
     customAccessories: List[Dict] = []
     totalPrice: float = 0.0
     totalArea: float = 0.0
@@ -1018,6 +1022,7 @@ class ArmarioProjectUpdate(BaseModel):
     height: Optional[int] = None
     depth: Optional[int] = None
     modules: Optional[int] = None
+    numDoors: Optional[int] = None
     doorType: Optional[str] = None
     exteriorColor: Optional[str] = None
     interiorColor: Optional[str] = None
@@ -1027,6 +1032,7 @@ class ArmarioProjectUpdate(BaseModel):
     moduleConfigs: Optional[List[ArmarioModuleConfig]] = None
     extras: Optional[Dict] = None
     ivaRate: Optional[float] = None
+    armDiscount: Optional[float] = None
     customAccessories: Optional[List[Dict]] = None
     totalPrice: Optional[float] = None
     totalArea: Optional[float] = None

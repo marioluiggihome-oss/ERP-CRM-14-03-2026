@@ -1533,11 +1533,16 @@ const Armarios = ({ state, setState }) => {
     const marginAmount = costeTotal * (marginPct / 100);
     const subtotalBruto = costeTotal + marginAmount; // PVP sin descuento
 
-    const discountPct = Math.max(0, Math.min(100, Number(armDiscount) || 0));
-    const discountAmount = subtotalBruto * (discountPct / 100);
-    const subtotal = subtotalBruto - discountAmount;   // base imponible tras descuento
+    // El PVP se muestra SIEMPRE (sin descuento). El descuento sale de la ficha de
+    // red de distribución de cada usuario (oculto) y solo genera el precio NETO
+    // de distribución, visible tras el candado (permiso Ver Costo).
+    const subtotal = subtotalBruto;                    // base imponible = PVP
     const iva = subtotal * (ivaRate / 100);
-    const total = subtotal + iva;
+    const total = subtotal + iva;                      // PVP con IVA (siempre)
+    const distDiscountPct = Math.max(0, Math.min(100, Number(state?.currentUser?.discountArmarios ?? state?.currentUser?.commercialDiscount ?? 0) || 0));
+    const distDiscountAmount = subtotalBruto * (distDiscountPct / 100);
+    const distNetBase = subtotalBruto - distDiscountAmount;  // base neta distribución
+    const distNetTotal = distNetBase * (1 + ivaRate / 100);  // neto con IVA
 
     // Referencia: el antiguo cálculo paramétrico (solo informativo, para calibrar
     // el margen). No interviene en el PVP.
@@ -1564,16 +1569,19 @@ const Armarios = ({ state, setState }) => {
       costeTotal,
       marginPct,
       marginAmount,
-      // Totales
+      // Totales (PVP siempre visible)
       subtotalBruto,
-      discountPct,
-      discountAmount,
       subtotal,
       iva,
       total,
+      // Distribución (neto, tras el candado)
+      distDiscountPct,
+      distDiscountAmount,
+      distNetBase,
+      distNetTotal,
       parametricRef,
     };
-  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, armDiscount, despieceTotals, state?.settings]);
+  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, despieceTotals, state?.settings, state?.currentUser]);
 
   // El despiece de armarios (lista de tableros/accesorios para fábrica) solo se
   // muestra a quien tenga activada la función de Fábrica (o admin). En el
@@ -3491,46 +3499,33 @@ const Armarios = ({ state, setState }) => {
             </div>
 
             <div className="border-t border-emerald-700 pt-3 mt-3">
-              {/* Descuento aparte para armarios */}
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-emerald-300">Descuento armarios</span>
-                <div className="flex items-center gap-1">
-                  <input type="number" min="0" max="100" value={armDiscount}
-                    onChange={(e) => setArmDiscount(e.target.value)}
-                    className="w-14 bg-white/10 text-white text-right font-bold rounded px-1 py-0.5 text-sm outline-none focus:bg-white/20" />
-                  <span className="text-emerald-300 text-xs">%</span>
-                </div>
-              </div>
-              {pricing.discountPct > 0 && (
-                <div className="flex justify-between mb-1 text-emerald-300">
-                  <span>Dto. aplicado</span>
-                  <span className="font-bold">-{pricing.discountAmount.toFixed(2)}€</span>
-                </div>
-              )}
-              {/* Candado PVP/coste: ver PVP sin descuento (solo con permiso Ver Costo) */}
-              {canSeeCost && pricing.discountPct > 0 && (
-                <div className="flex justify-between items-center mb-1">
-                  <button type="button" onClick={() => setShowCost(v => !v)}
-                    className="flex items-center gap-1 text-emerald-300 hover:text-white transition-colors"
-                    title={showCost ? 'Ocultar PVP sin descuento' : 'Ver PVP sin descuento'}>
-                    {showCost ? <EyeOff size={12} /> : <Eye size={12} />}
-                    <span className="text-xs">PVP sin dto.</span>
-                  </button>
-                  <span className="font-bold">{showCost ? `${pricing.subtotalBruto.toFixed(2)}€` : '•••'}</span>
-                </div>
-              )}
+              {/* PVP siempre visible. El descuento sale de la ficha de red de
+                  distribución del usuario (oculto); solo el neto tras candado. */}
               <div className="flex justify-between mb-1">
-                <span className="text-emerald-300">Base imponible</span>
+                <span className="text-emerald-300">Base imponible (PVP)</span>
                 <span className="font-bold">{pricing.subtotal.toFixed(2)}€</span>
               </div>
               <div className="flex justify-between mb-1">
                 <span className="text-emerald-300">IVA ({ivaRate}%)</span>
                 <span className="font-bold">{pricing.iva.toFixed(2)}€</span>
               </div>
+              {/* Candado: solo con permiso Ver Costo se ve el precio NETO de
+                  distribución (PVP con el descuento de la ficha del usuario). */}
+              {canSeeCost && (
+                <div className="mt-2 pt-2 border-t border-emerald-700/50 flex justify-between items-center">
+                  <button type="button" onClick={() => setShowCost(v => !v)}
+                    className="flex items-center gap-1 text-emerald-300 hover:text-white transition-colors"
+                    title={showCost ? 'Ocultar precio de distribución' : 'Ver precio de distribución'}>
+                    {showCost ? <EyeOff size={12} /> : <Eye size={12} />}
+                    <span className="text-xs">Precio distribución{pricing.distDiscountPct > 0 ? ` (−${pricing.distDiscountPct}%)` : ''}</span>
+                  </button>
+                  <span className="font-bold">{showCost ? `${pricing.distNetTotal.toFixed(2)}€` : '•••'}</span>
+                </div>
+              )}
             </div>
-            
+
             <div className="bg-emerald-600 rounded-xl p-4 mt-4">
-              <p className="text-xs text-emerald-200 uppercase tracking-widest mb-1">Total presupuesto</p>
+              <p className="text-xs text-emerald-200 uppercase tracking-widest mb-1">PVP (IVA incl.)</p>
               <p className="text-3xl font-black">{pricing.total.toFixed(2)}€</p>
             </div>
           </div>
