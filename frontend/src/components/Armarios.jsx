@@ -1633,6 +1633,33 @@ const Armarios = ({ state, setState }) => {
     return { marginReal, suelo, level, coste, neto, upsell: sugerencias.slice(0, 2) };
   }, [pricing.costeTotal, pricing.distNetBase, state?.settings, extras]);
 
+  // ── FEATURE ÚNICA "Fabricabilidad explicada por IA" ─────────────────────────
+  // Recoge los avisos que el despiece ya calcula (hoja >600, interior no cabe…).
+  const dfmIssues = useMemo(() => {
+    const out = [];
+    generateAccessoriesList.forEach(a => {
+      if (a.code === 'AVISO') out.push(`${a.name}: ${a.dimensions}. ${a.notes || ''}`.trim());
+      const n = a.notes || '';
+      const i = n.indexOf('⚠');
+      if (i >= 0) out.push(`${a.name || a.category}: ${n.slice(i)}`);
+    });
+    return out;
+  }, [generateAccessoriesList]);
+  const [dfm, setDfm] = useState({ loading: false, text: '', open: false });
+  const explainDFM = async () => {
+    setDfm(d => ({ ...d, loading: true, open: true, text: '' }));
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/armarios/ia/dfm`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ issues: dfmIssues, config: wardrobeConfig }),
+      });
+      const data = await res.json();
+      setDfm({ loading: false, open: true, text: data.explanation || data.detail || 'No se pudo generar la explicación.' });
+    } catch {
+      setDfm({ loading: false, open: true, text: 'Error de conexión al generar la explicación.' });
+    }
+  };
+
   // Dictado por voz para los campos de IA (Diseño Inteligente / IA armarios).
   const { isListening: iaListening, isSupported: iaVoiceSupported, transcript: iaTranscript, startListening: iaStart, stopListening: iaStop } = useSpeechRecognition();
   const iaDictateBaseRef = useRef('');
@@ -3620,6 +3647,25 @@ const Armarios = ({ state, setState }) => {
               </div>
             </div>
           </div>
+
+          {/* Fabricabilidad explicada por IA (feature única) */}
+          {dfmIssues.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-emerald-700">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black text-amber-300 uppercase tracking-widest">⚠ {dfmIssues.length} aviso{dfmIssues.length > 1 ? 's' : ''} de fabricación</span>
+                <button type="button" onClick={explainDFM} disabled={dfm.loading}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500 text-amber-950 text-[11px] font-black hover:bg-amber-400 disabled:opacity-50">
+                  {dfm.loading ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  Explícamelo (IA)
+                </button>
+              </div>
+              {dfm.open && dfm.text && (
+                <div className="mt-2 rounded-lg bg-emerald-900/50 p-3 text-[11px] text-emerald-50 whitespace-pre-wrap leading-snug">
+                  {dfm.text}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Resumen Tableros + despiece: solo para Fábrica (canDespiece) */}
           {canDespiece && (<>
