@@ -49,8 +49,8 @@ const MODULES = [
   // Ventas y Presupuestos
   { tab: 'crm-dashboard',   label: 'CRM',             icon: Target,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => u?.canAccessCRM && !u?.isTienda },
   { tab: 'agendaNegocios',  label: 'Agenda Negocios', icon: CalendarDays, color: 'bg-indigo-600',  group: 'ventas', can: (u) => u?.isPrescriptor },
-  { tab: 'presupuestador2', label: 'Cocina Montada',  icon: Receipt,      color: 'bg-emerald-600', group: 'ventas', can: (u) => u?.canUsePresupuestador2 !== false },
-  { tab: 'budget',          label: 'Cocina Montada 2',icon: FileText,     color: 'bg-orange-600',  group: 'ventas', can: (u) => u?.canUsePresupuestador1 !== false },
+  { tab: 'presupuestador2', label: 'Cocina Montada',  desc: 'Presupuestador 1',   icon: Receipt,      color: 'bg-emerald-600', group: 'ventas', can: (u) => u?.canUsePresupuestador2 !== false },
+  { tab: 'budget',          label: 'Cocina Montada 2',desc: 'Presupuestador 2',   icon: FileText,     color: 'bg-orange-600',  group: 'ventas', can: (u) => u?.canUsePresupuestador1 !== false },
   { tab: 'misPedidos',      label: 'Pedidos',         icon: ShoppingBag,  color: 'bg-orange-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessPedidos === true },
   { tab: 'library',         label: 'Archivo',         icon: FolderOpen,   color: 'bg-orange-500',  group: 'ventas', can: (u) => !u?.isTienda && u?.canAccessArchivo === true },
   { tab: 'invoices',        label: 'G. Comercial',    icon: Receipt,      color: 'bg-orange-500',  group: 'admin',  can: (u) => u?.canAccessInvoices === true },
@@ -64,8 +64,9 @@ const MODULES = [
 
   // Diseño y Visualización
   { tab: 'visualizer',      label: 'IA Lab',          icon: Sparkles,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
-  { tab: 'renderStudio',    label: 'Render 3D',       icon: ImageIcon,    color: 'bg-purple-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
-  { tab: 'estudioCocinas',  label: '3D Estudio',      icon: ChefHat,      color: 'bg-amber-600',   group: 'diseno', can: (u) => (u?.canUseKitchenDesigner || u?.canUseCocinasAI || u?.canUseAIAnalysis) && !u?.isTienda },
+  { tab: 'renderStudio',    label: 'Render 3D',       desc: 'Render rápido por texto o foto',       icon: ImageIcon,    color: 'bg-purple-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
+  { tab: 'estudioCocinas',  label: '3D Estudio',      desc: 'Estudio completo: plano, ficha y galería', icon: ChefHat,  color: 'bg-amber-600',   group: 'diseno', can: (u) => (u?.canUseKitchenDesigner || u?.canUseCocinasAI || u?.canUseAIAnalysis) && !u?.isTienda },
+  { tab: 'kitchenDesigner', label: 'Cocinas por módulos', desc: 'Diseño por módulos + chequeo de fabricabilidad', icon: Hammer, color: 'bg-teal-600', group: 'diseno', can: (u) => (u?.canUseKitchenDesigner || u?.isAdmin) && !u?.isTienda },
   { tab: 'armarios',        label: 'Armarios',        icon: Box,          color: 'bg-cyan-600',    group: 'diseno', can: (u) => u?.canAccessArmarios && !u?.isTienda },
   { tab: 'digitalizador',   label: 'Digitalizador',   icon: ScanLine,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseDigitalizador && !u?.isTienda },
 
@@ -126,7 +127,10 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
                         <span className={`${m.color} p-2.5 rounded-xl text-white shrink-0`}>
                           <Icon size={20} />
                         </span>
-                        <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900">{m.label}</span>
+                        <span className="flex flex-col min-w-0">
+                          <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900">{m.label}</span>
+                          {m.desc && <span className="text-[11px] text-slate-400 leading-tight">{m.desc}</span>}
+                        </span>
                       </button>
                     );
                   })}
