@@ -1,21 +1,17 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Hammer, Plus, Trash2, Download, Columns, Package, Ruler, Sparkles, Image as ImageIcon, Loader, Lock, Maximize2, X, FolderOpen, Save } from 'lucide-react';
 import { getToken } from '../services/api';
+import { WARDROBE_COLORS, COLOR_BRANDS } from './Armarios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const authH = () => ({ 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
 const DOOR_TYPES = [['open', 'Sin puertas'], ['sliding', 'Corredera'], ['hinged', 'Batiente'], ['folding', 'Plegable'], ['coplanar', 'Coplanar']];
 
-// ── Materiales: color para el dibujo y categoría de suplemento (matSupp_* de Ajustes) ──
-const MATERIALS = [
-  { id: '010B', name: 'Blanco Standard', color: '#ffffff', supp: 'blancos' },
-  { id: '25V', name: 'Roble Virginia', color: '#d4b483', supp: 'maderas-medias' },
-  { id: '17G', name: 'Pino Cervino', color: '#e8e4d8', supp: 'maderas-claras' },
-  { id: '453B', name: 'Boeta Blanco', color: '#f5f5f5', supp: 'blancos' },
-  { id: '91Y', name: 'Roble Dafne', color: '#e2d2ba', supp: 'maderas-claras' },
-  { id: '231N', name: 'Negro Liso', color: '#1a1a1a', supp: 'grises' },
-  { id: '195G', name: 'Gris Sarela', color: '#bcbcbc', supp: 'grises' },
-];
+// ── Materiales (unificación 2a): mismas gamas y categorías de suplemento que el
+// configurador Armarios. Cada color aporta hex (dibujo) y categoría (matSupp_*). ──
+const MATERIALS = WARDROBE_COLORS.map(c => ({
+  id: c.id, name: c.name, color: c.hex || '#e5e5e5', supp: c.category || 'blancos', brand: c.brand || 'FINSA',
+}));
 // Mapa tipo de accesorio → clave de tarifa en Ajustes (armPrice_*) y valor por defecto.
 const ACC_TARIFA = { shelf: ['shelf', 25], 'hanging-rod': ['hangingRod', 35], drawer: ['drawer', 85], 'shoe-rack': ['shelf', 40], 'pant-rack': ['drawer', 60], 'led-strip': ['ledPerModule', 120], 'divider-v': ['shelf', 30] };
 const LABELS = { shelf: 'Balda', 'hanging-rod': 'Barra colgador', drawer: 'Cajón', 'divider-v': 'Divisor vertical', 'shoe-rack': 'Zapatero', 'pant-rack': 'Pantalonero', 'led-strip': 'LED' };
@@ -400,7 +396,11 @@ const Armarios2 = ({ state }) => {
               </select></div>
             <div className="col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Material</label>
               <select value={cfg.materialId} onChange={e => set('materialId', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
-                {MATERIALS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                {COLOR_BRANDS.map(b => (
+                  <optgroup key={b} label={b}>
+                    {MATERIALS.filter(m => m.brand === b).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </optgroup>
+                ))}
               </select></div>
             <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tipo</label>
               <select value={cfg.projectType} onChange={e => set('projectType', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">

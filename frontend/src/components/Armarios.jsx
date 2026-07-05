@@ -249,12 +249,15 @@ const FINSA_COLORS = [
 
 // Catálogo de acabados combinado por fabricante: FINSA (base) + ALVIC + ACB.
 // Cada color/puerta se identifica por id; getColorByName busca en esta lista.
-const WARDROBE_COLORS = [
+// Catálogo unificado de colores de armario (FINSA + ALVIC + ACB). Se exporta
+// para que "Armarios IA" (Armarios2) use exactamente las mismas gamas y
+// categorías de suplemento que este configurador (unificación 2a).
+export const WARDROBE_COLORS = [
   ...FINSA_COLORS.map(c => ({ ...c, brand: c.brand || 'FINSA' })),
   ...ALVIC_WARDROBE_COLORS,
   ...ACB_WARDROBE_DOORS,
 ];
-const COLOR_BRANDS = ['FINSA', 'ALVIC', 'ACB'];
+export const COLOR_BRANDS = ['FINSA', 'ALVIC', 'ACB'];
 
 // ========== CATÁLOGO DE ACCESORIOS CON CÓDIGOS ==========
 const ACCESSORIES_CATALOG = {
