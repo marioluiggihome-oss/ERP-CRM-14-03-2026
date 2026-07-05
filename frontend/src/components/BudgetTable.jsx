@@ -120,7 +120,20 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
   useEffect(() => {
     localStorage.setItem('luiggi_use_millimeters', useMillimeters.toString());
   }, [useMillimeters]);
-  
+
+  // FUENTE ÚNICA DE TARIFA (MV): la valoración de línea usa state.globalFinish y
+  // el catálogo muestra selectedTariff. Antes solo se sincronizaban al tocar el
+  // desplegable → al recargar o cambiar de librería, se mostraba una tarifa y se
+  // facturaba la T1 (la más barata). Este efecto los mantiene siempre en sintonía.
+  useEffect(() => {
+    if (state.currentLibrary === 'MV') {
+      const n = parseInt(String(selectedTariff).replace('T', ''), 10) || 1;
+      const want = `TARIFA ${n}`;
+      if (state.globalFinish !== want) setState(p => ({ ...p, globalFinish: want }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTariff, state.currentLibrary]);
+
   // Función para formatear medidas según la unidad seleccionada
   const formatMeasure = useCallback((value) => {
     if (value === null || value === undefined || value === '') return '-';

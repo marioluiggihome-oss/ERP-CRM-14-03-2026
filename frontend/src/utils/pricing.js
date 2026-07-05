@@ -61,13 +61,14 @@ export function computeUnitPrice(product, opts = {}) {
       ? (MV_TARIFFS.find(f => f.name === finishName) || MV_TARIFFS[0])
       : (DOOR_FINISHES.find(f => f.name === finishName) || DOOR_FINISHES[0]);
 
-    let productBasePoints = 100;
+    // Fallback a 0 (no inventar 100 puntos): si el producto no trae puntos para
+    // la zona/tarifa activa, la línea queda a 0 y se marca 'sin precio'.
+    let productBasePoints = 0;
     if (typeof product.points === 'number') productBasePoints = product.points;
     else if (typeof product.points === 'object' && product.points !== null) {
-      // Para MV usar T1, para ZC usar Z1
       productBasePoints = isMV
-        ? (product.points.T1 || product.points.Z1 || 100)
-        : (product.points.Z1 || 100);
+        ? (product.points.T1 || product.points.Z1 || 0)
+        : (product.points.Z1 || 0);
     }
 
     usedPoints = product.zonePoints?.[finishObj.group] ?? productBasePoints;
@@ -77,12 +78,13 @@ export function computeUnitPrice(product, opts = {}) {
     const isExcludedCategory = categoryUpper.includes('COSTADO') || categoryUpper.includes('REGLETA');
 
     if (!isExcludedCategory) {
-      // Solo se cobra corte si el campo tiene una medida REAL distinta de la del
-      // catálogo. Un campo vacío/0 (sin rellenar) no debe disparar el incremento.
-      const changed = (cd, base) => cd != null && cd !== '' && Number(cd) > 0 && Number(cd) !== Number(base);
-      if (changed(customDims.width, product.width)) { cutsCost += increments.width; cuts.push('Ancho'); }
-      if (changed(customDims.height, product.height)) { cutsCost += increments.height; cuts.push('Alto'); }
-      if (changed(customDims.depth, product.depth)) { cutsCost += increments.depth; cuts.push('Fondo'); }
+      // Solo se cobra corte cuando la medida a medida es MAYOR que la del
+      // catálogo (corte que agranda). Un campo vacío/0 o una medida menor no
+      // dispara el incremento.
+      const bigger = (cd, base) => cd != null && cd !== '' && Number(cd) > 0 && Number(cd) > Number(base);
+      if (bigger(customDims.width, product.width)) { cutsCost += increments.width; cuts.push('Ancho'); }
+      if (bigger(customDims.height, product.height)) { cutsCost += increments.height; cuts.push('Alto'); }
+      if (bigger(customDims.depth, product.depth)) { cutsCost += increments.depth; cuts.push('Fondo'); }
     }
 
     carcassCost = carcassIncrement || 0;
@@ -121,6 +123,10 @@ CANTIDAD: x${quantity}
 ${showDistributorPrice ? `DTO. COMERCIAL (${module?.toUpperCase()}): -${discountPct}%` : ''}
 `.trim();
 
+  // 'sinPrecio': línea de librería sin puntos para la zona/tarifa activa, o sin
+  // valor de punto válido → no se debe facturar; la UI debe avisar/bloquear.
+  const sinPrecio = !isManual && (!(usedPoints > 0) || !(pointValue > 0));
+
   return {
     usedPoints,
     unitPrice,
@@ -129,6 +135,7 @@ ${showDistributorPrice ? `DTO. COMERCIAL (${module?.toUpperCase()}): -${discount
     hasExtras: (carcassCost > 0 || cutsCost > 0 || vigaCost > 0),
     vigaCost,
     cuts,
+    sinPrecio,
   };
 }
 
