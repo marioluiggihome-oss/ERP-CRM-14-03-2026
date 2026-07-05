@@ -17,6 +17,7 @@ import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximiz
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
+import { COLORES_1, COLORES_2, porGama } from '../data/finishes';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -328,6 +329,12 @@ export default function AIRenderStudio({ state, setState }) {
   const providerOf = () => (motor === 'ia2' ? 'manus' : 'gemini');
   const [attached, setAttached] = useState(false);
   const [compareOn, setCompareOn] = useState(false); // ver referencia vs render
+  // Selector de color por catálogo (pestañas Colores 1/2 + gamas colapsables).
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [colorTab, setColorTab] = useState('c1');
+  const [openGama, setOpenGama] = useState(null);
+  const paletteData = colorTab === 'c1' ? COLORES_1 : COLORES_2;
+  const gamas = porGama(paletteData);
   // Panel izquierdo redimensionable/ocultable (solo en pantallas grandes).
   const [panelW, setPanelW] = useState(420);
   const [panelHidden, setPanelHidden] = useState(false);
@@ -1401,17 +1408,60 @@ export default function AIRenderStudio({ state, setState }) {
               </div>
               )}
 
-              {/* Variantes de color en 1 clic */}
+              {/* Variantes de color: 6 rápidos + catálogo por gama (pestañas colapsables) */}
               {currentImage() && (
-                <div className="shrink-0 flex items-center gap-2 flex-wrap bg-white border border-slate-200 rounded-xl p-2">
-                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1">Variar color</span>
-                  {COLORS_VARIANTES.map(c => (
-                    <button key={c.label} onClick={() => colorVariant(c.label)} disabled={editing}
-                      title={`Muebles en ${c.label}`}
-                      className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-slate-300 shadow hover:scale-110 transition-transform disabled:opacity-40"
-                      style={{ background: c.hex }} />
-                  ))}
-                  {editing && <span className="text-[11px] text-slate-400 flex items-center gap-1"><Loader size={12} className="animate-spin" /> generando…</span>}
+                <div className="shrink-0 bg-white border border-slate-200 rounded-xl p-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1">Variar color</span>
+                    {COLORS_VARIANTES.map(c => (
+                      <button key={c.label} onClick={() => colorVariant(c.label)} disabled={editing}
+                        title={`Muebles en ${c.label}`}
+                        className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-slate-300 shadow hover:scale-110 transition-transform disabled:opacity-40"
+                        style={{ background: c.hex }} />
+                    ))}
+                    <button onClick={() => setPaletteOpen(o => !o)}
+                      className={`ml-auto px-2.5 py-1 rounded-lg text-[11px] font-bold ${paletteOpen ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                      Catálogo {paletteOpen ? '▾' : '▸'}
+                    </button>
+                    {editing && <span className="text-[11px] text-slate-400 flex items-center gap-1"><Loader size={12} className="animate-spin" /> generando…</span>}
+                  </div>
+
+                  {paletteOpen && (
+                    <div className="mt-2 border-t border-slate-100 pt-2">
+                      <div className="flex gap-1 mb-2">
+                        {[['c1', 'Colores 1'], ['c2', 'Colores 2']].map(([id, lbl]) => (
+                          <button key={id} onClick={() => { setColorTab(id); setOpenGama(null); }}
+                            className={`px-3 py-1 rounded-lg text-[11px] font-black ${colorTab === id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                            {lbl}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="max-h-64 overflow-y-auto pr-1 flex flex-col gap-1">
+                        {gamas.length === 0 && <p className="text-[11px] text-slate-400 py-2">Sin colores en esta pestaña todavía.</p>}
+                        {gamas.map(g => (
+                          <div key={g.gama} className="rounded-lg border border-slate-100">
+                            <button onClick={() => setOpenGama(o => o === g.gama ? null : g.gama)}
+                              className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-black text-slate-700 hover:bg-slate-50">
+                              <span>{g.gama} <span className="text-slate-400 font-bold">({g.items.length})</span></span>
+                              <span className="text-slate-400">{openGama === g.gama ? '▾' : '▸'}</span>
+                            </button>
+                            {openGama === g.gama && (
+                              <div className="px-2.5 pb-2 grid grid-cols-1 gap-1">
+                                {g.items.map(c => (
+                                  <button key={c.label} onClick={() => colorVariant(`${g.gama.replace(/\s*\(.*\)$/, '')} ${c.label}`.trim())} disabled={editing}
+                                    title={`Muebles en ${c.label}`}
+                                    className="flex items-center gap-2 text-left px-1.5 py-1 rounded hover:bg-indigo-50 disabled:opacity-40">
+                                    <span className="w-5 h-5 rounded-full border-2 border-white ring-1 ring-slate-300 shadow shrink-0" style={{ background: c.bg }} />
+                                    <span className="text-[11px] text-slate-600 truncate">{c.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
