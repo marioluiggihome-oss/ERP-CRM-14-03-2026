@@ -131,7 +131,6 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       const want = `TARIFA ${n}`;
       if (state.globalFinish !== want) setState(p => ({ ...p, globalFinish: want }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTariff, state.currentLibrary]);
 
   // Función para formatear medidas según la unidad seleccionada
