@@ -2,9 +2,10 @@
 Armarios Router - Proyectos de Armarios con IA
 Endpoints para gestionar proyectos de armarios empotrados con configuración e IA
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
+from typing import Optional
 import uuid
 import logging
 import os
@@ -19,7 +20,21 @@ from models.schemas import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["armarios"])
+# Autenticación: todos los endpoints exigen token. Los proyectos se filtran por
+# el usuario autenticado (no por un userId de query manipulable). Admin ve todo.
+try:
+    from services.jwt_service import require_auth, get_current_user, ADMIN_ROLE_FLAGS
+    _DEPS = [Depends(require_auth)]
+except Exception:  # pragma: no cover - fallback si el servicio no está disponible
+    async def get_current_user():
+        return None
+    ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
+    _DEPS = []
+
+def _is_admin(user) -> bool:
+    return bool(user) and any(user.get(f) for f in ADMIN_ROLE_FLAGS)
+
+router = APIRouter(tags=["armarios"], dependencies=_DEPS)
 
 # Database connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -33,108 +48,93 @@ db = client[DB_NAME]
 # ============================================
 
 @router.post("/armarios/projects")
-async def create_armario_project(project: ArmarioProjectCreate, userId: str = ""):
-    """Crear nuevo proyecto de armario"""
+async def create_armario_project(project: ArmarioProjectCreate, current_user: Optional[dict] = Depends(get_current_user)):
+    """Crear nuevo proyecto de armario (propiedad = usuario autenticado)."""
     try:
         project_dict = project.model_dump()
         project_dict["id"] = str(uuid.uuid4())
-        project_dict["userId"] = userId
+        project_dict["userId"] = (current_user or {}).get("id") or "anonymous"
         project_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
         project_dict["updatedAt"] = datetime.now(timezone.utc).isoformat()
-        
+
         await db.armario_projects.insert_one(project_dict)
-        
-        # Remover _id de MongoDB
         project_dict.pop("_id", None)
-        
         return {"success": True, "project": project_dict}
     except Exception as e:
         logger.error(f"Error creating armario project: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="No se pudo crear el proyecto")
 
 
 @router.get("/armarios/projects")
-async def get_armario_projects(userId: str = ""):
-    """Obtener lista de proyectos de armarios"""
+async def get_armario_projects(current_user: Optional[dict] = Depends(get_current_user)):
+    """Lista de proyectos del usuario autenticado (admin ve todos)."""
     try:
-        query = {}
-        if userId:
-            query["userId"] = userId
-        
+        query = {} if _is_admin(current_user) else {"userId": (current_user or {}).get("id") or "anonymous"}
         projects = await db.armario_projects.find(
             query,
             {"_id": 0}
         ).sort("updatedAt", -1).to_list(100)
-        
         return {"success": True, "projects": projects}
     except Exception as e:
         logger.error(f"Error getting armario projects: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="No se pudieron cargar los proyectos")
+
+
+async def _load_owned_project(project_id: str, current_user: Optional[dict], fields=None):
+    """Carga un proyecto y verifica que el usuario es propietario o admin."""
+    project = await db.armario_projects.find_one({"id": project_id}, fields if fields is not None else {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    owner = project.get("userId")
+    if not _is_admin(current_user) and owner and owner != ((current_user or {}).get("id")):
+        raise HTTPException(status_code=403, detail="Sin acceso a este proyecto")
+    return project
 
 
 @router.get("/armarios/projects/{project_id}")
-async def get_armario_project(project_id: str):
-    """Obtener un proyecto de armario especifico"""
+async def get_armario_project(project_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """Obtener un proyecto de armario específico (solo propietario o admin)."""
     try:
-        project = await db.armario_projects.find_one(
-            {"id": project_id},
-            {"_id": 0}
-        )
-        
-        if not project:
-            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-        
+        project = await _load_owned_project(project_id, current_user)
         return {"success": True, "project": project}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting armario project: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="No se pudo cargar el proyecto")
 
 
 @router.put("/armarios/projects/{project_id}")
-async def update_armario_project(project_id: str, update: ArmarioProjectUpdate):
-    """Actualizar un proyecto de armario"""
+async def update_armario_project(project_id: str, update: ArmarioProjectUpdate, current_user: Optional[dict] = Depends(get_current_user)):
+    """Actualizar un proyecto de armario (solo propietario o admin)."""
     try:
+        await _load_owned_project(project_id, current_user, {"_id": 0, "userId": 1})
         update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+        update_data.pop("userId", None)  # la propiedad no se cambia desde el cliente
         update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
-        
-        result = await db.armario_projects.update_one(
-            {"id": project_id},
-            {"$set": update_data}
-        )
-        
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-        
-        updated_project = await db.armario_projects.find_one(
-            {"id": project_id},
-            {"_id": 0}
-        )
-        
+
+        await db.armario_projects.update_one({"id": project_id}, {"$set": update_data})
+        updated_project = await db.armario_projects.find_one({"id": project_id}, {"_id": 0})
         return {"success": True, "project": updated_project}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error updating armario project: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="No se pudo actualizar el proyecto")
 
 
 @router.delete("/armarios/projects/{project_id}")
-async def delete_armario_project(project_id: str):
-    """Eliminar un proyecto de armario"""
+async def delete_armario_project(project_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """Eliminar un proyecto de armario (solo propietario o admin)."""
     try:
-        result = await db.armario_projects.delete_one({"id": project_id})
-        
-        if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-        
+        await _load_owned_project(project_id, current_user, {"_id": 0, "userId": 1})
+        await db.armario_projects.delete_one({"id": project_id})
         return {"success": True, "message": "Proyecto eliminado"}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting armario project: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="No se pudo eliminar el proyecto")
 
 
 @router.post("/crm/opportunities/from-armario/{project_id}")

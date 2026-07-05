@@ -1266,11 +1266,11 @@ export const digitalizadorAPI = {
 // ============================================
 
 export const armariosAPI = {
-  // Crear proyecto
-  create: async (project, userId = "") => {
-    const response = await fetch(`${API_URL}/api/armarios/projects?userId=${userId}`, {
+  // Crear proyecto (la propiedad la fija el backend con el token)
+  create: async (project) => {
+    const response = await fetch(`${API_URL}/api/armarios/projects`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(project)
     });
     const data = await response.json();
@@ -1280,9 +1280,9 @@ export const armariosAPI = {
     return data;
   },
 
-  // Obtener lista de proyectos
-  getAll: async (userId = "") => {
-    const response = await fetch(`${API_URL}/api/armarios/projects?userId=${userId}`);
+  // Obtener lista de proyectos del usuario autenticado
+  getAll: async () => {
+    const response = await fetch(`${API_URL}/api/armarios/projects`, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener proyectos');
@@ -1292,7 +1292,7 @@ export const armariosAPI = {
 
   // Obtener un proyecto específico
   get: async (projectId) => {
-    const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`);
+    const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener proyecto');
@@ -1304,7 +1304,7 @@ export const armariosAPI = {
   update: async (projectId, updates) => {
     const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(updates)
     });
     const data = await response.json();
@@ -1317,7 +1317,7 @@ export const armariosAPI = {
   // Eliminar proyecto
   delete: async (projectId) => {
     const response = await fetch(`${API_URL}/api/armarios/projects/${projectId}`, {
-      method: 'DELETE'
+      method: 'DELETE', headers: authHeaders()
     });
     const data = await response.json();
     if (!response.ok) {
@@ -1330,7 +1330,7 @@ export const armariosAPI = {
   iaConfiguracion: async (instruction, currentConfig = {}) => {
     const response = await fetch(`${API_URL}/api/armarios/ia/configure`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ instruction, current_config: currentConfig })
     });
     const data = await response.json();
