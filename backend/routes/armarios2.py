@@ -144,11 +144,23 @@ async def armarios2_render(payload: dict):
         interior = str(p.get("interior") or "")
         edit = str(p.get("editInstruction") or "").strip()
         prev = p.get("previousImageBase64")
+        reference_is_sketch = bool(p.get("referenceIsSketch"))
 
         if edit and prev:
             prompt = (
                 f"Edita este render de {tipo} manteniendo el estilo y encuadre. Cambio pedido: {edit}. "
                 "Fotorrealista, iluminación de catálogo, fondo neutro."
+            )
+        elif reference_is_sketch and prev:
+            prompt = (
+                f"La imagen de referencia es un CROQUIS a escala de un {tipo} de {w}x{h}x{d} mm. "
+                "Genera un render fotorrealista RESPETANDO FIELMENTE esa distribución: mismas secciones, "
+                "mismas baldas, cajones, barras y proporciones y en las mismas posiciones. No añadas ni "
+                "quites elementos. "
+                f"Material de los frentes/cuerpo: '{material}', {door_es}. "
+                f"{('Detalle del interior: ' + interior + '. ') if interior else ''}"
+                "Vista frontal ligeramente en perspectiva, iluminación de catálogo, fondo neutro, alta calidad, "
+                "estilo mueble a medida español."
             )
         else:
             prompt = (

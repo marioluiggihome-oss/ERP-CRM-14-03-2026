@@ -213,13 +213,18 @@ const Armarios2 = ({ state }) => {
   const generarRender = async (edit) => {
     setRenderLoading(true); setAiError('');
     try {
-      const prev = edit && renders.length ? renders[renders.length - 1] : null;
+      // Al editar, referencia = último render. En la PRIMERA generación,
+      // referencia = el croquis SVG rasterizado a PNG, para que el motor
+      // respete la distribución interior dibujada (antes solo mandaba texto).
+      let prev = edit && renders.length ? renders[renders.length - 1] : null;
+      if (!edit) prev = await svgToPngDataUrl().catch(() => null);
       const r = await fetch(`${API_URL}/api/armarios2/render`, {
         method: 'POST', headers: authH(),
         body: JSON.stringify({
           width: cfg.width, height: cfg.height, depth: cfg.depth,
           material: material.name, projectType: cfg.projectType, doorType: cfg.doorType,
           interior: interiorResumen(), editInstruction: edit || '', previousImageBase64: prev,
+          referenceIsSketch: !edit && !!prev,
         }),
       });
       const d = await r.json();
@@ -244,6 +249,22 @@ const Armarios2 = ({ state }) => {
     const xml = new XMLSerializer().serializeToString(svg);
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
   };
+  // Rasteriza el SVG del diseño a un PNG (data URL) para usarlo como referencia
+  // del render IA (Gemini no admite SVG). Devuelve una promesa.
+  const svgToPngDataUrl = () => new Promise((resolve, reject) => {
+    const url = svgToDataUrl(); if (!url) return resolve(null);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = vbW * 2; c.height = vbH * 2;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/png'));
+      } catch (e) { reject(e); }
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
   const descargarDiseno = () => {
     const url = svgToDataUrl(); if (!url) return;
     const img = new Image();
