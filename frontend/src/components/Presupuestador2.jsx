@@ -92,7 +92,7 @@ const isFlatPanel = (category) => FLAT_PANEL_RE.test(String(category || '').toUp
  * product.zonePoints[tarifa]. PDF con formato del Presupuestador 1 y guardado
  * en proyectos.
  */
-const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed, incomingLines, onLinesConsumed }) => {
+const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed, incomingLines, incomingLibrary, onLinesConsumed }) => {
   const [libraryCode, setLibraryCode] = useState(() => localStorage.getItem('p2_library') || 'MV');
   const [availableLibraries, setAvailableLibraries] = useState([]);
   const [library, setLibrary] = useState(null);
@@ -366,6 +366,10 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   // librería, manual:false); solo si no se encuentra entra como línea manual.
   useEffect(() => {
     if (!incomingLines || !incomingLines.length) return;
+    // Si el volcado viene de otra librería, cambiamos a ELLA antes de emparejar
+    // (si no, los productId no existirían en el catálogo activo y todo caería a
+    // manual). Al cambiar libraryCode se recargan products y el efecto re-corre.
+    if (incomingLibrary && incomingLibrary !== libraryCode) { setLibraryCode(incomingLibrary); return; }
     if (!products || !products.length) return; // espera a que cargue el catálogo
     const norm = (c) => (c == null ? '' : String(c)).trim().toUpperCase();
     setCart(prev => [...prev, ...incomingLines.map((l, idx) => {

@@ -672,6 +672,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       setState(p => ({
         ...p, currentLibrary: lib,
         p2PendingLines: [...(p.p2PendingLines || []), ...p2Lines],
+        p2PendingLibrary: lib,   // fuerza al Presupuestador 1 a la misma librería
         currentTab: 'presupuestador2', renderReturn: true,
       }));
       alert(`✅ ${cotizables.length} mueble(s) volcado(s) al Presupuestador 1 (Cocina Montada, catálogo ${lib}). ${emparejados} emparejado(s) con el catálogo${cotizables.length - emparejados ? `, ${cotizables.length - emparejados} sin emparejar (precio orientativo)` : ''}.`);
