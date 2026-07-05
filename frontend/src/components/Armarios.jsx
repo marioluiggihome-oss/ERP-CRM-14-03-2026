@@ -1128,6 +1128,28 @@ const Armarios = ({ state, setState }) => {
           notes: `Balda-tapa de maletero + frente abatible módulo ${modNum}`
         });
       }
+
+      // Fabricabilidad: comprobar que el interior cabe en la altura del módulo.
+      // Estimación conservadora de espacio vertical necesario (mm).
+      const dobleBarra = (Number(mod.hangingRods) || 0) >= 2;
+      const reqMm =
+        (Number(mod.shelves) || 0) * 330 +                 // paso mínimo entre baldas
+        (Number(mod.drawers) || 0) * 200 +                 // frente de cajón + holgura
+        (mod.maletero ? 400 : 0) +                         // altillo maletero
+        ((Number(mod.hangingRods) || 0) >= 1 ? (dobleBarra ? 2000 : 1100) : 0); // colgado
+      if (reqMm > height + 10) {
+        accessories.push({
+          num: itemNum++,
+          code: 'AVISO',
+          name: `⚠ Interior del módulo ${modNum} no cabe en la altura`,
+          category: `MÓDULO ${modNum}`,
+          dimensions: `necesita ~${reqMm} mm / hay ${height} mm`,
+          quantity: 0,
+          unitPrice: 0,
+          totalPrice: 0,
+          notes: dobleBarra ? 'La doble barra requiere ≥ 2000 mm de columna. Reduce elementos o sube la altura.' : 'Reduce baldas/cajones o sube la altura del módulo.'
+        });
+      }
     });
 
     // 4. EXTRAS GENERALES
