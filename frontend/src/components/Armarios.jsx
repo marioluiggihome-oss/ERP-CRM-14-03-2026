@@ -527,6 +527,7 @@ const DEFAULT_ARMARIOS_PRICING = {
   antiFingerprintPerM2: 80,
   ledPerModule: 120,
   mirror: 200,
+  cantoPerMl: 1.2,   // canto ABS €/metro lineal
   ...Object.fromEntries(
     Object.entries(DEFAULT_MATERIAL_CATEGORY_SUPP).map(([cat, v]) => [`matSupp_${cat}`, v])
   ),
@@ -819,6 +820,13 @@ const Armarios = ({ state, setState }) => {
     // incluye el divisor de 18 mm. Las baldas y cuerpos de cajón deben cortarse
     // sobre este hueco, no sobre el paso bruto, o no entran en fábrica.
     const huecoLibre = moduleWidth - 18;
+    // Lectura de tarifa (misma lógica que el cálculo de precio) para piezas que
+    // no están en ACCESSORIES_CATALOG, p. ej. el maletero.
+    const sv = state?.settings || {};
+    const P = (k) => {
+      const v = sv['armPrice_' + k];
+      return (v === undefined || v === null || v === '') ? DEFAULT_ARMARIOS_PRICING[k] : Number(v);
+    };
     const exteriorColorName = getColorByName(wardrobeConfig.exteriorColor).name;
     const interiorColorName = getColorByName(wardrobeConfig.interiorColor).name;
 
@@ -1103,6 +1111,23 @@ const Armarios = ({ state, setState }) => {
           });
         }
       }
+
+      // Maletero (altillo con puerta abatible): faltaba en el despiece aunque
+      // sí contaba en tableros y precio. Se lista con su tapa/frente propio.
+      if (mod.maletero) {
+        const maleteroP = P('maletero');
+        accessories.push({
+          num: itemNum++,
+          code: 'MAL',
+          name: `Maletero (altillo) ${interiorColorName}`,
+          category: `MÓDULO ${modNum}`,
+          dimensions: `${Math.round(huecoLibre - 6)} x ${depth - 20} x 18`,
+          quantity: 1,
+          unitPrice: maleteroP,
+          totalPrice: maleteroP,
+          notes: `Balda-tapa de maletero + frente abatible módulo ${modNum}`
+        });
+      }
     });
 
     // 4. EXTRAS GENERALES
@@ -1169,8 +1194,44 @@ const Armarios = ({ state, setState }) => {
       });
     });
 
+    // 5. CANTO (edge banding) — estimación de metros lineales de canto ABS del
+    // conjunto: frente de laterales/divisores, puertas (perímetro), frentes de
+    // baldas, perímetro de frentes de cajón y tapa de maletero.
+    {
+      const totShelves = moduleConfigs.reduce((s, m) => s + (Number(m.shelves) || 0), 0);
+      const totDrawers = moduleConfigs.reduce((s, m) => s + (Number(m.drawers) || 0), 0);
+      const totMaleteros = moduleConfigs.filter(m => m.maletero).length;
+      const numDoors2 = wardrobeConfig.numDoors || modules;
+      const dH = (doorType === DoorType.SLIDING ? height - 45 : height - 6);
+      const dW = (doorType === DoorType.SLIDING
+        ? (width + 30 * Math.max(0, numDoors2 - 1)) / numDoors2
+        : width / numDoors2);
+      const frenteCajon = Math.max(0, huecoLibre - 26);
+      const cantoMl =
+        (modules + 1) * (height / 1000) +                         // canto frontal de verticales
+        numDoors2 * 2 * (dH + dW) / 1000 +                        // perímetro de puertas
+        totShelves * (huecoLibre / 1000) +                        // canto frontal de baldas
+        totDrawers * 2 * (frenteCajon + 150) / 1000 +             // perímetro de frentes de cajón
+        totMaleteros * (huecoLibre / 1000);                       // canto de tapa de maletero
+      const cantoRound = Math.ceil(cantoMl);
+      if (cantoRound > 0) {
+        const cantoP = P('cantoPerMl');
+        accessories.push({
+          num: itemNum++,
+          code: 'CANTO',
+          name: `Canto ABS ${exteriorColorName}`,
+          category: 'TABLEROS',
+          dimensions: `${cantoRound} ml`,
+          quantity: cantoRound,
+          unitPrice: cantoP,
+          totalPrice: Math.round(cantoRound * cantoP * 100) / 100,
+          notes: 'Metros lineales de canto (estimación del perímetro cantado)'
+        });
+      }
+    }
+
     return accessories;
-  }, [wardrobeConfig, moduleConfigs, extras, customAccessories]);
+  }, [wardrobeConfig, moduleConfigs, extras, customAccessories, state?.settings]);
 
   // ========== CALCULAR TABLEROS Y METROS CUADRADOS ==========
   const boardsCalculation = useMemo(() => {
