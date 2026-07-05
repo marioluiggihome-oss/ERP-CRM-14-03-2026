@@ -273,7 +273,51 @@ const _range = (from, to, mk) => {
   return out;
 };
 
+// Modelos de puerta ACB (catálogo 2020, págs. 10–51): cada uno con su FORMA,
+// para que el render aplique modelo + forma + acabado (no solo el color).
+const _acbModelos = [
+  // ── Lisa / gola integrada ───────────────────────────────────────────────────
+  { gama: 'ACB · lisa / gola', modelo: 'Arlés', material: 'laca mate', forma: 'lisa sin marco, con gola/uñero integrado en el canto superior', label: 'Arlés · lándalo mate', bg: '#6b5f52' },
+  { gama: 'ACB · lisa / gola', modelo: 'Madrid', material: 'laca brillo', forma: 'lisa sin marco, con uñero/gola superior', label: 'Madrid · blanco brillo', bg: 'linear-gradient(135deg,#f6f6f4,#eaeae8,#fafafa)' },
+  { gama: 'ACB · lisa / gola', modelo: 'Orleans', material: 'laca mate', forma: 'lisa sin marco, canto perimetral biselado suave (curva)', label: 'Orleans · marfil mate', bg: '#efe6d2' },
+  { gama: 'ACB · lisa / gola', modelo: 'Hanoi', material: 'laca mate', forma: 'lisa sin marco, con gola perimetral en L', label: 'Hanoi · nube mate', bg: '#e7e5df' },
+  { gama: 'ACB · lisa / gola', modelo: 'Palencia', material: 'laca mate', forma: 'lisa con gola curva integrada en el canto', label: 'Palencia · nube mate', bg: '#e7e5df' },
+  { gama: 'ACB · lisa / gola', modelo: 'Palma', material: 'laca mate', forma: 'lisa con gola curva integrada en el canto', label: 'Palma · nube mate', bg: '#e7e5df' },
+  { gama: 'ACB · lisa / gola', modelo: 'Cadaqués', material: 'laca mate', forma: 'lisa con gola redondeada integrada en el canto', label: 'Cadaqués · beig grisáceo mate', bg: '#b9b2a4' },
+  { gama: 'ACB · lisa / gola', modelo: 'Olimpia', material: 'laca brillo', forma: 'lisa sin marco con gola perimetral', label: 'Olimpia · blanco brillo', bg: 'linear-gradient(135deg,#f6f6f4,#eaeae8,#fafafa)' },
+  { gama: 'ACB · lisa / gola', modelo: 'Laredo', material: 'laca brillo', forma: 'lisa sin marco con gola/uñero horizontal superior', label: 'Laredo · blanco brillo', bg: 'linear-gradient(135deg,#f6f6f4,#eaeae8,#fafafa)' },
+  { gama: 'ACB · lisa / gola', modelo: 'Trípoli', material: 'laca mate', forma: 'lisa sin marco con gola/uñero horizontal rehundido superior', label: 'Trípoli · gris perla', bg: '#cfd0cd' },
+  // ── Marco y plafón rehundido liso (tipo Shaker) ─────────────────────────────
+  { gama: 'ACB · marco y plafón liso', modelo: 'Ostende', material: 'laca mate', forma: 'con marco recto ancho y plafón central rehundido liso', label: 'Ostende · gris mate', bg: '#b3b3b1' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Cambridge', material: 'laca mate', forma: 'con marco estrecho y plafón central rehundido', label: 'Cambridge · mouse mate', bg: '#8f867a' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Lima', material: 'laca mate', forma: 'con marco y plafón rehundido, canto biselado', label: 'Lima · coco mate', bg: '#8a6f57' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Arizona', material: 'laca mate', forma: 'con marco y plafón central rehundido (tipo Shaker)', label: 'Arizona · blanco mate', bg: '#f1efe9' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Marina', material: 'laca mate', forma: 'con marco recto y plafón central rehundido liso', label: 'Marina · gris mate', bg: '#b3b3b1' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Orlando', material: 'laca mate', forma: 'con marco y plafón rehundido, uñero superior', label: 'Orlando · blanco mate', bg: '#f1efe9' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Denver', material: 'laca mate', forma: 'con marco y plafón rehundido, travesaño superior ancho', label: 'Denver · gris perla mate', bg: '#cfd0cd' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Denver Xolid', material: 'laca mate acabado Xolid', forma: 'con marco y plafón rehundido (tipo Shaker), acabado Xolid', label: 'Denver · ayure xolid', bg: '#b0a58f' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Baltimore', material: 'laca mate', forma: 'con marco y plafón rehundido, travesaño superior ancho', label: 'Baltimore · sombra mate', bg: '#6f6a63' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Málaga', material: 'laca mate', forma: 'con marco y plafón central rehundido (tipo Shaker)', label: 'Málaga · vulcano mate', bg: '#4a4642' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Maella 8 cm', material: 'laca mate', forma: 'con marco ancho (8 cm) y plafón rehundido liso', label: 'Maella · mouse mate', bg: '#8f867a' },
+  // ── Marco y plafón con moldura ──────────────────────────────────────────────
+  { gama: 'ACB · marco con moldura', modelo: 'Florida', material: 'laca mate', forma: 'con marco ancho y plafón rehundido, moldura de bisel volumétrica', label: 'Florida · lino mate', bg: '#e4ddcb' },
+  { gama: 'ACB · marco con moldura', modelo: 'Doha', material: 'laca mate', forma: 'con marco y plafón rehundido, moldura interior escalonada', label: 'Doha · desierto mate', bg: '#c9bda2' },
+  { gama: 'ACB · marco con moldura', modelo: 'Xátiva', material: 'laca mate', forma: 'con marco y plafón rehundido, moldura interior escalonada', label: 'Xátiva · marfil mate', bg: '#efe6d2' },
+  { gama: 'ACB · marco con moldura', modelo: 'Grecia', material: 'laca mate', forma: 'con marco y plafón rehundido, moldura de bisel volumétrica', label: 'Grecia · beig grisáceo mate', bg: '#b9b2a4' },
+  { gama: 'ACB · marco con moldura', modelo: 'Oxford', material: 'laca mate', forma: 'con marco y plafón rehundido con moldura clásica (cuarterón)', label: 'Oxford · blanco mate', bg: '#f1efe9' },
+  { gama: 'ACB · marco con moldura', modelo: 'Tapies', material: 'laca mate', forma: 'con marco y plafón rehundido con moldura clásica biselada', label: 'Tapies · pergamon mate', bg: '#ded4c0' },
+  { gama: 'ACB · marco con moldura', modelo: 'Nantes', material: 'laca mate', forma: 'con marco y plafón con moldura escalonada múltiple', label: 'Nantes · lándalo mate', bg: '#6b5f52' },
+  { gama: 'ACB · marco con moldura', modelo: 'Yakarta', material: 'laca mate', forma: 'con marco y plafón con moldura escalonada en varios niveles', label: 'Yakarta · ayure mate', bg: '#b0a58f' },
+  { gama: 'ACB · marco con moldura', modelo: 'Rodas', material: 'laca mate', forma: 'con marco y plafón rehundido de líneas rectas finas', label: 'Rodas · titanio mate', bg: '#8f9195' },
+  // ── Plafón ranurado ─────────────────────────────────────────────────────────
+  { gama: 'ACB · plafón ranurado', modelo: 'Kansas plafón rayado', material: 'laca mate', forma: 'con marco y plafón central ranurado vertical (lamas/rayado)', label: 'Kansas · nube mate', bg: '#e7e5df' },
+  // ── Vitrina / metal ─────────────────────────────────────────────────────────
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Venecia', material: 'aluminio y vidrio', forma: 'vitrina acristalada con marco metálico', label: 'Vitrina Venecia · plata', bg: 'linear-gradient(135deg,#c8ccce,#e2e6e8,#b8bcbe)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Lieja', material: 'metal acero inox', forma: 'con marco y plafón rehundido en acero inoxidable', label: 'Lieja · acero inox', bg: 'linear-gradient(135deg,#b9bcbe,#d2d5d7,#a9acae)' },
+];
+
 const _c2acb = [
+  ..._acbModelos,
   // ── MADERA (escala válida SOLO para puertas de madera) ──────────────────────
   // Fresno F01–F16
   ..._range(1, 16, i => ({ gama: 'Madera · Fresno', label: `Fresno F${_num(i)}`, bg: 'linear-gradient(90deg,#cdbb9e,#dccaa9,#cdbb9e)' })),
