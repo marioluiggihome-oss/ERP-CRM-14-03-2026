@@ -264,7 +264,9 @@ async function apiPostForm(endpoint, formData) {
 /** Añade el token JWT como query param a URLs del proxy de assets (las <img> no envían cabeceras). */
 function imgSrc(url) {
   if (!url) return '';
-  if (url.startsWith('blob:')) return url;
+  // Las data:/blob: URLs son imágenes ya embebidas (p.ej. render Gemini): NO se
+  // les puede añadir el token de proxy o se corrompen y no se ven.
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
   const t = getToken();
   let fullUrl = url;
   if (url.startsWith('/api/')) {
