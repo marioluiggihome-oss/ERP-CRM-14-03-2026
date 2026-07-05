@@ -1557,6 +1557,13 @@ const Armarios = ({ state, setState }) => {
 
   // Guardar proyecto actual
   const saveProject = async () => {
+    // Validación de medidas: evita presupuestos a 0 € por campos vacíos/negativos.
+    const w = Number(wardrobeConfig.width), h = Number(wardrobeConfig.height), d = Number(wardrobeConfig.depth);
+    if (!(w >= 300) || !(h >= 300) || !(d >= 200)) {
+      setSaveMessage({ type: 'error', text: 'Revisa las medidas: ancho/alto ≥ 300 mm y fondo ≥ 200 mm antes de guardar.' });
+      setTimeout(() => setSaveMessage(null), 4000);
+      return;
+    }
     setSaving(true);
     setSaveMessage(null);
     try {
@@ -1571,10 +1578,13 @@ const Armarios = ({ state, setState }) => {
           drawers: m.drawers,
           hangingRods: m.hangingRods,
           hangingHeight: m.hangingHeight,
+          maletero: !!m.maletero,
+          layout: m.layout || getModuleLayout(m),
           extras: m.extras || {}
         })),
         extras,
         ivaRate,
+        armDiscount,
         customAccessories,
         totalPrice: pricing.total,
         totalArea: boardsCalculation.totalArea
@@ -1616,7 +1626,9 @@ const Armarios = ({ state, setState }) => {
                 notes: `Contacto creado desde proyecto de armarios: ${projectName}`
               })
             });
+            if (!contactRes.ok) throw new Error('No se pudo crear el contacto en el CRM');
             const contact = await contactRes.json();
+            if (!contact?.id) throw new Error('El CRM no devolvió un contacto válido');
 
             // Crear oportunidad con businessType: armarios
             await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/opportunities`, {
@@ -1627,7 +1639,7 @@ const Armarios = ({ state, setState }) => {
                 description: `Armario ${wardrobeConfig.width}x${wardrobeConfig.height}cm - ${wardrobeConfig.modules} módulos - ${wardrobeConfig.doorType === 'sliding' ? 'Puertas correderas' : 'Puertas batientes'}`,
                 contactId: contact.id,
                 contactName: contact.name,
-                value: pricing.total,
+                value: pricing.subtotal,   // base imponible (sin IVA) para el pipeline CRM
                 probability: 50,
                 stage: 'proposal',
                 tags: ['presupuesto', 'auto', 'armarios'],
@@ -1665,6 +1677,7 @@ const Armarios = ({ state, setState }) => {
       height: project.height,
       depth: project.depth,
       modules: project.modules,
+      numDoors: project.numDoors ?? project.modules,
       doorType: project.doorType,
       exteriorColor: project.exteriorColor,
       interiorColor: project.interiorColor,
@@ -1675,6 +1688,7 @@ const Armarios = ({ state, setState }) => {
     setModuleConfigs(project.moduleConfigs || []);
     setExtras(project.extras || {});
     setIvaRate(project.ivaRate || 21);
+    setArmDiscount(project.armDiscount || 0);
     setCustomAccessories(project.customAccessories || []);
     setShowProjectsModal(false);
   };
