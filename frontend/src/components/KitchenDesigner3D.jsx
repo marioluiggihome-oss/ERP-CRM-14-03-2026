@@ -459,6 +459,8 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const [renderErr, setRenderErr] = useState(null);
+  const [editTxt, setEditTxt] = useState('');          // cambios/matices para la IA
+  const [isEditing, setIsEditing] = useState(false);
   const [isBudgeting, setIsBudgeting] = useState(false);
   const [detected, setDetected] = useState(null);      // muebles detectados
   const [savedId, setSavedId] = useState(null);        // id del proyecto guardado
@@ -502,6 +504,42 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       } else setRenderErr(data.error || 'No se pudo generar el render.');
     } catch { setRenderErr('Error de conexión al generar el render.'); }
     finally { setIsRendering(false); }
+  };
+
+  // Convierte una imagen (URL de proxy o data URL) a data URL para mandarla como
+  // referencia al motor de render.
+  const imgToDataUrl = async (url) => {
+    if (typeof url === 'string' && url.startsWith('data:')) return url;
+    const resp = await fetch(assetSrc(url));
+    const blob = await resp.blob();
+    return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+  };
+
+  // Aplica con IA los cambios/matices escritos sobre el render ACTUAL, manteniendo
+  // el resto del diseño (igual que la edición de Estudio 3D). Añade una propuesta.
+  const editRender = async () => {
+    const cur = proposals[activeIdx];
+    if (!cur || !editTxt.trim() || isEditing) return;
+    setIsEditing(true); setRenderErr(null);
+    try {
+      const ref = await imgToDataUrl(cur.url);
+      const r = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: `Modifica el render adjunto aplicando ÚNICAMENTE este cambio: ${editTxt.trim()}. Mantén EXACTAMENTE el mismo diseño, distribución, encuadre, cámara e iluminación; no cambies nada más.`,
+          provider: 'gemini',
+          referenceImage: ref,
+        }),
+      });
+      const data = await r.json();
+      const url = data?.result?.images?.[0] || data?.imageUrl;
+      if (data.success && url) {
+        setProposals(prev => { const next = [...prev, { url, source: 'ia' }]; setActiveIdx(next.length - 1); return next; });
+        setEditTxt('');
+      } else setRenderErr(data.error || 'No se pudo aplicar el cambio.');
+    } catch { setRenderErr('Error de conexión al aplicar el cambio.'); }
+    finally { setIsEditing(false); }
   };
 
   // Subir tus propios renders (de tu CAD) y usarlos como propuesta.
@@ -920,6 +958,26 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
                 <input type="file" accept="image/*" multiple className="hidden" onChange={onUploadRender} />
               </label>
             </div>
+
+            {/* Cambios y matices con IA sobre el render actual (antes de volcar) */}
+            {active && (
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
+                <label className="flex items-center gap-1.5 text-xs font-black text-indigo-700 uppercase tracking-wider mb-1.5">
+                  <Wand2 size={13} /> Cambios y matices con IA
+                </label>
+                <textarea value={editTxt} onChange={e => setEditTxt(e.target.value)} rows={2} disabled={isEditing}
+                  className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm disabled:bg-slate-100"
+                  placeholder="Ej: cambia los frentes a roble claro · quita la isla · pon campana decorativa de madera · tiradores negros · más luz cálida…" />
+                <div className="flex items-center gap-2 mt-2">
+                  <button onClick={editRender} disabled={isEditing || !editTxt.trim()}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700 disabled:opacity-50">
+                    {isEditing ? <Loader className="animate-spin" size={16} /> : <Wand2 size={16} />}
+                    {isEditing ? 'Aplicando…' : 'Aplicar cambios'}
+                  </button>
+                  <span className="text-[11px] text-slate-500">Mantiene el diseño y solo aplica lo que pidas. Cada cambio crea una variante.</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
