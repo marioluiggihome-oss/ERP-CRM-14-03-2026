@@ -815,6 +815,10 @@ const Armarios = ({ state, setState }) => {
     let itemNum = 1;
     const { width, height, depth, modules, doorType, endLeft, endRight } = wardrobeConfig;
     const moduleWidth = width / modules;
+    // Hueco libre interior real de cada módulo: el paso bruto (width/modules)
+    // incluye el divisor de 18 mm. Las baldas y cuerpos de cajón deben cortarse
+    // sobre este hueco, no sobre el paso bruto, o no entran en fábrica.
+    const huecoLibre = moduleWidth - 18;
     const exteriorColorName = getColorByName(wardrobeConfig.exteriorColor).name;
     const interiorColorName = getColorByName(wardrobeConfig.interiorColor).name;
 
@@ -882,19 +886,33 @@ const Armarios = ({ state, setState }) => {
     
     // Usar el número de puertas configurado por el usuario
     const configuredNumDoors = wardrobeConfig.numDoors || modules;
-    const doorHeight = height - 4;
-    const doorWidth = width / configuredNumDoors;
+    const isSliding = doorType === DoorType.SLIDING;
+    // Holgura en altura: la corredera aloja carril superior + rodadura (~45 mm);
+    // la abatible solo necesita ~6 mm de holgura arriba/abajo.
+    const doorHeight = isSliding ? height - 45 : height - 6;
+    // Ancho de hoja: las correderas SOLAPAN entre sí (~30 mm por junta) y montan
+    // en 2 carriles; las abatibles reparten el ancho a partes iguales.
+    const SOLAPE_MM = 30;
+    const doorWidth = isSliding
+      ? (width + SOLAPE_MM * Math.max(0, configuredNumDoors - 1)) / configuredNumDoors
+      : width / configuredNumDoors;
+
+    // Fabricabilidad: una hoja abatible de melamina no debe superar ~600 mm.
+    const anchoHoja = Math.round(doorWidth);
+    const avisoHoja = (!isSliding && anchoHoja > 600)
+      ? ` ⚠ Hoja de ${anchoHoja} mm: supera el máx. fabricable (~600 mm); usa ${Math.ceil(width / 600)} puertas.`
+      : '';
 
     accessories.push({
       num: itemNum++,
       code: doorAccessory.id,
       name: `${doorAccessory.name} ${exteriorColorName}`,
       category: 'PUERTAS',
-      dimensions: `${doorHeight} x ${Math.round(doorWidth)} x 18`,
+      dimensions: `${doorHeight} x ${anchoHoja} x 18`,
       quantity: configuredNumDoors,
       unitPrice: doorAccessory.price,
       totalPrice: configuredNumDoors * doorAccessory.price,
-      notes: doorAccessory.description
+      notes: `${doorAccessory.description}${isSliding ? ` (solape ${SOLAPE_MM} mm/junta)` : ''}${avisoHoja}`
     });
 
     // Sistema corredera si aplica
@@ -913,8 +931,9 @@ const Armarios = ({ state, setState }) => {
         notes: `Kit guía superior + inferior aluminio (${configuredNumDoors} puertas)`
       });
     } else {
-      // Bisagras para puertas abatibles/plegables
-      const hingesPerDoor = Math.ceil(doorHeight / 500);
+      // Bisagras para puertas abatibles/plegables: por altura y +1 si la hoja es
+      // ancha/pesada (≥ 500 mm), donde el peso exige un punto de giro extra.
+      const hingesPerDoor = Math.ceil(doorHeight / 500) + (anchoHoja >= 500 ? 1 : 0);
       accessories.push({
         num: itemNum++,
         code: ACCESSORIES_CATALOG.hinge.id,
@@ -952,11 +971,11 @@ const Armarios = ({ state, setState }) => {
           code: ACCESSORIES_CATALOG.shelves.id,
           name: `${ACCESSORIES_CATALOG.shelves.name} ${interiorColorName}`,
           category: `MÓDULO ${modNum}`,
-          dimensions: `${Math.round(moduleWidth - 4)} x ${depth - 20} x 18`,
+          dimensions: `${Math.round(huecoLibre - 6)} x ${depth - 20} x 18`,
           quantity: mod.shelves,
           unitPrice: ACCESSORIES_CATALOG.shelves.price,
           totalPrice: mod.shelves * ACCESSORIES_CATALOG.shelves.price,
-          notes: `Baldas módulo ${modNum}`
+          notes: `Baldas módulo ${modNum} (hueco libre)`
         });
 
         // Soportes de balda (4 por balda)
@@ -980,11 +999,11 @@ const Armarios = ({ state, setState }) => {
           code: ACCESSORIES_CATALOG.drawers.id,
           name: `${ACCESSORIES_CATALOG.drawers.name} ${interiorColorName}`,
           category: `MÓDULO ${modNum}`,
-          dimensions: `${Math.round(moduleWidth - 8)} x ${depth - 50} x 150`,
+          dimensions: `${Math.round(huecoLibre - 26)} x ${depth - 50} x 150`,
           quantity: mod.drawers,
           unitPrice: ACCESSORIES_CATALOG.drawers.price,
           totalPrice: mod.drawers * ACCESSORIES_CATALOG.drawers.price,
-          notes: `Cajón con frente ${exteriorColorName}`
+          notes: `Cajón (cuerpo hueco libre − guías) frente ${exteriorColorName}`
         });
 
         // Guías de cajón
