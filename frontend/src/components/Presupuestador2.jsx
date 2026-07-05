@@ -381,15 +381,18 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         null;
       if (prod) {
         // Línea de CATÁLOGO: el precio lo calcula la propia tarifa (unitPriceOf).
+        // NO se pasan medidas custom: la medida detectada por IA casi nunca
+        // coincide al cm con el nominal y dispararía un recargo de "medida
+        // especial" fantasma. Se usa el nominal del catálogo (custom = '').
         return {
           id: prod.id,
           code: prod.code,
           name: prod.name,
           qty: Number(l.qty) || 1,
           manual: false,
-          customWidth: l.width != null ? Number(l.width) : '',
-          customHeight: l.height != null ? Number(l.height) : '',
-          customDepth: l.depth != null ? Number(l.depth) : '',
+          customWidth: '',
+          customHeight: '',
+          customDepth: '',
         };
       }
       // No encontrado: línea manual (igual que antes).

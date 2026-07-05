@@ -164,7 +164,17 @@ const Cascos = ({ state, setState }) => {
   useEffect(() => {
     const pend = state?.cascosPendingLines;
     if (pend && pend.length) {
-      setCart(prev => [...prev, ...pend]);
+      // Fusiona por sig (como addToCart) para que un segundo volcado sume
+      // cantidades en lugar de crear líneas de herraje duplicadas.
+      setCart(prev => {
+        const next = [...prev];
+        for (const l of pend) {
+          const i = next.findIndex(x => x.sig === l.sig);
+          if (i >= 0) next[i] = { ...next[i], qty: (next[i].qty || 1) + (l.qty || 1) };
+          else next.push(l);
+        }
+        return next;
+      });
       if (setState) setState(p => ({ ...p, cascosPendingLines: null }));
     }
   }, [state?.cascosPendingLines, setState]);
@@ -234,6 +244,44 @@ const Cascos = ({ state, setState }) => {
     return cid;
   };
   const gamaLabelOf = (gid) => CASCOS_GAMAS.find(g => g.id === gid)?.label || '';
+
+  // Volcado de MUEBLES desde el Diseñador 3D: empareja cada mueble detectado con
+  // el catálogo CASCOS (misma familia bajo/alto/columna + ancho más cercano) y lo
+  // precia con el color/grosor/gama activos. Si no hay match, entra estimado a 0€.
+  useEffect(() => {
+    const cabs = state?.cascosPendingCabinets;
+    if (!cabs || !cabs.length) return;
+    const famOf = (t) => {
+      const s = norm(t);
+      if (/alto|altillo|sobre\s*encimera|sobre\s*columna|cubretermo|escurre|campana|vitrina/.test(s)) return 'alto';
+      if (/columna|semicolumna/.test(s)) return 'columna';
+      return 'bajo';
+    };
+    const pool = CASCOS.filter(m => (m.gama || 'kit') === gama && String(m.grosor) === String(grosorActivo) && m.precios[colorActivo] != null);
+    const lines = cabs.map((det, idx) => {
+      const fam = famOf(det.tipo);
+      let cand = pool.filter(m => famOf(m.tipo) === fam);
+      if (!cand.length) cand = pool;
+      const target = Number(det.ancho) || 0;
+      let best = null, bd = Infinity;
+      for (const m of cand) { const d = Math.abs((Number(m.ancho) || 0) - target); if (d < bd) { bd = d; best = m; } }
+      if (best) {
+        const base = best.precios[colorActivo];
+        return { key: `vk-${Date.now()}-${idx}`, sig: `${best.id}|${colorActivo}`, tipo: best.tipo, grosor: best.grosor, dibujo: best.dibujo, fondo: best.fondo, alto: best.alto, ancho: best.ancho, color: colorActivo, colorLabel: colorLabel(colorActivo), gama: best.gama || 'kit', precio: pc(base), precioBase: base, qty: det.qty || 1 };
+      }
+      return { key: `vk-${Date.now()}-${idx}`, sig: `estimado|${norm(det.tipo)}|${det.ancho}`, tipo: det.tipo, grosor: grosorActivo, dibujo: null, fondo: det.fondo || 0, alto: det.alto || 0, ancho: det.ancho || 0, color: colorActivo, colorLabel: colorLabel(colorActivo), gama, precio: 0, precioBase: 0, qty: det.qty || 1, estimado: true };
+    });
+    setCart(prev => {
+      const next = [...prev];
+      for (const l of lines) {
+        const i = next.findIndex(x => x.sig === l.sig);
+        if (i >= 0) next[i] = { ...next[i], qty: (next[i].qty || 1) + (l.qty || 1) };
+        else next.push(l);
+      }
+      return next;
+    });
+    if (setState) setState(p => ({ ...p, cascosPendingCabinets: null }));
+  }, [state?.cascosPendingCabinets, gama, grosorActivo, colorActivo, setState]);
   // Acabado legible para diferenciar líneas mezcladas en el pedido.
   const acabadoOf = (l) => {
     if (l.accesorio) return l.ref || 'BLUM';
