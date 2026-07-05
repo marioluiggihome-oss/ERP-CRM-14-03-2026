@@ -528,6 +528,7 @@ const DEFAULT_ARMARIOS_PRICING = {
   ledPerModule: 120,
   mirror: 200,
   cantoPerMl: 1.2,   // canto ABS €/metro lineal
+  marginPct: 40,     // margen comercial (%) que se aplica sobre el coste del despiece para el PVP
   ...Object.fromEntries(
     Object.entries(DEFAULT_MATERIAL_CATEGORY_SUPP).map(([cat, v]) => [`matSupp_${cat}`, v])
   ),
@@ -1502,44 +1503,74 @@ const Armarios = ({ state, setState }) => {
     const interiorMaterialSupp = P('matSupp_' + interiorCategory) || 0;
     const materialPrice = surfaceM2 * exteriorMaterialSupp + surfaceM2 * 0.5 * interiorMaterialSupp;
 
-    // Componentes interiores
-    let interiorPrice = 0;
-    moduleConfigs.forEach(mod => {
-      interiorPrice += (mod.shelves || 0) * P('shelf');
-      interiorPrice += (mod.drawers || 0) * P('drawer');
-      interiorPrice += (mod.hangingRods || 0) * P('hangingRod');
-      if (mod.maletero) interiorPrice += P('maletero');
-    });
+    // Antihuellas (acabado de superficie, no es una pieza del despiece).
+    const antiFingerprintPrice = extras.antiFingerprint ? surfaceM2 * P('antiFingerprintPerM2') : 0;
 
-    // Extras
-    let extrasPrice = 0;
-    if (extras.softClose) extrasPrice += modules * P('softClosePerModule');
-    if (extras.antiFingerprint) extrasPrice += surfaceM2 * P('antiFingerprintPerM2');
-    if (extras.led) extrasPrice += modules * P('ledPerModule');
-    if (extras.mirror) extrasPrice += P('mirror');
+    // ── 1c: FUENTE ÚNICA DE VERDAD = EL DESPIECE ──────────────────────────────
+    // El coste del conjunto sale de la suma real del despiece (estructura,
+    // puertas, herrajes, interior, canto, extras y accesorios personalizados),
+    // más lo que no es una pieza del despiece (terminaciones, suplemento de
+    // material y antihuellas). Sobre ese coste se aplica el margen comercial.
+    const cat = despieceTotals.byCategory || {};
+    const catTotal = (k) => (cat[k] ? cat[k].total : 0);
+    const moduleTotal = Object.keys(cat)
+      .filter(k => k.startsWith('MÓDULO'))
+      .reduce((s, k) => s + cat[k].total, 0);
 
-    const subtotalBruto = basePrice + doorPrice + endPrice + materialPrice + interiorPrice + extrasPrice;
+    const costeEstructura = catTotal('ESTRUCTURA') + catTotal('TABLEROS'); // incluye canto
+    const costePuertas = catTotal('PUERTAS') + catTotal('HERRAJES');
+    const costeInterior = moduleTotal;
+    const costeExtras = catTotal('EXTRAS') + catTotal('PERSONALIZADO');
+    const costeMaterial = materialPrice + antiFingerprintPrice;
+
+    const costeDespiece = despieceTotals.grandTotal; // suma completa de la lista
+    const costeTotal = costeDespiece + endPrice + costeMaterial; // + lo no despiezado
+
+    const marginPct = Math.max(0, Number(P('marginPct')) || 0);
+    const marginAmount = costeTotal * (marginPct / 100);
+    const subtotalBruto = costeTotal + marginAmount; // PVP sin descuento
+
     const discountPct = Math.max(0, Math.min(100, Number(armDiscount) || 0));
     const discountAmount = subtotalBruto * (discountPct / 100);
     const subtotal = subtotalBruto - discountAmount;   // base imponible tras descuento
     const iva = subtotal * (ivaRate / 100);
     const total = subtotal + iva;
 
+    // Referencia: el antiguo cálculo paramétrico (solo informativo, para calibrar
+    // el margen). No interviene en el PVP.
+    let interiorParam = 0;
+    moduleConfigs.forEach(mod => {
+      interiorParam += (mod.shelves || 0) * P('shelf') + (mod.drawers || 0) * P('drawer') + (mod.hangingRods || 0) * P('hangingRod') + (mod.maletero ? P('maletero') : 0);
+    });
+    let extrasParam = 0;
+    if (extras.softClose) extrasParam += modules * P('softClosePerModule');
+    if (extras.led) extrasParam += modules * P('ledPerModule');
+    if (extras.mirror) extrasParam += P('mirror');
+    const parametricRef = basePrice + doorPrice + endPrice + materialPrice + antiFingerprintPrice + interiorParam + extrasParam;
+
     return {
-      base: basePrice,
-      doors: doorPrice,
+      // Desglose (ahora derivado del despiece) para el resumen de precio.
+      base: costeEstructura,
+      doors: costePuertas,
       ends: endPrice,
-      material: materialPrice,
-      interior: interiorPrice,
-      extras: extrasPrice,
+      material: costeMaterial,
+      interior: costeInterior,
+      extras: costeExtras,
+      // Coste y margen
+      costeDespiece,
+      costeTotal,
+      marginPct,
+      marginAmount,
+      // Totales
       subtotalBruto,
       discountPct,
       discountAmount,
       subtotal,
       iva,
-      total
+      total,
+      parametricRef,
     };
-  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, armDiscount, state?.settings]);
+  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, armDiscount, despieceTotals, state?.settings]);
 
   // El despiece de armarios (lista de tableros/accesorios para fábrica) solo se
   // muestra a quien tenga activada la función de Fábrica (o admin). En el
@@ -3439,7 +3470,23 @@ const Armarios = ({ state, setState }) => {
               <span className="text-emerald-300">Extras</span>
               <span className="font-bold">{pricing.extras.toFixed(2)}€</span>
             </div>
-            
+            {canSeeCost && (
+              <div className="text-[11px] text-emerald-200/80 border-t border-emerald-700/50 pt-2 space-y-1">
+                <div className="flex justify-between">
+                  <span>Coste despiece</span>
+                  <span className="font-bold">{pricing.costeTotal.toFixed(2)}€</span>
+                </div>
+                <div className="flex justify-between text-emerald-200/60">
+                  <span>Ref. cálculo anterior</span>
+                  <span>{pricing.parametricRef.toFixed(2)}€</span>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-emerald-300">Margen ({pricing.marginPct}%)</span>
+              <span className="font-bold">{pricing.marginAmount.toFixed(2)}€</span>
+            </div>
+
             <div className="border-t border-emerald-700 pt-3 mt-3">
               {/* Descuento aparte para armarios */}
               <div className="flex justify-between items-center mb-1">
