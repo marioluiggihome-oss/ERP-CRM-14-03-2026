@@ -2114,22 +2114,22 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
                                   type="number" 
                                   min="0" 
                                   max="100" 
-                                  value={state.ivaRate || 21}
+                                  value={state.ivaRate ?? 21}
                                   onChange={e => setState(prev => ({...prev, ivaRate: parseFloat(e.target.value) || 0}))}
                                   className="w-10 bg-indigo-800 border border-indigo-700 rounded px-1 py-0.5 text-xs font-black text-white text-center outline-none focus:border-orange-500 no-print"
                                 />
-                                <span className="text-[7px] font-bold text-indigo-400 print-only">{state.ivaRate || 21}</span>
+                                <span className="text-[7px] font-bold text-indigo-400 print-only">{state.ivaRate ?? 21}</span>
                                 <span className="text-[7px] font-bold text-indigo-400">%</span>
                               </div>
                               <div className="text-sm font-black italic tracking-tight text-white">
-                                {(total * (state.ivaRate || 21) / 100).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+                                {(total * (state.ivaRate ?? 21) / 100).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                               </div>
                            </div>
                            {/* TOTAL */}
                            <div className="flex-1 px-4 py-3 bg-orange-600 rounded-r-xl">
                               <div className="text-[7px] font-black uppercase tracking-wide text-orange-200">TOTAL PRESUPUESTO</div>
                               <div className="text-lg font-black italic tracking-tight text-white text-right">
-                                {(total * (1 + (state.ivaRate || 21) / 100)).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+                                {(total * (1 + (state.ivaRate ?? 21) / 100)).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                               </div>
                            </div>
                         </div>
