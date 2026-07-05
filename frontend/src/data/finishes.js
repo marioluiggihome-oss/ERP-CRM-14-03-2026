@@ -311,8 +311,15 @@ const _acbModelos = [
   { gama: 'ACB · marco con moldura', modelo: 'Rodas', material: 'laca mate', forma: 'con marco y plafón rehundido de líneas rectas finas', label: 'Rodas · titanio mate', bg: '#8f9195' },
   // ── Plafón ranurado ─────────────────────────────────────────────────────────
   { gama: 'ACB · plafón ranurado', modelo: 'Kansas plafón rayado', material: 'laca mate', forma: 'con marco y plafón central ranurado vertical (lamas/rayado)', label: 'Kansas · nube mate', bg: '#e7e5df' },
-  // ── Vitrina / metal ─────────────────────────────────────────────────────────
-  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Venecia', material: 'aluminio y vidrio', forma: 'vitrina acristalada con marco metálico', label: 'Vitrina Venecia · plata', bg: 'linear-gradient(135deg,#c8ccce,#e2e6e8,#b8bcbe)' },
+  // ── Vitrina / metal (serie "vitrinas metálicas", págs. 184–189) ─────────────
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Diseño', material: 'aluminio y vidrio', forma: 'vitrina con perfil plata mate y cristal ácido', label: 'Vitrina Diseño · plata mate', bg: 'linear-gradient(135deg,#c8ccce,#e2e6e8,#b8bcbe)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Pekín', material: 'aluminio y vidrio', forma: 'vitrina con perfil de acero y cristal lacado blanco', label: 'Vitrina Pekín · acero / blanco', bg: 'linear-gradient(135deg,#dcdedd,#f0f1ef,#cfd1d0)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Milán', material: 'aluminio y vidrio', forma: 'vitrina con perfil plata mate y cristal ácido', label: 'Vitrina Milán · plata mate', bg: 'linear-gradient(135deg,#c8ccce,#e2e6e8,#b8bcbe)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Londres', material: 'aluminio y vidrio', forma: 'vitrina con perfil blanco soft y cristal lacado gris metal (opción rejilla lacada)', label: 'Vitrina Londres · blanco soft / gris metal', bg: 'linear-gradient(135deg,#e8e9e6,#f4f5f3,#d8dad7)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Bisel', material: 'aluminio y vidrio', forma: 'vitrina con perfil negro y cristal ahumado negro', label: 'Vitrina Bisel · negro', bg: 'linear-gradient(135deg,#2a2a2a,#3a3a3a,#1e1e1e)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Tokio', material: 'aluminio y vidrio', forma: 'vitrina con perfil negro y plafón de rejilla lacada negra', label: 'Vitrina Tokio · negro', bg: 'linear-gradient(135deg,#2a2a2a,#3a3a3a,#1e1e1e)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Berlín', material: 'aluminio y vidrio', forma: 'vitrina con perfil plata mate, tirador embutido y cristal lacado negro', label: 'Vitrina Berlín · plata mate / negro', bg: 'linear-gradient(135deg,#9aa0a2,#c2c6c8,#6a6e70)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Venecia', material: 'aluminio y vidrio', forma: 'vitrina con perfil negro y cristal ahumado negro (perfiles: negro/titanio/cobre/oro/plata mate)', label: 'Vitrina Venecia · negro', bg: 'linear-gradient(135deg,#2a2a2a,#3a3a3a,#1e1e1e)' },
   { gama: 'ACB · vitrina / metal', modelo: 'Lieja', material: 'metal acero inox', forma: 'con marco y plafón rehundido en acero inoxidable', label: 'Lieja · acero inox', bg: 'linear-gradient(135deg,#b9bcbe,#d2d5d7,#a9acae)' },
 ];
 
