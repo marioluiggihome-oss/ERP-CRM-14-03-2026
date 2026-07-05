@@ -46,6 +46,8 @@ const Armarios2 = ({ state }) => {
   const [renderLoading, setRenderLoading] = useState(false);
   const [editText, setEditText] = useState('');
   const [aiError, setAiError] = useState('');
+  const [flash, setFlash] = useState(null); // { type:'ok'|'err', text } — banner no bloqueante
+  const showFlash = (type, text) => { setFlash({ type, text }); setTimeout(() => setFlash(null), 3500); };
   const [comps, setComps] = useState([
     { id: nid(), type: 'divider-v', x: 50 },
     { id: nid(), type: 'shelf', y: 30, sectionIndex: 0 },
@@ -329,8 +331,8 @@ const Armarios2 = ({ state }) => {
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || 'Error');
       if (d.design?.id) setSavedId(d.design.id);
-      alert('✅ Diseño guardado.');
-    } catch (e) { alert('No se pudo guardar: ' + (e.message || '')); }
+      showFlash('ok', 'Diseño guardado.');
+    } catch (e) { showFlash('err', 'No se pudo guardar: ' + (e.message || '')); }
     finally { setSaving(false); }
   };
   const openDesigns = async () => {
@@ -343,7 +345,7 @@ const Armarios2 = ({ state }) => {
       if (d.cfg) setCfg(c => ({ ...c, ...d.cfg }));
       if (d.comps) setComps(d.comps);
       setSavedId(d.id); setDesigns(null); setSelId(null);
-    } catch { alert('No se pudo abrir el diseño.'); }
+    } catch { showFlash('err', 'No se pudo abrir el diseño.'); }
   };
   const deleteDesign = async (id) => {
     if (!window.confirm('¿Eliminar este diseño?')) return;
@@ -562,6 +564,11 @@ const Armarios2 = ({ state }) => {
             <p className="text-xs text-slate-400 text-center py-6">Genera una imagen realista del armario con la configuración actual.</p>
           )}
           {aiError && <p className="text-xs text-rose-600 font-bold mt-2">{aiError}</p>}
+          {flash && (
+            <p className={`text-xs font-bold mt-2 px-3 py-1.5 rounded-lg ${flash.type === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+              {flash.type === 'ok' ? '✅ ' : '⚠️ '}{flash.text}
+            </p>
+          )}
         </div>
 
         {/* Presupuesto */}

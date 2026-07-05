@@ -58,7 +58,7 @@ const MODULES = [
   { tab: 'resumenCocinas',  label: 'Resumen Totales', icon: Layers,       color: 'bg-indigo-600',  group: 'ventas', can: (u) => !u?.isTienda && u?.canUseResumenTotales === true },
   { tab: 'cascos',          label: 'Cocina Desmontada',icon: Box,         color: 'bg-cyan-600',    group: 'ventas', can: (u) => !u?.isTienda && u?.canUseCascos === true },
   { tab: 'propdata',        label: 'Obra Nueva (IA)', icon: Building2,    color: 'bg-sky-600',     group: 'ventas', can: (u) => !u?.isTienda && u?.canUsePropData === true },
-  { tab: 'armarios2',       label: 'Armarios 2 (IA)', icon: Hammer,       color: 'bg-fuchsia-600', group: 'diseno', can: (u) => !u?.isTienda && u?.canUseArmarios2 === true },
+  { tab: 'armarios2',       label: 'Armarios IA',     desc: 'Boceto rápido con IA', icon: Sparkles, color: 'bg-fuchsia-600', group: 'diseno', can: (u) => !u?.isTienda && u?.canUseArmarios2 === true },
   { tab: 'cocinasai',       label: 'Cocinas IA 2',    icon: ChefHat,      color: 'bg-orange-500',  group: 'diseno', can: (u) => false && !u?.isTienda && u?.canUseCocinasAI === true },
   { tab: 'gastos',          label: 'Gastos',          icon: Receipt,      color: 'bg-indigo-600',  group: 'admin',  can: (u) => (u?.isAdmin || u?.isRepresentative || u?.isGerente || u?.isDirectorComercial) && u?.canAccessGastos !== false },
 
@@ -67,7 +67,7 @@ const MODULES = [
   { tab: 'renderStudio',    label: 'Render 3D',       desc: 'Render rápido por texto o foto',       icon: ImageIcon,    color: 'bg-purple-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
   { tab: 'estudioCocinas',  label: '3D Estudio',      desc: 'Estudio completo: plano, ficha y galería', icon: ChefHat,  color: 'bg-amber-600',   group: 'diseno', can: (u) => (u?.canUseKitchenDesigner || u?.canUseCocinasAI || u?.canUseAIAnalysis) && !u?.isTienda },
   { tab: 'kitchenDesigner', label: 'Cocinas por módulos', desc: 'Diseño por módulos + chequeo de fabricabilidad', icon: Hammer, color: 'bg-teal-600', group: 'diseno', can: (u) => (u?.canUseKitchenDesigner || u?.isAdmin) && !u?.isTienda },
-  { tab: 'armarios',        label: 'Armarios',        icon: Box,          color: 'bg-cyan-600',    group: 'diseno', can: (u) => u?.canAccessArmarios && !u?.isTienda },
+  { tab: 'armarios',        label: 'Armarios',        desc: 'Configurador por módulos y despiece', icon: Box,          color: 'bg-cyan-600',    group: 'diseno', can: (u) => u?.canAccessArmarios && !u?.isTienda },
   { tab: 'digitalizador',   label: 'Digitalizador',   icon: ScanLine,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseDigitalizador && !u?.isTienda },
 
   // Producción
