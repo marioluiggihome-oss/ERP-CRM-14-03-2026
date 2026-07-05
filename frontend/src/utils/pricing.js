@@ -77,9 +77,12 @@ export function computeUnitPrice(product, opts = {}) {
     const isExcludedCategory = categoryUpper.includes('COSTADO') || categoryUpper.includes('REGLETA');
 
     if (!isExcludedCategory) {
-      if (Number(customDims.width) !== Number(product.width)) { cutsCost += increments.width; cuts.push('Ancho'); }
-      if (Number(customDims.height) !== Number(product.height)) { cutsCost += increments.height; cuts.push('Alto'); }
-      if (Number(customDims.depth) !== Number(product.depth)) { cutsCost += increments.depth; cuts.push('Fondo'); }
+      // Solo se cobra corte si el campo tiene una medida REAL distinta de la del
+      // catálogo. Un campo vacío/0 (sin rellenar) no debe disparar el incremento.
+      const changed = (cd, base) => cd != null && cd !== '' && Number(cd) > 0 && Number(cd) !== Number(base);
+      if (changed(customDims.width, product.width)) { cutsCost += increments.width; cuts.push('Ancho'); }
+      if (changed(customDims.height, product.height)) { cutsCost += increments.height; cuts.push('Alto'); }
+      if (changed(customDims.depth, product.depth)) { cutsCost += increments.depth; cuts.push('Fondo'); }
     }
 
     carcassCost = carcassIncrement || 0;
