@@ -73,7 +73,7 @@ export const ACB_WARDROBE_DOORS = _acbModels.map((m, i) => ({
 // ── Datos para el selector de color del render (por GAMA, sin marca) ──────────
 // COLORES 1 = gama Alvic (JYT/JIT 2025). COLORES 2 = ACB (madera/laca/polilaminado).
 
-export const COLORES_1 = [
+const _c1base = [
   // Luxe / Luxe Plus (lacado alto brillo)
   { gama: 'Luxe', label: 'Blanco', bg: '#ffffff' },
   { gama: 'Luxe', label: 'Blanco Polar', bg: '#f2f3f4' },
@@ -183,8 +183,8 @@ export const COLORES_1 = [
   { gama: 'Syncron decorativo', label: 'Vulcano', bg: '#c3b1a3' },
 ];
 
-// COLORES 2 = ACB (madera / laca / polilaminado): modelos y cartas de color.
-export const COLORES_2 = [
+// Puertas Alvic (madera / laca / polilaminado): modelos y cartas de color → Colores 1.
+const _c1puertas = [
   { gama: 'Madera (modelo)', label: 'Alcaudete (Nogal · Castaña)', bg: 'linear-gradient(90deg,#6e4426,#8a5a34,#6e4426)' },
   { gama: 'Madera (modelo)', label: 'Bordeaux (Castaño · Café)', bg: 'linear-gradient(90deg,#4a3122,#5c4030,#4a3122)' },
   { gama: 'Madera (modelo)', label: 'Bayonne (Castaño · Almendra)', bg: 'linear-gradient(90deg,#b89a6f,#c6a97e,#b89a6f)' },
@@ -254,6 +254,11 @@ export const COLORES_2 = [
   { gama: 'Polilaminado (acabado)', label: 'Nudos', bg: 'linear-gradient(90deg,#b47f43,#c9964f,#b47f43)' },
   { gama: 'Polilaminado (acabado)', label: 'Rústico', bg: 'linear-gradient(90deg,#9a7d55,#a68a62,#8a6e48)' },
 ];
+
+// COLORES 1 = todo Alvic (melamina/lacado + puertas madera/laca/polilaminado).
+export const COLORES_1 = [..._c1base, ..._c1puertas];
+// COLORES 2 = ACB. Pendiente de recibir el catálogo del fabricante.
+export const COLORES_2 = [];
 
 // Agrupa una lista de acabados por gama preservando el orden de aparición.
 export function porGama(list) {

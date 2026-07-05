@@ -1330,7 +1330,20 @@ const App = () => {
             )}
             {state.currentTab === 'library' && <ErrorBoundary><ProjectLibrary state={state} setState={setState} /></ErrorBoundary>}
             {state.currentTab === 'resumenCocinas' && state.currentUser?.canUseResumenTotales === true && <ErrorBoundary><ResumenCocinas state={state} /></ErrorBoundary>}
-            {state.currentTab === 'cascos' && state.currentUser?.canUseCascos === true && <ErrorBoundary><Cascos state={state} /></ErrorBoundary>}
+            {state.currentTab === 'cascos' && state.currentUser?.canUseCascos === true && (
+              <ErrorBoundary>
+              {state.renderReturn && (
+                <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-indigo-50 border-b border-indigo-200">
+                  <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Vienes de Estudio 3D</span>
+                  <button onClick={() => setState(p => ({ ...p, currentTab: 'renderStudio' }))}
+                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700">← Volver a Estudio 3D</button>
+                  <button onClick={() => setState(p => ({ ...p, renderReturn: false }))}
+                    className="px-3 py-1 rounded-full text-[11px] font-bold bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">Quedarme en Cocina Desmontada</button>
+                </div>
+              )}
+              <Cascos state={state} />
+              </ErrorBoundary>
+            )}
             {state.currentTab === 'propdata' && state.currentUser?.canUsePropData === true && <ErrorBoundary><PropData state={state} /></ErrorBoundary>}
             {state.currentTab === 'armarios2' && state.currentUser?.canUseArmarios2 === true && <ErrorBoundary><Armarios2 state={state} /></ErrorBoundary>}
             {state.currentTab === 'cocinasai' && (state.currentUser?.canUseCocinasAI === true || state.currentUser?.isAdmin) && <ErrorBoundary><CocinasIA state={state} /></ErrorBoundary>}
