@@ -1,21 +1,17 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Hammer, Plus, Trash2, Download, Columns, Package, Ruler, Sparkles, Image as ImageIcon, Loader, Lock, Maximize2, X, FolderOpen, Save } from 'lucide-react';
 import { getToken } from '../services/api';
+import { WARDROBE_COLORS, COLOR_BRANDS } from './Armarios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const authH = () => ({ 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' });
 const DOOR_TYPES = [['open', 'Sin puertas'], ['sliding', 'Corredera'], ['hinged', 'Batiente'], ['folding', 'Plegable'], ['coplanar', 'Coplanar']];
 
-// ── Materiales: color para el dibujo y categoría de suplemento (matSupp_* de Ajustes) ──
-const MATERIALS = [
-  { id: '010B', name: 'Blanco Standard', color: '#ffffff', supp: 'blancos' },
-  { id: '25V', name: 'Roble Virginia', color: '#d4b483', supp: 'maderas-medias' },
-  { id: '17G', name: 'Pino Cervino', color: '#e8e4d8', supp: 'maderas-claras' },
-  { id: '453B', name: 'Boeta Blanco', color: '#f5f5f5', supp: 'blancos' },
-  { id: '91Y', name: 'Roble Dafne', color: '#e2d2ba', supp: 'maderas-claras' },
-  { id: '231N', name: 'Negro Liso', color: '#1a1a1a', supp: 'grises' },
-  { id: '195G', name: 'Gris Sarela', color: '#bcbcbc', supp: 'grises' },
-];
+// ── Materiales (unificación 2a): mismas gamas y categorías de suplemento que el
+// configurador Armarios. Cada color aporta hex (dibujo) y categoría (matSupp_*). ──
+const MATERIALS = WARDROBE_COLORS.map(c => ({
+  id: c.id, name: c.name, color: c.hex || '#e5e5e5', supp: c.category || 'blancos', brand: c.brand || 'FINSA',
+}));
 // Mapa tipo de accesorio → clave de tarifa en Ajustes (armPrice_*) y valor por defecto.
 const ACC_TARIFA = { shelf: ['shelf', 25], 'hanging-rod': ['hangingRod', 35], drawer: ['drawer', 85], 'shoe-rack': ['shelf', 40], 'pant-rack': ['drawer', 60], 'led-strip': ['ledPerModule', 120], 'divider-v': ['shelf', 30] };
 const LABELS = { shelf: 'Balda', 'hanging-rod': 'Barra colgador', drawer: 'Cajón', 'divider-v': 'Divisor vertical', 'shoe-rack': 'Zapatero', 'pant-rack': 'Pantalonero', 'led-strip': 'LED' };
@@ -46,6 +42,8 @@ const Armarios2 = ({ state }) => {
   const [renderLoading, setRenderLoading] = useState(false);
   const [editText, setEditText] = useState('');
   const [aiError, setAiError] = useState('');
+  const [flash, setFlash] = useState(null); // { type:'ok'|'err', text } — banner no bloqueante
+  const showFlash = (type, text) => { setFlash({ type, text }); setTimeout(() => setFlash(null), 3500); };
   const [comps, setComps] = useState([
     { id: nid(), type: 'divider-v', x: 50 },
     { id: nid(), type: 'shelf', y: 30, sectionIndex: 0 },
@@ -213,13 +211,18 @@ const Armarios2 = ({ state }) => {
   const generarRender = async (edit) => {
     setRenderLoading(true); setAiError('');
     try {
-      const prev = edit && renders.length ? renders[renders.length - 1] : null;
+      // Al editar, referencia = último render. En la PRIMERA generación,
+      // referencia = el croquis SVG rasterizado a PNG, para que el motor
+      // respete la distribución interior dibujada (antes solo mandaba texto).
+      let prev = edit && renders.length ? renders[renders.length - 1] : null;
+      if (!edit) prev = await svgToPngDataUrl().catch(() => null);
       const r = await fetch(`${API_URL}/api/armarios2/render`, {
         method: 'POST', headers: authH(),
         body: JSON.stringify({
           width: cfg.width, height: cfg.height, depth: cfg.depth,
           material: material.name, projectType: cfg.projectType, doorType: cfg.doorType,
           interior: interiorResumen(), editInstruction: edit || '', previousImageBase64: prev,
+          referenceIsSketch: !edit && !!prev,
         }),
       });
       const d = await r.json();
@@ -244,6 +247,22 @@ const Armarios2 = ({ state }) => {
     const xml = new XMLSerializer().serializeToString(svg);
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
   };
+  // Rasteriza el SVG del diseño a un PNG (data URL) para usarlo como referencia
+  // del render IA (Gemini no admite SVG). Devuelve una promesa.
+  const svgToPngDataUrl = () => new Promise((resolve, reject) => {
+    const url = svgToDataUrl(); if (!url) return resolve(null);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = vbW * 2; c.height = vbH * 2;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/png'));
+      } catch (e) { reject(e); }
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
   const descargarDiseno = () => {
     const url = svgToDataUrl(); if (!url) return;
     const img = new Image();
@@ -308,8 +327,8 @@ const Armarios2 = ({ state }) => {
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || 'Error');
       if (d.design?.id) setSavedId(d.design.id);
-      alert('✅ Diseño guardado.');
-    } catch (e) { alert('No se pudo guardar: ' + (e.message || '')); }
+      showFlash('ok', 'Diseño guardado.');
+    } catch (e) { showFlash('err', 'No se pudo guardar: ' + (e.message || '')); }
     finally { setSaving(false); }
   };
   const openDesigns = async () => {
@@ -322,7 +341,7 @@ const Armarios2 = ({ state }) => {
       if (d.cfg) setCfg(c => ({ ...c, ...d.cfg }));
       if (d.comps) setComps(d.comps);
       setSavedId(d.id); setDesigns(null); setSelId(null);
-    } catch { alert('No se pudo abrir el diseño.'); }
+    } catch { showFlash('err', 'No se pudo abrir el diseño.'); }
   };
   const deleteDesign = async (id) => {
     if (!window.confirm('¿Eliminar este diseño?')) return;
@@ -377,7 +396,11 @@ const Armarios2 = ({ state }) => {
               </select></div>
             <div className="col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Material</label>
               <select value={cfg.materialId} onChange={e => set('materialId', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
-                {MATERIALS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                {COLOR_BRANDS.map(b => (
+                  <optgroup key={b} label={b}>
+                    {MATERIALS.filter(m => m.brand === b).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </optgroup>
+                ))}
               </select></div>
             <div><label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tipo</label>
               <select value={cfg.projectType} onChange={e => set('projectType', e.target.value)} className="w-full px-2 py-2 border border-slate-200 rounded-lg text-sm bg-white">
@@ -541,6 +564,11 @@ const Armarios2 = ({ state }) => {
             <p className="text-xs text-slate-400 text-center py-6">Genera una imagen realista del armario con la configuración actual.</p>
           )}
           {aiError && <p className="text-xs text-rose-600 font-bold mt-2">{aiError}</p>}
+          {flash && (
+            <p className={`text-xs font-bold mt-2 px-3 py-1.5 rounded-lg ${flash.type === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+              {flash.type === 'ok' ? '✅ ' : '⚠️ '}{flash.text}
+            </p>
+          )}
         </div>
 
         {/* Presupuesto */}

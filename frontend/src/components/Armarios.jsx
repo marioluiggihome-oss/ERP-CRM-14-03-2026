@@ -249,12 +249,15 @@ const FINSA_COLORS = [
 
 // Catálogo de acabados combinado por fabricante: FINSA (base) + ALVIC + ACB.
 // Cada color/puerta se identifica por id; getColorByName busca en esta lista.
-const WARDROBE_COLORS = [
+// Catálogo unificado de colores de armario (FINSA + ALVIC + ACB). Se exporta
+// para que "Armarios IA" (Armarios2) use exactamente las mismas gamas y
+// categorías de suplemento que este configurador (unificación 2a).
+export const WARDROBE_COLORS = [
   ...FINSA_COLORS.map(c => ({ ...c, brand: c.brand || 'FINSA' })),
   ...ALVIC_WARDROBE_COLORS,
   ...ACB_WARDROBE_DOORS,
 ];
-const COLOR_BRANDS = ['FINSA', 'ALVIC', 'ACB'];
+export const COLOR_BRANDS = ['FINSA', 'ALVIC', 'ACB'];
 
 // ========== CATÁLOGO DE ACCESORIOS CON CÓDIGOS ==========
 const ACCESSORIES_CATALOG = {
@@ -527,6 +530,8 @@ const DEFAULT_ARMARIOS_PRICING = {
   antiFingerprintPerM2: 80,
   ledPerModule: 120,
   mirror: 200,
+  cantoPerMl: 1.2,   // canto ABS €/metro lineal
+  marginPct: 40,     // margen comercial (%) que se aplica sobre el coste del despiece para el PVP
   ...Object.fromEntries(
     Object.entries(DEFAULT_MATERIAL_CATEGORY_SUPP).map(([cat, v]) => [`matSupp_${cat}`, v])
   ),
@@ -815,6 +820,17 @@ const Armarios = ({ state, setState }) => {
     let itemNum = 1;
     const { width, height, depth, modules, doorType, endLeft, endRight } = wardrobeConfig;
     const moduleWidth = width / modules;
+    // Hueco libre interior real de cada módulo: el paso bruto (width/modules)
+    // incluye el divisor de 18 mm. Las baldas y cuerpos de cajón deben cortarse
+    // sobre este hueco, no sobre el paso bruto, o no entran en fábrica.
+    const huecoLibre = moduleWidth - 18;
+    // Lectura de tarifa (misma lógica que el cálculo de precio) para piezas que
+    // no están en ACCESSORIES_CATALOG, p. ej. el maletero.
+    const sv = state?.settings || {};
+    const P = (k) => {
+      const v = sv['armPrice_' + k];
+      return (v === undefined || v === null || v === '') ? DEFAULT_ARMARIOS_PRICING[k] : Number(v);
+    };
     const exteriorColorName = getColorByName(wardrobeConfig.exteriorColor).name;
     const interiorColorName = getColorByName(wardrobeConfig.interiorColor).name;
 
@@ -882,19 +898,33 @@ const Armarios = ({ state, setState }) => {
     
     // Usar el número de puertas configurado por el usuario
     const configuredNumDoors = wardrobeConfig.numDoors || modules;
-    const doorHeight = height - 4;
-    const doorWidth = width / configuredNumDoors;
+    const isSliding = doorType === DoorType.SLIDING;
+    // Holgura en altura: la corredera aloja carril superior + rodadura (~45 mm);
+    // la abatible solo necesita ~6 mm de holgura arriba/abajo.
+    const doorHeight = isSliding ? height - 45 : height - 6;
+    // Ancho de hoja: las correderas SOLAPAN entre sí (~30 mm por junta) y montan
+    // en 2 carriles; las abatibles reparten el ancho a partes iguales.
+    const SOLAPE_MM = 30;
+    const doorWidth = isSliding
+      ? (width + SOLAPE_MM * Math.max(0, configuredNumDoors - 1)) / configuredNumDoors
+      : width / configuredNumDoors;
+
+    // Fabricabilidad: una hoja abatible de melamina no debe superar ~600 mm.
+    const anchoHoja = Math.round(doorWidth);
+    const avisoHoja = (!isSliding && anchoHoja > 600)
+      ? ` ⚠ Hoja de ${anchoHoja} mm: supera el máx. fabricable (~600 mm); usa ${Math.ceil(width / 600)} puertas.`
+      : '';
 
     accessories.push({
       num: itemNum++,
       code: doorAccessory.id,
       name: `${doorAccessory.name} ${exteriorColorName}`,
       category: 'PUERTAS',
-      dimensions: `${doorHeight} x ${Math.round(doorWidth)} x 18`,
+      dimensions: `${doorHeight} x ${anchoHoja} x 18`,
       quantity: configuredNumDoors,
       unitPrice: doorAccessory.price,
       totalPrice: configuredNumDoors * doorAccessory.price,
-      notes: doorAccessory.description
+      notes: `${doorAccessory.description}${isSliding ? ` (solape ${SOLAPE_MM} mm/junta)` : ''}${avisoHoja}`
     });
 
     // Sistema corredera si aplica
@@ -913,8 +943,9 @@ const Armarios = ({ state, setState }) => {
         notes: `Kit guía superior + inferior aluminio (${configuredNumDoors} puertas)`
       });
     } else {
-      // Bisagras para puertas abatibles/plegables
-      const hingesPerDoor = Math.ceil(doorHeight / 500);
+      // Bisagras para puertas abatibles/plegables: por altura y +1 si la hoja es
+      // ancha/pesada (≥ 500 mm), donde el peso exige un punto de giro extra.
+      const hingesPerDoor = Math.ceil(doorHeight / 500) + (anchoHoja >= 500 ? 1 : 0);
       accessories.push({
         num: itemNum++,
         code: ACCESSORIES_CATALOG.hinge.id,
@@ -952,11 +983,11 @@ const Armarios = ({ state, setState }) => {
           code: ACCESSORIES_CATALOG.shelves.id,
           name: `${ACCESSORIES_CATALOG.shelves.name} ${interiorColorName}`,
           category: `MÓDULO ${modNum}`,
-          dimensions: `${Math.round(moduleWidth - 4)} x ${depth - 20} x 18`,
+          dimensions: `${Math.round(huecoLibre - 6)} x ${depth - 20} x 18`,
           quantity: mod.shelves,
           unitPrice: ACCESSORIES_CATALOG.shelves.price,
           totalPrice: mod.shelves * ACCESSORIES_CATALOG.shelves.price,
-          notes: `Baldas módulo ${modNum}`
+          notes: `Baldas módulo ${modNum} (hueco libre)`
         });
 
         // Soportes de balda (4 por balda)
@@ -980,11 +1011,11 @@ const Armarios = ({ state, setState }) => {
           code: ACCESSORIES_CATALOG.drawers.id,
           name: `${ACCESSORIES_CATALOG.drawers.name} ${interiorColorName}`,
           category: `MÓDULO ${modNum}`,
-          dimensions: `${Math.round(moduleWidth - 8)} x ${depth - 50} x 150`,
+          dimensions: `${Math.round(huecoLibre - 26)} x ${depth - 50} x 150`,
           quantity: mod.drawers,
           unitPrice: ACCESSORIES_CATALOG.drawers.price,
           totalPrice: mod.drawers * ACCESSORIES_CATALOG.drawers.price,
-          notes: `Cajón con frente ${exteriorColorName}`
+          notes: `Cajón (cuerpo hueco libre − guías) frente ${exteriorColorName}`
         });
 
         // Guías de cajón
@@ -1084,6 +1115,45 @@ const Armarios = ({ state, setState }) => {
           });
         }
       }
+
+      // Maletero (altillo con puerta abatible): faltaba en el despiece aunque
+      // sí contaba en tableros y precio. Se lista con su tapa/frente propio.
+      if (mod.maletero) {
+        const maleteroP = P('maletero');
+        accessories.push({
+          num: itemNum++,
+          code: 'MAL',
+          name: `Maletero (altillo) ${interiorColorName}`,
+          category: `MÓDULO ${modNum}`,
+          dimensions: `${Math.round(huecoLibre - 6)} x ${depth - 20} x 18`,
+          quantity: 1,
+          unitPrice: maleteroP,
+          totalPrice: maleteroP,
+          notes: `Balda-tapa de maletero + frente abatible módulo ${modNum}`
+        });
+      }
+
+      // Fabricabilidad: comprobar que el interior cabe en la altura del módulo.
+      // Estimación conservadora de espacio vertical necesario (mm).
+      const dobleBarra = (Number(mod.hangingRods) || 0) >= 2;
+      const reqMm =
+        (Number(mod.shelves) || 0) * 330 +                 // paso mínimo entre baldas
+        (Number(mod.drawers) || 0) * 200 +                 // frente de cajón + holgura
+        (mod.maletero ? 400 : 0) +                         // altillo maletero
+        ((Number(mod.hangingRods) || 0) >= 1 ? (dobleBarra ? 2000 : 1100) : 0); // colgado
+      if (reqMm > height + 10) {
+        accessories.push({
+          num: itemNum++,
+          code: 'AVISO',
+          name: `⚠ Interior del módulo ${modNum} no cabe en la altura`,
+          category: `MÓDULO ${modNum}`,
+          dimensions: `necesita ~${reqMm} mm / hay ${height} mm`,
+          quantity: 0,
+          unitPrice: 0,
+          totalPrice: 0,
+          notes: dobleBarra ? 'La doble barra requiere ≥ 2000 mm de columna. Reduce elementos o sube la altura.' : 'Reduce baldas/cajones o sube la altura del módulo.'
+        });
+      }
     });
 
     // 4. EXTRAS GENERALES
@@ -1150,8 +1220,44 @@ const Armarios = ({ state, setState }) => {
       });
     });
 
+    // 5. CANTO (edge banding) — estimación de metros lineales de canto ABS del
+    // conjunto: frente de laterales/divisores, puertas (perímetro), frentes de
+    // baldas, perímetro de frentes de cajón y tapa de maletero.
+    {
+      const totShelves = moduleConfigs.reduce((s, m) => s + (Number(m.shelves) || 0), 0);
+      const totDrawers = moduleConfigs.reduce((s, m) => s + (Number(m.drawers) || 0), 0);
+      const totMaleteros = moduleConfigs.filter(m => m.maletero).length;
+      const numDoors2 = wardrobeConfig.numDoors || modules;
+      const dH = (doorType === DoorType.SLIDING ? height - 45 : height - 6);
+      const dW = (doorType === DoorType.SLIDING
+        ? (width + 30 * Math.max(0, numDoors2 - 1)) / numDoors2
+        : width / numDoors2);
+      const frenteCajon = Math.max(0, huecoLibre - 26);
+      const cantoMl =
+        (modules + 1) * (height / 1000) +                         // canto frontal de verticales
+        numDoors2 * 2 * (dH + dW) / 1000 +                        // perímetro de puertas
+        totShelves * (huecoLibre / 1000) +                        // canto frontal de baldas
+        totDrawers * 2 * (frenteCajon + 150) / 1000 +             // perímetro de frentes de cajón
+        totMaleteros * (huecoLibre / 1000);                       // canto de tapa de maletero
+      const cantoRound = Math.ceil(cantoMl);
+      if (cantoRound > 0) {
+        const cantoP = P('cantoPerMl');
+        accessories.push({
+          num: itemNum++,
+          code: 'CANTO',
+          name: `Canto ABS ${exteriorColorName}`,
+          category: 'TABLEROS',
+          dimensions: `${cantoRound} ml`,
+          quantity: cantoRound,
+          unitPrice: cantoP,
+          totalPrice: Math.round(cantoRound * cantoP * 100) / 100,
+          notes: 'Metros lineales de canto (estimación del perímetro cantado)'
+        });
+      }
+    }
+
     return accessories;
-  }, [wardrobeConfig, moduleConfigs, extras, customAccessories]);
+  }, [wardrobeConfig, moduleConfigs, extras, customAccessories, state?.settings]);
 
   // ========== CALCULAR TABLEROS Y METROS CUADRADOS ==========
   const boardsCalculation = useMemo(() => {
@@ -1400,44 +1506,74 @@ const Armarios = ({ state, setState }) => {
     const interiorMaterialSupp = P('matSupp_' + interiorCategory) || 0;
     const materialPrice = surfaceM2 * exteriorMaterialSupp + surfaceM2 * 0.5 * interiorMaterialSupp;
 
-    // Componentes interiores
-    let interiorPrice = 0;
-    moduleConfigs.forEach(mod => {
-      interiorPrice += (mod.shelves || 0) * P('shelf');
-      interiorPrice += (mod.drawers || 0) * P('drawer');
-      interiorPrice += (mod.hangingRods || 0) * P('hangingRod');
-      if (mod.maletero) interiorPrice += P('maletero');
-    });
+    // Antihuellas (acabado de superficie, no es una pieza del despiece).
+    const antiFingerprintPrice = extras.antiFingerprint ? surfaceM2 * P('antiFingerprintPerM2') : 0;
 
-    // Extras
-    let extrasPrice = 0;
-    if (extras.softClose) extrasPrice += modules * P('softClosePerModule');
-    if (extras.antiFingerprint) extrasPrice += surfaceM2 * P('antiFingerprintPerM2');
-    if (extras.led) extrasPrice += modules * P('ledPerModule');
-    if (extras.mirror) extrasPrice += P('mirror');
+    // ── 1c: FUENTE ÚNICA DE VERDAD = EL DESPIECE ──────────────────────────────
+    // El coste del conjunto sale de la suma real del despiece (estructura,
+    // puertas, herrajes, interior, canto, extras y accesorios personalizados),
+    // más lo que no es una pieza del despiece (terminaciones, suplemento de
+    // material y antihuellas). Sobre ese coste se aplica el margen comercial.
+    const cat = despieceTotals.byCategory || {};
+    const catTotal = (k) => (cat[k] ? cat[k].total : 0);
+    const moduleTotal = Object.keys(cat)
+      .filter(k => k.startsWith('MÓDULO'))
+      .reduce((s, k) => s + cat[k].total, 0);
 
-    const subtotalBruto = basePrice + doorPrice + endPrice + materialPrice + interiorPrice + extrasPrice;
+    const costeEstructura = catTotal('ESTRUCTURA') + catTotal('TABLEROS'); // incluye canto
+    const costePuertas = catTotal('PUERTAS') + catTotal('HERRAJES');
+    const costeInterior = moduleTotal;
+    const costeExtras = catTotal('EXTRAS') + catTotal('PERSONALIZADO');
+    const costeMaterial = materialPrice + antiFingerprintPrice;
+
+    const costeDespiece = despieceTotals.grandTotal; // suma completa de la lista
+    const costeTotal = costeDespiece + endPrice + costeMaterial; // + lo no despiezado
+
+    const marginPct = Math.max(0, Number(P('marginPct')) || 0);
+    const marginAmount = costeTotal * (marginPct / 100);
+    const subtotalBruto = costeTotal + marginAmount; // PVP sin descuento
+
     const discountPct = Math.max(0, Math.min(100, Number(armDiscount) || 0));
     const discountAmount = subtotalBruto * (discountPct / 100);
     const subtotal = subtotalBruto - discountAmount;   // base imponible tras descuento
     const iva = subtotal * (ivaRate / 100);
     const total = subtotal + iva;
 
+    // Referencia: el antiguo cálculo paramétrico (solo informativo, para calibrar
+    // el margen). No interviene en el PVP.
+    let interiorParam = 0;
+    moduleConfigs.forEach(mod => {
+      interiorParam += (mod.shelves || 0) * P('shelf') + (mod.drawers || 0) * P('drawer') + (mod.hangingRods || 0) * P('hangingRod') + (mod.maletero ? P('maletero') : 0);
+    });
+    let extrasParam = 0;
+    if (extras.softClose) extrasParam += modules * P('softClosePerModule');
+    if (extras.led) extrasParam += modules * P('ledPerModule');
+    if (extras.mirror) extrasParam += P('mirror');
+    const parametricRef = basePrice + doorPrice + endPrice + materialPrice + antiFingerprintPrice + interiorParam + extrasParam;
+
     return {
-      base: basePrice,
-      doors: doorPrice,
+      // Desglose (ahora derivado del despiece) para el resumen de precio.
+      base: costeEstructura,
+      doors: costePuertas,
       ends: endPrice,
-      material: materialPrice,
-      interior: interiorPrice,
-      extras: extrasPrice,
+      material: costeMaterial,
+      interior: costeInterior,
+      extras: costeExtras,
+      // Coste y margen
+      costeDespiece,
+      costeTotal,
+      marginPct,
+      marginAmount,
+      // Totales
       subtotalBruto,
       discountPct,
       discountAmount,
       subtotal,
       iva,
-      total
+      total,
+      parametricRef,
     };
-  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, armDiscount, state?.settings]);
+  }, [wardrobeConfig, moduleConfigs, extras, ivaRate, armDiscount, despieceTotals, state?.settings]);
 
   // El despiece de armarios (lista de tableros/accesorios para fábrica) solo se
   // muestra a quien tenga activada la función de Fábrica (o admin). En el
@@ -1557,6 +1693,13 @@ const Armarios = ({ state, setState }) => {
 
   // Guardar proyecto actual
   const saveProject = async () => {
+    // Validación de medidas: evita presupuestos a 0 € por campos vacíos/negativos.
+    const w = Number(wardrobeConfig.width), h = Number(wardrobeConfig.height), d = Number(wardrobeConfig.depth);
+    if (!(w >= 300) || !(h >= 300) || !(d >= 200)) {
+      setSaveMessage({ type: 'error', text: 'Revisa las medidas: ancho/alto ≥ 300 mm y fondo ≥ 200 mm antes de guardar.' });
+      setTimeout(() => setSaveMessage(null), 4000);
+      return;
+    }
     setSaving(true);
     setSaveMessage(null);
     try {
@@ -1571,10 +1714,13 @@ const Armarios = ({ state, setState }) => {
           drawers: m.drawers,
           hangingRods: m.hangingRods,
           hangingHeight: m.hangingHeight,
+          maletero: !!m.maletero,
+          layout: m.layout || getModuleLayout(m),
           extras: m.extras || {}
         })),
         extras,
         ivaRate,
+        armDiscount,
         customAccessories,
         totalPrice: pricing.total,
         totalArea: boardsCalculation.totalArea
@@ -1616,7 +1762,9 @@ const Armarios = ({ state, setState }) => {
                 notes: `Contacto creado desde proyecto de armarios: ${projectName}`
               })
             });
+            if (!contactRes.ok) throw new Error('No se pudo crear el contacto en el CRM');
             const contact = await contactRes.json();
+            if (!contact?.id) throw new Error('El CRM no devolvió un contacto válido');
 
             // Crear oportunidad con businessType: armarios
             await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/crm/opportunities`, {
@@ -1627,7 +1775,7 @@ const Armarios = ({ state, setState }) => {
                 description: `Armario ${wardrobeConfig.width}x${wardrobeConfig.height}cm - ${wardrobeConfig.modules} módulos - ${wardrobeConfig.doorType === 'sliding' ? 'Puertas correderas' : 'Puertas batientes'}`,
                 contactId: contact.id,
                 contactName: contact.name,
-                value: pricing.total,
+                value: pricing.subtotal,   // base imponible (sin IVA) para el pipeline CRM
                 probability: 50,
                 stage: 'proposal',
                 tags: ['presupuesto', 'auto', 'armarios'],
@@ -1665,6 +1813,7 @@ const Armarios = ({ state, setState }) => {
       height: project.height,
       depth: project.depth,
       modules: project.modules,
+      numDoors: project.numDoors ?? project.modules,
       doorType: project.doorType,
       exteriorColor: project.exteriorColor,
       interiorColor: project.interiorColor,
@@ -1675,6 +1824,7 @@ const Armarios = ({ state, setState }) => {
     setModuleConfigs(project.moduleConfigs || []);
     setExtras(project.extras || {});
     setIvaRate(project.ivaRate || 21);
+    setArmDiscount(project.armDiscount || 0);
     setCustomAccessories(project.customAccessories || []);
     setShowProjectsModal(false);
   };
@@ -3323,7 +3473,23 @@ const Armarios = ({ state, setState }) => {
               <span className="text-emerald-300">Extras</span>
               <span className="font-bold">{pricing.extras.toFixed(2)}€</span>
             </div>
-            
+            {canSeeCost && (
+              <div className="text-[11px] text-emerald-200/80 border-t border-emerald-700/50 pt-2 space-y-1">
+                <div className="flex justify-between">
+                  <span>Coste despiece</span>
+                  <span className="font-bold">{pricing.costeTotal.toFixed(2)}€</span>
+                </div>
+                <div className="flex justify-between text-emerald-200/60">
+                  <span>Ref. cálculo anterior</span>
+                  <span>{pricing.parametricRef.toFixed(2)}€</span>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-emerald-300">Margen ({pricing.marginPct}%)</span>
+              <span className="font-bold">{pricing.marginAmount.toFixed(2)}€</span>
+            </div>
+
             <div className="border-t border-emerald-700 pt-3 mt-3">
               {/* Descuento aparte para armarios */}
               <div className="flex justify-between items-center mb-1">

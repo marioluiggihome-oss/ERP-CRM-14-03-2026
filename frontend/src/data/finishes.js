@@ -184,20 +184,23 @@ const _c1base = [
 ];
 
 // Puertas Alvic (madera / laca / polilaminado): modelos y cartas de color → Colores 1.
+// IMPORTANTE: cada MODELO lleva su FORMA de puerta (lisa / con marco y plafón /
+// ranurada / gola…) además del material. El render usa modelo + forma + color,
+// no solo el color. Extraído del catálogo Alvic "Puertas Madera/Laca/Polilaminado".
 const _c1puertas = [
-  { gama: 'Madera (modelo)', label: 'Alcaudete (Nogal · Castaña)', bg: 'linear-gradient(90deg,#6e4426,#8a5a34,#6e4426)' },
-  { gama: 'Madera (modelo)', label: 'Bordeaux (Castaño · Café)', bg: 'linear-gradient(90deg,#4a3122,#5c4030,#4a3122)' },
-  { gama: 'Madera (modelo)', label: 'Bayonne (Castaño · Almendra)', bg: 'linear-gradient(90deg,#b89a6f,#c6a97e,#b89a6f)' },
-  { gama: 'Madera (modelo)', label: 'Toulouse (Castaño · Tabaco)', bg: 'linear-gradient(90deg,#5a3a24,#6a4a32,#5a3a24)' },
-  { gama: 'Madera (modelo)', label: 'Montpellier (Fresno Olivato · Nieve)', bg: 'linear-gradient(90deg,#f2efe9,#e8e4dc,#f2efe9)' },
-  { gama: 'Madera (modelo)', label: 'Doral (Roble · Buganvilla)', bg: '#c76a5a' },
-  { gama: 'Madera (modelo)', label: 'Vic (Leño · Nuez)', bg: 'linear-gradient(90deg,#b98f5a,#c79d68,#b98f5a)' },
-  { gama: 'Madera (modelo)', label: 'La Carolina (Nogal · Castaña)', bg: 'repeating-linear-gradient(90deg,#6e4426,#6e4426 8px,#3a2515 10px)' },
-  { gama: 'Madera (modelo)', label: 'Pompano (Fresno Olivato · Verde Abeto)', bg: '#3f5346' },
-  { gama: 'Madera (modelo)', label: 'Avignon (Fresno Olivato · Beige Poro Marrón)', bg: '#d8c4a8' },
-  { gama: 'Madera (modelo)', label: 'Tampa (Roble · Ceniza)', bg: 'linear-gradient(90deg,#cfd0cf,#dcdddc,#cfd0cf)' },
-  { gama: 'Madera (modelo)', label: 'Las Vegas (Castaño · Tabaco)', bg: 'linear-gradient(90deg,#5a3a24,#6a4a32,#5a3a24)' },
-  { gama: 'Madera (modelo)', label: 'Solsona (Fresno Olivato · Manzana)', bg: '#7fae82' },
+  { gama: 'Madera (modelo)', modelo: 'Alcaudete', material: 'madera de nogal', forma: 'lisa sin marco con tirador gola integrado en el canto superior, veta de nogal marcada', label: 'Alcaudete (Nogal · Castaña)', bg: 'linear-gradient(90deg,#6e4426,#8a5a34,#6e4426)' },
+  { gama: 'Madera (modelo)', modelo: 'Bordeaux', material: 'madera de castaño', forma: 'con marco y plafón central rehundido, moldura perimetral clásica', label: 'Bordeaux (Castaño · Café)', bg: 'linear-gradient(90deg,#4a3122,#5c4030,#4a3122)' },
+  { gama: 'Madera (modelo)', modelo: 'Bayonne', material: 'madera de castaño', forma: 'con marco y plafón central rehundido, moldura biselada interior', label: 'Bayonne (Castaño · Almendra)', bg: 'linear-gradient(90deg,#b89a6f,#c6a97e,#b89a6f)' },
+  { gama: 'Madera (modelo)', modelo: 'Toulouse', material: 'madera de castaño', forma: 'lisa sin marco, canto biselado a 45°, veta de madera', label: 'Toulouse (Castaño · Tabaco)', bg: 'linear-gradient(90deg,#5a3a24,#6a4a32,#5a3a24)' },
+  { gama: 'Madera (modelo)', modelo: 'Montpellier', material: 'madera de fresno olivato', forma: 'con marco ancho biselado y plafón central rehundido, tirador integrado oculto', label: 'Montpellier (Fresno Olivato · Nieve)', bg: 'linear-gradient(90deg,#f2efe9,#e8e4dc,#f2efe9)' },
+  { gama: 'Madera (modelo)', modelo: 'Doral', material: 'madera de roble', forma: 'con marco y plafón central rehundido (Shaker), poro de madera visible bajo laca de color', label: 'Doral (Roble · Buganvilla)', bg: '#c76a5a' },
+  { gama: 'Madera (modelo)', modelo: 'Vic', material: 'madera de leño', forma: 'lisa sin marco, canto recto, veta natural rústica con nudos', label: 'Vic (Leño · Nuez)', bg: 'linear-gradient(90deg,#b98f5a,#c79d68,#b98f5a)' },
+  { gama: 'Madera (modelo)', modelo: 'La Carolina', material: 'madera de nogal', forma: 'ranurada/listelada vertical (duelas sobre soporte oscuro), veta de nogal', label: 'La Carolina (Nogal · Castaña)', bg: 'repeating-linear-gradient(90deg,#6e4426,#6e4426 8px,#3a2515 10px)' },
+  { gama: 'Madera (modelo)', modelo: 'Pompano', material: 'madera de fresno olivato', forma: 'con marco y plafón central rehundido, tirador integrado oculto', label: 'Pompano (Fresno Olivato · Verde Abeto)', bg: '#3f5346' },
+  { gama: 'Madera (modelo)', modelo: 'Avignon', material: 'madera de fresno olivato', forma: 'con marco y plafón central rehundido (Shaker), tirador integrado oculto', label: 'Avignon (Fresno Olivato · Beige Poro Marrón)', bg: '#d8c4a8' },
+  { gama: 'Madera (modelo)', modelo: 'Tampa', material: 'madera de roble', forma: 'con marco estrecho y plafón central rehundido, poro de madera muy marcado', label: 'Tampa (Roble · Ceniza)', bg: 'linear-gradient(90deg,#cfd0cf,#dcdddc,#cfd0cf)' },
+  { gama: 'Madera (modelo)', modelo: 'Las Vegas', material: 'madera de castaño', forma: 'lisa con marco superior y tirador gola rehundido en la parte alta', label: 'Las Vegas (Castaño · Tabaco)', bg: 'linear-gradient(90deg,#5a3a24,#6a4a32,#5a3a24)' },
+  { gama: 'Madera (modelo)', modelo: 'Solsona', material: 'madera de fresno olivato', forma: 'con marco ancho de bisel pronunciado y plafón central rehundido', label: 'Solsona (Fresno Olivato · Manzana)', bg: '#7fae82' },
   { gama: 'Madera (color)', label: 'Castaña', bg: '#6e4426' },
   { gama: 'Madera (color)', label: 'Almendra', bg: '#b89a6f' },
   { gama: 'Madera (color)', label: 'Tabaco', bg: '#5a3a24' },
@@ -257,11 +260,123 @@ const _c1puertas = [
 
 // COLORES 1 = todo Alvic (melamina/lacado + puertas madera/laca/polilaminado).
 export const COLORES_1 = [..._c1base, ..._c1puertas];
-// COLORES 2 = ACB: modelos de puerta (por orden alfabético; el color/acabado se
-// elige según tarifa). Agrupados por inicial para que las gamas no ocupen espacio.
-export const COLORES_2 = _acbModels.map(m => ({
-  gama: (m[0] || '#').toUpperCase(), label: m, bg: '#cfcdc6',
-}));
+
+// ── COLORES 2 = GRUPO ACB (por material → acabado, ordenado por número) ────────
+// Extraído de las páginas 1000139335–354 y 1000139446–465. Estructurado por
+// categoría de material; los acabados con código numérico van ordenados por su
+// número. FALTAN las páginas 1000139355–445 (hueco del catálogo) → ampliar aquí.
+// Helpers para generar rangos numéricos de acabados de forma compacta.
+const _num = (n, digits = 2) => String(n).padStart(digits, '0');
+const _range = (from, to, mk) => {
+  const out = [];
+  for (let i = from; i <= to; i++) out.push(mk(i));
+  return out;
+};
+
+// Modelos de puerta ACB (catálogo 2020, págs. 10–51): cada uno con su FORMA,
+// para que el render aplique modelo + forma + acabado (no solo el color).
+const _acbModelos = [
+  // ── Lisa / gola integrada ───────────────────────────────────────────────────
+  { gama: 'ACB · lisa / gola', modelo: 'Arlés', material: 'laca mate', forma: 'lisa sin marco, con gola/uñero integrado en el canto superior', label: 'Arlés · lándalo mate', bg: '#6b5f52' },
+  { gama: 'ACB · lisa / gola', modelo: 'Madrid', material: 'laca brillo', forma: 'lisa sin marco, con uñero/gola superior', label: 'Madrid · blanco brillo', bg: 'linear-gradient(135deg,#f6f6f4,#eaeae8,#fafafa)' },
+  { gama: 'ACB · lisa / gola', modelo: 'Orleans', material: 'laca mate', forma: 'lisa sin marco, canto perimetral biselado suave (curva)', label: 'Orleans · marfil mate', bg: '#efe6d2' },
+  { gama: 'ACB · lisa / gola', modelo: 'Hanoi', material: 'laca mate', forma: 'lisa sin marco, con gola perimetral en L', label: 'Hanoi · nube mate', bg: '#e7e5df' },
+  { gama: 'ACB · lisa / gola', modelo: 'Palencia', material: 'laca mate', forma: 'lisa con gola curva integrada en el canto', label: 'Palencia · nube mate', bg: '#e7e5df' },
+  { gama: 'ACB · lisa / gola', modelo: 'Palma', material: 'laca mate', forma: 'lisa con gola curva integrada en el canto', label: 'Palma · nube mate', bg: '#e7e5df' },
+  { gama: 'ACB · lisa / gola', modelo: 'Cadaqués', material: 'laca mate', forma: 'lisa con gola redondeada integrada en el canto', label: 'Cadaqués · beig grisáceo mate', bg: '#b9b2a4' },
+  { gama: 'ACB · lisa / gola', modelo: 'Olimpia', material: 'laca brillo', forma: 'lisa sin marco con gola perimetral', label: 'Olimpia · blanco brillo', bg: 'linear-gradient(135deg,#f6f6f4,#eaeae8,#fafafa)' },
+  { gama: 'ACB · lisa / gola', modelo: 'Laredo', material: 'laca brillo', forma: 'lisa sin marco con gola/uñero horizontal superior', label: 'Laredo · blanco brillo', bg: 'linear-gradient(135deg,#f6f6f4,#eaeae8,#fafafa)' },
+  { gama: 'ACB · lisa / gola', modelo: 'Trípoli', material: 'laca mate', forma: 'lisa sin marco con gola/uñero horizontal rehundido superior', label: 'Trípoli · gris perla', bg: '#cfd0cd' },
+  // ── Marco y plafón rehundido liso (tipo Shaker) ─────────────────────────────
+  { gama: 'ACB · marco y plafón liso', modelo: 'Ostende', material: 'laca mate', forma: 'con marco recto ancho y plafón central rehundido liso', label: 'Ostende · gris mate', bg: '#b3b3b1' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Cambridge', material: 'laca mate', forma: 'con marco estrecho y plafón central rehundido', label: 'Cambridge · mouse mate', bg: '#8f867a' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Lima', material: 'laca mate', forma: 'con marco y plafón rehundido, canto biselado', label: 'Lima · coco mate', bg: '#8a6f57' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Arizona', material: 'laca mate', forma: 'con marco y plafón central rehundido (tipo Shaker)', label: 'Arizona · blanco mate', bg: '#f1efe9' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Marina', material: 'laca mate', forma: 'con marco recto y plafón central rehundido liso', label: 'Marina · gris mate', bg: '#b3b3b1' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Orlando', material: 'laca mate', forma: 'con marco y plafón rehundido, uñero superior', label: 'Orlando · blanco mate', bg: '#f1efe9' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Denver', material: 'laca mate', forma: 'con marco y plafón rehundido, travesaño superior ancho', label: 'Denver · gris perla mate', bg: '#cfd0cd' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Denver Xolid', material: 'laca mate acabado Xolid', forma: 'con marco y plafón rehundido (tipo Shaker), acabado Xolid', label: 'Denver · ayure xolid', bg: '#b0a58f' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Baltimore', material: 'laca mate', forma: 'con marco y plafón rehundido, travesaño superior ancho', label: 'Baltimore · sombra mate', bg: '#6f6a63' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Málaga', material: 'laca mate', forma: 'con marco y plafón central rehundido (tipo Shaker)', label: 'Málaga · vulcano mate', bg: '#4a4642' },
+  { gama: 'ACB · marco y plafón liso', modelo: 'Maella 8 cm', material: 'laca mate', forma: 'con marco ancho (8 cm) y plafón rehundido liso', label: 'Maella · mouse mate', bg: '#8f867a' },
+  // ── Marco y plafón con moldura ──────────────────────────────────────────────
+  { gama: 'ACB · marco con moldura', modelo: 'Florida', material: 'laca mate', forma: 'con marco ancho y plafón rehundido, moldura de bisel volumétrica', label: 'Florida · lino mate', bg: '#e4ddcb' },
+  { gama: 'ACB · marco con moldura', modelo: 'Doha', material: 'laca mate', forma: 'con marco y plafón rehundido, moldura interior escalonada', label: 'Doha · desierto mate', bg: '#c9bda2' },
+  { gama: 'ACB · marco con moldura', modelo: 'Xátiva', material: 'laca mate', forma: 'con marco y plafón rehundido, moldura interior escalonada', label: 'Xátiva · marfil mate', bg: '#efe6d2' },
+  { gama: 'ACB · marco con moldura', modelo: 'Grecia', material: 'laca mate', forma: 'con marco y plafón rehundido, moldura de bisel volumétrica', label: 'Grecia · beig grisáceo mate', bg: '#b9b2a4' },
+  { gama: 'ACB · marco con moldura', modelo: 'Oxford', material: 'laca mate', forma: 'con marco y plafón rehundido con moldura clásica (cuarterón)', label: 'Oxford · blanco mate', bg: '#f1efe9' },
+  { gama: 'ACB · marco con moldura', modelo: 'Tapies', material: 'laca mate', forma: 'con marco y plafón rehundido con moldura clásica biselada', label: 'Tapies · pergamon mate', bg: '#ded4c0' },
+  { gama: 'ACB · marco con moldura', modelo: 'Nantes', material: 'laca mate', forma: 'con marco y plafón con moldura escalonada múltiple', label: 'Nantes · lándalo mate', bg: '#6b5f52' },
+  { gama: 'ACB · marco con moldura', modelo: 'Yakarta', material: 'laca mate', forma: 'con marco y plafón con moldura escalonada en varios niveles', label: 'Yakarta · ayure mate', bg: '#b0a58f' },
+  { gama: 'ACB · marco con moldura', modelo: 'Rodas', material: 'laca mate', forma: 'con marco y plafón rehundido de líneas rectas finas', label: 'Rodas · titanio mate', bg: '#8f9195' },
+  // ── Plafón ranurado ─────────────────────────────────────────────────────────
+  { gama: 'ACB · plafón ranurado', modelo: 'Kansas plafón rayado', material: 'laca mate', forma: 'con marco y plafón central ranurado vertical (lamas/rayado)', label: 'Kansas · nube mate', bg: '#e7e5df' },
+  // ── Vitrina / metal (serie "vitrinas metálicas", págs. 184–189) ─────────────
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Diseño', material: 'aluminio y vidrio', forma: 'vitrina con perfil plata mate y cristal ácido', label: 'Vitrina Diseño · plata mate', bg: 'linear-gradient(135deg,#c8ccce,#e2e6e8,#b8bcbe)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Pekín', material: 'aluminio y vidrio', forma: 'vitrina con perfil de acero y cristal lacado blanco', label: 'Vitrina Pekín · acero / blanco', bg: 'linear-gradient(135deg,#dcdedd,#f0f1ef,#cfd1d0)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Milán', material: 'aluminio y vidrio', forma: 'vitrina con perfil plata mate y cristal ácido', label: 'Vitrina Milán · plata mate', bg: 'linear-gradient(135deg,#c8ccce,#e2e6e8,#b8bcbe)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Londres', material: 'aluminio y vidrio', forma: 'vitrina con perfil blanco soft y cristal lacado gris metal (opción rejilla lacada)', label: 'Vitrina Londres · blanco soft / gris metal', bg: 'linear-gradient(135deg,#e8e9e6,#f4f5f3,#d8dad7)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Bisel', material: 'aluminio y vidrio', forma: 'vitrina con perfil negro y cristal ahumado negro', label: 'Vitrina Bisel · negro', bg: 'linear-gradient(135deg,#2a2a2a,#3a3a3a,#1e1e1e)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Tokio', material: 'aluminio y vidrio', forma: 'vitrina con perfil negro y plafón de rejilla lacada negra', label: 'Vitrina Tokio · negro', bg: 'linear-gradient(135deg,#2a2a2a,#3a3a3a,#1e1e1e)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Berlín', material: 'aluminio y vidrio', forma: 'vitrina con perfil plata mate, tirador embutido y cristal lacado negro', label: 'Vitrina Berlín · plata mate / negro', bg: 'linear-gradient(135deg,#9aa0a2,#c2c6c8,#6a6e70)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Vitrina Venecia', material: 'aluminio y vidrio', forma: 'vitrina con perfil negro y cristal ahumado negro (perfiles: negro/titanio/cobre/oro/plata mate)', label: 'Vitrina Venecia · negro', bg: 'linear-gradient(135deg,#2a2a2a,#3a3a3a,#1e1e1e)' },
+  { gama: 'ACB · vitrina / metal', modelo: 'Lieja', material: 'metal acero inox', forma: 'con marco y plafón rehundido en acero inoxidable', label: 'Lieja · acero inox', bg: 'linear-gradient(135deg,#b9bcbe,#d2d5d7,#a9acae)' },
+];
+
+const _c2acb = [
+  ..._acbModelos,
+  // ── MADERA (escala válida SOLO para puertas de madera) ──────────────────────
+  // Fresno F01–F16
+  ..._range(1, 16, i => ({ gama: 'Madera · Fresno', label: `Fresno F${_num(i)}`, bg: 'linear-gradient(90deg,#cdbb9e,#dccaa9,#cdbb9e)' })),
+  // Élite 300–307
+  ..._range(300, 307, i => ({ gama: 'Madera · Élite', label: `Élite ${i}`, bg: 'linear-gradient(90deg,#a98a63,#bb9c73,#a98a63)' })),
+  // Roble T-xx (serie; se ampliará con los números exactos de las páginas que faltan)
+  ..._range(1, 12, i => ({ gama: 'Madera · Roble', label: `Roble T${_num(i)}`, bg: 'linear-gradient(90deg,#b89968,#c8a878,#b89968)' })),
+  // Roble nudos H-xx
+  ..._range(1, 8, i => ({ gama: 'Madera · Roble nudos', label: `Roble nudos H${_num(i)}`, bg: 'linear-gradient(90deg,#a67f4c,#b88f5c,#8a6838)' })),
+  // Nogal N-xx
+  ..._range(1, 12, i => ({ gama: 'Madera · Nogal', label: `Nogal N${_num(i)}`, bg: 'linear-gradient(90deg,#6b4a2e,#7c583a,#6b4a2e)' })),
+  { gama: 'Madera · Naturalnet', label: 'Naturalnet', bg: 'linear-gradient(90deg,#c9b696,#d7c4a4,#c9b696)' },
+  { gama: 'Madera · Xolid', label: 'Xolid', bg: 'linear-gradient(90deg,#b7a488,#c5b296,#b7a488)' },
+
+  // ── LACA ────────────────────────────────────────────────────────────────────
+  { gama: 'Laca mate', label: 'Blanco', bg: '#ffffff' },
+  { gama: 'Laca mate', label: 'Hueso', bg: '#efe9db' },
+  { gama: 'Laca mate', label: 'Gris', bg: '#b0b2b1' },
+  { gama: 'Laca mate', label: 'Antracita', bg: '#3b3d3d' },
+  { gama: 'Laca mate', label: 'Negro', bg: '#0a0a0a' },
+  { gama: 'Laca brillo', label: 'Brillo G2', bg: 'linear-gradient(135deg,#f4f4f2,#e8e8e6,#fafafa)' },
+  { gama: 'Laca · Xolid', label: 'Xolid', bg: '#dad4c8' },
+
+  // ── POLILAMINADO ──────────────────────────────────────────────────────────────
+  { gama: 'Polilaminado', label: 'Blanco', bg: '#fbfdff' },
+  { gama: 'Polilaminado', label: 'Naturalnet', bg: 'linear-gradient(90deg,#c9b696,#d7c4a4,#c9b696)' },
+
+  // ── CANTEADO (frente de tablero con canto perimetral) ─────────────────────────
+  { gama: 'Canteado', label: 'Canteado (color a definir)', bg: '#cfcdc6' },
+
+  // ── METAL ─────────────────────────────────────────────────────────────────────
+  { gama: 'Metal', label: 'Acero inox', bg: 'linear-gradient(135deg,#b9bcbe,#d2d5d7,#a9acae)' },
+
+  // ── SERIE SLATE (versátil; ordenada por código numérico) ──────────────────────
+  { gama: 'Serie Slate', label: 'Roble 3822', bg: 'linear-gradient(90deg,#b89968,#c8a878,#b89968)' },
+  { gama: 'Serie Slate', label: 'Roble 3823', bg: 'linear-gradient(90deg,#a98a63,#bb9c73,#a98a63)' },
+  { gama: 'Serie Slate', label: 'Haya 3596', bg: 'linear-gradient(90deg,#d8c3a2,#e4d2b4,#d8c3a2)' },
+  { gama: 'Serie Slate', label: 'Cosmos 1049', bg: '#6f6d68' },
+  { gama: 'Serie Slate', label: 'Decorado 4569', bg: '#8a8378' },
+  { gama: 'Serie Slate', label: 'Decorado 4673', bg: '#9a9188' },
+  { gama: 'Serie Slate', label: 'Nogal N4671', bg: 'linear-gradient(90deg,#6b4a2e,#7c583a,#6b4a2e)' },
+  { gama: 'Serie Slate', label: 'Nogal N4677', bg: 'linear-gradient(90deg,#5f4128,#704e34,#5f4128)' },
+  { gama: 'Serie Slate', label: 'Nogal N4692', bg: 'linear-gradient(90deg,#553a24,#664830,#553a24)' },
+  { gama: 'Serie Slate', label: 'Nogal N4701', bg: 'linear-gradient(90deg,#4d3420,#5e422c,#4d3420)' },
+  { gama: 'Serie Slate', label: 'Eucalipto', bg: 'linear-gradient(90deg,#b7a888,#c5b696,#b7a888)' },
+  { gama: 'Serie Slate', label: 'Blanco Nórdico', bg: '#f1efe9' },
+  { gama: 'Serie Slate', label: 'Nieve', bg: '#f6f5f1' },
+];
+
+// COLORES 2 = ACB por material/acabado (ver arriba). El nombre del acabado se
+// aplica tal cual al render al seleccionarlo.
+export const COLORES_2 = _c2acb;
 
 // Agrupa una lista de acabados por gama preservando el orden de aparición.
 export function porGama(list) {
