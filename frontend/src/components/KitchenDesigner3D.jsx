@@ -335,6 +335,50 @@ function ergonomicChecks(project) {
   const cols = new Set(cabs.map(c => (c.color || '').trim().toLowerCase()).filter(Boolean));
   if (mats.size + cols.size > 3) out.push({ level: 'info', msg: `Hay ${mats.size + cols.size} acabados/colores distintos: un diseño profesional suele limitarse a 2-3 que armonicen.` });
 
+  // ── TANDA 3 · FABRICABILIDAD ────────────────────────────────────────────────
+  // 5) Anchos de módulo fabricables (medidas estándar de fabricación en cm).
+  const STD_W = [15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120];
+  const noEstandar = [];
+  cabs.forEach(c => {
+    const wcm = Number(c.width) / 10; // mm→cm
+    if (!wcm || wcm <= 0) return;
+    const cerca = STD_W.reduce((a, b) => Math.abs(b - wcm) < Math.abs(a - wcm) ? b : a, STD_W[0]);
+    if (Math.abs(cerca - wcm) > 1.5) noEstandar.push(`${c.cabinet_type || 'módulo'} ${Math.round(wcm)}cm → el estándar más cercano es ${cerca}cm`);
+  });
+  if (noEstandar.length) out.push({ level: 'warn', msg: `Anchos no estándar (encarecen o no son fabricables de serie): ${noEstandar.slice(0, 4).join('; ')}${noEstandar.length > 4 ? '…' : ''}.` });
+
+  // 6) Huecos por pared: sobra/falta espacio respecto al ancho real de la pared.
+  Object.entries(sumByWall).forEach(([w, sum]) => {
+    const pared = wallW[w];
+    if (!pared) return;
+    const hueco = Math.round(pared - sum);
+    if (hueco < -2) {
+      out.push({ level: 'err', msg: `La pared "${w}" NO cabe: los muebles suman ~${Math.round(sum)} cm y solo hay ${pared} cm (sobran ${Math.abs(hueco)} cm). Reduce o quita un módulo.` });
+    } else if (hueco >= 15) {
+      out.push({ level: 'warn', msg: `Hueco aprovechable de ${hueco} cm en la pared "${w}": cabe un módulo más (p. ej. un bajo de ${STD_W.filter(x => x <= hueco).pop() || 15} cm) o una columna. No lo dejes vacío.` });
+    } else if (hueco >= 3) {
+      out.push({ level: 'info', msg: `Sobran ${hueco} cm en la pared "${w}": ciérralos con un panel/relleno a medida para un acabado limpio.` });
+    }
+  });
+
+  // 7) Pasillo de trabajo (paralela / isla / península): mínimo 90 cm, ideal 120.
+  const layoutTxt = `${project?.layout || ''}`.toLowerCase();
+  const necesitaPasillo = /paralel|isla|penin/.test(layoutTxt) || has(/isla|penin/);
+  if (necesitaPasillo) {
+    // Buscamos una medida de pasillo/paso en las medidas de paredes.
+    const pasilloM = ms.find(m => /pasillo|paso|separaci|frente|central/i.test(m.wall_label || '') && Number(m.wall_width) > 0);
+    const pas = pasilloM ? Number(pasilloM.wall_width) : null;
+    if (pas == null) {
+      out.push({ level: 'info', msg: 'Distribución con pasillo (paralela/isla/península): asegúrate de dejar ≥ 90 cm libres entre frentes (120 cm recomendado si se abren cajones o hay dos personas).' });
+    } else if (pas < 90) {
+      out.push({ level: 'err', msg: `Pasillo de solo ${pas} cm: por debajo del mínimo de 90 cm no se pueden abrir cajones/hornos con comodidad ni pasar. Amplía a 90-120 cm.` });
+    } else if (pas < 120) {
+      out.push({ level: 'warn', msg: `Pasillo de ${pas} cm: cumple el mínimo (90 cm) pero lo ideal son 120 cm para abrir cajones y cruzarse dos personas.` });
+    } else {
+      out.push({ level: 'ok', msg: `Pasillo de ${pas} cm: holgura correcta (≥ 120 cm).` });
+    }
+  }
+
   return out;
 }
 
@@ -1809,9 +1853,13 @@ function RendersTab({ project, onRefresh }) {
         const styleByLevel = {
           ok: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           warn: 'bg-amber-50 text-amber-800 border-amber-200',
+          err: 'bg-rose-50 text-rose-700 border-rose-300',
           info: 'bg-slate-50 text-slate-600 border-slate-200',
         };
-        const iconByLevel = { ok: '✅', warn: '⚠️', info: 'ℹ️' };
+        const iconByLevel = { ok: '✅', warn: '⚠️', err: '⛔', info: 'ℹ️' };
+        // Ordena: errores primero, luego avisos, ok e info.
+        const rank = { err: 0, warn: 1, ok: 2, info: 3 };
+        checks.sort((a, b) => (rank[a.level] ?? 9) - (rank[b.level] ?? 9));
         return (
           <div className="mb-5 rounded-xl border border-slate-200 p-4">
             <p className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
