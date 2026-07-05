@@ -61,14 +61,13 @@ export function computeUnitPrice(product, opts = {}) {
       ? (MV_TARIFFS.find(f => f.name === finishName) || MV_TARIFFS[0])
       : (DOOR_FINISHES.find(f => f.name === finishName) || DOOR_FINISHES[0]);
 
-    // Fallback a 0 (no inventar 100 puntos): si el producto no trae puntos para
-    // la zona/tarifa activa, la línea queda a 0 y se marca 'sin precio'.
-    let productBasePoints = 0;
+    let productBasePoints = 100;
     if (typeof product.points === 'number') productBasePoints = product.points;
     else if (typeof product.points === 'object' && product.points !== null) {
+      // Para MV usar T1, para ZC usar Z1
       productBasePoints = isMV
-        ? (product.points.T1 || product.points.Z1 || 0)
-        : (product.points.Z1 || 0);
+        ? (product.points.T1 || product.points.Z1 || 100)
+        : (product.points.Z1 || 100);
     }
 
     usedPoints = product.zonePoints?.[finishObj.group] ?? productBasePoints;
