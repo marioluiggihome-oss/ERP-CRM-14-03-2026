@@ -1590,6 +1590,76 @@ const Armarios = ({ state, setState }) => {
   // Permiso para ver el coste (PVP sin descuento) tras el candado, como en cocinas.
   const canSeeCost = state?.currentUser?.isAdmin === true || state?.currentUser?.canSeeCost === true;
 
+  // ── FEATURE ÚNICA "Tu ropa cabe aquí": capacidad real de almacenaje ──────────
+  const capacity = useMemo(() => {
+    const { width, modules } = wardrobeConfig;
+    const moduleWidthMm = modules > 0 ? width / modules : 0;
+    const totBarMm = moduleConfigs.reduce((s, m) => s + (Number(m.hangingRods) || 0) * moduleWidthMm, 0);
+    const perchas = Math.round(totBarMm / 25);          // ~25 mm por prenda colgada
+    const baldas = moduleConfigs.reduce((s, m) => s + (Number(m.shelves) || 0), 0);
+    const cajones = moduleConfigs.reduce((s, m) => s + (Number(m.drawers) || 0), 0);
+    // Estimación tangible: una balda de ~1 m ≈ 12 camisetas dobladas.
+    const camisetas = Math.round(baldas * (moduleWidthMm / 1000) * 12);
+    return { perchas, baldas, cajones, camisetas, metrosBarra: +(totBarMm / 1000).toFixed(1) };
+  }, [wardrobeConfig, moduleConfigs]);
+
+  // ── FEATURE ÚNICA "Financiación": cuota mensual orientativa ──────────────────
+  const financing = useMemo(() => {
+    const sv = state?.settings || {};
+    const tin = Number(sv.armPrice_financeTin ?? 6.95);   // TIN anual % (configurable)
+    const meses = Number(sv.armPrice_financeMonths ?? 36);
+    const total = pricing.total || 0;
+    if (total <= 0 || meses <= 0) return { cuota: 0, meses, tin };
+    const i = tin / 100 / 12;
+    const cuota = i > 0 ? (total * i) / (1 - Math.pow(1 + i, -meses)) : total / meses;
+    return { cuota, meses, tin };
+  }, [pricing.total, state?.settings]);
+
+  // ── FEATURE ÚNICA "Copiloto de margen": salud del margen tras el descuento ───
+  const marginHealth = useMemo(() => {
+    const coste = pricing.costeTotal || 0;
+    const neto = pricing.distNetBase || 0;             // precio de distribución (base)
+    const marginReal = neto > 0 ? ((neto - coste) / neto) * 100 : 0;
+    // Suelo de margen configurable; por debajo, alerta.
+    const suelo = Number(state?.settings?.armPrice_marginFloor ?? 15);
+    let level = 'ok';
+    if (neto < coste) level = 'err';                   // se vende por debajo de coste
+    else if (marginReal < suelo) level = 'warn';
+    // Sugerencia de upsell rentable según lo que aún no lleva.
+    const sugerencias = [];
+    if (!extras.led) sugerencias.push('iluminación LED');
+    if (!extras.softClose) sugerencias.push('cierre suave');
+    if (!extras.antiFingerprint) sugerencias.push('acabado antihuellas');
+    return { marginReal, suelo, level, coste, neto, upsell: sugerencias.slice(0, 2) };
+  }, [pricing.costeTotal, pricing.distNetBase, state?.settings, extras]);
+
+  // ── FEATURE ÚNICA "Fabricabilidad explicada por IA" ─────────────────────────
+  // Recoge los avisos que el despiece ya calcula (hoja >600, interior no cabe…).
+  const dfmIssues = useMemo(() => {
+    const out = [];
+    generateAccessoriesList.forEach(a => {
+      if (a.code === 'AVISO') out.push(`${a.name}: ${a.dimensions}. ${a.notes || ''}`.trim());
+      const n = a.notes || '';
+      const i = n.indexOf('⚠');
+      if (i >= 0) out.push(`${a.name || a.category}: ${n.slice(i)}`);
+    });
+    return out;
+  }, [generateAccessoriesList]);
+  const [dfm, setDfm] = useState({ loading: false, text: '', open: false });
+  const explainDFM = async () => {
+    setDfm(d => ({ ...d, loading: true, open: true, text: '' }));
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/armarios/ia/dfm`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ issues: dfmIssues, config: wardrobeConfig }),
+      });
+      const data = await res.json();
+      setDfm({ loading: false, open: true, text: data.explanation || data.detail || 'No se pudo generar la explicación.' });
+    } catch {
+      setDfm({ loading: false, open: true, text: 'Error de conexión al generar la explicación.' });
+    }
+  };
+
   // Dictado por voz para los campos de IA (Diseño Inteligente / IA armarios).
   const { isListening: iaListening, isSupported: iaVoiceSupported, transcript: iaTranscript, startListening: iaStart, stopListening: iaStop } = useSpeechRecognition();
   const iaDictateBaseRef = useRef('');
@@ -3527,10 +3597,34 @@ const Armarios = ({ state, setState }) => {
             <div className="bg-emerald-600 rounded-xl p-4 mt-4">
               <p className="text-xs text-emerald-200 uppercase tracking-widest mb-1">PVP (IVA incl.)</p>
               <p className="text-3xl font-black">{pricing.total.toFixed(2)}€</p>
+              {financing.cuota > 0 && (
+                <p className="text-xs text-emerald-100 mt-1 font-bold">
+                  desde <span className="text-white text-sm">{financing.cuota.toFixed(2)}€/mes</span> en {financing.meses} meses
+                  <span className="font-normal text-emerald-200/80"> (TIN {financing.tin}%)</span>
+                </p>
+              )}
             </div>
+
+            {/* Copiloto de margen (solo con permiso de coste) */}
+            {canSeeCost && (
+              <div className={`mt-3 rounded-xl p-3 text-xs ${marginHealth.level === 'err' ? 'bg-rose-600/90' : marginHealth.level === 'warn' ? 'bg-amber-500/90 text-amber-950' : 'bg-emerald-700/60'}`}>
+                <div className="flex justify-between font-black">
+                  <span>{marginHealth.level === 'err' ? '⛔ Bajo coste' : marginHealth.level === 'warn' ? '⚠️ Margen bajo' : '✅ Margen sano'}</span>
+                  <span>{marginHealth.marginReal.toFixed(1)}%</span>
+                </div>
+                {marginHealth.level !== 'ok' && (
+                  <p className="mt-1 leading-snug">
+                    {marginHealth.level === 'err'
+                      ? `El precio de distribución (${marginHealth.neto.toFixed(0)}€) está por DEBAJO del coste (${marginHealth.coste.toFixed(0)}€). Revisa descuento o configuración.`
+                      : `Por debajo del suelo del ${marginHealth.suelo}%.`}
+                    {marginHealth.upsell.length > 0 && ` Upsell rentable: ${marginHealth.upsell.join(', ')}.`}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-          
-          {/* Especificaciones */}
+
+          {/* Especificaciones + "Tu ropa cabe aquí" */}
           <div className="mt-6 pt-4 border-t border-emerald-700">
             <h4 className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-2">ESPECIFICACIONES</h4>
             <div className="text-[10px] text-emerald-400 space-y-1">
@@ -3542,7 +3636,36 @@ const Armarios = ({ state, setState }) => {
               <p>• {moduleConfigs.reduce((acc, m) => acc + m.drawers, 0)} cajones totales</p>
               <p>• {moduleConfigs.reduce((acc, m) => acc + m.hangingRods, 0)} barras totales</p>
             </div>
+            <div className="mt-3 rounded-xl bg-emerald-700/50 p-3">
+              <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1.5">👕 Tu ropa cabe aquí</p>
+              <div className="grid grid-cols-2 gap-1.5 text-[11px] text-emerald-50">
+                <span>≈ <b>{capacity.perchas}</b> perchas</span>
+                <span>≈ <b>{capacity.camisetas}</b> camisetas</span>
+                <span><b>{capacity.baldas}</b> baldas</span>
+                <span><b>{capacity.cajones}</b> cajones</span>
+                <span className="col-span-2 text-emerald-300/80">{capacity.metrosBarra} m de barra de colgar</span>
+              </div>
+            </div>
           </div>
+
+          {/* Fabricabilidad explicada por IA (feature única) */}
+          {dfmIssues.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-emerald-700">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black text-amber-300 uppercase tracking-widest">⚠ {dfmIssues.length} aviso{dfmIssues.length > 1 ? 's' : ''} de fabricación</span>
+                <button type="button" onClick={explainDFM} disabled={dfm.loading}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500 text-amber-950 text-[11px] font-black hover:bg-amber-400 disabled:opacity-50">
+                  {dfm.loading ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  Explícamelo (IA)
+                </button>
+              </div>
+              {dfm.open && dfm.text && (
+                <div className="mt-2 rounded-lg bg-emerald-900/50 p-3 text-[11px] text-emerald-50 whitespace-pre-wrap leading-snug">
+                  {dfm.text}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Resumen Tableros + despiece: solo para Fábrica (canDespiece) */}
           {canDespiece && (<>

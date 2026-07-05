@@ -663,3 +663,48 @@ Generate ONE high-quality photorealistic image."""
     except Exception as e:
         logger.error(f"Error en IA render: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/armarios/ia/dfm")
+async def ia_explain_fabricabilidad(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Feature única: explica en lenguaje natural los problemas de fabricabilidad
+    detectados y propone la corrección concreta (Design For Manufacturing con IA)."""
+    p = payload or {}
+    issues = p.get("issues") or []
+    cfg = p.get("config") or {}
+    if not issues:
+        return {"success": True, "explanation": "No se han detectado problemas de fabricabilidad. El armario es fabricable tal cual."}
+    try:
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+        except ImportError:
+            raise HTTPException(status_code=503, detail="Servicio de IA no disponible")
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Clave de IA no configurada")
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"armario-dfm-{uuid.uuid4()}",
+            system_message=(
+                "Eres un técnico jefe de fábrica de armarios a medida de melamina. "
+                "Te dan una lista de avisos de fabricabilidad de un armario y su configuración. "
+                "Para CADA aviso, explica en 1-2 frases claras y sin jerga POR QUÉ es un problema de "
+                "fabricación y da la SOLUCIÓN concreta y accionable (medida o cambio exacto). "
+                "Responde en español, en viñetas breves, tono profesional y directo. No inventes avisos nuevos."
+            ),
+        )
+        chat.with_model("gemini", "gemini-3-flash-preview")
+        prompt = (
+            f"Armario: {cfg.get('width',0)}x{cfg.get('height',0)}x{cfg.get('depth',0)} mm, "
+            f"{cfg.get('modules',0)} módulos, {cfg.get('numDoors',0)} puertas {cfg.get('doorType','')}.\n\n"
+            "Avisos detectados:\n- " + "\n- ".join(str(x) for x in issues) +
+            "\n\nExplica cada uno con su causa y su solución concreta."
+        )
+        response = await chat.send_message(UserMessage(text=prompt))
+        text = response if isinstance(response, str) else getattr(response, "content", None) or str(response)
+        return {"success": True, "explanation": text.strip()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en IA DFM: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo generar la explicación")
