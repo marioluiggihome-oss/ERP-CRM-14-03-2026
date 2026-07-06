@@ -13,6 +13,27 @@ if (process.env.NODE_ENV === 'production') {
   console.debug = noop;
 }
 
+// ── Auto-recarga ante fallo de carga de "chunk" tras un deploy ────────────────
+// Al desplegar una versión nueva, el navegador puede tener cacheada la página
+// vieja y fallar al pedir un trozo de código que ya cambió de nombre
+// (ChunkLoadError / "Loading chunk failed" / "dynamically imported module").
+// Recargamos UNA vez para traer la versión nueva; si tras recargar sigue
+// fallando, no reintentamos (evita bucle). Al cargar bien se limpia el flag.
+const CHUNK_RELOAD_KEY = 'luiggi-chunk-reload';
+const isChunkError = (msg) => /Loading chunk [\w]+ failed|ChunkLoadError|Loading CSS chunk|Failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed/i.test(String(msg || ''));
+const tryChunkReload = (msg) => {
+  if (!isChunkError(msg)) return;
+  try {
+    if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+      window.location.reload();
+    }
+  } catch (_) { window.location.reload(); }
+};
+window.addEventListener('error', (e) => tryChunkReload(e?.message || e?.error?.message));
+window.addEventListener('unhandledrejection', (e) => tryChunkReload(e?.reason?.message || e?.reason));
+window.addEventListener('load', () => { setTimeout(() => { try { sessionStorage.removeItem(CHUNK_RELOAD_KEY); } catch (_) {} }, 5000); });
+
 // Clean the root element before mounting
 const rootElement = document.getElementById("root");
 if (rootElement) {
@@ -35,7 +56,12 @@ class ErrorBoundary extends React.Component {
     console.error('React Error:', error, info);
     this.setState({ errorInfo: info });
 
-    // Si es la primera vez en esta sesión, intentar auto-recargar (puede ser bundle desfasado)
+    // Un fallo de carga de chunk (bundle desfasado tras deploy) SIEMPRE se
+    // recarga una vez, con su propio flag, sin quedar bloqueado por otros errores.
+    const msg = error?.message || String(error || '');
+    if (isChunkError(msg)) { tryChunkReload(msg); return; }
+
+    // Otros errores: intentar auto-recargar una vez por sesión.
     try {
       const reloaded = sessionStorage.getItem(AUTO_RELOAD_KEY);
       if (!reloaded) {
