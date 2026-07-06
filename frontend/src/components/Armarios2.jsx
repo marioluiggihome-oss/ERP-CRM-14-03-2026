@@ -561,7 +561,15 @@ const Armarios2 = ({ state }) => {
           </div>
           {renders.length > 0 ? (
             <>
-              <img src={renders[renders.length - 1]} alt="Render armario" className="w-full rounded-xl border border-slate-100" />
+              <div className="relative group">
+                <img src={renders[renders.length - 1]} alt="Render armario"
+                  onClick={() => setFullImg(renders[renders.length - 1])}
+                  className="w-full rounded-xl border border-slate-100 cursor-zoom-in" />
+                <button onClick={() => setFullImg(renders[renders.length - 1])} title="Ver a pantalla completa"
+                  className="absolute top-2 right-2 bg-white/90 hover:bg-white border border-slate-200 rounded-lg p-1.5 shadow">
+                  <Maximize2 size={16} />
+                </button>
+              </div>
               <div className="flex gap-2 mt-2">
                 <input value={editText} onChange={e => setEditText(e.target.value)} placeholder="Editar: 'puertas correderas negras'…" className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs" onKeyDown={e => { if (e.key === 'Enter' && editText.trim()) generarRender(editText.trim()); }} />
                 <button onClick={() => editText.trim() && generarRender(editText.trim())} disabled={renderLoading || !editText.trim()} className="px-3 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-50">Editar</button>
