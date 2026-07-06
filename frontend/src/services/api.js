@@ -1812,17 +1812,14 @@ export const fabricaAPI = {
 // ============================================
 
 export const ordersAPI = {
-  // Obtener pedidos del usuario
+  // Obtener pedidos del usuario autenticado (el backend filtra por el token).
   getOrders: async (userId = null, limit = 100) => {
     const params = new URLSearchParams();
-    if (userId) params.append('userId', userId);
     if (limit) params.append('limit', limit);
-    
     const url = params.toString()
       ? `${API_URL}/api/orders?${params.toString()}`
       : `${API_URL}/api/orders`;
-    
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener pedidos');
@@ -1832,7 +1829,7 @@ export const ordersAPI = {
 
   // Obtener detalle de un pedido
   getOrder: async (orderId) => {
-    const response = await fetch(`${API_URL}/api/orders/${orderId}`);
+    const response = await fetch(`${API_URL}/api/orders/${orderId}`, { headers: authHeaders() });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || 'Error al obtener pedido');
@@ -1844,7 +1841,7 @@ export const ordersAPI = {
   sendCopy: async (orderId, recipientEmail, includeAttachments = true, additionalMessage = '') => {
     const response = await fetch(`${API_URL}/api/orders/${orderId}/send-copy`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({
         recipient_email: recipientEmail,
         include_attachments: includeAttachments,
