@@ -320,6 +320,8 @@ export default function AIRenderStudio({ state, setState }) {
   // Edición del render en lenguaje natural (iterar sin empezar de cero).
   const [editInstruction, setEditInstruction] = useState('');
   const [editing, setEditing] = useState(false);
+  // Imagen de un ELEMENTO a copiar (una puerta, un mueble…) para incorporarlo.
+  const [editRefImage, setEditRefImage] = useState(null);
   // Electrodomésticos, cámara y nº de variaciones (Tanda 3).
   const [electros, setElectros] = useState([]);
   const [camera, setCamera] = useState('eyelevel');
@@ -374,6 +376,29 @@ export default function AIRenderStudio({ state, setState }) {
       setDescription(base ? `${base.trim()} ${transcript}` : transcript);
     }
   }, [transcript]);
+
+  // Dictado independiente para el cuadro de EDICIÓN (cambios sobre el render).
+  const editSp = useSpeechRecognition();
+  const editBaseRef = useRef('');
+  useEffect(() => {
+    if (editSp.transcript) {
+      const base = editBaseRef.current;
+      setEditInstruction(base ? `${base.trim()} ${editSp.transcript}` : editSp.transcript);
+    }
+  }, [editSp.transcript]);
+  const toggleEditMic = () => {
+    if (editSp.isListening) { editSp.stopListening(); return; }
+    editBaseRef.current = editInstruction || '';
+    editSp.resetTranscript();
+    editSp.startListening();
+  };
+  // Sube una imagen de elemento (puerta, mueble…) para copiarla en la cocina.
+  const onEditRefUpload = async (e) => {
+    const f = e.target.files?.[0]; e.target.value = '';
+    if (!f) return;
+    const url = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(f); });
+    setEditRefImage(url);
+  };
 
   const getAuthHeaders = () => {
     const token = getToken();
@@ -527,25 +552,29 @@ export default function AIRenderStudio({ state, setState }) {
   // ─── Editar el render existente en lenguaje natural ─────────────────────────
   const editRender = async () => {
     const img = currentImage();
-    if (!img || !editInstruction.trim()) return;
+    // Se puede editar por texto, por imagen de elemento, o por ambos.
+    if (!img || (!editInstruction.trim() && !editRefImage)) return;
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
+      const cambio = editInstruction.trim()
+        || (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : '');
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
-          description: `Modifica el render adjunto manteniendo el mismo diseño, encuadre e iluminación. Cambio solicitado: ${editInstruction.trim()}. No cambies nada más.`,
+          description: `Modifica el render adjunto manteniendo el mismo diseño, encuadre e iluminación. Cambio solicitado: ${cambio}. No cambies nada más.`,
           style: params.style,
           provider: providerOf(),
           referenceImage: dataUrl,
+          referenceImages: editRefImage ? [editRefImage] : undefined,
         }),
       });
       const data = await response.json();
       if (data.success) {
-        const merged = { ...data, description: `${renderResult?.description || description}\n[Edición] ${editInstruction.trim()}` };
+        const merged = { ...data, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
-        setEditInstruction('');
+        setEditInstruction(''); setEditRefImage(null);
       } else setError(data.error || 'No se pudo editar el render');
     } catch { setError('Error de conexión al editar el render.'); }
     finally { setEditing(false); }
@@ -1483,15 +1512,36 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               )}
 
-              {/* Editar el render en lenguaje natural */}
+              {/* Editar el render en lenguaje natural (con dictado y elemento por imagen) */}
               {currentImage() && (
-                <div className="shrink-0 flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-2">
+                <div className="shrink-0 flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-2 flex-wrap">
                   <Wand2 size={16} className="text-purple-500 shrink-0 ml-1" />
+                  {/* Miniatura del elemento subido (a copiar en la cocina) */}
+                  {editRefImage && (
+                    <div className="relative shrink-0">
+                      <img src={editRefImage} alt="Elemento" className="h-9 w-9 object-cover rounded-lg border border-purple-200" />
+                      <button onClick={() => setEditRefImage(null)} title="Quitar elemento"
+                        className="absolute -top-1.5 -right-1.5 bg-white border border-slate-300 rounded-full p-0.5 shadow"><X size={10} /></button>
+                    </div>
+                  )}
                   <input value={editInstruction} onChange={e => setEditInstruction(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !editing && editInstruction.trim()) editRender(); }}
-                    placeholder="Editar: p. ej. 'haz la isla más grande', 'cambia los muebles a azul navy', 'añade una campana de isla'"
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
-                  <button onClick={editRender} disabled={editing || !editInstruction.trim()}
+                    onKeyDown={e => { if (e.key === 'Enter' && !editing && (editInstruction.trim() || editRefImage)) editRender(); }}
+                    placeholder={editRefImage ? "Opcional: dónde/cómo colocar el elemento…" : "Editar: p. ej. 'cambia los muebles a azul navy', 'añade una campana de isla'…"}
+                    className="flex-1 min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
+                  {/* Micro: dictar el cambio */}
+                  {editSp.isSupported && (
+                    <button onClick={toggleEditMic} title={editSp.isListening ? 'Detener dictado' : 'Dictar el cambio'}
+                      className={`shrink-0 p-2 rounded-lg border ${editSp.isListening ? 'bg-red-500 text-white border-red-500 animate-pulse' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                      {editSp.isListening ? <MicOff size={16} /> : <Mic size={16} />}
+                    </button>
+                  )}
+                  {/* Subir una imagen de elemento (puerta, mueble…) a copiar */}
+                  <label title="Subir imagen de un elemento (puerta, mueble…) para copiarlo en la cocina"
+                    className="shrink-0 p-2 rounded-lg border bg-white text-slate-600 border-slate-200 hover:bg-slate-50 cursor-pointer">
+                    <Upload size={16} />
+                    <input type="file" accept="image/*" className="hidden" onChange={onEditRefUpload} />
+                  </label>
+                  <button onClick={editRender} disabled={editing || (!editInstruction.trim() && !editRefImage)}
                     className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50 shrink-0">
                     {editing ? <><Loader size={14} className="animate-spin" /> Aplicando…</> : <><Send size={14} /> Aplicar cambio</>}
                   </button>
