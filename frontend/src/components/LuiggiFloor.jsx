@@ -82,6 +82,7 @@ const LuiggiFloor = ({ currentUser }) => {
   const [clienteDatos, setClienteDatos] = useState({ codigo: '', nombre: '', apellidos: '', dni: '', direccion: '', cp: '', poblacion: '', telefono: '' });
   const [showDatos, setShowDatos] = useState(false);
   const setDato = (k, v) => setClienteDatos(d => ({ ...d, [k]: v }));
+  const [observacion, setObservacion] = useState('');   // nota del pedido (al servir)
   const [edit, setEdit] = useState({});           // edición admin {id:{pricePerM2,stockPackages}}
   const [savingId, setSavingId] = useState('');
   const [docs, setDocs] = useState([]);           // catálogos descargables
@@ -298,6 +299,7 @@ const LuiggiFloor = ({ currentUser }) => {
       const payload = {
         cliente,
         clienteDatos,
+        notas: observacion,
         items: [{
           productId: selected.id, key: selected.key, name: selected.name, dims: selected.dims,
           paquetes: calc.paquetes, m2: calc.m2reales, pricePerM2: calc.precioM2,
@@ -344,7 +346,7 @@ const LuiggiFloor = ({ currentUser }) => {
     const W = pdf.internal.pageSize.getWidth();
     pdf.setFillColor(24, 24, 27); pdf.rect(0, 0, W, 30, 'F');
     pdf.setTextColor(202, 169, 104); pdf.setFontSize(11); pdf.text('LUIGGI FLOOR', 14, 13);
-    pdf.setTextColor(255); pdf.setFontSize(17); pdf.text('Oferta de suelo SPC', 14, 23);
+    pdf.setTextColor(255); pdf.setFontSize(17); pdf.text(d.title || 'Oferta de suelo SPC', 14, 23);
     const brand = floorLogo || currentUser?.logo;
     if (brand) { try { pdf.addImage(brand, imgFormat(brand), W - 50, 5, 36, 20); } catch (_) {} }
 
@@ -396,6 +398,13 @@ const LuiggiFloor = ({ currentUser }) => {
     y += 14;
     pdf.setFontSize(10); pdf.setTextColor(24, 24, 27); pdf.text('Observaciones', 14, y); y += 5;
     pdf.setFontSize(9); pdf.setTextColor(70);
+    // Observación específica del pedido (para tener en cuenta al servirlo).
+    if (d.notas && d.notas.trim()) {
+      pdf.setTextColor(24, 24, 27);
+      pdf.text(pdf.splitTextToSize(`· ${d.notas.trim()}`, W - 28), 14, y);
+      y += 5 * pdf.splitTextToSize(`· ${d.notas.trim()}`, W - 28).length;
+      pdf.setTextColor(70);
+    }
     [
       '· Instalación no incluida.',
       '· Transporte no incluido.',
@@ -429,7 +438,8 @@ const LuiggiFloor = ({ currentUser }) => {
     rows.push(['IVA 21%', eur(calc.iva)]);
     renderOfferPDF({
       prod: selected, name: selected.name, dims: selected.dims,
-      cliente, datos: clienteDatos, rows, total: calc.total,
+      cliente, datos: clienteDatos, rows, total: calc.total, notas: observacion,
+      title: 'Oferta de suelo SPC',
       fileName: `Oferta_LuiggiFloor_${selected.name.replace(/\s+/g, '_')}.pdf`,
     });
   };
@@ -446,9 +456,23 @@ const LuiggiFloor = ({ currentUser }) => {
     rows.push(['IVA 21%', eur(o.iva)]);
     renderOfferPDF({
       prod, name: it.name || 'Pedido', dims: it.dims || '',
-      cliente: o.cliente, datos: o.clienteDatos || {}, rows, total: o.total,
+      cliente: o.cliente, datos: o.clienteDatos || {}, rows, total: o.total, notas: o.notas,
+      title: 'ORDEN DE PEDIDO',
       fileName: `Pedido_LuiggiFloor_${(o.cliente || 'cliente').replace(/\s+/g, '_')}.pdf`,
     });
+  };
+
+  // Guarda/edita la observación de un pedido ya grabado (para tener en cuenta al
+  // servirlo). Se puede editar siempre.
+  const saveOrderNota = async (o, notas) => {
+    try {
+      const r = await fetch(`${API_URL}/api/floor/orders/${o.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ notas }),
+      });
+      if (r.ok) await loadOrders();
+      else alert('No se pudo guardar la observación');
+    } catch (e) { alert('Error al guardar la observación'); }
   };
 
   const shareWhatsApp = () => {
@@ -550,6 +574,9 @@ const LuiggiFloor = ({ currentUser }) => {
                       ))}
                     </div>
                   )}
+                  <textarea value={observacion} onChange={e => setObservacion(e.target.value)} rows={2}
+                    placeholder="📝 Observación del pedido (para tener en cuenta al servirlo)…"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-[12px] focus:outline-none focus:border-amber-500" />
                   <div className="flex gap-2">
                     <button onClick={() => setMode('m2')} className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ${mode === 'm2' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}><Boxes size={14} /> Por m²</button>
                     <button onClick={() => setMode('paq')} className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ${mode === 'paq' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}><Package size={14} /> Por paquetes</button>
@@ -723,6 +750,13 @@ const LuiggiFloor = ({ currentUser }) => {
                               <Download size={12} /> PDF
                             </button>
                           </div>
+                        </div>
+                        {/* Observación del pedido (editable, se guarda al salir del campo) */}
+                        <div className="mt-2.5 pt-2.5 border-t border-slate-100">
+                          <textarea defaultValue={o.notas || ''} rows={1}
+                            onBlur={e => { const v = e.target.value; if (v !== (o.notas || '')) saveOrderNota(o, v); }}
+                            placeholder="📝 Observación para servir el pedido…"
+                            className="w-full px-2.5 py-1.5 bg-amber-50/40 border border-amber-100 rounded-lg text-[12px] focus:outline-none focus:border-amber-400" />
                         </div>
                         {/* El administrador cambia el estado (reservado descuenta stock) */}
                         {ordersIsAdmin && (
