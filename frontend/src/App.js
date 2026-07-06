@@ -1378,7 +1378,7 @@ const App = () => {
             
             {/* Render 3D Studio */}
             {state.currentTab === 'renderStudio' && state.currentUser?.canUseAIAnalysis && (
-              <AIRenderStudio state={state} setState={setState} />
+              <ErrorBoundary><AIRenderStudio state={state} setState={setState} /></ErrorBoundary>
             )}
             {/* Kitchen 3D Designer - Panel de proyectos (mantenido por compatibilidad) */}
             {state.currentTab === 'kitchenDesigner' && (state.currentUser?.canUseKitchenDesigner || state.currentUser?.isAdmin) && (
