@@ -77,6 +77,11 @@ const LuiggiFloor = ({ currentUser }) => {
   const [descuento, setDescuento] = useState(0);
   const [precioNeto, setPrecioNeto] = useState(''); // precio neto €/m² manual (manda si se rellena)
   const [cliente, setCliente] = useState('');
+  // Datos ampliados del cliente (desplegable): se guardan con el pedido y salen
+  // en el PDF de oferta/presupuesto.
+  const [clienteDatos, setClienteDatos] = useState({ codigo: '', nombre: '', apellidos: '', dni: '', direccion: '', cp: '', poblacion: '', telefono: '' });
+  const [showDatos, setShowDatos] = useState(false);
+  const setDato = (k, v) => setClienteDatos(d => ({ ...d, [k]: v }));
   const [edit, setEdit] = useState({});           // edición admin {id:{pricePerM2,stockPackages}}
   const [savingId, setSavingId] = useState('');
   const [docs, setDocs] = useState([]);           // catálogos descargables
@@ -292,6 +297,7 @@ const LuiggiFloor = ({ currentUser }) => {
     try {
       const payload = {
         cliente,
+        clienteDatos,
         items: [{
           productId: selected.id, key: selected.key, name: selected.name, dims: selected.dims,
           paquetes: calc.paquetes, m2: calc.m2reales, pricePerM2: calc.precioM2,
@@ -330,74 +336,73 @@ const LuiggiFloor = ({ currentUser }) => {
     } catch (e) { alert('Error: ' + e.message); }
   };
 
-  // ── Imprimir oferta (PDF comercial: logo + foto del color) ──
-  const printOffer = () => {
-    if (!selected || calc.paquetes <= 0) { alert('Selecciona color e indica metros o paquetes'); return; }
+  // ── Render común del PDF de oferta/presupuesto (usado por el presupuestador y
+  //    por la descarga de un pedido guardado). `d` = { prod, name, dims, cliente,
+  //    datos, rows, total, fileName }. ──
+  const renderOfferPDF = (d) => {
     const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
     const W = pdf.internal.pageSize.getWidth();
-
-    // Cabecera oscura con marca y logo
     pdf.setFillColor(24, 24, 27); pdf.rect(0, 0, W, 30, 'F');
     pdf.setTextColor(202, 169, 104); pdf.setFontSize(11); pdf.text('LUIGGI FLOOR', 14, 13);
     pdf.setTextColor(255); pdf.setFontSize(17); pdf.text('Oferta de suelo SPC', 14, 23);
     const brand = floorLogo || currentUser?.logo;
-    if (brand) {
-      try { pdf.addImage(brand, imgFormat(brand), W - 50, 5, 36, 20); } catch (_) {}
-    }
+    if (brand) { try { pdf.addImage(brand, imgFormat(brand), W - 50, 5, 36, 20); } catch (_) {} }
 
-    // Showcase del color: foto si existe, si no banda con el tono del swatch
-    let y = 38;
-    const bandH = 46;
-    if (selected.image) {
-      try { pdf.addImage(selected.image, imgFormat(selected.image), 14, y, W - 28, bandH); }
-      catch (_) { const [r, g, b] = hexToRgb(selected.swatchTo); pdf.setFillColor(r, g, b); pdf.rect(14, y, W - 28, bandH, 'F'); }
+    let y = 38; const bandH = 46;
+    const prod = d.prod;
+    if (prod?.image) {
+      try { pdf.addImage(prod.image, imgFormat(prod.image), 14, y, W - 28, bandH); }
+      catch (_) { const [r, g, b] = hexToRgb(prod.swatchTo || '#c9c2b3'); pdf.setFillColor(r, g, b); pdf.rect(14, y, W - 28, bandH, 'F'); }
     } else {
-      const [r, g, b] = hexToRgb(selected.swatchTo); pdf.setFillColor(r, g, b); pdf.rect(14, y, W - 28, bandH, 'F');
+      const [r, g, b] = hexToRgb(prod?.swatchTo || '#c9c2b3'); pdf.setFillColor(r, g, b); pdf.rect(14, y, W - 28, bandH, 'F');
     }
     y += bandH + 9;
 
-    pdf.setFontSize(16); pdf.setTextColor(20); pdf.text(selected.name, 14, y); y += 6;
-    pdf.setFontSize(10); pdf.setTextColor(110); pdf.text(selected.dims, 14, y); y += 10;
-    // Cliente (destacado) + fecha + validez
+    pdf.setFontSize(16); pdf.setTextColor(20); pdf.text(d.name || '—', 14, y); y += 6;
+    pdf.setFontSize(10); pdf.setTextColor(110); pdf.text(d.dims || '', 14, y); y += 10;
+    // Cliente (destacado) + datos ampliados + fecha + validez
     pdf.setFontSize(8); pdf.setTextColor(120); pdf.text('CLIENTE', 14, y);
     pdf.setFontSize(9); pdf.setTextColor(90);
     pdf.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, W - 14, y, { align: 'right' });
     pdf.text('Válida 30 días o hasta fin de existencias', W - 14, y + 5, { align: 'right' });
     pdf.setFontSize(14); pdf.setTextColor(20); pdf.setFont(undefined, 'bold');
-    pdf.text((cliente || '—').toUpperCase(), 14, y + 6); pdf.setFont(undefined, 'normal');
+    pdf.text((d.cliente || '—').toUpperCase(), 14, y + 6); pdf.setFont(undefined, 'normal');
     y += 13;
+    const dt = d.datos || {};
+    const nomComp = [dt.nombre, dt.apellidos].filter(Boolean).join(' ');
+    const infoLine = [
+      dt.codigo && `Cód.: ${dt.codigo}`,
+      dt.dni && `DNI/NIF: ${dt.dni}`,
+      nomComp && nomComp,
+      dt.telefono && `Tel.: ${dt.telefono}`,
+    ].filter(Boolean).join('   ·   ');
+    const dirLine = [dt.direccion, [dt.cp, dt.poblacion].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    if (infoLine || dirLine) {
+      pdf.setFontSize(9); pdf.setTextColor(90);
+      if (infoLine) { pdf.text(infoLine, 14, y); y += 5; }
+      if (dirLine) { pdf.text(dirLine, 14, y); y += 5; }
+      y += 2;
+    }
 
-    const rows = [
-      ['Paquetes', `${calc.paquetes}  ·  ${m2pp} m²/paquete`],
-      ['Superficie servida', m2fmt(calc.m2reales)],
-      ['Precio base/m²', eur(calc.precioM2)],
-      ['Precio NETO/m²', `${eur(calc.netoM2)}  ·  ${eur(calc.netoPaquete)}/paq`],
-    ];
-    if (calc.dto > 0) rows.push(['Ahorro', `- ${eur(calc.dto)}`]);
-    rows.push(['Base imponible', eur(calc.base)]);
-    rows.push(['IVA 21%', eur(calc.iva)]);
     pdf.setFontSize(11); pdf.setTextColor(40);
-    rows.forEach(([k, v], i) => {
+    (d.rows || []).forEach(([k, v], i) => {
       if (i % 2 === 0) { pdf.setFillColor(245, 245, 244); pdf.rect(14, y - 5, W - 28, 7, 'F'); }
       pdf.text(k, 16, y); pdf.text(String(v), W - 16, y, { align: 'right' }); y += 7;
     });
     y += 2;
     pdf.setFillColor(24, 24, 27); pdf.rect(14, y - 5, W - 28, 11, 'F');
     pdf.setFontSize(14); pdf.setTextColor(202, 169, 104);
-    pdf.text('TOTAL', 16, y + 1.5); pdf.text(eur(calc.total), W - 16, y + 1.5, { align: 'right' });
+    pdf.text('TOTAL', 16, y + 1.5); pdf.text(eur(d.total), W - 16, y + 1.5, { align: 'right' });
     y += 14;
-    // Observaciones al pie del presupuesto
     pdf.setFontSize(10); pdf.setTextColor(24, 24, 27); pdf.text('Observaciones', 14, y); y += 5;
     pdf.setFontSize(9); pdf.setTextColor(70);
-    const obs = [
+    [
       '· Instalación no incluida.',
       '· Transporte no incluido.',
       '· Este suelo debe instalarse siempre sobre una superficie bien nivelada.',
       '  No nos hacemos responsables de instalaciones mal realizadas.',
-    ];
-    obs.forEach(line => { pdf.text(pdf.splitTextToSize(line, W - 28), 14, y); y += 5; });
+    ].forEach(line => { pdf.text(pdf.splitTextToSize(line, W - 28), 14, y); y += 5; });
     y += 6;
-    // Tira de características del producto (incluye UNICLIC patentado y CE)
     const stripW = W - 28, stripH = +(stripW * FLOOR_FEATURES_RATIO).toFixed(2);
     const pageH = pdf.internal.pageSize.getHeight();
     if (y + stripH + 14 > pageH) { pdf.addPage(); y = 20; }
@@ -407,8 +412,43 @@ const LuiggiFloor = ({ currentUser }) => {
     y += stripH + 6;
     pdf.setFontSize(8); pdf.setTextColor(150);
     pdf.text('Luiggi Floor · división de suelo SPC porcelánico · oferta orientativa salvo error u omisión.', 14, y);
+    pdf.save(d.fileName || 'Oferta_LuiggiFloor.pdf');
+  };
 
-    pdf.save(`Oferta_LuiggiFloor_${selected.name.replace(/\s+/g, '_')}.pdf`);
+  // ── Imprimir oferta del presupuestador actual ──
+  const printOffer = () => {
+    if (!selected || calc.paquetes <= 0) { alert('Selecciona color e indica metros o paquetes'); return; }
+    const rows = [
+      ['Paquetes', `${calc.paquetes}  ·  ${m2pp} m²/paquete`],
+      ['Superficie servida', m2fmt(calc.m2reales)],
+      ['Precio base/m²', eur(calc.precioM2)],
+      ['Precio NETO/m²', `${eur(calc.netoM2)}  ·  ${eur(calc.netoPaquete)}/paq`],
+    ];
+    if (calc.dto > 0) rows.push(['Ahorro', `- ${eur(calc.dto)}`]);
+    rows.push(['Base imponible', eur(calc.base)]);
+    rows.push(['IVA 21%', eur(calc.iva)]);
+    renderOfferPDF({
+      prod: selected, name: selected.name, dims: selected.dims,
+      cliente, datos: clienteDatos, rows, total: calc.total,
+      fileName: `Oferta_LuiggiFloor_${selected.name.replace(/\s+/g, '_')}.pdf`,
+    });
+  };
+
+  // ── Descargar copia (PDF/presupuesto) de un pedido guardado ──
+  const downloadOrderPDF = (o) => {
+    const it = (o.items || [])[0] || {};
+    const prod = items.find(p => p.id === (it.productId || it.id)) || { swatchTo: '#c9c2b3', image: it.image };
+    const rows = (o.items || []).map(x => [
+      `${x.name}${x.dims ? ` (${x.dims})` : ''}`,
+      `${x.paquetes} paq · ${m2fmt(x.m2)} · ${eur(x.pricePerM2 || x.netoM2 || 0)}/m²`,
+    ]);
+    rows.push(['Base imponible', eur(o.base)]);
+    rows.push(['IVA 21%', eur(o.iva)]);
+    renderOfferPDF({
+      prod, name: it.name || 'Pedido', dims: it.dims || '',
+      cliente: o.cliente, datos: o.clienteDatos || {}, rows, total: o.total,
+      fileName: `Pedido_LuiggiFloor_${(o.cliente || 'cliente').replace(/\s+/g, '_')}.pdf`,
+    });
   };
 
   const shareWhatsApp = () => {
@@ -491,6 +531,25 @@ const LuiggiFloor = ({ currentUser }) => {
                 <div className="space-y-3">
                   <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="👤 Nombre del cliente…"
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500" />
+                  {/* Desplegable: datos ampliados del cliente */}
+                  <button type="button" onClick={() => setShowDatos(v => !v)}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-600 hover:bg-slate-100">
+                    <span>📋 Datos del cliente (código, DNI, dirección…)</span>
+                    <span className="text-slate-400">{showDatos ? '▾' : '▸'}</span>
+                  </button>
+                  {showDatos && (
+                    <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                      {[
+                        ['codigo', 'Código cliente'], ['dni', 'DNI / NIF'],
+                        ['nombre', 'Nombre'], ['apellidos', 'Apellidos'],
+                        ['direccion', 'Dirección'], ['cp', 'Código postal'],
+                        ['poblacion', 'Población'], ['telefono', 'Teléfono'],
+                      ].map(([k, label]) => (
+                        <input key={k} value={clienteDatos[k]} onChange={e => setDato(k, e.target.value)} placeholder={label}
+                          className={`px-2.5 py-2 border border-slate-200 rounded-lg text-[12px] focus:outline-none focus:border-amber-500 ${k === 'direccion' ? 'col-span-2' : ''}`} />
+                      ))}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <button onClick={() => setMode('m2')} className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ${mode === 'm2' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}><Boxes size={14} /> Por m²</button>
                     <button onClick={() => setMode('paq')} className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ${mode === 'paq' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}><Package size={14} /> Por paquetes</button>
@@ -659,6 +718,10 @@ const LuiggiFloor = ({ currentUser }) => {
                           <div className="text-right shrink-0">
                             <p className="font-black text-slate-800">{eur(o.total)}</p>
                             <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${meta.cls}`}>{meta.label}</span>
+                            <button onClick={() => downloadOrderPDF(o)} title="Descargar copia del pedido en PDF"
+                              className="mt-1.5 flex items-center gap-1 ml-auto px-2.5 py-1 bg-zinc-900 text-amber-300 rounded-lg text-[10px] font-black uppercase hover:bg-zinc-800">
+                              <Download size={12} /> PDF
+                            </button>
                           </div>
                         </div>
                         {/* El administrador cambia el estado (reservado descuenta stock) */}

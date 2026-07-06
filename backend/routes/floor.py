@@ -293,6 +293,7 @@ async def create_floor_order(payload: dict, current_user: Optional[dict] = Depen
     order = {
         "id": f"floorord-{uuid.uuid4().hex[:8]}",
         "cliente": str(p.get("cliente") or "").strip(),
+        "clienteDatos": (p.get("clienteDatos") if isinstance(p.get("clienteDatos"), dict) else {}),
         "items": items,
         "base": round(float(p.get("base") or 0), 2),
         "iva": round(float(p.get("iva") or 0), 2),
