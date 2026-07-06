@@ -448,17 +448,24 @@ async def generate_image_with_gemini(
     # Encuadre 16:9 apaisado (por defecto el modelo genera cuadrado y recorta la
     # cocina). Se aplica de forma defensiva: si la versión del SDK no soporta
     # ImageConfig/aspect_ratio, se cae al config normal sin romper.
-    def _make_cfg():
-        try:
-            return google_genai_types.GenerateContentConfig(
-                response_modalities=["IMAGE", "TEXT"],
-                image_config=google_genai_types.ImageConfig(aspect_ratio="16:9"),
-            )
-        except Exception:
-            return google_genai_types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"])
+    # Máxima resolución posible: Nano Banana Pro (gemini-3-pro-image-preview)
+    # admite 2K, lo que evita que el render pierda nitidez al iterar ediciones.
+    # Los modelos flash solo dan 1K, así que a ellos NO se les pide 2K.
+    def _make_cfg(model_name):
+        want_2k = "pro-image" in (model_name or "")
+        attempts = ([{"aspect_ratio": "16:9", "image_size": "2K"}] if want_2k else []) + [{"aspect_ratio": "16:9"}]
+        for kwargs in attempts:
+            try:
+                return google_genai_types.GenerateContentConfig(
+                    response_modalities=["IMAGE", "TEXT"],
+                    image_config=google_genai_types.ImageConfig(**kwargs),
+                )
+            except Exception:
+                continue
+        return google_genai_types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"])
 
     def _sync_call(model_name):
-        cfg = _make_cfg()
+        cfg = _make_cfg(model_name)
         resp = client.models.generate_content(model=model_name, contents=contents, config=cfg)
         return _extract_inline_image(resp)
 
