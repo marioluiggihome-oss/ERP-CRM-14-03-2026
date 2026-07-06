@@ -350,12 +350,19 @@ async def update_floor_order(order_id: str, payload: dict,
         update["stockDeducted"] = await _apply_stock_for_state(order, new_state)
         update["estado"] = new_state
 
+    # La observación del pedido (notas) se puede editar SIEMPRE (dueño o admin):
+    # es una nota para tener en cuenta al servir, no afecta a stock ni precio.
+    if "notas" in p:
+        update["notas"] = str(p.get("notas") or "")
+    if "clienteDatos" in p and isinstance(p["clienteDatos"], dict):
+        update["clienteDatos"] = p["clienteDatos"]
+
     # Edición de campos básicos (el dueño sólo si sigue 'presupuestado')
     if not order.get("estado") == "presupuestado" and not elevated:
         # ya reservado/entregado: el dueño no edita líneas
         pass
     else:
-        for k in ("cliente", "notas"):
+        for k in ("cliente",):
             if k in p:
                 update[k] = str(p.get(k) or "")
         for k in ("base", "iva", "total"):
