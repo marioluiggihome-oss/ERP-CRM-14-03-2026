@@ -427,6 +427,25 @@ export default function AIRenderStudio({ state, setState }) {
     try { setEditRefImage(await downscaleImage(f)); }
     catch { setError('No se pudo leer la imagen del elemento.'); }
   };
+  // Pegar una imagen del portapapeles (Ctrl+V) como elemento a copiar.
+  const captureClipboardImage = async (e) => {
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items || [];
+    for (const it of items) {
+      if (it.type && it.type.startsWith('image/')) {
+        const file = it.getAsFile();
+        if (file) { e.preventDefault(); try { setEditRefImage(await downscaleImage(file)); } catch { setError('No se pudo pegar la imagen.'); } return true; }
+      }
+    }
+    return false;
+  };
+  // Ctrl+V en cualquier parte del Estudio pega una imagen del portapapeles como
+  // elemento (no interfiere con pegar texto: solo actúa si hay imagen).
+  useEffect(() => {
+    const handler = (e) => { captureClipboardImage(e); };
+    window.addEventListener('paste', handler);
+    return () => window.removeEventListener('paste', handler);
+    // eslint-disable-next-line
+  }, []);
 
   const getAuthHeaders = () => {
     const token = getToken();
@@ -1549,7 +1568,8 @@ export default function AIRenderStudio({ state, setState }) {
                   )}
                   <input value={editInstruction} onChange={e => setEditInstruction(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !editing && (editInstruction.trim() || editRefImage)) editRender(); }}
-                    placeholder={editRefImage ? "Opcional: dónde/cómo colocar el elemento…" : "Editar: p. ej. 'cambia los muebles a azul navy', 'añade una campana de isla'…"}
+                    onPaste={captureClipboardImage}
+                    placeholder={editRefImage ? "Opcional: dónde/cómo colocar el elemento…" : "Editar o pega una imagen (Ctrl+V): 'cambia a azul navy', 'añade campana de isla'…"}
                     className="flex-1 min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
                   {/* Micro: dictar el cambio */}
                   {editSp.isSupported && (
