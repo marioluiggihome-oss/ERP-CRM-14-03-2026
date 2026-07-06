@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Package, Search, Calendar, Euro, Mail, CheckCircle, 
+import {
+  Package, Search, Calendar, Euro, Mail, CheckCircle,
   AlertTriangle, Eye, FileText, ChevronDown, ChevronUp,
   User, MapPin, Clock, Filter, RefreshCw, X, Printer,
   Factory, Truck, PackageCheck, Timer, Circle, Send, Paperclip
 } from 'lucide-react';
+import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+const _authH = () => ({ 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) });
 
 // Estados de fabricación con colores
 const FABRICATION_STATES = {
@@ -47,7 +49,7 @@ const MisPedidos = ({ currentUser }) => {
         ? `${API_URL}/api/orders`
         : `${API_URL}/api/orders`;  // Backend filtrará si es necesario
       
-      const response = await fetch(url);
+      const response = await fetch(url, { headers: _authH() });
       if (!response.ok) throw new Error('Error al cargar pedidos');
       const data = await response.json();
       
@@ -75,7 +77,7 @@ const MisPedidos = ({ currentUser }) => {
     try {
       const response = await fetch(`${API_URL}/api/orders/${showSendCopyModal.id}/send-copy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: _authH(),
         body: JSON.stringify({
           recipient_email: sendCopyEmail,
           include_attachments: sendCopyIncludeAttachments,

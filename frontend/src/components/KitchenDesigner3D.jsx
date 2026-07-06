@@ -663,11 +663,14 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
         // MUEBLES (cascos): se pasan los detectados para que Cascos los empareje
         // con SU catálogo (tipo + ancho más cercano, color/grosor activos). Antes
         // no se volcaba ningún casco → faltaba el 90% del pedido.
+        // El catálogo de Cascos trabaja en MILÍMETROS, así que los muebles se pasan
+        // en mm (no en cm) para que el emparejador por ancho acierte el módulo.
+        const toMm = (v) => { const n = Number(v) || 0; return n > 0 && n < 320 ? Math.round(n * 10) : Math.round(n); };
         const cabs = cotizables.map(f => ({
           tipo: (f.tipo || f.subtipo || f.nombre_catalogo || 'Bajo').toString(),
-          ancho: toCm(f.ancho_real || f.ancho_estimado, null),
-          alto: toCm(f.alto_real || f.alto_estimado, null),
-          fondo: toCm(f.fondo_real || f.fondo_estimado, null),
+          ancho: toMm(f.ancho_real || f.ancho_estimado),
+          alto: toMm(f.alto_real || f.alto_estimado),
+          fondo: toMm(f.fondo_real || f.fondo_estimado),
           qty: Number(f.cantidad) || Number(f.qty) || 1,
         }));
         setState(p => ({

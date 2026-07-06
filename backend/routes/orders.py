@@ -2,7 +2,7 @@
 Orders Router - Sistema de Confirmación de Pedidos
 Endpoints para confirmar pedidos, enviar emails y crear órdenes de fabricación
 """
-from fastapi import APIRouter, HTTPException, Form, File, UploadFile
+from fastapi import APIRouter, HTTPException, Form, File, UploadFile, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 from typing import Optional
@@ -18,7 +18,21 @@ import resend
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["orders"])
+# Autenticación obligatoria en todo el router. Los pedidos se filtran por el
+# usuario del token (no por un userId de query/form manipulable). Admin ve todo.
+try:
+    from services.jwt_service import require_auth, get_current_user, ADMIN_ROLE_FLAGS
+    _DEPS = [Depends(require_auth)]
+except Exception:  # pragma: no cover
+    async def get_current_user():
+        return None
+    ADMIN_ROLE_FLAGS = ["isAdmin", "isGerente", "isDirectorComercial"]
+    _DEPS = []
+
+def _is_admin(user) -> bool:
+    return bool(user) and any(user.get(f) for f in ADMIN_ROLE_FLAGS)
+
+router = APIRouter(tags=["orders"], dependencies=_DEPS)
 
 # Database connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -49,6 +63,7 @@ async def confirm_order(
     distributorName: str = Form(""),
     userId: str = Form(""),
     projectReference: str = Form(""),
+    current_user: Optional[dict] = Depends(get_current_user),
     attachment_0: Optional[UploadFile] = File(None),
     attachment_1: Optional[UploadFile] = File(None),
     attachment_2: Optional[UploadFile] = File(None),
@@ -60,6 +75,8 @@ async def confirm_order(
     Crea automaticamente una orden de fabricacion.
     """
     try:
+        # La propiedad del pedido la fija el usuario autenticado, no el Form.
+        userId = (current_user or {}).get("id") or userId
         # Clave de SendGrid: primero de los ajustes (MASTER > Settings), luego del entorno.
         _email_settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0}) or {}
         sendgrid_key = _email_settings.get('sendgridApiKey') or os.environ.get('SENDGRID_API_KEY')
@@ -438,16 +455,14 @@ async def confirm_order(
 # ============================================
 
 @router.get("/orders")
-async def get_user_orders(userId: Optional[str] = None, limit: int = 100):
+async def get_user_orders(limit: int = 100, current_user: Optional[dict] = Depends(get_current_user)):
     """
-    Obtiene los pedidos confirmados. Si se pasa userId, filtra por usuario.
+    Pedidos confirmados del usuario autenticado (admin/dirección ven todos).
     Sincroniza el estado de fabricacion con fabrica_orders.
     """
     try:
-        query = {}
-        if userId:
-            query["userId"] = userId
-        
+        query = {} if _is_admin(current_user) else {"userId": (current_user or {}).get("id")}
+
         orders = await db.orders.find(query, {"_id": 0}).sort("confirmedAt", -1).limit(limit).to_list(limit)
         
         # Sync fabrication status
@@ -478,14 +493,15 @@ async def get_user_orders(userId: Optional[str] = None, limit: int = 100):
 
 
 @router.get("/orders/{order_id}")
-async def get_order_detail(order_id: str):
-    """
-    Obtiene el detalle de un pedido especifico
-    """
+async def get_order_detail(order_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """Detalle de un pedido (solo su propietario o admin/dirección)."""
     try:
         order = await db.orders.find_one({"id": order_id}, {"_id": 0})
         if not order:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        owner = order.get("userId") or order.get("createdByUserId")
+        if not _is_admin(current_user) and owner and owner != (current_user or {}).get("id"):
+            raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
         return order
     except HTTPException:
         raise
@@ -509,7 +525,7 @@ class SendCopyRequest(BaseModel):
 
 
 @router.post("/orders/{order_id}/send-copy")
-async def send_order_copy(order_id: str, request: SendCopyRequest):
+async def send_order_copy(order_id: str, request: SendCopyRequest, current_user: Optional[dict] = Depends(get_current_user)):
     """
     Envía una copia del pedido a un email especificado.
     Incluye los archivos adjuntos del cliente si están disponibles.
@@ -519,7 +535,10 @@ async def send_order_copy(order_id: str, request: SendCopyRequest):
         order = await db.orders.find_one({"id": order_id}, {"_id": 0})
         if not order:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
-        
+        owner = order.get("userId") or order.get("createdByUserId")
+        if not _is_admin(current_user) and owner and owner != (current_user or {}).get("id"):
+            raise HTTPException(status_code=403, detail="Sin acceso a este pedido")
+
         sendgrid_key = os.environ.get('SENDGRID_API_KEY')
         if not sendgrid_key:
             raise HTTPException(status_code=500, detail="SendGrid API key not configured")

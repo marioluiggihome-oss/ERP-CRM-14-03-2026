@@ -819,7 +819,9 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
       formData.append('projectReference', budgetReference || budNum);
       orderAttachments.slice(0, 5).forEach((f, i) => formData.append(`attachment_${i}`, f));
       const r = await fetch(`${API_URL}/api/orders/confirm`, {
-        method: 'POST', headers: authHeaders(), body: formData,
+        // FormData multipart: solo Authorization (el navegador pone el Content-Type
+        // con su boundary; poner application/json rompería el parseo).
+        method: 'POST', headers: { Authorization: authHeaders().Authorization }, body: formData,
       });
       if (r.ok) {
         setOrderSent(true);

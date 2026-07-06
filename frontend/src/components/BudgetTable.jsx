@@ -761,7 +761,9 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
      // Para montada, usar el valor de punto de la biblioteca activa
      // Para despiece, usar pointValueDespiece (común)
      const currentLibrary = state.currentLibrary || 'ZC';
-     const libraryPointValue = state.libraryPointValues?.[currentLibrary] || state.pointValueMontada || 1.0;
+     // '??' para respetar un valor de punto = 0 configurado (con '||' un 0 caía a
+     // 1.0 y multiplicaba los puntos por 1€, disparando el presupuesto sin aviso).
+     const libraryPointValue = state.libraryPointValues?.[currentLibrary] ?? state.pointValueMontada ?? 1.0;
      const pointValue = state.currentModule === 'montada' ? libraryPointValue : state.pointValueDespiece;
 
      // Guarda idéntica al original: línea de librería sin producto -> total 0
@@ -1068,6 +1070,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/orders/confirm`, {
         method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
         body: formData
       });
       
