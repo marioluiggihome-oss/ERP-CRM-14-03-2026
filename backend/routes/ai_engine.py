@@ -96,6 +96,7 @@ class RenderRequest(BaseModel):
     layout: Optional[str] = Field(None, description="Layout override (L-shape, island, etc.)")
     referenceImage: Optional[str] = Field(None, description="Imagen/PDF de referencia en base64 para condicionar el render")
     referenceMime: Optional[str] = Field(None, description="MIME de la imagen de referencia")
+    referenceImages: Optional[List[str]] = Field(None, description="Imágenes adicionales (elemento a copiar: puerta, mueble…) en base64/data URL")
     provider: Optional[str] = Field(None, description="Motor de render: manus | gemini (opcional; por defecto manus)")
 
 
@@ -233,6 +234,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
         reference_image=request.referenceImage,
         reference_mime=request.referenceMime,
         provider=request.provider,
+        reference_images=request.referenceImages,
     )
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")

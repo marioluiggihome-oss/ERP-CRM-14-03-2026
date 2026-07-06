@@ -471,6 +471,7 @@ class Render3DService:
         reference_image: Optional[str] = None,
         reference_mime: Optional[str] = None,
         provider: Optional[str] = None,
+        reference_images: Optional[list] = None,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -507,6 +508,17 @@ class Render3DService:
         if ref_b64:
             change = (description or "").strip()
             parsed_params["briefExpanded"] = False
+            # Si además llegan imágenes de ELEMENTO (una puerta, un mueble a copiar),
+            # se lo indicamos al modelo para que incorpore ESE elemento a la cocina.
+            extra_imgs = [i for i in (reference_images or []) if i]
+            elemento_note = ""
+            if extra_imgs:
+                elemento_note = (
+                    "\n\nADDITIONAL reference image(s) are provided AFTER the main one: they show a "
+                    "specific ELEMENT (e.g. a door front, a handle, a cabinet or appliance) that you "
+                    "must ADD to / replicate in the kitchen, matching its look, color and finish, and "
+                    "placing it coherently. The FIRST image is always the existing kitchen to keep."
+                )
             task_prompt = (
                 "You are given a reference image of an EXISTING kitchen/furniture design. "
                 "Your job is to EDIT that exact image applying ONLY the change described below, "
@@ -515,7 +527,8 @@ class Render3DService:
                 "wall unit and tall column), the SAME appliances in the same places, the SAME sink, "
                 "hob, hood, windows and doors, and the SAME camera angle, framing and perspective. "
                 "Do NOT redesign, reorganize, add, remove, move, resize or 'improve' anything that "
-                "is not explicitly requested.\n\n"
+                "is not explicitly requested."
+                + elemento_note + "\n\n"
                 f"Requested change (apply ONLY this): {change or 'no change, just re-render faithfully'}.\n\n"
                 "Photorealistic result identical in composition to the reference, realistic PBR "
                 "materials, natural light and shadows, 16:9. It must look like the SAME kitchen as "
@@ -524,7 +537,7 @@ class Render3DService:
             return await self._render_dispatch(
                 task_prompt, task_prompt, parsed_params,
                 reference_image_base64=ref_b64, reference_mime=ref_mime,
-                provider=provider,
+                provider=provider, reference_images=extra_imgs or None,
             )
 
         # ── SIN REFERENCIA = diseño desde cero ─────────────────────────────────
@@ -833,7 +846,8 @@ class Render3DService:
                                parsed_params: Optional[Dict[str, Any]] = None,
                                reference_image_base64: Optional[str] = None,
                                reference_mime: str = "image/png",
-                               provider: Optional[str] = None) -> Dict[str, Any]:
+                               provider: Optional[str] = None,
+                               reference_images: Optional[list] = None) -> Dict[str, Any]:
         """Elige el motor de render. Por defecto MANUS (preferencia del usuario);
         si no está configurado o falla, usa Gemini como respaldo. El parámetro
         `provider` (por petición) tiene prioridad sobre la variable de entorno
@@ -856,6 +870,7 @@ class Render3DService:
         return await self._render_with_gemini(
             task_prompt, prompt, parsed_params,
             reference_image_base64=reference_image_base64, reference_mime=reference_mime,
+            reference_images=reference_images,
         )
 
     def get_materials_catalog(self) -> Dict[str, Any]:
