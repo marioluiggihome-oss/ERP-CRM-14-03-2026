@@ -22,6 +22,34 @@ import { COLORES_1, COLORES_2, porGama } from '../data/finishes';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // ─── Hook para Web Speech API ────────────────────────────────────────────────
+// Reduce una imagen grande (foto de móvil) antes de guardarla/enviarla: evita
+// que un base64 enorme sature memoria y tumbe la pestaña al analizarla/renderizar.
+// Si el archivo no es una imagen rasterizable (p. ej. PDF), devuelve el original.
+const downscaleImage = (file, maxDim = 1600, quality = 0.85) => new Promise((resolve, reject) => {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const original = fr.result;
+    try {
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          if (scale >= 1) { resolve(original); return; } // ya es pequeña
+          const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (_) { resolve(original); }
+      };
+      img.onerror = () => resolve(original); // no es imagen (PDF u otro) → original
+      img.src = original;
+    } catch (_) { resolve(original); }
+  };
+  fr.onerror = reject;
+  fr.readAsDataURL(file);
+});
+
 function useSpeechRecognition() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -396,8 +424,8 @@ export default function AIRenderStudio({ state, setState }) {
   const onEditRefUpload = async (e) => {
     const f = e.target.files?.[0]; e.target.value = '';
     if (!f) return;
-    const url = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(f); });
-    setEditRefImage(url);
+    try { setEditRefImage(await downscaleImage(f)); }
+    catch { setError('No se pudo leer la imagen del elemento.'); }
   };
 
   const getAuthHeaders = () => {
@@ -700,12 +728,7 @@ export default function AIRenderStudio({ state, setState }) {
     setAnalyzingRef(true);
     setError(null);
     try {
-      const b64 = await new Promise((res, rej) => {
-        const fr = new FileReader();
-        fr.onload = () => res(fr.result);
-        fr.onerror = rej;
-        fr.readAsDataURL(file);
-      });
+      const b64 = await downscaleImage(file);
       const response = await fetch(`${API_URL}/api/ai-engine/describe-reference`, {
         method: 'POST',
         headers: getAuthHeaders(),
