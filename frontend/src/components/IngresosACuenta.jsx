@@ -2,12 +2,14 @@
  * IngresosACuenta - Localiza por IA los ingresos a cuenta (anticipos del cliente)
  * a partir de un documento (PDF/imagen) y los registra. Cada usuario ve los suyos.
  */
-import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Trash2, X, Plus, RefreshCw, Banknote, UserPlus } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Sparkles, Trash2, X, Plus, RefreshCw, Banknote, UserPlus, Link2 } from 'lucide-react';
 import { clientsAPI } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+// Mismo criterio que se usa para pintar la etiqueta "PENDIENTE DE ASIGNACIÓN" en la fila.
+const isPendiente = (i) => !i.targetRef && (i.pendiente || (!i.clientCode && !i.cliente));
 
 const IngresosACuenta = ({ currentUser }) => {
   const [items, setItems] = useState([]);
@@ -18,6 +20,13 @@ const IngresosACuenta = ({ currentUser }) => {
   const [saving, setSaving] = useState(false);
   const [asignables, setAsignables] = useState([]); // presupuestos/pedidos/facturas a los que asignar
   const [clients, setClients] = useState([]); // clientes a los que asignar directamente
+  const [assign, setAssign] = useState(null); // { id, targetId, clientCode }
+  const [assigning, setAssigning] = useState(false);
+
+  const pendientes = useMemo(() => {
+    const rows = items.filter(isPendiente);
+    return { count: rows.length, total: rows.reduce((s, i) => s + (Number(i.importe) || 0), 0) };
+  }, [items]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -137,6 +146,28 @@ const IngresosACuenta = ({ currentUser }) => {
     load();
   };
 
+  // Asignar (o reasignar) despues un ingreso que quedo pendiente, sin borrarlo y recrearlo.
+  const openAssign = (i) => setAssign({ id: i.id, targetId: i.targetId || '', clientCode: i.clientCode || '' });
+  const doAssign = async () => {
+    if (!assign.targetId && !assign.clientCode) { alert('Selecciona un cliente y/o un documento'); return; }
+    setAssigning(true);
+    try {
+      const target = asignables.find(a => a.id === assign.targetId);
+      const client = clients.find(c => c.codigo === assign.clientCode);
+      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos/${assign.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetId: assign.targetId, targetType: target?.docType || '', targetRef: target?.ref || '',
+          clientCode: assign.clientCode, cliente: client?.nombre || '',
+        }),
+      });
+      if (!r.ok) throw new Error();
+      setAssign(null);
+      await load();
+    } catch { alert('No se pudo asignar el ingreso'); }
+    finally { setAssigning(false); }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
@@ -162,10 +193,19 @@ const IngresosACuenta = ({ currentUser }) => {
         </div>
       </div>
 
-      <div className="bg-teal-600 text-white p-4 rounded-2xl mb-5 inline-block min-w-[220px]">
-        <p className="text-[10px] uppercase opacity-80">Total ingresos a cuenta</p>
-        <p className="text-2xl font-black">{eur(total)}</p>
-        <p className="text-[11px] opacity-80">{items.length} registro(s)</p>
+      <div className="flex flex-wrap gap-4 mb-5">
+        <div className="bg-teal-600 text-white p-4 rounded-2xl inline-block min-w-[220px]">
+          <p className="text-[10px] uppercase opacity-80">Total ingresos a cuenta</p>
+          <p className="text-2xl font-black">{eur(total)}</p>
+          <p className="text-[11px] opacity-80">{items.length} registro(s)</p>
+        </div>
+        {pendientes.count > 0 && (
+          <div className="bg-orange-600 text-white p-4 rounded-2xl inline-block min-w-[220px]">
+            <p className="text-[10px] uppercase opacity-80">Pendientes de asignar</p>
+            <p className="text-2xl font-black">{eur(pendientes.total)}</p>
+            <p className="text-[11px] opacity-80">{pendientes.count} registro(s) sin cliente ni documento</p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
@@ -199,8 +239,11 @@ const IngresosACuenta = ({ currentUser }) => {
                     <span className={`px-2 py-1 rounded-lg text-[11px] font-black ${i.targetType === 'factura' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
                       {(i.targetType || '').toUpperCase()} {i.targetRef}
                     </span>
-                  ) : (i.pendiente || (!i.clientCode && !i.cliente)) ? (
-                    <span className="px-2 py-1 rounded-lg text-[11px] font-black bg-orange-100 text-orange-700">PENDIENTE DE ASIGNACIÓN</span>
+                  ) : isPendiente(i) ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-1 rounded-lg text-[11px] font-black bg-orange-100 text-orange-700">PENDIENTE DE ASIGNACIÓN</span>
+                      <button onClick={() => openAssign(i)} title="Asignar a un cliente o documento" className="px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1"><Link2 size={11} /> Asignar</button>
+                    </div>
                   ) : <span className="text-slate-300">—</span>}
                 </td>
                 <td className="p-3 text-center">
@@ -292,6 +335,37 @@ const IngresosACuenta = ({ currentUser }) => {
               </table>
               <button onClick={saveAll} disabled={saving} className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white rounded-xl font-black uppercase text-sm flex items-center justify-center gap-2">
                 <Plus size={16} /> {saving ? 'Registrando…' : `Registrar ${review.ingresos.length} ingreso(s)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: asignar despues un ingreso pendiente (sin borrar y recrear) */}
+      {assign && (
+        <div className="fixed inset-0 bg-black/60 z-[130] flex items-center justify-center p-4" onClick={() => !assigning && setAssign(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-teal-600 text-white px-5 py-3 flex items-center justify-between">
+              <h3 className="font-black text-sm uppercase flex items-center gap-2"><Link2 size={16} /> Asignar ingreso</h3>
+              <button onClick={() => setAssign(null)} className="p-1.5 hover:bg-white/20 rounded-lg"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Cliente final</label>
+                <select value={assign.clientCode} onChange={e => setAssign({ ...assign, clientCode: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm font-bold">
+                  <option value="">— Sin cliente vinculado —</option>
+                  {clients.map(c => <option key={c.codigo} value={c.codigo}>{c.codigo} · {c.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Presupuesto / pedido / factura</label>
+                <select value={assign.targetId} onChange={e => setAssign({ ...assign, targetId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm font-bold">
+                  <option value="">— Sin documento vinculado —</option>
+                  {asignables.map(a => <option key={a.id} value={a.id}>{(a.docType || '').toUpperCase()} · {a.ref || '(sin ref)'} · {a.cliente || ''}</option>)}
+                </select>
+              </div>
+              <button onClick={doAssign} disabled={assigning} className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl font-black text-sm">
+                {assigning ? 'Asignando…' : 'Guardar asignación'}
               </button>
             </div>
           </div>
