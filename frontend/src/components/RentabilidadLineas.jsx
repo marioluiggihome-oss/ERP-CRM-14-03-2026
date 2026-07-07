@@ -588,6 +588,18 @@ const RentabilidadLineas = ({ currentUser }) => {
 
   const hasActiveFilters = Object.values(columnFilters).some(v => v !== '');
 
+  // Totales del listado FILTRADO (respeta pestaña de tipo + todos los filtros de columna).
+  const [showTotals, setShowTotals] = useState(false);
+  const filteredTotals = useMemo(() => {
+    return filteredAndSorted.reduce((acc, f) => {
+      const tt = f.totals || totals(f.lines);
+      acc.venta += tt.venta || 0;
+      acc.coste += tt.coste || 0;
+      acc.margen += tt.margen || 0;
+      return acc;
+    }, { venta: 0, coste: 0, margen: 0 });
+  }, [filteredAndSorted]);
+
   const et = editor ? totals(editor.lines) : null;
 
   const SortHeader = ({ col, label, align = 'left' }) => (
@@ -640,11 +652,24 @@ const RentabilidadLineas = ({ currentUser }) => {
             {parsing ? 'Leyendo...' : `Subir ${TABS.find(t => t.key === docType)?.singular || 'documento'}`}
             <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleSaleDoc} disabled={parsing || parsingMulti} />
           </label>
+          <button onClick={() => setShowTotals(s => !s)} className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${showTotals ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            <Euro size={16} /> Totales
+          </button>
           <button onClick={load} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
+
+      {/* Totales del listado filtrado (pestaña + filtros de columna activos) */}
+      {showTotals && (
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+          <div className="bg-indigo-600 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Total venta</p><p className="text-xl font-black">{eur(filteredTotals.venta)}</p></div>
+          <div className="bg-orange-600 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Total coste</p><p className="text-xl font-black">{eur(filteredTotals.coste)}</p></div>
+          <div className={`${filteredTotals.margen >= 0 ? 'bg-emerald-600' : 'bg-red-600'} text-white p-3 rounded-2xl`}><p className="text-[10px] uppercase opacity-80">Total margen</p><p className="text-xl font-black">{eur(filteredTotals.margen)}</p></div>
+          <div className="bg-slate-800 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Documentos {hasActiveFilters ? '(filtrados)' : ''}</p><p className="text-xl font-black">{filteredAndSorted.length}</p></div>
+        </div>
+      )}
 
       {/* Bandeja IA: zona de arrastrar y soltar */}
       <div
