@@ -34,6 +34,10 @@ try:
         raise HTTPException(status_code=403, detail="Sin acceso al módulo de Rentabilidad")
     _RENTA_DEPS = [Depends(require_rentabilidad)]
 except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    ADMIN_ROLE_FLAGS = ()
+
+    async def require_rentabilidad():
+        return {}
     _RENTA_DEPS = []
 
 router = APIRouter(tags=["rentabilidad"], dependencies=_RENTA_DEPS)
@@ -42,6 +46,44 @@ MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
+
+MAX_DOC_SIZE_MB = 15
+
+
+def _is_elevated(user: dict) -> bool:
+    return any((user or {}).get(f) for f in ADMIN_ROLE_FLAGS)
+
+
+def _check_doc_size(b64: str, max_mb: int = MAX_DOC_SIZE_MB):
+    """Rechaza documentos adjuntos (base64) por encima del limite, para no
+    disparar el tamano de Mongo con lotes grandes de facturas escaneadas."""
+    if not b64:
+        return
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    size_mb = (len(stripped) * 3 / 4) / (1024 * 1024)  # tamano real aprox. del binario
+    if size_mb > max_mb:
+        raise HTTPException(
+            status_code=413,
+            detail=f"El documento pesa {size_mb:.1f}MB; el maximo permitido es {max_mb}MB",
+        )
+
+
+async def _log_deletion(entity: str, entity_id: str, before: Optional[dict], user: dict):
+    """Auditoria minima de borrados: quien borro que y una copia del documento
+    para poder recuperarlo si hace falta."""
+    try:
+        await db.rentabilidad_audit_log.insert_one({
+            "id": f"aud-{uuid.uuid4().hex[:8]}",
+            "action": "delete",
+            "entity": entity,
+            "entityId": entity_id,
+            "before": before,
+            "userId": (user or {}).get("id", ""),
+            "userName": (user or {}).get("username", ""),
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as e:
+        logger.error(f"No se pudo registrar auditoria de borrado ({entity}/{entity_id}): {e}")
 
 
 # ----------------------------- COSTES POR PROYECTO -----------------------------
@@ -54,12 +96,18 @@ async def add_project_cost(cost: dict):
         if not ref:
             raise HTTPException(status_code=400, detail="Falta projectRef")
         ref = await _resolve_project_cost_ref(ref)
+        _check_doc_size(cost.get("docBase64") or "")
+        raw_categoria = str(cost.get("categoria") or "OTROS")
+        categoria = _invoice_category(raw_categoria)
         doc = {
             "id": f"cost-{uuid.uuid4().hex[:8]}",
             "projectRef": ref,
             "proveedor": cost.get("proveedor", ""),
             "concepto": cost.get("concepto", ""),
-            "categoria": cost.get("categoria", "OTROS"),
+            "categoria": categoria,
+            # Si la IA/usuario mando una categoria que no es de las validas, se
+            # normaliza a OTROS pero se conserva lo detectado para no maquillarlo.
+            "categoriaOriginal": raw_categoria if categoria == "OTROS" and raw_categoria.strip().upper() != "OTROS" else "",
             "importe": float(cost.get("importe", 0) or 0),
             "fecha": cost.get("fecha", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "source": cost.get("source", "manual"),
@@ -114,10 +162,13 @@ async def get_project_cost_doc(doc_id: str):
 
 
 @router.delete("/project-costs/{cost_id}")
-async def delete_project_cost(cost_id: str):
+async def delete_project_cost(cost_id: str, user: dict = Depends(require_rentabilidad)):
     try:
+        existing = await db.project_costs.find_one({"id": cost_id}, {"_id": 0})
         await db.project_cost_docs.delete_many({"costId": cost_id})
         res = await db.project_costs.delete_one({"id": cost_id})
+        if existing:
+            await _log_deletion("project_cost", cost_id, existing, user)
         return {"success": True, "deleted": res.deleted_count}
     except Exception as e:
         logger.error(f"Delete project cost error: {e}")
@@ -762,6 +813,71 @@ def _ficha_totals(lines):
     }
 
 
+async def _cobrado_por_ficha_map():
+    """Suma ingresos_cuenta por ficha: por targetId (vinculo directo) y tambien
+    por referencia normalizada (fallback si el ingreso se registro contra la
+    ref y no contra el id de la ficha)."""
+    m = {}
+    async for ing in db.ingresos_cuenta.find({}, {"_id": 0, "targetId": 1, "targetRef": 1, "importe": 1}):
+        monto = float(ing.get("importe", 0) or 0)
+        tid = ing.get("targetId")
+        if tid:
+            m[tid] = m.get(tid, 0.0) + monto
+        tref = _normalize_ref(ing.get("targetRef") or "")
+        if tref:
+            key = f"ref:{tref}"
+            m[key] = m.get(key, 0.0) + monto
+    return m
+
+
+async def _costes_proyecto_map():
+    """Total de project_costs (costes de Rentabilidad > Por proyecto) por
+    referencia normalizada, para poder avisar en la ficha 'Por lineas' de que
+    ya hay coste cargado aunque las lineas de la ficha no lo reflejen."""
+    m = {}
+    async for c in db.project_costs.find({}, {"_id": 0, "projectRef": 1, "importe": 1}):
+        ref = _normalize_ref(c.get("projectRef"))
+        if not ref:
+            continue
+        m[ref] = m.get(ref, 0.0) + float(c.get("importe", 0) or 0)
+    return m
+
+
+def _apply_ficha_extras(f, cobrado_map, costes_map):
+    """Anade a la ficha: cobrado/pendienteCobro (cruce con ingresos a cuenta) y
+    costesProyecto (coste ya registrado en Rentabilidad para ese projectRef)."""
+    tt = f.get("totals") or _ficha_totals(f.get("lines", []))
+    cobrado = cobrado_map.get(f.get("id")) or cobrado_map.get(f"ref:{_normalize_ref(f.get('ref'))}") or 0.0
+    f["cobrado"] = round(cobrado, 2)
+    f["pendienteCobro"] = round((tt.get("venta") or 0) - cobrado, 2)
+    proj_ref = _normalize_ref(f.get("projectRef") or f.get("ref"))
+    f["costesProyecto"] = round(costes_map.get(proj_ref, 0.0), 2)
+    return f
+
+
+@router.post("/rentabilidad/split-pdf-pages")
+async def split_pdf_pages(payload: dict):
+    """Divide un PDF de varias paginas en un PDF por pagina. Pensado para cuando
+    llega un archivo combinado con muchas facturas dentro (una por pagina, como
+    en una exportacion/historico): sin esto, parse-sale-doc intentaba leer las
+    N facturas como si fueran un solo documento y fallaba."""
+    b64 = (payload or {}).get("fileBase64") or ""
+    if not b64:
+        raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    stripped = b64.split(",", 1)[1] if b64.startswith("data:") else b64
+    try:
+        from services.pdf_utils import is_pdf_base64, split_pdf_to_pages_base64
+        if not is_pdf_base64(stripped):
+            return {"success": True, "pages": [b64]}
+        pages = split_pdf_to_pages_base64(stripped)
+        if not pages:
+            return {"success": True, "pages": [b64]}
+        return {"success": True, "pages": [f"data:application/pdf;base64,{p}" for p in pages]}
+    except Exception as e:
+        logger.error(f"split_pdf_pages error: {e}")
+        return {"success": False, "error": str(e), "pages": [b64]}
+
+
 @router.post("/rentabilidad/parse-sale-doc")
 async def parse_sale_doc(payload: dict):
     """Lee un documento de venta (presupuesto/pedido/factura) y extrae sus lineas."""
@@ -893,9 +1009,12 @@ async def list_fichas(userId: Optional[str] = None):
     try:
         query = {"createdBy": userId} if userId else {}
         fichas = await db.sale_fichas.find(query, {"_id": 0}).sort("createdAt", -1).to_list(2000)
+        cobrado_map = await _cobrado_por_ficha_map()
+        costes_map = await _costes_proyecto_map()
         for f in fichas:
             f["totals"] = _ficha_totals(f.get("lines", []))
             f["numDocs"] = await db.sale_ficha_docs.count_documents({"fichaId": f.get("id")})
+            _apply_ficha_extras(f, cobrado_map, costes_map)
         return fichas
     except Exception as e:
         logger.error(f"List fichas error: {e}")
@@ -909,6 +1028,9 @@ async def get_ficha(ficha_id: str):
     if not f:
         raise HTTPException(status_code=404, detail="Ficha no encontrada")
     f["totals"] = _ficha_totals(f.get("lines", []))
+    cobrado_map = await _cobrado_por_ficha_map()
+    costes_map = await _costes_proyecto_map()
+    _apply_ficha_extras(f, cobrado_map, costes_map)
     docs = await db.sale_ficha_docs.find(
         {"fichaId": ficha_id}, {"_id": 0, "dataBase64": 0}
     ).sort("uploadedAt", 1).to_list(100)
@@ -1048,11 +1170,18 @@ async def trace_ficha(ficha_id: str, payload: dict):
 
 
 @router.delete("/rentabilidad/fichas/{ficha_id}")
-async def delete_ficha(ficha_id: str):
+async def delete_ficha(ficha_id: str, user: dict = Depends(require_rentabilidad)):
     try:
+        existing = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
+        if existing and existing.get("createdBy") and not _is_elevated(user) and existing.get("createdBy") != (user or {}).get("id"):
+            raise HTTPException(status_code=403, detail="No puedes borrar un documento de otro usuario")
         await db.sale_fichas.delete_one({"id": ficha_id})
         await db.sale_ficha_docs.delete_many({"fichaId": ficha_id})
+        if existing:
+            await _log_deletion("sale_ficha", ficha_id, existing, user)
         return {"success": True}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Delete ficha error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1066,6 +1195,7 @@ async def add_ficha_doc(ficha_id: str, payload: dict):
     b64 = (payload or {}).get("fileBase64") or ""
     if not b64:
         raise HTTPException(status_code=400, detail="Falta el archivo (fileBase64)")
+    _check_doc_size(b64)
     # Detectar mime del prefijo data: si viene
     mime = "application/octet-stream"
     if b64.startswith("data:"):
@@ -1464,6 +1594,7 @@ async def create_ingreso(payload: dict):
     # Archivar el documento (si viene en base64) en su propia colección
     doc_id = ""
     doc_b64 = (payload or {}).get("docBase64") or ""
+    _check_doc_size(doc_b64)
     if doc_b64:
         stripped = doc_b64.split(",", 1)[1] if doc_b64.startswith("data:") else doc_b64
         doc_id = f"ingdoc-{uuid.uuid4().hex[:8]}"
@@ -1511,8 +1642,39 @@ async def get_ingreso_doc(doc_id: str):
     return d
 
 
+@router.patch("/rentabilidad/ingresos/{ingreso_id}")
+async def update_ingreso(ingreso_id: str, payload: dict):
+    """Asigna (o reasigna) un ingreso a cuenta a un cliente y/o documento sin
+    tener que borrarlo y recrearlo — pensado para resolver los que quedaron
+    'pendientes de asignación'."""
+    existing = await db.ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Ingreso no encontrado")
+    target_id = str((payload or {}).get("targetId") or "")
+    client_code = str((payload or {}).get("clientCode") or "")
+    upd = {
+        "clientCode": client_code,
+        "targetId": target_id,
+        "targetType": str((payload or {}).get("targetType") or ""),
+        "targetRef": str((payload or {}).get("targetRef") or ""),
+        "pendiente": not target_id and not client_code,
+    }
+    if (payload or {}).get("cliente"):
+        upd["cliente"] = str(payload.get("cliente"))
+    if (payload or {}).get("projectRef"):
+        upd["projectRef"] = str(payload.get("projectRef"))
+    await db.ingresos_cuenta.update_one({"id": ingreso_id}, {"$set": upd})
+    updated = await db.ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
+    return {"success": True, "ingreso": updated}
+
+
 @router.delete("/rentabilidad/ingresos/{ingreso_id}")
-async def delete_ingreso(ingreso_id: str):
+async def delete_ingreso(ingreso_id: str, user: dict = Depends(require_rentabilidad)):
+    existing = await db.ingresos_cuenta.find_one({"id": ingreso_id}, {"_id": 0})
+    if existing and existing.get("createdBy") and not _is_elevated(user) and existing.get("createdBy") != (user or {}).get("id"):
+        raise HTTPException(status_code=403, detail="No puedes borrar un ingreso de otro usuario")
     await db.ingresos_cuenta.delete_one({"id": ingreso_id})
     await db.ingreso_docs.delete_many({"ingresoId": ingreso_id})
+    if existing:
+        await _log_deletion("ingreso_cuenta", ingreso_id, existing, user)
     return {"success": True}

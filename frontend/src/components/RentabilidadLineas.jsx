@@ -208,6 +208,33 @@ const RentabilidadLineas = ({ currentUser }) => {
     setParsingMulti(true);
     setMultiProgress({ current: 0, total: files.length });
 
+    // Expandir cada archivo: si es un PDF combinado con varias facturas dentro
+    // (una por pagina, como en una exportacion/historico), se separa en un
+    // documento por pagina para leer cada factura por separado. Si no es PDF
+    // o tiene una sola pagina, se procesa igual que antes (1 documento).
+    const docs = []; // { b64, name }
+    for (const file of files) {
+      const b64 = await fileToB64(file);
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+      if (!isPdf) { docs.push({ b64, name: file.name }); continue; }
+      try {
+        const sr = await fetch(`${API_URL}/api/rentabilidad/split-pdf-pages`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileBase64: b64 }),
+        });
+        const sd = await sr.json();
+        const pages = (sd.success && Array.isArray(sd.pages) && sd.pages.length) ? sd.pages : [b64];
+        pages.forEach((pageB64, idx) => docs.push({
+          b64: pageB64,
+          name: pages.length > 1 ? `${file.name} (pág ${idx + 1}/${pages.length})` : file.name,
+        }));
+      } catch {
+        docs.push({ b64, name: file.name });
+      }
+    }
+
+    setMultiProgress({ current: 0, total: docs.length });
+
     let successCount = 0;
     let errorCount = 0;
     let completedCount = 0;   // ya existia pero le faltaba algun campo y se ha rellenado
@@ -219,10 +246,10 @@ const RentabilidadLineas = ({ currentUser }) => {
       (fichas || []).map(f => [`${f.docType || 'factura'}|${normRef(f.ref)}`, f])
     );
 
-    for (let i = 0; i < files.length; i++) {
-      setMultiProgress({ current: i + 1, total: files.length });
+    for (let i = 0; i < docs.length; i++) {
+      setMultiProgress({ current: i + 1, total: docs.length });
+      const b64 = docs[i].b64;
       try {
-        const b64 = await fileToB64(files[i]);
         const r = await fetch(`${API_URL}/api/rentabilidad/parse-sale-doc`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fileBase64: b64 }),
@@ -267,7 +294,7 @@ const RentabilidadLineas = ({ currentUser }) => {
           if (existing.id) {
             await fetch(`${API_URL}/api/rentabilidad/fichas/${existing.id}/docs`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileBase64: b64, filename: files[i].name, kind: 'venta' }),
+              body: JSON.stringify({ fileBase64: b64, filename: docs[i].name, kind: 'venta' }),
             });
           }
           completedCount++;
@@ -297,7 +324,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         if (fid) {
           await fetch(`${API_URL}/api/rentabilidad/fichas/${fid}/docs`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileBase64: b64, filename: files[i].name, kind: 'venta' }),
+            body: JSON.stringify({ fileBase64: b64, filename: docs[i].name, kind: 'venta' }),
           });
         }
         if (refKey && saveData?.ficha) existingByKey.set(`${resolvedDocType}|${refKey}`, saveData.ficha);
@@ -589,15 +616,18 @@ const RentabilidadLineas = ({ currentUser }) => {
   const hasActiveFilters = Object.values(columnFilters).some(v => v !== '');
 
   // Totales del listado FILTRADO (respeta pestaña de tipo + todos los filtros de columna).
+  // Se excluyen las fichas ya convertidas a otro documento (convertidoAId): su importe
+  // ya vive en el documento destino, sumarla aqui tambien duplicaria la venta.
   const [showTotals, setShowTotals] = useState(false);
   const filteredTotals = useMemo(() => {
-    return filteredAndSorted.reduce((acc, f) => {
+    return filteredAndSorted.filter(f => !f.convertidoAId).reduce((acc, f) => {
       const tt = f.totals || totals(f.lines);
       acc.venta += tt.venta || 0;
       acc.coste += tt.coste || 0;
       acc.margen += tt.margen || 0;
+      acc.pendienteCobro += Number(f.pendienteCobro) || 0;
       return acc;
-    }, { venta: 0, coste: 0, margen: 0 });
+    }, { venta: 0, coste: 0, margen: 0, pendienteCobro: 0 });
   }, [filteredAndSorted]);
 
   const et = editor ? totals(editor.lines) : null;
@@ -663,10 +693,11 @@ const RentabilidadLineas = ({ currentUser }) => {
 
       {/* Totales del listado filtrado (pestaña + filtros de columna activos) */}
       {showTotals && (
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-4">
           <div className="bg-indigo-600 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Total venta</p><p className="text-xl font-black">{eur(filteredTotals.venta)}</p></div>
           <div className="bg-orange-600 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Total coste</p><p className="text-xl font-black">{eur(filteredTotals.coste)}</p></div>
           <div className={`${filteredTotals.margen >= 0 ? 'bg-emerald-600' : 'bg-red-600'} text-white p-3 rounded-2xl`}><p className="text-[10px] uppercase opacity-80">Total margen</p><p className="text-xl font-black">{eur(filteredTotals.margen)}</p></div>
+          <div className={`${filteredTotals.pendienteCobro > 0 ? 'bg-amber-600' : 'bg-slate-700'} text-white p-3 rounded-2xl`}><p className="text-[10px] uppercase opacity-80">Pendiente cobro</p><p className="text-xl font-black">{eur(filteredTotals.pendienteCobro)}</p></div>
           <div className="bg-slate-800 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Documentos {hasActiveFilters ? '(filtrados)' : ''}</p><p className="text-xl font-black">{filteredAndSorted.length}</p></div>
         </div>
       )}
@@ -703,6 +734,7 @@ const RentabilidadLineas = ({ currentUser }) => {
               <SortHeader col="venta" label="Venta" align="right" />
               <SortHeader col="coste" label="Coste" align="right" />
               <SortHeader col="margen" label="Margen" align="right" />
+              <th className="text-right p-3 text-xs font-black uppercase">Pendiente cobro</th>
               <th className="text-center p-3 text-xs font-black uppercase">Docs</th>
               <th className="p-3"></th>
             </tr>
@@ -797,6 +829,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                 </div>
               </th>
               <th className="p-1.5"></th>
+              <th className="p-1.5"></th>
               <th className="p-1.5">
                 {hasActiveFilters && (
                   <button onClick={clearColumnFilters} className="text-red-500 hover:text-red-700">
@@ -809,9 +842,15 @@ const RentabilidadLineas = ({ currentUser }) => {
           <tbody className="divide-y divide-slate-100">
             {paginatedRows.map(f => {
               const tt = f.totals || totals(f.lines);
+              // Alerta de margen bajo (<15%) solo tiene sentido si hay venta y coste registrados.
+              const alertaMargen = tt.venta > 0 && tt.coste > 0 && tt.margenPct < 15;
+              // Ya convertida a otro documento: se atenua porque su importe ya no cuenta
+              // en los totales (vive en el documento de destino), evita doble lectura.
+              const yaConvertida = !!f.convertidoAId;
               return (
-                <tr key={f.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => openFicha(f.id)}>
+                <tr key={f.id} className={`hover:bg-slate-50 cursor-pointer ${alertaMargen ? 'bg-red-50/60' : ''} ${yaConvertida ? 'opacity-50' : ''}`} onClick={() => openFicha(f.id)}>
                   <td className="p-3 font-black text-indigo-700">
+                    {alertaMargen && <span title="Margen bajo (<15%)" className="inline-block mr-1 text-red-500">⚠</span>}
                     {f.ref || '-'}
                     {f.origenRef && <button type="button" onClick={(e) => { e.stopPropagation(); irADocumento(f.origenType, f.origenRef); }} title="Ir al documento de origen" className="block text-[9px] font-bold text-slate-400 hover:text-indigo-600 hover:underline mt-0.5">↑ {(f.origenType || '').charAt(0).toUpperCase() + (f.origenType || '').slice(1)} {f.origenRef}</button>}
                     {f.convertidoARef && <button type="button" onClick={(e) => { e.stopPropagation(); irADocumento(f.convertidoAType, f.convertidoARef); }} title="Ir al documento de destino" className="block text-[9px] font-bold text-emerald-600 hover:text-emerald-800 hover:underline mt-0.5">→ {(f.convertidoAType || '').charAt(0).toUpperCase() + (f.convertidoAType || '').slice(1)} {f.convertidoARef}</button>}
@@ -823,7 +862,8 @@ const RentabilidadLineas = ({ currentUser }) => {
                   <td className="p-3 text-slate-500">{f.fecha || '-'}</td>
                   <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
                   <td className="p-3 text-right font-mono text-orange-600">{eur(tt.coste)}</td>
-                  <td className={`p-3 text-right font-mono font-black ${tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
+                  <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
+                  <td className={`p-3 text-right font-mono ${(f.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>{eur(f.pendienteCobro)}</td>
                   <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
                   <td className="p-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     {NEXT_DOC_TYPE[f.docType || 'factura'] && (
@@ -838,7 +878,7 @@ const RentabilidadLineas = ({ currentUser }) => {
               );
             })}
             {filteredAndSorted.length === 0 && (
-              <tr><td colSpan={8} className="p-8 text-center text-slate-400">
+              <tr><td colSpan={9} className="p-8 text-center text-slate-400">
                 {loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : `Sin ${TABS.find(t => t.key === docType)?.label.toLowerCase()}. Sube un documento de venta para empezar.`}
               </td></tr>
             )}
@@ -1131,6 +1171,14 @@ const RentabilidadLineas = ({ currentUser }) => {
                   <div className="bg-orange-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-orange-500 font-black">Coste</p><p className="text-lg font-black text-orange-700">{eur(viewing.totals.coste)}</p></div>
                   <div className={`${viewing.totals.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${viewing.totals.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Margen ({viewing.totals.margenPct}%)</p><p className={`text-lg font-black ${viewing.totals.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(viewing.totals.margen)}</p></div>
                 </div>
+              )}
+              {(viewing.pendienteCobro || 0) > 0 && (
+                <p className="text-xs text-amber-600 font-bold mt-2">Pendiente de cobro: {eur(viewing.pendienteCobro)} (cobrado hasta ahora: {eur(viewing.cobrado)})</p>
+              )}
+              {(viewing.costesProyecto || 0) > 0 && (viewing.costesProyecto !== viewing.totals?.coste) && (
+                <p className="text-xs text-indigo-600 font-bold mt-1">
+                  Este proyecto ya tiene {eur(viewing.costesProyecto)} de coste registrado en Rentabilidad &gt; Costes por proyecto — revisa si coincide con el coste de estas líneas antes de dar el margen por bueno.
+                </p>
               )}
             </div>
           </div>

@@ -109,6 +109,46 @@ def pdf_base64_to_png_base64(
     return images
 
 
+def split_pdf_to_pages_base64(pdf_b64: str, max_pages: Optional[int] = None) -> List[str]:
+    """Divide un PDF de varias páginas en un PDF de 1 sola página por cada una
+    (en base64), para poder procesar cada página como un documento independiente.
+
+    Útil cuando llega un PDF combinado con muchas facturas dentro (una por
+    página, como en una exportación/histórico), y hay que leer cada factura
+    por separado en vez de intentar leerlas todas como si fueran una sola.
+    """
+    if not PYMUPDF_AVAILABLE:
+        return []
+    if pdf_b64.startswith("data:"):
+        pdf_b64 = pdf_b64.split(",", 1)[1]
+    try:
+        pdf_bytes = base64.b64decode(pdf_b64)
+    except Exception:
+        return []
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception:
+        return []
+    out: List[str] = []
+    try:
+        total = doc.page_count
+        limit = total if max_pages is None else min(total, max_pages)
+        for i in range(limit):
+            single = None
+            try:
+                single = fitz.open()
+                single.insert_pdf(doc, from_page=i, to_page=i)
+                out.append(base64.b64encode(single.tobytes()).decode("utf-8"))
+            except Exception as e:
+                logger.warning(f"No se pudo aislar la página {i + 1}/{total}: {e}")
+            finally:
+                if single is not None:
+                    single.close()
+    finally:
+        doc.close()
+    return out
+
+
 def pdf_base64_to_text(pdf_b64: str, max_pages: Optional[int] = None) -> str:
     """Extrae el TEXTO de un PDF digital (todas las páginas por defecto).
 
