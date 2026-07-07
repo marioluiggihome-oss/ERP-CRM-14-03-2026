@@ -5,13 +5,29 @@ Permite generar informes de rentabilidad, ventas, costes y márgenes
 con filtros por fecha, cliente, categoría, tipo de documento, etc.
 Exporta en JSON (para frontend) y PDF (para descarga).
 """
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 from typing import Optional, List
 from datetime import datetime, date
 import logging
 
 logger = logging.getLogger("reports")
-router = APIRouter(tags=["reports"])
+
+# Seguridad: estos informes exponen facturacion, margenes y el desglose por
+# cliente de toda la empresa (incluido descargable en PDF). Antes no exigian
+# ningun token: cualquiera que conociera la URL podia verlos. Mismo criterio
+# de acceso que el resto de Rentabilidad (rol elevado o canAccessRentabilidad).
+try:
+    from services.jwt_service import require_auth, ADMIN_ROLE_FLAGS
+
+    async def require_reports_access(user: dict = Depends(require_auth)):
+        if any(user.get(f) for f in ADMIN_ROLE_FLAGS) or user.get("canAccessRentabilidad"):
+            return user
+        raise HTTPException(status_code=403, detail="Sin acceso a los informes de rentabilidad")
+    _REPORTS_DEPS = [Depends(require_reports_access)]
+except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    _REPORTS_DEPS = []
+
+router = APIRouter(tags=["reports"], dependencies=_REPORTS_DEPS)
 
 
 # ========== HELPERS ==========
