@@ -1041,9 +1041,13 @@ async def get_ficha(ficha_id: str):
 async def _ensure_client_for_invoice(nombre: str, codigo: str = ""):
     """Si una factura trae un cliente que no existe en db.clients, lo busca
     primero por el codigo que viene impreso en la factura (si lo hay) y si no
-    por nombre. Si no existe ninguno, lo crea usando ese MISMO codigo (no se
-    autogenera ningun numero correlativo). Devuelve
-    {id, codigo, nombre, created} del cliente existente o recien creado."""
+    por nombre. Solo se CREA un cliente nuevo cuando la factura trae un codigo
+    de cliente fiable (usa ese MISMO codigo, no se autogenera ningun numero
+    correlativo); sin codigo NO se crea nada automaticamente (evita altas por
+    un nombre mal detectado por la IA, p.ej. el comercial en vez del cliente
+    real) y se deja para que el controller lo cree a mano si corresponde.
+    Devuelve {id, codigo, nombre, created} del cliente existente o recien
+    creado, o None si no hay coincidencia y no hay codigo para crear uno."""
     nombre = (nombre or "").strip()
     codigo = (codigo or "").strip()
     if not nombre and not codigo:
@@ -1065,7 +1069,7 @@ async def _ensure_client_for_invoice(nombre: str, codigo: str = ""):
         if existing:
             return {**existing, "created": False}
 
-    if not nombre:
+    if not nombre or not codigo:
         return None
 
     client_doc = {
