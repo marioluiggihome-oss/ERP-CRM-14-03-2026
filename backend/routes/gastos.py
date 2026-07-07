@@ -10,7 +10,7 @@ Colecciones:
                  descripcion, kms, docId, createdAt, updatedAt }
 - gasto_docs   { id, gastoId, dataBase64, mime, filename, createdAt }
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
@@ -21,7 +21,16 @@ import re
 from motor.motor_asyncio import AsyncIOMotorClient
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["gastos"])
+
+# Seguridad: el modulo no exigia ningun token; cualquiera que conociera la URL
+# podia ver los tickets/gastos (importes, proveedores) de cualquier comercial.
+try:
+    from services.jwt_service import require_module_access
+    _GASTOS_DEPS = [Depends(require_module_access("canAccessGastos"))]
+except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    _GASTOS_DEPS = []
+
+router = APIRouter(tags=["gastos"], dependencies=_GASTOS_DEPS)
 
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')

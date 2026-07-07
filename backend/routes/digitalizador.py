@@ -2,7 +2,7 @@
 Digitalizador Router - Reconocimiento Óptico de Presupuestos
 Endpoints para digitalización de borradores con IA y gestión de expedientes
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone
 import uuid
@@ -19,7 +19,15 @@ from models.schemas import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["digitalizador"])
+# Seguridad: el modulo no exigia ningun token; presupuestos digitalizados y
+# expedientes quedaban abiertos a cualquiera que conociera la URL.
+try:
+    from services.jwt_service import require_module_access
+    _DIGITALIZADOR_DEPS = [Depends(require_module_access("canUseDigitalizador"))]
+except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    _DIGITALIZADOR_DEPS = []
+
+router = APIRouter(tags=["digitalizador"], dependencies=_DIGITALIZADOR_DEPS)
 
 # Database connection
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')

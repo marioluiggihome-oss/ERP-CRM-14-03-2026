@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
 from fastapi import HTTPException, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from motor.motor_asyncio import AsyncIOMotorClient
 
 # Configuración JWT
 # JWT_SECRET es OBLIGATORIO: sin él, la app no debe arrancar (evita secretos por defecto
@@ -201,6 +202,47 @@ async def require_admin(
     if not any(user.get(flag) for flag in ADMIN_ROLE_FLAGS):
         raise HTTPException(status_code=403, detail="Acceso denegado: se requiere rol de administrador")
     return user
+
+
+def _users_collection():
+    """Cliente Mongo propio de este servicio (mismo patron que el resto de
+    routers: variables de entorno con el mismo fallback, cliente unico a
+    nivel de modulo). No reutiliza services/database.py porque ese modulo no
+    se usa en ningun otro sitio del backend y exige las variables de entorno
+    sin fallback, un camino no probado que no conviene meter en el auth."""
+    global _users_client, _users_db
+    if _users_db is None:
+        mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+        db_name = os.environ.get('DB_NAME', 'luiggi_home')
+        _users_client = AsyncIOMotorClient(mongo_url)
+        _users_db = _users_client[db_name]
+    return _users_db.users
+
+
+_users_client = None
+_users_db = None
+
+
+def require_module_access(flag_name: str):
+    """Factoria de dependency: exige login y, ademas, el permiso concreto
+    `flag_name` (p.ej. "canAccessGastos") o un rol elevado.
+
+    El JWT NO incluye los permisos `canAccess*` (solo los roles fijos:
+    isAdmin/isGerente/...), asi que aqui se consulta en vivo el usuario en
+    Mongo para ese permiso concreto -- si se confiara solo en el payload del
+    token, esta comprobacion nunca se cumpliria para un usuario no-admin al
+    que se le haya dado ese permiso especifico.
+    """
+    async def _dep(user: dict = Depends(require_auth)) -> Dict[str, Any]:
+        if any(user.get(f) for f in ADMIN_ROLE_FLAGS):
+            return user
+        uid = user.get("id")
+        if uid:
+            db_user = await _users_collection().find_one({"id": uid}, {"_id": 0, flag_name: 1})
+            if db_user and db_user.get(flag_name):
+                return user
+        raise HTTPException(status_code=403, detail=f"Sin acceso a este modulo ({flag_name})")
+    return _dep
 
 
 def get_token_from_request(request: Request) -> Optional[str]:

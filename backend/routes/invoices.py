@@ -25,7 +25,18 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/invoices", tags=["Invoices"])
+
+# Seguridad: el modulo no exigia ningun token (el HTTPBearer de abajo estaba
+# importado pero nunca usado). Facturas reales quedaban accesibles a
+# cualquiera que conociera la URL. No hay permiso granular especifico para
+# facturacion, asi que se exige al menos estar logueado.
+try:
+    from services.jwt_service import require_auth
+    _INVOICES_DEPS = [Depends(require_auth)]
+except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    _INVOICES_DEPS = []
+
+router = APIRouter(prefix="/invoices", tags=["Invoices"], dependencies=_INVOICES_DEPS)
 security = HTTPBearer(auto_error=False)
 
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')

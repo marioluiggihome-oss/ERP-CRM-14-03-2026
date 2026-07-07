@@ -2,7 +2,7 @@
 Panel de Mando - LUIGGI HOME
 Centro de control con KPIs, actividad de usuarios y métricas de negocio
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -10,7 +10,18 @@ import os
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/command-center", tags=["CommandCenter"])
+
+# Seguridad: el modulo no exigia ningun token. Es un panel de KPIs/metricas de
+# negocio (agrupado junto a Rentabilidad y Gastos en Administracion), sin
+# permiso granular propio, asi que se exige rol elevado como el resto de esa
+# seccion.
+try:
+    from services.jwt_service import require_admin
+    _COMMAND_CENTER_DEPS = [Depends(require_admin)]
+except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    _COMMAND_CENTER_DEPS = []
+
+router = APIRouter(prefix="/command-center", tags=["CommandCenter"], dependencies=_COMMAND_CENTER_DEPS)
 
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'luiggi_home')

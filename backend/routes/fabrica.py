@@ -29,7 +29,15 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/fabrica", tags=["Portal Fábrica"])
+# Seguridad: el modulo no exigia ningun token; datos de produccion/ordenes de
+# fabricacion quedaban abiertos a cualquiera que conociera la URL.
+try:
+    from services.jwt_service import require_module_access
+    _FABRICA_DEPS = [Depends(require_module_access("canAccessFabrica"))]
+except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    _FABRICA_DEPS = []
+
+router = APIRouter(prefix="/fabrica", tags=["Portal Fábrica"], dependencies=_FABRICA_DEPS)
 
 # Emergent LLM Key para Gemini
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')

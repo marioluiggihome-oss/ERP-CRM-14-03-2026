@@ -2,7 +2,7 @@
 Router para el módulo DESPIECE - Presupuestador de tableros
 Gestiona productos de fabricantes como ALVIC con parámetros específicos
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field, field_validator
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,7 +10,16 @@ from datetime import datetime, timezone
 import os
 import uuid
 
-router = APIRouter(prefix="/despiece-budgeter", tags=["despiece-budgeter"])
+# Seguridad: el modulo no exigia ningun token. No hay un permiso granular
+# especifico para este presupuestador (a diferencia de Gastos/Fabrica), asi
+# que se exige al menos estar logueado en vez de dejarlo abierto del todo.
+try:
+    from services.jwt_service import require_auth
+    _DESPIECE_DEPS = [Depends(require_auth)]
+except Exception:  # pragma: no cover - fallback si no hay jwt_service
+    _DESPIECE_DEPS = []
+
+router = APIRouter(prefix="/despiece-budgeter", tags=["despiece-budgeter"], dependencies=_DESPIECE_DEPS)
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL')

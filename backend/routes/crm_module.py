@@ -17,7 +17,7 @@ from models.schemas import (
     CalendarEventModel, CalendarEventCreate, CalendarEventUpdate,
     ActivityModel, ActivityCreate, ActivityUpdate
 )
-from services.jwt_service import get_current_user as jwt_get_current_user
+from services.jwt_service import get_current_user as jwt_get_current_user, require_auth
 import re as _re
 
 def _escape_regex(s: str) -> str:
@@ -27,7 +27,15 @@ def _escape_regex(s: str) -> str:
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["crm"])
+# Seguridad: sin token, el "modo compatibilidad" de abajo (_get_user_or_none)
+# trataba la peticion como admin (parametro isAdmin por defecto True), asi
+# que cualquiera sin loguearse podia listar TODOS los contactos/oportunidades
+# del CRM. Se exige login a nivel de router; la logica interna de permisos
+# por propietario/rol (_can_modify, filtros de get_contacts) sigue igual y ya
+# funciona bien una vez hay un usuario real verificado.
+_CRM_DEPS = [Depends(require_auth)]
+
+router = APIRouter(tags=["crm"], dependencies=_CRM_DEPS)
 _optional_bearer = HTTPBearer(auto_error=False)
 
 # Database connection
