@@ -210,11 +210,13 @@ const RentabilidadLineas = ({ currentUser }) => {
 
     let successCount = 0;
     let errorCount = 0;
-    let duplicateCount = 0;
-    // Claves ya existentes (docType|ref normalizada) para no duplicar; se va ampliando
-    // con lo que se guarda en este mismo lote (por si el lote trae la misma factura dos veces).
-    const seenKeys = new Set(
-      (fichas || []).map(f => `${f.docType || 'factura'}|${normRef(f.ref)}`)
+    let completedCount = 0;   // ya existia pero le faltaba algun campo y se ha rellenado
+    let duplicateCount = 0;   // ya existia completa: se omite tal cual
+    // Fichas existentes indexadas por docType|ref normalizada, para detectar duplicados
+    // y completar campos que falten en vez de descartar la factura repetida. Se va
+    // ampliando con lo que se guarda en este mismo lote (por si se repite dentro del lote).
+    const existingByKey = new Map(
+      (fichas || []).map(f => [`${f.docType || 'factura'}|${normRef(f.ref)}`, f])
     );
 
     for (let i = 0; i < files.length; i++) {
@@ -230,7 +232,47 @@ const RentabilidadLineas = ({ currentUser }) => {
 
         const resolvedDocType = normDocType(data.data.docType) || docType;
         const refKey = normRef(data.data.ref);
-        if (refKey && seenKeys.has(`${resolvedDocType}|${refKey}`)) { duplicateCount++; continue; }
+        const existing = refKey ? existingByKey.get(`${resolvedDocType}|${refKey}`) : null;
+
+        if (existing) {
+          // Ya existe: en vez de descartarla, rellena en la ficha guardada los campos
+          // que falten (cliente, codigo, fecha, lineas) con lo leido en la repetida.
+          const clienteFill = !existing.cliente && data.data.cliente;
+          const codigoFill = !existing.clienteCodigo && data.data.clienteCodigo;
+          const fechaFill = !existing.fecha && data.data.fecha;
+          const lineasFill = (!existing.lines || existing.lines.length === 0) && (data.data.lines || []).length > 0;
+
+          if (!clienteFill && !codigoFill && !fechaFill && !lineasFill) {
+            duplicateCount++; continue;
+          }
+
+          const merged = {
+            id: existing.id,
+            ref: existing.ref,
+            docType: resolvedDocType,
+            cliente: clienteFill ? data.data.cliente : (existing.cliente || ''),
+            clienteCodigo: codigoFill ? data.data.clienteCodigo : (existing.clienteCodigo || ''),
+            fecha: fechaFill ? data.data.fecha : (existing.fecha || ''),
+            lines: lineasFill ? (data.data.lines || []) : (existing.lines || []),
+            createdBy: existing.createdBy || currentUser?.id,
+            createdByName: existing.createdByName || currentUser?.clientName || currentUser?.username,
+          };
+          const saveR = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(merged),
+          });
+          const saveData = await saveR.json();
+          if (saveData?.ficha) existingByKey.set(`${resolvedDocType}|${refKey}`, saveData.ficha);
+          // Deja constancia del documento repetido que aporto el dato que faltaba.
+          if (existing.id) {
+            await fetch(`${API_URL}/api/rentabilidad/fichas/${existing.id}/docs`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileBase64: b64, filename: files[i].name, kind: 'venta' }),
+            });
+          }
+          completedCount++;
+          continue;
+        }
 
         // Guardar directamente la ficha
         const fichaData = {
@@ -258,7 +300,7 @@ const RentabilidadLineas = ({ currentUser }) => {
             body: JSON.stringify({ fileBase64: b64, filename: files[i].name, kind: 'venta' }),
           });
         }
-        if (refKey) seenKeys.add(`${resolvedDocType}|${refKey}`);
+        if (refKey && saveData?.ficha) existingByKey.set(`${resolvedDocType}|${refKey}`, saveData.ficha);
         successCount++;
       } catch {
         errorCount++;
@@ -269,8 +311,8 @@ const RentabilidadLineas = ({ currentUser }) => {
     setMultiProgress({ current: 0, total: 0 });
     load();
 
-    if (errorCount > 0 || duplicateCount > 0) {
-      alert(`Importacion completada: ${successCount} facturas importadas, ${duplicateCount} duplicadas (omitidas), ${errorCount} con errores.`);
+    if (errorCount > 0 || duplicateCount > 0 || completedCount > 0) {
+      alert(`Importacion completada: ${successCount} nuevas, ${completedCount} duplicadas completadas (rellenado un campo que faltaba), ${duplicateCount} duplicadas exactas (omitidas), ${errorCount} con errores.`);
     }
   };
 
