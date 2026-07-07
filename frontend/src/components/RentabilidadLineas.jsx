@@ -147,6 +147,9 @@ const RentabilidadLineas = ({ currentUser }) => {
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas${qs}`);
       setFichas(await r.json());
     } catch { /* noop */ } finally { setLoading(false); }
+    // Cuenta de clientes en vivo (ademas de la lista que se abre bajo demanda con "Clientes"),
+    // para ver crecer el numero mientras se importan facturas que dan de alta clientes nuevos.
+    try { const c = await clientsAPI.getAll(); setClients(c || []); } catch { /* noop */ }
   }, [currentUser]);
 
   useEffect(() => { load(); }, [load]);
@@ -239,6 +242,7 @@ const RentabilidadLineas = ({ currentUser }) => {
     let errorCount = 0;
     let completedCount = 0;   // ya existia pero le faltaba algun campo y se ha rellenado
     let duplicateCount = 0;   // ya existia completa: se omite tal cual
+    let clientesCreados = 0;  // clientes nuevos dados de alta automaticamente al detectarlos en la factura
     // Fichas existentes indexadas por docType|ref normalizada, para detectar duplicados
     // y completar campos que falten en vez de descartar la factura repetida. Se va
     // ampliando con lo que se guarda en este mismo lote (por si se repite dentro del lote).
@@ -290,6 +294,7 @@ const RentabilidadLineas = ({ currentUser }) => {
           });
           const saveData = await saveR.json();
           if (saveData?.ficha) existingByKey.set(`${resolvedDocType}|${refKey}`, saveData.ficha);
+          if (saveData?.clientCreated) clientesCreados++;
           // Deja constancia del documento repetido que aporto el dato que faltaba.
           if (existing.id) {
             await fetch(`${API_URL}/api/rentabilidad/fichas/${existing.id}/docs`, {
@@ -328,6 +333,7 @@ const RentabilidadLineas = ({ currentUser }) => {
           });
         }
         if (refKey && saveData?.ficha) existingByKey.set(`${resolvedDocType}|${refKey}`, saveData.ficha);
+        if (saveData?.clientCreated) clientesCreados++;
         successCount++;
       } catch {
         errorCount++;
@@ -338,8 +344,8 @@ const RentabilidadLineas = ({ currentUser }) => {
     setMultiProgress({ current: 0, total: 0 });
     load();
 
-    if (errorCount > 0 || duplicateCount > 0 || completedCount > 0) {
-      alert(`Importacion completada: ${successCount} nuevas, ${completedCount} duplicadas completadas (rellenado un campo que faltaba), ${duplicateCount} duplicadas exactas (omitidas), ${errorCount} con errores.`);
+    if (errorCount > 0 || duplicateCount > 0 || completedCount > 0 || clientesCreados > 0) {
+      alert(`Importacion completada: ${successCount} nuevas, ${completedCount} duplicadas completadas (rellenado un campo que faltaba), ${duplicateCount} duplicadas exactas (omitidas), ${errorCount} con errores, ${clientesCreados} clientes nuevos dados de alta.`);
     }
   };
 
@@ -664,7 +670,7 @@ const RentabilidadLineas = ({ currentUser }) => {
         })}
         <div className="ml-auto flex items-center gap-2">
           <button onClick={openClients} className="px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700">
-            <Users size={16} /> Clientes
+            <Users size={16} /> Clientes {clients.length > 0 && <span className="px-1.5 py-0.5 bg-white/20 rounded text-[11px]">{clients.length}</span>}
           </button>
           <label className="px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white hover:opacity-90 cursor-pointer">
             <Sparkles size={16} /> Bandeja IA
