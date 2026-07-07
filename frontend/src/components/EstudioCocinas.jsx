@@ -26,8 +26,9 @@ import {
   Presentation, Eye, Sun, Moon, Monitor, Printer,
   Zap, Droplets, Flame, LayoutGrid, Wand2,
   Heart, Trash2, FolderOpen, Save, Stamp, ImagePlus,
-  Send, Plus, ChevronLeft, ChevronRight
+  Send, Plus, ChevronLeft, ChevronRight, ClipboardList
 } from 'lucide-react';
+import FichaFabricacion from './FichaFabricacion';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -919,6 +920,7 @@ export default function EstudioCocinas({ state, setState }) {
     { id: 'render', label: 'Render 3D', icon: <Sparkles size={14}/> },
     { id: 'plano',  label: 'Plano 2D',     icon: <Image size={14}/> },
     { id: 'ficha',  label: 'Ficha Técnica', icon: <FileText size={14}/> },
+    { id: 'dossier', label: 'Ficha Fabricación', icon: <ClipboardList size={14}/> },
     { id: 'pres',   label: 'Presentación',  icon: <Presentation size={14}/> },
     { id: 'inst',   label: 'Instalaciones', icon: <Zap size={14}/> },
     { id: 'galeria', label: 'Galería',     icon: <FolderOpen size={14}/> },
@@ -1388,6 +1390,13 @@ export default function EstudioCocinas({ state, setState }) {
                     <button className="absolute top-4 right-4 bg-white/10 p-2 rounded-full text-white"><X size={18}/></button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── FICHA DE FABRICACIÓN (dossier técnico estilo estudio) ── */}
+            {tab === 'dossier' && (
+              <div className="max-w-3xl mx-auto">
+                <FichaFabricacion proy={proy} logo={watermark.mode === 'custom' ? watermark.customLogo : defaultLogo} />
               </div>
             )}
 
