@@ -210,6 +210,12 @@ const RentabilidadLineas = ({ currentUser }) => {
 
     let successCount = 0;
     let errorCount = 0;
+    let duplicateCount = 0;
+    // Claves ya existentes (docType|ref normalizada) para no duplicar; se va ampliando
+    // con lo que se guarda en este mismo lote (por si el lote trae la misma factura dos veces).
+    const seenKeys = new Set(
+      (fichas || []).map(f => `${f.docType || 'factura'}|${normRef(f.ref)}`)
+    );
 
     for (let i = 0; i < files.length; i++) {
       setMultiProgress({ current: i + 1, total: files.length });
@@ -222,13 +228,17 @@ const RentabilidadLineas = ({ currentUser }) => {
         const data = await r.json();
         if (!data.success) { errorCount++; continue; }
 
+        const resolvedDocType = normDocType(data.data.docType) || docType;
+        const refKey = normRef(data.data.ref);
+        if (refKey && seenKeys.has(`${resolvedDocType}|${refKey}`)) { duplicateCount++; continue; }
+
         // Guardar directamente la ficha
         const fichaData = {
           ref: data.data.ref || '',
           cliente: data.data.cliente || '',
           clienteCodigo: data.data.clienteCodigo || '',
           fecha: data.data.fecha || '',
-          docType: normDocType(data.data.docType) || docType,
+          docType: resolvedDocType,
           lines: data.data.lines || [],
           createdBy: currentUser?.id,
           createdByName: currentUser?.clientName || currentUser?.username,
@@ -248,6 +258,7 @@ const RentabilidadLineas = ({ currentUser }) => {
             body: JSON.stringify({ fileBase64: b64, filename: files[i].name, kind: 'venta' }),
           });
         }
+        if (refKey) seenKeys.add(`${resolvedDocType}|${refKey}`);
         successCount++;
       } catch {
         errorCount++;
@@ -258,8 +269,8 @@ const RentabilidadLineas = ({ currentUser }) => {
     setMultiProgress({ current: 0, total: 0 });
     load();
 
-    if (errorCount > 0) {
-      alert(`Importacion completada: ${successCount} facturas importadas, ${errorCount} con errores.`);
+    if (errorCount > 0 || duplicateCount > 0) {
+      alert(`Importacion completada: ${successCount} facturas importadas, ${duplicateCount} duplicadas (omitidas), ${errorCount} con errores.`);
     }
   };
 
