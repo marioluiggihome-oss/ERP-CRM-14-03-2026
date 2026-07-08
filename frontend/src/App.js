@@ -983,6 +983,18 @@ const App = () => {
                     </button>
                     )}
 
+                    {/* Mis Pedidos - requiere permiso explícito (la casilla manda) */}
+                    {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos === true && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="mis-pedidos-nav-btn"
+                      >
+                        <ShoppingBag size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Pedidos</span>
+                      </button>
+                    )}
+
                     {/* Resumen Totales - resumen por cocinas con totales y forma de pago (permiso específico) */}
                     {!state.currentUser?.isTienda && state.currentUser?.canUseResumenTotales === true && (
                       <button
@@ -1046,18 +1058,6 @@ const App = () => {
                       >
                         <FolderOpen size={18}/>
                         <span className="text-[7px] font-black uppercase tracking-widest">Archivo</span>
-                      </button>
-                    )}
-
-                    {/* Mis Pedidos - requiere permiso explícito (la casilla manda) */}
-                    {!state.currentUser?.isTienda && state.currentUser?.canAccessPedidos === true && (
-                      <button
-                        onClick={() => setState(p => ({...p, currentTab: 'misPedidos'}))}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'misPedidos' ? 'bg-orange-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        data-testid="mis-pedidos-nav-btn"
-                      >
-                        <ShoppingBag size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">Pedidos</span>
                       </button>
                     )}
 
