@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, CheckCircle, Building2, FileSpreadsheet, Download, HardDrive, Database, Clock, AlertTriangle, Wrench, Power, ShieldAlert, Timer, Maximize2, Minimize2, Target, Award, TrendingUp, BarChart3, FolderOpen, FileText, ChevronDown, ChevronUp, UserCheck, Layers, Factory } from 'lucide-react';
+import { X, Users, Euro, Palette, Camera, Settings as SettingsIcon, Plus, Pencil, Trash2, Check, UserPlus, Shield, Store, Briefcase, Search, Package, Save, CheckSquare, Square, Loader, Zap, Upload, FileImage, XCircle, RefreshCw, CheckCircle, Building2, FileSpreadsheet, Download, HardDrive, Database, Clock, AlertTriangle, Wrench, Power, ShieldAlert, Timer, Maximize2, Minimize2, Target, Award, TrendingUp, BarChart3, FolderOpen, FileText, ChevronDown, ChevronUp, UserCheck, Layers, Factory, Percent, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, librariesAPI, authHeaders } from '../services/api';
 import CatalogImporter from './CatalogImporter';
@@ -3318,6 +3318,45 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                {/* Márgenes Armarios */}
+                <div className="mt-6 pt-5 border-t border-slate-200">
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><Percent size={18} /></div>
+                    <h3 className="text-base font-black text-slate-900 uppercase">Márgenes Armarios</h3>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-4 ml-[52px]">Porcentaje de margen comercial aplicado al PVP del armario. Cada distribuidor puede tener su propio margen (se asigna en la ficha de usuario); aquí se define el <b>margen por defecto</b> para nuevos usuarios.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {[
+                      { k: 'armMargin_default', label: 'Margen por defecto', def: 30 },
+                      { k: 'armMargin_premium', label: 'Margen Premium', def: 35 },
+                      { k: 'armMargin_basico', label: 'Margen Básico', def: 25 },
+                      { k: 'armMargin_interior', label: 'Margen Interior', def: 20 },
+                    ].map(f => (
+                      <div key={f.k} className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 hover:border-emerald-300 transition-colors">
+                        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide block truncate">{f.label}</label>
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <input type="number" step="0.5" min="0" max="100" placeholder={String(f.def)}
+                            defaultValue={state.settings?.[f.k] ?? ''}
+                            onBlur={(e) => saveSetting({ [f.k]: e.target.value === '' ? null : Number(e.target.value) })}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500 font-mono font-bold text-slate-900" />
+                          <span className="text-[10px] font-bold text-slate-400 shrink-0">%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Botón ver costos */}
+                  <button
+                    onClick={() => {
+                      const base = state.settings?.armPrice_basePerM2 || 450;
+                      const marginDef = state.settings?.armMargin_default || 30;
+                      const pvp = base / (1 - marginDef / 100);
+                      alert(`RESUMEN COSTOS ARMARIOS\n\nPrecio base: ${base} €/m²\nMargen por defecto: ${marginDef}%\nPVP resultante: ${pvp.toFixed(2)} €/m²\n\nFondo extra: ${state.settings?.armPrice_depthSuppPerMm || 0.5} €/mm\nP. corredera: ${state.settings?.armPrice_doorSlidingPerM2 || 180} €/m²\nP. plegable: ${state.settings?.armPrice_doorFoldingPerM2 || 250} €/m²`);
+                    }}
+                    className="mt-3 ml-[52px] flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors">
+                    <Eye size={14} /> Ver costos resultantes
+                  </button>
                 </div>
 
                 {/* Cocina Des-Montada (Cascos): el valor de punto se configura en Márgenes Maestros → Valor de Punto Base. */}
