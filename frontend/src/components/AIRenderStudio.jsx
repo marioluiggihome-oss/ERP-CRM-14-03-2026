@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -393,6 +393,13 @@ export default function AIRenderStudio({ state, setState }) {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, []);
   const [imgError, setImgError] = useState(false);    // la imagen del render no cargó
+  // Visor interactivo: zoom + pan
+  const [interactiveMode, setInteractiveMode] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  // Plan de instalaciones (colapsable)
+  const [showInstallPlan, setShowInstallPlan] = useState(false);
   const [params, setParams] = useState({
     layout: 'L-shape',
     countertop: 'quartz_white',
@@ -857,15 +864,28 @@ export default function AIRenderStudio({ state, setState }) {
     } catch { setError('No se pudo eliminar.'); }
   };
   // ─── Adjuntar el render al presupuesto (Resumen Totales) ────────────────────
+  // Volcado a presupuesto dual (P1/P2): si el usuario tiene ambos, muestra modal.
+  const [showDualModal, setShowDualModal] = useState(null); // null | 'choosing'
   const attachToBudget = async () => {
     const img = currentImage();
     if (!img) return;
-    setDownloading(true);
+    const canP1 = state?.currentUser?.canUsePresupuestador1 !== false;
+    const canP2 = state?.currentUser?.canUsePresupuestador2 !== false;
+    // Si tiene ambos presupuestadores, mostrar modal de elección
+    if (canP1 && canP2) { setShowDualModal('choosing'); return; }
+    // Si solo tiene uno, volcar directamente
+    await doAttach(canP2 ? 'presupuestador2' : 'budget');
+  };
+  const doAttach = async (destTab) => {
+    const img = currentImage();
+    if (!img) return;
+    setDownloading(true); setShowDualModal(null);
     try {
       const dataUrl = await imageToDataUrl(img);
       localStorage.setItem('render3d_attach', JSON.stringify({ image: dataUrl, cliente, ref, ts: Date.now() }));
       setAttached(true);
       setTimeout(() => setAttached(false), 4000);
+      if (setState) setState(p => ({ ...p, currentTab: destTab, renderReturn: true }));
     } catch { setError('No se pudo adjuntar el render.'); }
     finally { setDownloading(false); }
   };
@@ -1334,6 +1354,37 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               ); })()}
 
+              {/* Plan de Instalaciones */}
+              {currentImage() && (
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <button onClick={() => setShowInstallPlan(v => !v)}
+                    className="w-full flex items-center justify-between text-[11px] font-black text-slate-600 uppercase tracking-wider">
+                    <span>Plan de Instalaciones</span>
+                    <span className="text-slate-400">{showInstallPlan ? '▲' : '▼'}</span>
+                  </button>
+                  {showInstallPlan && (
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        { label: 'Puntos eléctricos', color: 'bg-yellow-400', icon: '⚡', count: Math.max(4, electros.length + 2) },
+                        { label: 'Tomas de agua', color: 'bg-blue-400', icon: '💧', count: electros.includes('fregadero_bajo') || electros.includes('lavavajillas') ? 2 : 1 },
+                        { label: 'Desagüe', color: 'bg-slate-500', icon: '🚨', count: electros.includes('fregadero_bajo') || electros.includes('lavavajillas') ? 2 : 1 },
+                        { label: 'Gas', color: 'bg-orange-400', icon: '🔥', count: 0 },
+                        { label: 'Ventilación', color: 'bg-emerald-400', icon: '🌬️', count: electros.some(e => e.includes('campana')) ? 1 : 0 },
+                        { label: 'LED / Iluminación', color: 'bg-purple-400', icon: '💡', count: 2 },
+                      ].map(item => (
+                        <div key={item.label} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                          <span className={`w-3 h-3 rounded-full ${item.color}`} />
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-700">{item.icon} {item.label}</p>
+                            <p className="text-[10px] text-slate-500">{item.count} punto{item.count !== 1 ? 's' : ''}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Acción principal — barra fija siempre visible */}
               <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-gradient-to-t from-white via-white to-white/70 backdrop-blur flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
@@ -1572,6 +1623,13 @@ export default function AIRenderStudio({ state, setState }) {
                     </button>
                   )}
                   <button
+                    onClick={() => { setInteractiveMode(v => !v); if (!interactiveMode) { setZoom(1); setPanX(0); setPanY(0); } }}
+                    className={`p-2 rounded-lg transition-colors ${interactiveMode ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}
+                    title={interactiveMode ? 'Desactivar visor interactivo' : 'Visor interactivo (zoom + pan)'}
+                  >
+                    <Layers size={16} className={interactiveMode ? 'text-white' : 'text-slate-600'} />
+                  </button>
+                  <button
                     onClick={() => setShowFullscreen(true)}
                     className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
                     title="Ver en pantalla completa"
@@ -1602,12 +1660,16 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               ) : (
               /* Imagen del render */
-              <div className="flex-1 bg-slate-900 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center relative">
+              <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center relative"
+                onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
+                onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
+              >
                 {renderResult?.result?.images?.[0] && !imgError ? (
                   <img
                     src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain transition-transform"
+                    style={interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : undefined}
                     onError={() => setImgError(true)}
                   />
                 ) : imgError ? (
@@ -1851,6 +1913,27 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal volcado dual P1/P2 */}
+      {showDualModal === 'choosing' && (
+        <div className="fixed inset-0 bg-black/60 z-[9998] flex items-center justify-center p-4" onClick={() => setShowDualModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider mb-4 text-center">Volcar render al presupuesto</h3>
+            <p className="text-xs text-slate-500 text-center mb-4">Tienes ambos presupuestadores activos. Elige dónde enviar el render:</p>
+            <div className="flex gap-3">
+              <button onClick={() => doAttach('presupuestador2')}
+                className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-colors">
+                Cocina Montada (P1)
+              </button>
+              <button onClick={() => doAttach('budget')}
+                className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-colors">
+                Cocina Montada 2 (P2)
+              </button>
+            </div>
+            <button onClick={() => setShowDualModal(null)} className="mt-3 w-full text-xs text-slate-400 hover:text-slate-600 text-center">Cancelar</button>
           </div>
         </div>
       )}
