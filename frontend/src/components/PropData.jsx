@@ -157,7 +157,7 @@ const PropData = ({ state }) => {
     <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-sky-50 overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-violet-600 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
         <h1 className="ml-14 sm:ml-2 text-base sm:text-lg font-black flex items-center gap-2"><Building2 size={18} /> Prospección de Obra Nueva</h1>
-        <p className="hidden sm:block text-xs text-white/80">Localiza promociones y promotores a los que ofrecer cocinas · IA (Gemini)</p>
+        <p className="hidden sm:block text-xs text-white/80">Localiza promociones y promotores a los que ofrecer cocinas · IA</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">

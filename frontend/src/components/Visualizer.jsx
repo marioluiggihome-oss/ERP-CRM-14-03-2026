@@ -217,7 +217,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
           </div>
           <div>
             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">IA Lab - Analizador de Planos</h2>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Detecta muebles automáticamente con Gemini Vision</p>
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Detecta muebles automáticamente con IA</p>
           </div>
         </div>
         {selectedImages.length > 0 && (

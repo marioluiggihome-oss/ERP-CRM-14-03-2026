@@ -1179,7 +1179,7 @@ function LegacyKitchenDesigner({ state, setState, onAddToBudget }) {
             <button
               onClick={runDiagnostics}
               disabled={diagLoading}
-              title="Comprueba si el motor de render (Manus/Gemini) está configurado"
+              title="Comprueba si el motor de render está configurado"
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
             >
               {diagLoading ? <Loader size={16} className="animate-spin" /> : <Wand2 size={16} />} Diagnóstico IA
@@ -1209,12 +1209,12 @@ function LegacyKitchenDesigner({ state, setState, onAddToBudget }) {
               <div className="space-y-1.5">
                 <p className="font-bold text-slate-800">
                   {diag.effective_engine === 'manus' && <span className="text-green-600">✅ Usará MANUS</span>}
-                  {diag.effective_engine === 'gemini' && <span className="text-amber-600">🟡 Usará GEMINI (respaldo)</span>}
+                  {diag.effective_engine === 'gemini' && <span className="text-amber-600">🟡 Usará Motor IA 2 (respaldo)</span>}
                   {diag.effective_engine === 'ninguno' && <span className="text-red-600">❌ Sin motor: faltan claves</span>}
                 </p>
                 <p><b>Manus:</b> {diag.manus?.key_present ? `clave puesta (${diag.manus.key_length} car.)` : 'sin clave'}
                   {diag.manus?.key_present && (diag.manus.reachable ? ` · conecta (HTTP ${diag.manus.http_status})` : ` · NO conecta (${diag.manus.error || 'error'})`)}</p>
-                <p><b>Gemini:</b> {diag.gemini?.key_present ? 'clave puesta' : 'sin clave'} · SDK {diag.gemini?.sdk_available ? 'ok' : 'no'}</p>
+                <p><b>Motor IA 2:</b> {diag.gemini?.key_present ? 'clave puesta' : 'sin clave'} · SDK {diag.gemini?.sdk_available ? 'ok' : 'no'}</p>
                 <p className="text-slate-500">{diag.hint}</p>
               </div>
             )}
