@@ -47,6 +47,7 @@ const Login = ({ onLogin, customLogo }) => {
   const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionConflict, setSessionConflict] = useState(null); // mensaje de conflicto de sesión
 
   // Logo corporativo para la pantalla de login. Si no llega por props, se pide
   // al endpoint público (la pantalla de login no tiene sesión todavía).
@@ -158,6 +159,8 @@ const Login = ({ onLogin, customLogo }) => {
         
         if (result.success && result.user) {
           onLogin(result.user);
+        } else if (result.sessionConflict) {
+          setSessionConflict(result.message);
         } else if (result.requires2FA) {
           setRequires2FA(true);
         } else {
@@ -364,6 +367,40 @@ const Login = ({ onLogin, customLogo }) => {
                 <div className="bg-red-50/90 border border-red-200 p-3 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold shadow-sm">
                   <ShieldAlert size={16} />
                   {error}
+                </div>
+              )}
+
+              {/* Popup de sesión activa */}
+              {sessionConflict && (
+                <div className="bg-amber-50/95 border-2 border-amber-300 p-4 rounded-xl shadow-lg">
+                  <div className="flex items-start gap-2 mb-3">
+                    <ShieldAlert size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-amber-800 text-xs font-bold leading-relaxed">{sessionConflict}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={async () => {
+                      setSessionConflict(null); setIsLoading(true); setError(null);
+                      try {
+                        const resp = await fetch(`${API_URL}/api/auth/force-login`, {
+                          method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ username: username.trim(), password: password.trim(), force: true })
+                        });
+                        const data = await resp.json();
+                        if (data.success && data.user) {
+                          if (data.tokens) { localStorage.setItem('luiggi_access_token', data.tokens.access_token); localStorage.setItem('luiggi_refresh_token', data.tokens.refresh_token); localStorage.setItem('token', data.tokens.access_token); localStorage.setItem('access_token', data.tokens.access_token); }
+                          onLogin(data.user);
+                        } else { setError(data.detail || data.message || 'Error al forzar acceso'); }
+                      } catch { setError('Error de conexión'); }
+                      finally { setIsLoading(false); }
+                    }}
+                      className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-black uppercase tracking-wider transition-colors">
+                      Forzar acceso
+                    </button>
+                    <button type="button" onClick={() => setSessionConflict(null)}
+                      className="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition-colors">
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               )}
 

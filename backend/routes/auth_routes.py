@@ -112,9 +112,33 @@ async def login(request: Request, credentials: dict):
         except (ValueError, AttributeError) as e:
             logger.warning(f"Error parsing expiration date for {username}: {e}")
     
+    # ─── Sesión única: verificar si ya hay una sesión activa ───
+    force = credentials.get("force", False)
+    user_id = user.get("id")
+    existing_session = await db.active_sessions.find_one({"user_id": user_id})
+    if existing_session and not force:
+        return {
+            "success": False,
+            "sessionConflict": True,
+            "message": f"Ya hay una sesión activa para este usuario (desde {existing_session.get('login_at', 'desconocido')}). Pulsa 'Forzar acceso' para cerrar la otra sesión."
+        }
+    # Limpiar sesión anterior si existe (forzado o nueva)
+    if existing_session:
+        await db.active_sessions.delete_many({"user_id": user_id})
+
     # Crear tokens JWT
+    session_token = str(uuid.uuid4())
     access_token = create_access_token(user)
     refresh_token = create_refresh_token(user.get("id"))
+
+    # Registrar sesión activa
+    await db.active_sessions.insert_one({
+        "user_id": user_id,
+        "username": username,
+        "session_token": session_token,
+        "login_at": datetime.now(timezone.utc).isoformat(),
+        "ip": request.client.host if request.client else None,
+    })
     
     # Auditoría: login exitoso
     audit.log_login_success(user.get("id"), username, request)
@@ -189,7 +213,7 @@ async def refresh_token(request: Request, data: dict):
 
 @router.post("/auth/logout")
 async def logout(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Cerrar sesión (invalida el token en el cliente)"""
+    """Cerrar sesión (invalida el token en el cliente) y limpia sesión activa"""
     user = None
     if credentials:
         try:
@@ -199,6 +223,8 @@ async def logout(request: Request, credentials: HTTPAuthorizationCredentials = D
             pass
     
     if user:
+        # Limpiar sesión activa de la colección
+        await db.active_sessions.delete_many({"user_id": user.get("id")})
         audit.log(
             AuditAction.LOGOUT,
             user_id=user.get("id"),
@@ -208,6 +234,14 @@ async def logout(request: Request, credentials: HTTPAuthorizationCredentials = D
         )
     
     return {"success": True, "message": "Sesión cerrada"}
+
+
+@router.post("/auth/force-login")
+@limiter.limit(get_limit("login"))
+async def force_login(request: Request, credentials: dict):
+    """Forzar login cerrando la sesión activa anterior"""
+    credentials["force"] = True
+    return await login(request, credentials)
 
 
 @router.get("/auth/me")
