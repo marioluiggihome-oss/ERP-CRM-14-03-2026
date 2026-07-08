@@ -77,7 +77,11 @@ async def list_render_designs(current_user: Optional[dict] = Depends(get_current
     query = {}
     if current_user and current_user.get("id") and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         query["userId"] = current_user["id"]
-    items = await _db.render3d_designs.find(query, {"_id": 0}).sort("updatedAt", -1).to_list(300)
+    # Solo la primera imagen por diseño (miniatura + abrir): devolver todas las
+    # imágenes completas de 300 diseños generaba un payload de decenas de MB.
+    items = await _db.render3d_designs.find(
+        query, {"_id": 0, "images": {"$slice": 1}}
+    ).sort("updatedAt", -1).to_list(300)
     return {"success": True, "designs": items}
 
 
