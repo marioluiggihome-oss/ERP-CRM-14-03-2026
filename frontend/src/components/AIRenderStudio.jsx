@@ -683,20 +683,45 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   // ─── Guardar / abrir proyectos ──────────────────────────────────────────────
+  // Reduce el render a un tamaño razonable ANTES de guardarlo: una data URL de
+  // un render grande (p.ej. 2K) puede pesar varios MB y el servidor/proxy
+  // rechaza el JSON → "Error al guardar". Para archivo basta 1600px JPEG.
+  const shrinkForSave = async (src) => {
+    const dataUrl = await imageToDataUrl(src);
+    if (!dataUrl || !String(dataUrl).startsWith('data:image')) return dataUrl;
+    return await new Promise((resolve) => {
+      const im = new window.Image();
+      im.onload = () => {
+        try {
+          const maxDim = 1600;
+          const scale = Math.min(1, maxDim / Math.max(im.width, im.height));
+          const w = Math.round(im.width * scale), h = Math.round(im.height * scale);
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          c.getContext('2d').drawImage(im, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', 0.85));
+        } catch (_) { resolve(dataUrl); }
+      };
+      im.onerror = () => resolve(dataUrl);
+      im.src = dataUrl;
+    });
+  };
+
   const saveDesign = async () => {
     const img = currentImage();
     if (!img) { setError('Genera un render antes de guardar.'); return; }
     if (!(cliente || ref).trim()) { setError('Pon un cliente o referencia para guardar el proyecto.'); return; }
     setBusy(true); setError(null);
     try {
+      const imgSave = await shrinkForSave(img);
       const r = await fetch(`${API_URL}/api/ai-engine/designs`, {
         method: 'POST', headers: getAuthHeaders(),
-        body: JSON.stringify({ id: savedId || undefined, cliente, ref, description: renderResult?.description || description, style: params.style, images: [img] }),
+        body: JSON.stringify({ id: savedId || undefined, cliente, ref, description: renderResult?.description || description, style: params.style, images: [imgSave] }),
       });
-      const d = await r.json();
-      if (d.success) { setSavedId(d.design.id); }
-      else setError(d.error || 'No se pudo guardar.');
-    } catch { setError('Error al guardar el proyecto.'); }
+      let d = null;
+      try { d = await r.json(); } catch (_) { d = null; }
+      if (d?.success) { setSavedId(d.design.id); }
+      else setError(d?.error || d?.detail || `No se pudo guardar (HTTP ${r.status}).`);
+    } catch { setError('Error de conexión al guardar el proyecto.'); }
     finally { setBusy(false); }
   };
   const openList = async () => {
