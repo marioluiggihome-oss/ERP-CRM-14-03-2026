@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -237,6 +237,16 @@ const PRESETS = [
   { id: 'madera_u', label: '🟫 Madera cálida en U', desc: 'Cocina en U de estilo cálido, frentes de roble natural con veta visible, encimera clara, tirador tipo uñero y luz LED bajo los muebles altos.', style: 'warm', lighting: 'sunset', camera: 'wide', electros: ['fregadero_bajo', 'placa_induccion', 'campana_integrada', 'horno'] },
   { id: 'min_negra', label: '◼ Minimalista negra', desc: 'Cocina minimalista lineal, frentes negro mate sin tiradores, encimera de piedra técnica negra continua con copete, campana integrada y electrodomésticos enrasados.', style: 'minimalist', lighting: 'neutral', camera: 'eyelevel', electros: ['fregadero_bajo', 'placa_induccion', 'campana_integrada', 'horno', 'nevera_integrada'] },
   { id: 'peninsula_gris', label: '▦ Península gris', desc: 'Cocina con península abierta al salón, frentes gris mate, encimera de cuarzo claro con canto recto, tiradores tipo barra negros y taburetes en la península.', style: 'magazine', lighting: 'bright', camera: 'wide', electros: ['fregadero_bajo', 'placa_induccion', 'campana_isla', 'horno', 'lavavajillas'] },
+  // Tendencia 2026
+  { id: 'warm_minimalism', label: '🌾 Warm Minimalism', desc: 'Cocina minimalista cálida con madera clara, líneas puras sin tiradores, encimera de piedra natural beige, iluminación indirecta y texturas orgánicas. Tendencia 2026.', style: 'warm', lighting: 'natural', camera: 'wide', electros: ['fregadero_bajo', 'placa_induccion', 'campana_integrada', 'horno'] },
+  { id: 'joydrenching', label: '🎨 Joydrenching', desc: 'Cocina vibrante con color saturado en los frentes (terracota, verde bosque o azul profundo), combinada con madera y latón. Estilo atrevido y alegre, tendencia 2026.', style: 'magazine', lighting: 'bright', camera: 'eyelevel', electros: ['fregadero_bajo', 'placa_induccion', 'campana_decorativa', 'horno', 'vinoteca'] },
+  { id: 'dark_luxury', label: '🔮 Dark Luxury', desc: 'Cocina de lujo oscura con frentes negros o antracita texturizados, encimera de mármol oscuro con veta dorada, grifoía negra mate y detalles en latón cepillado. Tendencia 2026.', style: 'photorealistic', lighting: 'night', camera: 'eyelevel', electros: ['fregadero_bajo', 'placa_induccion', 'campana_isla', 'horno', 'vinoteca', 'nevera_integrada'] },
+  { id: 'japandi_2026', label: '🌿 Japandi', desc: 'Cocina Japandi con madera de fresno claro, líneas horizontales, cerámica artesanal en salpicadero, muebles bajos sin tiradores y altos abiertos con estantes. Tendencia 2026.', style: 'minimalist', lighting: 'natural', camera: 'wide', electros: ['fregadero_bajo', 'placa_induccion', 'campana_integrada', 'horno'] },
+  { id: 'curvas_suaves', label: '➰ Curvas suaves', desc: 'Cocina con isla de bordes redondeados, frentes curvos en los extremos, colores suaves (crema, rosa empolvado), encimera con canto redondeado y campana esférica. Tendencia 2026.', style: 'architectural', lighting: 'bright', camera: 'wide', electros: ['fregadero_bajo', 'placa_induccion', 'campana_isla', 'horno', 'lavavajillas'] },
+  // Armarios
+  { id: 'vestidor_lujo', label: '👔 Vestidor', desc: 'Vestidor amplio con armarios empotrados de suelo a techo, puertas correderas lacadas blanco mate con tirador integrado, interior con barra doble, zapatero extraíble, cajones con divisores y espejo de cuerpo entero. Iluminación LED interior automática.', style: 'photorealistic', lighting: 'neutral', camera: 'wide', electros: [] },
+  { id: 'corredera_moderna', label: '🚪 Corredera moderna', desc: 'Armario con puertas correderas de 3 hojas, acabado madera roble con franja central en cristal gris, perfil de aluminio negro mate, interior con módulos de estantes y barras a dos alturas.', style: 'minimalist', lighting: 'natural', camera: 'eyelevel', electros: [] },
+  { id: 'dormitorio_completo', label: '🛏 Dormitorio completo', desc: 'Dormitorio con armario empotrado de pared a pared con puertas abatibles blancas, cabecero integrado con mesitas, y armario rinconero aprovechando toda la pared. Interior organizado con accesorios.', style: 'warm', lighting: 'sunset', camera: 'wide', electros: [] },
 ];
 
 // Frases rápidas para enriquecer la descripción con un clic (detalles habituales).
@@ -245,6 +255,10 @@ const QUICK_PHRASES = [
   'campana de isla', 'encimera volada para taburetes', 'zona de office con banco',
   'luz LED bajo los altos', 'fregadero bajo encimera', 'vinoteca integrada',
   'despensa/columna de almacenaje', 'copete a juego con la encimera', 'zócalo retranqueado',
+  // Armarios
+  'puertas correderas', 'interior con barra doble', 'zapatero extraíble',
+  'cajones con divisores', 'espejo de cuerpo entero', 'LED interior automático',
+  'rinconero aprovechando esquina', 'altillo con puertas abatibles',
 ];
 
 // ─── Estimación de precio ORIENTATIVA (no es presupuesto) ────────────────────
@@ -347,6 +361,7 @@ export default function AIRenderStudio({ state, setState }) {
   const [medidas, setMedidas] = useState({ ancho: '', fondo: '', altura: '', aberturas: '' });
   // Edición del render en lenguaje natural (iterar sin empezar de cero).
   const [editInstruction, setEditInstruction] = useState('');
+  const [editLines, setEditLines] = useState([]); // multi-línea: instrucciones adicionales
   const [editing, setEditing] = useState(false);
   // Imagen de un ELEMENTO a copiar (una puerta, un mueble…) para incorporarlo.
   const [editRefImage, setEditRefImage] = useState(null);
@@ -599,17 +614,19 @@ export default function AIRenderStudio({ state, setState }) {
   // ─── Editar el render existente en lenguaje natural ─────────────────────────
   const editRender = async () => {
     const img = currentImage();
-    // Se puede editar por texto, por imagen de elemento, o por ambos.
-    if (!img || (!editInstruction.trim() && !editRefImage)) return;
+    // Combina la instrucción principal + líneas adicionales (multi-línea).
+    const allLines = [editInstruction.trim(), ...editLines.map(l => l.trim())].filter(Boolean);
+    if (!img || (!allLines.length && !editRefImage)) return;
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
-      const cambio = editInstruction.trim()
-        || (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : '');
+      const cambio = allLines.length
+        ? allLines.join('. ')
+        : (editRefImage ? 'Incorpora a la cocina el elemento de la imagen de referencia adicional (respeta su forma, color y acabado).' : '');
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({
-          description: `Modifica el render adjunto manteniendo el mismo diseño, encuadre e iluminación. Cambio solicitado: ${cambio}. No cambies nada más.`,
+          description: `Modifica el render adjunto manteniendo el mismo diseño, encuadre e iluminación. Cambios solicitados: ${cambio}. No cambies nada más.`,
           style: params.style,
           provider: providerOf(),
           referenceImage: dataUrl,
@@ -621,7 +638,7 @@ export default function AIRenderStudio({ state, setState }) {
         const merged = { ...data, description: `${renderResult?.description || description}\n[Edición] ${cambio}` };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
-        setEditInstruction(''); setEditRefImage(null);
+        setEditInstruction(''); setEditLines([]); setEditRefImage(null);
       } else setError(data.error || 'No se pudo editar el render');
     } catch { setError('Error de conexión al editar el render.'); }
     finally { setEditing(false); }
@@ -679,6 +696,100 @@ export default function AIRenderStudio({ state, setState }) {
       if (desc) { pdf.setFontSize(8.5); pdf.setTextColor(110); pdf.text(pdf.splitTextToSize(desc, W - 2 * M).slice(0, 2), M, H - 8); }
       pdf.save(nombreArchivo('pdf'));
     } catch (e) { setError('No se pudo generar el PDF: ' + (e.message || '')); }
+    finally { setDownloading(false); }
+  };
+
+  // ─── Compartir por WhatsApp ────────────────────────────────────────────────
+  const shareWhatsApp = async () => {
+    const img = currentImage();
+    if (!img) return;
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const text = `✨ Propuesta de diseño 3D${cliente ? ` para ${cliente}` : ''}\n${(renderResult?.description || description || '').substring(0, 200)}\n\n— Luiggi Home`;
+      // Intentar Web Share API (móvil)
+      if (navigator.share && navigator.canShare) {
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], nombreArchivo('png'), { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ text, files: [file] });
+          return;
+        }
+      }
+      // Fallback: abrir WhatsApp Web con texto
+      const encoded = encodeURIComponent(text);
+      window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    } catch (e) {
+      if (e.name !== 'AbortError') setError('No se pudo compartir por WhatsApp.');
+    }
+  };
+
+  // ─── Dossier PDF multi-página (portada + render + especificaciones) ─────────
+  const exportDossierPDF = async () => {
+    const img = currentImage();
+    if (!img) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const H = pdf.internal.pageSize.getHeight();
+      const M = 12;
+      // Página 1: Portada
+      const logo = state?.logo;
+      if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+        try { const fmt = logo.includes('image/png') ? 'PNG' : 'JPEG'; pdf.addImage(logo, fmt, M, M, 40, 20); } catch (_) {}
+      } else { pdf.setFontSize(20); pdf.setTextColor(30); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+      pdf.setFontSize(24); pdf.setTextColor(60, 40, 120); pdf.setFont(undefined, 'bold');
+      pdf.text('PROPUESTA DE DISEÑO 3D', W / 2, H / 2 - 10, { align: 'center' });
+      pdf.setFont(undefined, 'normal'); pdf.setFontSize(14); pdf.setTextColor(80);
+      if (cliente) pdf.text(cliente, W / 2, H / 2 + 5, { align: 'center' });
+      if (ref) pdf.text(`Ref: ${ref}`, W / 2, H / 2 + 14, { align: 'center' });
+      pdf.setFontSize(10); pdf.setTextColor(140);
+      pdf.text(new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }), W / 2, H - 20, { align: 'center' });
+      // Página 2: Render
+      pdf.addPage();
+      const props = pdf.getImageProperties(dataUrl);
+      const areaW = W - 2 * M, areaH = H - 2 * M;
+      const ratio = Math.min(areaW / props.width, areaH / props.height);
+      const iw = props.width * ratio, ih = props.height * ratio;
+      pdf.addImage(dataUrl, 'PNG', M + (areaW - iw) / 2, M + (areaH - ih) / 2, iw, ih);
+      // Página 3: Especificaciones
+      pdf.addPage('a4', 'portrait');
+      const Wp = pdf.internal.pageSize.getWidth();
+      let y = 20;
+      pdf.setFontSize(14); pdf.setTextColor(60, 40, 120); pdf.setFont(undefined, 'bold');
+      pdf.text('ESPECIFICACIONES DEL DISEÑO', M, y); y += 10;
+      pdf.setFont(undefined, 'normal'); pdf.setFontSize(10); pdf.setTextColor(60);
+      const specs = [
+        ['Distribución', MATERIALS.layouts.find(l => l.id === params.layout)?.label || params.layout],
+        ['Encimera', MATERIALS.countertops.find(c => c.id === params.countertop)?.label || params.countertop],
+        ['Muebles', MATERIALS.cabinets.find(c => c.id === params.cabinets)?.label || params.cabinets],
+        ['Tiradores', MATERIALS.handles.find(h => h.id === params.handles)?.label || params.handles],
+        ['Suelo', MATERIALS.floors.find(f => f.id === params.floor)?.label || params.floor],
+        ['Estilo', MATERIALS.styles.find(s => s.id === params.style)?.label || params.style],
+        ['Iluminación', MATERIALS.lighting.find(l => l.id === params.lighting)?.label || params.lighting],
+      ];
+      if (medidas.ancho) specs.push(['Ancho estancia', `${medidas.ancho} cm`]);
+      if (medidas.fondo) specs.push(['Fondo estancia', `${medidas.fondo} cm`]);
+      if (medidas.altura) specs.push(['Altura techo', `${medidas.altura} cm`]);
+      const selElectros = MATERIALS.appliances.filter(a => electros.includes(a.id)).map(a => a.label);
+      if (selElectros.length) specs.push(['Electrodomésticos', selElectros.join(', ')]);
+      specs.forEach(([k, v]) => {
+        pdf.setFont(undefined, 'bold'); pdf.text(`${k}:`, M, y);
+        pdf.setFont(undefined, 'normal'); pdf.text(v, M + 45, y);
+        y += 7;
+      });
+      y += 5;
+      const desc = (renderResult?.description || description || '').trim();
+      if (desc) {
+        pdf.setFont(undefined, 'bold'); pdf.text('Descripción:', M, y); y += 6;
+        pdf.setFont(undefined, 'normal'); pdf.setFontSize(9);
+        const lines = pdf.splitTextToSize(desc, Wp - 2 * M);
+        lines.slice(0, 20).forEach(l => { pdf.text(l, M, y); y += 5; });
+      }
+      pdf.save(nombreArchivo('pdf'));
+    } catch (e) { setError('No se pudo generar el dossier PDF: ' + (e.message || '')); }
     finally { setDownloading(false); }
   };
 
@@ -1441,6 +1552,14 @@ export default function AIRenderStudio({ state, setState }) {
                     className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
                     <FileText size={14} /> PDF
                   </button>
+                  <button onClick={exportDossierPDF} disabled={downloading || !currentImage()}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-lg text-xs font-bold hover:bg-violet-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
+                    <BookOpen size={14} /> Dossier
+                  </button>
+                  <button onClick={shareWhatsApp} disabled={downloading || !currentImage()}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 disabled:opacity-50" title="Compartir por WhatsApp">
+                    <Share2 size={14} /> WhatsApp
+                  </button>
                   <button onClick={attachToBudget} disabled={downloading || !currentImage()}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`} title="Adjuntar este render al presupuesto (Resumen Totales)">
                     {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> Al presupuesto</>}
@@ -1609,10 +1728,30 @@ export default function AIRenderStudio({ state, setState }) {
                     <Upload size={16} />
                     <input type="file" accept="image/*" className="hidden" onChange={onEditRefUpload} />
                   </label>
-                  <button onClick={editRender} disabled={editing || (!editInstruction.trim() && !editRefImage)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50 shrink-0">
-                    {editing ? <><Loader size={14} className="animate-spin" /> Aplicando…</> : <><Send size={14} /> Aplicar cambio</>}
+                  {/* Botón + para añadir líneas de edición */}
+                  <button onClick={() => setEditLines(prev => [...prev, ''])} title="Añadir otra instrucción de edición"
+                    className="shrink-0 p-2 rounded-lg border bg-white text-purple-600 border-purple-200 hover:bg-purple-50">
+                    <Plus size={16} />
                   </button>
+                  <button onClick={editRender} disabled={editing || (!editInstruction.trim() && !editLines.some(l => l.trim()) && !editRefImage)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50 shrink-0">
+                    {editing ? <><Loader size={14} className="animate-spin" /> Aplicando…</> : <><Send size={14} /> Aplicar {editLines.length > 0 ? `${editLines.length + 1} cambios` : 'cambio'}</>}
+                  </button>
+                </div>
+              )}
+              {/* Líneas adicionales de edición (multi-línea) */}
+              {editLines.length > 0 && currentImage() && (
+                <div className="shrink-0 flex flex-col gap-1.5 bg-purple-50 border border-purple-100 rounded-xl p-2">
+                  {editLines.map((line, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-purple-400 w-4 text-center">{idx + 2}</span>
+                      <input value={line} onChange={e => { const copy = [...editLines]; copy[idx] = e.target.value; setEditLines(copy); }}
+                        placeholder={`Cambio adicional ${idx + 2}...`}
+                        className="flex-1 px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
+                      <button onClick={() => setEditLines(prev => prev.filter((_, i) => i !== idx))} title="Eliminar línea"
+                        className="shrink-0 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"><X size={14} /></button>
+                    </div>
+                  ))}
                 </div>
               )}
 
