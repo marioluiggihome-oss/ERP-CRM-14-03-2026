@@ -635,7 +635,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       // Si el usuario tiene Cocina Desmontada (Cascos), preguntar destino.
       const tieneDesmontada = state?.currentUser?.canUseCascos === true;
       const irDesmontada = tieneDesmontada && !window.confirm(
-        '¿A qué presupuesto llevamos el diseño?\n\nAceptar = COCINA MONTADA (módulos completos)\nCancelar = COCINA DESMONTADA (cascos + herraje estimado)'
+        '¿A DÓNDE VOLCAMOS EL DISEÑO?\n\n✔ Aceptar → PRESUPUESTADOR 1 · COCINA MONTADA (módulos completos)\n✖ Cancelar → DESPIECE · COCINA DESMONTADA (cascos + herraje estimado)'
       );
 
       if (irDesmontada) {

@@ -1211,7 +1211,7 @@ export default function AIRenderStudio({ state, setState }) {
                       const tieneDesmontada = state?.currentUser?.canUseCascos === true;
                       let destino = 'presupuestador2';
                       if (tieneDesmontada) {
-                        const montada = window.confirm('¿A qué presupuesto llevamos el diseño?\n\nAceptar = COCINA MONTADA (Presupuestador 1)\nCancelar = COCINA DESMONTADA (Cascos: herrajes, cajones, bisagras…)');
+                        const montada = window.confirm('¿A DÓNDE VOLCAMOS EL DISEÑO?\n\n✔ Aceptar → PRESUPUESTADOR 1 · COCINA MONTADA\n✖ Cancelar → DESPIECE · COCINA DESMONTADA (cascos + herraje)');
                         destino = montada ? 'presupuestador2' : 'cascos';
                       }
                       setState(p => ({ ...p, currentTab: destino, renderReturn: true }));
