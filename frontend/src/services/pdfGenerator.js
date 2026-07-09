@@ -53,7 +53,8 @@ export const generateBudgetPDF = ({
   golaAltoColor = '',
   golaBajo = false,
   golaBajoColor = '',
-  valorado = true
+  valorado = true,
+  render3dImage = null
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -448,6 +449,20 @@ export const generateBudgetPDF = ({
     
     drawTotals();
     drawFooter();
+  }
+
+  // Página final con el render 3D (si se adjuntó)
+  if (render3dImage && render3dImage.startsWith('data:image')) {
+    doc.addPage();
+    const rMargin = 12;
+    const rW = 210 - rMargin * 2;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('RENDER 3D DEL PROYECTO', 210 / 2, 18, { align: 'center' });
+    try {
+      doc.addImage(render3dImage, 'JPEG', rMargin, 24, rW, rW * 9 / 16);
+    } catch (_) {}
   }
 
   // Guardar

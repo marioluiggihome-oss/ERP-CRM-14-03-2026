@@ -378,6 +378,36 @@ const _c2acb = [
 // aplica tal cual al render al seleccionarlo.
 export const COLORES_2 = _c2acb;
 
+// ── COLORES 3 = PORTASUR (puertas y acabados) ───────────────────────────────────────
+// Acabados de puertas Portasur (catálogo 2025). Ampliar con los datos reales.
+export const COLORES_3 = [
+  // Lisa
+  { gama: 'Portasur · Lisa', label: 'Lisa Blanco Mate', bg: '#f1efe9' },
+  { gama: 'Portasur · Lisa', label: 'Lisa Gris Perla', bg: '#cfd0cd' },
+  { gama: 'Portasur · Lisa', label: 'Lisa Antracita', bg: '#3a3d40' },
+  { gama: 'Portasur · Lisa', label: 'Lisa Negro Mate', bg: '#1b1b1d' },
+  { gama: 'Portasur · Lisa', label: 'Lisa Cashmere', bg: '#d5c9b4' },
+  { gama: 'Portasur · Lisa', label: 'Lisa Arena', bg: '#d7cab0' },
+  // Madera
+  { gama: 'Portasur · Madera', label: 'Roble Natural', bg: 'linear-gradient(90deg,#b89968,#c8a878,#b89968)' },
+  { gama: 'Portasur · Madera', label: 'Roble Oscuro', bg: 'linear-gradient(90deg,#7a5c3a,#8a6c4a,#7a5c3a)' },
+  { gama: 'Portasur · Madera', label: 'Nogal', bg: 'linear-gradient(90deg,#6b4a2e,#7c583a,#6b4a2e)' },
+  { gama: 'Portasur · Madera', label: 'Fresno Blanqueado', bg: 'linear-gradient(90deg,#ddd2c0,#e8ddd0,#ddd2c0)' },
+  { gama: 'Portasur · Madera', label: 'Olmo', bg: 'linear-gradient(90deg,#a08060,#b09070,#a08060)' },
+  // Marco / Shaker
+  { gama: 'Portasur · Marco', label: 'Shaker Blanco', bg: '#f1efe9' },
+  { gama: 'Portasur · Marco', label: 'Shaker Gris', bg: '#b3b3b1' },
+  { gama: 'Portasur · Marco', label: 'Shaker Marfil', bg: '#efe6d2' },
+  { gama: 'Portasur · Marco', label: 'Shaker Verde Salvia', bg: '#9aa98c' },
+  { gama: 'Portasur · Marco', label: 'Shaker Azul Marino', bg: '#25324a' },
+  // Lacado
+  { gama: 'Portasur · Lacado', label: 'Lacado Blanco Brillo', bg: 'linear-gradient(135deg,#f6f6f4,#eaeae8,#fafafa)' },
+  { gama: 'Portasur · Lacado', label: 'Lacado Gris Nube', bg: '#c0c2c1' },
+  { gama: 'Portasur · Lacado', label: 'Lacado Hueso', bg: '#efe9db' },
+  { gama: 'Portasur · Lacado', label: 'Lacado Taupe', bg: '#b3a89a' },
+  { gama: 'Portasur · Lacado', label: 'Lacado Negro', bg: '#0a0a0a' },
+];
+
 // Agrupa una lista de acabados por gama preservando el orden de aparición.
 export function porGama(list) {
   const out = [];

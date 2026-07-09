@@ -17,7 +17,7 @@ import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximiz
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
-import { COLORES_1, COLORES_2, porGama } from '../data/finishes';
+import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -378,7 +378,7 @@ export default function AIRenderStudio({ state, setState }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [colorTab, setColorTab] = useState('c1');
   const [openGama, setOpenGama] = useState(null);
-  const paletteData = colorTab === 'c1' ? COLORES_1 : COLORES_2;
+  const paletteData = colorTab === 'c1' ? COLORES_1 : colorTab === 'c2' ? COLORES_2 : COLORES_3;
   const gamas = porGama(paletteData);
   // Panel izquierdo redimensionable/ocultable (solo en pantallas grandes).
   const [panelW, setPanelW] = useState(420);
@@ -877,12 +877,8 @@ export default function AIRenderStudio({ state, setState }) {
   const attachToBudget = async () => {
     const img = currentImage();
     if (!img) return;
-    const canP1 = state?.currentUser?.canUsePresupuestador1 !== false;
-    const canP2 = state?.currentUser?.canUsePresupuestador2 !== false;
-    // Si tiene ambos presupuestadores, mostrar modal de elección
-    if (canP1 && canP2) { setShowDualModal('choosing'); return; }
-    // Si solo tiene uno, volcar directamente
-    await doAttach(canP2 ? 'presupuestador2' : 'budget');
+    // Volcar siempre al Presupuestador 1 (tab 'presupuestador2' = Cocina Montada)
+    await doAttach('presupuestador2');
   };
   const doAttach = async (destTab) => {
     const img = currentImage();
@@ -1740,7 +1736,7 @@ export default function AIRenderStudio({ state, setState }) {
                   {paletteOpen && (
                     <div className="mt-2 border-t border-slate-100 pt-2">
                       <div className="flex gap-1 mb-2">
-                        {[['c1', 'Colores 1'], ['c2', 'Colores 2']].map(([id, lbl]) => (
+                        {[['c1', 'ALVIC'], ['c2', 'ACB'], ['c3', 'PORTASUR']].map(([id, lbl]) => (
                           <button key={id} onClick={() => { setColorTab(id); setOpenGama(null); }}
                             className={`px-3 py-1 rounded-lg text-[11px] font-black ${colorTab === id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                             {lbl}

@@ -171,6 +171,8 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
   const [orderAttachments, setOrderAttachments] = useState([]);
   const [isSendingOrder, setIsSendingOrder] = useState(false);
   const [orderSent, setOrderSent] = useState(false);
+  // Render 3D adjuntado desde Estudio 3D (se incluye en el PDF del presupuesto).
+  const [render3dImage, setRender3dImage] = useState(null);
 
   // Importar tarifas oficiales a los productos (solo admin). Hace dry-run, muestra
   // el resumen y, si confirmas, reconstruye el catálogo MV desde las tarifas.
@@ -259,6 +261,18 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
     }).catch(() => {});
   }, []);
   useEffect(() => { if (tariff) localStorage.setItem(`p2_tariff_${libraryCode}`, tariff); }, [tariff, libraryCode]);
+  // Consumir render3d_attach del Estudio 3D (transferencia única)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('render3d_attach');
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data.image) setRender3dImage(data.image);
+        if (data.cliente && !clientName) setClientName(data.cliente);
+        localStorage.removeItem('render3d_attach');
+      }
+    } catch (_) {}
+  }, []);
   useEffect(() => { localStorage.setItem('p2_search_scope', searchScope); }, [searchScope]);
   useEffect(() => { localStorage.setItem('p2_use_mm', useMillimeters ? 'true' : 'false'); }, [useMillimeters]);
   useEffect(() => { localStorage.setItem('p2_catalog_view', catalogView); }, [catalogView]);
@@ -782,6 +796,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         golaAltoColor,
         golaBajo,
         golaBajoColor,
+        render3dImage,
       });
     } catch (e) { alert('No se pudo generar el PDF: ' + (e.message || e)); }
   };
@@ -1549,6 +1564,13 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                       className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-100 disabled:text-slate-300 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider">
                       <Scissors size={14} /> Generar despiece
                     </button>
+                  )}
+                  {render3dImage && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 border border-green-200">
+                      <img src={render3dImage} alt="Render 3D" className="w-12 h-8 object-cover rounded" />
+                      <span className="text-[10px] font-bold text-green-700 flex-1">Render 3D adjunto (se incluirá en el PDF)</span>
+                      <button onClick={() => setRender3dImage(null)} className="text-red-400 hover:text-red-600"><X size={12} /></button>
+                    </div>
                   )}
                   <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
                 </div>
