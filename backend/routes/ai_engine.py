@@ -63,6 +63,7 @@ async def save_render_design(payload: dict, current_user: Optional[dict] = Depen
         "description": str(p.get("description") or ""),
         "style": str(p.get("style") or ""),
         "images": (p.get("images") or [])[:12],
+        "referenceImage": p.get("referenceImage") or None,  # plano/referencia para comparar
         "createdByName": (current_user or {}).get("clientName") or (current_user or {}).get("username") or "",
         "createdAt": (existing or {}).get("createdAt") or now,
         "updatedAt": now,
@@ -79,8 +80,11 @@ async def list_render_designs(current_user: Optional[dict] = Depends(get_current
         query["userId"] = current_user["id"]
     # Solo la primera imagen por diseño (miniatura + abrir): devolver todas las
     # imágenes completas de 300 diseños generaba un payload de decenas de MB.
+    # Incluimos referenceImage para que al abrir se pueda comparar plano vs render.
     items = await _db.render3d_designs.find(
-        query, {"_id": 0, "images": {"$slice": 1}}
+        query, {"_id": 0, "images": {"$slice": 1}, "referenceImage": 1,
+                "id": 1, "cliente": 1, "ref": 1, "description": 1,
+                "style": 1, "createdByName": 1, "createdAt": 1, "updatedAt": 1, "userId": 1}
     ).sort("updatedAt", -1).to_list(300)
     return {"success": True, "designs": items}
 

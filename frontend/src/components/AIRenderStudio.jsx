@@ -831,9 +831,14 @@ export default function AIRenderStudio({ state, setState }) {
     setBusy(true); setError(null);
     try {
       const imgSave = await shrinkForSave(img);
+      // Guardar también la referencia/plano subido para poder comparar al reabrir
+      let refSave = null;
+      if (refImage) {
+        try { refSave = await shrinkForSave(refImage); } catch (_) { refSave = refImage; }
+      }
       const r = await fetch(`${API_URL}/api/ai-engine/designs`, {
         method: 'POST', headers: getAuthHeaders(),
-        body: JSON.stringify({ id: savedId || undefined, cliente, ref, description: renderResult?.description || description, style: params.style, images: [imgSave] }),
+        body: JSON.stringify({ id: savedId || undefined, cliente, ref, description: renderResult?.description || description, style: params.style, images: [imgSave], referenceImage: refSave }),
       });
       let d = null;
       try { d = await r.json(); } catch (_) { d = null; }
@@ -854,6 +859,9 @@ export default function AIRenderStudio({ state, setState }) {
     if (dsg.style) setParams(p => ({ ...p, style: dsg.style }));
     setSavedId(dsg.id); setSavedList(null);
     if (dsg.images?.[0]) setRenderResult({ success: true, result: { images: dsg.images }, description: dsg.description });
+    // Restaurar la referencia/plano guardado para poder comparar
+    if (dsg.referenceImage) setRefImage(dsg.referenceImage);
+    else setRefImage(null);
   };
   const deleteDesign = async (id) => {
     if (!window.confirm('¿Eliminar este proyecto guardado?')) return;
