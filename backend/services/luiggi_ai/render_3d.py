@@ -505,7 +505,12 @@ class Render3DService:
         # La imagen manda. NO expandimos el brief ni inyectamos principios de
         # diseño (harían que el modelo REDISEÑE en vez de mantener la cocina y
         # aplicar solo el cambio pedido, p. ej. el color de las puertas).
-        if ref_b64:
+        # EXCEPCIÓN: si la referencia es un CROQUIS/PLANO MANUSCRITO (PDF escaneado
+        # o imagen con trazos a mano), NO es una foto a editar sino un plano del que
+        # INTERPRETAR la distribución. En ese caso usamos la rama SIN referencia pero
+        # pasando la imagen como guía de layout.
+        is_sketch = self._is_sketch_reference(reference_image, reference_mime)
+        if ref_b64 and not is_sketch:
             change = (description or "").strip()
             parsed_params["briefExpanded"] = False
             # Si además llegan imágenes de ELEMENTO (una puerta, un mueble a copiar),
@@ -673,6 +678,29 @@ class Render3DService:
         return await self._render_with_gemini(
             task_prompt, prompt, parsed_params, reference_images=images,
         )
+
+    def _is_sketch_reference(self, reference_image, reference_mime):
+        """Detecta si la referencia es un croquis/plano manuscrito (PDF escaneado)
+        en vez de una foto de cocina existente. En ese caso el render debe
+        INTERPRETAR el plano, no EDITAR la imagen."""
+        if not reference_image:
+            return False
+        # Si el MIME indica PDF, es casi seguro un croquis escaneado
+        if reference_mime and "pdf" in reference_mime.lower():
+            return True
+        # Si el data URL indica PDF
+        if reference_image[:60].lower().startswith("data:application/pdf"):
+            return True
+        # Detectar por magic bytes del PDF (%PDF)
+        try:
+            raw = reference_image.split(",", 1)[-1] if "," in reference_image else reference_image
+            import base64
+            header_bytes = base64.b64decode(raw[:20])
+            if header_bytes[:4] == b"%PDF":
+                return True
+        except Exception:
+            pass
+        return False
 
     def _prepare_reference(self, reference_image, reference_mime):
         """Normaliza la referencia: quita el prefijo data:, y si es PDF convierte
