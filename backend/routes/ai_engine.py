@@ -509,13 +509,27 @@ async def proxy_asset(
 # ruta de vision independiente del motor de render principal.
 _REF_PROMPT = (
     "Eres un disenador de interiores y mobiliario a medida (cocinas, armarios "
-    "empotrados, banos, dormitorios, estanterias, muebles a medida...). Describe "
+    "empotrados, banos, dormitorios, estanterias, muebles a medida...). Analiza "
     "esta imagen de referencia para generar un render 3D fotorrealista del MISMO "
-    "tipo de elemento que aparece (no asumas que es una cocina): tipo de mueble o "
-    "espacio, distribucion, materiales y acabados, color de puertas, tiradores, "
-    "interior (baldas, columnas, cajones), suelo, pared, iluminacion y estilo. "
-    "Devuelve un parrafo descriptivo en espanol, conciso y concreto, listo para "
-    "usar como prompt de render. Solo el texto, sin encabezados."
+    "tipo de elemento que aparece (no asumas que es una cocina).\n\n"
+    "Si la imagen es un CROQUIS o PLANO MANUSCRITO (dibujo a mano con medidas), "
+    "interpreta FIELMENTE:\n"
+    "- La FORMA de la distribucion (lineal, L, U, isla, etc.)\n"
+    "- Cada MODULO dibujado de izquierda a derecha y su MEDIDA en cm\n"
+    "- Los ELECTRODOMESTICOS y su posicion exacta (fregadero, lavavajillas, "
+    "lavadora, horno, placa, campana, frigorifico)\n"
+    "- Las COLUMNAS (alto) y su contenido\n"
+    "- Los MATERIALES y ACABADOS escritos (ej: Sincron Noce, Alhambra, etc.)\n"
+    "- El COLOR del casco (ej: casco blanco)\n"
+    "- Los TIRADORES mencionados\n"
+    "- Las medidas totales (ancho total, alto de bajos, alto de altos)\n\n"
+    "Si la imagen es una FOTO, describe: tipo de mueble o espacio, distribucion, "
+    "materiales y acabados, color de puertas, tiradores, interior (baldas, columnas, "
+    "cajones), suelo, pared, iluminacion y estilo.\n\n"
+    "Devuelve un parrafo descriptivo en espanol, MUY DETALLADO y CONCRETO, "
+    "especificando cada modulo con su medida y posicion exacta, listo para "
+    "usar como prompt de render. Incluye TODAS las medidas que puedas leer. "
+    "Solo el texto, sin encabezados."
 )
 
 

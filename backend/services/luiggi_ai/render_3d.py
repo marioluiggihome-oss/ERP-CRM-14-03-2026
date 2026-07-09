@@ -559,14 +559,30 @@ class Render3DService:
         )
 
         # Crear tarea de generación de imagen (genérica, dirigida por el brief)
-        ref_note = (
-            "An IMAGE has been attached as visual reference (a photo, a sketch or a "
-            "technical breakdown/despiece). Use it to respect the real LAYOUT, "
-            "PROPORTIONS and MEASUREMENTS of the piece (number and size of doors, "
-            "drawers, shelves and columns). Keep the geometry faithful to the "
-            "reference; apply the finishes/colors from the brief. "
-            if ref_b64 else ""
-        )
+        if ref_b64 and is_sketch:
+            ref_note = (
+                "A HAND-DRAWN FLOOR PLAN / SKETCH has been attached. It shows the "
+                "exact kitchen/furniture LAYOUT drawn by the designer. You MUST "
+                "reproduce the EXACT distribution shown in the sketch: the SHAPE "
+                "(linear, L-shaped, U-shaped), the NUMBER and ORDER of modules from "
+                "left to right, the POSITION of each appliance (sink, dishwasher, "
+                "washing machine, oven, hob, fridge), and the TALL COLUMNS. "
+                "The sketch is NOT decorative — it is a TECHNICAL blueprint. "
+                "Generate the kitchen EXACTLY as drawn, with the materials and "
+                "colors described in the brief below. Do NOT add, remove, or "
+                "rearrange any module. The proportions and widths of each module "
+                "must match the sketch. "
+            )
+        elif ref_b64:
+            ref_note = (
+                "An IMAGE has been attached as visual reference (a photo, a sketch or a "
+                "technical breakdown/despiece). Use it to respect the real LAYOUT, "
+                "PROPORTIONS and MEASUREMENTS of the piece (number and size of doors, "
+                "drawers, shelves and columns). Keep the geometry faithful to the "
+                "reference; apply the finishes/colors from the brief. "
+            )
+        else:
+            ref_note = ""
         task_prompt = (
             "Generate a single high-quality, photorealistic 3D render image based "
             "STRICTLY on the following design brief. Reproduce exactly what is "
