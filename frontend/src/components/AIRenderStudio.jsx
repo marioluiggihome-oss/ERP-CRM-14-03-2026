@@ -1648,13 +1648,21 @@ export default function AIRenderStudio({ state, setState }) {
 
               {/* Comparativa referencia vs render */}
               {compareOn && refImage && renderResult?.result?.images?.[0] ? (
-                <div className="flex-1 grid grid-cols-2 gap-3 overflow-hidden">
-                  <div className="bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center relative">
-                    <img src={refImage} alt="Referencia" className="w-full h-full object-contain" />
+                <div className="flex-1 grid grid-cols-2 gap-3 min-h-[350px]">
+                  <div className="bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center relative p-3" style={{ minHeight: '300px' }}>
+                    {refImage.startsWith('data:image') ? (
+                      <img src={refImage} alt="Referencia" className="max-w-full max-h-[500px] object-contain rounded-lg" />
+                    ) : (
+                      <div className="text-center p-4">
+                        <FileText size={40} className="text-slate-400 mx-auto mb-2" />
+                        <p className="text-xs text-slate-500 font-bold">Referencia (PDF)</p>
+                        <p className="text-[10px] text-slate-400 mt-1">No se puede previsualizar un PDF en la comparativa</p>
+                      </div>
+                    )}
                     <span className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded text-[10px] font-black text-white uppercase tracking-widest">Referencia</span>
                   </div>
-                  <div className="bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center relative">
-                    <img src={assetSrc(renderResult.result.images[0])} alt="Render" className="w-full h-full object-contain" />
+                  <div className="bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center relative p-3" style={{ minHeight: '300px' }}>
+                    <img src={assetSrc(renderResult.result.images[0])} alt="Render" className="max-w-full max-h-[500px] object-contain rounded-lg" />
                     <span className="absolute top-2 left-2 px-2 py-1 bg-indigo-600 rounded text-[10px] font-black text-white uppercase tracking-widest">Render</span>
                   </div>
                 </div>
