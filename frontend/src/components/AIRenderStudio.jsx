@@ -449,13 +449,39 @@ export default function AIRenderStudio({ state, setState }) {
     try { setEditRefImage(await downscaleImage(f)); }
     catch { setError('No se pudo leer la imagen del elemento.'); }
   };
-  // Pegar una imagen del portapapeles (Ctrl+V) como elemento a copiar.
+  // Pegar una imagen del portapapeles (Ctrl+V):
+  // - Si NO hay render generado todavía → se usa como REFERENCIA principal (mismo flujo que subir archivo).
+  // - Si YA hay render → se usa como elemento de edición (editRefImage).
   const captureClipboardImage = async (e) => {
     const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items || [];
     for (const it of items) {
       if (it.type && it.type.startsWith('image/')) {
         const file = it.getAsFile();
-        if (file) { e.preventDefault(); try { setEditRefImage(await downscaleImage(file)); } catch { setError('No se pudo pegar la imagen.'); } return true; }
+        if (!file) continue;
+        e.preventDefault();
+        try {
+          const b64 = await downscaleImage(file);
+          if (!renderResult) {
+            // Sin render → usar como referencia principal
+            setRefImage(b64);
+            setAnalyzingRef(true);
+            try {
+              const response = await fetch(`${API_URL}/api/ai-engine/describe-reference`, {
+                method: 'POST', headers: getAuthHeaders(),
+                body: JSON.stringify({ fileBase64: b64 }),
+              });
+              const data = await response.json();
+              if (data.success && data.description) {
+                setDescription(prev => prev?.trim() ? `${prev.trim()}\n\n[Referencia pegada] ${data.description}` : data.description);
+              }
+            } catch (_) {}
+            finally { setAnalyzingRef(false); }
+          } else {
+            // Con render → usar como elemento de edición
+            setEditRefImage(b64);
+          }
+        } catch { setError('No se pudo pegar la imagen.'); }
+        return true;
       }
     }
     return false;
