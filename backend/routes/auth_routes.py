@@ -113,15 +113,20 @@ async def login(request: Request, credentials: dict):
             logger.warning(f"Error parsing expiration date for {username}: {e}")
     
     # ─── Sesión única: verificar si ya hay una sesión activa ───
+    # Los usuarios admin/master pueden tener múltiples sesiones simultáneas.
+    is_admin_user = any(user.get(flag) for flag in ("isAdmin", "isResponsableDelegacion", "isGerente", "isDirectorComercial", "isDirectorFabrica"))
     force = credentials.get("force", False)
     user_id = user.get("id")
-    existing_session = await db.active_sessions.find_one({"user_id": user_id})
-    if existing_session and not force:
-        return {
-            "success": False,
-            "sessionConflict": True,
-            "message": f"Ya hay una sesión activa para este usuario (desde {existing_session.get('login_at', 'desconocido')}). Pulsa 'Forzar acceso' para cerrar la otra sesión."
-        }
+    if not is_admin_user:
+        existing_session = await db.active_sessions.find_one({"user_id": user_id})
+        if existing_session and not force:
+            return {
+                "success": False,
+                "sessionConflict": True,
+                "message": f"Ya hay una sesión activa para este usuario (desde {existing_session.get('login_at', 'desconocido')}). Pulsa 'Forzar acceso' para cerrar la otra sesión."
+            }
+    else:
+        existing_session = None  # admin: no bloquear multi-sesión
     # Limpiar sesión anterior si existe (forzado o nueva)
     if existing_session:
         await db.active_sessions.delete_many({"user_id": user_id})
