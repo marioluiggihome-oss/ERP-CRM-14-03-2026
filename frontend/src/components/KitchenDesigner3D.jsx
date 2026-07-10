@@ -568,7 +568,7 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
       const fd = new FormData();
       fd.append('library', lib);
       fd.append('file', file);
-      const r = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan`, { method: 'POST', body: fd });
+      const r = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }, body: fd });
       if (!r.ok) { alert(`Error del servidor al analizar (${r.status}).`); return; }
       const data = await r.json();
       const muebles = data?.analysis?.muebles_detectados || [];
