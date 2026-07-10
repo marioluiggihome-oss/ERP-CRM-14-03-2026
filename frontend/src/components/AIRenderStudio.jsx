@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -29,6 +29,10 @@ const MARK_TYPES = {
   agua:    { label: 'Toma agua', color: '#0ea5e9', h: 50, Icon: Droplet },
   desague: { label: 'Desagüe', color: '#64748b', h: 40, Icon: Waves },
   gas:     { label: 'Gas', color: '#ef4444', h: 55, Icon: Flame },
+  luz:     { label: 'Punto de luz', color: '#eab308', h: 220, Icon: Lightbulb },
+  campana: { label: 'Campana', color: '#334155', h: 200, Icon: Fan },
+  tv:      { label: 'TV / antena', color: '#8b5cf6', h: 120, Icon: Tv },
+  datos:   { label: 'Datos / red', color: '#10b981', h: 30, Icon: Wifi },
 };
 
 // ─── Hook para Web Speech API ────────────────────────────────────────────────
@@ -389,6 +393,8 @@ export default function AIRenderStudio({ state, setState }) {
   const [marks, setMarks] = useState([]);           // [{x,y,type}] en % del render
   const [detecting, setDetecting] = useState(false);
   const [schematic, setSchematic] = useState(false); // vista esquema (render atenuado)
+  const [editMark, setEditMark] = useState(null);    // índice de la marca en edición
+  const markH = (mk) => (mk.h != null ? mk.h : MARK_TYPES[mk.type].h); // altura efectiva (cm)
   // Selector de color por catálogo (pestañas Colores 1/2 + gamas colapsables).
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [colorTab, setColorTab] = useState('c1');
@@ -432,7 +438,7 @@ export default function AIRenderStudio({ state, setState }) {
   const baseTextRef = useRef('');
 
   // Al cambiar de render, reseteamos el aviso de imagen no cargada.
-  useEffect(() => { setImgError(false); setMarks([]); setMarkTool(null); setSchematic(false); }, [renderResult]);
+  useEffect(() => { setImgError(false); setMarks([]); setMarkTool(null); setSchematic(false); setEditMark(null); }, [renderResult]);
 
   // Detección AUTOMÁTICA de instalaciones con IA (analiza el render y coloca las
   // marcas de enchufes/agua/desagüe/gas donde irían).
@@ -456,6 +462,7 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Coloca una marca de instalación en el punto pulsado del render (% del box).
   const placeMark = (e) => {
+    if (editMark !== null) { setEditMark(null); return; } // clic fuera cierra el editor
     if (!markTool || interactiveMode) return;
     const r = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * 100;
@@ -482,8 +489,8 @@ export default function AIRenderStudio({ state, setState }) {
         // Punto (círculo de color, sin letra)
         ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
-        // Cota de altura junto al punto
-        const cota = `${t.h} cm`;
+        // Cota de altura junto al punto (usa la altura editada si la hay)
+        const cota = `${markH(mk)} cm`;
         ctx.font = 'bold 11px sans-serif'; const tw = ctx.measureText(cota).width;
         ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(x + 11, y - 8, tw + 8, 16);
         ctx.fillStyle = t.color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(cota, x + 15, y + 0.5);
@@ -1893,19 +1900,45 @@ export default function AIRenderStudio({ state, setState }) {
                     onError={() => setImgError(true)}
                     onClick={placeMark}
                   />
-                  {/* Capa de marcas de instalaciones: icono + cota de altura */}
+                  {/* Capa de marcas de instalaciones: icono + cota de altura (editable) */}
                   {!interactiveMode && marks.map((mk, i) => {
                     const t = MARK_TYPES[mk.type]; const Ic = t.Icon;
                     return (
                       <div key={i} className="absolute z-10 flex flex-col items-center"
                         style={{ left: `${mk.x}%`, top: `${mk.y}%`, transform: 'translate(-50%,-50%)' }}>
-                        <button onClick={(e) => { e.stopPropagation(); setMarks(m => m.filter((_, j) => j !== i)); }}
-                          title={`${t.label} · altura ≈ ${t.h} cm — clic para quitar`}
-                          className="w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg ring-2 ring-white"
+                        <button onClick={(e) => { e.stopPropagation(); setEditMark(editMark === i ? null : i); }}
+                          title={`${t.label} · altura ${markH(mk)} cm — clic para editar`}
+                          className={`w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg ring-2 ${editMark === i ? 'ring-indigo-500' : 'ring-white'}`}
                           style={{ background: t.color }}>
                           <Ic size={15} />
                         </button>
-                        <span className="mt-0.5 px-1.5 py-[1px] rounded bg-white/90 text-[9px] font-black text-slate-700 shadow whitespace-nowrap leading-tight">{t.h} cm</span>
+                        <span className="mt-0.5 px-1.5 py-[1px] rounded bg-white/90 text-[9px] font-black text-slate-700 shadow whitespace-nowrap leading-tight">{markH(mk)} cm</span>
+
+                        {/* Editor de la marca */}
+                        {editMark === i && (
+                          <div className="absolute top-8 z-20 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 w-56" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide">Editar punto</span>
+                              <button onClick={() => setEditMark(null)} className="text-slate-400 hover:text-slate-700"><X size={13} /></button>
+                            </div>
+                            <label className="flex items-center gap-2 mb-2">
+                              <span className="text-[11px] font-bold text-slate-500 w-12">Altura</span>
+                              <input type="number" min="0" max="300" value={markH(mk)}
+                                onChange={(e) => { const v = e.target.value === '' ? '' : Math.max(0, Math.min(300, parseInt(e.target.value) || 0)); setMarks(m => m.map((x, j) => j === i ? { ...x, h: v === '' ? null : v } : x)); }}
+                                className="flex-1 px-2 py-1 border border-slate-200 rounded-lg text-sm" />
+                              <span className="text-[11px] text-slate-400">cm</span>
+                            </label>
+                            <div className="grid grid-cols-4 gap-1.5 mb-2">
+                              {Object.entries(MARK_TYPES).map(([id, tt]) => { const TI = tt.Icon; return (
+                                <button key={id} title={tt.label} onClick={() => setMarks(m => m.map((x, j) => j === i ? { ...x, type: id } : x))}
+                                  className={`h-8 rounded-lg flex items-center justify-center ${mk.type === id ? 'text-white ring-2 ring-offset-1' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                  style={mk.type === id ? { background: tt.color } : undefined}><TI size={15} /></button>
+                              ); })}
+                            </div>
+                            <button onClick={() => { setMarks(m => m.filter((_, j) => j !== i)); setEditMark(null); }}
+                              className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[11px] font-bold hover:bg-rose-100"><Trash2 size={13} /> Quitar punto</button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
