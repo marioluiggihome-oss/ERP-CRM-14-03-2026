@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw, Layers } from 'lucide-react';
 import { getProductIcon } from './FurnitureIcons';
+import { getToken } from '../services/api';
 import DOMPurify from 'dompurify';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -74,6 +75,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         
         const response = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan`, {
           method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
           body: formData
         });
 
@@ -92,6 +94,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         
         const response = await fetch(`${API_URL}/api/ia-lab/analyze-kitchen-plan-multi`, {
           method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
           body: formData
         });
 
