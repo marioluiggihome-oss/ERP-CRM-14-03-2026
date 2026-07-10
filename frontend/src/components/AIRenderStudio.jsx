@@ -754,8 +754,29 @@ export default function AIRenderStudio({ state, setState }) {
       if (data.success) {
         const merged = { ...data, description: 'Ficha técnica: alzado + planta + medidas' };
         setRenderResult(merged);
-        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
       } else setError(data.error || 'No se pudo generar la ficha técnica.');
+
+      // Además, planta y alzado EXACTOS (vectoriales con cotas): se detecta la
+      // distribución del render con IA y se dibujan de forma determinista. Es
+      // best-effort: si falla, la lámina IA ya se ha generado igualmente.
+      try {
+        const dd = await fetch(`${API_URL}/api/estudio-cocinas/detect-distribucion`, {
+          method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl }),
+        });
+        const dj = await dd.json();
+        if (dj?.success && dj.distribucion) {
+          const body = JSON.stringify({ nombre_cliente: cliente || 'Cliente', distribucion_estructurada: dj.distribucion });
+          const [pr, ar] = await Promise.all([
+            fetch(`${API_URL}/api/estudio-cocinas/plano-2d`, { method: 'POST', headers: getAuthHeaders(), body }).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`${API_URL}/api/estudio-cocinas/alzado`, { method: 'POST', headers: getAuthHeaders(), body }).then(r => r.ok ? r.json() : null).catch(() => null),
+          ]);
+          const extra = [];
+          if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: 'Planta acotada (exacta)', timestamp: new Date() });
+          if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: 'Alzado alámbrico acotado (exacto)', timestamp: new Date() });
+          if (extra.length) setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
+        }
+      } catch (_) { /* la lámina IA ya está; los planos exactos son un extra */ }
     } catch { setError('Error al generar la ficha técnica.'); }
     finally { setEditing(false); }
   };

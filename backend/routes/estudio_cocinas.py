@@ -1663,3 +1663,70 @@ async def generar_alzado(payload: ProyectoBase):
     except Exception as e:
         logger.error(f"alzado error: {e}")
         raise HTTPException(status_code=500, detail="No se pudo generar la vista alámbrica")
+
+
+@router.post("/detect-distribucion")
+async def detect_distribucion(payload: dict):
+    """Analiza un render de cocina con IA y deduce la DISTRIBUCIÓN ESTRUCTURADA
+    (tipo, paredes con ancho/alto y elementos con posición y ancho en cm) para
+    poder dibujar planta y alzado deterministas con cotas."""
+    import json as _json, re as _re
+    img = (payload or {}).get("imageBase64") or (payload or {}).get("image") or ""
+    if not img:
+        raise HTTPException(status_code=400, detail="Falta la imagen del render.")
+    try:
+        from services.llm_vision import analyze_image_with_gemini, is_vision_available
+        if not is_vision_available():
+            raise HTTPException(status_code=503, detail="IA no configurada. Falta la clave del motor de IA (contacta con el administrador).")
+        prompt = (
+            "Eres proyectista de cocinas. Analiza esta imagen (render de cocina) y deduce su DISTRIBUCIÓN. "
+            "Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, en cada pared, "
+            "la secuencia de MÓDULOS de izquierda a derecha con su nombre y ancho aproximado en cm "
+            "(anchos típicos: 30,40,45,60,80,90,100,120). Electrodomésticos visibles cuentan como módulos "
+            "(frigorífico, columna horno/microondas, lavavajillas, fregadero, placa/cocina, campana...).\n"
+            "Devuelve SOLO un JSON con esta forma exacta:\n"
+            "{\"tipo\":\"l\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":370,\"alto\":240}],"
+            "\"elementos\":[{\"id\":\"frigorifico\",\"label\":\"Frigorífico\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":60}]}. "
+            "'ancho' de pared en cm (suma de sus módulos). 'posicion_cm' es la distancia desde el inicio de la pared. "
+            "id usa palabras clave: frigorifico, congelador, columna_hornos, horno, microondas, lavavajillas, "
+            "fregadero, placa, campana, mueble, cajonera, despensa, vinoteca."
+        )
+        text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-pro")
+        m = _re.search(r"\{[\s\S]*\}", text or "")
+        data = {}
+        if m:
+            try:
+                data = _json.loads(m.group())
+            except Exception:
+                data = {}
+        # Sanear
+        paredes = []
+        for p in (data.get("paredes") or [])[:4]:
+            try:
+                anc = int(round(float(p.get("ancho") or 0)))
+                alt = int(round(float(p.get("alto") or 240)))
+            except (TypeError, ValueError):
+                continue
+            if anc > 0:
+                paredes.append({"nombre": str(p.get("nombre") or f"Pared {len(paredes)+1}"), "ancho": anc, "alto": alt or 240})
+        elementos = []
+        for e in (data.get("elementos") or [])[:40]:
+            try:
+                anc = int(round(float(e.get("ancho") or 60)))
+                pos = int(round(float(e.get("posicion_cm") or 0)))
+                pidx = int(e.get("pared_idx") or 0)
+            except (TypeError, ValueError):
+                continue
+            elementos.append({
+                "id": str(e.get("id") or "mueble").lower().strip().replace(" ", "_"),
+                "label": str(e.get("label") or e.get("id") or "Módulo")[:24],
+                "pared_idx": max(0, pidx), "posicion_cm": max(0, pos), "ancho": max(10, anc),
+            })
+        if not paredes:
+            raise HTTPException(status_code=422, detail="No se pudo deducir la distribución del render.")
+        return {"success": True, "distribucion": {"tipo": str(data.get("tipo") or "lineal"), "paredes": paredes, "elementos": elementos, "isla": {}}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"detect-distribucion error: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo analizar la distribución.")
