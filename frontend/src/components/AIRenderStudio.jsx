@@ -725,6 +725,41 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   // ─── Editar el render existente en lenguaje natural ─────────────────────────
+  // Lámina técnica: alzado con cotas + planta + listado de medidas + acabados,
+  // generada a partir del render actual (estilo ficha de estudio profesional).
+  const generarFichaTecnica = async () => {
+    const img = currentImage();
+    if (!img || editing) return;
+    setEditing(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const desc = (
+        'Crea una LÁMINA TÉCNICA de presentación de ESTA cocina (usa la imagen adjunta como '
+        + 'referencia FIEL del diseño, mismos muebles, acabados y distribución). Composición de ficha '
+        + 'de estudio de cocinas profesional, fondo claro, tipografía legible, líneas de cota finas:\n'
+        + '- ARRIBA: el FRENTE/ALZADO de la cocina con COTAS: el ancho total en metros y, DEBAJO de cada '
+        + 'módulo, su ancho en cm con su nombre (p. ej. "60 FRIGORÍFICO", "40 COLUMNA", "60 FREGADERO", '
+        + '"80 COCINA", "30 MUEBLE"…).\n'
+        + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN Y MEDIDAS" con la lista de módulos y sus medidas.\n'
+        + '- CENTRO/ABAJO: la PLANTA (vista cenital) de la cocina a escala con cotas (ancho y fondo en metros '
+        + 'y ancho por módulo).\n'
+        + '- DERECHA: recuadro "ACABADOS SUGERIDOS" (puertas, encimera, tirador, salpicadero, iluminación, detalles).\n'
+        + 'Formato 16:9, alta legibilidad.'
+      );
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        const merged = { ...data, description: 'Ficha técnica: alzado + planta + medidas' };
+        setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 10));
+      } else setError(data.error || 'No se pudo generar la ficha técnica.');
+    } catch { setError('Error al generar la ficha técnica.'); }
+    finally { setEditing(false); }
+  };
+
   const editRender = async () => {
     const img = currentImage();
     // Combina la instrucción principal + líneas adicionales (multi-línea).
@@ -1789,6 +1824,10 @@ export default function AIRenderStudio({ state, setState }) {
                   <button onClick={() => setSchematic(s => !s)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${schematic ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                     ▦ Esquema
+                  </button>
+                  <button onClick={generarFichaTecnica} disabled={editing}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
+                    {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} Alzado + planta + medidas
                   </button>
                   <span className="w-px h-4 bg-slate-300 mx-0.5" />
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Manual:</span>
