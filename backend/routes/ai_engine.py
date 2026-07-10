@@ -573,3 +573,59 @@ async def describe_reference(payload: dict, user=Depends(require_auth)):
         # Nunca exponer el detalle del proveedor al cliente: log interno + mensaje genérico.
         logger.error(f"describe-reference error: {e}")
         return {"success": False, "error": "No se pudo analizar la imagen de referencia. Inténtelo de nuevo."}
+
+
+@ai_engine_router.post("/detect-installations")
+async def detect_installations(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
+    """Analiza un render de cocina con IA y devuelve los puntos de instalación
+    (enchufes, tomas de agua, desagüe, gas) con coordenadas normalizadas 0-1,
+    para señalarlos automáticamente sobre la imagen (esquema para gremios)."""
+    import json as _json, re as _re
+    p = payload or {}
+    img = p.get("imageBase64") or p.get("image") or ""
+    if not img:
+        raise HTTPException(status_code=400, detail="Falta la imagen del render.")
+    try:
+        from services.llm_vision import analyze_image_with_gemini, is_vision_available
+        if not is_vision_available():
+            raise HTTPException(status_code=503, detail="IA no configurada. Falta la clave del motor de IA (contacta con el administrador).")
+        prompt = (
+            "Eres instalador y proyectista de cocinas. Analiza esta imagen (render de una cocina) "
+            "y localiza los PUNTOS DE INSTALACIÓN necesarios, deduciéndolos de los elementos visibles:\n"
+            "- 'enchufe': tomas de corriente sobre la encimera (zonas de pequeño electrodoméstico), y detrás de "
+            "cada electrodoméstico visible (horno, microondas, placa de inducción, frigorífico, lavavajillas, campana, vinoteca).\n"
+            "- 'agua': toma de agua fría/caliente bajo el fregadero (y en isla si hay segundo fregadero).\n"
+            "- 'desague': desagüe bajo el fregadero (y lavavajillas).\n"
+            "- 'gas': solo si hay placa de GAS (llama). Si la placa es de inducción/vitrocerámica, NO pongas gas.\n\n"
+            "Coloca cada punto donde iría físicamente (p. ej. el enchufe justo sobre la encimera en su zona, la toma "
+            "de agua a la altura del mueble del fregadero). Usa coordenadas normalizadas donde x=0 es el borde "
+            "izquierdo, x=1 el derecho, y=0 arriba, y=1 abajo de la imagen.\n\n"
+            "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|agua|desague|gas\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"nota\":\"texto corto\"}]}. "
+            "Sin puntos claros, devuelve {\"puntos\":[]}."
+        )
+        text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-pro")
+        m = _re.search(r"\{[\s\S]*\}", text or "")
+        data = {}
+        if m:
+            try:
+                data = _json.loads(m.group())
+            except Exception:
+                data = {}
+        out = []
+        valid = {"enchufe", "agua", "desague", "gas"}
+        for it in (data.get("puntos") or [])[:40]:
+            tipo = str(it.get("tipo") or "").lower().strip()
+            if tipo not in valid:
+                continue
+            try:
+                x = max(0.0, min(1.0, float(it.get("x"))))
+                y = max(0.0, min(1.0, float(it.get("y"))))
+            except (TypeError, ValueError):
+                continue
+            out.append({"type": tipo, "x": round(x * 100, 2), "y": round(y * 100, 2), "nota": str(it.get("nota") or "")[:60]})
+        return {"success": True, "marks": out}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"detect-installations error: {e}")
+        raise HTTPException(status_code=500, detail="No se pudieron detectar las instalaciones.")

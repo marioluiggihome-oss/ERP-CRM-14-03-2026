@@ -385,6 +385,8 @@ export default function AIRenderStudio({ state, setState }) {
   // Marcado de instalaciones sobre el render (para electricista/fontanero).
   const [markTool, setMarkTool] = useState(null);   // 'enchufe'|'agua'|'desague'|'gas'|null
   const [marks, setMarks] = useState([]);           // [{x,y,type}] en % del render
+  const [detecting, setDetecting] = useState(false);
+  const [schematic, setSchematic] = useState(false); // vista esquema (render atenuado)
   // Selector de color por catálogo (pestañas Colores 1/2 + gamas colapsables).
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [colorTab, setColorTab] = useState('c1');
@@ -428,7 +430,27 @@ export default function AIRenderStudio({ state, setState }) {
   const baseTextRef = useRef('');
 
   // Al cambiar de render, reseteamos el aviso de imagen no cargada.
-  useEffect(() => { setImgError(false); setMarks([]); setMarkTool(null); }, [renderResult]);
+  useEffect(() => { setImgError(false); setMarks([]); setMarkTool(null); setSchematic(false); }, [renderResult]);
+
+  // Detección AUTOMÁTICA de instalaciones con IA (analiza el render y coloca las
+  // marcas de enchufes/agua/desagüe/gas donde irían).
+  const detectInstalaciones = async () => {
+    const src = currentImage(); if (!src || detecting) return;
+    setDetecting(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(src);
+      const r = await fetch(`${API_URL}/api/ai-engine/detect-installations`, {
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setMarks(d.marks || []); setMarkTool(null);
+        if ((d.marks || []).length) setSchematic(true);
+        else setError('La IA no localizó puntos claros; márcalos a mano.');
+      } else setError(d.detail || d.error || 'No se pudieron detectar las instalaciones.');
+    } catch { setError('Error al detectar instalaciones.'); }
+    finally { setDetecting(false); }
+  };
 
   // Coloca una marca de instalación en el punto pulsado del render (% del box).
   const placeMark = (e) => {
@@ -1759,7 +1781,17 @@ export default function AIRenderStudio({ state, setState }) {
               <>
               {renderResult?.result?.images?.[0] && !imgError && !interactiveMode && (
                 <div className="shrink-0 mb-2 flex items-center gap-1.5 flex-wrap bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Marcar instalaciones:</span>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Instalaciones:</span>
+                  <button onClick={detectInstalaciones} disabled={detecting}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5">
+                    {detecting ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />} {detecting ? 'Detectando…' : 'Detectar auto (IA)'}
+                  </button>
+                  <button onClick={() => setSchematic(s => !s)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 ${schematic ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                    ▦ Esquema
+                  </button>
+                  <span className="w-px h-4 bg-slate-300 mx-0.5" />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Manual:</span>
                   {Object.entries(MARK_TYPES).map(([id, t]) => (
                     <button key={id} onClick={() => setMarkTool(markTool === id ? null : id)}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${markTool === id ? 'text-white ring-2 ring-offset-1' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -1788,7 +1820,10 @@ export default function AIRenderStudio({ state, setState }) {
                     src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
                     className="w-full h-full object-contain transition-transform"
-                    style={interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : undefined)}
+                    style={{
+                      ...(interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
+                      ...(schematic ? { filter: 'grayscale(1) brightness(1.22) contrast(0.82)' } : {}),
+                    }}
                     onError={() => setImgError(true)}
                     onClick={placeMark}
                   />
