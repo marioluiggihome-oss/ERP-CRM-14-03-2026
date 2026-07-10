@@ -416,7 +416,7 @@ async def analyze_kitchen_plan(
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         
         if not is_vision_available():
-            raise HTTPException(status_code=503, detail="Vision IA no configurada. Añade GEMINI_API_KEY en variables de entorno")
+            raise HTTPException(status_code=503, detail="Vision IA no configurada. Falta la clave del motor de IA (contacta con el administrador)")
         
         # Normalizar biblioteca
         active_library = (library or "ZC").upper()
@@ -486,11 +486,11 @@ async def analyze_kitchen_plan(
         if 'quota' in ml or '429' in msg:
             raise HTTPException(status_code=429, detail="Límite de uso de IA alcanzado. Espera un momento.")
         elif '401' in msg or 'unauthenticated' in ml or 'access_token_type_unsupported' in ml or 'invalid authentication' in ml:
-            raise HTTPException(status_code=503, detail="GEMINI_API_KEY rechazada por Google (401). Verifica que sea una API key válida de AI Studio (empieza por 'AIza'), sin espacios ni comillas, y que la Generative Language API esté activada.")
+            raise HTTPException(status_code=503, detail="Clave del motor de IA rechazada (401). Verifica la clave en la configuración del servidor.")
         elif 'api_key' in ml or 'api key not valid' in ml or '400' in msg:
-            raise HTTPException(status_code=503, detail="Error de configuración de IA. Verifica GEMINI_API_KEY.")
+            raise HTTPException(status_code=503, detail="Error de configuración de IA. Verifica la clave del motor de IA.")
         elif 'not_found' in ml or '404' in msg or 'not found' in ml:
-            raise HTTPException(status_code=503, detail="El modelo de IA no está disponible para tu clave. Actualiza el SDK o revisa el acceso a Gemini en tu proyecto.")
+            raise HTTPException(status_code=503, detail="El modelo de IA no está disponible para tu clave. Revisa la configuración del motor de IA.")
         elif 'timeout' in msg.lower():
             raise HTTPException(status_code=504, detail="La IA tardó demasiado. Intenta con una imagen más pequeña.")
         else:
@@ -513,7 +513,7 @@ async def analyze_kitchen_plan_multi(
         
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         if not is_vision_available():
-            raise HTTPException(status_code=503, detail="Vision IA no configurada. Añade GEMINI_API_KEY en variables de entorno")
+            raise HTTPException(status_code=503, detail="Vision IA no configurada. Falta la clave del motor de IA (contacta con el administrador)")
         
         # Normalizar biblioteca
         active_library = (library or "ZC").upper()

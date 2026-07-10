@@ -461,6 +461,8 @@ export default function EstudioCocinas({ state, setState }) {
   const [render, setRender] = useState({ status: null, msg: '', imageUrl: null, originalUrl: null, croquis: null, croquisPrev: null, editMode: false, editTxt: '', fs: false });
   const [freeDesign, setFreeDesign] = useState(false);
   const [plano,  setPlano]  = useState({ status: null, msg: '', b64: null, fs: false });
+  // Vista alámbrica (alzados acotados por pared) para el dossier técnico.
+  const [alzado, setAlzado] = useState({ status: null, msg: '', b64: null, fs: false });
   const [ficha,  setFicha]  = useState({ status: null, msg: '', md: '', ref: '' });
   const [pres,   setPres]   = useState({ status: null, msg: '', html: '', preview: false });
   const [inst,   setInst]   = useState({ status: null, msg: '', data: null });
@@ -854,6 +856,17 @@ export default function EstudioCocinas({ state, setState }) {
       setPlano(s => ({ ...s, status: 'success', msg: 'Plano generado', b64: r.planoBase64 }));
     } catch (err) {
       setPlano(s => ({ ...s, status: 'error', msg: err.message }));
+    }
+  }, [proy, distribucion]);
+
+  // ── Vista alámbrica (alzados por pared, con cotas) ──
+  const genAlzado = useCallback(async () => {
+    setAlzado(s => ({ ...s, status: 'loading', msg: 'Generando vista alámbrica…', b64: null }));
+    try {
+      const r = await apiPost('/alzado', { ...proy, distribucion_estructurada: distribucion });
+      setAlzado(s => ({ ...s, status: 'success', msg: `Alzados generados (${r.paredes} pared/es)`, b64: r.alzadoBase64 }));
+    } catch (err) {
+      setAlzado(s => ({ ...s, status: 'error', msg: err.message }));
     }
   }, [proy, distribucion]);
 
@@ -1390,6 +1403,35 @@ export default function EstudioCocinas({ state, setState }) {
                     <button className="absolute top-4 right-4 bg-white/10 p-2 rounded-full text-white"><X size={18}/></button>
                   </div>
                 )}
+
+                {/* ── Vista alámbrica: alzados acotados por pared (dossier / gremios) ── */}
+                <div className={`mt-2 pt-4 border-t ${t.cardBorder}`}>
+                  <h2 className={`text-sm font-black mb-1 ${t.title}`}>Vista alámbrica (alzados acotados)</h2>
+                  <p className={`text-xs mb-3 ${t.subtext}`}>Alzado por pared en línea técnica con cotas de módulos y alturas (zócalo 10 · encimera 90 · altos 140–210). Para fábrica, electricistas y fontaneros.</p>
+                  <button onClick={genAlzado} disabled={alzado.status === 'loading'}
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 rounded-xl text-sm font-black uppercase tracking-widest transition-all text-white">
+                    {alzado.status === 'loading' ? <><Loader2 size={15} className="animate-spin"/> Generando alzados…</> : <><LayoutGrid size={15}/> Generar vista alámbrica</>}
+                  </button>
+                  <StatusBadge status={alzado.status} message={alzado.msg} t={t} />
+                  {alzado.b64 && (
+                    <>
+                      <PrintPdfBar t={t} onPrint={() => handlePrint('alzado-print-area')} onPdf={() => handlePdfExport(`<img src="${alzado.b64}" style="width:100%"/>`, `alzados_${proy.nombre_cliente || 'cocina'}.pdf`)}
+                        extraBtns={<a href={alzado.b64} download={`alzados_${proy.nombre_cliente || 'cocina'}.png`} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}><Download size={11}/> PNG</a>} />
+                      <div id="alzado-print-area" className={`relative group rounded-xl overflow-hidden border bg-white ${t.cardBorder}`}>
+                        <img src={alzado.b64} alt="Alzados alámbricos" className="w-full object-contain" />
+                        <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setAlzado(s => ({ ...s, fs: true }))} className={`p-1.5 rounded-lg ${t.dlBtn}`}><Maximize2 size={13}/></button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {alzado.fs && (
+                    <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onClick={() => setAlzado(s => ({ ...s, fs: false }))}>
+                      <img src={alzado.b64} alt="Alzados" className="max-w-full max-h-full object-contain rounded-xl bg-white" />
+                      <button className="absolute top-4 right-4 bg-white/10 p-2 rounded-full text-white"><X size={18}/></button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

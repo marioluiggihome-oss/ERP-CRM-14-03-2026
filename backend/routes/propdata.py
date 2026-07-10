@@ -77,7 +77,7 @@ async def propdata_search(payload: dict):
     try:
         from services.llm_vision import search_with_gemini, is_vision_available
         if not is_vision_available():
-            raise HTTPException(status_code=503, detail="IA no configurada. Añade GEMINI_API_KEY en variables de entorno.")
+            raise HTTPException(status_code=503, detail="IA no configurada. Falta la clave del motor de IA (contacta con el administrador).")
         portal_txt = f" listadas en portales como {portal} (o información general)" if portal else ""
         prompt = SEARCH_PROMPT.format(location=location, portal=portal_txt)
         text, sources, grounding_failed = await search_with_gemini(prompt)
@@ -102,7 +102,7 @@ async def propdata_image(payload: dict):
     try:
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         if not is_vision_available():
-            raise HTTPException(status_code=503, detail="IA no configurada. Añade GEMINI_API_KEY en variables de entorno.")
+            raise HTTPException(status_code=503, detail="IA no configurada. Falta la clave del motor de IA (contacta con el administrador).")
         text = await analyze_image_with_gemini(image_base64=img, prompt=IMAGE_PROMPT, model="gemini-2.5-flash")
         return {"developments": _parse_json(text), "summary": _strip_json_blocks(text) or "Análisis de imagen completado."}
     except HTTPException:

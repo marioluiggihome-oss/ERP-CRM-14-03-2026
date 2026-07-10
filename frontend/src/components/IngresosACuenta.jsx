@@ -14,6 +14,10 @@ const isPendiente = (i) => !i.targetRef && (i.pendiente || (!i.clientCode && !i.
 const IngresosACuenta = ({ currentUser }) => {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
+  // Los ingresos ya vinculados a una FACTURA se consideran cobrados: salen de la
+  // lista (la factura los refleja como Pagada) y se pueden ver con el toggle.
+  const [verFacturados, setVerFacturados] = useState(false);
+  const facturados = items.filter(i => i.targetType === 'factura');
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [review, setReview] = useState(null); // { cliente, clientCode, proyecto, ingresos: [], targetId, fileB64, fileName, fileMime }
@@ -206,6 +210,14 @@ const IngresosACuenta = ({ currentUser }) => {
             <p className="text-[11px] opacity-80">{pendientes.count} registro(s) sin cliente ni documento</p>
           </div>
         )}
+        {facturados.length > 0 && (
+          <button onClick={() => setVerFacturados(v => !v)}
+            className={`p-4 rounded-2xl inline-block min-w-[220px] text-left transition-colors ${verFacturados ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
+            <p className="text-[10px] uppercase opacity-80">Vinculados a factura (cobrados)</p>
+            <p className="text-2xl font-black">{eur(facturados.reduce((s, i) => s + (Number(i.importe) || 0), 0))}</p>
+            <p className="text-[11px] opacity-80">{facturados.length} registro(s) · {verFacturados ? 'ocultar' : 'ver'}</p>
+          </button>
+        )}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
@@ -224,7 +236,7 @@ const IngresosACuenta = ({ currentUser }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {items.map((i) => (
+            {(verFacturados ? items : items.filter(i => i.targetType !== 'factura')).map((i) => (
               <tr key={i.id} className="hover:bg-slate-50">
                 <td className="p-3 text-slate-500">{i.fecha || '—'}</td>
                 <td className="p-3 text-slate-700">
