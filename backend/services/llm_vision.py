@@ -133,8 +133,7 @@ async def analyze_image_with_gemini(
         )
     
     raise RuntimeError(
-        "Vision IA no disponible. Configura GEMINI_API_KEY en las variables de entorno. "
-        "Obtén una gratis en https://aistudio.google.com/apikey"
+        "Vision IA no disponible. Falta la clave del motor de IA en el servidor."
     )
 
 

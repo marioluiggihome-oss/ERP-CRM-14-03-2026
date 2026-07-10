@@ -202,7 +202,7 @@ async def engine_diagnostics(user=Depends(require_auth)):
         "hint": (
             "El render usará MANUS." if effective == "manus"
             else "El render usará GEMINI (respaldo)." if effective == "gemini"
-            else "Falta configurar MANUS_API_KEY (o GEMINI_API_KEY) en Railway."
+            else "Falta configurar la clave del motor de IA en el servidor."
         ),
     }
 

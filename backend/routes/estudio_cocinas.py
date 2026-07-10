@@ -1551,3 +1551,115 @@ async def estado_lote_agentes(body: dict):
             })
 
     return {"agentes": resultados, "timestamp": int(time.time())}
+
+
+@router.post("/alzado")
+async def generar_alzado(payload: ProyectoBase):
+    """Vista ALÁMBRICA acotada (alzado por pared) para el dossier técnico:
+    bajos/altos/columnas en wireframe con cotas de anchos por módulo, alturas
+    estándar (zócalo 10, encimera 90, altos 140–210) y etiquetas de elementos.
+    Generación local con matplotlib (sin IA)."""
+    try:
+        import io, base64
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as patches
+
+        C_LINE = "#2C2C2C"; C_COTA = "#B03A2E"; C_BG = "#FFFFFF"; C_GRID = "#E6E2DA"
+        ALTOS_Y0, ALTOS_Y1, ENC_Y, ZOC_Y, COL_Y = 140, 210, 90, 10, 220
+        COLS = {"frigorifico", "columna_hornos", "despensa", "congelador"}
+        ALTOS = {"campana", "microondas"}
+
+        dist = payload.distribucion_estructurada
+        paredes = (dist.paredes if dist and dist.paredes else None) or [{"nombre": "Pared principal", "ancho": 400, "alto": 240}]
+        elementos = (dist.elementos if dist else None) or []
+        paredes = [p for p in paredes if (p.get("ancho") or 0) > 0][:4] or [{"nombre": "Pared", "ancho": 400, "alto": 240}]
+
+        n = len(paredes)
+        fig, axes = plt.subplots(n, 1, figsize=(14, 4.6 * n))
+        if n == 1:
+            axes = [axes]
+        fig.patch.set_facecolor(C_BG)
+
+        def wire(ax, x, y, w, h, dash=False, lw=1.4):
+            ax.add_patch(patches.Rectangle((x, y), w, h, fill=False, edgecolor=C_LINE,
+                                           linewidth=lw, linestyle="--" if dash else "-", zorder=3))
+
+        def puerta_x(ax, x, y, w, h):
+            ax.plot([x, x + w], [y, y + h], color=C_LINE, lw=0.5, ls=":", zorder=3)
+            ax.plot([x, x + w], [y + h, y], color=C_LINE, lw=0.5, ls=":", zorder=3)
+
+        def cota_h(ax, x0, x1, y, txt):
+            ax.annotate("", xy=(x0, y), xytext=(x1, y),
+                        arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
+            ax.text((x0 + x1) / 2, y + 4, txt, ha="center", va="bottom", fontsize=7.5, color=C_COTA)
+
+        for idx, (ax, pared) in enumerate(zip(axes, paredes)):
+            ancho = int(pared.get("ancho") or 400)
+            alto = int(pared.get("alto") or 240)
+            ax.set_facecolor(C_BG); ax.set_aspect("equal"); ax.axis("off")
+            ax.set_xlim(-70, ancho + 30); ax.set_ylim(-45, alto + 30)
+            # contorno de pared y líneas guía
+            wire(ax, 0, 0, ancho, alto, lw=2)
+            for gy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
+                ax.plot([0, ancho], [gy, gy], color=C_GRID, lw=0.6, zorder=1)
+
+            elems = sorted([e for e in elementos if e.get("pared_idx", 0) == idx],
+                           key=lambda e: e.get("posicion_cm", 0) or 0)
+            pos = 0
+            cotas = []
+            for e in elems:
+                w = int(e.get("ancho") or 60)
+                tipo = str(e.get("id") or e.get("tipo") or "").lower()
+                label = str(e.get("label") or tipo or "módulo")[:18]
+                x = int(e.get("posicion_cm") or pos)
+                if tipo in COLS:
+                    wire(ax, x, ZOC_Y, w, COL_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, COL_Y - ZOC_Y)
+                    ax.text(x + w / 2, (ZOC_Y + COL_Y) / 2, label, ha="center", va="center", fontsize=7, rotation=90)
+                elif tipo in ALTOS:
+                    wire(ax, x, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0)
+                    ax.text(x + w / 2, (ALTOS_Y0 + ALTOS_Y1) / 2, label, ha="center", va="center", fontsize=7)
+                else:
+                    wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
+                    ax.text(x + w / 2, (ZOC_Y + ENC_Y) / 2, label, ha="center", va="center", fontsize=7)
+                cotas.append((x, x + w, f"{w}"))
+                pos = max(pos, x + w)
+            # relleno con módulos estándar de 60 en bajos y altos
+            x = pos
+            while x + 30 <= ancho:
+                w = min(60, ancho - x)
+                wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y, dash=True)
+                cotas.append((x, x + w, f"{w}"))
+                x += w
+            x2 = 0
+            while x2 + 30 <= ancho:
+                w = min(60, ancho - x2)
+                ocupado = any(t for t in elems if str(t.get("id") or "").lower() in COLS
+                              and (t.get("posicion_cm") or 0) < x2 + w and (t.get("posicion_cm") or 0) + (t.get("ancho") or 60) > x2)
+                if not ocupado:
+                    wire(ax, x2, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0, dash=True)
+                x2 += w
+            # encimera y zócalo
+            ax.plot([0, ancho], [ENC_Y, ENC_Y], color=C_LINE, lw=2.2, zorder=4)
+            ax.plot([0, ancho], [ZOC_Y, ZOC_Y], color=C_LINE, lw=1.2, zorder=4)
+            # cotas: módulos + total + alturas
+            for (a, b, t) in cotas:
+                cota_h(ax, a, b, -12, t)
+            cota_h(ax, 0, ancho, -32, f"{ancho} cm")
+            for gy, t in ((ZOC_Y, "10"), (ENC_Y, "90"), (ALTOS_Y0, "140"), (ALTOS_Y1, "210"), (alto, str(alto))):
+                ax.text(-10, gy, t, ha="right", va="center", fontsize=7, color=C_COTA)
+                ax.plot([-6, 0], [gy, gy], color=C_COTA, lw=0.8)
+            ax.text(0, alto + 12, f"ALZADO S{idx + 1} — {pared.get('nombre') or f'Pared {idx + 1}'} · escala orientativa · cotas en cm",
+                    fontsize=9, fontweight="bold", color=C_LINE)
+
+        buf = io.BytesIO()
+        plt.tight_layout(pad=1.2)
+        plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=C_BG)
+        plt.close(fig)
+        buf.seek(0)
+        b64 = base64.b64encode(buf.read()).decode("utf-8")
+        return {"alzadoBase64": f"data:image/png;base64,{b64}", "paredes": len(paredes)}
+    except Exception as e:
+        logger.error(f"alzado error: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo generar la vista alámbrica")

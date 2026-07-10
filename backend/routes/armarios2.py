@@ -113,7 +113,7 @@ async def armarios2_plan(payload: dict):
     try:
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         if not is_vision_available():
-            raise HTTPException(status_code=503, detail="IA no configurada. Añade GEMINI_API_KEY en variables de entorno.")
+            raise HTTPException(status_code=503, detail="IA no configurada. Falta la clave del motor de IA (contacta con el administrador).")
         prompt = (
             "Eres un técnico de medición de armarios. Analiza este plano o foto del hueco donde irá el armario. "
             "Deduce las medidas en MILÍMETROS (ancho, alto y fondo del hueco). Si el fondo no se aprecia, usa 600. "
@@ -149,7 +149,7 @@ async def armarios2_render(payload: dict):
     try:
         from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
         if not (get_gemini_key() and GOOGLE_GENAI_AVAILABLE):
-            raise HTTPException(status_code=503, detail="Generación de imágenes no disponible: configura GEMINI_API_KEY.")
+            raise HTTPException(status_code=503, detail="Generación de imágenes no disponible: falta la clave del motor de IA.")
         w = _num(p.get("width")) or 2000
         h = _num(p.get("height")) or 2400
         d = _num(p.get("depth")) or 600

@@ -478,7 +478,7 @@ async def analyze_pdf_with_gemini(pdf_bytes: bytes, filename: str) -> Dict:
     if not GEMINI_AVAILABLE:
         return {
             "success": False,
-            "message": "Gemini Vision no disponible. Instale google-genai.",
+            "message": "Vision IA no disponible en este servidor.",
             "items": []
         }
     

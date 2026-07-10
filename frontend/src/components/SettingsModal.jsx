@@ -2276,7 +2276,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUsePropData: e.target.checked})}
                                 className="w-4 h-4 rounded accent-cyan-600"
                               />
-                              <span title="Buscar promociones de obra nueva con IA (Gemini)." className="text-xs font-bold text-slate-700">Prospección Obra Nueva (IA)</span>
+                              <span title="Buscar promociones de obra nueva con IA." className="text-xs font-bold text-slate-700">Prospección Obra Nueva (IA)</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input

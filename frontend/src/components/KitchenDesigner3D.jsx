@@ -1179,7 +1179,7 @@ function LegacyKitchenDesigner({ state, setState, onAddToBudget }) {
             <button
               onClick={runDiagnostics}
               disabled={diagLoading}
-              title="Comprueba si el motor de render (Manus/Gemini) está configurado"
+              title="Comprueba si el motor de render IA está configurado"
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors"
             >
               {diagLoading ? <Loader size={16} className="animate-spin" /> : <Wand2 size={16} />} Diagnóstico IA
@@ -1214,7 +1214,7 @@ function LegacyKitchenDesigner({ state, setState, onAddToBudget }) {
                 </p>
                 <p><b>Manus:</b> {diag.manus?.key_present ? `clave puesta (${diag.manus.key_length} car.)` : 'sin clave'}
                   {diag.manus?.key_present && (diag.manus.reachable ? ` · conecta (HTTP ${diag.manus.http_status})` : ` · NO conecta (${diag.manus.error || 'error'})`)}</p>
-                <p><b>Gemini:</b> {diag.gemini?.key_present ? 'clave puesta' : 'sin clave'} · SDK {diag.gemini?.sdk_available ? 'ok' : 'no'}</p>
+                <p><b>IA 1:</b> {diag.gemini?.key_present ? 'clave puesta' : 'sin clave'} · SDK {diag.gemini?.sdk_available ? 'ok' : 'no'}</p>
                 <p className="text-slate-500">{diag.hint}</p>
               </div>
             )}

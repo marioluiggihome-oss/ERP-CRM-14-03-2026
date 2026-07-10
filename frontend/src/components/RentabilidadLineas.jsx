@@ -867,9 +867,27 @@ const RentabilidadLineas = ({ currentUser }) => {
                   </td>
                   <td className="p-3 text-slate-500">{f.fecha || '-'}</td>
                   <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
-                  <td className="p-3 text-right font-mono text-orange-600">{eur(tt.coste)}</td>
+                  <td className="p-3 text-right font-mono text-orange-600">
+                    {eur(tt.coste)}
+                    {/* Aviso: hay venta pero ningún coste emparejado (ni en líneas ni en costes de proyecto) */}
+                    {tt.venta > 0 && !(tt.coste > 0) && !((f.costesProyecto || 0) > 0) && (
+                      <span title="Esta ficha no tiene costes emparejados: el margen mostrado no es real."
+                        className="block mt-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-0.5 inline-block">⚠ Faltan costes</span>
+                    )}
+                  </td>
                   <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
-                  <td className={`p-3 text-right font-mono ${(f.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>{eur(f.pendienteCobro)}</td>
+                  <td className={`p-3 text-right font-mono ${(f.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
+                    {/* PAGADA: el cobro (ingresos a cuenta vinculados) cubre la venta */}
+                    {tt.venta > 0 && (f.cobrado || 0) >= tt.venta - 0.01 ? (
+                      <span title={`Cobrado ${eur(f.cobrado)} — vinculado desde Ingresos a cuenta`}
+                        className="text-[9px] font-black uppercase tracking-wide text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">✔ Pagada</span>
+                    ) : (f.cobrado || 0) > 0 ? (
+                      <span title={`A cuenta: ${eur(f.cobrado)}`} className="block">
+                        {eur(f.pendienteCobro)}
+                        <span className="block text-[9px] font-bold text-sky-600">a cuenta {eur(f.cobrado)}</span>
+                      </span>
+                    ) : eur(f.pendienteCobro)}
+                  </td>
                   <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
                   <td className="p-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     {NEXT_DOC_TYPE[f.docType || 'factura'] && (

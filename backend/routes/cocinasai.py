@@ -95,7 +95,7 @@ async def cocinasai_design(payload: dict):
     try:
         from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
         if not (get_gemini_key() and GOOGLE_GENAI_AVAILABLE):
-            raise HTTPException(status_code=503, detail="Generación de imágenes no disponible: configura GEMINI_API_KEY.")
+            raise HTTPException(status_code=503, detail="Generación de imágenes no disponible: falta la clave del motor de IA.")
         prompt = (
             "Actúa como experto en infoarquitectura y renderizado técnico. Convierte los planos técnicos "
             "(plantas y alzados) adjuntos en un render fotorrealista de alta gama respetando la planimetría: "
@@ -127,7 +127,7 @@ async def cocinasai_edit(payload: dict):
     try:
         from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
         if not (get_gemini_key() and GOOGLE_GENAI_AVAILABLE):
-            raise HTTPException(status_code=503, detail="Generación de imágenes no disponible: configura GEMINI_API_KEY.")
+            raise HTTPException(status_code=503, detail="Generación de imágenes no disponible: falta la clave del motor de IA.")
         prompt = (
             f"Revisión técnica de proyecto. Modifica este render siguiendo estrictamente: \"{instruction}\". "
             "Mantén muros, ventanas y puertas inalterados salvo que se pida explícitamente. "

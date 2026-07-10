@@ -133,7 +133,7 @@ const CocinasIA = ({ state }) => {
           </div>
           <button onClick={generar} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-xl font-black text-sm hover:bg-orange-600 disabled:opacity-50">{loading ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />} Generar render</button>
           {error && <p className="text-xs text-rose-600 font-bold">{error}</p>}
-          <p className="text-[10px] text-slate-400">Sin planos también genera una cocina de ejemplo con el estilo elegido. El render por IA consume créditos de Gemini.</p>
+          <p className="text-[10px] text-slate-400">Sin planos también genera una cocina de ejemplo con el estilo elegido. El render por IA consume créditos de IA.</p>
         </div>
 
         {/* Resultado */}

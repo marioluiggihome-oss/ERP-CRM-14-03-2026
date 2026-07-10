@@ -245,7 +245,7 @@ const CatalogImporter = ({ onProductsImported }) => {
       )}
 
       <p className="mt-4 text-xs text-amber-600 italic">
-        💡 Sube capturas de las páginas de la tarifa técnica para extraer productos automáticamente con IA (Gemini Vision).
+        💡 Sube capturas de las páginas de la tarifa técnica para extraer productos automáticamente con IA.
       </p>
     </div>
   );
