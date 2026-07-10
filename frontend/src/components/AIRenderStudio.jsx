@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -22,11 +22,13 @@ import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Tipos de marca de instalaciones para señalar sobre el render (gremios).
+// `h` = altura estándar de la instalación (cm desde el suelo), que se muestra
+// como COTA junto a cada punto. `Icon` = icono (no letras).
 const MARK_TYPES = {
-  enchufe: { label: 'Enchufe', short: 'E', color: '#f59e0b' },
-  agua:    { label: 'Toma agua', short: 'A', color: '#0ea5e9' },
-  desague: { label: 'Desagüe', short: 'D', color: '#64748b' },
-  gas:     { label: 'Gas', short: 'G', color: '#ef4444' },
+  enchufe: { label: 'Enchufe', color: '#f59e0b', h: 110, Icon: PlugZap },
+  agua:    { label: 'Toma agua', color: '#0ea5e9', h: 50, Icon: Droplet },
+  desague: { label: 'Desagüe', color: '#64748b', h: 40, Icon: Waves },
+  gas:     { label: 'Gas', color: '#ef4444', h: 55, Icon: Flame },
 };
 
 // ─── Hook para Web Speech API ────────────────────────────────────────────────
@@ -477,20 +479,24 @@ export default function AIRenderStudio({ state, setState }) {
       ctx.drawImage(im, dx, dy, dw, dh);
       marks.forEach((mk) => {
         const t = MARK_TYPES[mk.type]; const x = mk.x / 100 * cw, y = mk.y / 100 * ch;
-        ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
+        // Punto (círculo de color, sin letra)
+        ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(t.short, x, y + 0.5);
+        // Cota de altura junto al punto
+        const cota = `${t.h} cm`;
+        ctx.font = 'bold 11px sans-serif'; const tw = ctx.measureText(cota).width;
+        ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(x + 11, y - 8, tw + 8, 16);
+        ctx.fillStyle = t.color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(cota, x + 15, y + 0.5);
       });
-      // Leyenda
+      // Leyenda con color, nombre y altura estándar (sin letras)
       const used = [...new Set(marks.map(m => m.type))];
       let ly = ch - 10 - used.length * 18;
       used.forEach((tp) => {
         const t = MARK_TYPES[tp];
-        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(10, ly - 12, 160, 18);
-        ctx.beginPath(); ctx.arc(24, ly - 3, 7, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t.short, 24, ly - 2.5);
-        ctx.textAlign = 'left'; ctx.font = '11px sans-serif'; ctx.fillText(`${t.label} (${marks.filter(m => m.type === tp).length})`, 36, ly - 2.5);
+        ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(10, ly - 12, 210, 18);
+        ctx.beginPath(); ctx.arc(24, ly - 3, 6, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.font = '11px sans-serif'; ctx.textBaseline = 'middle';
+        ctx.fillText(`${t.label} · h ${t.h} cm · x${marks.filter(m => m.type === tp).length}`, 36, ly - 2.5);
         ly += 18;
       });
       const a = document.createElement('a'); a.href = cv.toDataURL('image/png');
@@ -1852,14 +1858,14 @@ export default function AIRenderStudio({ state, setState }) {
                   </button>
                   <span className="w-px h-4 bg-slate-300 mx-0.5" />
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Manual:</span>
-                  {Object.entries(MARK_TYPES).map(([id, t]) => (
+                  {Object.entries(MARK_TYPES).map(([id, t]) => { const Ic = t.Icon; return (
                     <button key={id} onClick={() => setMarkTool(markTool === id ? null : id)}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${markTool === id ? 'text-white ring-2 ring-offset-1' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                       style={markTool === id ? { background: t.color } : undefined}>
-                      <span className="w-4 h-4 rounded-full text-white text-[9px] font-black flex items-center justify-center" style={{ background: t.color }}>{t.short}</span>
+                      <span className="w-4 h-4 rounded-full text-white flex items-center justify-center" style={{ background: t.color }}><Ic size={10} /></span>
                       {t.label}
                     </button>
-                  ))}
+                  ); })}
                   {marks.length > 0 && <>
                     <button onClick={() => setMarks(m => m.slice(0, -1))} className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">Deshacer</button>
                     <button onClick={() => { setMarks([]); setMarkTool(null); }} className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">Limpiar</button>
@@ -1887,16 +1893,20 @@ export default function AIRenderStudio({ state, setState }) {
                     onError={() => setImgError(true)}
                     onClick={placeMark}
                   />
-                  {/* Capa de marcas de instalaciones */}
+                  {/* Capa de marcas de instalaciones: icono + cota de altura */}
                   {!interactiveMode && marks.map((mk, i) => {
-                    const t = MARK_TYPES[mk.type];
+                    const t = MARK_TYPES[mk.type]; const Ic = t.Icon;
                     return (
-                      <button key={i} onClick={(e) => { e.stopPropagation(); setMarks(m => m.filter((_, j) => j !== i)); }}
-                        title={`${t.label} — clic para quitar`}
-                        className="absolute z-10 w-7 h-7 rounded-full text-white text-[11px] font-black flex items-center justify-center shadow-lg ring-2 ring-white"
-                        style={{ left: `${mk.x}%`, top: `${mk.y}%`, transform: 'translate(-50%,-50%)', background: t.color }}>
-                        {t.short}
-                      </button>
+                      <div key={i} className="absolute z-10 flex flex-col items-center"
+                        style={{ left: `${mk.x}%`, top: `${mk.y}%`, transform: 'translate(-50%,-50%)' }}>
+                        <button onClick={(e) => { e.stopPropagation(); setMarks(m => m.filter((_, j) => j !== i)); }}
+                          title={`${t.label} · altura ≈ ${t.h} cm — clic para quitar`}
+                          className="w-7 h-7 rounded-full text-white flex items-center justify-center shadow-lg ring-2 ring-white"
+                          style={{ background: t.color }}>
+                          <Ic size={15} />
+                        </button>
+                        <span className="mt-0.5 px-1.5 py-[1px] rounded bg-white/90 text-[9px] font-black text-slate-700 shadow whitespace-nowrap leading-tight">{t.h} cm</span>
+                      </div>
                     );
                   })}
                   </>
