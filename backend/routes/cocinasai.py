@@ -45,6 +45,9 @@ async def save_kdesign(payload: dict, current_user: Optional[dict] = Depends(get
         "style": str(p.get("style") or ""),
         "notes": str(p.get("notes") or ""),
         "renders": (p.get("renders") or [])[:12],
+        # Planos/alzados originales: se guardan para poder COMPARAR plano vs
+        # render al reabrir el diseño.
+        "plans": (p.get("plans") or [])[:6],
         "createdByName": (current_user or {}).get("clientName") or (current_user or {}).get("username") or "",
         "createdAt": (existing or {}).get("createdAt") or now,
         "updatedAt": now,
@@ -59,7 +62,7 @@ async def list_kdesigns(current_user: Optional[dict] = Depends(get_current_user)
     query = {}
     if current_user and current_user.get("id") and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         query["userId"] = current_user["id"]
-    items = await _db.cocinasai_designs.find(query, {"_id": 0, "renders": 0}).sort("updatedAt", -1).to_list(300)
+    items = await _db.cocinasai_designs.find(query, {"_id": 0, "renders": 0, "plans": 0}).sort("updatedAt", -1).to_list(300)
     return {"success": True, "designs": items}
 
 
@@ -128,12 +131,25 @@ async def cocinasai_edit(payload: dict):
         from services.llm_vision import generate_image_with_gemini, get_gemini_key, GOOGLE_GENAI_AVAILABLE
         if not (get_gemini_key() and GOOGLE_GENAI_AVAILABLE):
             raise HTTPException(status_code=503, detail="Generación de imágenes no disponible: falta la clave del motor de IA.")
+        # Imagen opcional de un ELEMENTO a incorporar (una puerta, un tirador, un
+        # electrodoméstico…): viaja como referencia adicional al motor.
+        elemento = p.get("elementImageBase64")
+        elemento_note = ""
+        extra_refs = None
+        if elemento:
+            extra_refs = [{"data": _strip(elemento), "mime": "image/png"}]
+            elemento_note = (
+                " Se adjunta una segunda imagen con un ELEMENTO concreto (p. ej. una puerta, "
+                "un tirador o un electrodoméstico): incorpóralo o replícalo en la cocina "
+                "respetando fielmente su forma, color y acabado."
+            )
         prompt = (
             f"Revisión técnica de proyecto. Modifica este render siguiendo estrictamente: \"{instruction}\". "
             "Mantén muros, ventanas y puertas inalterados salvo que se pida explícitamente. "
             "Conserva la iluminación fotorrealista y la calidad de los materiales. Formato 16:9."
+            + elemento_note
         )
-        data_url = await generate_image_with_gemini(prompt=prompt, reference_image_base64=_strip(prev), reference_mime="image/png")
+        data_url = await generate_image_with_gemini(prompt=prompt, reference_image_base64=_strip(prev), reference_mime="image/png", reference_images=extra_refs)
         if not data_url:
             raise HTTPException(status_code=502, detail="La IA no devolvió imagen.")
         return {"imageUrl": data_url}
