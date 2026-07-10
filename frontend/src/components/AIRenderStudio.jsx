@@ -21,6 +21,14 @@ import { COLORES_1, COLORES_2, COLORES_3, porGama } from '../data/finishes';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Tipos de marca de instalaciones para señalar sobre el render (gremios).
+const MARK_TYPES = {
+  enchufe: { label: 'Enchufe', short: 'E', color: '#f59e0b' },
+  agua:    { label: 'Toma agua', short: 'A', color: '#0ea5e9' },
+  desague: { label: 'Desagüe', short: 'D', color: '#64748b' },
+  gas:     { label: 'Gas', short: 'G', color: '#ef4444' },
+};
+
 // ─── Hook para Web Speech API ────────────────────────────────────────────────
 // Reduce una imagen grande (foto de móvil) antes de guardarla/enviarla: evita
 // que un base64 enorme sature memoria y tumbe la pestaña al analizarla/renderizar.
@@ -374,6 +382,9 @@ export default function AIRenderStudio({ state, setState }) {
   const providerOf = () => (motor === 'ia2' ? 'manus' : 'gemini');
   const [attached, setAttached] = useState(false);
   const [compareOn, setCompareOn] = useState(false); // ver referencia vs render
+  // Marcado de instalaciones sobre el render (para electricista/fontanero).
+  const [markTool, setMarkTool] = useState(null);   // 'enchufe'|'agua'|'desague'|'gas'|null
+  const [marks, setMarks] = useState([]);           // [{x,y,type}] en % del render
   // Selector de color por catálogo (pestañas Colores 1/2 + gamas colapsables).
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [colorTab, setColorTab] = useState('c1');
@@ -417,7 +428,54 @@ export default function AIRenderStudio({ state, setState }) {
   const baseTextRef = useRef('');
 
   // Al cambiar de render, reseteamos el aviso de imagen no cargada.
-  useEffect(() => { setImgError(false); }, [renderResult]);
+  useEffect(() => { setImgError(false); setMarks([]); setMarkTool(null); }, [renderResult]);
+
+  // Coloca una marca de instalación en el punto pulsado del render (% del box).
+  const placeMark = (e) => {
+    if (!markTool || interactiveMode) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+    setMarks(m => [...m, { x, y, type: markTool }]);
+  };
+
+  // Descarga el render con las marcas de instalaciones "quemadas" y una leyenda.
+  const descargarConMarcas = async () => {
+    const src = currentImage(); if (!src) return;
+    const dataUrl = await imageToDataUrl(src);
+    const el = document.getElementById('render-annot-img');
+    const cw = el?.offsetWidth || 1280, ch = el?.offsetHeight || 720;
+    const im = new window.Image();
+    im.onload = () => {
+      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0, 0, cw, ch);
+      const sc = Math.min(cw / im.width, ch / im.height);
+      const dw = im.width * sc, dh = im.height * sc, dx = (cw - dw) / 2, dy = (ch - dh) / 2;
+      ctx.drawImage(im, dx, dy, dw, dh);
+      marks.forEach((mk) => {
+        const t = MARK_TYPES[mk.type]; const x = mk.x / 100 * cw, y = mk.y / 100 * ch;
+        ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(t.short, x, y + 0.5);
+      });
+      // Leyenda
+      const used = [...new Set(marks.map(m => m.type))];
+      let ly = ch - 10 - used.length * 18;
+      used.forEach((tp) => {
+        const t = MARK_TYPES[tp];
+        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(10, ly - 12, 160, 18);
+        ctx.beginPath(); ctx.arc(24, ly - 3, 7, 0, Math.PI * 2); ctx.fillStyle = t.color; ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t.short, 24, ly - 2.5);
+        ctx.textAlign = 'left'; ctx.font = '11px sans-serif'; ctx.fillText(`${t.label} (${marks.filter(m => m.type === tp).length})`, 36, ly - 2.5);
+        ly += 18;
+      });
+      const a = document.createElement('a'); a.href = cv.toDataURL('image/png');
+      a.download = `render_instalaciones_${(cliente || ref || 'cocina').replace(/\s+/g, '_')}.png`; a.click();
+    };
+    im.src = dataUrl;
+  };
 
   // La transcripción se concatena al texto base (lo escrito antes de dictar).
   useEffect(() => {
@@ -1698,18 +1756,55 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               ) : (
               /* Imagen del render */
+              <>
+              {renderResult?.result?.images?.[0] && !imgError && !interactiveMode && (
+                <div className="shrink-0 mb-2 flex items-center gap-1.5 flex-wrap bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Marcar instalaciones:</span>
+                  {Object.entries(MARK_TYPES).map(([id, t]) => (
+                    <button key={id} onClick={() => setMarkTool(markTool === id ? null : id)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${markTool === id ? 'text-white ring-2 ring-offset-1' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                      style={markTool === id ? { background: t.color } : undefined}>
+                      <span className="w-4 h-4 rounded-full text-white text-[9px] font-black flex items-center justify-center" style={{ background: t.color }}>{t.short}</span>
+                      {t.label}
+                    </button>
+                  ))}
+                  {marks.length > 0 && <>
+                    <button onClick={() => setMarks(m => m.slice(0, -1))} className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">Deshacer</button>
+                    <button onClick={() => { setMarks([]); setMarkTool(null); }} className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">Limpiar</button>
+                    <button onClick={descargarConMarcas} className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-800 text-white hover:bg-slate-900 flex items-center gap-1"><Download size={12} /> Descargar con marcas</button>
+                    <span className="text-[10px] text-slate-400">{marks.length} marca(s)</span>
+                  </>}
+                  {markTool && marks.length === 0 && <span className="text-[10px] text-indigo-600 font-bold">Haz clic en el render para colocar «{MARK_TYPES[markTool].label}»</span>}
+                </div>
+              )}
               <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center relative"
                 onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
                 {renderResult?.result?.images?.[0] && !imgError ? (
+                  <>
                   <img
+                    id="render-annot-img"
                     src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
                     className="w-full h-full object-contain transition-transform"
-                    style={interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : undefined}
+                    style={interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : undefined)}
                     onError={() => setImgError(true)}
+                    onClick={placeMark}
                   />
+                  {/* Capa de marcas de instalaciones */}
+                  {!interactiveMode && marks.map((mk, i) => {
+                    const t = MARK_TYPES[mk.type];
+                    return (
+                      <button key={i} onClick={(e) => { e.stopPropagation(); setMarks(m => m.filter((_, j) => j !== i)); }}
+                        title={`${t.label} — clic para quitar`}
+                        className="absolute z-10 w-7 h-7 rounded-full text-white text-[11px] font-black flex items-center justify-center shadow-lg ring-2 ring-white"
+                        style={{ left: `${mk.x}%`, top: `${mk.y}%`, transform: 'translate(-50%,-50%)', background: t.color }}>
+                        {t.short}
+                      </button>
+                    );
+                  })}
+                  </>
                 ) : imgError ? (
                   <div className="text-center p-8 max-w-sm">
                     <Image size={40} className="text-slate-500 mx-auto mb-3" />
@@ -1739,6 +1834,7 @@ export default function AIRenderStudio({ state, setState }) {
                   </span>
                 </div>
               </div>
+              </>
               )}
 
               {/* Variantes de color: 6 rápidos + catálogo por gama (pestañas colapsables) */}
