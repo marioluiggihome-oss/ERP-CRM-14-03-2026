@@ -758,6 +758,12 @@ export default function AIRenderStudio({ state, setState }) {
         + '- CENTRO/ABAJO: la PLANTA (vista cenital) de la cocina a escala con cotas (ancho y fondo en metros '
         + 'y ancho por módulo).\n'
         + '- DERECHA: recuadro "ACABADOS SUGERIDOS" (puertas, encimera, tirador, salpicadero, iluminación, detalles).\n'
+        + 'REGLAS TÉCNICAS OBLIGATORIAS del alzado:\n'
+        + '  · La CAMPANA extractora va SIEMPRE centrada JUSTO ENCIMA de la placa/cocina (zona de cocción), '
+        + 'con el MISMO ancho que esa zona; NUNCA la dibujes reflejada ni desplazada sobre otro módulo.\n'
+        + '  · Los muebles ALTOS se alinean verticalmente con los BAJOS: cada módulo alto encima del bajo que le '
+        + 'corresponde y con anchos coherentes (la suma de altos = la suma de bajos = ancho total).\n'
+        + '  · Las cotas de cada módulo deben coincidir arriba (altos) y abajo (bajos) en la misma vertical.\n'
         + 'Formato 16:9, alta legibilidad.'
       );
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
