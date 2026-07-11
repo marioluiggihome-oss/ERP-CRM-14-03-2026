@@ -822,7 +822,8 @@ export default function AIRenderStudio({ state, setState }) {
       if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: 'Planta acotada (exacta)', timestamp: new Date() });
       if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: 'Alzado alámbrico acotado (exacto)', timestamp: new Date() });
       if (!extra.length) { setError('No se pudieron generar los planos técnicos.'); return; }
-      setRenderResult(extra[0]); // muestra el primero (planta)
+      // Los planos técnicos NO sustituyen a la propuesta de diseño 3D en la vista
+      // principal: se añaden como láminas en el historial para poder abrirlos.
       setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
     } catch { setError('Error al generar los planos técnicos.'); }
     finally { setEditing(false); }
@@ -1926,14 +1927,15 @@ export default function AIRenderStudio({ state, setState }) {
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
                 {renderResult?.result?.images?.[0] && !imgError ? (
-                  <>
+                  <div className="relative inline-block max-w-full max-h-full"
+                    style={interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)` } : {}}>
                   <img
                     id="render-annot-img"
                     src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
-                    className="w-full h-full object-contain transition-transform"
+                    className="block max-w-full max-h-full object-contain transition-transform"
                     style={{
-                      ...(interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
+                      ...(interactiveMode ? { cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
                       ...(schematic ? { filter: 'grayscale(1) brightness(1.22) contrast(0.82)' } : {}),
                     }}
                     onError={() => setImgError(true)}
@@ -1981,7 +1983,7 @@ export default function AIRenderStudio({ state, setState }) {
                       </div>
                     );
                   })}
-                  </>
+                  </div>
                 ) : imgError ? (
                   <div className="text-center p-8 max-w-sm">
                     <Image size={40} className="text-slate-500 mx-auto mb-3" />
