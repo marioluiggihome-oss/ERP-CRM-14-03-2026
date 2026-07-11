@@ -583,26 +583,63 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
     import json as _json, re as _re
     p = payload or {}
     img = p.get("imageBase64") or p.get("image") or ""
+    tipo_proyecto = str(p.get("tipo") or "cocina").lower().strip()
     if not img:
         raise HTTPException(status_code=400, detail="Falta la imagen del render.")
     try:
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         if not is_vision_available():
             raise HTTPException(status_code=503, detail="IA no configurada. Falta la clave del motor de IA (contacta con el administrador).")
-        prompt = (
-            "Eres instalador y proyectista de cocinas. Analiza esta imagen (render de una cocina) "
-            "y localiza los PUNTOS DE INSTALACIÓN necesarios, deduciéndolos de los elementos visibles:\n"
-            "- 'enchufe': tomas de corriente sobre la encimera (zonas de pequeño electrodoméstico), y detrás de "
-            "cada electrodoméstico visible (horno, microondas, placa de inducción, frigorífico, lavavajillas, campana, vinoteca).\n"
-            "- 'agua': toma de agua fría/caliente bajo el fregadero (y en isla si hay segundo fregadero).\n"
-            "- 'desague': desagüe bajo el fregadero (y lavavajillas).\n"
-            "- 'gas': solo si hay placa de GAS (llama). Si la placa es de inducción/vitrocerámica, NO pongas gas.\n\n"
-            "Coloca cada punto donde iría físicamente (p. ej. el enchufe justo sobre la encimera en su zona, la toma "
-            "de agua a la altura del mueble del fregadero). Usa coordenadas normalizadas donde x=0 es el borde "
-            "izquierdo, x=1 el derecho, y=0 arriba, y=1 abajo de la imagen.\n\n"
-            "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|agua|desague|gas\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"nota\":\"texto corto\"}]}. "
-            "Sin puntos claros, devuelve {\"puntos\":[]}."
-        )
+        # Prompt y tipos válidos según el tipo de proyecto (cocina / armario / baño / otro).
+        if tipo_proyecto == "armario":
+            valid = {"enchufe", "luz", "datos", "tv"}
+            prompt = (
+                "Eres instalador y proyectista de armarios/vestidores. Analiza esta imagen (render de un armario o "
+                "vestidor) y localiza los PUNTOS DE INSTALACIÓN necesarios:\n"
+                "- 'enchufe': tomas de corriente interiores o próximas (zona de cajones, caja fuerte, plancha).\n"
+                "- 'luz': iluminación LED interior (baldas, barras de colgar, sensor de puerta).\n"
+                "- 'datos': toma de red si hay zona de escritorio/tv.\n"
+                "- 'tv': toma de TV/antena si procede.\n\n"
+                "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|luz|datos|tv\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"nota\":\"texto corto\"}]}. "
+                "Sin puntos claros, devuelve {\"puntos\":[]}."
+            )
+        elif tipo_proyecto in ("bano", "baño"):
+            valid = {"enchufe", "agua", "desague", "lavadora", "luz", "toallero"}
+            prompt = (
+                "Eres instalador y proyectista de baños. Analiza esta imagen (render de un baño o mueble de baño) "
+                "y localiza los PUNTOS DE INSTALACIÓN necesarios, deduciéndolos de los elementos visibles:\n"
+                "- 'agua': tomas de agua fría/caliente del lavabo, ducha/bañera y bidé.\n"
+                "- 'desague': desagües del lavabo, ducha/bañera e inodoro.\n"
+                "- 'lavadora': toma de lavadora si aparece.\n"
+                "- 'enchufe': tomas junto al espejo/lavabo (secador, maquinilla).\n"
+                "- 'luz': puntos de luz (espejo, techo).\n"
+                "- 'toallero': toallero eléctrico o radiador si aparece.\n\n"
+                "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|agua|desague|lavadora|luz|toallero\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"nota\":\"texto corto\"}]}. "
+                "Sin puntos claros, devuelve {\"puntos\":[]}."
+            )
+        elif tipo_proyecto == "otro":
+            valid = {"enchufe", "luz", "datos", "tv"}
+            prompt = (
+                "Eres instalador y proyectista de mueble a medida. Analiza esta imagen y localiza los PUNTOS DE "
+                "INSTALACIÓN visibles: 'enchufe' (tomas de corriente), 'luz' (iluminación), 'datos' (red), 'tv' (antena).\n"
+                "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|luz|datos|tv\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"nota\":\"texto corto\"}]}. "
+                "Sin puntos claros, devuelve {\"puntos\":[]}."
+            )
+        else:
+            valid = {"enchufe", "agua", "desague", "gas"}
+            prompt = (
+                "Eres instalador y proyectista de cocinas. Analiza esta imagen (render de una cocina) "
+                "y localiza los PUNTOS DE INSTALACIÓN necesarios, deduciéndolos de los elementos visibles:\n"
+                "- 'enchufe': tomas de corriente sobre la encimera (zonas de pequeño electrodoméstico), y detrás de "
+                "cada electrodoméstico visible (horno, microondas, placa de inducción, frigorífico, lavavajillas, campana, vinoteca).\n"
+                "- 'agua': toma de agua fría/caliente bajo el fregadero (y en isla si hay segundo fregadero).\n"
+                "- 'desague': desagüe bajo el fregadero (y lavavajillas).\n"
+                "- 'gas': solo si hay placa de GAS (llama). Si la placa es de inducción/vitrocerámica, NO pongas gas.\n\n"
+                "Coloca cada punto donde iría físicamente. Usa coordenadas normalizadas donde x=0 es el borde "
+                "izquierdo, x=1 el derecho, y=0 arriba, y=1 abajo de la imagen.\n\n"
+                "Devuelve SOLO un bloque JSON: {\"puntos\":[{\"tipo\":\"enchufe|agua|desague|gas\",\"x\":0.0-1.0,\"y\":0.0-1.0,\"nota\":\"texto corto\"}]}. "
+                "Sin puntos claros, devuelve {\"puntos\":[]}."
+            )
         text = await analyze_image_with_gemini(image_base64=img, prompt=prompt, model="gemini-2.5-pro")
         m = _re.search(r"\{[\s\S]*\}", text or "")
         data = {}
@@ -612,7 +649,6 @@ async def detect_installations(payload: dict, current_user: Optional[dict] = Dep
             except Exception:
                 data = {}
         out = []
-        valid = {"enchufe", "agua", "desague", "gas"}
         for it in (data.get("puntos") or [])[:40]:
             tipo = str(it.get("tipo") or "").lower().strip()
             if tipo not in valid:
