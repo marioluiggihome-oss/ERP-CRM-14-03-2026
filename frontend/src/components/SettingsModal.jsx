@@ -7,6 +7,14 @@ import CatalogImporter from './CatalogImporter';
 // Componentes refactorizados
 import { TelemetryTab, TelemetryAuditTab, DigitalizadorAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab, DirectorTab, ShopClientsTab, PricingTab, BackupsTab, MaintenanceTab, InventoryTab, ArmazonesTab } from './settings';
 
+// Tipos de mueble del Estudio 3D (permisos por partidas). Compartido con AIRenderStudio.
+const ESTUDIO_3D_TIPOS = [
+  { id: 'cocina', label: 'Cocina' },
+  { id: 'armario', label: 'Armario / Vestidor' },
+  { id: 'bano', label: 'Baño' },
+  { id: 'otro', label: 'Otro mueble' },
+];
+
 // Capacidades técnicas (checkboxes del panel de permisos) para los botones
 // "Marcar todo / Desmarcar todo". Solo capacidades, NO roles ni modos "solo".
 const CAPABILITY_KEYS = [
@@ -2231,8 +2239,27 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canUseKitchenDesigner: e.target.checked})}
                                 className="w-4 h-4 rounded accent-emerald-600"
                               />
-                              <span className="text-xs font-black text-amber-800">3D Estudio</span>
+                              <span className="text-xs font-black text-amber-800">Estudio 3D</span>
                             </label>
+                            {/* Tipos permitidos dentro de Estudio 3D (por partidas). Vacío = todos. */}
+                            {!!userForm.canUseKitchenDesigner && (
+                              <div className="col-span-2 sm:col-span-3 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-2">
+                                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-wide mb-1.5">Estudio 3D · tipos permitidos <span className="text-emerald-500 font-bold normal-case">(vacío = todos)</span></p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {ESTUDIO_3D_TIPOS.map(tp => {
+                                    const sel = Array.isArray(userForm.estudio3dTipos) ? userForm.estudio3dTipos : [];
+                                    const on = sel.includes(tp.id);
+                                    return (
+                                      <button key={tp.id} type="button"
+                                        onClick={() => { const next = on ? sel.filter(x => x !== tp.id) : [...sel, tp.id]; setUserForm({ ...userForm, estudio3dTipos: next }); }}
+                                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                                        {tp.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
                                 type="checkbox"
