@@ -801,6 +801,33 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
+  // Genera SOLO los planos técnicos EXACTOS (planta acotada + alzado alámbrico)
+  // a partir del render: detecta la distribución con IA y los dibuja vectoriales.
+  const generarPlanosTecnicos = async () => {
+    const img = currentImage(); if (!img || editing) return;
+    setEditing(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const dd = await fetch(`${API_URL}/api/estudio-cocinas/detect-distribucion`, {
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl }),
+      });
+      const dj = await dd.json();
+      if (!dj?.success || !dj.distribucion) { setError(dj?.detail || 'No se pudo deducir la distribución del render para dibujar los planos.'); return; }
+      const body = JSON.stringify({ nombre_cliente: cliente || 'Cliente', distribucion_estructurada: dj.distribucion });
+      const [pr, ar] = await Promise.all([
+        fetch(`${API_URL}/api/estudio-cocinas/plano-2d`, { method: 'POST', headers: getAuthHeaders(), body }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${API_URL}/api/estudio-cocinas/alzado`, { method: 'POST', headers: getAuthHeaders(), body }).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
+      const extra = [];
+      if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: 'Planta acotada (exacta)', timestamp: new Date() });
+      if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: 'Alzado alámbrico acotado (exacto)', timestamp: new Date() });
+      if (!extra.length) { setError('No se pudieron generar los planos técnicos.'); return; }
+      setRenderResult(extra[0]); // muestra el primero (planta)
+      setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
+    } catch { setError('Error al generar los planos técnicos.'); }
+    finally { setEditing(false); }
+  };
+
   const editRender = async () => {
     const img = currentImage();
     // Combina la instrucción principal + líneas adicionales (multi-línea).
@@ -1869,6 +1896,11 @@ export default function AIRenderStudio({ state, setState }) {
                   <button onClick={generarFichaTecnica} disabled={editing}
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
                     {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} Alzado + planta + medidas
+                  </button>
+                  <button onClick={generarPlanosTecnicos} disabled={editing}
+                    title="Planta acotada + alzado alámbrico EXACTOS (vectoriales, con cotas)"
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1.5">
+                    {editing ? <Loader size={12} className="animate-spin" /> : <FileText size={12} />} Planta + alzado (técnico)
                   </button>
                   <span className="w-px h-4 bg-slate-300 mx-0.5" />
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Manual:</span>
