@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -30,7 +30,8 @@ const MARK_TYPES = {
   desague: { label: 'Desagüe', color: '#64748b', h: 40, Icon: Waves },
   gas:     { label: 'Gas', color: '#ef4444', h: 55, Icon: Flame },
   luz:     { label: 'Punto de luz', color: '#eab308', h: 220, Icon: Lightbulb },
-  campana: { label: 'Campana', color: '#334155', h: 200, Icon: Fan },
+  campana: { label: 'Luz campana', color: '#334155', h: 160, Icon: Fan },
+  vitrina: { label: 'Luz vitrina', color: '#a855f7', h: 160, Icon: Lamp },
   tv:      { label: 'TV / antena', color: '#8b5cf6', h: 120, Icon: Tv },
   datos:   { label: 'Datos / red', color: '#10b981', h: 30, Icon: Wifi },
 };
