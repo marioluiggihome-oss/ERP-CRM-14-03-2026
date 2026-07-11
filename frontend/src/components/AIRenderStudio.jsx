@@ -351,6 +351,16 @@ const ESTUDIO_3D_TIPOS = [
   { id: 'otro', label: 'Otro mueble' },
 ];
 
+// Palabras clave que delatan un tipo de proyecto. Se usan para BLOQUEAR el render
+// cuando el texto describe un tipo que el usuario NO tiene permitido (permisos por
+// partidas). "otro" no tiene palabras: nunca bloquea. Búsqueda por límite de palabra.
+const TIPO_KEYWORDS = {
+  cocina: ['cocina', 'encimera', 'fregadero', 'placa', 'vitroceramica', 'vitrocerámica', 'induccion', 'inducción', 'campana', 'horno', 'fogon', 'fogón', 'isla de cocina', 'office'],
+  armario: ['armario', 'armarios', 'vestidor', 'ropero', 'closet', 'clóset', 'baldas', 'zapatero', 'perchero', 'cajonera', 'barra de colgar'],
+  bano: ['baño', 'bano', 'lavabo', 'inodoro', 'wc', 'ducha', 'bañera', 'banera', 'bidet', 'bidé', 'mampara', 'toallero', 'aseo'],
+  otro: [],
+};
+
 export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true;
   // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
@@ -362,6 +372,19 @@ export default function AIRenderStudio({ state, setState }) {
   })();
   const [tipo3d, setTipo3d] = useState((tiposPermitidos[0] || ESTUDIO_3D_TIPOS[0]).id);
   const tipoActual = ESTUDIO_3D_TIPOS.find(t => t.id === tipo3d) || ESTUDIO_3D_TIPOS[0];
+  const permitidoIds = tiposPermitidos.map(t => t.id);
+  // Bloqueo por contenido: devuelve el tipo NO permitido que describe el texto, o null.
+  // El master (todos los tipos) nunca se bloquea.
+  const tipoNoPermitidoEnTexto = (texto) => {
+    if (!texto || permitidoIds.length >= ESTUDIO_3D_TIPOS.length) return null;
+    const t = ` ${texto.toLowerCase()} `;
+    for (const tp of ESTUDIO_3D_TIPOS) {
+      if (permitidoIds.includes(tp.id)) continue;
+      const kws = TIPO_KEYWORDS[tp.id] || [];
+      if (kws.some(k => t.includes(` ${k} `) || t.includes(` ${k},`) || t.includes(` ${k}.`) || t.includes(`${k}s `))) return tp;
+    }
+    return null;
+  };
   // Accesos temporales a otras herramientas de diseño (para el master), mientras
   // se unifica todo en Estudio 3D + Agentes.
   const OTRAS_HERRAMIENTAS = [
@@ -1186,6 +1209,8 @@ export default function AIRenderStudio({ state, setState }) {
   const removeWallSketch = (i) => setWallSketches(prev => prev.filter((_, idx) => idx !== i));
   const handleGenerateComposed = async () => {
     if (!floorPlan && wallSketches.length === 0) return;
+    const bloqueo = tipoNoPermitidoEnTexto(description);
+    if (bloqueo) { setError(`Tu descripción parece de «${bloqueo.label}» y tu usuario no tiene ese tipo permitido. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.`); return; }
     setIsGenerating(true);
     setError(null);
     try {
@@ -1216,6 +1241,8 @@ export default function AIRenderStudio({ state, setState }) {
   // ─── Generar render por descripción natural ─────────────────────────────
   const handleGenerateNatural = async () => {
     if (!description.trim()) return;
+    const bloqueo = tipoNoPermitidoEnTexto(description);
+    if (bloqueo) { setError(`Tu descripción parece de «${bloqueo.label}» y tu usuario no tiene ese tipo permitido. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.`); return; }
     // Guardarraíl: si hay plano o bocetos subidos, este botón los IGNORARÍA.
     // Evitamos que el render salga genérico sin respetar el plano.
     if (floorPlan || wallSketches.length > 0) {
