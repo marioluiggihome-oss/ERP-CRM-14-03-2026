@@ -64,7 +64,7 @@ const MODULES = [
 
   // Diseño y Visualización
   { tab: 'visualizer',      label: 'IA Lab',          icon: Sparkles,     color: 'bg-orange-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
-  { tab: 'renderStudio',    label: 'Render 3D',       desc: 'Render rápido por texto o foto',       icon: ImageIcon,    color: 'bg-purple-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
+  { tab: 'renderStudio',    label: 'Estudio 3D',      desc: 'Render rápido por texto o foto',       icon: ImageIcon,    color: 'bg-purple-600',  group: 'diseno', can: (u) => u?.canUseAIAnalysis && !u?.isTienda },
   { tab: 'estudioCocinas',  label: '3D Estudio',      desc: 'Estudio completo: plano, ficha y galería', icon: ChefHat,  color: 'bg-amber-600',   group: 'diseno', can: (u) => (u?.canUseKitchenDesigner || u?.canUseCocinasAI || u?.canUseAIAnalysis) && !u?.isTienda },
   { tab: 'kitchenDesigner', label: 'Cocinas por módulos', desc: 'Diseño por módulos + chequeo de fabricabilidad', icon: Hammer, color: 'bg-teal-600', group: 'diseno', can: (u) => (u?.canUseKitchenDesigner || u?.isAdmin) && !u?.isTienda },
   { tab: 'armarios',        label: 'Armarios',        desc: 'Configurador por módulos y despiece', icon: Box,          color: 'bg-cyan-600',    group: 'diseno', can: (u) => u?.canAccessArmarios && !u?.isTienda },
