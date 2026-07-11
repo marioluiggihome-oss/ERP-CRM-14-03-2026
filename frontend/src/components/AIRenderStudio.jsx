@@ -24,16 +24,20 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // Tipos de marca de instalaciones para señalar sobre el render (gremios).
 // `h` = altura estándar de la instalación (cm desde el suelo), que se muestra
 // como COTA junto a cada punto. `Icon` = icono (no letras).
+// Cada instalación indica en qué tipos de proyecto tiene sentido (`tipos`). Así la
+// paleta de marcado y la detección automática se adaptan a cocina / armario / baño.
 const MARK_TYPES = {
-  enchufe: { label: 'Enchufe', color: '#f59e0b', h: 110, Icon: PlugZap },
-  agua:    { label: 'Toma agua', color: '#0ea5e9', h: 50, Icon: Droplet },
-  desague: { label: 'Desagüe', color: '#64748b', h: 40, Icon: Waves },
-  gas:     { label: 'Gas', color: '#ef4444', h: 55, Icon: Flame },
-  luz:     { label: 'Punto de luz', color: '#eab308', h: 220, Icon: Lightbulb },
-  campana: { label: 'Luz campana', color: '#334155', h: 160, Icon: Fan },
-  vitrina: { label: 'Luz vitrina', color: '#a855f7', h: 160, Icon: Lamp },
-  tv:      { label: 'TV / antena', color: '#8b5cf6', h: 120, Icon: Tv },
-  datos:   { label: 'Datos / red', color: '#10b981', h: 30, Icon: Wifi },
+  enchufe:  { label: 'Enchufe', color: '#f59e0b', h: 110, Icon: PlugZap, tipos: ['cocina', 'armario', 'bano', 'otro'] },
+  agua:     { label: 'Toma agua', color: '#0ea5e9', h: 50, Icon: Droplet, tipos: ['cocina', 'bano'] },
+  desague:  { label: 'Desagüe', color: '#64748b', h: 40, Icon: Waves, tipos: ['cocina', 'bano'] },
+  lavadora: { label: 'Toma lavadora', color: '#0891b2', h: 90, Icon: Droplet, tipos: ['cocina', 'bano'] },
+  gas:      { label: 'Gas', color: '#ef4444', h: 55, Icon: Flame, tipos: ['cocina'] },
+  luz:      { label: 'Punto de luz', color: '#eab308', h: 220, Icon: Lightbulb, tipos: ['cocina', 'armario', 'bano', 'otro'] },
+  campana:  { label: 'Luz campana', color: '#334155', h: 160, Icon: Fan, tipos: ['cocina'] },
+  vitrina:  { label: 'Luz vitrina', color: '#a855f7', h: 160, Icon: Lamp, tipos: ['cocina'] },
+  toallero: { label: 'Toallero / radiador', color: '#f97316', h: 120, Icon: Flame, tipos: ['bano'] },
+  tv:       { label: 'TV / antena', color: '#8b5cf6', h: 120, Icon: Tv, tipos: ['cocina', 'armario', 'otro'] },
+  datos:    { label: 'Datos / red', color: '#10b981', h: 30, Icon: Wifi, tipos: ['cocina', 'armario', 'bano', 'otro'] },
 };
 
 // ─── Hook para Web Speech API ────────────────────────────────────────────────
@@ -491,12 +495,15 @@ export default function AIRenderStudio({ state, setState }) {
     try {
       const dataUrl = await imageToDataUrl(src);
       const r = await fetch(`${API_URL}/api/ai-engine/detect-installations`, {
-        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl }),
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl, tipo: tipo3d }),
       });
       const d = await r.json();
       if (d.success) {
-        setMarks(d.marks || []); setMarkTool(null);
-        if ((d.marks || []).length) setSchematic(true);
+        // Filtra las marcas a las instalaciones que tienen sentido en este tipo
+        // (p. ej. no dejar gas/campana en un baño aunque la IA lo devuelva).
+        const validas = (d.marks || []).filter(m => MARK_TYPES[m.type]?.tipos?.includes(tipo3d));
+        setMarks(validas); setMarkTool(null);
+        if (validas.length) setSchematic(true);
         else setError('La IA no localizó puntos claros; márcalos a mano.');
       } else setError(d.detail || d.error || 'No se pudieron detectar las instalaciones.');
     } catch { setError('Error al detectar instalaciones.'); }
@@ -782,6 +789,55 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
+  // Construye el prompt de la LÁMINA TÉCNICA según el tipo de proyecto. Cada tipo
+  // tiene su propia composición y sus reglas (la campana solo aplica a cocina).
+  const fichaPromptPorTipo = (tid) => {
+    const base = 'Composición de ficha de estudio profesional, fondo claro, tipografía legible, líneas de cota finas. Formato 16:9, alta legibilidad.';
+    if (tid === 'armario') {
+      return (
+        'Crea una LÁMINA TÉCNICA de ESTE armario/vestidor (usa la imagen adjunta como referencia FIEL: mismos módulos, acabados y distribución interior). ' + base + '\n'
+        + '- ARRIBA: el FRENTE/ALZADO del armario con COTAS: ancho total en metros y, DEBAJO de cada módulo, su ancho en cm con su nombre (p. ej. "100 DOBLE COLGAR", "50 CAJONERA", "50 BALDAS", "40 ZAPATERO").\n'
+        + '- CENTRO: el ALZADO INTERIOR (puertas abiertas) mostrando baldas, barras de colgar, cajones y altillos con sus alturas en cm.\n'
+        + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN INTERIOR" con la lista de módulos y medidas.\n'
+        + '- ABAJO CENTRO: la PLANTA (vista cenital) a escala con cotas (ancho y fondo).\n'
+        + '- DERECHA: recuadro "ACABADOS" (frentes, tiradores, interior, iluminación LED, detalles).\n'
+        + 'REGLAS: NO dibujes campana, placa ni fregadero (es un armario). Baldas y barras a alturas ergonómicas coherentes; la suma de anchos de módulos = ancho total.'
+      );
+    }
+    if (tid === 'bano') {
+      return (
+        'Crea una LÁMINA TÉCNICA de ESTE mueble/espacio de baño (usa la imagen adjunta como referencia FIEL: mismos elementos, acabados y distribución). ' + base + '\n'
+        + '- ARRIBA: el FRENTE/ALZADO con COTAS: ancho total en metros y, DEBAJO de cada elemento, su ancho en cm con su nombre (p. ej. "80 MUEBLE LAVABO", "35 COLUMNA", "60 ESPEJO", "70 DUCHA").\n'
+        + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN Y MEDIDAS" con la lista de elementos y medidas.\n'
+        + '- CENTRO/ABAJO: la PLANTA (vista cenital) a escala con cotas (ancho y fondo).\n'
+        + '- DERECHA: recuadro "ACABADOS Y SANITARIOS" (mueble, encimera/lavabo, grifería, espejo, mampara, iluminación).\n'
+        + 'REGLAS: NO dibujes campana, placa ni cocina. Marca la altura del lavabo, del espejo y de la grifería. Coherencia de anchos: la suma de elementos = ancho total.'
+      );
+    }
+    if (tid === 'otro') {
+      return (
+        'Crea una LÁMINA TÉCNICA de ESTE mueble a medida (usa la imagen adjunta como referencia FIEL: mismos módulos, acabados y distribución). ' + base + '\n'
+        + '- ARRIBA: el FRENTE/ALZADO con COTAS: ancho total en metros y, DEBAJO de cada módulo, su ancho en cm con su nombre.\n'
+        + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN Y MEDIDAS".\n'
+        + '- CENTRO/ABAJO: la PLANTA (vista cenital) a escala con cotas.\n'
+        + '- DERECHA: recuadro "ACABADOS" (frentes, tiradores, interior, iluminación, detalles).\n'
+        + 'REGLAS: dibuja solo lo que aparece en el render. La suma de anchos de módulos = ancho total.'
+      );
+    }
+    // Cocina (por defecto)
+    return (
+      'Crea una LÁMINA TÉCNICA de ESTA cocina (usa la imagen adjunta como referencia FIEL del diseño, mismos muebles, acabados y distribución). ' + base + '\n'
+      + '- ARRIBA: el FRENTE/ALZADO de la cocina con COTAS: el ancho total en metros y, DEBAJO de cada módulo, su ancho en cm con su nombre (p. ej. "60 FRIGORÍFICO", "40 COLUMNA", "60 FREGADERO", "80 COCINA", "30 MUEBLE"…).\n'
+      + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN Y MEDIDAS" con la lista de módulos y sus medidas.\n'
+      + '- CENTRO/ABAJO: la PLANTA (vista cenital) de la cocina a escala con cotas (ancho y fondo en metros y ancho por módulo).\n'
+      + '- DERECHA: recuadro "ACABADOS SUGERIDOS" (puertas, encimera, tirador, salpicadero, iluminación, detalles).\n'
+      + 'REGLAS TÉCNICAS OBLIGATORIAS del alzado:\n'
+      + '  · La CAMPANA extractora va SIEMPRE centrada JUSTO ENCIMA de la placa/cocina (zona de cocción), con el MISMO ancho que esa zona; NUNCA la dibujes reflejada ni desplazada sobre otro módulo.\n'
+      + '  · Los muebles ALTOS se alinean verticalmente con los BAJOS: cada módulo alto encima del bajo que le corresponde y con anchos coherentes (la suma de altos = la suma de bajos = ancho total).\n'
+      + '  · Las cotas de cada módulo deben coincidir arriba (altos) y abajo (bajos) en la misma vertical.'
+    );
+  };
+
   // ─── Editar el render existente en lenguaje natural ─────────────────────────
   // Lámina técnica: alzado con cotas + planta + listado de medidas + acabados,
   // generada a partir del render actual (estilo ficha de estudio profesional).
@@ -791,25 +847,7 @@ export default function AIRenderStudio({ state, setState }) {
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
-      const desc = (
-        'Crea una LÁMINA TÉCNICA de presentación de ESTA cocina (usa la imagen adjunta como '
-        + 'referencia FIEL del diseño, mismos muebles, acabados y distribución). Composición de ficha '
-        + 'de estudio de cocinas profesional, fondo claro, tipografía legible, líneas de cota finas:\n'
-        + '- ARRIBA: el FRENTE/ALZADO de la cocina con COTAS: el ancho total en metros y, DEBAJO de cada '
-        + 'módulo, su ancho en cm con su nombre (p. ej. "60 FRIGORÍFICO", "40 COLUMNA", "60 FREGADERO", '
-        + '"80 COCINA", "30 MUEBLE"…).\n'
-        + '- ABAJO IZQUIERDA: recuadro "DISTRIBUCIÓN Y MEDIDAS" con la lista de módulos y sus medidas.\n'
-        + '- CENTRO/ABAJO: la PLANTA (vista cenital) de la cocina a escala con cotas (ancho y fondo en metros '
-        + 'y ancho por módulo).\n'
-        + '- DERECHA: recuadro "ACABADOS SUGERIDOS" (puertas, encimera, tirador, salpicadero, iluminación, detalles).\n'
-        + 'REGLAS TÉCNICAS OBLIGATORIAS del alzado:\n'
-        + '  · La CAMPANA extractora va SIEMPRE centrada JUSTO ENCIMA de la placa/cocina (zona de cocción), '
-        + 'con el MISMO ancho que esa zona; NUNCA la dibujes reflejada ni desplazada sobre otro módulo.\n'
-        + '  · Los muebles ALTOS se alinean verticalmente con los BAJOS: cada módulo alto encima del bajo que le '
-        + 'corresponde y con anchos coherentes (la suma de altos = la suma de bajos = ancho total).\n'
-        + '  · Las cotas de cada módulo deben coincidir arriba (altos) y abajo (bajos) en la misma vertical.\n'
-        + 'Formato 16:9, alta legibilidad.'
-      );
+      const desc = fichaPromptPorTipo(tipo3d);
       const response = await fetch(`${API_URL}/api/ai-engine/render`, {
         method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
@@ -822,9 +860,10 @@ export default function AIRenderStudio({ state, setState }) {
       } else setError(data.error || 'No se pudo generar la ficha técnica.');
 
       // Además, planta y alzado EXACTOS (vectoriales con cotas): se detecta la
-      // distribución del render con IA y se dibujan de forma determinista. Es
-      // best-effort: si falla, la lámina IA ya se ha generado igualmente.
-      try {
+      // distribución del render con IA y se dibujan de forma determinista. El
+      // motor vectorial está modelado para COCINA (zonas de cocción, campana…),
+      // así que solo se añade en cocina. Es best-effort.
+      if (tipo3d === 'cocina') try {
         const dd = await fetch(`${API_URL}/api/estudio-cocinas/detect-distribucion`, {
           method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl }),
         });
@@ -1975,14 +2014,16 @@ export default function AIRenderStudio({ state, setState }) {
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5">
                     {editing ? <Loader size={12} className="animate-spin" /> : <Layers size={12} />} Alzado + planta + medidas
                   </button>
+                  {tipo3d === 'cocina' && (
                   <button onClick={generarPlanosTecnicos} disabled={editing}
-                    title="Planta acotada + alzado alámbrico EXACTOS (vectoriales, con cotas)"
+                    title="Planta acotada + alzado alámbrico EXACTOS (vectoriales, con cotas). Modelado para cocina."
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1.5">
                     {editing ? <Loader size={12} className="animate-spin" /> : <FileText size={12} />} Planta + alzado (técnico)
                   </button>
+                  )}
                   <span className="w-px h-4 bg-slate-300 mx-0.5" />
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Manual:</span>
-                  {Object.entries(MARK_TYPES).map(([id, t]) => { const Ic = t.Icon; return (
+                  {Object.entries(MARK_TYPES).filter(([, t]) => t.tipos.includes(tipo3d)).map(([id, t]) => { const Ic = t.Icon; return (
                     <button key={id} onClick={() => setMarkTool(markTool === id ? null : id)}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${markTool === id ? 'text-white ring-2 ring-offset-1' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                       style={markTool === id ? { background: t.color } : undefined}>
@@ -2049,7 +2090,7 @@ export default function AIRenderStudio({ state, setState }) {
                               <span className="text-[11px] text-slate-400">cm</span>
                             </label>
                             <div className="grid grid-cols-4 gap-1.5 mb-2">
-                              {Object.entries(MARK_TYPES).map(([id, tt]) => { const TI = tt.Icon; return (
+                              {Object.entries(MARK_TYPES).filter(([, tt]) => tt.tipos.includes(tipo3d)).map(([id, tt]) => { const TI = tt.Icon; return (
                                 <button key={id} title={tt.label} onClick={() => setMarks(m => m.map((x, j) => j === i ? { ...x, type: id } : x))}
                                   className={`h-8 rounded-lg flex items-center justify-center ${mk.type === id ? 'text-white ring-2 ring-offset-1' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                                   style={mk.type === id ? { background: tt.color } : undefined}><TI size={15} /></button>
