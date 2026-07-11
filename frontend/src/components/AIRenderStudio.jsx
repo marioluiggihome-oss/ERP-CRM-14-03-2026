@@ -395,6 +395,8 @@ export default function AIRenderStudio({ state, setState }) {
   const [detecting, setDetecting] = useState(false);
   const [schematic, setSchematic] = useState(false); // vista esquema (render atenuado)
   const [editMark, setEditMark] = useState(null);    // índice de la marca en edición
+  const [showInstall, setShowInstall] = useState(false); // panel de instalaciones/planos plegado
+  const [showOtras, setShowOtras] = useState(false); // barra master "otras herramientas" plegada
   const markH = (mk) => (mk.h != null ? mk.h : MARK_TYPES[mk.type].h); // altura efectiva (cm)
   // Selector de color por catálogo (pestañas Colores 1/2 + gamas colapsables).
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -439,7 +441,7 @@ export default function AIRenderStudio({ state, setState }) {
   const baseTextRef = useRef('');
 
   // Al cambiar de render, reseteamos el aviso de imagen no cargada.
-  useEffect(() => { setImgError(false); setMarks([]); setMarkTool(null); setSchematic(false); setEditMark(null); }, [renderResult]);
+  useEffect(() => { setImgError(false); setMarks([]); setMarkTool(null); setSchematic(false); setEditMark(null); setShowInstall(false); }, [renderResult]);
 
   // Detección AUTOMÁTICA de instalaciones con IA (analiza el render y coloca las
   // marcas de enchufes/agua/desagüe/gas donde irían).
@@ -1327,11 +1329,15 @@ export default function AIRenderStudio({ state, setState }) {
         </div>
       </div>
 
-      {/* Barra temporal de accesos a otras herramientas (solo master) */}
+      {/* Barra temporal de accesos a otras herramientas (solo master) — plegada por defecto */}
       {isMaster && setState && (
-        <div className="shrink-0 flex items-center gap-2 flex-wrap px-4 sm:px-8 py-2 bg-amber-50 border-b border-amber-200">
-          <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider">Otras herramientas (temporal · master)</span>
-          {OTRAS_HERRAMIENTAS.map(h => (
+        <div className="shrink-0 flex items-center gap-2 flex-wrap px-4 sm:px-8 py-1.5 bg-amber-50 border-b border-amber-200">
+          <button onClick={() => setShowOtras(s => !s)}
+            className="flex items-center gap-1 text-[10px] font-black text-amber-700 uppercase tracking-wider hover:text-amber-900">
+            <ChevronRight size={12} className={`transition-transform ${showOtras ? 'rotate-90' : ''}`} />
+            Otras herramientas (temporal · master)
+          </button>
+          {showOtras && OTRAS_HERRAMIENTAS.map(h => (
             <button key={h.tab} onClick={() => irA(h.tab)}
               className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-white border border-amber-200 text-amber-700 hover:bg-amber-100">
               {h.label}
@@ -1805,28 +1811,28 @@ export default function AIRenderStudio({ state, setState }) {
             </div>
           ) : renderResult ? (
             /* Resultado del render */
-            <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-              <div className="flex items-center justify-between shrink-0">
-                <h3 className="font-black text-slate-700 uppercase tracking-wider text-sm">Resultado</h3>
-                <div className="flex gap-2">
+            <div className="flex-1 flex flex-col gap-2 overflow-hidden">
+              <div className="flex items-center justify-between shrink-0 gap-2">
+                <h3 className="font-black text-slate-700 uppercase tracking-wider text-xs">Resultado</h3>
+                <div className="flex gap-1.5 flex-wrap justify-end">
                   <button onClick={downloadRender} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
                     {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar
                   </button>
                   <button onClick={exportPDF} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 text-white rounded-lg text-[11px] font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
                     <FileText size={14} /> PDF
                   </button>
                   <button onClick={exportDossierPDF} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-lg text-xs font-bold hover:bg-violet-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-600 text-white rounded-lg text-[11px] font-bold hover:bg-violet-700 disabled:opacity-50" title="Dossier PDF multi-página (portada + render + especificaciones)">
                     <BookOpen size={14} /> Dossier
                   </button>
                   <button onClick={shareWhatsApp} disabled={downloading || !currentImage()}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 disabled:opacity-50" title="Compartir por WhatsApp">
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-[11px] font-bold hover:bg-green-700 disabled:opacity-50" title="Compartir por WhatsApp">
                     <Share2 size={14} /> WhatsApp
                   </button>
                   <button onClick={attachToBudget} disabled={downloading || !currentImage()}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`} title="Adjuntar este render al presupuesto (Resumen Totales)">
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`} title="Adjuntar este render al presupuesto (Resumen Totales)">
                     {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> Al presupuesto</>}
                   </button>
                   {refImage && (
@@ -1845,14 +1851,14 @@ export default function AIRenderStudio({ state, setState }) {
                   </button>
                   <button
                     onClick={() => setShowFullscreen(true)}
-                    className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                    className="p-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
                     title="Ver en pantalla completa"
                   >
                     <Maximize2 size={16} className="text-slate-600" />
                   </button>
                   <button
                     onClick={() => { setRenderResult(null); setDescription(''); }}
-                    className="p-2 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                    className="p-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
                     title="Nuevo render"
                   >
                     <RotateCcw size={16} className="text-slate-600" />
@@ -1884,7 +1890,15 @@ export default function AIRenderStudio({ state, setState }) {
               /* Imagen del render */
               <>
               {renderResult?.result?.images?.[0] && !imgError && !interactiveMode && (
-                <div className="shrink-0 mb-2 flex items-center gap-1.5 flex-wrap bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
+                <div className="shrink-0 mb-2">
+                  {/* Botón que despliega el panel: oculto por defecto para no saturar la vista */}
+                  <button onClick={() => setShowInstall(s => !s)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${showInstall ? 'bg-indigo-600 text-white' : 'bg-white/70 backdrop-blur text-slate-600 hover:bg-white'}`}>
+                    <PlugZap size={13} /> Instalaciones y planos técnicos
+                    <ChevronRight size={13} className={`transition-transform ${showInstall ? 'rotate-90' : ''}`} />
+                  </button>
+                  {showInstall && (
+                  <div className="mt-2 flex items-center gap-1.5 flex-wrap bg-white/70 backdrop-blur rounded-xl px-2 py-1.5">
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide mr-1">Instalaciones:</span>
                   <button onClick={detectInstalaciones} disabled={detecting}
                     className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5">
@@ -1920,6 +1934,8 @@ export default function AIRenderStudio({ state, setState }) {
                     <span className="text-[10px] text-slate-400">{marks.length} marca(s)</span>
                   </>}
                   {markTool && marks.length === 0 && <span className="text-[10px] text-indigo-600 font-bold">Haz clic en el render para colocar «{MARK_TYPES[markTool].label}»</span>}
+                  </div>
+                  )}
                 </div>
               )}
               <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center relative"
