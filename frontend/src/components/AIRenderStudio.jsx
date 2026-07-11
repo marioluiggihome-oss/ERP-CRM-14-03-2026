@@ -963,6 +963,32 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setDownloading(false); }
   };
 
+  // ─── Descargar TODO de seguido: el render actual + todo el historial ─────────
+  // (renders, variantes, planos, láminas). Cada imagen se descarga como PNG.
+  const descargarTodo = async () => {
+    // Reúne imágenes sin duplicar, empezando por el render actual.
+    const items = [];
+    const push = (src, etiqueta) => { if (src && !items.some(x => x.src === src)) items.push({ src, etiqueta }); };
+    push(currentImage(), renderResult?.description || 'render');
+    (renderHistory || []).forEach((h, i) => push(h?.result?.images?.[0], h?.description || `historial-${i + 1}`));
+    if (!items.length) return;
+    setDownloading(true);
+    try {
+      const base = (cliente || ref || 'estudio-3d').trim().replace(/\s+/g, '_').replace(/[^\w\-]/g, '') || 'estudio-3d';
+      for (let i = 0; i < items.length; i++) {
+        try {
+          const dataUrl = await imageToDataUrl(items[i].src);
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = `${base}_${String(i + 1).padStart(2, '0')}.png`;
+          document.body.appendChild(a); a.click(); a.remove();
+          // Pausa breve para que el navegador no bloquee la descarga múltiple.
+          await new Promise(r => setTimeout(r, 350));
+        } catch { /* si una imagen falla, seguimos con las demás */ }
+      }
+    } finally { setDownloading(false); }
+  };
+
   // ─── Exportar PDF de presentación (con logo) ────────────────────────────────
   const exportPDF = async () => {
     const img = currentImage();
@@ -1921,6 +1947,10 @@ export default function AIRenderStudio({ state, setState }) {
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
                     {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar
                   </button>
+                  <button onClick={descargarTodo} disabled={downloading || !currentImage()}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-600 disabled:opacity-50" title="Descargar de seguido el render actual y todo el historial (renders, variantes, planos y láminas)">
+                    {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar todo
+                  </button>
                   <button onClick={exportPDF} disabled={downloading || !currentImage()}
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 text-white rounded-lg text-[11px] font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
                     <FileText size={14} /> PDF
@@ -2047,15 +2077,14 @@ export default function AIRenderStudio({ state, setState }) {
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
                 {renderResult?.result?.images?.[0] && !imgError ? (
-                  <div className="relative inline-block max-w-full max-h-full"
-                    style={interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)` } : {}}>
+                  <>
                   <img
                     id="render-annot-img"
                     src={assetSrc(renderResult.result.images[0])}
                     alt="Render 3D de cocina"
-                    className="block max-w-full max-h-full object-contain transition-transform"
+                    className="max-w-full max-h-full object-contain transition-transform"
                     style={{
-                      ...(interactiveMode ? { cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
+                      ...(interactiveMode ? { transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`, cursor: 'grab' } : (markTool ? { cursor: 'crosshair' } : {})),
                       ...(schematic ? { filter: 'grayscale(1) brightness(1.22) contrast(0.82)' } : {}),
                     }}
                     onError={() => setImgError(true)}
@@ -2103,7 +2132,7 @@ export default function AIRenderStudio({ state, setState }) {
                       </div>
                     );
                   })}
-                  </div>
+                  </>
                 ) : imgError ? (
                   <div className="text-center p-8 max-w-sm">
                     <Image size={40} className="text-slate-500 mx-auto mb-3" />
