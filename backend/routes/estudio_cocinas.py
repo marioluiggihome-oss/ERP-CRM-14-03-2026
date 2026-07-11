@@ -1569,7 +1569,8 @@ async def generar_alzado(payload: ProyectoBase):
         C_LINE = "#2C2C2C"; C_COTA = "#B03A2E"; C_BG = "#FFFFFF"; C_GRID = "#E6E2DA"
         ALTOS_Y0, ALTOS_Y1, ENC_Y, ZOC_Y, COL_Y = 140, 210, 90, 10, 220
         COLS = {"frigorifico", "columna_hornos", "despensa", "congelador"}
-        ALTOS = {"campana", "microondas"}
+        ALTOS = {"microondas"}  # la campana se dibuja SIEMPRE sobre la placa (abajo)
+        HOB = {"placa", "cocina", "vitroceramica", "vitro", "induccion", "placa_induccion", "coccion", "vitroceramicamica"}
 
         dist = payload.distribucion_estructurada
         paredes = (dist.paredes if dist and dist.paredes else None) or [{"nombre": "Pared principal", "ancho": 400, "alto": 240}]
@@ -1609,9 +1610,12 @@ async def generar_alzado(payload: ProyectoBase):
                            key=lambda e: e.get("posicion_cm", 0) or 0)
             pos = 0
             cotas = []
+            hob_zones = []   # (x, w) de las placas → la campana va justo encima
             for e in elems:
                 w = int(e.get("ancho") or 60)
                 tipo = str(e.get("id") or e.get("tipo") or "").lower()
+                if tipo == "campana":
+                    continue  # se dibuja al final, centrada sobre la placa
                 label = str(e.get("label") or tipo or "módulo")[:18]
                 x = int(e.get("posicion_cm") or pos)
                 if tipo in COLS:
@@ -1623,21 +1627,36 @@ async def generar_alzado(payload: ProyectoBase):
                 else:
                     wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
                     ax.text(x + w / 2, (ZOC_Y + ENC_Y) / 2, label, ha="center", va="center", fontsize=7)
+                    if tipo in HOB:
+                        hob_zones.append((x, w))
+                        # marca de zona de cocción sobre la encimera
+                        ax.plot([x + 6, x + w - 6], [ENC_Y - 2, ENC_Y - 2], color=C_LINE, lw=1.0)
                 cotas.append((x, x + w, f"{w}"))
                 pos = max(pos, x + w)
-            # relleno con módulos estándar de 60 en bajos y altos
+
+            # CAMPANA: siempre centrada JUSTO ENCIMA de cada placa, con su mismo ancho.
+            for (hx, hw) in hob_zones:
+                wire(ax, hx, ALTOS_Y0, hw, ALTOS_Y1 - ALTOS_Y0, lw=1.6)
+                # boca de campana (línea inferior más marcada)
+                ax.plot([hx + 4, hx + hw - 4], [ALTOS_Y0 + 4, ALTOS_Y0 + 4], color=C_LINE, lw=1.4)
+                ax.text(hx + hw / 2, (ALTOS_Y0 + ALTOS_Y1) / 2, "Campana", ha="center", va="center", fontsize=7)
+
+            # relleno con módulos estándar de 60 en bajos
             x = pos
             while x + 30 <= ancho:
                 w = min(60, ancho - x)
                 wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y, dash=True)
                 cotas.append((x, x + w, f"{w}"))
                 x += w
+            # relleno de altos, saltando columnas y la zona de campana (sobre placa)
             x2 = 0
             while x2 + 30 <= ancho:
                 w = min(60, ancho - x2)
-                ocupado = any(t for t in elems if str(t.get("id") or "").lower() in COLS
-                              and (t.get("posicion_cm") or 0) < x2 + w and (t.get("posicion_cm") or 0) + (t.get("ancho") or 60) > x2)
-                if not ocupado:
+                ocupado_col = any(str(t.get("id") or "").lower() in COLS
+                                  and (t.get("posicion_cm") or 0) < x2 + w and (t.get("posicion_cm") or 0) + (t.get("ancho") or 60) > x2
+                                  for t in elems)
+                ocupado_camp = any(hx < x2 + w and hx + hw > x2 for (hx, hw) in hob_zones)
+                if not (ocupado_col or ocupado_camp):
                     wire(ax, x2, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0, dash=True)
                 x2 += w
             # encimera y zócalo
