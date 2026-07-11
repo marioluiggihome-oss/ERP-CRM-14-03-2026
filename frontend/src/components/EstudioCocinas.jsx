@@ -29,6 +29,7 @@ import {
   Send, Plus, ChevronLeft, ChevronRight, ClipboardList
 } from 'lucide-react';
 import FichaFabricacion from './FichaFabricacion';
+import { jsPDF } from 'jspdf';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -859,6 +860,85 @@ export default function EstudioCocinas({ state, setState }) {
     }
   }, [proy, distribucion]);
 
+  // ── Dossier PDF multipágina (portada + render + planta + alzados + ficha) ──
+  const [dossierBusy, setDossierBusy] = useState(false);
+  const generarDossier = useCallback(async () => {
+    setDossierBusy(true);
+    try {
+      const dossierLogo = watermark.mode === 'custom' ? watermark.customLogo : defaultLogo;
+      const loadSize = (src) => new Promise((res) => { const im = new window.Image(); im.onload = () => res({ w: im.width, h: im.height }); im.onerror = () => res({ w: 16, h: 9 }); im.src = src; });
+      // Reunir láminas disponibles (al menos el render).
+      const plates = [];
+      if (render.imageUrl) plates.push({ title: 'Perspectiva · Render', img: await imageToDataUrl(render.imageUrl).catch(() => render.imageUrl) });
+      if (plano.b64) plates.push({ title: 'Planta acotada', img: plano.b64 });
+      if (alzado.b64) plates.push({ title: 'Alzados acotados · vista alámbrica', img: alzado.b64 });
+      if (!plates.length) { alert('Genera al menos el render (y opcionalmente plano/alzados) antes del dossier.'); setDossierBusy(false); return; }
+      for (const p of plates) p.size = await loadSize(p.img);
+
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+      const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+      const fecha = new Date().toLocaleDateString('es-ES');
+      const cliente = (proy.nombre_cliente || 'Cliente').toUpperCase();
+      const proyecto = proy.descripcion ? proy.descripcion.slice(0, 60) : 'Cocina a medida';
+      const fmtLogo = (l) => (l && l.includes('image/png')) ? 'PNG' : (l && l.includes('image/webp') ? 'WEBP' : 'JPEG');
+
+      // ── Portada ──
+      pdf.setFillColor(24, 24, 27); pdf.rect(0, 0, W, H, 'F');
+      if (dossierLogo) { try { pdf.addImage(dossierLogo, fmtLogo(dossierLogo), W / 2 - 26, 30, 52, 24); } catch (_) {} }
+      pdf.setTextColor(202, 169, 104); pdf.setFontSize(11); pdf.text('LUIGGI HOME · ESTUDIO DE COCINAS', W / 2, 68, { align: 'center' });
+      pdf.setTextColor(255); pdf.setFontSize(30); pdf.setFont(undefined, 'bold');
+      pdf.text('DOSSIER DE PROYECTO', W / 2, 92, { align: 'center' });
+      pdf.setFont(undefined, 'normal'); pdf.setFontSize(14); pdf.setTextColor(230);
+      pdf.text(cliente, W / 2, 108, { align: 'center' });
+      pdf.setFontSize(10); pdf.setTextColor(170);
+      pdf.text(`${proyecto}  ·  Estilo ${proy.estilo || '—'}  ·  ${fecha}`, W / 2, 118, { align: 'center' });
+      pdf.setDrawColor(202, 169, 104); pdf.line(W / 2 - 30, 124, W / 2 + 30, 124);
+      pdf.setFontSize(8); pdf.setTextColor(140);
+      pdf.text('Documentación: render, planta acotada, alzados y ficha técnica.', W / 2, H - 14, { align: 'center' });
+
+      // ── Una página por lámina, con cajetín tipo estudio a la derecha ──
+      const bx = W - 62; // inicio del cajetín
+      plates.forEach((p, i) => {
+        pdf.addPage();
+        pdf.setFillColor(255, 255, 255); pdf.rect(0, 0, W, H, 'F');
+        // Imagen (contain) en el área izquierda
+        const ax = 10, ay = 10, aw = bx - 16, ah = H - 20;
+        const sc = Math.min(aw / p.size.w, ah / p.size.h);
+        const iw = p.size.w * sc, ih = p.size.h * sc;
+        try { pdf.addImage(p.img, 'PNG', ax + (aw - iw) / 2, ay + (ah - ih) / 2, iw, ih); } catch (_) {}
+        // Cajetín derecho
+        pdf.setDrawColor(30); pdf.line(bx, 10, bx, H - 10);
+        let cy = 16;
+        if (dossierLogo) { try { pdf.addImage(dossierLogo, fmtLogo(dossierLogo), bx + 4, cy, 40, 16); cy += 22; } catch (_) {} }
+        const fld = (k, v) => { pdf.setFontSize(7); pdf.setTextColor(150); pdf.text(k.toUpperCase(), bx + 4, cy); pdf.setFontSize(9.5); pdf.setTextColor(30); pdf.text(pdf.splitTextToSize(String(v || '—'), 54), bx + 4, cy + 4.5); cy += 13; };
+        fld('Cliente', cliente);
+        fld('Proyecto', proyecto);
+        fld('Descripción del plano', p.title);
+        fld('Escala', 'Orientativa / cotas en cm');
+        fld('Fecha', fecha);
+        pdf.setFontSize(7); pdf.setTextColor(120);
+        pdf.text(pdf.splitTextToSize('Cualquier discrepancia sobre las dimensiones debe consultarse con el responsable del proyecto antes de ejecutar.', 54), bx + 4, H - 34);
+        pdf.setFontSize(9); pdf.setTextColor(160); pdf.text(`P${i}.${plates.length}`, W - 12, H - 10, { align: 'right' });
+      });
+
+      // ── Página de ficha técnica (materiales/acabados) si existe ──
+      if (ficha.md) {
+        pdf.addPage();
+        pdf.setFillColor(255, 255, 255); pdf.rect(0, 0, W, H, 'F');
+        pdf.setFontSize(14); pdf.setTextColor(24, 24, 27); pdf.setFont(undefined, 'bold');
+        pdf.text('FICHA TÉCNICA', 14, 16); pdf.setFont(undefined, 'normal');
+        const plain = ficha.md.replace(/[#*_`>-]/g, '').replace(/\n{2,}/g, '\n').trim();
+        pdf.setFontSize(9.5); pdf.setTextColor(50);
+        pdf.text(pdf.splitTextToSize(plain, W - 28), 14, 26);
+      }
+
+      pdf.save(`Dossier_${(proy.nombre_cliente || 'cocina').replace(/\s+/g, '_')}.pdf`);
+    } catch (e) {
+      alert('No se pudo generar el dossier: ' + (e.message || ''));
+    } finally { setDossierBusy(false); }
+    // eslint-disable-next-line
+  }, [render.imageUrl, plano.b64, alzado.b64, ficha.md, proy, watermark, defaultLogo]);
+
   // ── Vista alámbrica (alzados por pared, con cotas) ──
   const genAlzado = useCallback(async () => {
     setAlzado(s => ({ ...s, status: 'loading', msg: 'Generando vista alámbrica…', b64: null }));
@@ -956,6 +1036,9 @@ export default function EstudioCocinas({ state, setState }) {
         <div className="flex items-center gap-1.5">
           <button onClick={openProjectList} title="Abrir proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${t.dlBtn}`}>
             <FolderOpen size={12}/> <span className="hidden md:inline">Proyectos</span>
+          </button>
+          <button onClick={generarDossier} disabled={dossierBusy || !render.imageUrl} title="Generar dossier PDF (portada + render + planta + alzados + ficha)" className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50">
+            {dossierBusy ? <Loader2 size={12} className="animate-spin"/> : <FileText size={12}/>} <span className="hidden md:inline">Dossier PDF</span>
           </button>
           <button onClick={saveProject} disabled={busySave} title="Guardar proyecto" className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${savedId ? 'bg-emerald-600 text-white' : t.dlBtn}`}>
             {busySave ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} <span className="hidden md:inline">{savedId ? 'Guardado' : 'Guardar'}</span>
