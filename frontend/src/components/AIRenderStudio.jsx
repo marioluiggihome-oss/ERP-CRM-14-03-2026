@@ -343,8 +343,25 @@ function StepHeader({ n, title, hint }) {
 }
 
 // ─── Componente Principal ────────────────────────────────────────────────────
+// Tipos de mueble del Estudio 3D (deben coincidir con SettingsModal · ESTUDIO_3D_TIPOS).
+const ESTUDIO_3D_TIPOS = [
+  { id: 'cocina', label: 'Cocina' },
+  { id: 'armario', label: 'Armario / Vestidor' },
+  { id: 'bano', label: 'Baño' },
+  { id: 'otro', label: 'Otro mueble' },
+];
+
 export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true;
+  // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
+  // Admin o lista vacía/ausente = todos permitidos (compatibilidad hacia atrás).
+  const tiposPermitidos = (() => {
+    const sel = state?.currentUser?.estudio3dTipos;
+    if (isMaster || !Array.isArray(sel) || sel.length === 0) return ESTUDIO_3D_TIPOS;
+    return ESTUDIO_3D_TIPOS.filter(t => sel.includes(t.id));
+  })();
+  const [tipo3d, setTipo3d] = useState((tiposPermitidos[0] || ESTUDIO_3D_TIPOS[0]).id);
+  const tipoActual = ESTUDIO_3D_TIPOS.find(t => t.id === tipo3d) || ESTUDIO_3D_TIPOS[0];
   // Accesos temporales a otras herramientas de diseño (para el master), mientras
   // se unifica todo en Estudio 3D + Agentes.
   const OTRAS_HERRAMIENTAS = [
@@ -651,7 +668,9 @@ export default function AIRenderStudio({ state, setState }) {
   };
   const conMedidas = (desc) => {
     const extra = `${medidasTexto()}${electrosTexto()}${camaraTexto()}${luzTexto()}`.trim();
-    return extra ? `${extra}\n${desc}` : desc;
+    const conExtra = extra ? `${extra}\n${desc}` : desc;
+    // Contexto de tipo de mueble (permisos por partidas): guía al motor de IA.
+    return `[Tipo de proyecto: ${tipoActual.label}]\n${conExtra}`;
   };
 
   // Estimación de precio ORIENTATIVA a partir de medidas + materiales + equipamiento.
@@ -1356,6 +1375,23 @@ export default function AIRenderStudio({ state, setState }) {
             <div className="flex-1 flex flex-col p-6 gap-5">
               {/* PASO 1 — Describe el diseño */}
               <StepHeader n={1} title="Describe el diseño" hint="Cocina, armario, baño o mueble a medida. Puedes hablar o escribir." />
+
+              {/* Tipo de proyecto (permisos por partidas). Solo se ofrecen los tipos permitidos. */}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tipo de proyecto</p>
+                {tiposPermitidos.length > 1 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {tiposPermitidos.map(tp => (
+                      <button key={tp.id} onClick={() => setTipo3d(tp.id)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${tipo3d === tp.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
+                        {tp.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="self-start px-3 py-1.5 rounded-full text-[11px] font-black bg-indigo-50 text-indigo-700 border border-indigo-100">{tipoActual.label}</span>
+                )}
+              </div>
 
               {/* Plantillas rápidas (arranque en 1 clic) */}
               <div className="flex flex-col gap-1.5">

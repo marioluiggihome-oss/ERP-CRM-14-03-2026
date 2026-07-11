@@ -1140,10 +1140,10 @@ const App = () => {
                         onClick={() => setState(p => ({...p, currentTab: 'estudioCocinas'}))} 
                         className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'estudioCocinas' ? 'bg-amber-600 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
                         data-testid="estudio-3d-nav-btn"
-                        title="3D Estudio: Renders Manus, Planos 2D, Fichas Técnicas y Presentaciones"
+                        title="Estudio 3D: Renders, Planos 2D, Fichas Técnicas y Presentaciones"
                       >
                         <ChefHat size={18}/>
-                        <span className="text-[7px] font-black uppercase tracking-widest">3D Estudio</span>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Estudio 3D</span>
                       </button>
                     )}
                     
