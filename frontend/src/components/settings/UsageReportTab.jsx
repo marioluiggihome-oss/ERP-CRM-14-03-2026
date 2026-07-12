@@ -9,6 +9,75 @@ import { authHeaders } from '../../services/api';
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4', '#84cc16'];
 
+// Tarjeta de CONSUMO DE IA (solo master): contador mensual + umbral de alerta.
+const KIND_LABELS = { render: 'Renders 3D', vision: 'Análisis de imagen', text: 'Texto', chat: 'Chat', search: 'Búsqueda', otro: 'Otros' };
+const AIUsageCard = () => {
+  const [data, setData] = useState(null);
+  const [thr, setThr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const load = async () => {
+    try {
+      const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/ai-usage`, { headers: authHeaders() });
+      if (r.ok) { const d = await r.json(); setData(d); setThr(d.threshold ? String(d.threshold) : ''); }
+    } catch {}
+  };
+  useEffect(() => { load(); }, []);
+  const saveThreshold = async () => {
+    setSaving(true);
+    try {
+      const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/ai-usage/threshold`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threshold: Number(thr) || 0 }),
+      });
+      if (r.ok) setData(await r.json());
+    } catch {} finally { setSaving(false); }
+  };
+  if (!data) return null;
+  const kinds = Object.entries(data.by_kind || {}).sort((a, b) => b[1] - a[1]);
+  const barColor = data.over ? '#dc2626' : data.warn ? '#d97706' : '#4f46e5';
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2"><Activity className="w-4 h-4 text-indigo-500" /> Consumo de IA</h3>
+          <p className="text-xs text-slate-400">Llamadas al motor de IA este mes ({data.current_month})</p>
+        </div>
+        <button onClick={load} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100" title="Actualizar"><RefreshCw className="w-4 h-4" /></button>
+      </div>
+      <div className="flex items-end gap-3 mb-3">
+        <span className="text-4xl font-semibold tracking-tight text-slate-900 tabular-nums">{data.total.toLocaleString('es-ES')}</span>
+        <span className="text-sm text-slate-500 mb-1">llamadas{data.threshold ? ` / ${data.threshold.toLocaleString('es-ES')}` : ''}</span>
+        {data.over && <span className="mb-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Límite superado</span>}
+        {!data.over && data.warn && <span className="mb-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">⚠ Cerca del límite</span>}
+      </div>
+      {data.threshold > 0 && (
+        <div className="h-2 rounded-full bg-slate-100 overflow-hidden mb-3">
+          <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, data.pct)}%`, background: barColor }} />
+        </div>
+      )}
+      {kinds.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {kinds.map(([k, v]) => (
+            <span key={k} className="text-[11px] px-2 py-1 rounded-lg bg-slate-50 border border-slate-100 text-slate-600">
+              {KIND_LABELS[k] || k}: <b className="text-slate-900 tabular-nums">{v.toLocaleString('es-ES')}</b>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2 border-t border-slate-100 pt-3">
+        <span className="text-xs text-slate-500">Alerta al superar</span>
+        <input type="number" min="0" value={thr} onChange={e => setThr(e.target.value)} placeholder="sin límite"
+          className="w-28 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />
+        <span className="text-xs text-slate-400">llamadas/mes</span>
+        <button onClick={saveThreshold} disabled={saving}
+          className="ml-auto px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+          {saving ? 'Guardando…' : 'Guardar umbral'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const UsageReportTab = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +138,8 @@ const UsageReportTab = () => {
 
   return (
     <div className="space-y-6">
+      {/* Consumo de IA (contador + umbral de alerta) */}
+      <AIUsageCard />
       {/* Header con selector de período */}
       <div className="flex items-center justify-between">
         <div>

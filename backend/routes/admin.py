@@ -244,3 +244,20 @@ async def get_activity_by_type(days: int = 30, user=Depends(require_admin)):
         "period_days": days,
         "activity_by_type": by_type
     }
+
+
+# ─── Consumo de IA (contador + umbral de alerta), solo master ────────────────
+from services.ai_usage import get_usage_summary, set_threshold
+
+
+@router.get("/ai-usage")
+async def ai_usage(user=Depends(require_admin)):
+    """Resumen del consumo de IA del mes en curso, histórico y estado de alerta."""
+    return {"success": True, **(await get_usage_summary())}
+
+
+@router.post("/ai-usage/threshold")
+async def ai_usage_threshold(payload: dict, user=Depends(require_admin)):
+    """Fija el umbral mensual de alerta por exceso de uso de IA (0 = sin límite)."""
+    await set_threshold(int((payload or {}).get("threshold", 0) or 0))
+    return {"success": True, **(await get_usage_summary())}

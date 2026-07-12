@@ -15,6 +15,13 @@ from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
+# Contador de consumo de IA (best-effort; nunca debe romper una llamada).
+try:
+    from services.ai_usage import record_ai_usage
+except Exception:  # pragma: no cover
+    async def record_ai_usage(*a, **k):
+        return
+
 # Intentar importar google.genai (nuevo SDK)
 try:
     from google import genai as google_genai
@@ -85,6 +92,7 @@ async def analyze_image_with_gemini(
     Raises:
         RuntimeError si no hay forma de hacer Vision en el entorno actual
     """
+    await record_ai_usage("vision")
     # Limpiar prefijo data: si viene
     is_pdf_header = False
     if image_base64.startswith('data:'):
@@ -410,6 +418,7 @@ async def generate_image_with_gemini(
     Funciona en Railway usando GEMINI_API_KEY (SDK google-genai). Lanza
     RuntimeError si no hay forma de generar imagen en este entorno.
     """
+    await record_ai_usage("render")
     import asyncio
 
     key = get_gemini_key()
