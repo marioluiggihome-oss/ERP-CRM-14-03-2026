@@ -973,6 +973,35 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
+  // ─── HD: pasada de restauración/super-resolución. Recupera nitidez tras muchas
+  // ediciones (generation-loss) SIN cambiar nada del diseño. ────────────────────
+  const mejorarResolucion = async () => {
+    const img = currentImage();
+    if (!img || editing) return;
+    setEditing(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const desc = (
+        'Reprocesa esta imagen a ALTA RESOLUCIÓN y máxima nitidez fotorrealista. '
+        + 'NO cambies absolutamente NADA del diseño: mismos muebles, colores, materiales, '
+        + 'distribución, encuadre, perspectiva e iluminación. Solo mejora la DEFINICIÓN, el '
+        + 'enfoque y el detalle fino, eliminando el suavizado, el ruido y cualquier pixelado '
+        + 'acumulado. Resultado limpio y nítido, misma composición exacta.'
+      );
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        const merged = { ...data, description: `${renderResult?.description || description}\n[HD · nitidez mejorada]` };
+        setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
+      } else setError(data.error || 'No se pudo mejorar la resolución.');
+    } catch { setError('Error de conexión al mejorar la resolución.'); }
+    finally { setEditing(false); }
+  };
+
   const editRender = async () => {
     const img = currentImage();
     // Combina la instrucción principal + líneas adicionales (multi-línea).
@@ -2038,6 +2067,11 @@ export default function AIRenderStudio({ state, setState }) {
                     title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-sm disabled:opacity-50">
                     {editing ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />} Visita de decorador/a
+                  </button>
+                  <button onClick={mejorarResolucion} disabled={editing || downloading || !currentImage()}
+                    title="Recupera nitidez y resolución tras varias ediciones, sin cambiar el diseño"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50">
+                    {editing ? <Loader size={14} className="animate-spin" /> : <Wand2 size={14} />} HD
                   </button>
                   <button onClick={downloadRender} disabled={downloading || !currentImage()}
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
