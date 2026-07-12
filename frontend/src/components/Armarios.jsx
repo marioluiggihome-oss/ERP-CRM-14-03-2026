@@ -3538,7 +3538,9 @@ const Armarios = ({ state, setState }) => {
               <span className="text-emerald-300">Extras</span>
               <span className="font-bold">{pricing.extras.toFixed(2)}€</span>
             </div>
-            {canSeeCost && (
+            {/* Coste y margen: sensibles. Solo con permiso de coste Y con el candado
+                abierto (showCost). Por defecto NO se muestran. */}
+            {canSeeCost && showCost && (
               <div className="text-[11px] text-emerald-200/80 border-t border-emerald-700/50 pt-2 space-y-1">
                 <div className="flex justify-between">
                   <span>Coste despiece</span>
@@ -3550,10 +3552,12 @@ const Armarios = ({ state, setState }) => {
                 </div>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-emerald-300">Margen ({pricing.marginPct}%)</span>
-              <span className="font-bold">{pricing.marginAmount.toFixed(2)}€</span>
-            </div>
+            {canSeeCost && showCost && (
+              <div className="flex justify-between">
+                <span className="text-emerald-300">Margen ({pricing.marginPct}%)</span>
+                <span className="font-bold">{pricing.marginAmount.toFixed(2)}€</span>
+              </div>
+            )}
 
             <div className="border-t border-emerald-700 pt-3 mt-3">
               {/* PVP siempre visible. El descuento sale de la ficha de red de
