@@ -95,6 +95,67 @@ def _to_cm(v):
     return v / 10.0 if v >= 200 else v
 
 
+def _product_width_cm(p) -> float:
+    """Ancho REAL del producto en cm.
+
+    CLAVE DEL BUG: los importadores del catálogo (tanto ZC `import_complete_catalog.py`
+    como MV `seed_mv_products.py`) guardan `width: 0` en casi todos los muebles; el
+    ancho de verdad va CODIFICADO en el código y/o el nombre. Si nos fiábamos del
+    campo `width` (=0) TODOS los candidatos empataban en el score y el emparejador
+    devolvía siempre el primer mueble de la colección (p.ej. A40D/I), repitiendo el
+    mismo SKU y el mismo precio. Aquí extraemos el ancho de forma robusta:
+
+      1. Campo `width` si viene informado (>0).
+      2. Código estilo ZC: ancho en mm tras la última P/V (…P600, …V1200).
+      3. "600MM" en el nombre.
+      4. "40 CM" en el nombre (quitando primero la altura tipo H70/H90).
+      5. Código estilo MV: letras iniciales + ancho en cm (A40D/I, BC60, BCGF35, A100).
+      6. Primer número de 2-3 cifras del nombre (sin la altura).
+    """
+    try:
+        w = float(p.get('width') or 0)
+    except Exception:
+        w = 0
+    if w > 0:
+        return _to_cm(w)
+
+    code = (p.get('code') or '').upper()
+    name = (p.get('name') or '').upper()
+
+    # 2. ZC: ancho en mm al final tras P (puerta) o V (vitrina): 9A1P600 → 600mm.
+    m = re.search(r'[PV](\d{3,4})$', code)
+    if m:
+        return int(m.group(1)) / 10.0
+
+    # 3. Milímetros rotulados en el nombre: "…600mm".
+    m = re.search(r'(\d{3,4})\s*MM', name)
+    if m:
+        return int(m.group(1)) / 10.0
+
+    # 4. Centímetros en el nombre. Se quita antes la altura (H70/H90) para no
+    #    confundirla con el ancho.
+    name_wo_h = re.sub(r'H\s*\d{2,3}', ' ', name)
+    m = re.search(r'(\d{2,3})\s*CM', name_wo_h)
+    if m:
+        return float(m.group(1))
+
+    # 5. MV: letras iniciales + ancho en cm (A40D/I, BC60, BCGF35, ASCE60, A100).
+    m = re.search(r'^[A-Z]+(\d{2,3})', code)
+    if m:
+        val = int(m.group(1))
+        if 15 <= val <= 300:
+            return float(val)
+
+    # 6. Último recurso: primer número de 2-3 cifras del nombre (sin la altura).
+    m = re.search(r'\b(\d{2,3})\b', name_wo_h)
+    if m:
+        val = int(m.group(1))
+        if 15 <= val <= 300:
+            return float(val)
+
+    return 0.0
+
+
 async def _match_by_type_and_width(tipo: str, width: int, height: int, base_filter: dict) -> dict:
     """Empareja por TIPO + ANCHO (y, si ayuda, altura) dentro de la biblioteca.
 
@@ -117,9 +178,11 @@ async def _match_by_type_and_width(tipo: str, width: int, height: int, base_filt
         return None
 
     def score(p):
-        pw_cm = _to_cm(p.get('width'))
+        # Ancho REAL del candidato (derivado de código/nombre; el campo width del
+        # catálogo suele ser 0 y no sirve para emparejar).
+        pw_cm = _product_width_cm(p)
         s = abs(pw_cm - width_cm)
-        if height_cm:
+        if height_cm and _to_cm(p.get('height')):
             s += abs(_to_cm(p.get('height')) - height_cm) * 0.3  # la altura pesa menos
         return s
 
@@ -127,7 +190,7 @@ async def _match_by_type_and_width(tipo: str, width: int, height: int, base_filt
     best = candidates[0]
     # Aceptar solo si el ancho está razonablemente cerca (±8 cm); los anchos son
     # estándar (30,40,45,60,80,90,120…), así que un buen match debe ser exacto.
-    if abs(_to_cm(best.get('width')) - width_cm) > 8:
+    if abs(_product_width_cm(best) - width_cm) > 8:
         return None
     return best
 
@@ -255,7 +318,10 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
             enriched_item['precio_pvp'] = round(_puntos * point_value, 2)
             enriched_item['categoria'] = catalog_product.get('category', '')
             enriched_item['programa'] = catalog_product.get('programa', 'ESTÁNDAR')
-            enriched_item['ancho_real'] = catalog_product.get('width', width)
+            # El campo width del catálogo suele ser 0 → derivamos el ancho real del
+            # código/nombre. Se guarda en mm (como ancho_estimado) para el frontend.
+            _cat_w_cm = _product_width_cm(catalog_product)
+            enriched_item['ancho_real'] = int(_cat_w_cm * 10) if _cat_w_cm else width
             enriched_item['alto_real'] = catalog_product.get('height', height)
             enriched_item['fondo_real'] = catalog_product.get('depth', fondo_cm * 10)
             enriched_item['product_id'] = catalog_product.get('id', '')
@@ -330,6 +396,14 @@ RAZONA DE FORMA METÓDICA ANTES DE RESPONDER (piensa paso a paso):
   Si una medida se sale de rango (p.ej. fondo de 5 mm), es un ERROR: corrígela al estándar más cercano.
 - Prioriza los anchos ROTULADOS en el plano; no inventes medidas. Lee las líneas de
   cota y las cifras escritas junto a cada mueble: esa es la fuente de verdad del ancho.
+- LISTA MÓDULO A MÓDULO de IZQUIERDA a DERECHA. Cada entrada de "muebles_detectados"
+  es UN módulo físico distinto con SU PROPIO ancho medido en el plano. Los anchos de
+  una cocina real son VARIADOS (p.ej. 600, 800, 900): NO repitas el mismo ancho para
+  todos los módulos salvo que el plano muestre realmente módulos idénticos.
+- NO INVENTES DUPLICADOS: no copies el mismo mueble varias veces. Si dos módulos
+  contiguos son realmente iguales (mismo tipo y mismo ancho), inclúyelos como entradas
+  separadas SOLO si de verdad existen los dos en el plano; nunca "rellenes" la lista
+  repitiendo un módulo.
 - Si hay una ISLA o PENÍNSULA, detéctala como una fila de bajos independiente (sus
   propios módulos) y NO la confundas con la fila pegada a la pared.
 - Si el plano indica una ESCALA o una medida total de pared, úsala para repartir los
