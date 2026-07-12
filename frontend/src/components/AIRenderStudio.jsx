@@ -365,6 +365,15 @@ const TIPO_KEYWORDS = {
   otro: [],
 };
 
+// Ejemplo de la caja de descripción según el tipo de proyecto (no menciona tipos
+// que el usuario no tiene contratados).
+const PLACEHOLDER_TIPO = {
+  cocina: "Describe tu cocina. Ej: 'Cocina en L blanca mate con isla, encimera de cuarzo, tiradores negros y columna de horno y microondas'",
+  armario: "Describe tu armario o vestidor. Ej: 'Armario empotrado con puertas blancas lacadas, interior con columna de baldas, barras de colgar y cajonera'",
+  bano: "Describe tu baño. Ej: 'Mueble de baño suspendido en roble, lavabo sobre encimera, espejo con luz y columna auxiliar'",
+  otro: "Describe el mueble a medida. Ej: 'Estantería de salón a medida en roble con módulos cerrados y hueco para TV'",
+};
+
 export default function AIRenderStudio({ state, setState }) {
   const isMaster = state?.currentUser?.isAdmin === true;
   // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
@@ -408,14 +417,14 @@ export default function AIRenderStudio({ state, setState }) {
     if (!det || det === tipo3d) {
       // No se detecta otro tipo (o coincide): solo queda el filtro de permisos.
       const bloqueo = tipoNoPermitidoEnTexto(texto);
-      return bloqueo ? `Tu descripción parece de «${bloqueo.label}» y tu usuario no tiene ese tipo contratado. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.` : null;
+      return bloqueo ? `No puedes diseñar «${bloqueo.label}»: tu usuario no tiene ese tipo contratado. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.` : null;
     }
     // El texto describe un tipo DISTINTO al seleccionado.
     const detLabel = ESTUDIO_3D_TIPOS.find(t => t.id === det).label;
     if (permitidoIds.includes(det)) {
       return `Tu descripción parece de «${detLabel}» pero tienes seleccionado «${tipoActual.label}». Cambia el «Tipo de proyecto» a «${detLabel}» (o ajusta la descripción) para generar el render.`;
     }
-    return `Tu descripción parece de «${detLabel}», un tipo que tu usuario no tiene contratado. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.`;
+    return `No puedes diseñar «${detLabel}»: tu usuario no tiene ese tipo contratado. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.`;
   };
   // Accesos temporales a otras herramientas de diseño (para el master), mientras
   // se unifica todo en Estudio 3D + Agentes.
@@ -515,6 +524,18 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Al cambiar de render, reseteamos el aviso de imagen no cargada.
   useEffect(() => { setImgError(false); setMarks([]); setMarkTool(null); setSchematic(false); setEditMark(null); setShowInstall(false); }, [renderResult]);
+
+  // Preset entrante (p. ej. desde el Presupuestador de Armarios): fija el tipo y
+  // rellena la descripción para arrancar el render de ese mueble. Se consume una vez.
+  useEffect(() => {
+    const preset = state?.estudio3dPreset;
+    if (!preset) return;
+    if (preset.tipo) setTipo3d(preset.tipo);
+    if (preset.description) setDescription(preset.description);
+    if (preset.cliente) setCliente(preset.cliente);
+    if (preset.ref) setRef(preset.ref);
+    if (setState) setState(p => { const { estudio3dPreset, ...rest } = p; return rest; });
+  }, [state?.estudio3dPreset]); // eslint-disable-line
 
   // Detección AUTOMÁTICA de instalaciones con IA (analiza el render y coloca las
   // marcas de enchufes/agua/desagüe/gas donde irían).
@@ -1042,12 +1063,19 @@ export default function AIRenderStudio({ state, setState }) {
   // Estampa el logo personalizado como MARCA DE AGUA sobre una imagen (dataURL) y
   // devuelve el nuevo dataURL. Si no hay logo o la marca está desactivada, devuelve
   // la imagen tal cual. El logo se coloca abajo a la derecha, semitransparente.
-  const stampWatermark = (dataUrl) => new Promise((resolve) => {
-    const logo = state?.logo;
-    if (!watermarkOn || !logo) { resolve(dataUrl); return; }
+  const stampWatermark = async (dataUrl) => {
+    let logo = state?.logo;
+    if (!watermarkOn || !logo) return dataUrl;
+    // El logo debe ser data: para no contaminar el canvas (cross-origin).
+    if (!String(logo).startsWith('data:')) {
+      try { logo = await imageToDataUrl(logo); } catch { return dataUrl; }
+    }
+    return new Promise((resolve) => {
     const base = new window.Image();
+    base.crossOrigin = 'anonymous';
     base.onload = () => {
       const lg = new window.Image();
+      lg.crossOrigin = 'anonymous';
       lg.onload = () => {
         const cv = document.createElement('canvas');
         cv.width = base.naturalWidth; cv.height = base.naturalHeight;
@@ -1067,7 +1095,8 @@ export default function AIRenderStudio({ state, setState }) {
     };
     base.onerror = () => resolve(dataUrl);
     base.src = dataUrl;
-  });
+    });
+  };
 
   // ─── Descargar el render (PNG) ──────────────────────────────────────────────
   const downloadRender = async () => {
@@ -1316,8 +1345,8 @@ export default function AIRenderStudio({ state, setState }) {
   const attachToBudget = async () => {
     const img = currentImage();
     if (!img) return;
-    // Volcar siempre al Presupuestador 1 (tab 'presupuestador2' = Cocina Montada)
-    await doAttach('presupuestador2');
+    // Un armario va al Presupuestador de Armarios; el resto, a Cocina Montada.
+    await doAttach(tipo3d === 'armario' ? 'armarios' : 'presupuestador2');
   };
   const doAttach = async (destTab) => {
     const img = currentImage();
@@ -1586,7 +1615,7 @@ export default function AIRenderStudio({ state, setState }) {
             /* ─── Modo Voz/Texto ─── */
             <div className="flex-1 flex flex-col p-6 gap-5">
               {/* PASO 1 — Describe el diseño */}
-              <StepHeader n={1} title="Describe el diseño" hint="Cocina, armario, baño o mueble a medida. Puedes hablar o escribir." />
+              <StepHeader n={1} title="Describe el diseño" hint={`${tipoActual.label}. Puedes hablar o escribir.`} />
 
               {/* Tipo de proyecto (permisos por partidas). Solo se ofrecen los tipos permitidos. */}
               <div className="flex flex-col gap-1.5">
@@ -1673,7 +1702,7 @@ export default function AIRenderStudio({ state, setState }) {
                   ref={textareaRef}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe lo que quieres: cocina, armario empotrado, baño, dormitorio, estantería... Ej: 'Armario empotrado con puertas blancas lacadas, tirador fresado en los laterales color madera, interior con columna de baldas'"
+                  placeholder={PLACEHOLDER_TIPO[tipo3d] || PLACEHOLDER_TIPO.otro}
                   className="flex-1 min-h-[150px] p-4 border border-slate-200 rounded-xl text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all"
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -2100,8 +2129,9 @@ export default function AIRenderStudio({ state, setState }) {
                     <Share2 size={14} /> WhatsApp
                   </button>
                   <button onClick={attachToBudget} disabled={downloading || !currentImage()}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`} title="Adjuntar este render al presupuesto (Resumen Totales)">
-                    {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> Al presupuesto</>}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold disabled:opacity-50 ${attached ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+                    title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
+                    {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> {tipo3d === 'armario' ? 'Al presup. armarios' : 'Al presupuesto'}</>}
                   </button>
                   {refImage && (
                     <button onClick={() => setCompareOn(v => !v)}

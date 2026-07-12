@@ -2801,11 +2801,7 @@ const Armarios = ({ state, setState }) => {
       {/* Header — pl-16 deja sitio al botón/logo flotante del menú */}
       <div className="bg-white/90 backdrop-blur border-b border-slate-200 text-slate-900 pl-16 pr-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 shrink-0">
-          <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center ring-1 ring-slate-200 overflow-hidden shrink-0">
-            {state?.logo
-              ? <img src={state.logo} alt="Logo" className="h-full w-full object-contain p-0.5" />
-              : <Box size={20} className="text-white" />}
-          </div>
+          {/* Sin logo aquí: ya hay un logo general (flotante) y este pisaba el título. */}
           <div className="hidden sm:block">
             <h1 className="text-lg font-semibold tracking-tight leading-none text-slate-900">Presupuestador de Armarios</h1>
             <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Configurador Profesional</p>
@@ -2863,6 +2859,24 @@ const Armarios = ({ state, setState }) => {
             <Image size={16} />
             RENDER
           </button>
+          {setState && (state?.currentUser?.canUseAIAnalysis || state?.currentUser?.isAdmin) && (
+            <button
+              onClick={() => {
+                const c = wardrobeConfig;
+                const nB = moduleConfigs.reduce((a, m) => a + (Number(m.shelves) || 0), 0);
+                const nC = moduleConfigs.reduce((a, m) => a + (Number(m.drawers) || 0), 0);
+                const nR = moduleConfigs.reduce((a, m) => a + (Number(m.hangingRods) || 0), 0);
+                const puerta = c.doorType === DoorType.SLIDING ? 'corredera' : c.doorType === DoorType.HINGED ? 'abatible' : 'plegable';
+                const desc = `Render 3D fotorrealista de un ARMARIO a medida de ${c.width}×${c.height}×${c.depth} mm, ${c.modules} módulos, puerta ${puerta}. Frente en ${getColorByName(c.exteriorColor).name} e interior en ${getColorByName(c.interiorColor).name}. Interior con ${nB} baldas, ${nC} cajones y ${nR} barras de colgar. Diseño contemporáneo, iluminación LED cálida, estilo estudio de interiorismo.`;
+                setState(p => ({ ...p, currentTab: 'renderStudio', estudio3dPreset: { tipo: 'armario', description: desc, cliente: customerName || '', ref: projectRef || '' } }));
+              }}
+              className="flex items-center gap-2 bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+              title="Diseñar este armario en Estudio 3D (render IA fotorrealista)"
+            >
+              <Sparkles size={16} />
+              ESTUDIO 3D
+            </button>
+          )}
           <button
             onClick={() => {
               setElevationDrawing(generateElevationDrawing());
@@ -3547,12 +3561,6 @@ const Armarios = ({ state, setState }) => {
                 </div>
               </div>
             )}
-            {canSeeCost && showCost && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Margen ({pricing.marginPct}%)</span>
-                <span className="font-medium text-emerald-600 tabular-nums">{pricing.marginAmount.toFixed(2)} €</span>
-              </div>
-            )}
 
             <div className="border-t border-slate-100 pt-2.5 mt-2.5 space-y-2.5">
               {/* PVP siempre visible. El neto de distribución, solo tras candado. */}
@@ -3568,7 +3576,7 @@ const Armarios = ({ state, setState }) => {
                 <div className="pt-2.5 border-t border-slate-100 flex justify-between items-center">
                   <button type="button" onClick={() => setShowCost(v => !v)}
                     className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 transition-colors"
-                    title={showCost ? 'Ocultar precio de distribución' : 'Ver precio de distribución'}>
+                    title={`${showCost ? 'Ocultar' : 'Ver'} precio de distribución.${pricing.distDiscountPct > 0 ? ` El −${pricing.distDiscountPct}% es el descuento de red de distribución de tu ficha de usuario (Ajustes › Usuarios).` : ''}`}>
                     {showCost ? <EyeOff size={13} /> : <Eye size={13} />}
                     <span className="text-xs font-medium">Precio distribución{pricing.distDiscountPct > 0 ? ` (−${pricing.distDiscountPct}%)` : ''}</span>
                   </button>
