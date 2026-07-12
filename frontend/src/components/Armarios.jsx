@@ -3068,24 +3068,24 @@ const Armarios = ({ state, setState }) => {
             </div>
           </div>
 
-          {/* Colores */}
-          <div className="p-4 border-b border-slate-200">
-            <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
-              <Palette size={14} />
-              COLORES / PUERTAS
+          {/* Colores / acabados (rediseño: swatches en rejilla + acabado activo) */}
+          <div className="p-5 border-b border-slate-200">
+            <h3 className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Palette size={13} />
+              Colores y acabados
             </h3>
 
             {/* Selector de fabricante */}
-            <div className="mb-2 flex gap-1">
+            <div className="mb-3 flex gap-1.5">
               {COLOR_BRANDS.map(b => (
                 <button key={b} onClick={() => { setColorBrand(b); setColorCategory('all'); }}
-                  className={`flex-1 px-2 py-1.5 rounded text-[11px] font-black transition-all ${colorBrand === b ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${colorBrand === b ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                   {b}
                 </button>
               ))}
             </div>
             {colorBrand === 'ACB' && (
-              <p className="text-[9px] text-slate-400 mb-2">ACB: elige el modelo de puerta. El color/acabado se define según su tarifa.</p>
+              <p className="text-[10px] text-slate-400 mb-2">ACB: elige el modelo de puerta. El color/acabado se define según su tarifa.</p>
             )}
 
             {/* Selector de categoría (solo FINSA tiene categorías de color) */}
@@ -3093,7 +3093,7 @@ const Armarios = ({ state, setState }) => {
               <select
                 value={colorCategory}
                 onChange={(e) => setColorCategory(e.target.value)}
-                className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs font-bold bg-white"
+                className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
               >
                 <option value="all">Todos los colores</option>
                 <option value="blancos">⬜ Blancos</option>
@@ -3112,76 +3112,72 @@ const Armarios = ({ state, setState }) => {
                 <option value="textiles">🧵 Textiles</option>
               </select>
             </div>
-            
-            <div className="space-y-3">
+
+            <div className="space-y-4">
+              {/* EXTERIOR */}
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Exterior</label>
-                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400 block mb-2">Exterior</span>
+                <div className="grid grid-cols-6 gap-2 max-h-40 overflow-y-auto pr-0.5 pt-1">
                   {WARDROBE_COLORS
                     .filter(c => (c.brand || 'FINSA') === colorBrand)
                     .filter(c => colorBrand !== 'FINSA' || colorCategory === 'all' || c.category === colorCategory)
-                    .map(color => (
+                    .map(color => {
+                    const sel = wardrobeConfig.exteriorColor === color.id;
+                    return (
                     <button
                       key={color.id}
                       onClick={() => updateConfig('exteriorColor', color.id)}
-                      className={`relative group w-7 h-7 rounded border-2 transition-all ${
-                        wardrobeConfig.exteriorColor === color.id
-                          ? 'border-emerald-500 scale-110 ring-2 ring-emerald-300'
-                          : 'border-slate-300 hover:border-emerald-300 hover:scale-105'
-                      }`}
+                      className={`group relative aspect-square rounded-xl transition ${sel
+                        ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-white shadow-md'
+                        : 'ring-1 ring-slate-200 shadow-sm hover:scale-105 hover:ring-slate-300'}`}
                       style={{ backgroundColor: color.hex }}
                       title={`${color.ref} - ${color.name}`}
                     >
-                      {wardrobeConfig.exteriorColor === color.id && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-[6px]">✓</span>
-                        </span>
+                      {sel && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white shadow ring-2 ring-white text-[10px] font-black">✓</span>
                       )}
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-slate-800 text-white text-[8px] rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">
-                        {color.ref}
-                      </span>
                     </button>
-                  ))}
+                  ); })}
                 </div>
                 {wardrobeConfig.exteriorColor && (
-                  <p className="text-[9px] text-slate-500 mt-1">
-                    <span className="font-bold">{getColorByName(wardrobeConfig.exteriorColor).ref}</span> - {getColorByName(wardrobeConfig.exteriorColor).name}
-                  </p>
+                  <div className="mt-2.5 flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2">
+                    <span className="h-4 w-4 rounded-md ring-1 ring-slate-200 shrink-0" style={{ backgroundColor: getColorByName(wardrobeConfig.exteriorColor).hex }} />
+                    <span className="text-sm font-medium text-slate-700 truncate">{getColorByName(wardrobeConfig.exteriorColor).name}</span>
+                    <span className="text-xs text-slate-400 ml-auto shrink-0">{getColorByName(wardrobeConfig.exteriorColor).ref}</span>
+                  </div>
                 )}
               </div>
-              
+
+              {/* INTERIOR */}
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Interior</label>
-                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400 block mb-2">Interior</span>
+                <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto pr-0.5 pt-1">
                   {FINSA_COLORS
                     .filter(c => ['blancos', 'grises', 'cremas'].includes(c.category))
-                    .map(color => (
+                    .map(color => {
+                    const sel = wardrobeConfig.interiorColor === color.id;
+                    return (
                     <button
                       key={color.id}
                       onClick={() => updateConfig('interiorColor', color.id)}
-                      className={`relative group w-7 h-7 rounded border-2 transition-all ${
-                        wardrobeConfig.interiorColor === color.id
-                          ? 'border-emerald-500 scale-110 ring-2 ring-emerald-300'
-                          : 'border-slate-300 hover:border-emerald-300 hover:scale-105'
-                      }`}
+                      className={`group relative aspect-square rounded-xl transition ${sel
+                        ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-white shadow-md'
+                        : 'ring-1 ring-slate-200 shadow-sm hover:scale-105 hover:ring-slate-300'}`}
                       style={{ backgroundColor: color.hex }}
                       title={`${color.ref} - ${color.name}`}
                     >
-                      {wardrobeConfig.interiorColor === color.id && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-[6px]">✓</span>
-                        </span>
+                      {sel && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white shadow ring-2 ring-white text-[10px] font-black">✓</span>
                       )}
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-slate-800 text-white text-[8px] rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">
-                        {color.ref}
-                      </span>
                     </button>
-                  ))}
+                  ); })}
                 </div>
                 {wardrobeConfig.interiorColor && (
-                  <p className="text-[9px] text-slate-500 mt-1">
-                    <span className="font-bold">{getColorByName(wardrobeConfig.interiorColor).ref}</span> - {getColorByName(wardrobeConfig.interiorColor).name}
-                  </p>
+                  <div className="mt-2.5 flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2">
+                    <span className="h-4 w-4 rounded-md ring-1 ring-slate-200 shrink-0" style={{ backgroundColor: getColorByName(wardrobeConfig.interiorColor).hex }} />
+                    <span className="text-sm font-medium text-slate-700 truncate">{getColorByName(wardrobeConfig.interiorColor).name}</span>
+                    <span className="text-xs text-slate-400 ml-auto shrink-0">{getColorByName(wardrobeConfig.interiorColor).ref}</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -3506,104 +3502,99 @@ const Armarios = ({ state, setState }) => {
           </div>
         </div>
 
-        {/* Panel derecho - Resumen precio */}
-        <div className="w-72 bg-gradient-to-b from-emerald-600 to-green-800 text-white p-4 overflow-y-auto">
-          <h3 className="font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2 text-emerald-300">
-            <Calculator size={14} />
-            RESUMEN PRESUPUESTO
+        {/* Panel derecho - Resumen precio (rediseño blanco, sistema "Estudio 3D") */}
+        <div className="w-80 bg-white border-l border-slate-200 text-slate-900 p-5 overflow-y-auto">
+          <h3 className="text-[11px] font-medium uppercase tracking-wider mb-4 flex items-center gap-2 text-slate-400">
+            <Calculator size={13} />
+            Resumen presupuesto
           </h3>
-          
-          <div className="space-y-3 text-sm">
+
+          <div className="space-y-2.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-emerald-300">Estructura base</span>
-              <span className="font-bold">{pricing.base.toFixed(2)}€</span>
+              <span className="text-slate-500">Estructura base</span>
+              <span className="text-slate-700 tabular-nums">{pricing.base.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-emerald-300">Sistema puertas</span>
-              <span className="font-bold">{pricing.doors.toFixed(2)}€</span>
+              <span className="text-slate-500">Sistema puertas</span>
+              <span className="text-slate-700 tabular-nums">{pricing.doors.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-emerald-300">Terminaciones</span>
-              <span className="font-bold">{pricing.ends.toFixed(2)}€</span>
+              <span className="text-slate-500">Terminaciones</span>
+              <span className="text-slate-700 tabular-nums">{pricing.ends.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-emerald-300">Acabado/material</span>
-              <span className="font-bold">{pricing.material.toFixed(2)}€</span>
+              <span className="text-slate-500">Acabado/material</span>
+              <span className="text-slate-700 tabular-nums">{pricing.material.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-emerald-300">Interior</span>
-              <span className="font-bold">{pricing.interior.toFixed(2)}€</span>
+              <span className="text-slate-500">Interior</span>
+              <span className="text-slate-700 tabular-nums">{pricing.interior.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-emerald-300">Extras</span>
-              <span className="font-bold">{pricing.extras.toFixed(2)}€</span>
+              <span className="text-slate-500">Extras</span>
+              <span className="text-slate-700 tabular-nums">{pricing.extras.toFixed(2)} €</span>
             </div>
-            {/* Coste y margen: sensibles. Solo con permiso de coste Y con el candado
-                abierto (showCost). Por defecto NO se muestran. */}
+            {/* Coste y margen: sensibles. Solo con permiso de coste Y candado abierto. */}
             {canSeeCost && showCost && (
-              <div className="text-[11px] text-emerald-200/80 border-t border-emerald-700/50 pt-2 space-y-1">
+              <div className="text-[12px] text-slate-500 border-t border-slate-100 pt-2.5 space-y-1">
                 <div className="flex justify-between">
                   <span>Coste despiece</span>
-                  <span className="font-bold">{pricing.costeTotal.toFixed(2)}€</span>
+                  <span className="font-medium text-slate-700 tabular-nums">{pricing.costeTotal.toFixed(2)} €</span>
                 </div>
-                <div className="flex justify-between text-emerald-200/60">
+                <div className="flex justify-between text-slate-400">
                   <span>Ref. cálculo anterior</span>
-                  <span>{pricing.parametricRef.toFixed(2)}€</span>
+                  <span className="tabular-nums">{pricing.parametricRef.toFixed(2)} €</span>
                 </div>
               </div>
             )}
             {canSeeCost && showCost && (
               <div className="flex justify-between">
-                <span className="text-emerald-300">Margen ({pricing.marginPct}%)</span>
-                <span className="font-bold">{pricing.marginAmount.toFixed(2)}€</span>
+                <span className="text-slate-500">Margen ({pricing.marginPct}%)</span>
+                <span className="font-medium text-emerald-600 tabular-nums">{pricing.marginAmount.toFixed(2)} €</span>
               </div>
             )}
 
-            <div className="border-t border-emerald-700 pt-3 mt-3">
-              {/* PVP siempre visible. El descuento sale de la ficha de red de
-                  distribución del usuario (oculto); solo el neto tras candado. */}
-              <div className="flex justify-between mb-1">
-                <span className="text-emerald-300">Base imponible (PVP)</span>
-                <span className="font-bold">{pricing.subtotal.toFixed(2)}€</span>
+            <div className="border-t border-slate-100 pt-2.5 mt-2.5 space-y-2.5">
+              {/* PVP siempre visible. El neto de distribución, solo tras candado. */}
+              <div className="flex justify-between">
+                <span className="text-slate-500">Base imponible</span>
+                <span className="text-slate-700 tabular-nums">{pricing.subtotal.toFixed(2)} €</span>
               </div>
-              <div className="flex justify-between mb-1">
-                <span className="text-emerald-300">IVA ({ivaRate}%)</span>
-                <span className="font-bold">{pricing.iva.toFixed(2)}€</span>
+              <div className="flex justify-between">
+                <span className="text-slate-400">IVA ({ivaRate}%)</span>
+                <span className="text-slate-400 tabular-nums">{pricing.iva.toFixed(2)} €</span>
               </div>
-              {/* Candado: solo con permiso Ver Costo se ve el precio NETO de
-                  distribución (PVP con el descuento de la ficha del usuario). */}
               {canSeeCost && (
-                <div className="mt-2 pt-2 border-t border-emerald-700/50 flex justify-between items-center">
+                <div className="pt-2.5 border-t border-slate-100 flex justify-between items-center">
                   <button type="button" onClick={() => setShowCost(v => !v)}
-                    className="flex items-center gap-1 text-emerald-300 hover:text-white transition-colors"
+                    className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 transition-colors"
                     title={showCost ? 'Ocultar precio de distribución' : 'Ver precio de distribución'}>
-                    {showCost ? <EyeOff size={12} /> : <Eye size={12} />}
-                    <span className="text-xs">Precio distribución{pricing.distDiscountPct > 0 ? ` (−${pricing.distDiscountPct}%)` : ''}</span>
+                    {showCost ? <EyeOff size={13} /> : <Eye size={13} />}
+                    <span className="text-xs font-medium">Precio distribución{pricing.distDiscountPct > 0 ? ` (−${pricing.distDiscountPct}%)` : ''}</span>
                   </button>
-                  <span className="font-bold">{showCost ? `${pricing.distNetTotal.toFixed(2)}€` : '•••'}</span>
+                  <span className="font-semibold text-slate-900 tabular-nums">{showCost ? `${pricing.distNetTotal.toFixed(2)} €` : '•••'}</span>
                 </div>
               )}
             </div>
 
-            <div className="bg-emerald-600 rounded-xl p-4 mt-4">
-              <p className="text-xs text-emerald-200 uppercase tracking-widest mb-1">PVP (IVA incl.)</p>
-              <p className="text-3xl font-black">{pricing.total.toFixed(2)}€</p>
+            {/* PVP heroico: manda por tamaño y peso, no por color */}
+            <div className="border-t border-slate-200 pt-4 mt-1">
+              <div className="flex items-end justify-between">
+                <span className="text-sm font-medium text-slate-500">PVP <span className="text-slate-400 font-normal">(IVA incl.)</span></span>
+                <span className="text-4xl font-semibold tracking-tight text-slate-900 tabular-nums">{pricing.total.toFixed(2)} €</span>
+              </div>
               {financing.cuota > 0 && (
-                <p className="text-xs text-emerald-100 mt-1 font-bold">
-                  desde <span className="text-white text-sm">{financing.cuota.toFixed(2)}€/mes</span> en {financing.meses} meses
-                  <span className="font-normal text-emerald-200/80"> (TIN {financing.tin}%)</span>
+                <p className="mt-1 text-right text-xs text-slate-400 tabular-nums">
+                  o {financing.cuota.toFixed(2)} €/mes · {financing.meses} meses <span className="text-slate-300">(TIN {financing.tin}%)</span>
                 </p>
               )}
             </div>
-
-            {/* Copiloto de margen retirado del resumen a petición (la alerta roja de
-                "Bajo coste" ya no se muestra aquí). */}
           </div>
 
           {/* Especificaciones + "Tu ropa cabe aquí" */}
-          <div className="mt-6 pt-4 border-t border-emerald-700">
-            <h4 className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-2">ESPECIFICACIONES</h4>
-            <div className="text-[10px] text-emerald-400 space-y-1">
+          <div className="mt-6 pt-4 border-t border-slate-100">
+            <h4 className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-2">Especificaciones</h4>
+            <div className="text-[11px] text-slate-500 space-y-1">
               <p>• {wardrobeConfig.modules} módulos</p>
               <p>• Puerta {wardrobeConfig.doorType === DoorType.SLIDING ? 'corredera' : wardrobeConfig.doorType === DoorType.HINGED ? 'abatible' : 'plegable'}</p>
               <p>• Exterior: {getColorByName(wardrobeConfig.exteriorColor).name}</p>
@@ -3612,31 +3603,31 @@ const Armarios = ({ state, setState }) => {
               <p>• {moduleConfigs.reduce((acc, m) => acc + m.drawers, 0)} cajones totales</p>
               <p>• {moduleConfigs.reduce((acc, m) => acc + m.hangingRods, 0)} barras totales</p>
             </div>
-            <div className="mt-3 rounded-xl bg-emerald-700/50 p-3">
-              <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1.5">👕 Tu ropa cabe aquí</p>
-              <div className="grid grid-cols-2 gap-1.5 text-[11px] text-emerald-50">
-                <span>≈ <b>{capacity.perchas}</b> perchas</span>
-                <span>≈ <b>{capacity.camisetas}</b> camisetas</span>
-                <span><b>{capacity.baldas}</b> baldas</span>
-                <span><b>{capacity.cajones}</b> cajones</span>
-                <span className="col-span-2 text-emerald-300/80">{capacity.metrosBarra} m de barra de colgar</span>
+            <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">👕 Tu ropa cabe aquí</p>
+              <div className="grid grid-cols-2 gap-1.5 text-[11px] text-slate-600">
+                <span>≈ <b className="text-slate-900">{capacity.perchas}</b> perchas</span>
+                <span>≈ <b className="text-slate-900">{capacity.camisetas}</b> camisetas</span>
+                <span><b className="text-slate-900">{capacity.baldas}</b> baldas</span>
+                <span><b className="text-slate-900">{capacity.cajones}</b> cajones</span>
+                <span className="col-span-2 text-slate-400">{capacity.metrosBarra} m de barra de colgar</span>
               </div>
             </div>
           </div>
 
           {/* Fabricabilidad explicada por IA (feature única) */}
           {dfmIssues.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-emerald-700">
+            <div className="mt-4 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black text-amber-300 uppercase tracking-widest">⚠ {dfmIssues.length} aviso{dfmIssues.length > 1 ? 's' : ''} de fabricación</span>
+                <span className="text-[11px] font-semibold text-amber-600 uppercase tracking-wider">⚠ {dfmIssues.length} aviso{dfmIssues.length > 1 ? 's' : ''} de fabricación</span>
                 <button type="button" onClick={explainDFM} disabled={dfm.loading}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500 text-amber-950 text-[11px] font-black hover:bg-amber-400 disabled:opacity-50">
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500 text-white text-[11px] font-bold hover:bg-amber-600 disabled:opacity-50">
                   {dfm.loading ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                   Explícamelo (IA)
                 </button>
               </div>
               {dfm.open && dfm.text && (
-                <div className="mt-2 rounded-lg bg-emerald-900/50 p-3 text-[11px] text-emerald-50 whitespace-pre-wrap leading-snug">
+                <div className="mt-2 rounded-lg bg-slate-50 border border-slate-100 p-3 text-[11px] text-slate-600 whitespace-pre-wrap leading-snug">
                   {dfm.text}
                 </div>
               )}
@@ -3645,47 +3636,47 @@ const Armarios = ({ state, setState }) => {
 
           {/* Resumen Tableros + despiece: solo para Fábrica (canDespiece) */}
           {canDespiece && (<>
-          <div className="mt-4 pt-4 border-t border-emerald-700">
-            <h4 className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-2 flex items-center gap-1">
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <h4 className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
               <Layers size={12} />
-              TABLEROS NECESARIOS
+              Tableros necesarios
             </h4>
-            <div className="bg-emerald-800/50 rounded-lg p-3 space-y-2">
-              <div className="flex justify-between text-[10px]">
-                <span className="text-emerald-300">18mm Estructura:</span>
-                <span className="font-bold text-white">{boardsCalculation.boards.tablero18mm.totalArea.toFixed(2)} m²</span>
+            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-2">
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-500">18mm Estructura:</span>
+                <span className="font-medium text-slate-700 tabular-nums">{boardsCalculation.boards.tablero18mm.totalArea.toFixed(2)} m²</span>
               </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-emerald-300">8mm Trasera:</span>
-                <span className="font-bold text-white">{boardsCalculation.boards.tablero8mm.totalArea.toFixed(2)} m²</span>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-500">8mm Trasera:</span>
+                <span className="font-medium text-slate-700 tabular-nums">{boardsCalculation.boards.tablero8mm.totalArea.toFixed(2)} m²</span>
               </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-emerald-300">18mm Puertas:</span>
-                <span className="font-bold text-white">{boardsCalculation.boards.puertasTablero.totalArea.toFixed(2)} m²</span>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-500">18mm Puertas:</span>
+                <span className="font-medium text-slate-700 tabular-nums">{boardsCalculation.boards.puertasTablero.totalArea.toFixed(2)} m²</span>
               </div>
-              <div className="border-t border-emerald-600 pt-2 mt-2">
+              <div className="border-t border-slate-200 pt-2 mt-2">
                 <div className="flex justify-between text-xs">
-                  <span className="font-bold text-emerald-200">TOTAL:</span>
-                  <span className="font-black text-orange-400">{boardsCalculation.totalArea.toFixed(2)} m²</span>
+                  <span className="font-semibold text-slate-700">TOTAL:</span>
+                  <span className="font-bold text-orange-600 tabular-nums">{boardsCalculation.totalArea.toFixed(2)} m²</span>
                 </div>
-                <div className="flex justify-between text-[10px] mt-1">
-                  <span className="text-emerald-300">Tableros:</span>
-                  <span className="font-bold text-white">{boardsCalculation.totalBoards} uds</span>
+                <div className="flex justify-between text-[11px] mt-1">
+                  <span className="text-slate-500">Tableros:</span>
+                  <span className="font-medium text-slate-700 tabular-nums">{boardsCalculation.totalBoards} uds</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Botón para ver despiece */}
-          <button 
+          <button
             onClick={() => setShowDespieceModal(true)}
-            className="mt-4 w-full bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs uppercase tracking-widest py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+            className="mt-4 w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs uppercase tracking-wider py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
             data-testid="armarios-ver-despiece-btn"
           >
             <List size={16} />
-            VER DESPIECE PRIVADO
+            Ver despiece privado
           </button>
-          <p className="text-[9px] text-emerald-400 text-center mt-2">{despieceTotals.totalItems} accesorios numerados</p>
+          <p className="text-[10px] text-slate-400 text-center mt-2">{despieceTotals.totalItems} accesorios numerados</p>
           </>)}
         </div>
       </div>
