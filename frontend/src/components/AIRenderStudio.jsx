@@ -941,6 +941,38 @@ export default function AIRenderStudio({ state, setState }) {
     finally { setEditing(false); }
   };
 
+  // ─── Visita de decorador/a: pasa el render por el "ojo" de un decorador
+  // profesional. Mejora estilismo, iluminación, textiles, materiales y atmósfera
+  // SIN tocar la estructura, los muebles ni las medidas. ────────────────────────
+  const visitaDecorador = async () => {
+    const img = currentImage();
+    if (!img || editing) return;
+    setEditing(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(img);
+      const desc = (
+        `Aplica el TOQUE DE UN DECORADOR/A PROFESIONAL de interiorismo a este ${tipoActual.label.toLowerCase()} `
+        + 'usando la imagen adjunta como referencia FIEL. MANTÉN EXACTAMENTE los mismos muebles, módulos, '
+        + 'distribución, acabados principales y medidas: NO añadas ni quites módulos ni cambies la estructura. '
+        + 'Mejora SOLO la presentación y el estilismo, como en una visita de decoración: iluminación cálida y '
+        + 'equilibrada, paleta de materiales coherente y elegante, textiles y complementos bien elegidos (plantas, '
+        + 'objetos de decoración, arte, cestas, libros), styling cuidado de baldas y encimeras, y una atmósfera '
+        + 'acogedora y premium tipo revista de interiorismo. Fotorrealista, alta calidad, misma perspectiva.'
+      );
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ description: desc, style: params.style, provider: providerOf(), referenceImage: dataUrl }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        const merged = { ...data, description: `${renderResult?.description || description}\n[Visita de decorador/a]` };
+        setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
+      } else setError(data.error || 'No se pudo aplicar la visita de decorador/a.');
+    } catch { setError('Error de conexión en la visita de decorador/a.'); }
+    finally { setEditing(false); }
+  };
+
   const editRender = async () => {
     const img = currentImage();
     // Combina la instrucción principal + líneas adicionales (multi-línea).
@@ -2002,6 +2034,11 @@ export default function AIRenderStudio({ state, setState }) {
               <div className="flex items-center justify-between shrink-0 gap-2">
                 <h3 className="font-black text-slate-700 uppercase tracking-wider text-xs">Resultado</h3>
                 <div className="flex gap-1.5 flex-wrap justify-end">
+                  <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
+                    title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-sm disabled:opacity-50">
+                    {editing ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />} Visita de decorador/a
+                  </button>
                   <button onClick={downloadRender} disabled={downloading || !currentImage()}
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50" title="Descargar imagen (PNG)">
                     {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar
