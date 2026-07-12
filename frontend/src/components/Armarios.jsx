@@ -2799,16 +2799,16 @@ const Armarios = ({ state, setState }) => {
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
       {/* Header — pl-16 deja sitio al botón/logo flotante del menú */}
-      <div className="bg-gradient-to-r from-emerald-600 to-green-800 text-white pl-16 pr-4 py-4 flex items-center justify-between">
+      <div className="bg-white/90 backdrop-blur border-b border-slate-200 text-slate-900 pl-16 pr-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 shrink-0">
-          <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center ring-1 ring-white/30 overflow-hidden shrink-0">
+          <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center ring-1 ring-slate-200 overflow-hidden shrink-0">
             {state?.logo
               ? <img src={state.logo} alt="Logo" className="h-full w-full object-contain p-0.5" />
-              : <Box size={20} className="text-emerald-700" />}
+              : <Box size={20} className="text-white" />}
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-base font-black tracking-tight leading-none">DISEÑADOR DE ARMARIOS</h1>
-            <p className="text-[9px] text-emerald-300 uppercase tracking-widest mt-0.5">Configurador Profesional</p>
+            <h1 className="text-lg font-semibold tracking-tight leading-none text-slate-900">Presupuestador de Armarios</h1>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Configurador Profesional</p>
           </div>
         </div>
         
@@ -2819,7 +2819,7 @@ const Armarios = ({ state, setState }) => {
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value.toUpperCase())}
             placeholder="👤 Cliente…"
-            className="flex-1 min-w-0 max-w-[20rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white uppercase"
+            className="flex-1 min-w-0 max-w-[20rem] px-3 py-1.5 bg-white rounded-xl ring-1 ring-slate-200 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 uppercase"
           />
           {/* Referencia del proyecto */}
           <input
@@ -2827,15 +2827,15 @@ const Armarios = ({ state, setState }) => {
             value={projectRef}
             onChange={(e) => setProjectRef(e.target.value)}
             placeholder="🏷️ Ref…"
-            className="w-28 sm:w-40 shrink-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-white/25 text-xs font-black text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white"
+            className="w-28 sm:w-40 shrink-0 px-3 py-1.5 bg-white rounded-xl ring-1 ring-slate-200 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           />
           {/* IVA */}
-          <div className="flex items-center gap-1 bg-white/10 rounded-xl px-2.5 py-1.5 shrink-0">
-            <span className="text-[10px] font-bold text-white/60 uppercase">IVA</span>
+          <div className="flex items-center gap-1 bg-slate-100 rounded-xl px-2.5 py-1.5 shrink-0">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">IVA</span>
             <select
               value={ivaRate}
               onChange={(e) => setIvaRate(parseFloat(e.target.value))}
-              className="bg-transparent text-white font-bold text-sm outline-none cursor-pointer"
+              className="bg-transparent text-slate-900 font-bold text-sm outline-none cursor-pointer"
             >
               <option value="21" className="text-black">21%</option>
               <option value="10" className="text-black">10%</option>
