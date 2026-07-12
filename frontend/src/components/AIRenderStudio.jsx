@@ -796,16 +796,6 @@ export default function AIRenderStudio({ state, setState }) {
     return prev.trim() ? `${prev.trim()}, ${t}` : t;
   });
 
-  // Paleta rápida de colores de mueble para generar variantes de color en 1 clic.
-  const COLORS_VARIANTES = [
-    { label: 'Blanco mate', hex: '#f1f5f9' },
-    { label: 'Antracita', hex: '#3f3f46' },
-    { label: 'Azul navy', hex: '#1e293b' },
-    { label: 'Verde sage', hex: '#8a9a5b' },
-    { label: 'Roble natural', hex: '#c8a26a' },
-    { label: 'Negro mate', hex: '#18181b' },
-  ];
-
   // Genera una variante del render actual cambiando SOLO el color de los muebles.
   const colorVariant = async (colorInput) => {
     const img = currentImage();
@@ -2334,20 +2324,13 @@ export default function AIRenderStudio({ state, setState }) {
               </>
               )}
 
-              {/* Variantes de color: 6 rápidos + catálogo por gama (pestañas colapsables) */}
+              {/* Cambio de color/acabado: solo el CATÁLOGO completo por gama. */}
               {currentImage() && (
                 <div className="shrink-0 bg-white border border-slate-200 rounded-xl p-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider ml-1">Variar color</span>
-                    {COLORS_VARIANTES.map(c => (
-                      <button key={c.label} onClick={() => colorVariant(c.label)} disabled={editing}
-                        title={`Muebles en ${c.label}`}
-                        className="w-7 h-7 rounded-full border-2 border-white ring-1 ring-slate-300 shadow hover:scale-110 transition-transform disabled:opacity-40"
-                        style={{ background: c.hex }} />
-                    ))}
                     <button onClick={() => setPaletteOpen(o => !o)}
-                      className={`ml-auto px-2.5 py-1 rounded-lg text-[11px] font-bold ${paletteOpen ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                      Catálogo {paletteOpen ? '▾' : '▸'}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-black flex items-center gap-1.5 ${paletteOpen ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                      <Palette size={13} /> Catálogo de colores {paletteOpen ? '▾' : '▸'}
                     </button>
                     {editing && <span className="text-[11px] text-slate-400 flex items-center gap-1"><Loader size={12} className="animate-spin" /> generando…</span>}
                   </div>
