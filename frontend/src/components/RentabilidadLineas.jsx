@@ -527,7 +527,12 @@ const RentabilidadLineas = ({ currentUser }) => {
       rows = rows.filter(f => (f.ref || '').toLowerCase().includes(columnFilters.ref.toLowerCase()));
     }
     if (columnFilters.cliente) {
-      rows = rows.filter(f => (f.cliente || '').toLowerCase().includes(columnFilters.cliente.toLowerCase()));
+      // Filtra por NOMBRE o por CÓDIGO de cliente (p. ej. "4273").
+      const q = columnFilters.cliente.toLowerCase();
+      rows = rows.filter(f =>
+        (f.cliente || '').toLowerCase().includes(q) ||
+        String(f.clienteCodigo || f.clientCode || '').toLowerCase().includes(q)
+      );
     }
     if (columnFilters.fechaDesde) {
       rows = rows.filter(f => (f.fecha || '') >= columnFilters.fechaDesde);
@@ -758,7 +763,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <input
                   value={columnFilters.cliente}
                   onChange={e => setColumnFilters(prev => ({ ...prev, cliente: e.target.value }))}
-                  placeholder="Filtrar..."
+                  placeholder="Nombre o código…"
                   className="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal"
                 />
               </th>

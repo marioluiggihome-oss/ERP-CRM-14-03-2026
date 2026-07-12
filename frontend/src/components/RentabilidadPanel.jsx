@@ -374,7 +374,7 @@ const RentabilidadPanel = ({ currentUser }) => {
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="h-full overflow-y-auto p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white"><TrendingUp size={24} /></div>
