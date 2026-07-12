@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Upload, Wand2, AlertCircle, Loader2, Package, Check, Plus, X, FileImage, RefreshCw, Layers } from 'lucide-react';
 import { getProductIcon } from './FurnitureIcons';
 import { getToken } from '../services/api';
@@ -17,8 +17,27 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
   const [dumpChoice, setDumpChoice] = useState(null);  // { productos, opts } pendientes de elegir presupuestador
   const [dumpTarget, setDumpTarget] = useState(null);  // elección recordada en la sesión: 'p1' | 'p2'
   const fileInputRef = useRef(null);
-  
+  const [autoRun, setAutoRun] = useState(false); // analizar automáticamente un render entrante
+
   const canUseAI = state.currentUser?.canUseAIAnalysis || state.currentUser?.isAdmin || state.currentUser?.isGerente;
+
+  // Render entrante desde Estudio 3D ("Al presupuesto"): lo cargamos y analizamos
+  // automáticamente para volcar los muebles al presupuesto.
+  useEffect(() => {
+    const dataUrl = state?.analyzeRender;
+    if (!dataUrl) return;
+    if (setState) setState(p => { const { analyzeRender, ...rest } = p; return rest; });
+    fetch(dataUrl).then(r => r.blob()).then(blob => {
+      const file = new File([blob], 'render.png', { type: blob.type || 'image/png' });
+      setSelectedImages([{ dataUrl, file, name: 'render.png' }]);
+      setAnalysisResult(null); setError(null); setAutoRun(true);
+    }).catch(() => setError('No se pudo cargar el render para analizar.'));
+  }, [state?.analyzeRender]);
+
+  // Cuando el render entrante ya está cargado, dispara el análisis una vez.
+  useEffect(() => {
+    if (autoRun && selectedImages.length > 0) { setAutoRun(false); analyzeKitchenPlan(); }
+  }, [autoRun, selectedImages]);
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);

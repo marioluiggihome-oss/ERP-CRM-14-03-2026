@@ -1337,8 +1337,22 @@ export default function AIRenderStudio({ state, setState }) {
   const attachToBudget = async () => {
     const img = currentImage();
     if (!img) return;
-    // Un armario va al Presupuestador de Armarios; el resto, a Cocina Montada.
-    await doAttach(tipo3d === 'armario' ? 'armarios' : 'presupuestador2');
+    // Armario → Presupuestador de Armarios (adjunta el render).
+    if (tipo3d === 'armario') { await doAttach('armarios'); return; }
+    // Cocina → Analizador de Planos: detecta los muebles del render y los vuelca
+    // al presupuesto con la librería (precios correctos). Requiere acceso al Lab IA.
+    if (tipo3d === 'cocina' && setState && state?.currentUser?.canUseAIAnalysis) {
+      setDownloading(true);
+      try {
+        const dataUrl = await imageToDataUrl(img);
+        setAttached(true); setTimeout(() => setAttached(false), 4000);
+        setState(p => ({ ...p, analyzeRender: dataUrl, currentTab: 'visualizer' }));
+      } catch { setError('No se pudo enviar el render al analizador.'); }
+      finally { setDownloading(false); }
+      return;
+    }
+    // Baño/otro (o sin acceso al Lab): adjunta el render a Cocina Montada.
+    await doAttach('presupuestador2');
   };
   const doAttach = async (destTab) => {
     const img = currentImage();
