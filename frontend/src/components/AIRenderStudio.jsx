@@ -389,6 +389,34 @@ export default function AIRenderStudio({ state, setState }) {
     }
     return null;
   };
+  // Cuenta coincidencias de palabras clave de un tipo en el texto.
+  const contarTipo = (t, tid) => (TIPO_KEYWORDS[tid] || []).filter(k =>
+    t.includes(` ${k} `) || t.includes(` ${k},`) || t.includes(` ${k}.`) || t.includes(`${k}s `)).length;
+  // Tipo que MEJOR describe el texto (el de más coincidencias), o null.
+  const tipoDelTexto = (texto) => {
+    if (!texto) return null;
+    const t = ` ${texto.toLowerCase()} `;
+    let best = null, bestN = 0;
+    for (const tp of ESTUDIO_3D_TIPOS) { const n = contarTipo(t, tp.id); if (n > bestN) { bestN = n; best = tp.id; } }
+    return bestN > 0 ? best : null;
+  };
+  // Guard unificado: la descripción DEBE encajar con el tipo seleccionado y estar
+  // permitida. Devuelve un mensaje de error (string) o null si todo correcto.
+  // Aplica también al master: no se puede pedir un armario con "Cocina" elegida.
+  const guardTipo = (texto) => {
+    const det = tipoDelTexto(texto);
+    if (!det || det === tipo3d) {
+      // No se detecta otro tipo (o coincide): solo queda el filtro de permisos.
+      const bloqueo = tipoNoPermitidoEnTexto(texto);
+      return bloqueo ? `Tu descripción parece de «${bloqueo.label}» y tu usuario no tiene ese tipo contratado. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.` : null;
+    }
+    // El texto describe un tipo DISTINTO al seleccionado.
+    const detLabel = ESTUDIO_3D_TIPOS.find(t => t.id === det).label;
+    if (permitidoIds.includes(det)) {
+      return `Tu descripción parece de «${detLabel}» pero tienes seleccionado «${tipoActual.label}». Cambia el «Tipo de proyecto» a «${detLabel}» (o ajusta la descripción) para generar el render.`;
+    }
+    return `Tu descripción parece de «${detLabel}», un tipo que tu usuario no tiene contratado. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.`;
+  };
   // Accesos temporales a otras herramientas de diseño (para el master), mientras
   // se unifica todo en Estudio 3D + Agentes.
   const OTRAS_HERRAMIENTAS = [
@@ -441,6 +469,7 @@ export default function AIRenderStudio({ state, setState }) {
   const [editMark, setEditMark] = useState(null);    // índice de la marca en edición
   const [showInstall, setShowInstall] = useState(false); // panel de instalaciones/planos plegado
   const [showOtras, setShowOtras] = useState(false); // barra master "otras herramientas" plegada
+  const [watermarkOn, setWatermarkOn] = useState(false); // marca de agua con logo personalizado al descargar
   const markH = (mk) => (mk.h != null ? mk.h : MARK_TYPES[mk.type].h); // altura efectiva (cm)
   // Selector de color por catálogo (pestañas Colores 1/2 + gamas colapsables).
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -949,13 +978,43 @@ export default function AIRenderStudio({ state, setState }) {
     return `${base || 'render-3d'}.${ext}`;
   };
 
+  // Estampa el logo personalizado como MARCA DE AGUA sobre una imagen (dataURL) y
+  // devuelve el nuevo dataURL. Si no hay logo o la marca está desactivada, devuelve
+  // la imagen tal cual. El logo se coloca abajo a la derecha, semitransparente.
+  const stampWatermark = (dataUrl) => new Promise((resolve) => {
+    const logo = state?.logo;
+    if (!watermarkOn || !logo) { resolve(dataUrl); return; }
+    const base = new window.Image();
+    base.onload = () => {
+      const lg = new window.Image();
+      lg.onload = () => {
+        const cv = document.createElement('canvas');
+        cv.width = base.naturalWidth; cv.height = base.naturalHeight;
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(base, 0, 0);
+        // Logo a ~18% del ancho, margen del 3%, opacidad 0.5.
+        const lw = cv.width * 0.18;
+        const lh = lw * (lg.naturalHeight / lg.naturalWidth || 0.4);
+        const m = cv.width * 0.03;
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(lg, cv.width - lw - m, cv.height - lh - m, lw, lh);
+        ctx.globalAlpha = 1;
+        try { resolve(cv.toDataURL('image/png')); } catch { resolve(dataUrl); }
+      };
+      lg.onerror = () => resolve(dataUrl);
+      lg.src = logo;
+    };
+    base.onerror = () => resolve(dataUrl);
+    base.src = dataUrl;
+  });
+
   // ─── Descargar el render (PNG) ──────────────────────────────────────────────
   const downloadRender = async () => {
     const img = currentImage();
     if (!img) return;
     setDownloading(true);
     try {
-      const dataUrl = await imageToDataUrl(img);
+      const dataUrl = await stampWatermark(await imageToDataUrl(img));
       const a = document.createElement('a');
       a.href = dataUrl; a.download = nombreArchivo('png');
       document.body.appendChild(a); a.click(); a.remove();
@@ -977,7 +1036,7 @@ export default function AIRenderStudio({ state, setState }) {
       const base = (cliente || ref || 'estudio-3d').trim().replace(/\s+/g, '_').replace(/[^\w\-]/g, '') || 'estudio-3d';
       for (let i = 0; i < items.length; i++) {
         try {
-          const dataUrl = await imageToDataUrl(items[i].src);
+          const dataUrl = await stampWatermark(await imageToDataUrl(items[i].src));
           const a = document.createElement('a');
           a.href = dataUrl;
           a.download = `${base}_${String(i + 1).padStart(2, '0')}.png`;
@@ -1274,8 +1333,8 @@ export default function AIRenderStudio({ state, setState }) {
   const removeWallSketch = (i) => setWallSketches(prev => prev.filter((_, idx) => idx !== i));
   const handleGenerateComposed = async () => {
     if (!floorPlan && wallSketches.length === 0) return;
-    const bloqueo = tipoNoPermitidoEnTexto(description);
-    if (bloqueo) { setError(`Tu descripción parece de «${bloqueo.label}» y tu usuario no tiene ese tipo permitido. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.`); return; }
+    const err = guardTipo(description);
+    if (err) { setError(err); return; }
     setIsGenerating(true);
     setError(null);
     try {
@@ -1306,8 +1365,8 @@ export default function AIRenderStudio({ state, setState }) {
   // ─── Generar render por descripción natural ─────────────────────────────
   const handleGenerateNatural = async () => {
     if (!description.trim()) return;
-    const bloqueo = tipoNoPermitidoEnTexto(description);
-    if (bloqueo) { setError(`Tu descripción parece de «${bloqueo.label}» y tu usuario no tiene ese tipo permitido. Solo puedes diseñar: ${tiposPermitidos.map(t => t.label).join(', ')}.`); return; }
+    const err = guardTipo(description);
+    if (err) { setError(err); return; }
     // Guardarraíl: si hay plano o bocetos subidos, este botón los IGNORARÍA.
     // Evitamos que el render salga genérico sin respetar el plano.
     if (floorPlan || wallSketches.length > 0) {
@@ -1950,6 +2009,12 @@ export default function AIRenderStudio({ state, setState }) {
                   <button onClick={descargarTodo} disabled={downloading || !currentImage()}
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-600 disabled:opacity-50" title="Descargar de seguido el render actual y todo el historial (renders, variantes, planos y láminas)">
                     {downloading ? <Loader size={14} className="animate-spin" /> : <Download size={14} />} Descargar todo
+                  </button>
+                  <button onClick={() => setWatermarkOn(v => !v)}
+                    title={state?.logo ? (watermarkOn ? 'Marca de agua ACTIVADA: tu logo se estampa al descargar' : 'Activar marca de agua con tu logo al descargar') : 'Sube tu logo en Ajustes para usar marca de agua'}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${watermarkOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} disabled:opacity-40`}
+                    disabled={!state?.logo}>
+                    <Image size={14} /> Marca de agua
                   </button>
                   <button onClick={exportPDF} disabled={downloading || !currentImage()}
                     className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 text-white rounded-lg text-[11px] font-bold hover:bg-purple-700 disabled:opacity-50" title="Exportar PDF de presentación con logo">
