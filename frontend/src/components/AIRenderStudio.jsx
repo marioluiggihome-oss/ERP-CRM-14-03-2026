@@ -438,6 +438,7 @@ export default function AIRenderStudio({ state, setState }) {
   const [mode, setMode] = useState('natural'); // 'natural' | 'params'
   const [description, setDescription] = useState('');
   const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) para que el modelo la "vea"
+  const [originalRef, setOriginalRef] = useState(null); // PRIMERA imagen subida: se conserva para "Comparar" pase lo que pase
   const [floorPlan, setFloorPlan] = useState(null);    // plano en planta (dataURL)
   const [wallSketches, setWallSketches] = useState([]); // bocetos por pared (dataURL[])
   const [isGenerating, setIsGenerating] = useState(false);
@@ -657,6 +658,7 @@ export default function AIRenderStudio({ state, setState }) {
           if (!renderResult) {
             // Sin render → usar como referencia principal
             setRefImage(b64);
+            setOriginalRef(prev => prev || b64);
             setAnalyzingRef(true);
             try {
               const response = await fetch(`${API_URL}/api/ai-engine/describe-reference`, {
@@ -1328,8 +1330,8 @@ export default function AIRenderStudio({ state, setState }) {
     setSavedId(dsg.id); setSavedList(null);
     if (dsg.images?.[0]) setRenderResult({ success: true, result: { images: dsg.images }, description: dsg.description });
     // Restaurar la referencia/plano guardado para poder comparar
-    if (dsg.referenceImage) setRefImage(dsg.referenceImage);
-    else setRefImage(null);
+    if (dsg.referenceImage) { setRefImage(dsg.referenceImage); setOriginalRef(dsg.referenceImage); }
+    else { setRefImage(null); setOriginalRef(null); }
   };
   const deleteDesign = async (id) => {
     if (!window.confirm('¿Eliminar este proyecto guardado?')) return;
@@ -1364,7 +1366,7 @@ export default function AIRenderStudio({ state, setState }) {
 
   const nuevoProyecto = () => {
     setCliente(''); setRef(''); setSavedId(null); setRenderResult(null);
-    setDescription(''); setRefImage(null); setFloorPlan(null); setWallSketches([]); setError(null);
+    setDescription(''); setRefImage(null); setOriginalRef(null); setFloorPlan(null); setWallSketches([]); setError(null);
   };
 
   // ─── Subir imagen/PDF de referencia → la IA la describe y enriquece el prompt ───
@@ -1384,6 +1386,7 @@ export default function AIRenderStudio({ state, setState }) {
       // Guardar la imagen para pasársela TAMBIÉN al generador (no solo el texto),
       // así el render respeta distribución, proporciones y medidas de la referencia.
       setRefImage(b64);
+      setOriginalRef(prev => prev || b64); // conserva la PRIMERA subida para Comparar
       const data = await response.json();
       if (data.success && data.description) {
         setDescription(prev => {
@@ -2133,10 +2136,10 @@ export default function AIRenderStudio({ state, setState }) {
                     title={tipo3d === 'armario' ? 'Enviar este render al Presupuestador de Armarios' : 'Adjuntar este render al presupuesto (Cocina Montada)'}>
                     {attached ? <><CheckCircle size={14} /> Adjuntado</> : <><Send size={14} /> {tipo3d === 'armario' ? 'Al presup. armarios' : 'Al presupuesto'}</>}
                   </button>
-                  {refImage && (
+                  {(originalRef || refImage) && (
                     <button onClick={() => setCompareOn(v => !v)}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold ${compareOn ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                      title="Comparar la referencia con el render">
+                      title="Comparar la imagen original subida con el render">
                       <Image size={14} /> Comparar
                     </button>
                   )}
@@ -2165,11 +2168,11 @@ export default function AIRenderStudio({ state, setState }) {
               </div>
 
               {/* Comparativa referencia vs render */}
-              {compareOn && refImage && renderResult?.result?.images?.[0] ? (
+              {compareOn && (originalRef || refImage) && renderResult?.result?.images?.[0] ? (
                 <div className="flex-1 grid grid-cols-2 gap-3 min-h-[350px]">
                   <div className="bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center relative p-3" style={{ minHeight: '300px' }}>
-                    {refImage.startsWith('data:image') ? (
-                      <img src={refImage} alt="Referencia" className="max-w-full max-h-[500px] object-contain rounded-lg" />
+                    {(originalRef || refImage).startsWith('data:image') ? (
+                      <img src={originalRef || refImage} alt="Referencia original" className="max-w-full max-h-[500px] object-contain rounded-lg" />
                     ) : (
                       <div className="text-center p-4">
                         <FileText size={40} className="text-slate-400 mx-auto mb-2" />
