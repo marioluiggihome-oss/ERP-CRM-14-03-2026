@@ -1307,6 +1307,15 @@ const App = () => {
             )}
             {state.currentTab === 'presupuestador2' && (state.currentUser?.canUsePresupuestador2 !== false) && (
               <ErrorBoundary>
+              {!state.renderReturn && state.currentUser?.canUseAIAnalysis && (
+                <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-white border-b border-slate-200">
+                  <button onClick={() => setState(p => ({ ...p, currentTab: 'renderStudio', estudio3dPreset: { tipo: 'cocina' } }))}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-sm"
+                    title="Diseñar esta cocina en Estudio 3D (render IA fotorrealista)">
+                    <Sparkles size={13} /> Diseñar en Estudio 3D
+                  </button>
+                </div>
+              )}
               {state.renderReturn && (
                 <div className="flex items-center gap-2 flex-wrap px-4 py-2 bg-indigo-50 border-b border-indigo-200">
                   <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Vienes de Estudio 3D</span>
