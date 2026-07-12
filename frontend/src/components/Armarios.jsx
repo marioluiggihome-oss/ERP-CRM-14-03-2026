@@ -2799,7 +2799,7 @@ const Armarios = ({ state, setState }) => {
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
       {/* Header — pl-16 deja sitio al botón/logo flotante del menú */}
-      <div className="bg-white/90 backdrop-blur border-b border-slate-200 text-slate-900 pl-16 pr-4 py-3 flex items-center justify-between">
+      <div className="bg-white/90 backdrop-blur border-b border-slate-200 text-slate-900 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 shrink-0">
           {/* Sin logo aquí: ya hay un logo general (flotante) y este pisaba el título. */}
           <div className="hidden sm:block">

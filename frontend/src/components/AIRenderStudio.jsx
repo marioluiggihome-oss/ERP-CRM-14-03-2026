@@ -1544,8 +1544,8 @@ export default function AIRenderStudio({ state, setState }) {
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
-      {/* Header — pl-16 deja sitio al logo/botón flotante del menú (no lo pisa) */}
-      <div className="shrink-0 pl-16 pr-4 sm:pr-8 py-4 sm:py-5 bg-white border-b border-slate-200 shadow-sm">
+      {/* Header (el hueco para el logo flotante lo reserva <main> al colapsar) */}
+      <div className="shrink-0 px-4 sm:px-8 py-4 sm:py-5 bg-white border-b border-slate-200 shadow-sm">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
