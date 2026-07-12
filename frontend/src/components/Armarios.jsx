@@ -1616,22 +1616,9 @@ const Armarios = ({ state, setState }) => {
   }, [pricing.total, state?.settings]);
 
   // ── FEATURE ÚNICA "Copiloto de margen": salud del margen tras el descuento ───
-  const marginHealth = useMemo(() => {
-    const coste = pricing.costeTotal || 0;
-    const neto = pricing.distNetBase || 0;             // precio de distribución (base)
-    const marginReal = neto > 0 ? ((neto - coste) / neto) * 100 : 0;
-    // Suelo de margen configurable; por debajo, alerta.
-    const suelo = Number(state?.settings?.armPrice_marginFloor ?? 15);
-    let level = 'ok';
-    if (neto < coste) level = 'err';                   // se vende por debajo de coste
-    else if (marginReal < suelo) level = 'warn';
-    // Sugerencia de upsell rentable según lo que aún no lleva.
-    const sugerencias = [];
-    if (!extras.led) sugerencias.push('iluminación LED');
-    if (!extras.softClose) sugerencias.push('cierre suave');
-    if (!extras.antiFingerprint) sugerencias.push('acabado antihuellas');
-    return { marginReal, suelo, level, coste, neto, upsell: sugerencias.slice(0, 2) };
-  }, [pricing.costeTotal, pricing.distNetBase, state?.settings, extras]);
+  // Copiloto de margen retirado del resumen (la alerta roja de "Bajo coste" ya no
+  // se muestra). Se conserva el cálculo comentado por si se reactiva en el futuro.
+  // const marginHealth = useMemo(() => { … }, [...]);
 
   // ── FEATURE ÚNICA "Fabricabilidad explicada por IA" ─────────────────────────
   // Recoge los avisos que el despiece ya calcula (hoja >600, interior no cabe…).
@@ -3605,23 +3592,8 @@ const Armarios = ({ state, setState }) => {
               )}
             </div>
 
-            {/* Copiloto de margen (solo con permiso de coste) */}
-            {canSeeCost && (
-              <div className={`mt-3 rounded-xl p-3 text-xs ${marginHealth.level === 'err' ? 'bg-rose-600/90' : marginHealth.level === 'warn' ? 'bg-amber-500/90 text-amber-950' : 'bg-emerald-700/60'}`}>
-                <div className="flex justify-between font-black">
-                  <span>{marginHealth.level === 'err' ? '⛔ Bajo coste' : marginHealth.level === 'warn' ? '⚠️ Margen bajo' : '✅ Margen sano'}</span>
-                  <span>{marginHealth.marginReal.toFixed(1)}%</span>
-                </div>
-                {marginHealth.level !== 'ok' && (
-                  <p className="mt-1 leading-snug">
-                    {marginHealth.level === 'err'
-                      ? `El precio de distribución (${marginHealth.neto.toFixed(0)}€) está por DEBAJO del coste (${marginHealth.coste.toFixed(0)}€). Revisa descuento o configuración.`
-                      : `Por debajo del suelo del ${marginHealth.suelo}%.`}
-                    {marginHealth.upsell.length > 0 && ` Upsell rentable: ${marginHealth.upsell.join(', ')}.`}
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Copiloto de margen retirado del resumen a petición (la alerta roja de
+                "Bajo coste" ya no se muestra aquí). */}
           </div>
 
           {/* Especificaciones + "Tu ropa cabe aquí" */}
