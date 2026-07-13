@@ -631,7 +631,10 @@ const Digitalizador = ({ state, setState }) => {
         const desc = clean(line.description || '');
         if (!isValorado) return [String(cant), ref, desc];
         const lineDiscount = line.isManual ? line.discount : Math.max(line.discount || 0, globalDiscount || 0);
-        return [String(cant), ref, desc, eur(line.price), `${lineDiscount || 0}%`, eur(getLineNet(line))];
+        // La casilla Precio debe reflejar el INCREMENTO global (como el importe y la
+        // vista de pantalla): precio unitario con el markup aplicado.
+        const precioUnit = globalMarkup > 0 ? line.price * (1 + globalMarkup / 100) : line.price;
+        return [String(cant), ref, desc, eur(precioUnit), `${lineDiscount || 0}%`, eur(getLineNet(line))];
       });
 
       autoTable(pdf, {
