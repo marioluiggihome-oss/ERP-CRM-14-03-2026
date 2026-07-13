@@ -14,11 +14,20 @@ const KIND_LABELS = { render: 'Renders 3D', vision: 'Análisis de imagen', text:
 const AIUsageCard = () => {
   const [data, setData] = useState(null);
   const [thr, setThr] = useState('');
+  const [cRender, setCRender] = useState('');
+  const [cVision, setCVision] = useState('');
+  const [spendUrl, setSpendUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const load = async () => {
     try {
       const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/ai-usage`, { headers: authHeaders() });
-      if (r.ok) { const d = await r.json(); setData(d); setThr(d.threshold ? String(d.threshold) : ''); }
+      if (r.ok) {
+        const d = await r.json(); setData(d);
+        setThr(d.threshold ? String(d.threshold) : '');
+        setCRender(d.cost_per?.render != null ? String(d.cost_per.render) : '');
+        setCVision(d.cost_per?.vision != null ? String(d.cost_per.vision) : '');
+        setSpendUrl(d.spend_url || '');
+      }
     } catch {}
   };
   useEffect(() => { load(); }, []);
@@ -27,7 +36,11 @@ const AIUsageCard = () => {
     try {
       const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/ai-usage/threshold`, {
         method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threshold: Number(thr) || 0 }),
+        body: JSON.stringify({
+          threshold: Number(thr) || 0,
+          cost_per: { render: Number(cRender) || 0, vision: Number(cVision) || 0 },
+          spend_url: spendUrl || '',
+        }),
       });
       if (r.ok) setData(await r.json());
     } catch {} finally { setSaving(false); }
@@ -44,12 +57,19 @@ const AIUsageCard = () => {
         </div>
         <button onClick={load} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100" title="Actualizar"><RefreshCw className="w-4 h-4" /></button>
       </div>
-      <div className="flex items-end gap-3 mb-3">
+      <div className="flex items-end gap-3 mb-1 flex-wrap">
         <span className="text-4xl font-semibold tracking-tight text-slate-900 tabular-nums">{data.total.toLocaleString('es-ES')}</span>
         <span className="text-sm text-slate-500 mb-1">llamadas{data.threshold ? ` / ${data.threshold.toLocaleString('es-ES')}` : ''}</span>
+        {data.estimated_cost > 0 && <span className="mb-1 text-sm font-semibold text-emerald-600 tabular-nums">≈ {data.estimated_cost.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € estimado</span>}
         {data.over && <span className="mb-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Límite superado</span>}
         {!data.over && data.warn && <span className="mb-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">⚠ Cerca del límite</span>}
       </div>
+      {data.spend_url && (
+        <a href={data.spend_url} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 mb-3">
+          Ver coste real en el panel del proveedor ↗
+        </a>
+      )}
       {data.threshold > 0 && (
         <div className="h-2 rounded-full bg-slate-100 overflow-hidden mb-3">
           <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, data.pct)}%`, background: barColor }} />
@@ -64,15 +84,31 @@ const AIUsageCard = () => {
           ))}
         </div>
       )}
-      <div className="flex items-center gap-2 border-t border-slate-100 pt-3">
-        <span className="text-xs text-slate-500">Alerta al superar</span>
-        <input type="number" min="0" value={thr} onChange={e => setThr(e.target.value)} placeholder="sin límite"
-          className="w-28 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />
-        <span className="text-xs text-slate-400">llamadas/mes</span>
-        <button onClick={saveThreshold} disabled={saving}
-          className="ml-auto px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-          {saving ? 'Guardando…' : 'Guardar umbral'}
-        </button>
+      <div className="border-t border-slate-100 pt-3 space-y-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-500 w-28">Alerta al superar</span>
+          <input type="number" min="0" value={thr} onChange={e => setThr(e.target.value)} placeholder="sin límite"
+            className="w-28 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />
+          <span className="text-xs text-slate-400">llamadas/mes</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-500 w-28">Coste por llamada</span>
+          <label className="flex items-center gap-1 text-xs text-slate-500">render
+            <input type="number" step="0.001" min="0" value={cRender} onChange={e => setCRender(e.target.value)} placeholder="0"
+              className="w-20 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />€</label>
+          <label className="flex items-center gap-1 text-xs text-slate-500">visión
+            <input type="number" step="0.001" min="0" value={cVision} onChange={e => setCVision(e.target.value)} placeholder="0"
+              className="w-20 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />€</label>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-500 w-28">Panel del proveedor</span>
+          <input type="url" value={spendUrl} onChange={e => setSpendUrl(e.target.value)} placeholder="https://…/spend"
+            className="flex-1 min-w-[180px] px-2 py-1 border border-slate-200 rounded-lg text-sm" />
+          <button onClick={saveThreshold} disabled={saving}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+            {saving ? 'Guardando…' : 'Guardar'}
+          </button>
+        </div>
       </div>
     </div>
   );

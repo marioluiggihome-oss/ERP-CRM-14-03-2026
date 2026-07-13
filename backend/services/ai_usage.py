@@ -36,30 +36,52 @@ async def record_ai_usage(kind: str, user_id: str = None):
 
 
 async def get_usage_summary():
-    """Resumen del mes en curso + histórico (6 meses) + umbral y estado de alerta."""
+    """Resumen del mes en curso + histórico (6 meses) + umbral, coste estimado y alerta."""
     if db is None:
-        return {"total": 0, "by_kind": {}, "threshold": 0, "over": False, "pct": 0, "history": []}
+        return {"total": 0, "by_kind": {}, "threshold": 0, "over": False, "pct": 0, "history": [], "cost": {}}
     month = _month()
     cur = await db.ai_usage.find_one({"month": month}) or {"month": month, "total": 0, "by_kind": {}}
     cfg = await db.ai_usage_config.find_one({"_id": "cfg"}) or {}
     threshold = int(cfg.get("threshold", 0) or 0)
     total = int(cur.get("total", 0) or 0)
+    by_kind = cur.get("by_kind", {})
+    # Coste ESTIMADO: nº de llamadas por tipo × coste unitario configurable (€).
+    cost_per = cfg.get("cost_per", {}) or {}
+    est = 0.0
+    for k, n in by_kind.items():
+        est += (float(cost_per.get(k, 0) or 0)) * int(n or 0)
     history = await db.ai_usage.find({}, {"_id": 0, "by_user": 0}).sort("month", -1).to_list(6)
     return {
         "current_month": month,
         "total": total,
-        "by_kind": cur.get("by_kind", {}),
+        "by_kind": by_kind,
         "threshold": threshold,
         "over": threshold > 0 and total >= threshold,
         "warn": threshold > 0 and total >= threshold * 0.8,
         "pct": round(total / threshold * 100, 1) if threshold else 0,
         "history": history,
+        "cost_per": cost_per,
+        "estimated_cost": round(est, 2),
+        "spend_url": cfg.get("spend_url", ""),
     }
 
 
-async def set_threshold(threshold: int):
+async def set_config(payload: dict):
+    """Fija umbral, coste por tipo (€) y URL del panel del proveedor."""
     if db is None:
         return
-    await db.ai_usage_config.update_one(
-        {"_id": "cfg"}, {"$set": {"threshold": int(threshold or 0)}}, upsert=True
-    )
+    p = payload or {}
+    upd = {}
+    if "threshold" in p:
+        upd["threshold"] = int(p.get("threshold", 0) or 0)
+    if "cost_per" in p and isinstance(p["cost_per"], dict):
+        upd["cost_per"] = {k: float(v or 0) for k, v in p["cost_per"].items()}
+    if "spend_url" in p:
+        upd["spend_url"] = str(p.get("spend_url") or "")
+    if upd:
+        await db.ai_usage_config.update_one({"_id": "cfg"}, {"$set": upd}, upsert=True)
+
+
+# Compatibilidad: fija solo el umbral.
+async def set_threshold(threshold: int):
+    await set_config({"threshold": threshold})
