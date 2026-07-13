@@ -1264,7 +1264,20 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               Armazones
             </button>
           )}
-          
+
+          {/* Tab Armarios - precios del configurador de armarios (separada de Armazones) */}
+          {(state.currentUser?.isAdmin || state.currentUser?.canManageArticles) && (
+            <button
+              onClick={() => setActiveTab('armarios')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'armarios' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+              data-testid="armarios-precios-tab"
+            >
+              Armarios
+            </button>
+          )}
+
           {/* Tab Backups - Solo Admin */}
           {(state.currentUser?.isAdmin || state.currentUser?.isGerente || state.currentUser?.isDirectorComercial) && (
             <button
@@ -3256,7 +3269,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
 
           {/* Tab Armazones */}
           {activeTab === 'armazones' && (
-            <>
             <ArmazonesTab
               state={state}
               setState={setState}
@@ -3272,6 +3284,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
               handleSaveMaterial={handleSaveMaterial}
               handleDeleteMaterial={handleDeleteMaterial}
             />
+          )}
+
+          {activeTab === 'armarios' && (
             <div className="p-6 space-y-5 bg-slate-50">
               <div className="bg-white border border-slate-200 rounded-2xl p-5">
                 <div className="flex items-center gap-3 mb-1">
@@ -3393,7 +3408,6 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                 </div>
               </div>
             </div>
-            </>
           )}
 
           {/* Tab Backups */}

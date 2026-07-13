@@ -880,6 +880,39 @@ export default function AIRenderStudio({ state, setState }) {
     );
   };
 
+  // Llama a un endpoint POST JSON y devuelve el JSON. Si el backend responde con
+  // error (401/404/422/500/503…) lanza un Error con el MOTIVO legible (el campo
+  // `detail`/`error` del backend) para que NUNCA falle en silencio y el usuario
+  // vea por qué. Marca blanca: los mensajes del backend ya evitan citar el motor.
+  const postJson = async (path, bodyObj) => {
+    const res = await fetch(`${API_URL}${path}`, {
+      method: 'POST', headers: getAuthHeaders(),
+      body: typeof bodyObj === 'string' ? bodyObj : JSON.stringify(bodyObj),
+    });
+    let data = null;
+    try { data = await res.json(); } catch { data = null; }
+    if (!res.ok) {
+      const motivo = (data && (data.detail || data.error)) || `Error ${res.status} al llamar al servicio.`;
+      throw new Error(typeof motivo === 'string' ? motivo : `Error ${res.status}.`);
+    }
+    return data;
+  };
+
+  // Genera los planos EXACTOS (planta acotada + alzado alámbrico) a partir de una
+  // distribución detectada. Devuelve las láminas listas para el historial. Si un
+  // endpoint falla, propaga el error (con motivo) en lugar de tragárselo.
+  const generarPlanosExactos = async (distribucion) => {
+    const body = JSON.stringify({ nombre_cliente: cliente || 'Cliente', distribucion_estructurada: distribucion });
+    const [pr, ar] = await Promise.all([
+      postJson('/api/estudio-cocinas/plano-2d', body),
+      postJson('/api/estudio-cocinas/alzado', body),
+    ]);
+    const extra = [];
+    if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: 'Planta acotada (exacta)', timestamp: new Date() });
+    if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: 'Alzado alámbrico acotado (exacto)', timestamp: new Date() });
+    return extra;
+  };
+
   // ─── Editar el render existente en lenguaje natural ─────────────────────────
   // Lámina técnica: alzado con cotas + planta + listado de medidas + acabados,
   // generada a partir del render actual (estilo ficha de estudio profesional).
@@ -906,23 +939,17 @@ export default function AIRenderStudio({ state, setState }) {
       // motor vectorial está modelado para COCINA (zonas de cocción, campana…),
       // así que solo se añade en cocina. Es best-effort.
       if (tipo3d === 'cocina') try {
-        const dd = await fetch(`${API_URL}/api/estudio-cocinas/detect-distribucion`, {
-          method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl }),
-        });
-        const dj = await dd.json();
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl });
         if (dj?.success && dj.distribucion) {
-          const body = JSON.stringify({ nombre_cliente: cliente || 'Cliente', distribucion_estructurada: dj.distribucion });
-          const [pr, ar] = await Promise.all([
-            fetch(`${API_URL}/api/estudio-cocinas/plano-2d`, { method: 'POST', headers: getAuthHeaders(), body }).then(r => r.ok ? r.json() : null).catch(() => null),
-            fetch(`${API_URL}/api/estudio-cocinas/alzado`, { method: 'POST', headers: getAuthHeaders(), body }).then(r => r.ok ? r.json() : null).catch(() => null),
-          ]);
-          const extra = [];
-          if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: 'Planta acotada (exacta)', timestamp: new Date() });
-          if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: 'Alzado alámbrico acotado (exacto)', timestamp: new Date() });
+          const extra = await generarPlanosExactos(dj.distribucion);
           if (extra.length) setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
         }
-      } catch (_) { /* la lámina IA ya está; los planos exactos son un extra */ }
-    } catch { setError('Error al generar la ficha técnica.'); }
+      } catch (e) {
+        // La lámina IA ya está; los planos exactos son un extra, pero el motivo
+        // del fallo debe ser VISIBLE (no fallar en silencio).
+        setError(`Lámina generada, pero no se pudieron añadir los planos exactos: ${e?.message || 'error desconocido'}.`);
+      }
+    } catch (e) { setError(`Error al generar la ficha técnica: ${e?.message || 'error desconocido'}.`); }
     finally { setEditing(false); }
   };
 
@@ -933,24 +960,14 @@ export default function AIRenderStudio({ state, setState }) {
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
-      const dd = await fetch(`${API_URL}/api/estudio-cocinas/detect-distribucion`, {
-        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ imageBase64: dataUrl }),
-      });
-      const dj = await dd.json();
+      const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl });
       if (!dj?.success || !dj.distribucion) { setError(dj?.detail || 'No se pudo deducir la distribución del render para dibujar los planos.'); return; }
-      const body = JSON.stringify({ nombre_cliente: cliente || 'Cliente', distribucion_estructurada: dj.distribucion });
-      const [pr, ar] = await Promise.all([
-        fetch(`${API_URL}/api/estudio-cocinas/plano-2d`, { method: 'POST', headers: getAuthHeaders(), body }).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${API_URL}/api/estudio-cocinas/alzado`, { method: 'POST', headers: getAuthHeaders(), body }).then(r => r.ok ? r.json() : null).catch(() => null),
-      ]);
-      const extra = [];
-      if (pr?.planoBase64) extra.push({ success: true, result: { images: [pr.planoBase64] }, description: 'Planta acotada (exacta)', timestamp: new Date() });
-      if (ar?.alzadoBase64) extra.push({ success: true, result: { images: [ar.alzadoBase64] }, description: 'Alzado alámbrico acotado (exacto)', timestamp: new Date() });
-      if (!extra.length) { setError('No se pudieron generar los planos técnicos.'); return; }
+      const extra = await generarPlanosExactos(dj.distribucion);
+      if (!extra.length) { setError('No se pudieron generar los planos técnicos (respuesta vacía del servicio).'); return; }
       // Los planos técnicos NO sustituyen a la propuesta de diseño 3D en la vista
       // principal: se añaden como láminas en el historial para poder abrirlos.
       setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
-    } catch { setError('Error al generar los planos técnicos.'); }
+    } catch (e) { setError(`Error al generar los planos técnicos: ${e?.message || 'error desconocido'}.`); }
     finally { setEditing(false); }
   };
 

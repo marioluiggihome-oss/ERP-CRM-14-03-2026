@@ -1681,7 +1681,7 @@ async def generar_alzado(payload: ProyectoBase):
         return {"alzadoBase64": f"data:image/png;base64,{b64}", "paredes": len(paredes)}
     except Exception as e:
         logger.error(f"alzado error: {e}")
-        raise HTTPException(status_code=500, detail="No se pudo generar la vista alámbrica")
+        raise HTTPException(status_code=500, detail=f"No se pudo generar la vista alámbrica: {e}")
 
 
 @router.post("/detect-distribucion")
