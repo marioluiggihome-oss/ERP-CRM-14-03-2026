@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Plus, Minus, Save, Download, Box, Palette, Layers, Settings, ChevronDown, ChevronUp, Trash2, Copy, Move, GripVertical, RotateCcw, Eye, EyeOff, Calculator, FileText, List, Package, Scissors, X, Edit3, Hash, Printer, FolderOpen, RefreshCw, AlertCircle, Check, Sparkles, Image, MessageSquare, ArrowUp, ArrowDown, Loader, Mic, MicOff } from 'lucide-react';
 import { armariosAPI } from '../services/api';
-import { ALVIC_WARDROBE_COLORS, ACB_WARDROBE_DOORS } from '../data/finishes';
+import { ALVIC_WARDROBE_COLORS, ACB_WARDROBE_DOORS, ACB_GM_COLORS } from '../data/finishes';
 import { generateArmariosDespiecePDF, generateArmarioPresupuestoPDF } from '../services/pdfGenerator';
 
 // ========== TIPOS Y CONSTANTES ==========
@@ -255,6 +255,7 @@ const FINSA_COLORS = [
 export const WARDROBE_COLORS = [
   ...FINSA_COLORS.map(c => ({ ...c, brand: c.brand || 'FINSA' })),
   ...ALVIC_WARDROBE_COLORS,
+  ...ACB_GM_COLORS,
   ...ACB_WARDROBE_DOORS,
 ];
 export const COLOR_BRANDS = ['FINSA', 'ALVIC', 'ACB'];
