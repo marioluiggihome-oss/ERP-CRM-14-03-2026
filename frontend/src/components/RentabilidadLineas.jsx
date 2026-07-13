@@ -912,6 +912,18 @@ const RentabilidadLineas = ({ currentUser }) => {
               </td></tr>
             )}
           </tbody>
+          {showTotals && filteredAndSorted.length > 0 && (
+            <tfoot>
+              <tr className="bg-slate-50 border-t-2 border-slate-200 font-black text-slate-800">
+                <td colSpan={3} className="p-3 text-xs uppercase tracking-wide text-slate-500">Total {hasActiveFilters ? '(filtrado)' : ''} · {filteredAndSorted.length} doc.</td>
+                <td className="p-3 text-right font-mono">{eur(filteredTotals.venta)}</td>
+                <td className="p-3 text-right font-mono">{eur(filteredTotals.coste)}</td>
+                <td className="p-3 text-right font-mono text-emerald-700">{eur(filteredTotals.margen)}</td>
+                <td className="p-3 text-right font-mono text-amber-700">{eur(filteredTotals.pendienteCobro)}</td>
+                <td colSpan={2}></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

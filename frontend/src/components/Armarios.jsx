@@ -622,6 +622,18 @@ const Armarios = ({ state, setState }) => {
   const [showCost, setShowCost] = useState(false);      // candado: ver PVP sin descuento
   const [showConfig, setShowConfig] = useState(true);
   const [selectedModule, setSelectedModule] = useState(0);
+
+  // Estado de plegado del panel izquierdo (acordeón). "Dimensiones" abierta por
+  // defecto; "Tipo de puerta" y "Colores y acabados" cerradas (son las que más
+  // saturan). Solo afecta al layout; no toca la lógica de cálculo ni handlers.
+  const [openSections, setOpenSections] = useState({
+    dimensiones: true,
+    doorType: false,
+    colors: false,
+  });
+  const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+  // Plantillas rápidas ocultas tras un botón "Plantillas".
+  const [showTemplates, setShowTemplates] = useState(false);
   
   // Estado para el modal de despiece privado
   const [showDespieceModal, setShowDespieceModal] = useState(false);
@@ -2957,10 +2969,20 @@ const Armarios = ({ state, setState }) => {
         <div className="w-80 bg-white border-r border-slate-200 overflow-y-auto">
           {/* Dimensiones */}
           <div className="p-4 border-b border-slate-200">
-            <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest mb-3 flex items-center gap-2">
-              <Settings size={14} />
-              DIMENSIONES
-            </h3>
+            <button
+              onClick={() => toggleSection('dimensiones')}
+              className="w-full flex items-center justify-between group"
+            >
+              <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
+                <Settings size={14} />
+                DIMENSIONES
+              </h3>
+              {openSections.dimensiones
+                ? <ChevronUp size={16} className="text-slate-400 group-hover:text-slate-600" />
+                : <ChevronDown size={16} className="text-slate-400 group-hover:text-slate-600" />}
+            </button>
+            {openSections.dimensiones && (
+            <div className="mt-3">
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Ancho</label>
@@ -3029,11 +3051,30 @@ const Armarios = ({ state, setState }) => {
                 </button>
               </div>
             </div>
+            </div>
+            )}
           </div>
 
           {/* Tipo de puerta */}
           <div className="p-4 border-b border-slate-200">
-            <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest mb-3">TIPO DE PUERTA</h3>
+            <button
+              onClick={() => toggleSection('doorType')}
+              className="w-full flex items-center justify-between group"
+            >
+              <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest">TIPO DE PUERTA</h3>
+              <div className="flex items-center gap-2">
+                {!openSections.doorType && (
+                  <span className="text-[10px] font-bold text-slate-400 normal-case tracking-normal">
+                    {wardrobeConfig.doorType === DoorType.SLIDING ? 'Corredera' : wardrobeConfig.doorType === DoorType.FOLDING ? 'Plegable' : 'Abatible'} · {wardrobeConfig.numDoors} pts
+                  </span>
+                )}
+                {openSections.doorType
+                  ? <ChevronUp size={16} className="text-slate-400 group-hover:text-slate-600" />
+                  : <ChevronDown size={16} className="text-slate-400 group-hover:text-slate-600" />}
+              </div>
+            </button>
+            {openSections.doorType && (
+            <div className="mt-3">
             <div className="grid grid-cols-3 gap-2">
               {[
                 { type: DoorType.HINGED, label: 'Abatible', icon: '🚪' },
@@ -3081,15 +3122,44 @@ const Armarios = ({ state, setState }) => {
                     : `${wardrobeConfig.numDoors} puertas abatibles`}
               </p>
             </div>
+            </div>
+            )}
           </div>
 
           {/* Colores / acabados (rediseño: swatches en rejilla + acabado activo) */}
           <div className="p-5 border-b border-slate-200">
-            <h3 className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Palette size={13} />
-              Colores y acabados
-            </h3>
+            <button
+              onClick={() => toggleSection('colors')}
+              className="w-full flex items-center justify-between group"
+            >
+              <h3 className="text-[11px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <Palette size={13} />
+                Colores y acabados
+              </h3>
+              {openSections.colors
+                ? <ChevronUp size={16} className="text-slate-400 group-hover:text-slate-600" />
+                : <ChevronDown size={16} className="text-slate-400 group-hover:text-slate-600" />}
+            </button>
 
+            {/* Vista colapsada: solo acabado activo + botón Cambiar */}
+            {!openSections.colors && (
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
+                <span className="h-6 w-6 rounded-lg ring-1 ring-slate-200 shrink-0" style={{ backgroundColor: getColorByName(wardrobeConfig.exteriorColor).hex }} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-slate-700 truncate leading-tight">{getColorByName(wardrobeConfig.exteriorColor).name}</p>
+                  <p className="text-[10px] text-slate-400">Ref. {getColorByName(wardrobeConfig.exteriorColor).ref}</p>
+                </div>
+                <button
+                  onClick={() => setOpenSections(prev => ({ ...prev, colors: true }))}
+                  className="shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                >
+                  Cambiar
+                </button>
+              </div>
+            )}
+
+            {openSections.colors && (
+            <div className="mt-3">
             {/* Selector de fabricante */}
             <div className="mb-3 flex gap-1.5">
               {COLOR_BRANDS.map(b => (
@@ -3196,6 +3266,8 @@ const Armarios = ({ state, setState }) => {
                 )}
               </div>
             </div>
+            </div>
+            )}
           </div>
 
           {/* Módulo seleccionado */}
@@ -3451,13 +3523,22 @@ const Armarios = ({ state, setState }) => {
             </label>
           </div>
           
-          {/* Plantillas rápidas */}
-          <div className="mt-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Layers size={14} className="text-amber-600" />
-              <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-wider">PLANTILLAS RÁPIDAS — Módulo {selectedModule + 1}</h4>
-            </div>
-            <div className="flex flex-wrap gap-2">
+          {/* Plantillas rápidas (ocultas tras botón) */}
+          <div className="mt-3 bg-white rounded-2xl p-3 border border-slate-200 shadow-sm">
+            <button
+              onClick={() => setShowTemplates(v => !v)}
+              className="w-full flex items-center justify-between group"
+            >
+              <span className="flex items-center gap-2">
+                <Layers size={14} className="text-indigo-500" />
+                <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Plantillas — Módulo {selectedModule + 1}</span>
+              </span>
+              {showTemplates
+                ? <ChevronUp size={16} className="text-slate-400 group-hover:text-slate-600" />
+                : <ChevronDown size={16} className="text-slate-400 group-hover:text-slate-600" />}
+            </button>
+            {showTemplates && (
+            <div className="mt-3 flex flex-wrap gap-2">
               {LAYOUT_TEMPLATES.map((tpl) => (
                 <button
                   key={tpl.id}
@@ -3481,8 +3562,9 @@ const Armarios = ({ state, setState }) => {
                 Aplicar a todos
               </button>
             </div>
+            )}
           </div>
-          
+
           {/* Panel de accesorios arrastrables */}
           <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
