@@ -227,6 +227,23 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
     Ejemplo: "Quiero una cocina en L con encimera de mármol blanco,
     muebles de roble natural y tiradores negros"
     """
+    # ENFORCEMENT de créditos de IA por usuario. Admin/master = ilimitado.
+    # Defensivo: si el contador falla por un error interno, NO se bloquea; solo
+    # se bloquea cuando realmente no quedan créditos (restantes <= 0).
+    try:
+        from services.ai_usage import get_user_credits, consume_credits
+        credits = await get_user_credits(user)
+        if not credits.get("ilimitado") and int(credits.get("restantes", 0) or 0) <= 0:
+            raise HTTPException(
+                status_code=402,
+                detail=(f"Sin créditos de IA: has agotado tu bolsa mensual "
+                        f"({int(credits.get('asignados', 0) or 0)}). Contacta con tu administrador."),
+            )
+        await consume_credits(user, "render")
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # error interno del contador: nunca bloquea la generación
     # Registro de uso de IA POR USUARIO (alimenta la columna "IA" del ranking y
     # el consumo por usuario). Best-effort: nunca bloquea el render.
     try:
@@ -256,6 +273,13 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")
     return result
+
+
+@ai_engine_router.get("/my-credits")
+async def my_ai_credits(user=Depends(require_auth)):
+    """Estado de créditos de IA del usuario actual (asignados/consumidos/restantes/ilimitado)."""
+    from services.ai_usage import get_user_credits
+    return await get_user_credits(user)
 
 
 @ai_engine_router.post("/render/compose")
