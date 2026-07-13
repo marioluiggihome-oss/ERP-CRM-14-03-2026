@@ -890,7 +890,18 @@ const App = () => {
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 19l-7-7 7-7" /></svg>
               </div>
             </button>
-            
+
+            {/* Botón EXPLÍCITO para ocultar la barra (funciona en móvil, tablet y desktop) */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="w-full flex flex-col items-center gap-0.5 py-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              title="Ocultar el menú"
+              data-testid="sidebar-hide-btn"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 19l-7-7 7-7M18 19l-7-7 7-7" /></svg>
+              <span className="text-[7px] font-black uppercase tracking-widest">Ocultar</span>
+            </button>
+
             <div className="flex flex-col gap-3 flex-1 w-full px-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent min-h-0">
               {/* 
                 IMPORTANTE: Usuarios con isFabrica o que SOLO tienen canAccessFabrica
