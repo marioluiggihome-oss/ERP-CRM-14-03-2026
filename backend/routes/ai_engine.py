@@ -227,6 +227,15 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
     Ejemplo: "Quiero una cocina en L con encimera de mármol blanco,
     muebles de roble natural y tiradores negros"
     """
+    # Registro de uso de IA POR USUARIO (alimenta la columna "IA" del ranking y
+    # el consumo por usuario). Best-effort: nunca bloquea el render.
+    try:
+        from services.activity_tracker import get_tracker, ActivityType
+        _tr = get_tracker()
+        if _tr and user and user.get("id"):
+            await _tr.track(user.get("id"), user.get("username") or user.get("clientName") or "", ActivityType.AI_TELEMETRY, {"kind": "render"})
+    except Exception:
+        pass
     service = get_render_service()
 
     # Construir overrides desde parámetros opcionales
