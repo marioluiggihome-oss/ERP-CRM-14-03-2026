@@ -1293,7 +1293,7 @@ const App = () => {
             onOpenCalendar={(evt) => setState(p => ({ ...p, currentTab: 'crm-calendar', crmFocusEvent: evt || null }))}
           />
 
-          <main className={`flex-1 relative overflow-hidden bg-white shadow-2xl rounded-l-[3.5rem] my-2 border-l border-white/10 ${!sidebarOpen ? 'ml-16' : ''}`}>
+          <main className={`flex-1 relative overflow-hidden bg-white shadow-2xl border-l border-white/10 ${!sidebarOpen ? 'ml-0 my-0 rounded-l-none border-l-0' : 'rounded-l-[3.5rem] my-2'}`}>
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader className="animate-spin text-slate-400" size={32}/></div>}>
             {state.currentTab === 'welcome' && (
               <ErrorBoundary>
