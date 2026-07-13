@@ -437,7 +437,8 @@ export default function AIRenderStudio({ state, setState }) {
   const irA = (tab) => setState && setState(p => ({ ...p, currentTab: tab }));
   const [mode, setMode] = useState('natural'); // 'natural' | 'params'
   const [description, setDescription] = useState('');
-  const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) para que el modelo la "vea"
+  const [refImage, setRefImage] = useState(null); // imagen/PDF de referencia (base64) PRINCIPAL para que el modelo la "vea"
+  const [refImages, setRefImages] = useState([]); // TODAS las referencias subidas (p.ej. una por pared) → un render por cada una
   const [originalRef, setOriginalRef] = useState(null); // PRIMERA imagen subida: se conserva para "Comparar" pase lo que pase
   const [floorPlan, setFloorPlan] = useState(null);    // plano en planta (dataURL)
   const [wallSketches, setWallSketches] = useState([]); // bocetos por pared (dataURL[])
@@ -658,20 +659,9 @@ export default function AIRenderStudio({ state, setState }) {
         try {
           const b64 = await downscaleImage(file);
           if (!renderResult) {
-            // Sin render → usar como referencia principal
-            setRefImage(b64);
-            setOriginalRef(prev => prev || b64);
+            // Sin render → añadir como referencia (varias pegadas = varias referencias)
             setAnalyzingRef(true);
-            try {
-              const response = await fetch(`${API_URL}/api/ai-engine/describe-reference`, {
-                method: 'POST', headers: getAuthHeaders(),
-                body: JSON.stringify({ fileBase64: b64 }),
-              });
-              const data = await response.json();
-              if (data.success && data.description) {
-                setDescription(prev => prev?.trim() ? `${prev.trim()}\n\n[Referencia pegada] ${data.description}` : data.description);
-              }
-            } catch (_) {}
+            try { await addReference(b64, 'pegada'); }
             finally { setAnalyzingRef(false); }
           } else {
             // Con render → usar como elemento de edición
@@ -1402,33 +1392,43 @@ export default function AIRenderStudio({ state, setState }) {
   };
 
   // ─── Subir imagen/PDF de referencia → la IA la describe y enriquece el prompt ───
+  // Añade una referencia (base64 ya reducido) al array y la describe con la IA.
+  // Se reutiliza tanto para subir archivos como para pegar del portapapeles.
+  const addReference = async (b64, etiqueta = 'subida') => {
+    setRefImages(prev => [...prev, b64]);
+    setRefImage(b64);                       // principal = última añadida (compat con render single/comparar)
+    setOriginalRef(prev => prev || b64);    // conserva la PRIMERA subida para Comparar
+    try {
+      const response = await fetch(`${API_URL}/api/ai-engine/describe-reference`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ fileBase64: b64 }),
+      });
+      const data = await response.json();
+      if (data.success && data.description) {
+        setDescription(prev => prev?.trim()
+          ? `${prev.trim()}\n\n[Referencia ${etiqueta}] ${data.description}`
+          : data.description);
+      }
+    } catch (_) { /* la imagen ya está adjunta aunque falle la descripción */ }
+  };
+
+  // Quita una referencia del array (y reajusta la principal).
+  const removeReference = (i) => setRefImages(prev => {
+    const next = prev.filter((_, idx) => idx !== i);
+    setRefImage(next[next.length - 1] || null);
+    return next;
+  });
+
   const handleReferenceUpload = async (e) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []); // MÚLTIPLES: una imagen por pared, etc.
     e.target.value = '';
-    if (!file) return;
+    if (!files.length) return;
     setAnalyzingRef(true);
     setError(null);
     try {
-      const b64 = await downscaleImage(file);
-      const response = await fetch(`${API_URL}/api/ai-engine/describe-reference`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ fileBase64: b64 }),
-      });
-      // Guardar la imagen para pasársela TAMBIÉN al generador (no solo el texto),
-      // así el render respeta distribución, proporciones y medidas de la referencia.
-      setRefImage(b64);
-      setOriginalRef(prev => prev || b64); // conserva la PRIMERA subida para Comparar
-      const data = await response.json();
-      if (data.success && data.description) {
-        setDescription(prev => {
-          const next = prev?.trim()
-            ? `${prev.trim()}\n\n[Referencia subida] ${data.description}`
-            : data.description;
-          return next;
-        });
-      } else {
-        setError(data.error || 'No se pudo leer la imagen de referencia');
+      for (const file of files) {
+        const b64 = await downscaleImage(file);
+        await addReference(b64, 'subida');
       }
     } catch (err) {
       setError('No se pudo subir la imagen de referencia. Inténtelo de nuevo.');
@@ -1504,6 +1504,49 @@ export default function AIRenderStudio({ state, setState }) {
     }
     setIsGenerating(true);
     setError(null);
+
+    // ── VARIAS REFERENCIAS → un render por cada imagen ────────────────────
+    const refs = refImages.length ? refImages : (refImage ? [refImage] : []);
+    if (refs.length > 1) {
+      try {
+        const outputs = [];
+        let noCreditsMsg = null;
+        for (let i = 0; i < refs.length; i++) {
+          const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+            method: 'POST', headers: getAuthHeaders(),
+            body: JSON.stringify({
+              description: conMedidas(description.trim()),
+              style: params.style,
+              provider: providerOf(),
+              referenceImage: refs[i],
+            }),
+          });
+          // 402 = sin créditos: se detiene y se muestra el mensaje del backend.
+          if (response.status === 402) {
+            const d = await response.json().catch(() => ({}));
+            noCreditsMsg = d.detail || 'Sin créditos de IA.';
+            break;
+          }
+          const data = await response.json();
+          if (data && data.success) outputs.push({ ...data, description: `Render ${i + 1}`, timestamp: new Date() });
+        }
+        if (outputs.length) {
+          setRenderResult(outputs[0]);
+          setRenderHistory(prev => [...outputs, ...prev].slice(0, 12));
+          if (noCreditsMsg) setError(noCreditsMsg);
+        } else if (noCreditsMsg) {
+          setError(noCreditsMsg);
+        } else {
+          setError('Error al generar los renders');
+        }
+      } catch (err) {
+        setError('Error de conexión. Verifique su conexión a internet.');
+      } finally {
+        setIsGenerating(false);
+        fetchCredits();
+      }
+      return;
+    }
 
     const n = Math.max(1, Math.min(3, variantCount));
     const oneRender = async (i) => {
@@ -1749,14 +1792,33 @@ export default function AIRenderStudio({ state, setState }) {
                   </label>
                   <label className={`text-[11px] font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg ${analyzingRef ? 'bg-purple-200 text-purple-500' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}>
                     <Image size={14} className={analyzingRef ? 'animate-pulse' : ''} />
-                    {analyzingRef ? 'Analizando…' : 'Subir imagen de referencia'}
-                    <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
+                    {analyzingRef ? 'Analizando…' : 'Subir imagen(es) de referencia'}
+                    <input type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={handleReferenceUpload} disabled={analyzingRef} />
                   </label>
                 </div>
-                {refImage && (
-                  <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 w-fit">
-                    <CheckCircle size={13} /> Referencia adjunta — el render la respetará
-                    <button onClick={() => setRefImage(null)} className="ml-1 text-emerald-500 hover:text-red-500" title="Quitar referencia"><X size={13} /></button>
+                {refImages.length > 0 && (
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-700 mb-1.5">
+                      <CheckCircle size={13} />
+                      {refImages.length === 1
+                        ? 'Referencia adjunta — el render la respetará'
+                        : `${refImages.length} referencias — se generará un render por cada una`}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {refImages.map((img, i) => (
+                        <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-emerald-200 bg-slate-50">
+                          {typeof img === 'string' && img.startsWith('data:image') ? (
+                            <img src={img} alt={`Referencia ${i + 1}`} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-emerald-600"><FileText size={20} /></div>
+                          )}
+                          <button
+                            onClick={() => removeReference(i)}
+                            className="absolute top-0.5 right-0.5 bg-white/90 rounded-full text-slate-500 hover:text-red-500 shadow"
+                            title="Quitar referencia"><X size={13} /></button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 <textarea
