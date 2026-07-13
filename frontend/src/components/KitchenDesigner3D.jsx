@@ -799,12 +799,18 @@ function KitchenWizard({ state, setState, onAddToBudget }) {
           const n = i + 1;
           return (
             <React.Fragment key={s}>
-              <div className={`flex items-center gap-2 ${n === step ? 'text-indigo-700' : n < step ? 'text-emerald-600' : 'text-slate-400'}`}>
+              {/* Paso clicable: puedes saltar a un paso ya visitado o al siguiente
+                  disponible (no adelantar a pasos aún bloqueados). */}
+              <button type="button"
+                onClick={() => { if (n <= step || (n === step + 1 && canNext)) setStep(n); }}
+                disabled={n > step && !(n === step + 1 && canNext)}
+                title={`Ir a «${s}»`}
+                className={`flex items-center gap-2 transition-colors ${n === step ? 'text-indigo-700' : n < step ? 'text-emerald-600 hover:text-emerald-700' : 'text-slate-400'} ${(n <= step || (n === step + 1 && canNext)) ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
                 <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${n === step ? 'bg-indigo-600 text-white' : n < step ? 'bg-emerald-500 text-white' : 'bg-slate-200'}`}>
                   {n < step ? '✓' : n}
                 </span>
                 <span className="text-xs font-bold hidden sm:block">{s}</span>
-              </div>
+              </button>
               {n < STEPS.length && <span className={`flex-1 h-0.5 ${n < step ? 'bg-emerald-400' : 'bg-slate-200'}`} />}
             </React.Fragment>
           );
