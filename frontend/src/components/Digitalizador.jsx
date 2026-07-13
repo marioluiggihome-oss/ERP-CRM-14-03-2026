@@ -665,8 +665,9 @@ const Digitalizador = ({ state, setState }) => {
         pdf.setFillColor(30, 27, 65); // navy
         pdf.roundedRect(panelX, panelY, panelW, panelH, 3, 3, 'F');
 
+        // "Bruto líneas" retirado: confundía cuando se aplica un margen (la base
+        // imponible ya es el neto correcto). Solo base imponible / IVA / total.
         const cells = [
-          { label: 'BRUTO LÍNEAS', value: eur(T.brutoLineas), sub: '' },
           { label: 'BASE IMPONIBLE (NETO)', value: eur(T.baseImponible), sub: (globalDiscount > 0 ? 'DTO GLOBAL APLICADO' : '') },
           { label: `IVA (${ivaRate}%)`, value: eur(T.iva), sub: '' },
           { label: 'TOTAL PRESUPUESTO', value: eur(T.total), sub: '', highlight: true },
@@ -1443,11 +1444,7 @@ const Digitalizador = ({ state, setState }) => {
                     </span>
                   </div>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-indigo-900/50 rounded-xl">
-                    <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">Bruto Líneas</p>
-                    <p className="text-xl font-black">{(showCostMode ? costTotals : totals).brutoLineas.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-indigo-900/50 rounded-xl">
                     <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">
                       {showCostMode ? `Base Costo (-${userDiscount}%)` : 'Base Imponible (Neto)'}
