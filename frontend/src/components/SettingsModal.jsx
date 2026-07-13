@@ -2337,6 +2337,19 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               <span title="Render fotorrealista de cocina a partir del plano (IA)." className="text-xs font-bold text-slate-700">Cocinas IA 2 (render)</span>
                             </label>
                           </div>
+                          {/* Créditos de IA por usuario (bolsa mensual). 0/vacío = usar el valor por defecto global. Admin/master = ilimitado. */}
+                          <div className="mt-2 bg-white/60 border border-fuchsia-200 rounded-lg px-2.5 py-2">
+                            <label className="block text-[10px] font-black text-fuchsia-600 uppercase tracking-wide mb-1">Créditos IA / mes</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={userForm.aiCreditsMonthly ?? ''}
+                              onChange={(e) => setUserForm({ ...userForm, aiCreditsMonthly: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                              placeholder="0 = valor por defecto"
+                              className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-sm font-bold text-slate-700"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-1">0 o vacío usa el crédito mensual por defecto. Admin/gerente tienen créditos ilimitados.</p>
+                          </div>
                         </div>
 
                         {/* ── Grupo: Administración ── */}

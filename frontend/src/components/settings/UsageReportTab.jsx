@@ -17,6 +17,7 @@ const AIUsageCard = () => {
   const [cRender, setCRender] = useState('');
   const [cVision, setCVision] = useState('');
   const [spendUrl, setSpendUrl] = useState('');
+  const [defCredits, setDefCredits] = useState('');
   const [saving, setSaving] = useState(false);
   const load = async () => {
     try {
@@ -27,6 +28,7 @@ const AIUsageCard = () => {
         setCRender(d.cost_per?.render != null ? String(d.cost_per.render) : '');
         setCVision(d.cost_per?.vision != null ? String(d.cost_per.vision) : '');
         setSpendUrl(d.spend_url || '');
+        setDefCredits(d.default_credits ? String(d.default_credits) : '');
       }
     } catch {}
   };
@@ -40,6 +42,7 @@ const AIUsageCard = () => {
           threshold: Number(thr) || 0,
           cost_per: { render: Number(cRender) || 0, vision: Number(cVision) || 0 },
           spend_url: spendUrl || '',
+          default_credits: Number(defCredits) || 0,
         }),
       });
       if (r.ok) setData(await r.json());
@@ -99,6 +102,12 @@ const AIUsageCard = () => {
           <label className="flex items-center gap-1 text-xs text-slate-500">visión
             <input type="number" step="0.001" min="0" value={cVision} onChange={e => setCVision(e.target.value)} placeholder="0"
               className="w-20 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />€</label>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-500 w-28">Crédito mensual por defecto</span>
+          <input type="number" min="0" value={defCredits} onChange={e => setDefCredits(e.target.value)} placeholder="0"
+            className="w-28 px-2 py-1 border border-slate-200 rounded-lg text-sm tabular-nums" />
+          <span className="text-xs text-slate-400">créditos IA/mes por usuario (si no tiene valor propio)</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-slate-500 w-28">Panel del proveedor</span>

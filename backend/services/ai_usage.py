@@ -63,6 +63,8 @@ async def get_usage_summary():
         "cost_per": cost_per,
         "estimated_cost": round(est, 2),
         "spend_url": cfg.get("spend_url", ""),
+        "default_credits": int(cfg.get("default_credits", 0) or 0),
+        "credits_per": cfg.get("credits_per", {"render": 1, "vision": 0}) or {"render": 1, "vision": 0},
     }
 
 
@@ -78,6 +80,10 @@ async def set_config(payload: dict):
         upd["cost_per"] = {k: float(v or 0) for k, v in p["cost_per"].items()}
     if "spend_url" in p:
         upd["spend_url"] = str(p.get("spend_url") or "")
+    if "default_credits" in p:
+        upd["default_credits"] = int(p.get("default_credits", 0) or 0)
+    if "credits_per" in p and isinstance(p["credits_per"], dict):
+        upd["credits_per"] = {k: int(v or 0) for k, v in p["credits_per"].items()}
     if upd:
         await db.ai_usage_config.update_one({"_id": "cfg"}, {"$set": upd}, upsert=True)
 
@@ -85,3 +91,94 @@ async def set_config(payload: dict):
 # Compatibilidad: fija solo el umbral.
 async def set_threshold(threshold: int):
     await set_config({"threshold": threshold})
+
+
+# ─── CRÉDITOS DE IA POR USUARIO (ligados a la suscripción) ───────────────────
+# Roles con acceso ILIMITADO (nunca se les descuentan créditos).
+_UNLIMITED_FLAGS = ("isAdmin", "isPrimaryAdmin", "isGerente", "isDirectorComercial", "isMaster")
+
+
+def _is_unlimited(user: dict) -> bool:
+    """Admin/master (y roles equivalentes) tienen créditos ILIMITADOS."""
+    if not user:
+        return False
+    return any(user.get(f) for f in _UNLIMITED_FLAGS)
+
+
+async def _get_credits_config():
+    cfg = await db.ai_usage_config.find_one({"_id": "cfg"}) or {}
+    default_credits = int(cfg.get("default_credits", 0) or 0)
+    credits_per = cfg.get("credits_per", {}) or {}
+    # Valores por defecto: render cuesta 1 crédito, visión 0.
+    if "render" not in credits_per:
+        credits_per["render"] = 1
+    if "vision" not in credits_per:
+        credits_per["vision"] = 0
+    return default_credits, credits_per
+
+
+async def get_user_credits(user: dict) -> dict:
+    """Estado de créditos del usuario en el mes en curso.
+
+    Devuelve {asignados, consumidos_mes, restantes, ilimitado}.
+    Admin/master → ilimitado=True. Si el campo del usuario `aiCreditsMonthly`
+    está a 0/vacío, se usa el default global `ai_usage_config.default_credits`.
+    """
+    if db is None:
+        return {"asignados": 0, "consumidos_mes": 0, "restantes": 0, "ilimitado": True}
+    if _is_unlimited(user):
+        return {"asignados": 0, "consumidos_mes": 0, "restantes": 0, "ilimitado": True}
+
+    default_credits, _ = await _get_credits_config()
+    try:
+        assigned = int(user.get("aiCreditsMonthly", 0) or 0)
+    except (TypeError, ValueError):
+        assigned = 0
+    if assigned <= 0:
+        assigned = default_credits
+
+    uid = user.get("id") or user.get("_id") or ""
+    consumed = 0
+    try:
+        doc = await db.ai_credits.find_one({"user_id": str(uid), "month": _month()})
+        consumed = int((doc or {}).get("consumed", 0) or 0)
+    except Exception:
+        consumed = 0
+
+    remaining = max(assigned - consumed, 0)
+    return {
+        "asignados": assigned,
+        "consumidos_mes": consumed,
+        "restantes": remaining,
+        "ilimitado": False,
+    }
+
+
+async def consume_credits(user: dict, kind: str) -> dict:
+    """Descuenta el coste (en créditos) de una llamada de tipo `kind` para el
+    usuario y lo registra en la colección `ai_credits` por (user_id, month).
+
+    Admin/master no consumen. Devuelve el estado de créditos actualizado.
+    Best-effort: si algo falla, no lanza (el enforcement decide si bloquea).
+    """
+    if db is None or _is_unlimited(user):
+        return await get_user_credits(user)
+
+    _, credits_per = await _get_credits_config()
+    try:
+        cost = int(credits_per.get(kind, 0) or 0)
+    except (TypeError, ValueError):
+        cost = 0
+
+    if cost > 0:
+        uid = user.get("id") or user.get("_id") or ""
+        try:
+            await db.ai_credits.update_one(
+                {"user_id": str(uid), "month": _month()},
+                {"$inc": {"consumed": cost},
+                 "$setOnInsert": {"user_id": str(uid), "month": _month()}},
+                upsert=True,
+            )
+        except Exception:
+            pass  # no bloquear por un fallo del contador
+    return await get_user_credits(user)

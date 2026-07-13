@@ -445,6 +445,8 @@ export default function AIRenderStudio({ state, setState }) {
   const [renderResult, setRenderResult] = useState(null);
   const [renderHistory, setRenderHistory] = useState([]);
   const [error, setError] = useState(null);
+  // Créditos de IA del usuario (bolsa mensual ligada a su suscripción).
+  const [aiCredits, setAiCredits] = useState(null);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [analyzingRef, setAnalyzingRef] = useState(false);
   // Guardado de proyectos (cliente + referencia) y descarga.
@@ -694,6 +696,15 @@ export default function AIRenderStudio({ state, setState }) {
     const token = getToken();
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   };
+
+  // Créditos de IA del usuario: se consultan al montar y tras cada generación.
+  const fetchCredits = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/ai-engine/my-credits`, { headers: getAuthHeaders() });
+      if (r.ok) setAiCredits(await r.json());
+    } catch { /* silencioso: el contador nunca rompe la UI */ }
+  }, []);
+  useEffect(() => { fetchCredits(); }, [fetchCredits]);
 
   // Las imágenes del render se sirven por el proxy interno (marca blanca). Como
   // un <img> no puede enviar cabeceras, el token JWT viaja como query param.
@@ -1506,15 +1517,26 @@ export default function AIRenderStudio({ state, setState }) {
           referenceImage: refImage || undefined,
         }),
       });
+      // 402 = sin créditos de IA: propaga el detalle del backend.
+      if (response.status === 402) {
+        const d = await response.json().catch(() => ({}));
+        const e = new Error(d.detail || 'Sin créditos de IA.');
+        e.noCredits = true;
+        throw e;
+      }
       return response.json();
     };
 
     try {
-      const results = await Promise.all(Array.from({ length: n }, (_, i) => oneRender(i).catch(() => null)));
+      const settled = await Promise.allSettled(Array.from({ length: n }, (_, i) => oneRender(i)));
+      const results = settled.map(s => s.status === 'fulfilled' ? s.value : null);
+      const noCreditsErr = settled.find(s => s.status === 'rejected' && s.reason?.noCredits);
       const ok = results.filter(d => d && d.success);
       if (ok.length) {
         setRenderResult(ok[0]);
         setRenderHistory(prev => [...ok.map(d => ({ ...d, description, timestamp: new Date() })), ...prev].slice(0, 12));
+      } else if (noCreditsErr) {
+        setError(noCreditsErr.reason.message);
       } else {
         setError((results.find(Boolean) || {}).error || 'Error al generar el render');
       }
@@ -1522,6 +1544,7 @@ export default function AIRenderStudio({ state, setState }) {
       setError('Error de conexión. Verifique su conexión a internet.');
     } finally {
       setIsGenerating(false);
+      fetchCredits();
     }
   };
 
@@ -1576,6 +1599,20 @@ export default function AIRenderStudio({ state, setState }) {
               <h1 className="text-lg font-black text-slate-900 uppercase tracking-wide">Estudio 3D</h1>
               <p className="text-xs text-slate-500 font-medium">Powered by LuiggiAI Engine</p>
             </div>
+            {/* Créditos de IA del usuario (bolsa mensual). Admin/master = ilimitado. */}
+            {aiCredits && (
+              <span
+                title="Créditos de IA disponibles este mes"
+                className={`ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black ${
+                  aiCredits.ilimitado
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : (aiCredits.restantes <= 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700')
+                }`}
+              >
+                <Sparkles size={12} />
+                {aiCredits.ilimitado ? 'Créditos: ilimitado' : `Créditos: ${aiCredits.restantes} restantes`}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
