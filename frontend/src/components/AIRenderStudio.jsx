@@ -1633,7 +1633,7 @@ export default function AIRenderStudio({ state, setState }) {
       {/* Content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Panel izquierdo - Entrada */}
-        <div className={`${panelHidden ? 'lg:hidden' : ''} w-full lg:w-auto shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto`}
+        <div className={`${panelHidden ? 'hidden' : ''} w-full lg:w-auto shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col min-h-0 overflow-y-auto max-h-[55vh] lg:max-h-none`}
           style={isWide() && !panelHidden ? { width: panelW } : undefined}>
           {mode === 'natural' ? (
             /* ─── Modo Voz/Texto ─── */
@@ -2084,6 +2084,11 @@ export default function AIRenderStudio({ state, setState }) {
 
         {/* Panel derecho - Resultado */}
         <div className="flex-1 flex flex-col p-4 sm:p-6 min-h-[60vh] lg:min-h-0 lg:overflow-hidden">
+          {/* Mostrar/ocultar el panel de opciones en móvil y tablet para dar sitio al render */}
+          <button onClick={() => setPanelHidden(v => !v)}
+            className="lg:hidden self-start mb-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm">
+            {panelHidden ? <><ChevronRight size={14} /> Mostrar opciones</> : <><ChevronLeft size={14} /> Ocultar opciones</>}
+          </button>
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
               <span className="text-red-500 font-bold">Error:</span> {error}
@@ -2113,9 +2118,9 @@ export default function AIRenderStudio({ state, setState }) {
           ) : renderResult ? (
             /* Resultado del render */
             <div className="flex-1 flex flex-col gap-2 overflow-hidden">
-              <div className="flex items-center justify-between shrink-0 gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between shrink-0 gap-2">
                 <h3 className="font-black text-slate-700 uppercase tracking-wider text-xs">Resultado</h3>
-                <div className="flex gap-1.5 flex-wrap justify-end">
+                <div className="flex gap-1.5 flex-wrap justify-start sm:justify-end">
                   <button onClick={visitaDecorador} disabled={editing || downloading || !currentImage()}
                     title="Aplica el toque de un decorador/a profesional: estilismo, iluminación, textiles y ambiente premium — sin cambiar los muebles"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black text-white bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-sm disabled:opacity-50">
