@@ -146,7 +146,9 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
       depth: furniture.fondo_real || furniture.fondo_estimado * 10,
       category: furniture.categoria,
       programa: furniture.programa,
-      productId: furniture.product_id
+      productId: furniture.product_id,
+      cantidad: furniture.cantidad || 1,
+      qty: furniture.cantidad || 1
     }, false);
   };
 
@@ -159,7 +161,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         code: f.codigo_catalogo || f.codigo_sugerido || 'MV',
         name: f.nombre_catalogo || `${f.tipo || ''} ${f.subtipo || ''}`.trim() || 'Mueble',
         price: Number(f.precio_pvp) || 0,
-        qty: 1,
+        qty: Number(f.cantidad) || 1,
         width: f.ancho_real || f.ancho_estimado,
         height: f.alto_real || f.alto_estimado,
         depth: f.fondo_real || f.fondo_estimado,
@@ -176,8 +178,9 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
     setDumpTarget(target);
     setDumpChoice(null);
     if (notify) {
-      const totalPvp = productos.reduce((sum, f) => sum + (f.precio_pvp || 0), 0);
-      alert(`✅ ${productos.length} producto(s) añadido(s) al ${target === 'p2' ? 'Presupuestador (principal)' : 'Presupuestador 2'}.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€`);
+      const totalUnidades = productos.reduce((sum, f) => sum + (Number(f.cantidad) || 1), 0);
+      const totalPvp = productos.reduce((sum, f) => sum + (f.precio_pvp || 0) * (Number(f.cantidad) || 1), 0);
+      alert(`✅ ${totalUnidades} producto(s) añadido(s) al ${target === 'p2' ? 'Presupuestador (principal)' : 'Presupuestador 2'}.\n\nTotal: ${totalPvp.toLocaleString('es-ES')}€`);
     }
   };
 
@@ -435,7 +438,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                       <p className="text-[10px] font-bold text-orange-400 uppercase">Columnas</p>
                     </div>
                     <div className="bg-purple-50 rounded-lg p-2 text-center">
-                      <p className="text-xl font-black text-purple-600">{analysisResult.muebles_detectados?.length || 0}</p>
+                      <p className="text-xl font-black text-purple-600">{(analysisResult.muebles_detectados || []).reduce((s, m) => s + (Number(m.cantidad) || 1), 0)}</p>
                       <p className="text-[10px] font-bold text-purple-400 uppercase">Total</p>
                     </div>
                   </div>
@@ -468,6 +471,11 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-black text-indigo-900 text-sm">{furniture.codigo_catalogo || furniture.codigo_sugerido}</span>
+                          {(Number(furniture.cantidad) || 1) > 1 && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full font-black bg-indigo-600 text-white">
+                              ×{furniture.cantidad}
+                            </span>
+                          )}
                           {furniture.pared && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600">
                               P{furniture.pared}
@@ -493,7 +501,14 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                       </div>
                       <div className="text-right shrink-0">
                         {furniture.precio_pvp > 0 ? (
-                          <p className="font-black text-emerald-600 text-lg">{furniture.precio_pvp}€</p>
+                          <>
+                            <p className="font-black text-emerald-600 text-lg">
+                              {((Number(furniture.precio_pvp) || 0) * (Number(furniture.cantidad) || 1)).toLocaleString('es-ES')}€
+                            </p>
+                            {(Number(furniture.cantidad) || 1) > 1 && (
+                              <p className="text-[10px] text-slate-400">{furniture.precio_pvp}€/ud</p>
+                            )}
+                          </>
                         ) : (
                           <p className="font-bold text-orange-500 text-sm">Sin precio</p>
                         )}
@@ -593,7 +608,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setDumpChoice(null)}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-black text-slate-900 mb-1">¿A qué presupuestador?</h3>
-            <p className="text-sm text-slate-500 mb-4">Tienes los dos activos. Elige dónde volcar los {dumpChoice.productos.length} muebles detectados.</p>
+            <p className="text-sm text-slate-500 mb-4">Tienes los dos activos. Elige dónde volcar los {dumpChoice.productos.reduce((s, f) => s + (Number(f.cantidad) || 1), 0)} muebles detectados.</p>
             <div className="grid grid-cols-1 gap-2">
               <button onClick={() => doDump(dumpChoice.productos, 'p2', dumpChoice.opts)}
                 className="w-full px-4 py-3 rounded-xl bg-orange-600 text-white font-black uppercase text-sm hover:bg-orange-700 transition-colors">

@@ -596,6 +596,8 @@ const App = () => {
     // Código CONFIRMADO por el backend (no la simple sugerencia de la IA)
     const matchedCode = furniture.code || furniture.codigo_catalogo;
     const iaCode = matchedCode || furniture.codigo_sugerido;
+    // Cantidad de muebles idénticos agrupados (IA Lab). Por defecto 1.
+    const qty = Number(furniture.cantidad || furniture.qty) || 1;
 
     // Generar posibles códigos y buscar en catálogo (el código confirmado va primero)
     const possibleCodes = generatePossibleCodes(tipo, subtipo, ancho, alto);
@@ -614,7 +616,7 @@ const App = () => {
         productId: foundProduct.id,
         productCode: foundProduct.code,
         productName: foundProduct.name,
-        quantity: 1,
+        quantity: qty,
         customWidth: foundProduct.width || ancho,
         customHeight: foundProduct.height || alto,
         customDepth: foundProduct.depth || fondo,
@@ -636,7 +638,7 @@ const App = () => {
         productId: furniture.productId || furniture.product_id || matchedCode,
         productCode: matchedCode.toUpperCase(),
         productName: furniture.name || furniture.nombre_catalogo || `${tipo} ${subtipo}`.trim(),
-        quantity: 1,
+        quantity: qty,
         customWidth: ancho,
         customHeight: alto,
         customDepth: fondo,
@@ -659,7 +661,7 @@ const App = () => {
         productId: productCode,
         productCode: productCode.toUpperCase(),
         productName: productName,
-        quantity: 1,
+        quantity: qty,
         customWidth: ancho,
         customHeight: alto,
         customDepth: fondo,

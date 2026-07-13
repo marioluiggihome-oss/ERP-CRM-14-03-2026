@@ -345,9 +345,55 @@ async def enrich_detected_furniture(furniture_list: list, library: str = None) -
             enriched_item['precio_pvp'] = 0
             enriched_item['mensaje'] = f"Producto no encontrado en catálogo {library or 'ZC'} - revisar manualmente"
 
+        enriched_item.setdefault('cantidad', 1)
         enriched.append(enriched_item)
-    
+
     return enriched
+
+
+def group_identical_furniture(enriched_list: list) -> list:
+    """
+    Agrupa muebles IDÉNTICOS (con match de catálogo) en una sola entrada con
+    un campo `cantidad` = nº de repeticiones. Se consideran idénticos si comparten:
+    mismo `codigo_catalogo` + mismo `ancho_real` (o ancho) + misma altura + mismo precio.
+
+    Los muebles SIN match de catálogo (no encontrados / electrodomésticos) NO se
+    agrupan: quedan como filas separadas para poder revisarlos manualmente.
+
+    Mantiene el orden de primera aparición y NO elimina campos existentes: sólo
+    añade/actualiza `cantidad`.
+    """
+    grouped = []
+    index_by_key = {}
+
+    for item in enriched_list:
+        base_qty = int(item.get('cantidad', 1) or 1)
+
+        # Sólo agrupamos muebles con match de catálogo. Sin match → fila separada.
+        if not item.get('producto_encontrado'):
+            new_item = {**item}
+            new_item['cantidad'] = base_qty
+            grouped.append(new_item)
+            continue
+
+        ancho = item.get('ancho_real', item.get('ancho_estimado', 0))
+        altura = item.get('alto_real', item.get('alto_estimado', 0))
+        key = (
+            item.get('codigo_catalogo', ''),
+            ancho,
+            altura,
+            item.get('precio_pvp', 0),
+        )
+
+        if key in index_by_key:
+            grouped[index_by_key[key]]['cantidad'] += base_qty
+        else:
+            new_item = {**item}
+            new_item['cantidad'] = base_qty
+            index_by_key[key] = len(grouped)
+            grouped.append(new_item)
+
+    return grouped
 
 
 ANALYSIS_PROMPT_SINGLE = """Analiza este plano/diseño de cocina y detecta TODOS los muebles y elementos visibles.
@@ -533,19 +579,23 @@ async def analyze_kitchen_plan(
         
         # Enrich with catalog data - FILTRANDO POR BIBLIOTECA
         if 'muebles_detectados' in data:
-            data['muebles_detectados'] = await enrich_detected_furniture(data['muebles_detectados'], active_library)
-            
-            total_pvp = sum(m.get('precio_pvp', 0) for m in data['muebles_detectados'])
-            productos_encontrados = sum(1 for m in data['muebles_detectados'] if m.get('producto_encontrado'))
-            electrodomesticos = sum(1 for m in data['muebles_detectados'] if m.get('es_electrodomestico'))
+            enriched = await enrich_detected_furniture(data['muebles_detectados'], active_library)
+            # Agrupar muebles idénticos con match de catálogo (añade `cantidad`).
+            data['muebles_detectados'] = group_identical_furniture(enriched)
+
+            # Los contadores/totales cuentan por CANTIDAD (no por filas).
+            total_pvp = sum(m.get('precio_pvp', 0) * m.get('cantidad', 1) for m in data['muebles_detectados'])
+            productos_encontrados = sum(m.get('cantidad', 1) for m in data['muebles_detectados'] if m.get('producto_encontrado'))
+            electrodomesticos = sum(m.get('cantidad', 1) for m in data['muebles_detectados'] if m.get('es_electrodomestico'))
             # "No encontrados" reales = ni encontrados ni electrodomésticos
-            productos_no_encontrados = sum(1 for m in data['muebles_detectados']
+            productos_no_encontrados = sum(m.get('cantidad', 1) for m in data['muebles_detectados']
                                            if not m.get('producto_encontrado') and not m.get('es_electrodomestico'))
-            muebles_cotizables = len(data['muebles_detectados']) - electrodomesticos
+            total_muebles = sum(m.get('cantidad', 1) for m in data['muebles_detectados'])
+            muebles_cotizables = total_muebles - electrodomesticos
 
             data['resumen_precios'] = {
                 'total_pvp': total_pvp,
-                'total_puntos': sum(m.get('puntos', 0) for m in data['muebles_detectados']),
+                'total_puntos': sum(m.get('puntos', 0) * m.get('cantidad', 1) for m in data['muebles_detectados']),
                 'productos_encontrados': productos_encontrados,
                 'productos_no_encontrados': productos_no_encontrados,
                 'electrodomesticos': electrodomesticos,
@@ -698,17 +748,20 @@ ANCHO (rotulado en el plano); el sistema buscará el producto MV correspondiente
         
         # Enriquecer con datos del catálogo - FILTRANDO POR BIBLIOTECA
         enriched_furniture = await enrich_detected_furniture(all_furniture, active_library)
-        
-        total_pvp = sum(m.get('precio_pvp', 0) for m in enriched_furniture)
-        productos_encontrados = sum(1 for m in enriched_furniture if m.get('producto_encontrado'))
-        electrodomesticos = sum(1 for m in enriched_furniture if m.get('es_electrodomestico'))
-        productos_no_encontrados = sum(1 for m in enriched_furniture
+        # Agrupar muebles idénticos con match de catálogo (añade `cantidad`).
+        enriched_furniture = group_identical_furniture(enriched_furniture)
+
+        # Los contadores/totales cuentan por CANTIDAD (no por filas).
+        total_pvp = sum(m.get('precio_pvp', 0) * m.get('cantidad', 1) for m in enriched_furniture)
+        productos_encontrados = sum(m.get('cantidad', 1) for m in enriched_furniture if m.get('producto_encontrado'))
+        electrodomesticos = sum(m.get('cantidad', 1) for m in enriched_furniture if m.get('es_electrodomestico'))
+        productos_no_encontrados = sum(m.get('cantidad', 1) for m in enriched_furniture
                                        if not m.get('producto_encontrado') and not m.get('es_electrodomestico'))
-        muebles_cotizables = len(enriched_furniture) - electrodomesticos
+        muebles_cotizables = sum(m.get('cantidad', 1) for m in enriched_furniture) - electrodomesticos
 
         total_summary['resumen_precios'] = {
             'total_pvp': total_pvp,
-            'total_puntos': sum(m.get('puntos', 0) for m in enriched_furniture),
+            'total_puntos': sum(m.get('puntos', 0) * m.get('cantidad', 1) for m in enriched_furniture),
             'productos_encontrados': productos_encontrados,
             'productos_no_encontrados': productos_no_encontrados,
             'electrodomesticos': electrodomesticos,
