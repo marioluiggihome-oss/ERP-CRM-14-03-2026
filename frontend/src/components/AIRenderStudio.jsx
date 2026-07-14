@@ -1328,18 +1328,28 @@ export default function AIRenderStudio({ state, setState }) {
   const openList = async () => {
     try {
       const r = await fetch(`${API_URL}/api/ai-engine/designs`, { headers: getAuthHeaders() });
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || `Error ${r.status}`); }
       const d = await r.json();
       setSavedList(d.designs || []);
-    } catch { setError('No se pudo cargar la lista.'); }
+    } catch (e) { setError(`No se pudo cargar la lista de proyectos: ${e.message || 'error de conexión'}`); }
   };
-  const loadDesign = (dsg) => {
+  const loadDesign = async (dsg) => {
     setCliente(dsg.cliente || ''); setRef(dsg.ref || ''); setDescription(dsg.description || '');
     if (dsg.style) setParams(p => ({ ...p, style: dsg.style }));
     setSavedId(dsg.id); setSavedList(null);
     if (dsg.images?.[0]) setRenderResult({ success: true, result: { images: dsg.images }, description: dsg.description });
-    // Restaurar la referencia/plano guardado para poder comparar
-    if (dsg.referenceImage) { setRefImage(dsg.referenceImage); setOriginalRef(dsg.referenceImage); }
-    else { setRefImage(null); setOriginalRef(null); }
+    // La lista ya no trae el referenceImage (payload); se carga el detalle completo
+    // para poder Comparar con el plano/referencia original guardado.
+    setRefImage(null); setOriginalRef(null);
+    try {
+      const r = await fetch(`${API_URL}/api/ai-engine/designs/${dsg.id}`, { headers: getAuthHeaders() });
+      if (r.ok) {
+        const d = await r.json();
+        const full = d.design || {};
+        if (full.images?.length) setRenderResult({ success: true, result: { images: full.images }, description: full.description });
+        if (full.referenceImage) { setRefImage(full.referenceImage); setOriginalRef(full.referenceImage); }
+      }
+    } catch { /* si falla el detalle, se queda con la miniatura de la lista */ }
   };
   const deleteDesign = async (id) => {
     if (!window.confirm('¿Eliminar este proyecto guardado?')) return;
