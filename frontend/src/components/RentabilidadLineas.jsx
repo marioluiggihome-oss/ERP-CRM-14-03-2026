@@ -518,8 +518,96 @@ const RentabilidadLineas = ({ currentUser }) => {
     load();
   };
 
+  // ── Informe PDF: fichas con margen 0 o negativo (aviso previo al visto bueno) ──
+  const exportarRevisionMargen = async () => {
+    const rows = baseFiltered.filter(margenNegativo);
+    if (rows.length === 0) { alert('No hay documentos con margen 0 o negativo en el listado actual.'); return; }
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const clean = (s) => String(s ?? '').normalize('NFKC');
+      const hoy = new Date();
+      const fechaStr = hoy.toLocaleDateString('es-ES');
+      const fechaFile = hoy.toISOString().slice(0, 10);
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const M = 14;
+
+      // Cabecera de marca (logo si existe; si no, texto). Marca blanca.
+      const logo = currentUser?.logo || null;
+      const drawHeader = () => {
+        const hy = 14;
+        if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+          try {
+            const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG');
+            pdf.addImage(logo, fmt, M, hy, 32, 16);
+          } catch (_) { /* logo no incrustable */ }
+        } else {
+          pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
+          pdf.text('LUIGGI HOME', M, hy + 8); pdf.setFont(undefined, 'normal');
+        }
+        pdf.setFontSize(13); pdf.setTextColor(185, 28, 28); pdf.setFont(undefined, 'bold');
+        pdf.text('Revisión de margen — artículos con margen 0 o negativo', W - M, hy + 4, { align: 'right' });
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(9); pdf.setTextColor(120);
+        pdf.text(`${fechaStr}   ·   ${rows.length} documento(s)`, W - M, hy + 10, { align: 'right' });
+      };
+      drawHeader();
+
+      const head = [['Nº / Ref', 'Cliente', 'Fecha', 'Venta', 'Coste', 'Margen', '% Margen']];
+      const acc = { venta: 0, coste: 0, margen: 0 };
+      const body = rows.map(f => {
+        const tt = f.totals || totals(f.lines);
+        acc.venta += tt.venta || 0; acc.coste += tt.coste || 0; acc.margen += tt.margen || 0;
+        return [
+          clean(f.ref || '-'),
+          clean(f.cliente || '-') + (f.clienteCodigo ? ` (${f.clienteCodigo})` : ''),
+          f.fecha || '-',
+          eur(tt.venta), eur(tt.coste), eur(tt.margen),
+          `${(Number(tt.margenPct) || 0).toFixed(1)}%`,
+        ];
+      });
+
+      autoTable(pdf, {
+        startY: 40,
+        head, body,
+        styles: { fontSize: 8.5, cellPadding: 1.8, overflow: 'linebreak', valign: 'middle' },
+        headStyles: { fillColor: [185, 28, 28], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [253, 242, 242] },
+        columnStyles: {
+          0: { cellWidth: 24 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 20 },
+          3: { cellWidth: 24, halign: 'right' }, 4: { cellWidth: 24, halign: 'right' },
+          5: { cellWidth: 24, halign: 'right' }, 6: { cellWidth: 18, halign: 'right' },
+        },
+        margin: { top: 32, left: M, right: M },
+        didDrawPage: (data) => { if (data.pageNumber > 1) drawHeader(); },
+      });
+
+      let y = (pdf.lastAutoTable?.finalY || 40) + 8;
+      pdf.setFillColor(30, 27, 45); pdf.rect(M, y, W - 2 * M, 16, 'F');
+      pdf.setTextColor(255); pdf.setFontSize(9); pdf.setFont(undefined, 'bold');
+      pdf.text(`TOTAL (${rows.length} doc.)`, M + 3, y + 10);
+      pdf.text(`Venta: ${eur(acc.venta)}`, M + 55, y + 10);
+      pdf.text(`Coste: ${eur(acc.coste)}`, M + 105, y + 10);
+      pdf.setTextColor(acc.margen >= 0 ? 110 : 255, acc.margen >= 0 ? 231 : 120, acc.margen >= 0 ? 183 : 120);
+      pdf.text(`Margen: ${eur(acc.margen)}`, M + 150, y + 10);
+      pdf.setFont(undefined, 'normal');
+
+      pdf.save(`revision_margen_${fechaFile}.pdf`);
+    } catch (e) {
+      alert('No se pudo generar el PDF: ' + (e?.message || e));
+    }
+  };
+
+  // Modo "Revisar margen": aísla las fichas con margen 0 o negativo antes del visto bueno.
+  const [reviewMode, setReviewMode] = useState(false);
+  // Margen de una ficha (usa totals precalculados si existen, si no los calcula).
+  const margenDe = (f) => (f.totals?.margen ?? totals(f.lines).margen);
+  const margenNegativo = (f) => (Number(margenDe(f)) || 0) <= 0;
+
   // Filtrado y ordenacion
-  const filteredAndSorted = useMemo(() => {
+  const baseFiltered = useMemo(() => {
     let rows = fichas.filter(f => (f.docType || 'factura') === docType);
 
     // Aplicar filtros por columna
@@ -600,6 +688,15 @@ const RentabilidadLineas = ({ currentUser }) => {
 
     return rows;
   }, [fichas, docType, columnFilters, sortColumn, sortDirection]);
+
+  // Fichas con margen 0 o negativo dentro del listado ya filtrado (para el contador y el PDF).
+  const marginBadFichas = useMemo(() => baseFiltered.filter(margenNegativo), [baseFiltered]);
+
+  // Lista final que se pinta: si el modo revisión está activo, solo las de margen ≤ 0.
+  const filteredAndSorted = useMemo(
+    () => (reviewMode ? marginBadFichas : baseFiltered),
+    [reviewMode, marginBadFichas, baseFiltered]
+  );
 
   // Paginacion sobre los datos filtrados y ordenados
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
@@ -696,6 +793,18 @@ const RentabilidadLineas = ({ currentUser }) => {
           <button onClick={() => setShowTotals(s => !s)} className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${showTotals ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
             <Euro size={16} /> Totales
           </button>
+          {/* Revisar margen: aísla las fichas con margen 0 o negativo (aviso previo al visto bueno). */}
+          <button onClick={() => { setReviewMode(s => !s); setCurrentPage(1); }}
+            className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${reviewMode ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            <Eye size={16} /> Revisar margen
+            {marginBadFichas.length > 0 && (
+              <span className={`px-1.5 py-0.5 rounded text-[11px] ${reviewMode ? 'bg-white/20' : 'bg-red-100 text-red-700'}`}>{marginBadFichas.length}</span>
+            )}
+          </button>
+          <button onClick={exportarRevisionMargen} disabled={marginBadFichas.length === 0}
+            className="px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed">
+            <FileText size={16} /> Informe PDF (margen ≤ 0)
+          </button>
           <button onClick={load} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -721,6 +830,20 @@ const RentabilidadLineas = ({ currentUser }) => {
         className={`mb-4 rounded-2xl border-2 border-dashed px-4 py-3 flex items-center justify-center gap-2 text-sm font-bold transition-colors ${dragOver ? 'border-fuchsia-500 bg-fuchsia-50 text-fuchsia-700' : 'border-slate-200 text-slate-400'}`}>
         <Sparkles size={16} /> Arrastra aquí un documento (factura, pedido, albarán, ingreso…) y la IA detectará qué es y dónde colocarlo.
       </div>
+
+      {/* Aviso del modo revisión de margen */}
+      {reviewMode && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-red-50 border border-red-200">
+          <Eye size={16} className="text-red-600" />
+          <span className="text-sm font-black text-red-700">
+            Revisión de margen · {marginBadFichas.length} con margen 0 o negativo
+          </span>
+          <span className="text-xs text-red-500">Revísalos antes de dar el visto bueno.</span>
+          <button onClick={() => setReviewMode(false)} className="text-xs text-slate-500 hover:text-slate-700 font-bold ml-auto underline">
+            Salir de revisión
+          </button>
+        </div>
+      )}
 
       {/* Barra de filtros activos */}
       {hasActiveFilters && (
@@ -855,13 +978,18 @@ const RentabilidadLineas = ({ currentUser }) => {
               const tt = f.totals || totals(f.lines);
               // Alerta de margen bajo (<15%) solo tiene sentido si hay venta y coste registrados.
               const alertaMargen = tt.venta > 0 && tt.coste > 0 && tt.margenPct < 15;
+              // Margen 0 o negativo: aviso SIEMPRE visible (borde rojo + icono) para no dar
+              // por bueno un documento sin margen. Se resalta aunque el modo revisión esté off.
+              const margenCero = (Number(tt.margen) || 0) <= 0;
               // Ya convertida a otro documento: se atenua porque su importe ya no cuenta
               // en los totales (vive en el documento de destino), evita doble lectura.
               const yaConvertida = !!f.convertidoAId;
               return (
-                <tr key={f.id} className={`hover:bg-slate-50 cursor-pointer ${alertaMargen ? 'bg-red-50/60' : ''} ${yaConvertida ? 'opacity-50' : ''}`} onClick={() => openFicha(f.id)}>
+                <tr key={f.id} className={`hover:bg-slate-50 cursor-pointer ${margenCero ? 'bg-red-100/70 border-l-4 border-red-500' : alertaMargen ? 'bg-red-50/60' : ''} ${yaConvertida ? 'opacity-50' : ''}`} onClick={() => openFicha(f.id)}>
                   <td className="p-3 font-black text-indigo-700">
-                    {alertaMargen && <span title="Margen bajo (<15%)" className="inline-block mr-1 text-red-500">⚠</span>}
+                    {margenCero
+                      ? <span title="Margen 0 o negativo — revisar antes del visto bueno" className="inline-block mr-1 text-red-600">⚠</span>
+                      : alertaMargen && <span title="Margen bajo (<15%)" className="inline-block mr-1 text-red-500">⚠</span>}
                     {f.ref || '-'}
                     {f.origenRef && <button type="button" onClick={(e) => { e.stopPropagation(); irADocumento(f.origenType, f.origenRef); }} title="Ir al documento de origen" className="block text-[9px] font-bold text-slate-400 hover:text-indigo-600 hover:underline mt-0.5">↑ {(f.origenType || '').charAt(0).toUpperCase() + (f.origenType || '').slice(1)} {f.origenRef}</button>}
                     {f.convertidoARef && <button type="button" onClick={(e) => { e.stopPropagation(); irADocumento(f.convertidoAType, f.convertidoARef); }} title="Ir al documento de destino" className="block text-[9px] font-bold text-emerald-600 hover:text-emerald-800 hover:underline mt-0.5">→ {(f.convertidoAType || '').charAt(0).toUpperCase() + (f.convertidoAType || '').slice(1)} {f.convertidoARef}</button>}
