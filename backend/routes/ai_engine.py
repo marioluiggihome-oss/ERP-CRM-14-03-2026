@@ -78,15 +78,16 @@ async def list_render_designs(current_user: Optional[dict] = Depends(get_current
     query = {}
     if current_user and current_user.get("id") and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         query["userId"] = current_user["id"]
-    # Solo la primera imagen por diseño (miniatura + abrir). NO devolvemos el
-    # referenceImage completo aquí: con 300 diseños su base64 disparaba el payload
-    # a decenas de MB y la lista fallaba (500). Se marca si existe (hasReference)
-    # y, al abrir un diseño, se puede cargar el detalle completo aparte.
+    # La lista NO devuelve imágenes: cada diseño guarda su render/referencia como
+    # base64 (cientos de KB cada uno); devolver una imagen por 300 diseños disparaba
+    # el payload a cientos de MB y la petición se caía ("Failed to fetch"/timeout).
+    # Solo metadatos ligeros + `hasImage`; la imagen y la referencia se cargan al
+    # ABRIR el diseño (endpoint de detalle GET /designs/{id}).
     items = await _db.render3d_designs.find(
-        query, {"_id": 0, "images": {"$slice": 1},
-                "id": 1, "cliente": 1, "ref": 1, "description": 1,
-                "style": 1, "createdByName": 1, "createdAt": 1, "updatedAt": 1, "userId": 1}
+        query, {"_id": 0, "images": 0, "referenceImage": 0, "referenceImages": 0}
     ).sort("updatedAt", -1).to_list(300)
+    for it in items:
+        it["hasImage"] = True  # se resuelve al abrir; la lista muestra un placeholder
     return {"success": True, "designs": items}
 
 
