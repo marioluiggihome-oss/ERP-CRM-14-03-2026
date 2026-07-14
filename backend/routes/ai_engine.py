@@ -78,15 +78,25 @@ async def list_render_designs(current_user: Optional[dict] = Depends(get_current
     query = {}
     if current_user and current_user.get("id") and not any(current_user.get(f) for f in ADMIN_ROLE_FLAGS):
         query["userId"] = current_user["id"]
-    # Solo la primera imagen por diseño (miniatura + abrir): devolver todas las
-    # imágenes completas de 300 diseños generaba un payload de decenas de MB.
-    # Incluimos referenceImage para que al abrir se pueda comparar plano vs render.
+    # Solo la primera imagen por diseño (miniatura + abrir). NO devolvemos el
+    # referenceImage completo aquí: con 300 diseños su base64 disparaba el payload
+    # a decenas de MB y la lista fallaba (500). Se marca si existe (hasReference)
+    # y, al abrir un diseño, se puede cargar el detalle completo aparte.
     items = await _db.render3d_designs.find(
-        query, {"_id": 0, "images": {"$slice": 1}, "referenceImage": 1,
+        query, {"_id": 0, "images": {"$slice": 1},
                 "id": 1, "cliente": 1, "ref": 1, "description": 1,
                 "style": 1, "createdByName": 1, "createdAt": 1, "updatedAt": 1, "userId": 1}
     ).sort("updatedAt", -1).to_list(300)
     return {"success": True, "designs": items}
+
+
+@ai_engine_router.get("/designs/{design_id}")
+async def get_render_design(design_id: str, current_user: Optional[dict] = Depends(get_current_user)):
+    """Detalle completo de un diseño (incluye referenceImage) para abrir/comparar."""
+    doc = await _db.render3d_designs.find_one({"id": design_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Diseño no encontrado")
+    return {"success": True, "design": doc}
 
 
 @ai_engine_router.delete("/designs/{design_id}")
