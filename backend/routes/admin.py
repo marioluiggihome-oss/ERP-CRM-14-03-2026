@@ -261,3 +261,117 @@ async def ai_usage_config(payload: dict, user=Depends(require_admin)):
     """Fija umbral de alerta, coste por tipo de llamada (€) y URL del panel del proveedor."""
     await set_config(payload or {})
     return {"success": True, **(await get_usage_summary())}
+
+
+# ─── Planes de Suscripción SaaS ──────────────────────────────────────────────
+SUBSCRIPTION_PLANS = {
+    "starter": {
+        "id": "starter", "name": "Starter", "price": 79, "color": "#6366f1",
+        "aiCreditsMonthly": 10,
+        "description": "Autónomos y carpinteros. 10 renders/mes.",
+        "features": ["CRM ilimitado", "Presupuestador", "Pedidos y Albaranes", "Rentabilidad básica", "10 renders IA/mes", "30 bocetos IA/mes", "50 docs clasificación IA/mes"],
+    },
+    "profesional": {
+        "id": "profesional", "name": "Profesional", "price": 179, "color": "#0891b2",
+        "aiCreditsMonthly": 40,
+        "description": "Tiendas de cocinas y estudios de interiorismo.",
+        "features": ["Todo Starter", "Estudio 3D completo", "Armarios IA", "Digitalizador OCR", "Obra Nueva IA", "40 renders IA/mes", "150 bocetos IA/mes", "200 docs clasificación IA/mes", "Panel de Mando"],
+    },
+    "business": {
+        "id": "business", "name": "Business", "price": 349, "color": "#059669",
+        "aiCreditsMonthly": 120,
+        "description": "Fabricantes y tiendas grandes.",
+        "features": ["Todo Profesional", "Fábrica y Producción", "Agentes IA", "120 renders IA/mes", "500 bocetos IA/mes", "Clasificación ilimitada", "Marca blanca", "Soporte prioritario"],
+    },
+    "enterprise": {
+        "id": "enterprise", "name": "Enterprise", "price": 699, "color": "#7c3aed",
+        "aiCreditsMonthly": 400,
+        "description": "Grandes superficies y franquicias.",
+        "features": ["Todo Business", "400 renders IA/mes", "IA sin límites prácticos", "API propia", "Onboarding dedicado", "SLA garantizado", "Usuarios ilimitados"],
+    },
+    "custom": {
+        "id": "custom", "name": "Personalizado", "price": 0, "color": "#64748b",
+        "aiCreditsMonthly": 0,
+        "description": "Plan personalizado con créditos a medida.",
+        "features": ["Configuración a medida"],
+    },
+}
+
+@router.get("/subscription/plans")
+async def get_subscription_plans(user=Depends(require_admin)):
+    return {"success": True, "plans": list(SUBSCRIPTION_PLANS.values())}
+
+@router.get("/subscription/users")
+async def get_subscription_users(user=Depends(require_admin)):
+    from config import db as main_db
+    users = await main_db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
+    result = []
+    for u in users:
+        plan_id = u.get("subscriptionPlan", "")
+        plan = SUBSCRIPTION_PLANS.get(plan_id, {})
+        result.append({
+            "id": u.get("id"), "username": u.get("username"),
+            "clientName": u.get("clientName", ""), "isActive": u.get("isActive", True),
+            "subscriptionPlan": plan_id, "planName": plan.get("name", "Sin plan"),
+            "planColor": plan.get("color", "#64748b"),
+            "aiCreditsMonthly": u.get("aiCreditsMonthly", 0),
+            "subscriptionStartDate": u.get("subscriptionStartDate", ""),
+            "subscriptionNotes": u.get("subscriptionNotes", ""),
+        })
+    return {"success": True, "users": result}
+
+@router.post("/subscription/assign")
+async def assign_subscription(payload: dict, user=Depends(require_admin)):
+    """Asigna un plan a uno o varios usuarios. payload: {user_ids, plan_id, custom_credits?, notes?}"""
+    from config import db as main_db
+    user_ids = payload.get("user_ids", [])
+    plan_id = payload.get("plan_id", "")
+    custom_credits = payload.get("custom_credits", None)
+    notes = payload.get("notes", "")
+    if not user_ids:
+        raise HTTPException(status_code=400, detail="Se requiere al menos un user_id")
+    plan = SUBSCRIPTION_PLANS.get(plan_id)
+    if not plan and plan_id not in ("", "custom"):
+        raise HTTPException(status_code=400, detail=f"Plan '{plan_id}' no existe")
+    credits = custom_credits if custom_credits is not None else (plan.get("aiCreditsMonthly", 0) if plan else 0)
+    update_fields = {
+        "subscriptionPlan": plan_id, "aiCreditsMonthly": credits,
+        "subscriptionStartDate": datetime.utcnow().strftime("%Y-%m-%d"),
+    }
+    if notes:
+        update_fields["subscriptionNotes"] = notes
+    updated = 0
+    for uid in user_ids:
+        res = await main_db.users.update_one({"id": uid}, {"$set": update_fields})
+        if res.modified_count:
+            updated += 1
+    return {"success": True, "updated": updated, "plan": plan.get("name", plan_id) if plan else plan_id, "aiCreditsMonthly": credits}
+
+@router.get("/subscription/credits-usage")
+async def get_credits_usage(user=Depends(require_admin)):
+    """Consumo de créditos de IA de todos los usuarios en el mes actual."""
+    from config import db as main_db
+    from services.ai_usage import _month
+    month = _month()
+    credits_docs = await main_db.ai_credits.find({"month": month}, {"_id": 0}).to_list(None)
+    credits_map = {d["user_id"]: d.get("consumed", 0) for d in credits_docs}
+    users = await main_db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
+    result = []
+    for u in users:
+        uid = str(u.get("id", ""))
+        assigned = int(u.get("aiCreditsMonthly", 0) or 0)
+        consumed = int(credits_map.get(uid, 0))
+        plan_id = u.get("subscriptionPlan", "")
+        plan = SUBSCRIPTION_PLANS.get(plan_id, {})
+        if assigned <= 0:
+            assigned = plan.get("aiCreditsMonthly", 0)
+        remaining = max(assigned - consumed, 0)
+        pct = round(consumed / assigned * 100, 1) if assigned > 0 else 0
+        result.append({
+            "id": uid, "username": u.get("username"), "clientName": u.get("clientName", ""),
+            "subscriptionPlan": plan_id, "planName": plan.get("name", "Sin plan"),
+            "planColor": plan.get("color", "#64748b"),
+            "assigned": assigned, "consumed": consumed, "remaining": remaining,
+            "pct": pct, "over": assigned > 0 and consumed >= assigned,
+        })
+    return {"success": True, "month": month, "users": result}

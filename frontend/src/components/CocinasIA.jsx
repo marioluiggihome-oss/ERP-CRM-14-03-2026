@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChefHat, Sparkles, Image as ImageIcon, Loader, Upload, Download, Maximize2, X, Trash2, FolderOpen, Save } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ChefHat, Sparkles, Image as ImageIcon, Loader, Upload, Download, Maximize2, X, Trash2, FolderOpen, Save, AlertTriangle, Zap } from 'lucide-react';
 import { getToken } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +25,15 @@ const CocinasIA = ({ state }) => {
   const [savingD, setSavingD] = useState(false);
   const [compare, setCompare] = useState(false);          // plano original vs render
   const [editRefImage, setEditRefImage] = useState(null); // elemento pegado (puerta, tirador…)
+  const [aiCredits, setAiCredits] = useState(null);
+
+  const fetchCredits = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_URL}/api/ai-engine/my-credits`, { headers: authH() });
+      if (r.ok) setAiCredits(await r.json());
+    } catch { /* silencioso */ }
+  }, []);
+  useEffect(() => { fetchCredits(); }, [fetchCredits]);
 
   const guardarDiseno = async () => {
     // Si no se han rellenado, se piden aquí mismo: el diseño debe quedar
@@ -108,8 +117,10 @@ const CocinasIA = ({ state }) => {
     try {
       const r = await fetch(`${API_URL}/api/cocinasai/design`, { method: 'POST', headers: authH(), body: JSON.stringify({ images: plans, kitchenType, style, notes }) });
       const d = await r.json();
+      if (r.status === 402) throw new Error(d.detail || 'Has agotado tus créditos de IA este mes. Contacta con tu administrador para ampliar.');
       if (!r.ok) throw new Error(d.detail || 'Error');
       setRenders(rs => { const n = [...rs, d.imageUrl]; setSel(n.length - 1); return n; });
+      fetchCredits(); // Actualizar contador tras generar
     } catch (e) { setError(e.message || 'No se pudo generar el render.'); }
     finally { setLoading(false); }
   };
@@ -121,9 +132,11 @@ const CocinasIA = ({ state }) => {
         || 'Incorpora a la cocina el elemento de la imagen adjunta respetando su forma, color y acabado.';
       const r = await fetch(`${API_URL}/api/cocinasai/edit`, { method: 'POST', headers: authH(), body: JSON.stringify({ previousImageBase64: renders[sel], instruction, elementImageBase64: editRefImage || undefined }) });
       const d = await r.json();
+      if (r.status === 402) throw new Error(d.detail || 'Has agotado tus créditos de IA este mes. Contacta con tu administrador para ampliar.');
       if (!r.ok) throw new Error(d.detail || 'Error');
       setRenders(rs => { const n = [...rs, d.imageUrl]; setSel(n.length - 1); return n; });
       setEditText(''); setEditRefImage(null);
+      fetchCredits(); // Actualizar contador tras editar
     } catch (e) { setError(e.message || 'No se pudo editar el render.'); }
     finally { setLoading(false); }
   };
@@ -138,6 +151,20 @@ const CocinasIA = ({ state }) => {
     <div className="h-full flex flex-col p-4 sm:p-6 pb-24 bg-[#eef2ff] overflow-y-auto">
       <div className="rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white px-4 py-3 mb-4 shadow-lg flex items-center gap-3 flex-wrap">
         <h1 className="ml-14 sm:ml-2 text-base sm:text-lg font-black flex items-center gap-2"><ChefHat size={18} /> Cocinas IA 2 · Render desde plano</h1>
+        {/* Widget de créditos de IA */}
+        {aiCredits && (
+          <span
+            title="Créditos de IA disponibles este mes"
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black ${
+              aiCredits.ilimitado
+                ? 'bg-white/20 text-white'
+                : (aiCredits.restantes <= 0 ? 'bg-red-900/60 text-red-100' : 'bg-white/20 text-white')
+            }`}
+          >
+            <Zap size={11} />
+            {aiCredits.ilimitado ? 'Ilimitado' : `${aiCredits.restantes}/${aiCredits.asignados} renders`}
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-1.5 flex-wrap">
           <button onClick={openDesigns} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold"><FolderOpen size={14} /> Mis diseños</button>
           <button onClick={guardarDiseno} disabled={savingD || !renders.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold disabled:opacity-50">{savingD ? <Loader size={14} className="animate-spin" /> : <Save size={14} />} Guardar</button>
@@ -186,7 +213,16 @@ const CocinasIA = ({ state }) => {
             )}
           </div>
           <button onClick={generar} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-xl font-black text-sm hover:bg-orange-600 disabled:opacity-50">{loading ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />} Generar render</button>
-          {error && <p className="text-xs text-rose-600 font-bold">{error}</p>}
+          {error && (
+            <div className={`flex items-start gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${
+              error.includes('créditos') || error.includes('agotado')
+                ? 'bg-red-50 border border-red-200 text-red-700'
+                : 'bg-rose-50 text-rose-600'
+            }`}>
+              <AlertTriangle size={13} className="mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <p className="text-[10px] text-slate-400">Sin planos también genera una cocina de ejemplo con el estilo elegido. El render por IA consume créditos del motor de render.</p>
         </div>
 

@@ -87,8 +87,24 @@ def _strip(b64):
 
 
 @router.post("/cocinasai/design")
-async def cocinasai_design(payload: dict):
+async def cocinasai_design(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """Genera un render de cocina a partir de uno o varios planos/alzados."""
+    # ENFORCEMENT de créditos de IA por usuario
+    try:
+        from services.ai_usage import get_user_credits, consume_credits
+        if current_user:
+            credits = await get_user_credits(current_user)
+            if not credits.get("ilimitado") and int(credits.get("restantes", 0) or 0) <= 0:
+                raise HTTPException(
+                    status_code=402,
+                    detail=(f"Sin créditos de IA: has agotado tu bolsa mensual "
+                            f"({int(credits.get('asignados', 0) or 0)}). Contacta con tu administrador."),
+                )
+            await consume_credits(current_user, "render")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
     p = payload or {}
     plans = p.get("images") or ([p.get("imageBase64")] if p.get("imageBase64") else [])
     plans = [x for x in plans if x]
@@ -120,8 +136,24 @@ async def cocinasai_design(payload: dict):
 
 
 @router.post("/cocinasai/edit")
-async def cocinasai_edit(payload: dict):
+async def cocinasai_edit(payload: dict, current_user: Optional[dict] = Depends(get_current_user)):
     """Edita un render existente en lenguaje natural."""
+    # ENFORCEMENT de créditos de IA por usuario
+    try:
+        from services.ai_usage import get_user_credits, consume_credits
+        if current_user:
+            credits = await get_user_credits(current_user)
+            if not credits.get("ilimitado") and int(credits.get("restantes", 0) or 0) <= 0:
+                raise HTTPException(
+                    status_code=402,
+                    detail=(f"Sin créditos de IA: has agotado tu bolsa mensual "
+                            f"({int(credits.get('asignados', 0) or 0)}). Contacta con tu administrador."),
+                )
+            await consume_credits(current_user, "render")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
     p = payload or {}
     prev = p.get("previousImageBase64")
     instruction = str(p.get("instruction") or "").strip()
