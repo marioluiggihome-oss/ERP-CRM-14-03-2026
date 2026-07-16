@@ -273,7 +273,7 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 427-BFRH80120;Casco Bajo Fregadero (800x580) M-120;1;40.41;40.41;
 427-SCRH15090;Casco Semi Columna (1500x580) M-90;1;65.22;65.22;
 43-CAT178P130;Encimera Modelo CAT 178-P1 30x620x3600mm3.;3;175.07;58.3567;
-43-MARMFLRC40;Encimera Modelo MARMOL FLORA Canteada1;14;94.98;6.7843;
+43-MARMFLRC40;Encimera Modelo MARMOL FLORA Canteada 40x620x3660mm;14;94.98;94.977;
 43-MARMHDP130;Encimera Modelo MARMOL HADES-P1;20136;0.0;0.0;sin_coste_origen
 43-MARMHDR513;Encimera Modelo MARMOL HADES-R5;20136;115.29;0.0057;revisar_cantidad
 43-PIZ224P130;Encimera Modelo PIZ 224-P1 30x620x3600mm.2;2;112.32;56.16;

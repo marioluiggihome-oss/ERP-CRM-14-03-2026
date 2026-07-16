@@ -22,6 +22,7 @@ const ReportGenerator = () => {
     min_venta: '',
     max_venta: '',
     created_by: '',
+    revisada: '',
     sort_by: 'fecha',
     sort_order: 'desc',
   });
@@ -129,6 +130,7 @@ const ReportGenerator = () => {
       min_venta: '',
       max_venta: '',
       created_by: '',
+      revisada: '',
       sort_by: 'fecha',
       sort_order: 'desc',
     });
@@ -276,6 +278,20 @@ const ReportGenerator = () => {
                 </select>
               </div>
               
+              {/* Check Controller */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Check Controller</label>
+                <select
+                  value={filters.revisada}
+                  onChange={(e) => setFilters(prev => ({ ...prev, revisada: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+                >
+                  <option value="">Todas</option>
+                  <option value="no">❓ Faltan por revisar</option>
+                  <option value="si">✅ Revisadas</option>
+                </select>
+              </div>
+
               {/* Venta mínima */}
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Venta mín. (€)</label>

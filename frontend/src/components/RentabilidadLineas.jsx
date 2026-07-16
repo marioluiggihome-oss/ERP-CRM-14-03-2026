@@ -836,6 +836,8 @@ const RentabilidadLineas = ({ currentUser }) => {
 
   // Modo "Revisar margen": aísla las fichas con margen 0 o negativo antes del visto bueno.
   const [reviewMode, setReviewMode] = useState(false);
+  // Filtro por Check Controller: 'todas' | 'revisadas' | 'pendientes' (falta por revisar).
+  const [controllerFilter, setControllerFilter] = useState('todas');
   // Margen de una ficha (usa totals precalculados si existen, si no los calcula).
   const margenDe = (f) => (f.totals?.margen ?? totals(f.lines).margen);
   const margenNegativo = (f) => (Number(margenDe(f)) || 0) <= 0;
@@ -883,6 +885,12 @@ const RentabilidadLineas = ({ currentUser }) => {
     if (columnFilters.margenMax) {
       rows = rows.filter(f => { const tt = f.totals || totals(f.lines); return (tt.margen || 0) <= Number(columnFilters.margenMax); });
     }
+    // Filtro por Check Controller (revisada por el controller)
+    if (controllerFilter === 'revisadas') {
+      rows = rows.filter(f => !!f.revisada);
+    } else if (controllerFilter === 'pendientes') {
+      rows = rows.filter(f => !f.revisada);
+    }
 
     // Ordenacion
     rows.sort((a, b) => {
@@ -924,7 +932,7 @@ const RentabilidadLineas = ({ currentUser }) => {
     });
 
     return rows;
-  }, [fichas, docType, columnFilters, sortColumn, sortDirection]);
+  }, [fichas, docType, columnFilters, sortColumn, sortDirection, controllerFilter]);
 
   // Fichas con margen 0 o negativo dentro del listado ya filtrado (para el contador y el PDF).
   const marginBadFichas = useMemo(() => baseFiltered.filter(margenNegativo), [baseFiltered]);
@@ -1037,6 +1045,14 @@ const RentabilidadLineas = ({ currentUser }) => {
               <Unlock size={14} /> Desbloqueo master activo
             </span>
           )}
+          {/* Filtro por Check Controller: ver revisadas o las que faltan por revisar/generar */}
+          <select value={controllerFilter} onChange={e => { setControllerFilter(e.target.value); setCurrentPage(1); }}
+            title="Filtrar por estado del Check Controller"
+            className={`px-3 py-2 rounded-xl font-bold text-sm border ${controllerFilter === 'pendientes' ? 'bg-amber-100 text-amber-800 border-amber-300' : controllerFilter === 'revisadas' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+            <option value="todas">Check Controller: todas</option>
+            <option value="pendientes">❓ Faltan por revisar</option>
+            <option value="revisadas">✅ Revisadas</option>
+          </select>
           {/* Revisar margen: aísla las fichas con margen 0 o negativo (aviso previo al visto bueno). */}
           <button onClick={() => { setReviewMode(s => !s); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${reviewMode ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
