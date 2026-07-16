@@ -5,7 +5,7 @@ import { usersAPI, productsAPI, materialsAPI, settingsAPI, clientsAPI, libraries
 import CatalogImporter from './CatalogImporter';
 
 // Componentes refactorizados
-import { TelemetryTab, TelemetryAuditTab, DigitalizadorAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab, DirectorTab, ShopClientsTab, PricingTab, BackupsTab, MaintenanceTab, InventoryTab, ArmazonesTab, SubscriptionTab } from './settings';
+import { TelemetryTab, TelemetryAuditTab, DigitalizadorAuditTab, IdentityTab, SecurityTab, DashboardTab, UsageReportTab, BackupManagementTab, DirectorTab, ShopClientsTab, PricingTab, BackupsTab, MaintenanceTab, InventoryTab, ArmazonesTab, SubscriptionTab, CostesArticulosTab } from './settings';
 
 // Tipos de mueble del Estudio 3D (permisos por partidas). Compartido con AIRenderStudio.
 const ESTUDIO_3D_TIPOS = [
@@ -1406,6 +1406,19 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             >
               <span className="flex items-center gap-2">
                 <Euro size={16} /> Suscripciones
+              </span>
+            </button>
+          )}
+          {/* Costes de artículos - Solo Admin */}
+          {state.currentUser?.isAdmin && (
+            <button
+              onClick={() => setActiveTab('costes-articulos')}
+              className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeTab === 'costes-articulos' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-slate-700'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Euro size={16} /> Costes artículos
               </span>
             </button>
           )}
@@ -3595,6 +3608,10 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
           {/* Suscripciones SaaS */}
           {activeTab === 'subscriptions' && (
             <SubscriptionTab />
+          )}
+          {/* Costes de artículos (catálogo auditable) */}
+          {activeTab === 'costes-articulos' && (
+            <CostesArticulosTab />
           )}
         </div>
         </div>
