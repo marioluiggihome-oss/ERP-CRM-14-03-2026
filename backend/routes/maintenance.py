@@ -209,8 +209,8 @@ async def deactivate_maintenance_mode(adminUserId: str, user=Depends(require_adm
 
 
 @router.get("/backups")
-async def list_pre_update_backups(limit: int = 10):
-    """List all pre-update backups"""
+async def list_pre_update_backups(limit: int = 10, user=Depends(require_admin)):
+    """List all pre-update backups (solo admin)."""
     try:
         cursor = db.system_backups.find({"type": "pre_update"}).sort("createdAt", -1).limit(limit)
         backups = await cursor.to_list(length=limit)
