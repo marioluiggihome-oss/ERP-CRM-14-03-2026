@@ -19,6 +19,22 @@ const AIUsageCard = () => {
   const [spendUrl, setSpendUrl] = useState('');
   const [defCredits, setDefCredits] = useState('');
   const [saving, setSaving] = useState(false);
+  const [probing, setProbing] = useState(false);
+  const [probe, setProbe] = useState(null);
+  const [probeModel, setProbeModel] = useState('gemini-2.5-flash');
+  const medir = async () => {
+    setProbing(true); setProbe(null);
+    try {
+      const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/ai-usage/probe`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: probeModel, prompt: 'Responde solo con la palabra: OK' }),
+      });
+      const d = await r.json();
+      if (!d.success) { setProbe({ error: d.detail || 'Error al medir' }); }
+      else { setProbe(d); load(); }
+    } catch { setProbe({ error: 'Error de red' }); }
+    finally { setProbing(false); }
+  };
   const load = async () => {
     try {
       const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/admin/ai-usage`, { headers: authHeaders() });
@@ -64,6 +80,7 @@ const AIUsageCard = () => {
         <span className="text-4xl font-semibold tracking-tight text-slate-900 tabular-nums">{data.total.toLocaleString('es-ES')}</span>
         <span className="text-sm text-slate-500 mb-1">llamadas{data.threshold ? ` / ${data.threshold.toLocaleString('es-ES')}` : ''}</span>
         {data.estimated_cost > 0 && <span className="mb-1 text-sm font-semibold text-emerald-600 tabular-nums">≈ {data.estimated_cost.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € estimado</span>}
+        {data.real_cost > 0 && <span className="mb-1 text-sm font-bold text-indigo-600 tabular-nums" title="Coste medido con los tokens reales de cada llamada">= {data.real_cost.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} € real (medido)</span>}
         {data.over && <span className="mb-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Límite superado</span>}
         {!data.over && data.warn && <span className="mb-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">⚠ Cerca del límite</span>}
       </div>
@@ -87,6 +104,29 @@ const AIUsageCard = () => {
           ))}
         </div>
       )}
+      {/* Medidor en tiempo real: lanza una petición real y muestra tokens + € exactos */}
+      <div className="border-t border-slate-100 pt-3 mb-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-slate-600">Medir petición en tiempo real</span>
+          <select value={probeModel} onChange={e => setProbeModel(e.target.value)} className="px-2 py-1 border border-slate-200 rounded-lg text-xs">
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+            <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
+          </select>
+          <button onClick={medir} disabled={probing}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50">
+            {probing ? 'Midiendo…' : '⚡ Lanzar y medir'}
+          </button>
+          {probe && !probe.error && (
+            <span className="text-xs text-slate-600">
+              entrada <b className="tabular-nums">{probe.input_tokens}</b> · salida <b className="tabular-nums">{probe.output_tokens}</b> tok ·
+              <b className="text-indigo-600 tabular-nums"> {probe.cost_eur.toLocaleString('es-ES', { maximumFractionDigits: 6 })} €</b>
+              <span className="text-slate-400"> ({probe.cost_eur_1000.toLocaleString('es-ES', { maximumFractionDigits: 2 })} €/1.000 llamadas)</span>
+            </span>
+          )}
+          {probe?.error && <span className="text-xs text-red-600">{probe.error}</span>}
+        </div>
+      </div>
       <div className="border-t border-slate-100 pt-3 space-y-2.5">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-slate-500 w-28">Alerta al superar</span>

@@ -263,6 +263,50 @@ async def ai_usage_config(payload: dict, user=Depends(require_admin)):
     return {"success": True, **(await get_usage_summary())}
 
 
+@router.post("/ai-usage/probe")
+async def ai_usage_probe(payload: dict = None, user=Depends(require_admin)):
+    """Medidor en tiempo real: lanza UNA petición real a Gemini y devuelve los
+    tokens exactos (entrada/salida) y el coste en € de esa llamada. Sirve para
+    comprobar al momento cuánto cuesta una petición sin mirar la factura.
+    payload: {prompt?, model?}"""
+    from services.ai_usage import cost_of, record_ai_tokens
+    p = payload or {}
+    prompt = str(p.get("prompt") or "Responde solo con la palabra: OK").strip()
+    model = str(p.get("model") or "gemini-2.5-flash").strip()
+    try:
+        from services.llm_vision import get_gemini_key
+        from google import genai as google_genai
+        key = get_gemini_key()
+        if not key:
+            raise HTTPException(status_code=400, detail="No hay clave del motor de IA configurada en el servidor")
+        client = google_genai.Client(api_key=key)
+        import asyncio
+        def _call():
+            return client.models.generate_content(model=model, contents=prompt)
+        resp = await asyncio.get_event_loop().run_in_executor(None, _call)
+        um = getattr(resp, "usage_metadata", None)
+        in_tok = int(getattr(um, "prompt_token_count", 0) or 0)
+        out_tok = int(getattr(um, "candidates_token_count", 0) or 0)
+        eur = cost_of(model, in_tok, out_tok, 0)
+        # Se registra también en el contador del mes (cuenta como una llamada real).
+        await record_ai_tokens("probe", model, in_tok, out_tok, 0, str((user or {}).get("id", "")))
+        return {
+            "success": True,
+            "model": model,
+            "input_tokens": in_tok,
+            "output_tokens": out_tok,
+            "total_tokens": in_tok + out_tok,
+            "cost_eur": round(eur, 6),
+            "cost_eur_1000": round(eur * 1000, 4),  # coste si se repitiera 1.000 veces
+            "text": (getattr(resp, "text", "") or "")[:200],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"ai-usage probe error: {e}")
+        raise HTTPException(status_code=500, detail=f"No se pudo medir la petición: {str(e)[:200]}")
+
+
 # ─── Planes de Suscripción SaaS ──────────────────────────────────────────────
 SUBSCRIPTION_PLANS = {
     "starter": {
