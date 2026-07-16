@@ -937,6 +937,13 @@ const RentabilidadLineas = ({ currentUser }) => {
   // Fichas con margen 0 o negativo dentro del listado ya filtrado (para el contador y el PDF).
   const marginBadFichas = useMemo(() => baseFiltered.filter(margenNegativo), [baseFiltered]);
 
+  // Facturas que faltan por controlar (Check Controller pendiente). Solo facturas de venta.
+  const pendientesControl = useMemo(() => {
+    const facturas = (fichas || []).filter(f => (f.docType || 'factura') === 'factura' && !f.revisada);
+    const lineas = facturas.reduce((s, f) => s + ((f.lines || []).length), 0);
+    return { docs: facturas.length, lineas };
+  }, [fichas]);
+
   // Lista final que se pinta: si el modo revisión está activo, solo las de margen ≤ 0.
   const filteredAndSorted = useMemo(
     () => (reviewMode ? marginBadFichas : baseFiltered),
@@ -1045,6 +1052,14 @@ const RentabilidadLineas = ({ currentUser }) => {
               <Unlock size={14} /> Desbloqueo master activo
             </span>
           )}
+          {/* Contador fijo: facturas que faltan por controlar (Check Controller). Al pulsar, filtra. */}
+          <button onClick={() => { setControllerFilter('pendientes'); setCurrentPage(1); }}
+            title="Facturas de venta sin el visto bueno del controller. Pulsa para filtrarlas."
+            className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${pendientesControl.docs > 0 ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-emerald-100 text-emerald-700'}`}>
+            {pendientesControl.docs > 0
+              ? <>⚠ Faltan por controlar: {pendientesControl.docs} <span className="opacity-80 font-normal">({pendientesControl.lineas} líneas)</span></>
+              : <>✅ Todo controlado</>}
+          </button>
           {/* Filtro por Check Controller: ver revisadas o las que faltan por revisar/generar */}
           <select value={controllerFilter} onChange={e => { setControllerFilter(e.target.value); setCurrentPage(1); }}
             title="Filtrar por estado del Check Controller"
