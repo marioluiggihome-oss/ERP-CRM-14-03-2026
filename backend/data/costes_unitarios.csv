@@ -161,15 +161,15 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 25-T60B35601S;Blum Set TOB TANDEMBOX L5LN.350<600mm.E1XT.Total;1;10.39;10.39;
 25-Z30D000SLO;Blum Adaptador L=Izqu.Trasera Mader.Gavet9a;9;7.11;0.79;revisar_coste
 25-Z30D000SRO;Blum Adaptador R=Der.Trasera Mader.Gaveta9;9;7.11;0.79;revisar_coste
-25-Z31L1036AO;Blum Frente Metal Cajón/Gaveta Interior;2;104168.18;52084.09;revisar_coste
+25-Z31L1036AO;Blum Frente Metal Cajón/Gaveta Interior;2;104168.18;9.09;revisar_coste
 25-ZAA532CBLO;Blum Tapa Embellec.Lateral Izq/Der.Cajón;18;1.08;0.06;revisar_coste
 25-ZIF71M0LO1;Blum Fijación Frontal L=Izqu.Gris Orión;1;0.55;0.55;
 25-ZIF71M0RO1;Blum Fijación Frontal R=Der.Gris Orión;1;0.55;0.55;
 25-ZIF74D0LO1;Blum Fijación Frontal L=Izqu.Gris Orión;11;12.32;1.12;revisar_coste
 25-ZIF74D0RO1;Blum Fijación Frontal R=Der.Gris Orión;11;12.32;1.12;revisar_coste
-25-ZRG1046Z1O;Blum Guardacuerpo Frontal Gaveta;6;104624.96;17437.4933;revisar_coste
-25-ZRG437RSLO;Blum Guardacuerpo L=Izqu.ANTARO;9;;;sin_dato
-25-ZRG437RSRO;Blum Guardacuerpo R=Der.ANTARO;9;;;sin_dato
+25-ZRG1046Z1O;Blum Guardacuerpo Frontal Gaveta;6;104624.96;4.16;revisar_coste
+25-ZRG437RSLO;Blum Guardacuerpo L=Izqu.ANTARO;9;;1.81;sin_dato
+25-ZRG437RSRO;Blum Guardacuerpo R=Der.ANTARO;9;;1.81;sin_dato
 25-ZSF35A2021;Blum Fijación Frontal Atornillable Izq/Der.Cajó18n;18;4.32;0.24;
 25-ZV71043C0O;Blum Frente Metal Cajon M / Gaveta;5;46.7;9.34;revisar_coste
 2532867;Cajon metal gris Ral 9006 500 X 149;1;4.61;4.61;
@@ -195,7 +195,7 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 355555;CASCOS ALVIC;8;0.0;0.0;sin_coste_origen
 36-228001TLGO;Blum Tapa Izquierda Gris Orion HF/HL/HS-TOP;1;1.29;1.29;
 36-228001TRGO;Blum Tapa Derecha Gris Orion HF/HL/HS-TOP;1;1.29;1.29;
-36-22F2801PLT;Blum Mecanismo HF-TOP28 Con Plantilla;10200;31.4;0.0031;revisar_cantidad
+36-22F2801PLT;Blum Mecanismo HF-TOP28 Con Plantilla;10200;31.4;15.7;revisar_cantidad
 36-22F28STPMM;Blum Set HF-TOP 28 ST Con Plantilla Puertas;1;0.0;0.0;sin_coste_origen
 36-22F3901UND;Blum Brazo HF-TOP39 Alt. 840-1200mm.;2;19.12;9.56;
 36-22F39STDPM;Blum Set Brazos HF-TOP 39 ST/SD Puerta;1;0.0;0.0;sin_coste_origen
@@ -343,3 +343,65 @@ V0296;Vinoteca EVVO VT8 Cristal Negro 8 Botellas;1;83.81;83.81;
 WG56G2Z1ES;Lavadora SIEMENS WG56G2Z1ES Libre;1;0.0;0.0;sin_coste_origen
 WGG256Z1ES;Lavadora BOSCH WGG256Z1ES Libre;1;0.0;0.0;sin_coste_origen
 WQ45G2D1ES;Secadora SIEMENS WQ45G2D1ES Bomba;1;0.0;0.0;sin_coste_origen
+16-760H5000S4;Blum Guias MOVENTO S LN.500 Extraccion Total 40Kg;;;16.98;
+16-766H7500S;Blum Guias MOVENTO S LN.750 Extraccion Total 70Kg;;;28.44;
+17-173H7130NQ;Blum Base Bisagra Cruz Excentrica Alt.3mm Atornillar Niquel;;;0.34;
+17-174H7100EO;Blum Base Bisagra Cruz Excentrica Taco 5mm Exp ONDX;;;0.42;
+17-71B358EONX;Blum Bisagra Recta 110 Blumotion Taco Expando 8mm ONDX;;;1.97;
+17-79B3451NIQ;Blum Bisagra Angular -30 Blumotion Recubri.Total Atorn.N;;;2.65;
+17-79B3453NIQ;Blum Bisagra Angular -15 Blumotion Recubri.Total Atorn.N;;;2.65;
+17-956A1006FG;Blum TIP ON Muelle Fuerte Largo Gris Con Amortiguador;;;2.59;
+17-956A1006FN;Blum TIP ON Muelle Fuerte Largo Negro Con Amortiguador;;;2.49;
+17-956A1201NG;Blum Soporte Recto TIP ON Largo Negro;;;0.55;
+25-378M350SLO;Blum Perfil Altura M.L Cajon ANTARO Gris LN.350;;;4.33;
+25-378M350SRO;Blum Perfil Altura M.R Cajon ANTARO Gris LN.350;;;4.33;
+25-378M400SLO;Blum Perfil Altura M.L Cajon ANTARO Gris LN.400;;;4.38;
+25-378M400SRO;Blum Perfil Altura M.R Cajon ANTARO Gris LN.400;;;4.38;
+25-378M450SLO;Blum Perfil Altura M.L Cajon ANTARO Gris LN.450;;;4.43;
+25-378M450SRO;Blum Perfil Altura M.R Cajon ANTARO Gris LN.450;;;4.43;
+25-378M500SLB;Blum Perfil Altura M.L Cajon ANTARO Blanco LN.500;;;4.44;
+25-378M500SRB;Blum Perfil Altura M.R Cajon ANTARO Blanco LN.500;;;4.44;
+25-5784001M1J;Blum Juego Guias TANDEMBOX 30Kg TOB LN=400;;;10.5;
+25-7505001S4L;Blum Guia LEGRABOX S LN.500 40Kg Izquierda;;;6.96;
+25-7505001S4R;Blum Guia LEGRABOX S LN.500 40Kg Derecha;;;6.96;
+25-7535001S7L;Blum Guia LEGRABOX S LN.500 70Kg Izquierda;;;8.91;
+25-7535001S7R;Blum Guia LEGRABOX S LN.500 70Kg Derecha;;;8.91;
+25-770C500PLO;Blum Perfil LEGRABOX PURE Alt.C Gris LN.500 Izquierda;;;7.61;
+25-770C500PRO;Blum Perfil LEGRABOX PURE Alt.C Gris LN.500 Derecha;;;7.61;
+25-770F5002PO;Blum Perfiles LEGRABOX PURE Alt.F Gris LN.500 Izq y Der;;;31.74;
+25-770M500PLO;Blum Perfil LEGRABOX PURE Alt.M Gris LN.500 Izquierda;;;4.59;
+25-770M500PRO;Blum Perfil LEGRABOX PURE Alt.M Gris LN.500 Derecha;;;4.59;
+25-780C5002FO;Blum Perfiles LEGRABOX FREE Alt.C Gris LN.500 Izq y Der;;;19.1;
+25-X5765001B1J;Blum Juego Guias TANDEMBOX 65Kg Blumotion LN=500;;;14.09;
+25-Z30B00S4LG;Blum Adaptador L=Izqu.Trasera Mader.Gaveta Antaro B Gris;;;0.5;
+25-Z30B00S4RG;Blum Adaptador R=Der.Trasera Mader.Gaveta Antaro B Gris;;;0.5;
+25-Z30C000SLO;Blum Adaptador L=Izqu.Trasera Mader.Gaveta Antaro C Gris Orion;;;0.79;
+25-Z30C000SRO;Blum Adaptador R=Der.Trasera Mader.Gaveta Antaro C Gris Orion;;;0.79;
+25-Z30M00S4LO;Blum Adaptador L=Izqu.Trasera Mader.Cajon Antaro M Gris Orion;;;0.41;
+25-Z30M00S4RO;Blum Adaptador R=Der.Trasera Mader.Cajon Antaro M Gris Orion;;;0.41;
+25-Z962011UND;Blum Conector fondos de cajon para anchos <750mm;;;0.74;
+25-ZB7C000SLO;Blum Adaptador Trasera LEGRABOX Gris Alt.C L-Izquierda;;;0.43;
+25-ZB7C000SRO;Blum Adaptador Trasera LEGRABOX Gris Alt.C R-Derecha;;;0.43;
+25-ZE7S388GCT;Blum elementos Insercion Lat.LEGRABOX 138x338x10mm Cristal Transp;;;17.04;
+25-ZIF80M71GR;Blum Tirador Arrastrador Cajon Interior ANTARO Gris;;;4.01;
+25-ZRG387RSLO;Blum Guardacuerpo L=Izqu.ANTARO Gris LN=450;;;1.97;
+25-ZRG387RSRO;Blum Guardacuerpo R=Der.ANTARO Gris LN=450;;;1.97;
+36-20K1501B1U;Blum Mecanismo HK-XS-15-(F.R.800-1800);;;5.53;
+36-20K2C0102U;Blum Mecanismo HK-S-(C)-(F.R.400-1000);;;5.75;
+36-20K2C01T1U;Blum Mecanismo HK-S-(C)-TIP-ON-(F.R.400-1000);;;5.87;
+36-20K2E01T1U;Blum Mecanismo HK-S-(E)-TIP-ON-(F.R.960-2215);;;5.87;
+36-20S4201ATR;Blum Fijacion Frontal (HK-HS-HL) Atornillable;;;0.72;
+36-20S42E1EXP;Blum Fijacion Frontal (HK-HS-HL) Taco Expando;;;0.96;
+36-22F2501PLT;Blum Mecanismo HF-TOP25 Con Plantilla FR(2700-13500);;;14.26;
+36-22K2501BPU;Blum Mecanismo HK TOP-25-C/Plantilla.(F.R.930-2800);;;12.85;
+36-22K2701BPU;Blum Mecanismo HK TOP-27-C/Plantilla.(F.R.1730-5200);;;12.91;
+36-22K2701TPU;Blum Mecanismo HK TOP 27 TIP-ON-C/Plnt.(F.R.1730-5200);;;14.8;
+36-22K2901BPU;Blum Mecanismo HK TOP-29-C/Plantilla (F.R.3200-9000);;;15.27;
+36-22K2901TPU;Blum Mecanismo HK TOP 29 TIP-ON-C/Plnt.(F.R.3200-9000);;;17.15;
+36-22K8001LGO;Blum Tapa Gris Orion AVENTOS-HK TOP L/Izquierda;;;1.1;
+36-22K8001RGO;Blum Tapa Gris Orion AVENTOS-HK TOP R/Derecha;;;1.1;
+36-22L2500JGO;Blum Juego Mecanismos HL TOP 25 Alt.300-389;;;35.16;
+36-22L3800JGO;Blum Juego Brazos ST HL TOP 38 Alt.390-540;;;24.24;
+36-22S2500JGO;Blum Juego Mecanismos HS TOP 25;;;34.68;
+36-22S3500JGO;Blum Juego Brazos AVENTOS HS TOP 35;;;21.84;
+36-ABD1000BLO;Blum Tapa PEQUEÑA Decorativa Gris Orion;;;0.07;
