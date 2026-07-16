@@ -1466,13 +1466,14 @@ const RentabilidadLineas = ({ currentUser }) => {
                       <th className="text-left p-2 text-[10px] font-black uppercase">Concepto</th>
                       <th className="text-right p-2 text-[10px] font-black uppercase">Venta</th>
                       <th className="text-right p-2 text-[10px] font-black uppercase">Coste</th>
-                      <th className="text-right p-2 text-[10px] font-black uppercase">Margen</th>
+                      <th className="text-right p-2 text-[10px] font-black uppercase">Margen / %</th>
                       <th className="p-2"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {editor.lines.map((l, i) => {
                       const m = (Number(l.venta) || 0) - (Number(l.coste) || 0);
+                      const mpct = (Number(l.venta) || 0) > 0 ? (m / (Number(l.venta) || 0) * 100) : null;
                       return (
                         <tr key={l.id || i}>
                           <td className="p-1"><input value={l.ref} onChange={e => setLine(i, 'ref', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
@@ -1493,7 +1494,10 @@ const RentabilidadLineas = ({ currentUser }) => {
                             placeholder="0"
                             className={`w-full px-1.5 py-1 border rounded text-xs text-right ${l._match ? 'bg-blue-50 border-blue-200' : ''}`}
                           /></td>
-                          <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
+                          <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {eur(m)}
+                            <span className={`block text-[10px] font-bold ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(1)}%`}</span>
+                          </td>
                           <td className="p-1 text-center"><button onClick={() => removeLine(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                         </tr>
                       );
