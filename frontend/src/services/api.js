@@ -601,7 +601,7 @@ export const materialsAPI = {
   create: async (material) => {
     const response = await fetch(`${API_URL}/api/materials`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(material)
     });
     if (!response.ok) throw new Error('Error al crear material');
@@ -611,7 +611,7 @@ export const materialsAPI = {
   update: async (id, material) => {
     const response = await fetch(`${API_URL}/api/materials/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(material)
     });
     if (!response.ok) throw new Error('Error al actualizar material');
@@ -620,7 +620,8 @@ export const materialsAPI = {
 
   delete: async (id) => {
     const response = await fetch(`${API_URL}/api/materials/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders()
     });
     const data = await response.json();
     if (!response.ok) {

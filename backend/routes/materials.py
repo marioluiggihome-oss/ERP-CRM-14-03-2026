@@ -2,7 +2,8 @@
 Routes for Materials Management
 Extracted from server.py for better maintainability
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from services.jwt_service import require_auth
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -67,7 +68,7 @@ async def get_materials(library: str = None):
 
 
 @router.post("", response_model=MaterialModel)
-async def create_material(material: MaterialCreate):
+async def create_material(material: MaterialCreate, user=Depends(require_auth)):
     """Crear un nuevo material"""
     material_obj = MaterialModel(**material.model_dump())
     await db.materials.insert_one(material_obj.model_dump())
@@ -76,7 +77,7 @@ async def create_material(material: MaterialCreate):
 
 
 @router.put("/{material_id}", response_model=MaterialModel)
-async def update_material(material_id: str, material: MaterialCreate):
+async def update_material(material_id: str, material: MaterialCreate, user=Depends(require_auth)):
     """Actualizar un material"""
     existing = await db.materials.find_one({"id": material_id}, {"_id": 0})
     if not existing:
@@ -89,7 +90,7 @@ async def update_material(material_id: str, material: MaterialCreate):
 
 
 @router.delete("/{material_id}")
-async def delete_material(material_id: str):
+async def delete_material(material_id: str, user=Depends(require_auth)):
     """Eliminar un material"""
     # Check if it's the last one
     count = await db.materials.count_documents({})
