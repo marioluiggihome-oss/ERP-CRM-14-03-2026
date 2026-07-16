@@ -68,6 +68,11 @@ const RentabilidadLineas = ({ currentUser }) => {
   const [cobroMode, setCobroMode] = useState(false);
   const [altDown, setAltDown] = useState(false);
   const [pagando, setPagando] = useState('');
+  // Desbloqueo master: las fichas con visto bueno del controller quedan bloqueadas
+  // (no se pueden modificar, borrar ni desmarcar). Solo el master las desbloquea
+  // manteniendo pulsada la tecla Shift un rato (secuencia que solo él conoce).
+  const esMaster = !!(currentUser?.isAdmin || currentUser?.isPrimaryAdmin || currentUser?.isMaster);
+  const [masterUnlock, setMasterUnlock] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [parsingMulti, setParsingMulti] = useState(false);
   const [multiProgress, setMultiProgress] = useState({ current: 0, total: 0 });
@@ -110,6 +115,11 @@ const RentabilidadLineas = ({ currentUser }) => {
   const toggleRevision = async (e, f) => {
     e.stopPropagation();
     const yaRevisada = !!f.revisada;
+    // Desmarcar el visto bueno del controller: solo el master con el desbloqueo activo.
+    if (yaRevisada && !(esMaster && masterUnlock)) {
+      alert('Ficha con visto bueno del controller: bloqueada.\n\nPara desmarcarla, el master debe mantener pulsada la tecla Shift un par de segundos (desbloqueo) y volver a intentarlo.');
+      return;
+    }
     const accion = yaRevisada ? 'desmarcar la revisión' : 'marcar como REVISADA';
     if (!window.confirm(`¿Deseas ${accion} la factura "${f.ref || f.id}"?`)) return;
     setTogglingRevision(f.id);
@@ -457,6 +467,29 @@ const RentabilidadLineas = ({ currentUser }) => {
   }, []);
   const cobroActivo = cobroMode || altDown;
 
+  // Secuencia de desbloqueo master: mantener Shift pulsada ~2,5s activa el
+  // desbloqueo durante 30s (solo master). Deja modificar/borrar/desmarcar fichas
+  // revisadas por el controller.
+  useEffect(() => {
+    if (!esMaster) return;
+    let hold = null, expiry = null;
+    const down = (e) => {
+      if (e.key === 'Shift' && !hold && !masterUnlock) {
+        hold = setTimeout(() => {
+          setMasterUnlock(true);
+          if (expiry) clearTimeout(expiry);
+          expiry = setTimeout(() => setMasterUnlock(false), 30000);
+        }, 2500);
+      }
+    };
+    const up = (e) => { if (e.key === 'Shift' && hold) { clearTimeout(hold); hold = null; } };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); if (hold) clearTimeout(hold); if (expiry) clearTimeout(expiry); };
+  }, [esMaster, masterUnlock]);
+  // Una ficha revisada está bloqueada salvo que el master haya activado el desbloqueo.
+  const bloqueada = (f) => !!(f?.revisada) && !(esMaster && masterUnlock);
+
   // Registra el cobro TOTAL de una ficha (ingreso a cuenta = importe pendiente),
   // dejándola como "✔ Pagada". Requiere cliente y/o documento (siempre hay ficha).
   const registrarPagado = async (f) => {
@@ -637,8 +670,14 @@ const RentabilidadLineas = ({ currentUser }) => {
   };
 
   const removeFicha = async (id) => {
+    const f = (fichas || []).find(x => x.id === id);
+    if (bloqueada(f)) {
+      alert('Ficha con visto bueno del controller: bloqueada.\n\nSolo el master puede borrarla: mantén pulsada la tecla Shift un par de segundos (desbloqueo) y vuelve a intentarlo.');
+      return;
+    }
     if (!window.confirm('Eliminar esta ficha y sus documentos?')) return;
-    await fetch(`${API_URL}/api/rentabilidad/fichas/${id}`, { method: 'DELETE' });
+    const r = await fetch(`${API_URL}/api/rentabilidad/fichas/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); alert(e.detail || 'No se pudo borrar'); return; }
     load();
   };
 
@@ -998,6 +1037,11 @@ const RentabilidadLineas = ({ currentUser }) => {
           <button onClick={() => setShowTotals(s => !s)} className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${showTotals ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
             <Euro size={16} /> Totales
           </button>
+          {esMaster && masterUnlock && (
+            <span className="px-3 py-2 rounded-xl font-black text-xs bg-red-600 text-white flex items-center gap-1.5 animate-pulse" title="Desbloqueo master activo 30s: puedes modificar/borrar/desmarcar fichas revisadas">
+              <Unlock size={14} /> Desbloqueo master activo
+            </span>
+          )}
           {/* Modo cobro: candado que activa el botón "Pagado" en cada fila. También
               se activa temporalmente manteniendo pulsada la tecla Alt. */}
           <button onClick={() => setCobroMode(m => !m)}
@@ -1296,7 +1340,11 @@ const RentabilidadLineas = ({ currentUser }) => {
                         {f.revisada ? 'Check Controller' : 'Check Controller'}
                       </button>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }}
+                      title={bloqueada(f) ? 'Bloqueada por el controller (solo master con Shift)' : 'Eliminar'}
+                      className={bloqueada(f) ? 'text-slate-300' : 'text-slate-300 hover:text-red-500'}>
+                      {bloqueada(f) ? <Lock size={15} /> : <Trash2 size={15} />}
+                    </button>
                   </td>
                 </tr>
               );
@@ -1589,8 +1637,11 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <p className="text-xs opacity-70">{TABS.find(t => t.key === viewing.docType)?.label} - {viewing.fecha}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => { setViewing(null); setEditor({ ...viewing, saleDoc: null, costDocs: [], existingDocs: viewing.docs || [] }); }}
-                  className="px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">Editar</button>
+                <button onClick={() => {
+                    if (bloqueada(viewing)) { alert('Ficha con visto bueno del controller: bloqueada.\n\nSolo el master puede modificarla: mantén pulsada la tecla Shift un par de segundos (desbloqueo) y vuelve a intentarlo.'); return; }
+                    setViewing(null); setEditor({ ...viewing, saleDoc: null, costDocs: [], existingDocs: viewing.docs || [] });
+                  }}
+                  className="px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-bold">{bloqueada(viewing) ? '🔒 Editar' : 'Editar'}</button>
                 <button onClick={() => setViewing(null)} className="p-2 hover:bg-white/20 rounded-xl"><X size={20} /></button>
               </div>
             </div>
