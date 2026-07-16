@@ -380,8 +380,8 @@
   "nombre": "Copete En forma de \" C\" (Convexo)24x24.L.40200mm.",
   "cantidad": 40200.0,
   "coste_total": 21.12,
-  "coste_unitario": 0.0005,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 10.86,
+  "revisar": ""
  },
  {
   "codigo": "14-CC242440PM",
@@ -412,8 +412,8 @@
   "nombre": "Rincon Copete En forma de \" C\" (Convexo)242x24.mm.U2n,d08.Negro",
   "cantidad": 2422.0,
   "coste_total": 0.44,
-  "coste_unitario": 0.0002,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 0.32,
+  "revisar": ""
  },
  {
   "codigo": "14-CCRNC242PM",
@@ -2228,8 +2228,8 @@
   "nombre": "Encimera Modelo ROBLE HERCULES-P1",
   "cantidad": 21013.0,
   "coste_total": 772.34,
-  "coste_unitario": 0.0368,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 66.54,
+  "revisar": ""
  },
  {
   "codigo": "5300003",
