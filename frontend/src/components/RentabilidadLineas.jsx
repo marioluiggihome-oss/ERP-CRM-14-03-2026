@@ -63,6 +63,11 @@ const RentabilidadLineas = ({ currentUser }) => {
   const [loading, setLoading] = useState(true);
   const [editor, setEditor] = useState(null);
   const [viewing, setViewing] = useState(null);
+  // Modo cobro: muestra el botón "Pagado" en cada fila. Se activa con el candado
+  // de arriba o manteniendo pulsada la tecla Alt.
+  const [cobroMode, setCobroMode] = useState(false);
+  const [altDown, setAltDown] = useState(false);
+  const [pagando, setPagando] = useState('');
   const [parsing, setParsing] = useState(false);
   const [parsingMulti, setParsingMulti] = useState(false);
   const [multiProgress, setMultiProgress] = useState({ current: 0, total: 0 });
@@ -440,6 +445,41 @@ const RentabilidadLineas = ({ currentUser }) => {
     const parsed = parseFloat(normalized);
     return isNaN(parsed) ? 0 : parsed;
   };
+  // Alt mantiene visible el botón "Pagado" mientras se pulsa (modo cobro rápido).
+  useEffect(() => {
+    const down = (e) => { if (e.key === 'Alt') setAltDown(true); };
+    const up = (e) => { if (e.key === 'Alt') setAltDown(false); };
+    const blur = () => setAltDown(false);
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    window.addEventListener('blur', blur);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); window.removeEventListener('blur', blur); };
+  }, []);
+  const cobroActivo = cobroMode || altDown;
+
+  // Registra el cobro TOTAL de una ficha (ingreso a cuenta = importe pendiente),
+  // dejándola como "✔ Pagada". Requiere cliente y/o documento (siempre hay ficha).
+  const registrarPagado = async (f) => {
+    const pend = Number(f.pendienteCobro) || 0;
+    if (pend <= 0) return;
+    if (!window.confirm(`¿Marcar como PAGADA la ficha ${f.ref || ''}?\nSe registrará un cobro de ${eur(pend)}.`)) return;
+    setPagando(f.id);
+    try {
+      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos`, {
+        method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          importe: pend, targetId: f.id, targetRef: f.ref || '',
+          clientCode: f.clienteCodigo || '', cliente: f.cliente || '',
+          concepto: `Cobro total ${f.ref || ''}`.trim(),
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(data.detail || 'No se pudo registrar el cobro'); return; }
+      await load();
+    } catch { alert('Error al registrar el cobro'); }
+    finally { setPagando(''); }
+  };
+
   const setLine = (i, field, val) => {
     const lines = [...editor.lines];
     const isText = field === 'concepto' || field === 'ref';
@@ -958,6 +998,13 @@ const RentabilidadLineas = ({ currentUser }) => {
           <button onClick={() => setShowTotals(s => !s)} className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${showTotals ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
             <Euro size={16} /> Totales
           </button>
+          {/* Modo cobro: candado que activa el botón "Pagado" en cada fila. También
+              se activa temporalmente manteniendo pulsada la tecla Alt. */}
+          <button onClick={() => setCobroMode(m => !m)}
+            title="Activa el botón Pagado en cada fila para registrar el cobro. Atajo: mantén pulsada la tecla Alt."
+            className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${cobroActivo ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            {cobroActivo ? <Unlock size={16} /> : <Lock size={16} />} Modo cobro
+          </button>
           {/* Revisar margen: aísla las fichas con margen 0 o negativo (aviso previo al visto bueno). */}
           <button onClick={() => { setReviewMode(s => !s); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${reviewMode ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
@@ -1213,6 +1260,13 @@ const RentabilidadLineas = ({ currentUser }) => {
                         <span className="block text-[9px] font-bold text-sky-600">a cuenta {eur(f.cobrado)}</span>
                       </span>
                     ) : eur(f.pendienteCobro)}
+                    {/* Botón Pagado: visible solo en modo cobro (candado o Alt) y si queda pendiente */}
+                    {cobroActivo && tt.venta > 0 && (f.pendienteCobro || 0) > 0 && (
+                      <button onClick={(e) => { e.stopPropagation(); registrarPagado(f); }} disabled={pagando === f.id}
+                        className="block mt-1 ml-auto px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+                        {pagando === f.id ? '…' : '✔ Pagado'}
+                      </button>
+                    )}
                   </td>
                   <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
                   <td className="p-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
