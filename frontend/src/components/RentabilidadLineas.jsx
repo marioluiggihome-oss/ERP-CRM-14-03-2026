@@ -1530,7 +1530,7 @@ const RentabilidadLineas = ({ currentUser }) => {
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <table className="w-full text-sm table-fixed">
                   <colgroup>
-                    <col style={{ width: '100px' }} />
+                    <col style={{ width: '150px' }} />
                     <col />
                     <col style={{ width: '46px' }} />
                     <col style={{ width: '82px' }} />
