@@ -19,6 +19,9 @@ const NEXT_DOC_TYPE = { presupuesto: 'pedido', pedido: 'albaran', albaran: 'fact
 
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC`;
 const normRef = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+// Limpia la referencia visible: elimina espacios alrededor de '/' y al inicio/fin
+// para que 'LG26 / 57' se guarde y filtre como 'LG26/57'
+const cleanRef = (v) => String(v || '').trim().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ');
 
 const fileToB64 = (file) => new Promise((res, rej) => {
   const fr = new FileReader();
@@ -157,7 +160,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       } else { // venta
         const lines = (p.lines && p.lines.length) ? p.lines.map(l => ({ concepto: l.concepto || '', venta: Number(l.importe || l.venta) || 0, coste: 0 })) : [{ concepto: p.resumen || 'Documento', venta: Number(p.total) || 0, coste: 0 }];
         const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ docType: p.docType || 'factura', ref: p.ref || '', cliente: p.cliente || '', clienteCodigo: p.clientCode || '', fecha: p.fecha || '', lines, projectRef: p.projectRef || '', createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }) });
+          body: JSON.stringify({ docType: p.docType || 'factura', ref: cleanRef(p.ref || ''), cliente: p.cliente || '', clienteCodigo: p.clientCode || '', fecha: p.fecha || '', lines, projectRef: p.projectRef || '', createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }) });
         if (!r.ok) throw new Error((await r.json()).detail || 'Error');
         const created = await r.json().catch(() => ({}));
         const fid = created?.ficha?.id;
@@ -219,7 +222,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       const data = await r.json();
       if (!data.success) { alert(data.error || 'No se pudo leer el documento'); return; }
       setEditor({
-        ref: data.data.ref || '',
+        ref: cleanRef(data.data.ref || ''),
         cliente: data.data.cliente || '',
         clienteCodigo: data.data.clienteCodigo || '',
         fecha: data.data.fecha || '',
@@ -310,7 +313,7 @@ const RentabilidadLineas = ({ currentUser }) => {
 
           const merged = {
             id: existing.id,
-            ref: existing.ref,
+            ref: cleanRef(existing.ref),
             docType: resolvedDocType,
             cliente: clienteFill ? data.data.cliente : (existing.cliente || ''),
             clienteCodigo: codigoFill ? data.data.clienteCodigo : (existing.clienteCodigo || ''),
@@ -339,7 +342,7 @@ const RentabilidadLineas = ({ currentUser }) => {
 
         // Guardar directamente la ficha
         const fichaData = {
-          ref: data.data.ref || '',
+          ref: cleanRef(data.data.ref || ''),
           cliente: data.data.cliente || '',
           clienteCodigo: data.data.clienteCodigo || '',
           fecha: data.data.fecha || '',
@@ -464,7 +467,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: overwriteId, ref: editor.ref, cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
+          id: overwriteId, ref: cleanRef(editor.ref), cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
           docType: editor.docType,
           // Normalizar separador decimal (coma o punto) antes de guardar
           lines: (editor.lines || []).map(l => ({
