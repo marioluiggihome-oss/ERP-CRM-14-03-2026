@@ -1445,6 +1445,23 @@ async def save_ficha(payload: dict, user: dict = Depends(require_rentabilidad)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/rentabilidad/fichas/assign-client-code")
+async def assign_client_code(payload: dict, user: dict = Depends(require_rentabilidad)):
+    """Asigna un código de cliente a TODAS las fichas de un cliente (por nombre).
+    Útil cuando las fichas se crearon sin código y luego se conoce el código real."""
+    cliente = str((payload or {}).get("cliente") or "").strip()
+    codigo = str((payload or {}).get("codigo") or "").strip()
+    if not cliente or not codigo:
+        raise HTTPException(status_code=400, detail="Falta el cliente o el código")
+    res = await db.sale_fichas.update_many({"cliente": cliente}, {"$set": {"clienteCodigo": codigo}})
+    # Si el cliente existe en la ficha pero no en db.clients, lo damos de alta con ese código.
+    try:
+        await _ensure_client_for_invoice(cliente, codigo)
+    except Exception as e:
+        logger.warning("assign_client_code: no se pudo crear/enlazar cliente %s: %s", cliente, e)
+    return {"success": True, "updated": res.modified_count}
+
+
 @router.patch("/rentabilidad/fichas/{ficha_id}/trace")
 async def trace_ficha(ficha_id: str, payload: dict):
     """Marca en la ficha de origen a qué documento se convirtió (trazabilidad)."""
