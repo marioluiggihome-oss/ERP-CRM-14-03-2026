@@ -45,16 +45,16 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 13-AERM2R30NG;Tapa/Remate Encimera 2 Radios Grueso;3;4.95;1.65;
 13-AEU92R30NG;Unión 90º Reversible Encimera 2 Radios;13;1.98;0.1523;
 13-AEURRT40NG;Union Recta Encimera Recta Grueso;1;1.21;1.21;
-14-CC242440LB;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;20.18;0.0005;revisar_cantidad
+14-CC242440LB;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;20.18;10.3945;confirmar_valor
 14-CC242440LN;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;21.12;10.86;
-14-CC242440PM;"Copete En forma de "" C"" (Convexo)24x24.L.40500mm.";40500;45.98;0.0011;revisar_cantidad
+14-CC242440PM;"Copete En forma de "" C"" (Convexo)24x24.L.40500mm.";40500;45.98;9.1956;
 14-CCESQ242PM;"Esquina Copete En forma de "" C"" (Convexo)234x24.mm.U3,n6d2.";234;1.24;0.0053;revisar_cantidad
-14-CCRNC242LB;"Rincon Copete En forma de "" C"" (Convexo)243x24.mm.U3n,d12.Blanco";2432;0.66;0.0003;revisar_cantidad
+14-CCRNC242LB;"Rincon Copete En forma de "" C"" (Convexo)243x24.mm.U3n,d12.Blanco";2432;0.66;0.2281;
 14-CCRNC242LN;"Rincon Copete En forma de "" C"" (Convexo)242x24.mm.U2n,d08.Negro";2422;0.44;0.32;
-14-CCRNC242PM;"Rincon Copete En forma de "" C"" (Convexo)249x24.mm.U9n,d64.";2492;3.86;0.0015;revisar_cantidad
+14-CCRNC242PM;"Rincon Copete En forma de "" C"" (Convexo)249x24.mm.U9n,d64.";2492;3.86;0.4285;
 14-CCTAPIZDLB;"Tapa IZ/Dr. Copete En forma de "" C""";22;0.24;0.0109;revisar_coste
 14-CCTAPIZDLN;"Tapa IZ/Dr. Copete En forma de "" C""";42;1.52;0.0362;revisar_coste
-14-CCTAPIZDPM;"Tapa IZ/Dr. Copete En forma de "" C""";102;2.56;0.0251;revisar_cantidad
+14-CCTAPIZDPM;"Tapa IZ/Dr. Copete En forma de "" C""";102;2.56;0.2557;
 144.0667.810;Fregadero MEPAMSA SQUARE 50.40;3;353.52;117.84;
 14ESRENE02;Esquina copete rectangular negro;2;0.21;0.105;
 14RECTNEG02;Copete rectangular negro 395cm;3;27.54;9.18;
@@ -62,7 +62,7 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 14TAIZNE02;Tapa izquierda copete rectangular negro;2;0.13;0.065;
 15-ZPAL15040;Zocalo PVC Revestido Aluminio Cepillado;2;15.32;7.66;revisar_coste
 15-ZPBM100400;Zocalo PVC Revestido Blanco Mate;3;19.08;6.36;revisar_cantidad
-15-ZPBM150400;Zocalo PVC Revestido Blanco Mate;504;31.98;0.0635;revisar_cantidad
+15-ZPBM150400;Zocalo PVC Revestido Blanco Mate;504;31.98;8.3992;
 15-ZPNM100400;Zocalo PVC Revestido Negro Mate Altura;7;45.23;6.4614;revisar_cantidad
 15-ZPNM150400;Zocalo PVC Revestido Negro Mate Altura;502;15.99;0.0319;revisar_cantidad
 15-ZPREFNG100;Accesorio bivalente Esqu./Rinc.Flexible;2;1002.7;501.35;revisar_coste
