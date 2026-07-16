@@ -942,7 +942,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                   </button>
                 </span>
               </th>
-              <th className="text-right p-3 text-xs font-black uppercase">% C/V</th>
+              <th className="text-right p-3 text-xs font-black uppercase">% Incr. C→V</th>
               <th className="text-right p-3 text-xs font-black uppercase">Pendiente cobro</th>
               <th className="text-center p-3 text-xs font-black uppercase">Docs</th>
               <th className="p-3"></th>
@@ -1087,9 +1087,9 @@ const RentabilidadLineas = ({ currentUser }) => {
                   <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(tt.margen)}
                   </td>
-                  {/* Columna % Coste/Venta */}
+                  {/* Columna % Incremento Coste→Venta (Margen/Coste) */}
                   <td className="p-3 text-right font-mono text-slate-600 text-xs">
-                    {tt.venta > 0 ? `${((tt.coste / tt.venta) * 100).toFixed(1)}%` : '—'}
+                    {tt.coste > 0 ? `${(((tt.venta - tt.coste) / tt.coste) * 100).toFixed(1)}%` : '—'}
                   </td>
                   <td className={`p-3 text-right font-mono ${(f.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
                     {/* PAGADA: el cobro (ingresos a cuenta vinculados) cubre la venta */}
@@ -1151,9 +1151,9 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <td className="p-3 text-right font-mono text-emerald-700">
                   {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(filteredTotals.margen)}
                 </td>
-                {/* Total % C/V ponderado */}
+                {/* Total % Incremento Coste→Venta ponderado */}
                 <td className="p-3 text-right font-mono text-slate-600 text-xs">
-                  {filteredTotals.venta > 0 ? `${((filteredTotals.coste / filteredTotals.venta) * 100).toFixed(1)}%` : '—'}
+                  {filteredTotals.coste > 0 ? `${(((filteredTotals.venta - filteredTotals.coste) / filteredTotals.coste) * 100).toFixed(1)}%` : '—'}
                 </td>
                 <td className="p-3 text-right font-mono text-amber-700">{eur(filteredTotals.pendienteCobro)}</td>
                 <td colSpan={2}></td>
