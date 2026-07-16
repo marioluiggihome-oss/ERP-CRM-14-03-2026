@@ -4,7 +4,7 @@ import {
   Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw,
   ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck, Users
 } from 'lucide-react';
-import { clientsAPI } from '../services/api';
+import { clientsAPI, authHeaders } from '../services/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -93,6 +93,47 @@ const RentabilidadLineas = ({ currentUser }) => {
   const openClients = async () => {
     setClientsModal(true);
     try { const c = await clientsAPI.getAll(); setClients(c || []); } catch { setClients([]); }
+  };
+
+  // ── Marcar factura como pagada ──
+  const [markingPaid, setMarkingPaid] = useState('');
+  const markAsPaid = async (e, f) => {
+    e.stopPropagation();
+    const tt = f.totals || {};
+    const pendiente = Number(f.pendienteCobro) || 0;
+    if (pendiente <= 0.01) return;
+    if (!window.confirm(`¿Marcar "${f.ref || f.id}" como PAGADA?\n\nSe registrará un cobro de ${eur(pendiente)} vinculado a esta factura.`)) return;
+    setMarkingPaid(f.id);
+    try {
+      const payload = {
+        importe: pendiente,
+        concepto: `Cobro factura ${f.ref || f.id}`,
+        metodo: 'otro',
+        fecha: new Date().toISOString().slice(0, 10),
+        cliente: f.cliente || '',
+        clientCode: f.clienteCodigo || '',
+        targetId: f.id,
+        targetRef: f.ref || '',
+        targetType: 'factura',
+        projectRef: f.projectRef || f.ref || '',
+        createdBy: currentUser?.id || '',
+        createdByName: currentUser?.name || currentUser?.clientName || currentUser?.username || '',
+      };
+      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.detail || `Error ${r.status}`);
+      }
+      await load();
+    } catch (err) {
+      alert('Error al marcar como pagada: ' + err.message);
+    } finally {
+      setMarkingPaid('');
+    }
   };
 
   // ── Bandeja IA: arrastrar documento → clasificar → autorizar destino ──
@@ -1027,6 +1068,19 @@ const RentabilidadLineas = ({ currentUser }) => {
                       <button onClick={() => convertFicha(f)} disabled={converting === f.id}
                         className="mr-2 px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50">
                         → {TABS.find(t => t.key === NEXT_DOC_TYPE[f.docType || 'factura'])?.label}
+                      </button>
+                    )}
+                    {/* Botón Marcar como pagada: solo en facturas con pendiente > 0 */}
+                    {f.docType === 'factura' && (f.pendienteCobro || 0) > 0.01 && (
+                      <button
+                        onClick={(e) => markAsPaid(e, f)}
+                        disabled={markingPaid === f.id}
+                        title={`Marcar como pagada (cobrar ${eur(f.pendienteCobro)} pendiente)`}
+                        className="mr-2 px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {markingPaid === f.id
+                          ? <Loader2 size={11} className="animate-spin" />
+                          : '✔'} Pagada
                       </button>
                     )}
                     <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
