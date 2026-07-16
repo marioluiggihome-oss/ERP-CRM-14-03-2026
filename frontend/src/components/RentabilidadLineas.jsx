@@ -95,44 +95,34 @@ const RentabilidadLineas = ({ currentUser }) => {
     try { const c = await clientsAPI.getAll(); setClients(c || []); } catch { setClients([]); }
   };
 
-  // ── Marcar factura como pagada ──
-  const [markingPaid, setMarkingPaid] = useState('');
-  const markAsPaid = async (e, f) => {
+  // ── Revisión de controller: marcar/desmarcar que la factura y sus márgenes han sido revisados ──
+  const [togglingRevision, setTogglingRevision] = useState('');
+  const toggleRevision = async (e, f) => {
     e.stopPropagation();
-    const tt = f.totals || {};
-    const pendiente = Number(f.pendienteCobro) || 0;
-    if (pendiente <= 0.01) return;
-    if (!window.confirm(`¿Marcar "${f.ref || f.id}" como PAGADA?\n\nSe registrará un cobro de ${eur(pendiente)} vinculado a esta factura.`)) return;
-    setMarkingPaid(f.id);
+    const yaRevisada = !!f.revisada;
+    const accion = yaRevisada ? 'desmarcar la revisión' : 'marcar como REVISADA';
+    if (!window.confirm(`¿Deseas ${accion} la factura "${f.ref || f.id}"?`)) return;
+    setTogglingRevision(f.id);
     try {
-      const payload = {
-        importe: pendiente,
-        concepto: `Cobro factura ${f.ref || f.id}`,
-        metodo: 'otro',
-        fecha: new Date().toISOString().slice(0, 10),
-        cliente: f.cliente || '',
-        clientCode: f.clienteCodigo || '',
-        targetId: f.id,
-        targetRef: f.ref || '',
-        targetType: 'factura',
-        projectRef: f.projectRef || f.ref || '',
-        createdBy: currentUser?.id || '',
-        createdByName: currentUser?.name || currentUser?.clientName || currentUser?.username || '',
-      };
-      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos`, {
-        method: 'POST',
+      const r = await fetch(`${API_URL}/api/rentabilidad/fichas/${f.id}/revision`, {
+        method: 'PATCH',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ revisada: !yaRevisada }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         throw new Error(err.detail || `Error ${r.status}`);
       }
-      await load();
+      // Actualizar la ficha en local sin recargar todo
+      const data = await r.json();
+      setFichas(prev => prev.map(x => x.id === f.id
+        ? { ...x, revisada: data.revisada, revisadaPor: data.revisadaPor, revisadaAt: data.revisadaAt }
+        : x
+      ));
     } catch (err) {
-      alert('Error al marcar como pagada: ' + err.message);
+      alert('Error al cambiar revisión: ' + err.message);
     } finally {
-      setMarkingPaid('');
+      setTogglingRevision('');
     }
   };
 
@@ -1070,17 +1060,24 @@ const RentabilidadLineas = ({ currentUser }) => {
                         → {TABS.find(t => t.key === NEXT_DOC_TYPE[f.docType || 'factura'])?.label}
                       </button>
                     )}
-                    {/* Botón Marcar como pagada: solo en facturas con pendiente > 0 */}
-                    {f.docType === 'factura' && (f.pendienteCobro || 0) > 0.01 && (
+                    {/* Botón de revisión de controller: ❓✔ = pendiente de revisar | ✅ = ya revisada */}
+                    {f.docType === 'factura' && (
                       <button
-                        onClick={(e) => markAsPaid(e, f)}
-                        disabled={markingPaid === f.id}
-                        title={`Marcar como pagada (cobrar ${eur(f.pendienteCobro)} pendiente)`}
-                        className="mr-2 px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"
+                        onClick={(e) => toggleRevision(e, f)}
+                        disabled={togglingRevision === f.id}
+                        title={f.revisada
+                          ? `Revisada por ${f.revisadaPor || 'controller'}${f.revisadaAt ? ' el ' + f.revisadaAt.slice(0,10) : ''} — pulsa para desmarcar`
+                          : 'Marcar como revisada por el controller (márgenes verificados)'}
+                        className={`mr-2 px-2.5 py-1 rounded-lg text-[11px] font-bold disabled:opacity-50 flex items-center gap-1 transition-colors ${
+                          f.revisada
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200'
+                            : 'bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200'
+                        }`}
                       >
-                        {markingPaid === f.id
+                        {togglingRevision === f.id
                           ? <Loader2 size={11} className="animate-spin" />
-                          : '❓✔'} Pagada
+                          : f.revisada ? '✅' : '❓✔'}
+                        {f.revisada ? 'Revisada' : 'Revisar'}
                       </button>
                     )}
                     <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>

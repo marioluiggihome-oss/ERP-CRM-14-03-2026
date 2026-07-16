@@ -1173,6 +1173,36 @@ async def trace_ficha(ficha_id: str, payload: dict):
     return {"success": True}
 
 
+@router.patch("/rentabilidad/fichas/{ficha_id}/revision")
+async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(require_rentabilidad)):
+    """Marca o desmarca la ficha como revisada por el controller/director.
+    Guarda quién la revisó y cuándo. Enviar {revisada: true} para marcar,
+    {revisada: false} para desmarcar."""
+    try:
+        revisada = bool((payload or {}).get("revisada", True))
+        now = datetime.now(timezone.utc).isoformat()
+        upd = {
+            "revisada": revisada,
+            "revisadaPor": (
+                (user or {}).get("name") or
+                (user or {}).get("username") or
+                (user or {}).get("email") or ""
+            ) if revisada else "",
+            "revisadaAt": now if revisada else "",
+            "updatedAt": now,
+        }
+        await db.sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
+        return {
+            "success": True,
+            "revisada": revisada,
+            "revisadaPor": upd["revisadaPor"],
+            "revisadaAt": upd["revisadaAt"],
+        }
+    except Exception as e:
+        logger.error(f"Toggle revision error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/rentabilidad/fichas/{ficha_id}")
 async def delete_ficha(ficha_id: str, user: dict = Depends(require_rentabilidad)):
     try:
