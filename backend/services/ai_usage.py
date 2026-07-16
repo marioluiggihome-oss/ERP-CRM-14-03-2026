@@ -46,25 +46,30 @@ def cost_of(model: str, in_tokens: int = 0, out_tokens: int = 0, images: int = 0
 
 
 async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens: int = 0,
-                           images: int = 0, user_id: str = None):
+                           images: int = 0, user_id: str = None, count: bool = True):
     """Registra el consumo REAL de una llamada: tokens por modelo y coste exacto
-    acumulado del mes. Best-effort (nunca rompe la llamada de IA)."""
+    acumulado del mes. Best-effort (nunca rompe la llamada de IA).
+
+    count=True suma también 1 al total y a by_kind (llamada nueva). Usar count=False
+    cuando la llamada YA se contó con record_ai_usage() y solo queremos añadir el
+    coste/tokens (evita el doble conteo)."""
     if db is None:
         return
     try:
         eur = cost_of(model, in_tokens, out_tokens, images)
         mdl = (model or "otro").replace(".", "_")
         inc = {
-            "total": 1,
-            f"by_kind.{kind or 'otro'}": 1,
             f"tokens_in.{mdl}": int(in_tokens or 0),
             f"tokens_out.{mdl}": int(out_tokens or 0),
             f"images.{mdl}": int(images or 0),
             f"calls.{mdl}": 1,
             "real_cost": eur,
         }
-        if user_id:
-            inc[f"by_user.{user_id}"] = 1
+        if count:
+            inc["total"] = 1
+            inc[f"by_kind.{kind or 'otro'}"] = 1
+            if user_id:
+                inc[f"by_user.{user_id}"] = 1
         await db.ai_usage.update_one(
             {"month": _month()},
             {"$inc": inc, "$setOnInsert": {"month": _month()}},
@@ -72,6 +77,14 @@ async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens
         )
     except Exception:
         pass
+
+
+def usage_from_response(resp):
+    """Extrae (in_tokens, out_tokens) de la respuesta de google-genai. Best-effort."""
+    um = getattr(resp, "usage_metadata", None)
+    if not um:
+        return 0, 0
+    return int(getattr(um, "prompt_token_count", 0) or 0), int(getattr(um, "candidates_token_count", 0) or 0)
 
 
 async def record_ai_usage(kind: str, user_id: str = None):

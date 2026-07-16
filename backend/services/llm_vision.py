@@ -17,10 +17,14 @@ logger = logging.getLogger(__name__)
 
 # Contador de consumo de IA (best-effort; nunca debe romper una llamada).
 try:
-    from services.ai_usage import record_ai_usage
+    from services.ai_usage import record_ai_usage, record_ai_tokens, usage_from_response
 except Exception:  # pragma: no cover
     async def record_ai_usage(*a, **k):
         return
+    async def record_ai_tokens(*a, **k):
+        return
+    def usage_from_response(resp):
+        return 0, 0
 
 # Intentar importar google.genai (nuevo SDK)
 try:
@@ -185,13 +189,16 @@ async def _analyze_with_google_genai(
             # razonamiento + un listado largo de muebles.
             config=google_genai_types.GenerateContentConfig(temperature=0, max_output_tokens=16384),
         )
-        return response.text or ""
+        return response
 
     loop = asyncio.get_event_loop()
     last_err = None
     for model_name in candidates:
         try:
-            return await loop.run_in_executor(None, _sync_call, model_name)
+            response = await loop.run_in_executor(None, _sync_call, model_name)
+            it, ot = usage_from_response(response)
+            await record_ai_tokens("vision", model_name, it, ot, 0, count=False)
+            return response.text or ""
         except Exception as e:
             msg = str(e)
             if 'NOT_FOUND' in msg or '404' in msg or 'not found' in msg.lower() or 'not supported' in msg.lower():
@@ -251,6 +258,8 @@ async def chat_with_gemini(
                 def _sync_call(_m=model_name, _c=contents):
                     return client.models.generate_content(model=_m, contents=_c)
                 response = await asyncio.to_thread(_sync_call)
+                it, ot = usage_from_response(response)
+                await record_ai_tokens("text", model_name, it, ot, 0, count=True)
                 return response.text or ""
             except Exception as e:
                 msg = str(e)
@@ -322,6 +331,8 @@ async def search_with_gemini(
     for model_name in candidates:
         try:
             resp = await asyncio.to_thread(_sync, model_name, True)
+            it, ot = usage_from_response(resp)
+            await record_ai_tokens("search", model_name, it, ot, 0, count=True)
             return (resp.text or "", _sources(resp), False)
         except Exception as e:
             msg = str(e)
@@ -331,6 +342,8 @@ async def search_with_gemini(
             if any(x in msg for x in ('RESOURCE_EXHAUSTED', 'quota', 'PERMISSION_DENIED', 'permission', '429', '403')):
                 try:
                     resp = await asyncio.to_thread(_sync, model_name, False)
+                    it, ot = usage_from_response(resp)
+                    await record_ai_tokens("search", model_name, it, ot, 0, count=True)
                     return (resp.text or "", [], True)
                 except Exception as e2:
                     last_err = e2; continue
@@ -471,16 +484,18 @@ async def generate_image_with_gemini(
     def _sync_call(model_name):
         cfg = _make_cfg(model_name)
         resp = client.models.generate_content(model=model_name, contents=contents, config=cfg)
-        return _extract_inline_image(resp)
+        return _extract_inline_image(resp), resp
 
     loop = asyncio.get_event_loop()
     last_err = None
     for model_name in GEMINI_IMAGE_MODELS:
         try:
-            data_url = await asyncio.wait_for(
+            data_url, resp = await asyncio.wait_for(
                 loop.run_in_executor(None, _sync_call, model_name), timeout=90
             )
             if data_url:
+                it, ot = usage_from_response(resp)
+                await record_ai_tokens("render", model_name, it, ot, 1, count=False)
                 return data_url
             last_err = RuntimeError(f"'{model_name}' no devolvió imagen")
             logger.warning(f"Modelo de imagen '{model_name}' no devolvió imagen, probando siguiente")
