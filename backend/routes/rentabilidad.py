@@ -88,6 +88,54 @@ async def _log_deletion(entity: str, entity_id: str, before: Optional[dict], use
 
 # ----------------------------- COSTES POR PROYECTO -----------------------------
 
+@router.get("/rentabilidad/articulo")
+async def buscar_articulo_por_codigo(codigo: str = ""):
+    """Busca un artículo por código exacto o parcial en la colección de productos.
+    Devuelve código y nombre para rellenar el formulario de coste por código."""
+    import re as _re
+    try:
+        if not codigo or len(codigo.strip()) < 2:
+            return {"found": False, "results": []}
+        q = codigo.strip()
+        escaped = _re.escape(q)
+        # Primero busca coincidencia exacta de código
+        exact = await db.products.find_one(
+            {"code": {"$regex": f"^{escaped}$", "$options": "i"}},
+            {"_id": 0, "code": 1, "name": 1, "description": 1, "pvp": 1, "coste": 1}
+        )
+        if exact:
+            return {
+                "found": True,
+                "results": [{
+                    "code": exact.get("code", ""),
+                    "name": exact.get("name") or exact.get("description") or "",
+                    "pvp": float(exact.get("pvp", 0) or 0),
+                    "coste": float(exact.get("coste", 0) or 0),
+                }]
+            }
+        # Si no hay exacta, busca parcial (hasta 10 resultados)
+        cursor = db.products.find(
+            {"$or": [
+                {"code": {"$regex": escaped, "$options": "i"}},
+                {"name": {"$regex": escaped, "$options": "i"}},
+            ]},
+            {"_id": 0, "code": 1, "name": 1, "description": 1, "pvp": 1, "coste": 1}
+        ).limit(10)
+        results = await cursor.to_list(10)
+        return {
+            "found": len(results) > 0,
+            "results": [{
+                "code": r.get("code", ""),
+                "name": r.get("name") or r.get("description") or "",
+                "pvp": float(r.get("pvp", 0) or 0),
+                "coste": float(r.get("coste", 0) or 0),
+            } for r in results]
+        }
+    except Exception as e:
+        logger.error(f"Buscar articulo error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/project-costs")
 async def add_project_cost(cost: dict):
     """Registrar un coste/gasto asociado a un proyecto (por su referencia)."""
