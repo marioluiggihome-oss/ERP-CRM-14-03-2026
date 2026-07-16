@@ -1035,8 +1035,8 @@ const RentabilidadLineas = ({ currentUser }) => {
               <SortHeader col="ref" label="N. / Ref" />
               <SortHeader col="cliente" label="Cliente" />
               <SortHeader col="fecha" label="Fecha" />
-              <SortHeader col="venta" label="Venta" align="right" />
               <SortHeader col="coste" label="Coste" align="right" />
+              <SortHeader col="venta" label="Venta" align="right" />
               {/* Cabecera MARGEN con botón candado */}
               <th className="text-right p-3 text-xs font-black uppercase">
                 <span className="inline-flex items-center gap-1.5">
@@ -1098,24 +1098,6 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <div className="flex gap-0.5">
                   <input
                     type="number"
-                    value={columnFilters.ventaMin}
-                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMin: e.target.value }))}
-                    placeholder="Min"
-                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
-                  />
-                  <input
-                    type="number"
-                    value={columnFilters.ventaMax}
-                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMax: e.target.value }))}
-                    placeholder="Max"
-                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
-                  />
-                </div>
-              </th>
-              <th className="p-1.5">
-                <div className="flex gap-0.5">
-                  <input
-                    type="number"
                     value={columnFilters.costeMin}
                     onChange={e => setColumnFilters(prev => ({ ...prev, costeMin: e.target.value }))}
                     placeholder="Min"
@@ -1125,6 +1107,24 @@ const RentabilidadLineas = ({ currentUser }) => {
                     type="number"
                     value={columnFilters.costeMax}
                     onChange={e => setColumnFilters(prev => ({ ...prev, costeMax: e.target.value }))}
+                    placeholder="Max"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                </div>
+              </th>
+              <th className="p-1.5">
+                <div className="flex gap-0.5">
+                  <input
+                    type="number"
+                    value={columnFilters.ventaMin}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMin: e.target.value }))}
+                    placeholder="Min"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                  <input
+                    type="number"
+                    value={columnFilters.ventaMax}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMax: e.target.value }))}
                     placeholder="Max"
                     className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
                   />
@@ -1185,7 +1185,6 @@ const RentabilidadLineas = ({ currentUser }) => {
                     {f.clienteCodigo && <span className="ml-1.5 text-[10px] font-bold text-indigo-500">({f.clienteCodigo})</span>}
                   </td>
                   <td className="p-3 text-slate-500">{f.fecha || '-'}</td>
-                  <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
                   <td className="p-3 text-right font-mono text-orange-600">
                     {eur(tt.coste)}
                     {/* Aviso: hay venta pero ningún coste emparejado (ni en líneas ni en costes de proyecto) */}
@@ -1194,6 +1193,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                         className="block mt-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-0.5 inline-block">⚠ Faltan costes</span>
                     )}
                   </td>
+                  <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
                   {/* Celda MARGEN — oculta si hideMargen */}
                   <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(tt.margen)}
