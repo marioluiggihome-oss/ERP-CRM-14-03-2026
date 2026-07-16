@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FileText, Upload, Sparkles, Plus, Trash2, X, Save, Euro,
   Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw,
-  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck, Users
+  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck, Users,
+  Lock, Unlock
 } from 'lucide-react';
 import { clientsAPI, authHeaders } from '../services/api';
 
@@ -783,6 +784,8 @@ const RentabilidadLineas = ({ currentUser }) => {
   // Se excluyen las fichas ya convertidas a otro documento (convertidoAId): su importe
   // ya vive en el documento destino, sumarla aqui tambien duplicaria la venta.
   const [showTotals, setShowTotals] = useState(false);
+  // Candado: oculta la columna MARGEN para privacidad
+  const [hideMargen, setHideMargen] = useState(false);
   const filteredTotals = useMemo(() => {
     return filteredAndSorted.filter(f => !f.convertidoAId).reduce((acc, f) => {
       const tt = f.totals || totals(f.lines);
@@ -923,7 +926,23 @@ const RentabilidadLineas = ({ currentUser }) => {
               <SortHeader col="fecha" label="Fecha" />
               <SortHeader col="venta" label="Venta" align="right" />
               <SortHeader col="coste" label="Coste" align="right" />
-              <SortHeader col="margen" label="Margen" align="right" />
+              {/* Cabecera MARGEN con botón candado */}
+              <th className="text-right p-3 text-xs font-black uppercase">
+                <span className="inline-flex items-center gap-1.5">
+                  {!hideMargen && <SortHeader col="margen" label="Margen" align="right" />}
+                  {hideMargen && <span className="text-slate-400 italic">Margen</span>}
+                  <button
+                    onClick={() => setHideMargen(h => !h)}
+                    title={hideMargen ? 'Mostrar margen' : 'Ocultar margen (privacidad)'}
+                    className={`p-0.5 rounded transition-colors ${
+                      hideMargen ? 'text-red-500 hover:text-red-700' : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    {hideMargen ? <Lock size={12} /> : <Unlock size={12} />}
+                  </button>
+                </span>
+              </th>
+              <th className="text-right p-3 text-xs font-black uppercase">% C/V</th>
               <th className="text-right p-3 text-xs font-black uppercase">Pendiente cobro</th>
               <th className="text-center p-3 text-xs font-black uppercase">Docs</th>
               <th className="p-3"></th>
@@ -1064,7 +1083,14 @@ const RentabilidadLineas = ({ currentUser }) => {
                         className="block mt-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-0.5 inline-block">⚠ Faltan costes</span>
                     )}
                   </td>
-                  <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
+                  {/* Celda MARGEN — oculta si hideMargen */}
+                  <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(tt.margen)}
+                  </td>
+                  {/* Columna % Coste/Venta */}
+                  <td className="p-3 text-right font-mono text-slate-600 text-xs">
+                    {tt.venta > 0 ? `${((tt.coste / tt.venta) * 100).toFixed(1)}%` : '—'}
+                  </td>
                   <td className={`p-3 text-right font-mono ${(f.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
                     {/* PAGADA: el cobro (ingresos a cuenta vinculados) cubre la venta */}
                     {tt.venta > 0 && (f.cobrado || 0) >= tt.venta - 0.01 ? (
@@ -1122,7 +1148,13 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <td colSpan={3} className="p-3 text-xs uppercase tracking-wide text-slate-500">Total {hasActiveFilters ? '(filtrado)' : ''} · {filteredAndSorted.length} doc.</td>
                 <td className="p-3 text-right font-mono">{eur(filteredTotals.venta)}</td>
                 <td className="p-3 text-right font-mono">{eur(filteredTotals.coste)}</td>
-                <td className="p-3 text-right font-mono text-emerald-700">{eur(filteredTotals.margen)}</td>
+                <td className="p-3 text-right font-mono text-emerald-700">
+                  {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(filteredTotals.margen)}
+                </td>
+                {/* Total % C/V ponderado */}
+                <td className="p-3 text-right font-mono text-slate-600 text-xs">
+                  {filteredTotals.venta > 0 ? `${((filteredTotals.coste / filteredTotals.venta) * 100).toFixed(1)}%` : '—'}
+                </td>
                 <td className="p-3 text-right font-mono text-amber-700">{eur(filteredTotals.pendienteCobro)}</td>
                 <td colSpan={2}></td>
               </tr>
