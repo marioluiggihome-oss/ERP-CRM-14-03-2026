@@ -492,6 +492,22 @@ const RentabilidadLineas = ({ currentUser }) => {
   // Una ficha revisada está bloqueada salvo que el master haya activado el desbloqueo.
   const bloqueada = (f) => !!(f?.revisada) && !(esMaster && masterUnlock);
 
+  // Asigna el código de cliente del editor a TODAS las fichas de ese cliente.
+  const aplicarCodigoATodas = async () => {
+    if (!editor?.cliente || !(editor.clienteCodigo || '').trim()) return;
+    if (!window.confirm(`¿Asignar el código «${editor.clienteCodigo}» a TODAS las fichas de ${editor.cliente}?`)) return;
+    try {
+      const r = await fetch(`${API_URL}/api/rentabilidad/fichas/assign-client-code`, {
+        method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ cliente: editor.cliente, codigo: editor.clienteCodigo }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(data.detail || 'No se pudo asignar el código'); return; }
+      alert(`Código asignado a ${data.updated} ficha(s) de ${editor.cliente}.`);
+      await load();
+    } catch { alert('Error al asignar el código'); }
+  };
+
   const setLine = (i, field, val) => {
     const lines = [...editor.lines];
     const isText = field === 'concepto' || field === 'ref';
@@ -1481,7 +1497,13 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Cliente</label>
                   <input value={editor.cliente} onChange={e => setEditor({ ...editor, cliente: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Codigo cliente</label>
-                  <input value={editor.clienteCodigo || ''} onChange={e => setEditor({ ...editor, clienteCodigo: e.target.value })} placeholder="ej. 12345" className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
+                  <input value={editor.clienteCodigo || ''} onChange={e => setEditor({ ...editor, clienteCodigo: e.target.value })} placeholder="ej. 12345" className="w-full px-2 py-1.5 border rounded-lg text-sm" />
+                  {editor.cliente && (editor.clienteCodigo || '').trim() && (
+                    <button type="button" onClick={aplicarCodigoATodas}
+                      className="mt-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 underline">
+                      Aplicar código a todas las fichas de {editor.cliente}
+                    </button>
+                  )}</div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Fecha</label>
                   <input value={editor.fecha} onChange={e => setEditor({ ...editor, fecha: e.target.value })} className="w-full px-2 py-1.5 border rounded-lg text-sm" /></div>
                 <div><label className="text-[10px] font-black text-slate-400 uppercase">Estado</label>
