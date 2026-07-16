@@ -3254,5 +3254,13 @@
   "coste_total": null,
   "coste_unitario": 11.55,
   "revisar": ""
+ },
+ {
+  "codigo": "08063212",
+  "nombre": "Placa CATA TT 6003 BK Radiacion 3 Fuegos Zona Grande Triple",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 99.0,
+  "revisar": ""
  }
 ]
