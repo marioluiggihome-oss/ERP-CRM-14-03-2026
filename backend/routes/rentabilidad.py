@@ -1383,10 +1383,16 @@ async def check_client(nombre: str = "", codigo: str = ""):
 
 
 @router.post("/rentabilidad/fichas")
-async def save_ficha(payload: dict):
+async def save_ficha(payload: dict, user: dict = Depends(require_rentabilidad)):
     """Crea o actualiza una ficha de rentabilidad por lineas."""
     try:
         fid = (payload or {}).get("id") or f"fic-{uuid.uuid4().hex[:8]}"
+        # Ficha con visto bueno del controller: BLOQUEADA para modificaciones.
+        # Solo el master puede modificarla (la UI exige el desbloqueo con Shift).
+        if (payload or {}).get("id"):
+            _prev = await db.sale_fichas.find_one({"id": fid}, {"_id": 0, "revisada": 1})
+            if _prev and _prev.get("revisada") and not _is_elevated(user):
+                raise HTTPException(status_code=403, detail="Ficha revisada por el controller: bloqueada. Solo el master puede modificarla.")
         lines = payload.get("lines") or []
         norm_lines = []
         for l in lines:
@@ -1456,6 +1462,10 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
     {revisada: false} para desmarcar."""
     try:
         revisada = bool((payload or {}).get("revisada", True))
+        # Desmarcar una ficha ya revisada solo lo puede hacer un usuario elevado
+        # (master/dirección). El controller puede marcar, pero no desmarcar.
+        if not revisada and not _is_elevated(user):
+            raise HTTPException(status_code=403, detail="Solo el master puede quitar el visto bueno del controller")
         now = datetime.now(timezone.utc).isoformat()
         upd = {
             "revisada": revisada,
@@ -1485,6 +1495,10 @@ async def delete_ficha(ficha_id: str, user: dict = Depends(require_rentabilidad)
         existing = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0})
         if existing and existing.get("createdBy") and not _is_elevated(user) and existing.get("createdBy") != (user or {}).get("id"):
             raise HTTPException(status_code=403, detail="No puedes borrar un documento de otro usuario")
+        # Ficha con visto bueno del controller: BLOQUEADA. Solo el master puede
+        # borrarla (la UI exige la secuencia de desbloqueo con la tecla Shift).
+        if existing and existing.get("revisada") and not _is_elevated(user):
+            raise HTTPException(status_code=403, detail="Ficha revisada por el controller: bloqueada. Solo el master puede borrarla.")
         await db.sale_fichas.delete_one({"id": ficha_id})
         await db.sale_ficha_docs.delete_many({"fichaId": ficha_id})
         if existing:
