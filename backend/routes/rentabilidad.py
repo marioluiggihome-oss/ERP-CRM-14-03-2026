@@ -1001,6 +1001,107 @@ async def match_line_costs(payload: dict):
         return {"success": False, "error": "No se pudo leer el pantallazo de costes. Intentalo de nuevo."}
 
 
+# ------------------- CATALOGO DE COSTES POR ARTICULO (coste medio ponderado) -------------------
+# Coste unitario por articulo calculado como Coste_total / Cantidad del informe de
+# ventas del proveedor (coste medio ponderado). Se sirve desde el CSV validado en
+# backend/data/costes_unitarios.csv y permite alimentar el coste de las lineas de
+# una ficha casando por la referencia del articulo (linea.ref == codigo).
+import csv as _csv
+
+_ARTICLE_COSTS_CACHE: Dict[str, Any] = {"by_code": None, "list": None}
+_ARTICLE_COSTS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "costes_unitarios.csv")
+
+
+def _load_article_costs(force: bool = False):
+    """Carga (y cachea) el catalogo de costes unitarios desde el CSV validado."""
+    if _ARTICLE_COSTS_CACHE["by_code"] is not None and not force:
+        return _ARTICLE_COSTS_CACHE["by_code"]
+    by_code: Dict[str, Any] = {}
+    rows: List[Dict[str, Any]] = []
+    try:
+        with open(_ARTICLE_COSTS_PATH, encoding="utf-8") as fh:
+            reader = _csv.DictReader(fh, delimiter=";")
+            for r in reader:
+                cu = (r.get("coste_unitario") or "").strip()
+                if not cu:
+                    continue
+                try:
+                    coste_unit = float(cu)
+                except Exception:
+                    continue
+                cod = (r.get("codigo") or "").strip()
+                norm = _normalize_ref(cod)
+                if not norm:
+                    continue
+                item = {
+                    "codigo": cod,
+                    "nombre": (r.get("nombre") or "").strip(),
+                    "costeUnitario": round(coste_unit, 4),
+                    "revisar": (r.get("revisar") or "").strip(),
+                }
+                by_code[norm] = item
+                rows.append(item)
+    except FileNotFoundError:
+        logger.warning("costes_unitarios.csv no encontrado en %s", _ARTICLE_COSTS_PATH)
+    _ARTICLE_COSTS_CACHE["by_code"] = by_code
+    _ARTICLE_COSTS_CACHE["list"] = rows
+    return by_code
+
+
+@router.get("/rentabilidad/article-costs")
+async def article_costs(q: Optional[str] = None, limit: int = 500, reload: bool = False):
+    """Lista/busca el catalogo de costes unitarios por articulo."""
+    _load_article_costs(force=reload)
+    rows = _ARTICLE_COSTS_CACHE["list"] or []
+    if q:
+        nq = _normalize_ref(q)
+        ql = q.lower()
+        rows = [r for r in rows if (nq and nq in _normalize_ref(r["codigo"])) or ql in r["nombre"].lower()]
+    return {"total": len(rows), "items": rows[:max(1, limit)]}
+
+
+@router.post("/rentabilidad/apply-article-costs")
+async def apply_article_costs(payload: dict):
+    """Alimenta el coste de cada linea a partir del coste unitario (coste medio
+    ponderado) del articulo, casando por la referencia de la linea:
+        coste_linea = coste_unitario * cantidad.
+    Por defecto solo rellena lineas con coste 0 (no pisa un coste ya puesto a
+    mano); con force=true recalcula TODAS las que tengan articulo en catalogo.
+    Devuelve las lineas actualizadas y un resumen (casadas, a revisar, sin coste)."""
+    by_code = _load_article_costs()
+    lines = (payload or {}).get("lines") or []
+    force = bool((payload or {}).get("force"))
+    out: List[Dict[str, Any]] = []
+    matched = 0
+    revisar = 0
+    sin_coste: List[str] = []
+    for l in lines:
+        nl = dict(l)
+        ref = _normalize_ref(l.get("ref") or "")
+        art = by_code.get(ref) if ref else None
+        cur = float(l.get("coste") or 0)
+        if art and (force or cur == 0):
+            cant = float(l.get("cantidad") or 1) or 1
+            nl["coste"] = round(art["costeUnitario"] * cant, 2)
+            nl["costeUnitario"] = art["costeUnitario"]
+            nl["costeFuente"] = "catalogo"
+            if art.get("revisar"):
+                nl["costeRevisar"] = art["revisar"]
+                revisar += 1
+            matched += 1
+        elif not art and cur == 0:
+            sin_coste.append((l.get("ref") or l.get("concepto") or "").strip())
+        out.append(nl)
+    return {
+        "success": True,
+        "lines": out,
+        "matched": matched,
+        "revisar": revisar,
+        "sinCoste": sin_coste,
+        "totals": _ficha_totals(out),
+    }
+
+
 # ----------------------------- FICHAS (guardado) -----------------------------
 
 @router.get("/rentabilidad/fichas")

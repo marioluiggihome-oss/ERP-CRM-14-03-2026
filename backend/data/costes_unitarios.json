@@ -181,7 +181,7 @@
   "cantidad": 1,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "112.0671.788",
@@ -189,7 +189,7 @@
   "cantidad": 1,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "112500036",
@@ -309,7 +309,7 @@
   "cantidad": 3419,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": "revisar_cantidad"
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "122.0375.818",
@@ -317,7 +317,7 @@
   "cantidad": 410,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": "revisar_cantidad"
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "122.0393.818",
@@ -605,7 +605,7 @@
   "cantidad": 2,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "17-174H7100EN",
@@ -877,7 +877,7 @@
   "cantidad": 2014,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": "revisar_cantidad"
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "22-L203200N3K",
@@ -1165,7 +1165,7 @@
   "cantidad": 105,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": "revisar_cantidad"
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "25-3MO500B03A",
@@ -1205,7 +1205,7 @@
   "cantidad": 41,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "25-AXP167300G",
@@ -1485,7 +1485,7 @@
   "cantidad": 2,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "350--0000002C",
@@ -1501,7 +1501,7 @@
   "cantidad": 1,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "350-152400100",
@@ -1517,7 +1517,7 @@
   "cantidad": 16,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "35111111",
@@ -1549,7 +1549,7 @@
   "cantidad": 8,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "36-228001TLGO",
@@ -1581,7 +1581,7 @@
   "cantidad": 1,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "36-22F3901UND",
@@ -1597,7 +1597,7 @@
   "cantidad": 1,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": ""
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "37OKA41",
@@ -1605,7 +1605,7 @@
   "cantidad": 0,
   "coste_total": 0.0,
   "coste_unitario": null,
-  "revisar": "sin_dato"
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "37OKA54",
@@ -1720,7 +1720,7 @@
   "revisar": "revisar_coste"
  },
  {
-  "codigo": "40-C012916-B7E400ANEncimera",
+  "codigo": "40-C012916-B7E400AN",
   "nombre": "FENOLICA FLINT Fantastic.",
   "cantidad": 1,
   "coste_total": 30500.0,
@@ -2205,7 +2205,7 @@
   "cantidad": 20136,
   "coste_total": 0.0,
   "coste_unitario": 0.0,
-  "revisar": "revisar_cantidad"
+  "revisar": "sin_coste_origen"
  },
  {
   "codigo": "43-MARMHDR513",
@@ -2272,11 +2272,483 @@
   "revisar": ""
  },
  {
-  "codigo": "999",
-  "nombre": "CONCEPTOS FMCVa",
+  "codigo": "BE623LMB3",
+  "nombre": "Microondas SIEMENS BE623LMB3 Integrable",
+  "cantidad": 201,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "BER7321B1",
+  "nombre": "Microondas BOSCH BER7321B1 Integrable",
+  "cantidad": 11,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "BF525LMB1",
+  "nombre": "SIEMENS MICROONDAS BF525LMB1 20",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "CORO60X1",
+  "nombre": "Campana de integración JOHNSON",
+  "cantidad": 6081,
+  "coste_total": 1273.6,
+  "coste_unitario": 0.2094,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "CORO90X1",
+  "nombre": "Campana de integración JOHNSON",
+  "cantidad": 9021,
+  "coste_total": 366.4,
+  "coste_unitario": 0.0406,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "DANUBIO90",
+  "nombre": "Lavadora JOHNSON DANUBIO90 Libre",
+  "cantidad": 1,
+  "coste_total": 226.02,
+  "coste_unitario": 226.02,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "DANUBIODRY90",
+  "nombre": "Secadora JOHNSON DANUBIODRY90",
+  "cantidad": 1,
+  "coste_total": 348.37,
+  "coste_unitario": 348.37,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "DBB85CC60",
+  "nombre": "Campana BOSCH DBB85CC60 Integrada",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "ED851HQ26E",
+  "nombre": "SIEMENS VITRO CON CAMPANA INTEGRADA",
+  "cantidad": 18,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "EDW6120WH",
+  "nombre": "Lavavajillas EDESA EDW-6120 WH Libre",
+  "cantidad": 1,
+  "coste_total": 199.0,
+  "coste_unitario": 199.0,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "EWF7202WH",
+  "nombre": "Lavadora EDESA EWF-7202 WH 7 Kg",
+  "cantidad": 1,
+  "coste_total": 199.0,
+  "coste_unitario": 199.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "EX975LXC1E",
+  "nombre": "Placa SIEMENS EX975LXC1E Inducción",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "GASTOS+PORT3",
+  "nombre": "Portes + gastos C/R incluidos Fra",
   "cantidad": 0,
-  "coste_total": 7531.74,
+  "coste_total": 21.0,
   "coste_unitario": null,
   "revisar": "sin_dato"
+ },
+ {
+  "codigo": "GI81NACE0",
+  "nombre": "Congelador 1 puerta SIEMENS GI81NACE0",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "GRANITODS",
+  "nombre": "Fabricación encimera de cocina a medida",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "GUADIANA80W",
+  "nombre": "Lavadora JOHNSON GUADIANA80W",
+  "cantidad": 2,
+  "coste_total": 527.06,
+  "coste_unitario": 263.53,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "HB734G1B1",
+  "nombre": "Horno SIEMENS HB734G1B1 Multifunción",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "HEZ9VDKR0",
+  "nombre": "Set Accesorios Recirculación BALAY",
+  "cantidad": 10,
+  "coste_total": 118.34,
+  "coste_unitario": 11.834,
+  "revisar": ""
+ },
+ {
+  "codigo": "HR532GBS3",
+  "nombre": "SIEMENS HORNO HR532GBS3",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "HRG7361B1",
+  "nombre": "Horno BOSCH HRG7361B1 Multifunción",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "IR15ACEREXNE",
+  "nombre": "Grifo NOVAMIX Extraible negro IR15",
+  "cantidad": 1,
+  "coste_total": 57.0,
+  "coste_unitario": 57.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "JFILC38668",
+  "nombre": "Kit Filtros C/A JOHNSON JFILC38668",
+  "cantidad": 8,
+  "coste_total": 115.2,
+  "coste_unitario": 14.4,
+  "revisar": ""
+ },
+ {
+  "codigo": "JINDU230",
+  "nombre": "PLACA JOHNSON JINDU230 30CM 2",
+  "cantidad": 7,
+  "coste_total": 735.0,
+  "coste_unitario": 105.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "JINDU3292",
+  "nombre": "PLACA JOHNSON JINDU3292 3 ZONAS",
+  "cantidad": 2,
+  "coste_total": 247.2,
+  "coste_unitario": 123.6,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JINDU332FLEX",
+  "nombre": "Placa JOHNSON JINDU332FLEX Flexindución",
+  "cantidad": 1,
+  "coste_total": 172.0,
+  "coste_unitario": 172.0,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JOMI20NINT",
+  "nombre": "MICROONDAS JOHNSON JOMI20NINT",
+  "cantidad": 9,
+  "coste_total": 1844.73,
+  "coste_unitario": 204.97,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JOMI28NINT",
+  "nombre": "Microondas JOHNSON JOMI28NINT Integrable1",
+  "cantidad": 12,
+  "coste_total": 146.06,
+  "coste_unitario": 12.1717,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JOR45X",
+  "nombre": "Horno JOHNSON JOR45X 45CM 45L 8",
+  "cantidad": 1,
+  "coste_total": 157.76,
+  "coste_unitario": 157.76,
+  "revisar": ""
+ },
+ {
+  "codigo": "JOR50MI",
+  "nombre": "Horno con microondas JOHNSON JOR50MI",
+  "cantidad": 1,
+  "coste_total": 292.94,
+  "coste_unitario": 292.94,
+  "revisar": ""
+ },
+ {
+  "codigo": "JOR70CB",
+  "nombre": "HORNO JOHNSON JOR70CB 4 FUNCIONES",
+  "cantidad": 1,
+  "coste_total": 128.37,
+  "coste_unitario": 128.37,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JOR70N",
+  "nombre": "Horno JOHNSON JOR70N Multifunción",
+  "cantidad": 1,
+  "coste_total": 159.12,
+  "coste_unitario": 159.12,
+  "revisar": ""
+ },
+ {
+  "codigo": "JOR70NQ",
+  "nombre": "Horno JOHNSON JOR70NQ Pirolitico",
+  "cantidad": 2,
+  "coste_total": 471.65,
+  "coste_unitario": 235.825,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JRC1851ENW",
+  "nombre": "Combi JOHNSON JRC1851ENW 185 x",
+  "cantidad": 1,
+  "coste_total": 219.5,
+  "coste_unitario": 219.5,
+  "revisar": ""
+ },
+ {
+  "codigo": "JRC200CN2DX",
+  "nombre": "Combi JOHNSON JRC200CN2DX Libre",
+  "cantidad": 2,
+  "coste_total": 829.73,
+  "coste_unitario": 414.865,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JRFS1986ENDX",
+  "nombre": "Frigorífico Puerta Francesa JOHNSON",
+  "cantidad": 9826,
+  "coste_total": 164175.17,
+  "coste_unitario": 16.7082,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JRR82Z-INT",
+  "nombre": "FRIGORIFICO JRR82Z-INT JOHNSON INTEGRABL7E",
+  "cantidad": 7,
+  "coste_total": 1937.81,
+  "coste_unitario": 276.83,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JRVN28FB60D",
+  "nombre": "Vinoteca JOHNSON JRVN28FB60D Integrable",
+  "cantidad": 128,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "JVICA4201",
+  "nombre": "PLACA JOHNSON JVICA4201 4 Fuegos",
+  "cantidad": 1,
+  "coste_total": 61008.0,
+  "coste_unitario": 61008.0,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JWAS12EW",
+  "nombre": "LAVAVAJILLAS JOHNSON JWAS12EW",
+  "cantidad": 121,
+  "coste_total": 219.3,
+  "coste_unitario": 1.8124,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "JWAS14BINT",
+  "nombre": "Lavavajillas JOHNSON JWAS14BINT Integració1n",
+  "cantidad": 1,
+  "coste_total": 309.26,
+  "coste_unitario": 309.26,
+  "revisar": ""
+ },
+ {
+  "codigo": "JWAS14EINT",
+  "nombre": "Lavavajillas JOHNSON JWAS14EINT Int.",
+  "cantidad": 601,
+  "coste_total": 236.0,
+  "coste_unitario": 0.3927,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "KG39NVXCG",
+  "nombre": "SIEMENS COMBI 203x60 NEGRO NO FROST",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "KGN39LBCF",
+  "nombre": "Combi BOSCH KGN39LBCF 203 x 60 cm",
+  "cantidad": 1,
+  "coste_total": 1085.06,
+  "coste_unitario": 1085.06,
+  "revisar": ""
+ },
+ {
+  "codigo": "KI81RADD0",
+  "nombre": "Frigorífico 1 puerta SIEMENS KI81RADD0",
+  "cantidad": 1,
+  "coste_total": 796.34,
+  "coste_unitario": 796.34,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "KON908N",
+  "nombre": "Campana decorativa JOHNSON KON908N",
+  "cantidad": 920,
+  "coste_total": 322.2,
+  "coste_unitario": 0.3502,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "NERVION107DRY",
+  "nombre": "Lavasecadora JOHNSON NERVION107DRY",
+  "cantidad": 101,
+  "coste_total": 376.38,
+  "coste_unitario": 3.7265,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "PIJ631BB5E",
+  "nombre": "Placa BOSCH PIJ631BB5E Inducción",
+  "cantidad": 1,
+  "coste_total": 270.92,
+  "coste_unitario": 270.92,
+  "revisar": ""
+ },
+ {
+  "codigo": "REF",
+  "nombre": "",
+  "cantidad": 49,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "RODI-ACQUAVIVA",
+  "nombre": "FREGADERO-LAVADERO RODI ACQUAVIVA",
+  "cantidad": 1,
+  "coste_total": 143.55,
+  "coste_unitario": 143.55,
+  "revisar": ""
+ },
+ {
+  "codigo": "SMH4HVX14E",
+  "nombre": "Lavavajillas BOSCH SMH4HVX14E Int.",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "SN63HX03TE",
+  "nombre": "Lavavajillas SIEMENS SN63HX03TE Int.Total",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "SN63HX03VE",
+  "nombre": "SIEMENS LAVAVAJILLAS SN63HX03VE",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "SPC-FUSION1524X228",
+  "nombre": "Suelo SPC FUSION base IXPE espesor",
+  "cantidad": 680,
+  "coste_total": 228112.43,
+  "coste_unitario": 335.4595,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "SPC-VERA1524X228",
+  "nombre": "Suelo SPC VERA base IXPE espesor tota5l",
+  "cantidad": 780,
+  "coste_total": 82136.23,
+  "coste_unitario": 105.3029,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "SPC-VOLARE1524X228",
+  "nombre": "SPC VOLARE base IXPE espesor",
+  "cantidad": 415,
+  "coste_total": 228845.37,
+  "coste_unitario": 551.4346,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "SUJETOPASIVO",
+  "nombre": "Operacion con INVERSION DEL SUJETO",
+  "cantidad": 1,
+  "coste_total": 71909.2,
+  "coste_unitario": 71909.2,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "V0296",
+  "nombre": "Vinoteca EVVO VT8 Cristal Negro 8 Botellas",
+  "cantidad": 1,
+  "coste_total": 83.81,
+  "coste_unitario": 83.81,
+  "revisar": ""
+ },
+ {
+  "codigo": "WG56G2Z1ES",
+  "nombre": "Lavadora SIEMENS WG56G2Z1ES Libre",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "WGG256Z1ES",
+  "nombre": "Lavadora BOSCH WGG256Z1ES Libre",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
+ },
+ {
+  "codigo": "WQ45G2D1ES",
+  "nombre": "Secadora SIEMENS WQ45G2D1ES Bomba",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "sin_coste_origen"
  }
 ]
