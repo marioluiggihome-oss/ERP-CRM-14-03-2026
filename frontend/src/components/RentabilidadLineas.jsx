@@ -1508,18 +1508,22 @@ const RentabilidadLineas = ({ currentUser }) => {
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <table className="w-full text-sm table-fixed">
                   <colgroup>
-                    <col style={{ width: '110px' }} />
+                    <col style={{ width: '100px' }} />
                     <col />
-                    <col style={{ width: '95px' }} />
-                    <col style={{ width: '95px' }} />
-                    <col style={{ width: '95px' }} />
-                    <col style={{ width: '70px' }} />
-                    <col style={{ width: '36px' }} />
+                    <col style={{ width: '46px' }} />
+                    <col style={{ width: '82px' }} />
+                    <col style={{ width: '85px' }} />
+                    <col style={{ width: '85px' }} />
+                    <col style={{ width: '82px' }} />
+                    <col style={{ width: '54px' }} />
+                    <col style={{ width: '32px' }} />
                   </colgroup>
                   <thead className="bg-slate-100 text-slate-500">
                     <tr>
                       <th className="text-left p-2 text-[10px] font-black uppercase">Ref</th>
                       <th className="text-left p-2 text-[10px] font-black uppercase">Concepto</th>
+                      <th className="text-right p-2 text-[10px] font-black uppercase">Cant.</th>
+                      <th className="text-right p-2 text-[10px] font-black uppercase">Coste ud.</th>
                       <th className="text-right p-2 text-[10px] font-black uppercase">Coste</th>
                       <th className="text-right p-2 text-[10px] font-black uppercase">Venta</th>
                       <th className="text-right p-2 text-[10px] font-black uppercase">Beneficio</th>
@@ -1532,10 +1536,20 @@ const RentabilidadLineas = ({ currentUser }) => {
                       const m = (Number(l.venta) || 0) - (Number(l.coste) || 0);
                       // % = incremento sobre el coste (cuánto se sube el coste hasta la venta)
                       const mpct = (Number(l.coste) || 0) > 0 ? (m / (Number(l.coste) || 0) * 100) : null;
+                      const cant = Number(l.cantidad) || 1;
+                      const costeUd = cant > 0 ? (Number(l.coste) || 0) / cant : (Number(l.coste) || 0);
                       return (
                         <tr key={l.id || i}>
                           <td className="p-1"><input value={l.ref} onChange={e => setLine(i, 'ref', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
                           <td className="p-1"><input value={l.concepto} onChange={e => setLine(i, 'concepto', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
+                          <td className="p-1"><input
+                            type="text" inputMode="decimal"
+                            value={l.cantidad ?? 1}
+                            onChange={e => setLine(i, 'cantidad', e.target.value)}
+                            onBlur={e => blurLine(i, 'cantidad', e.target.value)}
+                            className="w-full px-1.5 py-1 border rounded text-xs text-right"
+                          /></td>
+                          <td className="p-1 text-right font-mono text-[11px] text-slate-500" title="Coste unitario = Coste ÷ Cantidad">{eur(costeUd)}</td>
                           <td className="p-1"><input
                             type="text" inputMode="decimal"
                             value={l.coste}
@@ -1558,7 +1572,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                         </tr>
                       );
                     })}
-                    {editor.lines.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-slate-400 text-xs">Sin lineas</td></tr>}
+                    {editor.lines.length === 0 && <tr><td colSpan={9} className="p-4 text-center text-slate-400 text-xs">Sin lineas</td></tr>}
                   </tbody>
                 </table>
               </div>
