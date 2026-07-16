@@ -395,9 +395,8 @@ const RentabilidadLineas = ({ currentUser }) => {
     }
   };
 
-  // ── Subir pantallazo de costes ──
-  const handleCostShot = async (e) => {
-    const file = e.target.files?.[0]; e.target.value = '';
+  // ── Subir pantallazo de costes (archivo o pegado con Ctrl+V) ──
+  const procesarCostShot = async (file) => {
     if (!file || !editor) return;
     setMatching(true);
     try {
@@ -411,11 +410,31 @@ const RentabilidadLineas = ({ currentUser }) => {
       setEditor({
         ...editor,
         lines: data.lines,
-        costDocs: [...editor.costDocs, { b64, name: file.name }],
+        costDocs: [...editor.costDocs, { b64, name: file.name || 'pegado.png' }],
       });
     } catch { alert('Error al leer el pantallazo'); }
     finally { setMatching(false); }
   };
+  const handleCostShot = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    await procesarCostShot(file);
+  };
+  // Pegar (Ctrl+V) una imagen del portapapeles cuando el editor está abierto:
+  // se procesa como el pantallazo de costes (IA empareja).
+  useEffect(() => {
+    if (!editor) return;
+    const onPaste = (e) => {
+      const items = (e.clipboardData && e.clipboardData.items) || [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) { e.preventDefault(); procesarCostShot(file); break; }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [editor]);
 
   // ── Alimentar costes desde el catálogo (coste medio ponderado por artículo) ──
   const handleAutoCostes = async () => {
@@ -1475,7 +1494,7 @@ const RentabilidadLineas = ({ currentUser }) => {
               <div className="flex items-center gap-2 mb-2">
                 <label className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer ${matching ? 'bg-blue-200 text-blue-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                   <Sparkles size={14} className={matching ? 'animate-pulse' : ''} />
-                  {matching ? 'Emparejando...' : 'Subir pantallazo de costes (IA empareja)'}
+                  {matching ? 'Emparejando...' : 'Subir pantallazo de costes (IA empareja · o pega con Ctrl+V)'}
                   <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleCostShot} disabled={matching} />
                 </label>
                 <button onClick={handleAutoCostes} disabled={feeding} title="Rellena el coste de cada línea con el coste medio ponderado del catálogo, casando por la referencia del artículo" className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 ${feeding ? 'bg-emerald-200 text-emerald-500' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
