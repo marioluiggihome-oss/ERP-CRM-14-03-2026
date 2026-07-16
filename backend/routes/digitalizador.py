@@ -383,6 +383,33 @@ REGLAS DE INTERPRETACION:
 - Si ves medidas como "35.5" o "69.8", son centimetros con decimales
 - Las medidas escritas a mano pueden parecer que les falta un digito - usa el contexto para interpretar
 
+PRIMERO, CLASIFICA EL DOCUMENTO (elige uno):
+  (A) PRESUPUESTO/FACTURA IMPRESO: tiene tabla con columnas (referencia, descripcion, precio, dto, total).
+  (B) BOCETO A MANO: dibujo/croquis con medidas escritas a mano.
+  (C) DISENO / ALZADO / PLANO DE COCINA: dibujo tecnico o render (2D o 3D) de la cocina, con los muebles
+      dibujados en su sitio (vista de alzado de pared, planta, o perspectiva del diseno montado).
+
+DETECCION DE MUEBLES EN DISENOS/ALZADOS/PLANOS (tipo C) — MUY IMPORTANTE:
+- Recorre la cocina de IZQUIERDA a DERECHA y por FILAS (primero los muebles BAJOS, luego ALTOS, luego
+  COLUMNAS), y crea UNA LINEA POR CADA MODULO/MUEBLE que veas dibujado. No agrupes varios modulos en una
+  sola linea aunque sean iguales: si hay 3 bajos de 60, saca 3 lineas (o 1 linea con quantity 3 si son
+  identicos y estan juntos).
+- Identifica y nombra el TIPO de cada modulo. Tipos habituales de cocina:
+  · Muebles BAJOS: bajo cajones, bajo puertas, bajo fregadero, bajo encimera, bajo rincon, bajo horno,
+    bajo campana, botellero, bajo esquinero.
+  · Muebles ALTOS: alto puertas, alto escurreplatos, alto campana, alto rincon, alto vitrina, alto abatible.
+  · COLUMNAS y SEMICOLUMNAS: columna horno+microondas, columna despensero, columna frigorifico, columna escobero.
+  · Complementos: encimera, peninsula, isla, zocalo, copete, costados/laterales vistos, remates, baldas.
+  · ELECTRODOMESTICOS integrados o vistos: campana, placa, horno, microondas, lavavajillas, frigorifico,
+    fregadero, grifo, vinoteca — sacalos tambien como lineas.
+- Para cada modulo, pon en "description" el TIPO + el ANCHO (y alto si aparece), ej: "Mueble bajo 2 cajones 60",
+  "Alto puertas 90 x 70", "Columna horno+micro 60 x 220". Si el ancho no esta rotulado, estimalo por
+  proporcion con los muebles vecinos rotulados y marca la medida como aproximada (ej: "~45").
+- Si el diseno lleva una LEYENDA, tabla de despiece o numeros de posicion junto a los muebles, usalos como
+  fuente principal de tipos y medidas.
+- No te dejes ningun modulo: cuenta las puertas/frentes y los tiradores para no saltarte muebles pequenos.
+- No metas como muebles los elementos decorativos (plantas, cuadros, personas, texto de marca).
+
 Extrae TODAS las lineas que encuentres, incluyendo:
 - Piezas de muebles con dimensiones (ej: "Costado 113 x 60", "Pieza 69.8 x 44.7")
 - Referencias de productos (ej: "Factory 01", "HB514AER4")
@@ -509,7 +536,9 @@ IMPORTANTE:
                         image_base64=pimg,
                         prompt=extraction_prompt,
                         session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
-                        model="gemini-2.5-flash",
+                        # Pro detecta mejor los muebles en disenos/alzados/planos (imagen).
+                        # Si no estuviera disponible, el servicio hace fallback a flash.
+                        model="gemini-2.5-pro",
                     )
                 except Exception as e:
                     # Un fallo en una página (timeout, cuota IA…) no debe tumbar
