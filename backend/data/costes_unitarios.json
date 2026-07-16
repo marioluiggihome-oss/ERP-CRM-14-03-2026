@@ -529,11 +529,11 @@
  },
  {
   "codigo": "15-ZPREFNG100",
-  "nombre": "Accesorio bivalente Esqu./Rinc.Flexible",
+  "nombre": "Accesorio bivalente Esqu./Rinc.Flexible Zocalo PVC Negro Alt.100mm",
   "cantidad": 2.0,
   "coste_total": 1002.7,
-  "coste_unitario": 501.35,
-  "revisar": "revisar_coste"
+  "coste_unitario": 0.7354,
+  "revisar": ""
  },
  {
   "codigo": "15-ZPREFNG150",
