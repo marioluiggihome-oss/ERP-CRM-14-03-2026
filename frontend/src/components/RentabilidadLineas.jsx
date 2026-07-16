@@ -63,11 +63,6 @@ const RentabilidadLineas = ({ currentUser }) => {
   const [loading, setLoading] = useState(true);
   const [editor, setEditor] = useState(null);
   const [viewing, setViewing] = useState(null);
-  // Modo cobro: muestra el botón "Pagado" en cada fila. Se activa con el candado
-  // de arriba o manteniendo pulsada la tecla Alt.
-  const [cobroMode, setCobroMode] = useState(false);
-  const [altDown, setAltDown] = useState(false);
-  const [pagando, setPagando] = useState('');
   // Desbloqueo master: las fichas con visto bueno del controller quedan bloqueadas
   // (no se pueden modificar, borrar ni desmarcar). Solo el master las desbloquea
   // manteniendo pulsada la tecla Shift un rato (secuencia que solo él conoce).
@@ -455,18 +450,6 @@ const RentabilidadLineas = ({ currentUser }) => {
     const parsed = parseFloat(normalized);
     return isNaN(parsed) ? 0 : parsed;
   };
-  // Alt mantiene visible el botón "Pagado" mientras se pulsa (modo cobro rápido).
-  useEffect(() => {
-    const down = (e) => { if (e.key === 'Alt') setAltDown(true); };
-    const up = (e) => { if (e.key === 'Alt') setAltDown(false); };
-    const blur = () => setAltDown(false);
-    window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    window.addEventListener('blur', blur);
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); window.removeEventListener('blur', blur); };
-  }, []);
-  const cobroActivo = cobroMode || altDown;
-
   // Secuencia de desbloqueo master: mantener Shift pulsada ~2,5s activa el
   // desbloqueo durante 30s (solo master). Deja modificar/borrar/desmarcar fichas
   // revisadas por el controller.
@@ -489,29 +472,6 @@ const RentabilidadLineas = ({ currentUser }) => {
   }, [esMaster, masterUnlock]);
   // Una ficha revisada está bloqueada salvo que el master haya activado el desbloqueo.
   const bloqueada = (f) => !!(f?.revisada) && !(esMaster && masterUnlock);
-
-  // Registra el cobro TOTAL de una ficha (ingreso a cuenta = importe pendiente),
-  // dejándola como "✔ Pagada". Requiere cliente y/o documento (siempre hay ficha).
-  const registrarPagado = async (f) => {
-    const pend = Number(f.pendienteCobro) || 0;
-    if (pend <= 0) return;
-    if (!window.confirm(`¿Marcar como PAGADA la ficha ${f.ref || ''}?\nSe registrará un cobro de ${eur(pend)}.`)) return;
-    setPagando(f.id);
-    try {
-      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos`, {
-        method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          importe: pend, targetId: f.id, targetRef: f.ref || '',
-          clientCode: f.clienteCodigo || '', cliente: f.cliente || '',
-          concepto: `Cobro total ${f.ref || ''}`.trim(),
-        }),
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) { alert(data.detail || 'No se pudo registrar el cobro'); return; }
-      await load();
-    } catch { alert('Error al registrar el cobro'); }
-    finally { setPagando(''); }
-  };
 
   const setLine = (i, field, val) => {
     const lines = [...editor.lines];
@@ -1042,13 +1002,6 @@ const RentabilidadLineas = ({ currentUser }) => {
               <Unlock size={14} /> Desbloqueo master activo
             </span>
           )}
-          {/* Modo cobro: candado que activa el botón "Pagado" en cada fila. También
-              se activa temporalmente manteniendo pulsada la tecla Alt. */}
-          <button onClick={() => setCobroMode(m => !m)}
-            title="Activa el botón Pagado en cada fila para registrar el cobro. Atajo: mantén pulsada la tecla Alt."
-            className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${cobroActivo ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-            {cobroActivo ? <Unlock size={16} /> : <Lock size={16} />} Modo cobro
-          </button>
           {/* Revisar margen: aísla las fichas con margen 0 o negativo (aviso previo al visto bueno). */}
           <button onClick={() => { setReviewMode(s => !s); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${reviewMode ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
@@ -1145,7 +1098,6 @@ const RentabilidadLineas = ({ currentUser }) => {
                 </span>
               </th>
               <th className="text-right p-3 text-xs font-black uppercase">% Incr. C→V</th>
-              <th className="text-right p-3 text-xs font-black uppercase">Pendiente cobro</th>
               <th className="text-center p-3 text-xs font-black uppercase">Docs</th>
               <th className="p-3"></th>
             </tr>
@@ -1293,25 +1245,6 @@ const RentabilidadLineas = ({ currentUser }) => {
                   <td className="p-3 text-right font-mono text-slate-600 text-xs">
                     {tt.coste > 0 ? `${(((tt.venta - tt.coste) / tt.coste) * 100).toFixed(1)}%` : '—'}
                   </td>
-                  <td className={`p-3 text-right font-mono ${(f.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
-                    {/* PAGADA: el cobro (ingresos a cuenta vinculados) cubre la venta */}
-                    {tt.venta > 0 && (f.cobrado || 0) >= tt.venta - 0.01 ? (
-                      <span title={`Cobrado ${eur(f.cobrado)} — vinculado desde Ingresos a cuenta`}
-                        className="text-[9px] font-black uppercase tracking-wide text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">✔ Pagada</span>
-                    ) : (f.cobrado || 0) > 0 ? (
-                      <span title={`A cuenta: ${eur(f.cobrado)}`} className="block">
-                        {eur(f.pendienteCobro)}
-                        <span className="block text-[9px] font-bold text-sky-600">a cuenta {eur(f.cobrado)}</span>
-                      </span>
-                    ) : eur(f.pendienteCobro)}
-                    {/* Botón Pagado: visible solo en modo cobro (candado o Alt) y si queda pendiente */}
-                    {cobroActivo && tt.venta > 0 && (f.pendienteCobro || 0) > 0 && (
-                      <button onClick={(e) => { e.stopPropagation(); registrarPagado(f); }} disabled={pagando === f.id}
-                        className="block mt-1 ml-auto px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
-                        {pagando === f.id ? '…' : '✔ Pagado'}
-                      </button>
-                    )}
-                  </td>
                   <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
                   <td className="p-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     {NEXT_DOC_TYPE[f.docType || 'factura'] && (
@@ -1352,7 +1285,7 @@ const RentabilidadLineas = ({ currentUser }) => {
               );
             })}
             {filteredAndSorted.length === 0 && (
-              <tr><td colSpan={9} className="p-8 text-center text-slate-400">
+              <tr><td colSpan={8} className="p-8 text-center text-slate-400">
                 {loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : `Sin ${TABS.find(t => t.key === docType)?.label.toLowerCase()}. Sube un documento de venta para empezar.`}
               </td></tr>
             )}
@@ -1361,8 +1294,8 @@ const RentabilidadLineas = ({ currentUser }) => {
             <tfoot>
               <tr className="bg-slate-50 border-t-2 border-slate-200 font-black text-slate-800">
                 <td colSpan={3} className="p-3 text-xs uppercase tracking-wide text-slate-500">Total {hasActiveFilters ? '(filtrado)' : ''} · {filteredAndSorted.length} doc.</td>
-                <td className="p-3 text-right font-mono">{eur(filteredTotals.venta)}</td>
                 <td className="p-3 text-right font-mono">{eur(filteredTotals.coste)}</td>
+                <td className="p-3 text-right font-mono">{eur(filteredTotals.venta)}</td>
                 <td className="p-3 text-right font-mono text-emerald-700">
                   {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(filteredTotals.margen)}
                 </td>
@@ -1370,7 +1303,6 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <td className="p-3 text-right font-mono text-slate-600 text-xs">
                   {filteredTotals.coste > 0 ? `${(((filteredTotals.venta - filteredTotals.coste) / filteredTotals.coste) * 100).toFixed(1)}%` : '—'}
                 </td>
-                <td className="p-3 text-right font-mono text-amber-700">{eur(filteredTotals.pendienteCobro)}</td>
                 <td colSpan={2}></td>
               </tr>
             </tfoot>
