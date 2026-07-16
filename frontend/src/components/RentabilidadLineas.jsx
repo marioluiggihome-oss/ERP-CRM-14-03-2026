@@ -1617,18 +1617,21 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-100 text-slate-500"><tr>
                     <th className="text-left p-2 text-[10px] font-black uppercase">Concepto</th>
-                    <th className="text-right p-2 text-[10px] font-black uppercase">Venta</th>
                     <th className="text-right p-2 text-[10px] font-black uppercase">Coste</th>
+                    <th className="text-right p-2 text-[10px] font-black uppercase">Venta</th>
                     <th className="text-right p-2 text-[10px] font-black uppercase">Margen</th>
+                    <th className="text-right p-2 text-[10px] font-black uppercase">%</th>
                   </tr></thead>
                   <tbody className="divide-y divide-slate-100">
                     {(viewing.lines || []).map((l, i) => {
                       const m = (Number(l.venta) || 0) - (Number(l.coste) || 0);
+                      const mpct = (Number(l.coste) || 0) > 0 ? (m / (Number(l.coste) || 0) * 100) : null;
                       return (<tr key={l.id || i}>
                         <td className="p-2">{l.ref ? <span className="text-slate-400 mr-1">[{l.ref}]</span> : null}{l.concepto}</td>
-                        <td className="p-2 text-right font-mono">{eur(l.venta)}</td>
                         <td className="p-2 text-right font-mono text-orange-600">{eur(l.coste)}</td>
+                        <td className="p-2 text-right font-mono">{eur(l.venta)}</td>
                         <td className={`p-2 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
+                        <td className={`p-2 text-right font-mono font-bold text-xs ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(1)}%`}</td>
                       </tr>);
                     })}
                   </tbody>
@@ -1636,13 +1639,10 @@ const RentabilidadLineas = ({ currentUser }) => {
               </div>
               {viewing.totals && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-                  <div className="bg-indigo-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-indigo-500 font-black">Venta</p><p className="text-lg font-black text-indigo-700">{eur(viewing.totals.venta)}</p></div>
                   <div className="bg-orange-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-orange-500 font-black">Coste</p><p className="text-lg font-black text-orange-700">{eur(viewing.totals.coste)}</p></div>
-                  <div className={`${viewing.totals.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${viewing.totals.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Margen ({viewing.totals.margenPct}%)</p><p className={`text-lg font-black ${viewing.totals.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(viewing.totals.margen)}</p></div>
+                  <div className="bg-indigo-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-indigo-500 font-black">Venta</p><p className="text-lg font-black text-indigo-700">{eur(viewing.totals.venta)}</p></div>
+                  <div className={`${viewing.totals.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${viewing.totals.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Margen ({viewing.totals.coste > 0 ? (viewing.totals.margen / viewing.totals.coste * 100).toFixed(1) : '0.0'}%)</p><p className={`text-lg font-black ${viewing.totals.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(viewing.totals.margen)}</p></div>
                 </div>
-              )}
-              {(viewing.pendienteCobro || 0) > 0 && (
-                <p className="text-xs text-amber-600 font-bold mt-2">Pendiente de cobro: {eur(viewing.pendienteCobro)} (cobrado hasta ahora: {eur(viewing.cobrado)})</p>
               )}
               {(viewing.costesProyecto || 0) > 0 && (viewing.costesProyecto !== viewing.totals?.coste) && (
                 <p className="text-xs text-indigo-600 font-bold mt-1">
