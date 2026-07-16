@@ -372,8 +372,8 @@
   "nombre": "Copete En forma de \" C\" (Convexo)24x24.L.40200mm.",
   "cantidad": 40200.0,
   "coste_total": 20.18,
-  "coste_unitario": 0.0005,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 10.3945,
+  "revisar": "confirmar_valor"
  },
  {
   "codigo": "14-CC242440LN",
@@ -388,8 +388,8 @@
   "nombre": "Copete En forma de \" C\" (Convexo)24x24.L.40500mm.",
   "cantidad": 40500.0,
   "coste_total": 45.98,
-  "coste_unitario": 0.0011,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 9.1956,
+  "revisar": ""
  },
  {
   "codigo": "14-CCESQ242PM",
@@ -404,8 +404,8 @@
   "nombre": "Rincon Copete En forma de \" C\" (Convexo)243x24.mm.U3n,d12.Blanco",
   "cantidad": 2432.0,
   "coste_total": 0.66,
-  "coste_unitario": 0.0003,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 0.2281,
+  "revisar": ""
  },
  {
   "codigo": "14-CCRNC242LN",
@@ -420,8 +420,8 @@
   "nombre": "Rincon Copete En forma de \" C\" (Convexo)249x24.mm.U9n,d64.",
   "cantidad": 2492.0,
   "coste_total": 3.86,
-  "coste_unitario": 0.0015,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 0.4285,
+  "revisar": ""
  },
  {
   "codigo": "14-CCTAPIZDLB",
@@ -444,8 +444,8 @@
   "nombre": "Tapa IZ/Dr. Copete En forma de \" C\"",
   "cantidad": 102.0,
   "coste_total": 2.56,
-  "coste_unitario": 0.0251,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 0.2557,
+  "revisar": ""
  },
  {
   "codigo": "144.0667.810",
@@ -508,8 +508,8 @@
   "nombre": "Zocalo PVC Revestido Blanco Mate",
   "cantidad": 504.0,
   "coste_total": 31.98,
-  "coste_unitario": 0.0635,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 8.3992,
+  "revisar": ""
  },
  {
   "codigo": "15-ZPNM100400",
