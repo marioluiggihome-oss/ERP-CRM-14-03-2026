@@ -3520,6 +3520,34 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
             />
           )}
 
+          {/* Botón de migración: normalizar refs con espacios en fichas existentes */}
+          {activeTab === 'maintenance' && state.currentUser?.isAdmin && (
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <h3 className="text-sm font-black uppercase tracking-wide text-slate-700 mb-2">Migración de datos</h3>
+              <p className="text-xs text-slate-500 mb-3">
+                Normaliza las referencias de todas las fichas de Rentabilidad eliminando espacios alrededor de la barra
+                (p. ej. <code>LG26 / 61</code> → <code>LG26/61</code>) para que el filtro funcione correctamente.
+              </p>
+              <button
+                onClick={async () => {
+                  if (!window.confirm('¿Normalizar todas las referencias de Rentabilidad? Esta acción es segura y reversible.')) return;
+                  try {
+                    const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/rentabilidad/admin/normalize-refs`, {
+                      method: 'POST', headers: authHeaders()
+                    });
+                    const data = await res.json();
+                    alert(`✅ ${data.message}`);
+                  } catch (e) {
+                    alert('❌ Error al normalizar referencias: ' + e.message);
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
+              >
+                🔧 Normalizar referencias (LG26 / 61 → LG26/61)
+              </button>
+            </div>
+          )}
+
           {activeTab === 'telemetry' && (
             <TelemetryTab state={state} setState={setState} />
           )}

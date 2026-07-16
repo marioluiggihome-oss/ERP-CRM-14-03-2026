@@ -1760,3 +1760,40 @@ async def delete_ingreso(ingreso_id: str, user: dict = Depends(require_rentabili
     if existing:
         await _log_deletion("ingreso_cuenta", ingreso_id, existing, user)
     return {"success": True}
+
+
+# ── Migración: limpiar espacios en refs de fichas existentes ─────────────────
+@router.post("/rentabilidad/admin/normalize-refs")
+async def normalize_refs(user: dict = Depends(require_rentabilidad)):
+    """Elimina espacios alrededor de '/' en el campo ref de todas las fichas.
+    Convierte 'LG26 / 61' → 'LG26/61' para que el filtro funcione correctamente.
+    Solo accesible para administradores o usuarios con permisos elevados.
+    """
+    import re as _re
+    if not _is_elevated(user):
+        raise HTTPException(status_code=403, detail="Solo administradores pueden ejecutar migraciones")
+
+    def _clean_ref(v: str) -> str:
+        return _re.sub(r'\s*/\s*', '/', str(v or '').strip())
+
+    cursor = db.fichas_rentabilidad.find({}, {"_id": 0, "id": 1, "ref": 1})
+    updated = 0
+    skipped = 0
+    async for doc in cursor:
+        original = doc.get("ref") or ""
+        cleaned = _clean_ref(original)
+        if cleaned != original:
+            await db.fichas_rentabilidad.update_one(
+                {"id": doc["id"]},
+                {"$set": {"ref": cleaned}}
+            )
+            updated += 1
+        else:
+            skipped += 1
+
+    return {
+        "success": True,
+        "updated": updated,
+        "skipped": skipped,
+        "message": f"Normalizadas {updated} referencias. {skipped} ya estaban correctas."
+    }

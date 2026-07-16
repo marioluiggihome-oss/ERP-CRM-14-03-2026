@@ -669,7 +669,10 @@ const RentabilidadLineas = ({ currentUser }) => {
 
     // Aplicar filtros por columna
     if (columnFilters.ref) {
-      rows = rows.filter(f => (f.ref || '').toLowerCase().includes(columnFilters.ref.toLowerCase()));
+      // Usa normRef en ambos lados: elimina espacios, barras y convierte a mayúsculas
+      // Así 'LG26/61' encuentra 'LG26 / 61' y viceversa
+      const refQ = normRef(columnFilters.ref);
+      rows = rows.filter(f => normRef(f.ref).includes(refQ));
     }
     if (columnFilters.cliente) {
       // Filtra por NOMBRE o por CÓDIGO de cliente (p. ej. "4273").
