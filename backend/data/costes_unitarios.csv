@@ -110,8 +110,8 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 22-A165600900;Fondo Protector Fregadero F.560xAn.Mod.9001mm.Cos1.166,6m7m.Alum3.,56;1;3.56;3.56;revisar_coste
 22-L13130W424;Transformador LED Modelo L131-24V-30W-IP201;2014;0.0;0.0;sin_coste_origen
 22-L203200N3K;Regleta LED Modelo L. 203 L.2000mm.;2270;71.5;0.0315;revisar_cantidad
-22-L203200T4S;Regleta LED Modelo L. 203 Con SENSOR;1;4480.502;4480.502;revisar_coste
-22-LSG5152520;Transformador LED SMARTGLOW-24V-30W;2016;12.85;0.0064;revisar_cantidad
+22-L203200T4S;Regleta LED Modelo L.203 Con SENSOR TOUCH L.2000mm Titanio 4000K;1;4480.502;21.674;confirmar_ponderado_vs_coste
+22-LSG5152520;Transformador LED SMARTGLOW-24V-30W IP20 6 Cnxns.LED +2 Sensor Blanco;2016;12.85;12.5194;confirmar_ponderado_vs_coste
 22-LSG5152720;Transformador LED SMARTGLOW-24V-90W;2016;27.3;0.0135;revisar_cantidad
 22-LSGS290N4K;Regleta LED SmartGlow 24V Superficie;2;55.7;27.85;
 2200101;Rejilla 8 lamas acero blanca M-60;2;7.61;3.805;

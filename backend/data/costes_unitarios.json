@@ -889,19 +889,19 @@
  },
  {
   "codigo": "22-L203200T4S",
-  "nombre": "Regleta LED Modelo L. 203 Con SENSOR",
+  "nombre": "Regleta LED Modelo L.203 Con SENSOR TOUCH L.2000mm Titanio 4000K",
   "cantidad": 1.0,
   "coste_total": 4480.502,
-  "coste_unitario": 4480.502,
-  "revisar": "revisar_coste"
+  "coste_unitario": 21.674,
+  "revisar": "confirmar_ponderado_vs_coste"
  },
  {
   "codigo": "22-LSG5152520",
-  "nombre": "Transformador LED SMARTGLOW-24V-30W",
+  "nombre": "Transformador LED SMARTGLOW-24V-30W IP20 6 Cnxns.LED +2 Sensor Blanco",
   "cantidad": 2016.0,
   "coste_total": 12.85,
-  "coste_unitario": 0.0064,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 12.5194,
+  "revisar": "confirmar_ponderado_vs_coste"
  },
  {
   "codigo": "22-LSG5152720",
