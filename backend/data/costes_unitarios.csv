@@ -1,0 +1,286 @@
+codigo;nombre;cantidad;coste_total;coste_unitario;revisar
+02017305;Campana CATA TF-2003 60 Duralum;1;77.0;77.0;
+02034310;Campana CATA TF 5260 Inox;1;65.63;65.63;
+02089305;Campana CATA TF-2003 70 Duralum;1;93.0;93.0;
+02186309;Campana Integración CATA ARMONIA;2;289.02;144.51;revisar_cantidad
+10-101200401B;Tubo Redondo Ø120mm. Largo 1500mm.;3;21.88;7.2933;
+10-101500601B;Tubo Redondo Ø150mm. Largo 1500mm;1;11.67;11.67;
+10-111000202B;Empalme redondo Ø100mm.;3;1.3;0.4333;
+10-111200402B;Empalme redondo Ø120mm.;3;2.35;0.7833;
+10-111500602B;Empalme redondo Ø150mm.;1;3.22;3.22;
+10-121000206B;Codo Redondo 90º Ø100mm.;1;1.22;1.22;
+10-121200406B;Codo Redondo 90º Ø120mm.;2;3.41;1.705;
+10-181000203B;Aro Reductor Piramide Ø125 > Ø100mm.;3;2.47;0.8233;
+10-181200454B;Aro Reductor Ø150 > Ø120 mm.;3;6.47;2.1567;
+10-401021023B;Tubo Flexible Ø102mm. Largo 3000mm.;2;16.96;8.48;
+10107007;Fregadero TEKA STYLO 1C Cubeta INOXIDABL4E;4;160.54;40.135;
+10110005;Fregadero TEKA DR-80 1C 1E Cubeta;1;71.37;71.37;
+10111004;Fregadero TEKA 1 Cubeta CENTROVAL;1;55.44;55.44;
+11-CJECL0600X;Conjunto Escurreplatos Clasic Acero;1;7.37;7.37;
+11-CJECL0800X;Conjunto Escurreplatos Clasic Acero;1;9.58;9.58;
+11-CJECL0900X;Conjunto Escurreplatos Clasic Acero;1;10.67;10.67;
+11-PRP216090P;Perfil Alum 19x14mm C/Soportes Modulo;62;2.5;0.0403;revisar_cantidad
+11-PRP2SPCTGR;Soporte C/Taco Perfil Alum Estriado;4;0.27;0.0675;
+112.0264.987;Válvula Man. FRANKE Integrada Premium;1;0.0;0.0;
+112.0671.788;Rebosadero FRANKE Rectangular Hidden;1;0.0;0.0;
+112500036;Placa TEKA IZF 68780 MST Total Flex Inducción;160;640.08;4.0005;
+112570022;Placa TEKA GZC 63310 XBN NAT Cristal;31;211.58;6.8252;revisar_coste
+112660000;Placa Teppan Yaki TEKA YZC 32600 XFL;1;819.53;819.53;
+114.0361.524;Fregadero FRANKE SIRIUS SID-610-50;1;124.25;124.25;
+115.0550.427;Grifo FRANKE ATLAS NEO PULL OUT Negro;1;240.9;240.9;
+115230020;Fregadero TEKA SQUARE 50.40 TG Negro;1;190.63;190.63;
+115890041;Dispensador jabón TEKA Cuadrado Negro;1;30.03;30.03;
+116020023;Grifo de cocina TEKA UNI9331 negro;3;310.47;103.49;revisar_coste
+119.0547.906;Dispensador jabón FRANKE ACTIVE NEGRO;1;61.0;61.0;
+12-CBCP0400BL;Cubertero COMPACT Cajón Blum LGBX/MVBO1X;1;2.91;2.91;revisar_coste
+12-CBCP0600GA;Cubertero COMPACT Cajón Blum LGBX/MVBO9X;9;25.01;2.7789;revisar_coste
+12-CBCP0700GA;Cubertero COMPACT Cajón Blum LGBX/MVBO1X;1;4.43;4.43;revisar_coste
+12-CBCP0900BL;Cubertero COMPACT Cajón Blum LGBX/MVBO4X;4;21.27;5.3175;revisar_coste
+12-CBCP0900GA;Cubertero COMPACT Cajón Blum LGBX/MVBO2X;2;9.18;4.59;revisar_coste
+12-CBTP45045B;Cubertero TECNO PLUS Modulo 450mm.An.3419x455mm.7B,l6a6nco;3419;0.0;0.0;revisar_cantidad
+122.0375.818;Fregadero FRANKE BMG MU 50.40 PLUS;410;0.0;0.0;revisar_cantidad
+122.0393.818;Fregadero FRANKE BOX BXX 110-68;1;237.5;237.5;
+125.0633.508;Fregadero FRANKE KUBUS KNG 110-52;1;278.85;278.85;
+127.0715.191;Fregadero FRANKE SRX 110-40 Bajo Encimera;240;108.54;0.4523;revisar_cantidad
+13-AERM2R30NG;Tapa/Remate Encimera 2 Radios Grueso;3;4.95;1.65;
+13-AEU92R30NG;Unión 90º Reversible Encimera 2 Radios;13;1.98;0.1523;
+13-AEURRT40NG;Union Recta Encimera Recta Grueso;1;1.21;1.21;
+14-CC242440LB;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;20.18;0.0005;revisar_cantidad
+14-CC242440LN;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;21.12;0.0005;revisar_cantidad
+14-CC242440PM;"Copete En forma de "" C"" (Convexo)24x24.L.40500mm.";40500;45.98;0.0011;revisar_cantidad
+14-CCESQ242PM;"Esquina Copete En forma de "" C"" (Convexo)234x24.mm.U3,n6d2.";234;1.24;0.0053;revisar_cantidad
+14-CCRNC242LB;"Rincon Copete En forma de "" C"" (Convexo)243x24.mm.U3n,d12.Blanco";2432;0.66;0.0003;revisar_cantidad
+14-CCRNC242LN;"Rincon Copete En forma de "" C"" (Convexo)242x24.mm.U2n,d08.Negro";2422;0.44;0.0002;revisar_cantidad
+14-CCRNC242PM;"Rincon Copete En forma de "" C"" (Convexo)249x24.mm.U9n,d64.";2492;3.86;0.0015;revisar_cantidad
+14-CCTAPIZDLB;"Tapa IZ/Dr. Copete En forma de "" C""";22;0.24;0.0109;revisar_coste
+14-CCTAPIZDLN;"Tapa IZ/Dr. Copete En forma de "" C""";42;1.52;0.0362;revisar_coste
+14-CCTAPIZDPM;"Tapa IZ/Dr. Copete En forma de "" C""";102;2.56;0.0251;revisar_cantidad
+144.0667.810;Fregadero MEPAMSA SQUARE 50.40;3;353.52;117.84;
+14ESRENE02;Esquina copete rectangular negro;2;0.21;0.105;
+14RECTNEG02;Copete rectangular negro 395cm;3;27.54;9.18;
+14TADENE02;Tapa derecha copete rectangular negro;2;0.13;0.065;
+14TAIZNE02;Tapa izquierda copete rectangular negro;2;0.13;0.065;
+15-ZPAL15040;Zocalo PVC Revestido Aluminio Cepillado;2;15.32;7.66;revisar_coste
+15-ZPBM100400;Zocalo PVC Revestido Blanco Mate;3;19.08;6.36;revisar_cantidad
+15-ZPBM150400;Zocalo PVC Revestido Blanco Mate;504;31.98;0.0635;revisar_cantidad
+15-ZPNM100400;Zocalo PVC Revestido Negro Mate Altura;7;45.23;6.4614;revisar_cantidad
+15-ZPNM150400;Zocalo PVC Revestido Negro Mate Altura;502;15.99;0.0319;revisar_cantidad
+15-ZPREFNG100;Accesorio bivalente Esqu./Rinc.Flexible;2;1002.7;501.35;revisar_coste
+15-ZPREFNG150;Accesorio bivalente Esqu./Rinc.Flexible;4;1503.04;375.76;revisar_coste
+15-ZZPABZALPR;Pinza Abrazadera Sujeción Zocalo Aluminio;24;0.93;0.0387;revisar_coste
+15-ZZPABZPVPR;Pinza Abrazadera Sujeción Zocalo PVC;50;2.45;0.049;revisar_coste
+1500140;Pata zocalo 10-16 Cm. D13;200;32.9;0.1645;revisar_cantidad
+1500141;Pata zocalo 13-21 Cm. D13 ESPIGA R.13;228;36.02;0.158;revisar_cantidad
+16-560H5000B3;Blum Guia Tandem PLUS Blumotion LN.500mm1.EXT.Total;1;10.93;10.93;
+161;Fregadero POALGI GANDIA 15 Ref.161;7;404.25;57.75;
+17-173H7100NQ;Blum Base Bisagra Cruz Excentrica Alt.0mm.5A5t3ornillar;553;165.9;0.3;revisar_cantidad
+17-173L6130NQ;Blum Base Bisagra Cruz Altura 3mm.Atornillar.N2iquel.;2;0.0;0.0;
+17-174H7100EN;Blum Base Bisagra Cruz Excentrica Alt.0mm.Ta2co;2;0.72;0.36;
+17-175H3100NIQ;Blum Base Bisagra Recta Excentrica;2;0.58;0.29;
+17-175H9160NQ;Blum Base Bisagra Cruz Excentrica Altura;8;4.88;0.61;
+17-70T3580TLN;Blum Bisagra Recta 110º Sin Muelle Taco;32;31.04;0.97;
+17-71B3550NIQ;Blum Bisagra Recta 110º Blumotion Atornilla2r;244;412.36;1.69;
+17-71B3580NIQ;Blum Bisagra Recta 110º Blumotion Taco;2;3.34;1.67;
+17-71B358ENIQ;Blum Bisagra Recta 110º Blumotion Taco;6;10.44;1.74;
+17-71B7550NIQ;Blum Bisagra Recta 155º Ang.0º.Blumotion;3;8.76;2.92;
+17-71B758ENIQ;Blum Bisagra Recta 155º Ang.0º.Blumotion;5;17.8;3.56;revisar_coste
+17-71T3550NIQ;Blum Bisagra Recta 110º Con Muelle;237;203.82;0.86;
+17-71T3580NIQ;Blum Bisagra Recta 110º Con Muelle;18;15.84;0.88;
+17-74T1580TLN;Blum Bisagra Recta 107º Sin Muelle Taco;8;5.36;0.67;
+17-79B9550NIQ;Blum Bisagra 95º Rinc.Ciego Blumotion;6;14.94;2.49;revisar_coste
+17-79B9580NIQ;Blum Bisagra 95º Rinc.Ciego Blumotion;4;10.16;2.54;
+17-9551008NIQ;Blum Placa Metálica Adhesiva Para;12;2.16;0.18;
+17-956A1002NG;Blum TIP ON Largo Negro;8;17.68;2.21;
+17-956AG1002G;Blum TIP ON Largo Gris.;4;8.84;2.21;
+17-956AG1201G;Blum Soporte Recto TIP ON Largo Gris.;4;2.0;0.5;
+17001528;Kit de unión lavado - secado BALAY;1;73.63;73.63;revisar_coste
+18-B202GB01E;Botellero EZKANDA Cromado Bandeja;1;2603.7803;2603.7803;revisar_coste
+1825011;Rinconero extraible cromo reversible;7100;184.77;0.026;revisar_cantidad
+1825015;Rinconero extraible cromo reversible;8100;145.2;0.0179;revisar_cantidad
+19-625400031I;Colgador ESCARPI-4 Izquierda Montaje;20;10.33;0.5165;
+19-625500035D;Colgador ESCARPI-4 Derecha Montaje;20;10.33;0.5165;
+19-639600006I;Tapa Izquierda Colgador ESCARPI-4;20;1.22;0.061;
+19-639700003D;Tapa Derecha Colgador ESCARPI-4;20;1.22;0.061;
+19-694700101J;Colgador OCULTO Montaje Rapid.(2;69;88.62;1.2843;
+1902512;Chapa colgador DOBLE;20;2.97;0.1485;
+2100655;Piston tope puerta sin alas;5;1.1;0.22;
+22-18198223GA;Contenedor Base Recycle Modulo 450<7040,0.A00l.266.2x15L0t,r0s4.GA;2;42.74;21.37;
+22-A165600500;Fondo Protector Fregadero F.560xAn.Mod.5001mm.Cos.186,5m0m.Alum2.,73;1;2.73;2.73;revisar_coste
+22-A165600600;Fondo Protector Fregadero F.560xAn.Mod.6002mm.Cos1.186,6m5m.Alum6.,19;2;6.19;3.095;revisar_coste
+22-A165600900;Fondo Protector Fregadero F.560xAn.Mod.9001mm.Cos1.166,6m7m.Alum3.,56;1;3.56;3.56;revisar_coste
+22-L13130W424;Transformador LED Modelo L131-24V-30W-IP201;2014;0.0;0.0;revisar_cantidad
+22-L203200N3K;Regleta LED Modelo L. 203 L.2000mm.;2270;71.5;0.0315;revisar_cantidad
+22-L203200T4S;Regleta LED Modelo L. 203 Con SENSOR;1;4480.502;4480.502;revisar_coste
+22-LSG5152520;Transformador LED SMARTGLOW-24V-30W;2016;12.85;0.0064;revisar_cantidad
+22-LSG5152720;Transformador LED SMARTGLOW-24V-90W;2016;27.3;0.0135;revisar_cantidad
+22-LSGS290N4K;Regleta LED SmartGlow 24V Superficie;2;55.7;27.85;
+2200101;Rejilla 8 lamas acero blanca M-60;2;7.61;3.805;
+2200105;Rejilla 8 lamas ALUMINIO MATE M-60;2;8.05;4.025;
+2200106;Rejilla 8 lamas Inox mate M-60;3;18.35;6.1167;
+2200140;Rejilla Tabica Blanca 60 x 8,5;1;5.76;5.76;
+2200142;Rejilla Tabica Negra 60 x 8,5;1;5.45;5.45;
+2200143;Rejilla Tabica Inox 60 x 8,5;2;14.16;7.08;
+2200301;Rejilla Zócalo 440 mm. Blanco;2;4.88;2.44;
+2200305;Rejilla Zócalo 440 mm. Plata;1;2.72;2.72;
+2203331;Costado Campana (2 Ud.) 90 x 33 Blanco;2;20.71;10.355;
+2204001;Marco microondas ABS blanco;4;20.36;5.09;
+2204002;Marco Microondas ABS Negro;1;6.8;6.8;
+2204005;Marco Microondas ABS Cromo Mate;3;39.12;13.04;
+2205024;Base multiple 3 enchufes cable 1,5 m.;3150;2.19;0.0007;revisar_cantidad
+2205148;Energy Box escamoteable C/3 enchufes;1;57.42;57.42;
+2207106;Pata PENINSULA/MESA Ø60mm.Alt. 710<740m1m.C/Reg1u2l,a6c1ión;1;4.97;4.97;revisar_coste
+2208719;Pata PENÍNSULA CUADRADA Reg. Lt/Alt.;616;9.25;0.015;revisar_cantidad
+23-6765750;Tirador modelo 6765 grafito 128mm;2;5.0;2.5;
+23-6863032;Tirador mod 6863 negro mate 96mm;12;26.28;2.19;
+2310046;Tirador VITRINA Autoad. yecora 150;2;2.8;1.4;
+2312327;perfil tirador gola mod. J barra de 4;4;49.98;12.495;
+2312331;Tapa lateral perfil gola modelo J;6;1.99;0.3317;
+2312332;Rincon gola J plata mate;1;0.83;0.83;
+2312340;Perfil tirador gola modelo U barra de;2;41.19;20.595;
+2312349;Angulo para sujetar el perfil gola;29;5.33;0.1838;
+2312350;Perfil canto-gola mueble alto barra;2;6.77;3.385;
+2312351;Perfil canto-gola mueble alto barra;2;24.73;12.365;
+2341520;Tirador VITRINA Autoad. Cr. Mate 150;3;41.75;13.9167;
+25-093110823A;Distanciador/Separador lateral para;2;3.45;1.725;revisar_coste
+25-378M500SLO;Blum Perfil Altura M.L=Izqu.Cajón ANTARO;15;55.89;3.726;
+25-378M500SRO;Blum Perfil Altura M.R=Der.Cajón ANTARO;15;55.89;3.726;
+25-3DO500B03A;Blum Set Gaveta ANTARO D Gris Orión;105;0.0;0.0;revisar_cantidad
+25-3MO500B03A;Blum Set Cajón ANTARO M Gris Orión;2;35.68;17.84;revisar_coste
+25-5785001M1J;Blum Juego Guias TANDEMBOX 30Kg.TOB;950;80.65;0.0849;revisar_cantidad
+25-AXP084500B;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m8m.Blan1c1o7,.18;48;77.61;1.6169;
+25-AXP084500G;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m5m.Gris;45;48.51;1.078;
+25-AXP084550B;Set Cajón AXIS PRO 40Kg.Fondo 550mm.H-84-m1m.Blan-c1o9,.19;41;0.0;0.0;
+25-AXP167300G;Set Gaveta AXIS PRO 40Kg.Fondo 300mm.H-1267mm.Gr3is2;1267;22.76;0.018;revisar_cantidad
+25-AXP167350G;Set Gaveta AXIS PRO 40Kg.Fondo 350mm.H-1467mm.Gr6is7;1467;43.4;0.0296;revisar_cantidad
+25-AXP167500B;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1667mm.B1la36n,c2o3.;1667;71.52;0.0429;revisar_cantidad
+25-AXP167500G;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1767mm.G1r4is7;1767;83.44;0.0472;revisar_cantidad
+25-AXP199500B;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-11099mm.B2la20n,c0o5.;11099;122.22;0.011;revisar_cantidad
+25-AXP199500G;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1299mm.Gr4is4;1299;24.52;0.0189;revisar_cantidad
+25-AXPZESWEAG;Kit Frente+Fijaciones Cajon Interior AXIS;1;9.41;9.41;
+25-AXPZESWECG;Kit Frente+Barra+Fijaciones Gaveta Interior;1;711.29;711.29;revisar_coste
+25-T60B35601S;Blum Set TOB TANDEMBOX L5LN.350<600mm.E1XT.Total;1;10.39;10.39;
+25-Z30D000SLO;Blum Adaptador L=Izqu.Trasera Mader.Gavet9a;9;7.11;0.79;revisar_coste
+25-Z30D000SRO;Blum Adaptador R=Der.Trasera Mader.Gaveta9;9;7.11;0.79;revisar_coste
+25-Z31L1036AO;Blum Frente Metal Cajón/Gaveta Interior;2;104168.18;52084.09;revisar_coste
+25-ZAA532CBLO;Blum Tapa Embellec.Lateral Izq/Der.Cajón;18;1.08;0.06;revisar_coste
+25-ZIF71M0LO1;Blum Fijación Frontal L=Izqu.Gris Orión;1;0.55;0.55;
+25-ZIF71M0RO1;Blum Fijación Frontal R=Der.Gris Orión;1;0.55;0.55;
+25-ZIF74D0LO1;Blum Fijación Frontal L=Izqu.Gris Orión;11;12.32;1.12;revisar_coste
+25-ZIF74D0RO1;Blum Fijación Frontal R=Der.Gris Orión;11;12.32;1.12;revisar_coste
+25-ZRG1046Z1O;Blum Guardacuerpo Frontal Gaveta;6;104624.96;17437.4933;revisar_coste
+25-ZRG437RSLO;Blum Guardacuerpo L=Izqu.ANTARO;9;;;sin_dato
+25-ZRG437RSRO;Blum Guardacuerpo R=Der.ANTARO;9;;;sin_dato
+25-ZSF35A2021;Blum Fijación Frontal Atornillable Izq/Der.Cajó18n;18;4.32;0.24;
+25-ZV71043C0O;Blum Frente Metal Cajon M / Gaveta;5;46.7;9.34;revisar_coste
+2532867;Cajon metal gris Ral 9006 500 X 149;1;4.61;4.61;
+3202890;Compas de gas 8 Kg gris montaje directo;4;2.24;0.56;
+3202891;Compas de gas 10 Kg gris montaje directo;6;3.36;0.56;
+3208030;Escuadra abatible 30X30 CROMO 3;1;8.17;8.17;
+3211102;Tubo silicona Soudal transparente 280;1;1.27;1.27;
+325.0568.821;Campana MEPAMSA SILUETA XLA 60;1;130.27;130.27;revisar_coste
+325.0571.785;Campana MEPAMSA SILUETA XLA 70;1;137.63;137.63;
+3455555;Fabricación cocina completa;45;1647.09;36.602;
+35-ALVICACCES;Alvic Accesorio;5;34.5;6.9;
+35-ALVICCASCO;Casco de cocina Alvic;10;631.86;63.186;
+35-ALVICKITCHEN;Fabricación cocina completa Alvic;15;15907.68;1060.512;
+35-ALVICPUERT;Puerta Alvic;100;3675.6;36.756;
+35-LUIGGIMVKITCHEN;Fabricación cocina completa Luiggi;2;0.0;0.0;
+350--0000002C;Canto Mod:;5;122.3;24.46;
+350--00000PEC;Ref.Pedido Cliente:;1;0.0;0.0;
+350-152400100;Puerta Laminado S1_T15. Al.2400xAn.100mm12.2;122;246286.36;2018.7407;
+3511111;AGUJERO DE BISAGRAS EN PUERTAS;16;0.0;0.0;
+35111111;PUERTAS FABRICADAS EN PUBLIOFERTA;35;124.25;3.55;
+35400000;Puerta Madera;36;1110.4;30.8444;
+355-PCDSNBLBR;CORNISA Diseño Blanco Brillo.;2;113.67;56.835;
+355555;CASCOS ALVIC;8;0.0;0.0;
+36-228001TLGO;Blum Tapa Izquierda Gris Orion HF/HL/HS-TOP;1;1.29;1.29;
+36-228001TRGO;Blum Tapa Derecha Gris Orion HF/HL/HS-TOP;1;1.29;1.29;
+36-22F2801PLT;Blum Mecanismo HF-TOP28 Con Plantilla;10200;31.4;0.0031;revisar_cantidad
+36-22F28STPMM;Blum Set HF-TOP 28 ST Con Plantilla Puertas;1;0.0;0.0;
+36-22F3901UND;Blum Brazo HF-TOP39 Alt. 840-1200mm.;2;19.12;9.56;
+36-22F39STDPM;Blum Set Brazos HF-TOP 39 ST/SD Puerta;1;0.0;0.0;
+37OKA41;Freg LUIGGI GRANITO NEGRO 45X45;0;0.0;;sin_dato
+37OKA54;Freg LUIGGI inox B/encimera 50X40x20;11;45.13;4.1027;
+3BD967GN;Campana BALAY 3BD967GN Integrada;1;304.18;304.18;revisar_cantidad
+3CB4130X3;Horno BALAY 3CB4130X3 Compacto;1;325.0;325.0;
+3CG6112X3;Microondas BALAY 3CG6112X3 Integrable;1;113.46;113.46;revisar_cantidad
+3EB765LQ;Placa BALAY 3EB765LQ;1;253.32;253.32;
+3EB865FR;Placa BALAY 3EB865FR Inducción 3 fuegos;1;223.98;223.98;
+3HB413CX3;Horno BALAY 3HB413CX3 Multifunción;16;330.46;20.6537;revisar_coste
+3KFE753XI;Combi BALAY 3KFE753XI 203 x 60 cm;1;518.08;518.08;
+3SB093BC;Secadora BALAY 3SB093BC con Bomba;1;504.97;504.97;
+3SB582BE;Secadora BALAY 3SB582BE 8 Kg Bomba;1;366.78;366.78;
+3TS3104BH;Lavadora BALAY 3TS3104BH 10 Kg 1400;1;461.6;461.6;revisar_coste
+3TS3107BD;Lavadora BALAY 3TS3107BD Libre Instalación;110;381.23;3.4657;revisar_coste
+3TS993BP;Lavadora BALAY 3TS993BP 9 Kg 1200;1;318.9;318.9;
+3VF5032DP;Lavavajillas BALAY 3VF5032DP integrable;1;405.83;405.83;revisar_coste
+40-C012916-B7E400ANEncimera;FENOLICA FLINT Fantastic.;1;30500.0;30500.0;revisar_coste
+402-FCAV47060;Fondo Cajón/Gaveta AXIS PRO F-50;11;28.6;2.6;
+402-FCAV47090;Fondo Cajón/Gaveta AXIS PRO F-50;3;8.7;2.9;
+402-TCAV47060;Trasera Cajón AXIS PRO F-50 M-60;3;4.8;1.6;
+402-TCAV47090;Trasera Cajón AXIS PRO F-50 M-90;1;2.1;2.1;
+402-TGDV47060;Trasera Gaveta 199MM AXIS PRO F-50;6;8.77;1.4617;
+402-TGDV47090;Trasera Gaveta 199MM AXIS PRO F-50;2;4.74;2.37;
+402-TGSV47060;Trasera Gaveta 167MM AXIS PRO F-50;2;2.92;1.46;
+40487182;Campana TEKA DLH 986 T Inox;1;190.15;190.15;
+420-AABL35060;Casco Alto ABATIBLE (350x600x330) Blanco;1;10.02;10.02;
+420-AABL60060;Casco Alto ABATIBLE (600x600x330) Blanco;1;14.37;14.37;
+420-ACBL09040;Casco Alto (900x330) M-40 Blanco Soft.;1;17.87;17.87;
+420-ACBL09045;Casco Alto (900x330) M-45 Blanco Soft;1;19.02;19.02;
+420-ACBL09050;Casco Alto (900x330) M-50 Blanco Soft.;2;41.58;20.79;
+420-ACBL09060;Casco Alto (900x330) M-60 Blanco Soft.;5;106.37;21.274;
+420-ACBL09090;Casco Alto (900x330) M-90 Blanco Soft.;2;54.38;27.19;
+420-ACBL10060;Casco Alto (1000x330) M-60 Blanco Soft.;2;57.77;28.885;
+420-AEBL09045;Casco Alto Esc./Platero (900x330) M-45;1;17.19;17.19;
+420-AEBL09060;Casco Alto Esc./Platero (900x330) M-60;1;20.0;20.0;
+420-AEBL09080;Casco Alto Esc./Platero (900x330) M-80;1;23.78;23.78;
+420-ARLBL0963;"Casco Alto Rincón Ang.""L"" (900x330)-(630x6301)";301;44.98;0.1494;revisar_cantidad
+420-BABL70040;Casco Bajo (700x580) M-40 Blanco Soft.;1;15.32;15.32;
+420-BABL70060;Casco Bajo (700x580) M-60 Blanco Soft.;2;33.71;16.855;
+420-BABL70100;Casco Bajo (700x580) M-100 Blanco;1;25.33;25.33;
+420-BABL80060;Casco Bajo (800x580) M-60 Blanco Soft.;3;69.06;23.02;
+420-BFBL70050;Casco Bajo Fregadero (700x580) M-50;1;15.5;15.5;
+420-BFBL80080;Casco Bajo Fregadero (800x580) M-80;1;22.98;22.98;
+420-BFBL80090;Casco Bajo Fregadero (800x580) M-90;1;24.41;24.41;
+420-BRLB70103;"Casco Bajo Rincón Ang.""L"" (700)-(1030x1030)";1;63.4;63.4;
+420-CLDBL2060;Casco Columna Desp.(2000x580) M-60;1;43.92;43.92;
+420-SCBL15060;Casco Semi Columna (1500x580) M-60;2;78.39;39.195;
+422-AAGR40060;Casco Alto ABATIBLE (400x600x330) Gris.;2;27.08;13.54;
+422-ACGR07030;Casco Alto (700x330) M-30 Gris.;1;14.02;14.02;
+422-ACGR07040;Casco Alto (700x330) M-40 Gris.;1;16.05;16.05;
+422-ACGR09045;Casco Alto (900x330) M-45 Gris.;1;23.65;23.65;
+422-ACGR09060;Casco Alto (900x330) M-60 Gris.;3;82.54;27.5133;
+422-ACGR09070;Casco Alto (900x330) M-70 Gris.;2;60.2;30.1;
+422-ARCGR0963;Casco Alto Rincón Chaflan (900)-(630x630);1;59.29;59.29;
+422-BAGR70030;Casco Bajo (700x580) M-30 Gris.;2;36.8;18.4;
+422-BAGR70060;Casco Bajo (700x580) M-60 Gris.;1;24.09;24.09;
+422-BAGR70070;Casco Bajo (700x580) M-70 Gris.;1;27.59;27.59;
+422-BAGR70080;Casco Bajo (700x580) M-80 Gris.;2;59.8;29.9;
+422-BAGR70100;Casco Bajo (700x580) M-100 Gris.;1;34.5;34.5;
+422-BFGR70045;Casco Bajo Fregadero (700x580) M-45;1;18.21;18.21;
+422-BFGR70050;Casco Bajo Fregadero (700x580) M-50;1;18.96;18.96;
+422-BFGR70060;Casco Bajo Fregadero (700x580) M-60;2;40.88;20.44;
+426-AARO50060;Casco Alto ABATIBLE (500x600x330) Roble.;1;16.53;16.53;
+426-ACRO07045;Casco Alto (700x330) M-45 Roble.;1;17.05;17.05;
+426-ACRO07060;Casco Alto (700x330) M-60 Roble.;2;40.18;20.09;
+426-AERO07080;Casco Alto Esc./Platero (700x330) M-80;1;18.2;18.2;
+427-ACRH08070;Casco Alto (800x330) M-70 Roble. Hercules;191;30.53;0.1598;revisar_cantidad
+427-ACRH09045;Casco Alto (900x330) M-45 Roble. Hercules;191;27.19;0.1424;revisar_cantidad
+427-ACRH09060;Casco Alto (900x330) M-60 Roble. Hercules;192;63.27;0.3295;revisar_cantidad
+427-ACRH09090;Casco Alto (900x330) M-90 Roble. Hercules;191;40.56;0.2124;revisar_cantidad
+427-ACRH09100;Casco Alto (900x330) M-100 Roble. Hercules;119;43.55;0.366;revisar_cantidad
+427-BARH80045;Casco Bajo (800x580) M-45 Roble. Hercules;192;60.14;0.3132;revisar_cantidad
+427-BFRH80120;Casco Bajo Fregadero (800x580) M-120;1;40.41;40.41;
+427-SCRH15090;Casco Semi Columna (1500x580) M-90;1;65.22;65.22;
+43-CAT178P130;Encimera Modelo CAT 178-P1 30x620x3600mm3.;3;175.07;58.3567;
+43-MARMFLRC40;Encimera Modelo MARMOL FLORA Canteada1;14;94.98;6.7843;
+43-MARMHDP130;Encimera Modelo MARMOL HADES-P1;20136;0.0;0.0;revisar_cantidad
+43-MARMHDR513;Encimera Modelo MARMOL HADES-R5;20136;115.29;0.0057;revisar_cantidad
+43-PIZ224P130;Encimera Modelo PIZ 224-P1 30x620x3600mm.2;2;112.32;56.16;
+43-ROBLEHERCL;Encimera Modelo ROBLE HERCULES-P1;21013;772.34;0.0368;revisar_cantidad
+5300003;Grifo OKA Caño Alto Mod: ASTRAL Cromo;1;22.28;22.28;
+5300010;Grifo OKA Caño Alto Mod: GRANADA;2;57.0;28.5;
+5300031;Grifo OKA ducha extraible MOD: HELMANTICA2;2;169.58;84.79;
+5300032;Grifo OKA Ducha extraible Mod: HELMANTICA3;3;229.43;76.4767;
+5300038;Grifo OKA Extraible MOD GOLD acero;7;351.45;50.2071;
+999;CONCEPTOS FMCVa;0;7531.74;;sin_dato

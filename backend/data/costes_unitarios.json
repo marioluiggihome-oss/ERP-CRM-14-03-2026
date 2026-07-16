@@ -1,0 +1,2282 @@
+[
+ {
+  "codigo": "02017305",
+  "nombre": "Campana CATA TF-2003 60 Duralum",
+  "cantidad": 1,
+  "coste_total": 77.0,
+  "coste_unitario": 77.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "02034310",
+  "nombre": "Campana CATA TF 5260 Inox",
+  "cantidad": 1,
+  "coste_total": 65.63,
+  "coste_unitario": 65.63,
+  "revisar": ""
+ },
+ {
+  "codigo": "02089305",
+  "nombre": "Campana CATA TF-2003 70 Duralum",
+  "cantidad": 1,
+  "coste_total": 93.0,
+  "coste_unitario": 93.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "02186309",
+  "nombre": "Campana Integración CATA ARMONIA",
+  "cantidad": 2,
+  "coste_total": 289.02,
+  "coste_unitario": 144.51,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "10-101200401B",
+  "nombre": "Tubo Redondo Ø120mm. Largo 1500mm.",
+  "cantidad": 3,
+  "coste_total": 21.88,
+  "coste_unitario": 7.2933,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-101500601B",
+  "nombre": "Tubo Redondo Ø150mm. Largo 1500mm",
+  "cantidad": 1,
+  "coste_total": 11.67,
+  "coste_unitario": 11.67,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-111000202B",
+  "nombre": "Empalme redondo Ø100mm.",
+  "cantidad": 3,
+  "coste_total": 1.3,
+  "coste_unitario": 0.4333,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-111200402B",
+  "nombre": "Empalme redondo Ø120mm.",
+  "cantidad": 3,
+  "coste_total": 2.35,
+  "coste_unitario": 0.7833,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-111500602B",
+  "nombre": "Empalme redondo Ø150mm.",
+  "cantidad": 1,
+  "coste_total": 3.22,
+  "coste_unitario": 3.22,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-121000206B",
+  "nombre": "Codo Redondo 90º Ø100mm.",
+  "cantidad": 1,
+  "coste_total": 1.22,
+  "coste_unitario": 1.22,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-121200406B",
+  "nombre": "Codo Redondo 90º Ø120mm.",
+  "cantidad": 2,
+  "coste_total": 3.41,
+  "coste_unitario": 1.705,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-181000203B",
+  "nombre": "Aro Reductor Piramide Ø125 > Ø100mm.",
+  "cantidad": 3,
+  "coste_total": 2.47,
+  "coste_unitario": 0.8233,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-181200454B",
+  "nombre": "Aro Reductor Ø150 > Ø120 mm.",
+  "cantidad": 3,
+  "coste_total": 6.47,
+  "coste_unitario": 2.1567,
+  "revisar": ""
+ },
+ {
+  "codigo": "10-401021023B",
+  "nombre": "Tubo Flexible Ø102mm. Largo 3000mm.",
+  "cantidad": 2,
+  "coste_total": 16.96,
+  "coste_unitario": 8.48,
+  "revisar": ""
+ },
+ {
+  "codigo": "10107007",
+  "nombre": "Fregadero TEKA STYLO 1C Cubeta INOXIDABL4E",
+  "cantidad": 4,
+  "coste_total": 160.54,
+  "coste_unitario": 40.135,
+  "revisar": ""
+ },
+ {
+  "codigo": "10110005",
+  "nombre": "Fregadero TEKA DR-80 1C 1E Cubeta",
+  "cantidad": 1,
+  "coste_total": 71.37,
+  "coste_unitario": 71.37,
+  "revisar": ""
+ },
+ {
+  "codigo": "10111004",
+  "nombre": "Fregadero TEKA 1 Cubeta CENTROVAL",
+  "cantidad": 1,
+  "coste_total": 55.44,
+  "coste_unitario": 55.44,
+  "revisar": ""
+ },
+ {
+  "codigo": "11-CJECL0600X",
+  "nombre": "Conjunto Escurreplatos Clasic Acero",
+  "cantidad": 1,
+  "coste_total": 7.37,
+  "coste_unitario": 7.37,
+  "revisar": ""
+ },
+ {
+  "codigo": "11-CJECL0800X",
+  "nombre": "Conjunto Escurreplatos Clasic Acero",
+  "cantidad": 1,
+  "coste_total": 9.58,
+  "coste_unitario": 9.58,
+  "revisar": ""
+ },
+ {
+  "codigo": "11-CJECL0900X",
+  "nombre": "Conjunto Escurreplatos Clasic Acero",
+  "cantidad": 1,
+  "coste_total": 10.67,
+  "coste_unitario": 10.67,
+  "revisar": ""
+ },
+ {
+  "codigo": "11-PRP216090P",
+  "nombre": "Perfil Alum 19x14mm C/Soportes Modulo",
+  "cantidad": 62,
+  "coste_total": 2.5,
+  "coste_unitario": 0.0403,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "11-PRP2SPCTGR",
+  "nombre": "Soporte C/Taco Perfil Alum Estriado",
+  "cantidad": 4,
+  "coste_total": 0.27,
+  "coste_unitario": 0.0675,
+  "revisar": ""
+ },
+ {
+  "codigo": "112.0264.987",
+  "nombre": "Válvula Man. FRANKE Integrada Premium",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "112.0671.788",
+  "nombre": "Rebosadero FRANKE Rectangular Hidden",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "112500036",
+  "nombre": "Placa TEKA IZF 68780 MST Total Flex Inducción",
+  "cantidad": 160,
+  "coste_total": 640.08,
+  "coste_unitario": 4.0005,
+  "revisar": ""
+ },
+ {
+  "codigo": "112570022",
+  "nombre": "Placa TEKA GZC 63310 XBN NAT Cristal",
+  "cantidad": 31,
+  "coste_total": 211.58,
+  "coste_unitario": 6.8252,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "112660000",
+  "nombre": "Placa Teppan Yaki TEKA YZC 32600 XFL",
+  "cantidad": 1,
+  "coste_total": 819.53,
+  "coste_unitario": 819.53,
+  "revisar": ""
+ },
+ {
+  "codigo": "114.0361.524",
+  "nombre": "Fregadero FRANKE SIRIUS SID-610-50",
+  "cantidad": 1,
+  "coste_total": 124.25,
+  "coste_unitario": 124.25,
+  "revisar": ""
+ },
+ {
+  "codigo": "115.0550.427",
+  "nombre": "Grifo FRANKE ATLAS NEO PULL OUT Negro",
+  "cantidad": 1,
+  "coste_total": 240.9,
+  "coste_unitario": 240.9,
+  "revisar": ""
+ },
+ {
+  "codigo": "115230020",
+  "nombre": "Fregadero TEKA SQUARE 50.40 TG Negro",
+  "cantidad": 1,
+  "coste_total": 190.63,
+  "coste_unitario": 190.63,
+  "revisar": ""
+ },
+ {
+  "codigo": "115890041",
+  "nombre": "Dispensador jabón TEKA Cuadrado Negro",
+  "cantidad": 1,
+  "coste_total": 30.03,
+  "coste_unitario": 30.03,
+  "revisar": ""
+ },
+ {
+  "codigo": "116020023",
+  "nombre": "Grifo de cocina TEKA UNI9331 negro",
+  "cantidad": 3,
+  "coste_total": 310.47,
+  "coste_unitario": 103.49,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "119.0547.906",
+  "nombre": "Dispensador jabón FRANKE ACTIVE NEGRO",
+  "cantidad": 1,
+  "coste_total": 61.0,
+  "coste_unitario": 61.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "12-CBCP0400BL",
+  "nombre": "Cubertero COMPACT Cajón Blum LGBX/MVBO1X",
+  "cantidad": 1,
+  "coste_total": 2.91,
+  "coste_unitario": 2.91,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "12-CBCP0600GA",
+  "nombre": "Cubertero COMPACT Cajón Blum LGBX/MVBO9X",
+  "cantidad": 9,
+  "coste_total": 25.01,
+  "coste_unitario": 2.7789,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "12-CBCP0700GA",
+  "nombre": "Cubertero COMPACT Cajón Blum LGBX/MVBO1X",
+  "cantidad": 1,
+  "coste_total": 4.43,
+  "coste_unitario": 4.43,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "12-CBCP0900BL",
+  "nombre": "Cubertero COMPACT Cajón Blum LGBX/MVBO4X",
+  "cantidad": 4,
+  "coste_total": 21.27,
+  "coste_unitario": 5.3175,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "12-CBCP0900GA",
+  "nombre": "Cubertero COMPACT Cajón Blum LGBX/MVBO2X",
+  "cantidad": 2,
+  "coste_total": 9.18,
+  "coste_unitario": 4.59,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "12-CBTP45045B",
+  "nombre": "Cubertero TECNO PLUS Modulo 450mm.An.3419x455mm.7B,l6a6nco",
+  "cantidad": 3419,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "122.0375.818",
+  "nombre": "Fregadero FRANKE BMG MU 50.40 PLUS",
+  "cantidad": 410,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "122.0393.818",
+  "nombre": "Fregadero FRANKE BOX BXX 110-68",
+  "cantidad": 1,
+  "coste_total": 237.5,
+  "coste_unitario": 237.5,
+  "revisar": ""
+ },
+ {
+  "codigo": "125.0633.508",
+  "nombre": "Fregadero FRANKE KUBUS KNG 110-52",
+  "cantidad": 1,
+  "coste_total": 278.85,
+  "coste_unitario": 278.85,
+  "revisar": ""
+ },
+ {
+  "codigo": "127.0715.191",
+  "nombre": "Fregadero FRANKE SRX 110-40 Bajo Encimera",
+  "cantidad": 240,
+  "coste_total": 108.54,
+  "coste_unitario": 0.4523,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "13-AERM2R30NG",
+  "nombre": "Tapa/Remate Encimera 2 Radios Grueso",
+  "cantidad": 3,
+  "coste_total": 4.95,
+  "coste_unitario": 1.65,
+  "revisar": ""
+ },
+ {
+  "codigo": "13-AEU92R30NG",
+  "nombre": "Unión 90º Reversible Encimera 2 Radios",
+  "cantidad": 13,
+  "coste_total": 1.98,
+  "coste_unitario": 0.1523,
+  "revisar": ""
+ },
+ {
+  "codigo": "13-AEURRT40NG",
+  "nombre": "Union Recta Encimera Recta Grueso",
+  "cantidad": 1,
+  "coste_total": 1.21,
+  "coste_unitario": 1.21,
+  "revisar": ""
+ },
+ {
+  "codigo": "14-CC242440LB",
+  "nombre": "Copete En forma de \" C\" (Convexo)24x24.L.40200mm.",
+  "cantidad": 40200,
+  "coste_total": 20.18,
+  "coste_unitario": 0.0005,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "14-CC242440LN",
+  "nombre": "Copete En forma de \" C\" (Convexo)24x24.L.40200mm.",
+  "cantidad": 40200,
+  "coste_total": 21.12,
+  "coste_unitario": 0.0005,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "14-CC242440PM",
+  "nombre": "Copete En forma de \" C\" (Convexo)24x24.L.40500mm.",
+  "cantidad": 40500,
+  "coste_total": 45.98,
+  "coste_unitario": 0.0011,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "14-CCESQ242PM",
+  "nombre": "Esquina Copete En forma de \" C\" (Convexo)234x24.mm.U3,n6d2.",
+  "cantidad": 234,
+  "coste_total": 1.24,
+  "coste_unitario": 0.0053,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "14-CCRNC242LB",
+  "nombre": "Rincon Copete En forma de \" C\" (Convexo)243x24.mm.U3n,d12.Blanco",
+  "cantidad": 2432,
+  "coste_total": 0.66,
+  "coste_unitario": 0.0003,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "14-CCRNC242LN",
+  "nombre": "Rincon Copete En forma de \" C\" (Convexo)242x24.mm.U2n,d08.Negro",
+  "cantidad": 2422,
+  "coste_total": 0.44,
+  "coste_unitario": 0.0002,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "14-CCRNC242PM",
+  "nombre": "Rincon Copete En forma de \" C\" (Convexo)249x24.mm.U9n,d64.",
+  "cantidad": 2492,
+  "coste_total": 3.86,
+  "coste_unitario": 0.0015,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "14-CCTAPIZDLB",
+  "nombre": "Tapa IZ/Dr. Copete En forma de \" C\"",
+  "cantidad": 22,
+  "coste_total": 0.24,
+  "coste_unitario": 0.0109,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "14-CCTAPIZDLN",
+  "nombre": "Tapa IZ/Dr. Copete En forma de \" C\"",
+  "cantidad": 42,
+  "coste_total": 1.52,
+  "coste_unitario": 0.0362,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "14-CCTAPIZDPM",
+  "nombre": "Tapa IZ/Dr. Copete En forma de \" C\"",
+  "cantidad": 102,
+  "coste_total": 2.56,
+  "coste_unitario": 0.0251,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "144.0667.810",
+  "nombre": "Fregadero MEPAMSA SQUARE 50.40",
+  "cantidad": 3,
+  "coste_total": 353.52,
+  "coste_unitario": 117.84,
+  "revisar": ""
+ },
+ {
+  "codigo": "14ESRENE02",
+  "nombre": "Esquina copete rectangular negro",
+  "cantidad": 2,
+  "coste_total": 0.21,
+  "coste_unitario": 0.105,
+  "revisar": ""
+ },
+ {
+  "codigo": "14RECTNEG02",
+  "nombre": "Copete rectangular negro 395cm",
+  "cantidad": 3,
+  "coste_total": 27.54,
+  "coste_unitario": 9.18,
+  "revisar": ""
+ },
+ {
+  "codigo": "14TADENE02",
+  "nombre": "Tapa derecha copete rectangular negro",
+  "cantidad": 2,
+  "coste_total": 0.13,
+  "coste_unitario": 0.065,
+  "revisar": ""
+ },
+ {
+  "codigo": "14TAIZNE02",
+  "nombre": "Tapa izquierda copete rectangular negro",
+  "cantidad": 2,
+  "coste_total": 0.13,
+  "coste_unitario": 0.065,
+  "revisar": ""
+ },
+ {
+  "codigo": "15-ZPAL15040",
+  "nombre": "Zocalo PVC Revestido Aluminio Cepillado",
+  "cantidad": 2,
+  "coste_total": 15.32,
+  "coste_unitario": 7.66,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "15-ZPBM100400",
+  "nombre": "Zocalo PVC Revestido Blanco Mate",
+  "cantidad": 3,
+  "coste_total": 19.08,
+  "coste_unitario": 6.36,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "15-ZPBM150400",
+  "nombre": "Zocalo PVC Revestido Blanco Mate",
+  "cantidad": 504,
+  "coste_total": 31.98,
+  "coste_unitario": 0.0635,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "15-ZPNM100400",
+  "nombre": "Zocalo PVC Revestido Negro Mate Altura",
+  "cantidad": 7,
+  "coste_total": 45.23,
+  "coste_unitario": 6.4614,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "15-ZPNM150400",
+  "nombre": "Zocalo PVC Revestido Negro Mate Altura",
+  "cantidad": 502,
+  "coste_total": 15.99,
+  "coste_unitario": 0.0319,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "15-ZPREFNG100",
+  "nombre": "Accesorio bivalente Esqu./Rinc.Flexible",
+  "cantidad": 2,
+  "coste_total": 1002.7,
+  "coste_unitario": 501.35,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "15-ZPREFNG150",
+  "nombre": "Accesorio bivalente Esqu./Rinc.Flexible",
+  "cantidad": 4,
+  "coste_total": 1503.04,
+  "coste_unitario": 375.76,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "15-ZZPABZALPR",
+  "nombre": "Pinza Abrazadera Sujeción Zocalo Aluminio",
+  "cantidad": 24,
+  "coste_total": 0.93,
+  "coste_unitario": 0.0387,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "15-ZZPABZPVPR",
+  "nombre": "Pinza Abrazadera Sujeción Zocalo PVC",
+  "cantidad": 50,
+  "coste_total": 2.45,
+  "coste_unitario": 0.049,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "1500140",
+  "nombre": "Pata zocalo 10-16 Cm. D13",
+  "cantidad": 200,
+  "coste_total": 32.9,
+  "coste_unitario": 0.1645,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "1500141",
+  "nombre": "Pata zocalo 13-21 Cm. D13 ESPIGA R.13",
+  "cantidad": 228,
+  "coste_total": 36.02,
+  "coste_unitario": 0.158,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "16-560H5000B3",
+  "nombre": "Blum Guia Tandem PLUS Blumotion LN.500mm1.EXT.Total",
+  "cantidad": 1,
+  "coste_total": 10.93,
+  "coste_unitario": 10.93,
+  "revisar": ""
+ },
+ {
+  "codigo": "161",
+  "nombre": "Fregadero POALGI GANDIA 15 Ref.161",
+  "cantidad": 7,
+  "coste_total": 404.25,
+  "coste_unitario": 57.75,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-173H7100NQ",
+  "nombre": "Blum Base Bisagra Cruz Excentrica Alt.0mm.5A5t3ornillar",
+  "cantidad": 553,
+  "coste_total": 165.9,
+  "coste_unitario": 0.3,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "17-173L6130NQ",
+  "nombre": "Blum Base Bisagra Cruz Altura 3mm.Atornillar.N2iquel.",
+  "cantidad": 2,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-174H7100EN",
+  "nombre": "Blum Base Bisagra Cruz Excentrica Alt.0mm.Ta2co",
+  "cantidad": 2,
+  "coste_total": 0.72,
+  "coste_unitario": 0.36,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-175H3100NIQ",
+  "nombre": "Blum Base Bisagra Recta Excentrica",
+  "cantidad": 2,
+  "coste_total": 0.58,
+  "coste_unitario": 0.29,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-175H9160NQ",
+  "nombre": "Blum Base Bisagra Cruz Excentrica Altura",
+  "cantidad": 8,
+  "coste_total": 4.88,
+  "coste_unitario": 0.61,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-70T3580TLN",
+  "nombre": "Blum Bisagra Recta 110º Sin Muelle Taco",
+  "cantidad": 32,
+  "coste_total": 31.04,
+  "coste_unitario": 0.97,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-71B3550NIQ",
+  "nombre": "Blum Bisagra Recta 110º Blumotion Atornilla2r",
+  "cantidad": 244,
+  "coste_total": 412.36,
+  "coste_unitario": 1.69,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-71B3580NIQ",
+  "nombre": "Blum Bisagra Recta 110º Blumotion Taco",
+  "cantidad": 2,
+  "coste_total": 3.34,
+  "coste_unitario": 1.67,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-71B358ENIQ",
+  "nombre": "Blum Bisagra Recta 110º Blumotion Taco",
+  "cantidad": 6,
+  "coste_total": 10.44,
+  "coste_unitario": 1.74,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-71B7550NIQ",
+  "nombre": "Blum Bisagra Recta 155º Ang.0º.Blumotion",
+  "cantidad": 3,
+  "coste_total": 8.76,
+  "coste_unitario": 2.92,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-71B758ENIQ",
+  "nombre": "Blum Bisagra Recta 155º Ang.0º.Blumotion",
+  "cantidad": 5,
+  "coste_total": 17.8,
+  "coste_unitario": 3.56,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "17-71T3550NIQ",
+  "nombre": "Blum Bisagra Recta 110º Con Muelle",
+  "cantidad": 237,
+  "coste_total": 203.82,
+  "coste_unitario": 0.86,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-71T3580NIQ",
+  "nombre": "Blum Bisagra Recta 110º Con Muelle",
+  "cantidad": 18,
+  "coste_total": 15.84,
+  "coste_unitario": 0.88,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-74T1580TLN",
+  "nombre": "Blum Bisagra Recta 107º Sin Muelle Taco",
+  "cantidad": 8,
+  "coste_total": 5.36,
+  "coste_unitario": 0.67,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-79B9550NIQ",
+  "nombre": "Blum Bisagra 95º Rinc.Ciego Blumotion",
+  "cantidad": 6,
+  "coste_total": 14.94,
+  "coste_unitario": 2.49,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "17-79B9580NIQ",
+  "nombre": "Blum Bisagra 95º Rinc.Ciego Blumotion",
+  "cantidad": 4,
+  "coste_total": 10.16,
+  "coste_unitario": 2.54,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-9551008NIQ",
+  "nombre": "Blum Placa Metálica Adhesiva Para",
+  "cantidad": 12,
+  "coste_total": 2.16,
+  "coste_unitario": 0.18,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-956A1002NG",
+  "nombre": "Blum TIP ON Largo Negro",
+  "cantidad": 8,
+  "coste_total": 17.68,
+  "coste_unitario": 2.21,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-956AG1002G",
+  "nombre": "Blum TIP ON Largo Gris.",
+  "cantidad": 4,
+  "coste_total": 8.84,
+  "coste_unitario": 2.21,
+  "revisar": ""
+ },
+ {
+  "codigo": "17-956AG1201G",
+  "nombre": "Blum Soporte Recto TIP ON Largo Gris.",
+  "cantidad": 4,
+  "coste_total": 2.0,
+  "coste_unitario": 0.5,
+  "revisar": ""
+ },
+ {
+  "codigo": "17001528",
+  "nombre": "Kit de unión lavado - secado BALAY",
+  "cantidad": 1,
+  "coste_total": 73.63,
+  "coste_unitario": 73.63,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "18-B202GB01E",
+  "nombre": "Botellero EZKANDA Cromado Bandeja",
+  "cantidad": 1,
+  "coste_total": 2603.7803,
+  "coste_unitario": 2603.7803,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "1825011",
+  "nombre": "Rinconero extraible cromo reversible",
+  "cantidad": 7100,
+  "coste_total": 184.77,
+  "coste_unitario": 0.026,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "1825015",
+  "nombre": "Rinconero extraible cromo reversible",
+  "cantidad": 8100,
+  "coste_total": 145.2,
+  "coste_unitario": 0.0179,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "19-625400031I",
+  "nombre": "Colgador ESCARPI-4 Izquierda Montaje",
+  "cantidad": 20,
+  "coste_total": 10.33,
+  "coste_unitario": 0.5165,
+  "revisar": ""
+ },
+ {
+  "codigo": "19-625500035D",
+  "nombre": "Colgador ESCARPI-4 Derecha Montaje",
+  "cantidad": 20,
+  "coste_total": 10.33,
+  "coste_unitario": 0.5165,
+  "revisar": ""
+ },
+ {
+  "codigo": "19-639600006I",
+  "nombre": "Tapa Izquierda Colgador ESCARPI-4",
+  "cantidad": 20,
+  "coste_total": 1.22,
+  "coste_unitario": 0.061,
+  "revisar": ""
+ },
+ {
+  "codigo": "19-639700003D",
+  "nombre": "Tapa Derecha Colgador ESCARPI-4",
+  "cantidad": 20,
+  "coste_total": 1.22,
+  "coste_unitario": 0.061,
+  "revisar": ""
+ },
+ {
+  "codigo": "19-694700101J",
+  "nombre": "Colgador OCULTO Montaje Rapid.(2",
+  "cantidad": 69,
+  "coste_total": 88.62,
+  "coste_unitario": 1.2843,
+  "revisar": ""
+ },
+ {
+  "codigo": "1902512",
+  "nombre": "Chapa colgador DOBLE",
+  "cantidad": 20,
+  "coste_total": 2.97,
+  "coste_unitario": 0.1485,
+  "revisar": ""
+ },
+ {
+  "codigo": "2100655",
+  "nombre": "Piston tope puerta sin alas",
+  "cantidad": 5,
+  "coste_total": 1.1,
+  "coste_unitario": 0.22,
+  "revisar": ""
+ },
+ {
+  "codigo": "22-18198223GA",
+  "nombre": "Contenedor Base Recycle Modulo 450<7040,0.A00l.266.2x15L0t,r0s4.GA",
+  "cantidad": 2,
+  "coste_total": 42.74,
+  "coste_unitario": 21.37,
+  "revisar": ""
+ },
+ {
+  "codigo": "22-A165600500",
+  "nombre": "Fondo Protector Fregadero F.560xAn.Mod.5001mm.Cos.186,5m0m.Alum2.,73",
+  "cantidad": 1,
+  "coste_total": 2.73,
+  "coste_unitario": 2.73,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "22-A165600600",
+  "nombre": "Fondo Protector Fregadero F.560xAn.Mod.6002mm.Cos1.186,6m5m.Alum6.,19",
+  "cantidad": 2,
+  "coste_total": 6.19,
+  "coste_unitario": 3.095,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "22-A165600900",
+  "nombre": "Fondo Protector Fregadero F.560xAn.Mod.9001mm.Cos1.166,6m7m.Alum3.,56",
+  "cantidad": 1,
+  "coste_total": 3.56,
+  "coste_unitario": 3.56,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "22-L13130W424",
+  "nombre": "Transformador LED Modelo L131-24V-30W-IP201",
+  "cantidad": 2014,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "22-L203200N3K",
+  "nombre": "Regleta LED Modelo L. 203 L.2000mm.",
+  "cantidad": 2270,
+  "coste_total": 71.5,
+  "coste_unitario": 0.0315,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "22-L203200T4S",
+  "nombre": "Regleta LED Modelo L. 203 Con SENSOR",
+  "cantidad": 1,
+  "coste_total": 4480.502,
+  "coste_unitario": 4480.502,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "22-LSG5152520",
+  "nombre": "Transformador LED SMARTGLOW-24V-30W",
+  "cantidad": 2016,
+  "coste_total": 12.85,
+  "coste_unitario": 0.0064,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "22-LSG5152720",
+  "nombre": "Transformador LED SMARTGLOW-24V-90W",
+  "cantidad": 2016,
+  "coste_total": 27.3,
+  "coste_unitario": 0.0135,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "22-LSGS290N4K",
+  "nombre": "Regleta LED SmartGlow 24V Superficie",
+  "cantidad": 2,
+  "coste_total": 55.7,
+  "coste_unitario": 27.85,
+  "revisar": ""
+ },
+ {
+  "codigo": "2200101",
+  "nombre": "Rejilla 8 lamas acero blanca M-60",
+  "cantidad": 2,
+  "coste_total": 7.61,
+  "coste_unitario": 3.805,
+  "revisar": ""
+ },
+ {
+  "codigo": "2200105",
+  "nombre": "Rejilla 8 lamas ALUMINIO MATE M-60",
+  "cantidad": 2,
+  "coste_total": 8.05,
+  "coste_unitario": 4.025,
+  "revisar": ""
+ },
+ {
+  "codigo": "2200106",
+  "nombre": "Rejilla 8 lamas Inox mate M-60",
+  "cantidad": 3,
+  "coste_total": 18.35,
+  "coste_unitario": 6.1167,
+  "revisar": ""
+ },
+ {
+  "codigo": "2200140",
+  "nombre": "Rejilla Tabica Blanca 60 x 8,5",
+  "cantidad": 1,
+  "coste_total": 5.76,
+  "coste_unitario": 5.76,
+  "revisar": ""
+ },
+ {
+  "codigo": "2200142",
+  "nombre": "Rejilla Tabica Negra 60 x 8,5",
+  "cantidad": 1,
+  "coste_total": 5.45,
+  "coste_unitario": 5.45,
+  "revisar": ""
+ },
+ {
+  "codigo": "2200143",
+  "nombre": "Rejilla Tabica Inox 60 x 8,5",
+  "cantidad": 2,
+  "coste_total": 14.16,
+  "coste_unitario": 7.08,
+  "revisar": ""
+ },
+ {
+  "codigo": "2200301",
+  "nombre": "Rejilla Zócalo 440 mm. Blanco",
+  "cantidad": 2,
+  "coste_total": 4.88,
+  "coste_unitario": 2.44,
+  "revisar": ""
+ },
+ {
+  "codigo": "2200305",
+  "nombre": "Rejilla Zócalo 440 mm. Plata",
+  "cantidad": 1,
+  "coste_total": 2.72,
+  "coste_unitario": 2.72,
+  "revisar": ""
+ },
+ {
+  "codigo": "2203331",
+  "nombre": "Costado Campana (2 Ud.) 90 x 33 Blanco",
+  "cantidad": 2,
+  "coste_total": 20.71,
+  "coste_unitario": 10.355,
+  "revisar": ""
+ },
+ {
+  "codigo": "2204001",
+  "nombre": "Marco microondas ABS blanco",
+  "cantidad": 4,
+  "coste_total": 20.36,
+  "coste_unitario": 5.09,
+  "revisar": ""
+ },
+ {
+  "codigo": "2204002",
+  "nombre": "Marco Microondas ABS Negro",
+  "cantidad": 1,
+  "coste_total": 6.8,
+  "coste_unitario": 6.8,
+  "revisar": ""
+ },
+ {
+  "codigo": "2204005",
+  "nombre": "Marco Microondas ABS Cromo Mate",
+  "cantidad": 3,
+  "coste_total": 39.12,
+  "coste_unitario": 13.04,
+  "revisar": ""
+ },
+ {
+  "codigo": "2205024",
+  "nombre": "Base multiple 3 enchufes cable 1,5 m.",
+  "cantidad": 3150,
+  "coste_total": 2.19,
+  "coste_unitario": 0.0007,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "2205148",
+  "nombre": "Energy Box escamoteable C/3 enchufes",
+  "cantidad": 1,
+  "coste_total": 57.42,
+  "coste_unitario": 57.42,
+  "revisar": ""
+ },
+ {
+  "codigo": "2207106",
+  "nombre": "Pata PENINSULA/MESA Ø60mm.Alt. 710<740m1m.C/Reg1u2l,a6c1ión",
+  "cantidad": 1,
+  "coste_total": 4.97,
+  "coste_unitario": 4.97,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "2208719",
+  "nombre": "Pata PENÍNSULA CUADRADA Reg. Lt/Alt.",
+  "cantidad": 616,
+  "coste_total": 9.25,
+  "coste_unitario": 0.015,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "23-6765750",
+  "nombre": "Tirador modelo 6765 grafito 128mm",
+  "cantidad": 2,
+  "coste_total": 5.0,
+  "coste_unitario": 2.5,
+  "revisar": ""
+ },
+ {
+  "codigo": "23-6863032",
+  "nombre": "Tirador mod 6863 negro mate 96mm",
+  "cantidad": 12,
+  "coste_total": 26.28,
+  "coste_unitario": 2.19,
+  "revisar": ""
+ },
+ {
+  "codigo": "2310046",
+  "nombre": "Tirador VITRINA Autoad. yecora 150",
+  "cantidad": 2,
+  "coste_total": 2.8,
+  "coste_unitario": 1.4,
+  "revisar": ""
+ },
+ {
+  "codigo": "2312327",
+  "nombre": "perfil tirador gola mod. J barra de 4",
+  "cantidad": 4,
+  "coste_total": 49.98,
+  "coste_unitario": 12.495,
+  "revisar": ""
+ },
+ {
+  "codigo": "2312331",
+  "nombre": "Tapa lateral perfil gola modelo J",
+  "cantidad": 6,
+  "coste_total": 1.99,
+  "coste_unitario": 0.3317,
+  "revisar": ""
+ },
+ {
+  "codigo": "2312332",
+  "nombre": "Rincon gola J plata mate",
+  "cantidad": 1,
+  "coste_total": 0.83,
+  "coste_unitario": 0.83,
+  "revisar": ""
+ },
+ {
+  "codigo": "2312340",
+  "nombre": "Perfil tirador gola modelo U barra de",
+  "cantidad": 2,
+  "coste_total": 41.19,
+  "coste_unitario": 20.595,
+  "revisar": ""
+ },
+ {
+  "codigo": "2312349",
+  "nombre": "Angulo para sujetar el perfil gola",
+  "cantidad": 29,
+  "coste_total": 5.33,
+  "coste_unitario": 0.1838,
+  "revisar": ""
+ },
+ {
+  "codigo": "2312350",
+  "nombre": "Perfil canto-gola mueble alto barra",
+  "cantidad": 2,
+  "coste_total": 6.77,
+  "coste_unitario": 3.385,
+  "revisar": ""
+ },
+ {
+  "codigo": "2312351",
+  "nombre": "Perfil canto-gola mueble alto barra",
+  "cantidad": 2,
+  "coste_total": 24.73,
+  "coste_unitario": 12.365,
+  "revisar": ""
+ },
+ {
+  "codigo": "2341520",
+  "nombre": "Tirador VITRINA Autoad. Cr. Mate 150",
+  "cantidad": 3,
+  "coste_total": 41.75,
+  "coste_unitario": 13.9167,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-093110823A",
+  "nombre": "Distanciador/Separador lateral para",
+  "cantidad": 2,
+  "coste_total": 3.45,
+  "coste_unitario": 1.725,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-378M500SLO",
+  "nombre": "Blum Perfil Altura M.L=Izqu.Cajón ANTARO",
+  "cantidad": 15,
+  "coste_total": 55.89,
+  "coste_unitario": 3.726,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-378M500SRO",
+  "nombre": "Blum Perfil Altura M.R=Der.Cajón ANTARO",
+  "cantidad": 15,
+  "coste_total": 55.89,
+  "coste_unitario": 3.726,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-3DO500B03A",
+  "nombre": "Blum Set Gaveta ANTARO D Gris Orión",
+  "cantidad": 105,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "25-3MO500B03A",
+  "nombre": "Blum Set Cajón ANTARO M Gris Orión",
+  "cantidad": 2,
+  "coste_total": 35.68,
+  "coste_unitario": 17.84,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-5785001M1J",
+  "nombre": "Blum Juego Guias TANDEMBOX 30Kg.TOB",
+  "cantidad": 950,
+  "coste_total": 80.65,
+  "coste_unitario": 0.0849,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "25-AXP084500B",
+  "nombre": "Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m8m.Blan1c1o7,.18",
+  "cantidad": 48,
+  "coste_total": 77.61,
+  "coste_unitario": 1.6169,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-AXP084500G",
+  "nombre": "Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m5m.Gris",
+  "cantidad": 45,
+  "coste_total": 48.51,
+  "coste_unitario": 1.078,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-AXP084550B",
+  "nombre": "Set Cajón AXIS PRO 40Kg.Fondo 550mm.H-84-m1m.Blan-c1o9,.19",
+  "cantidad": 41,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-AXP167300G",
+  "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 300mm.H-1267mm.Gr3is2",
+  "cantidad": 1267,
+  "coste_total": 22.76,
+  "coste_unitario": 0.018,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "25-AXP167350G",
+  "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 350mm.H-1467mm.Gr6is7",
+  "cantidad": 1467,
+  "coste_total": 43.4,
+  "coste_unitario": 0.0296,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "25-AXP167500B",
+  "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1667mm.B1la36n,c2o3.",
+  "cantidad": 1667,
+  "coste_total": 71.52,
+  "coste_unitario": 0.0429,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "25-AXP167500G",
+  "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1767mm.G1r4is7",
+  "cantidad": 1767,
+  "coste_total": 83.44,
+  "coste_unitario": 0.0472,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "25-AXP199500B",
+  "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-11099mm.B2la20n,c0o5.",
+  "cantidad": 11099,
+  "coste_total": 122.22,
+  "coste_unitario": 0.011,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "25-AXP199500G",
+  "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1299mm.Gr4is4",
+  "cantidad": 1299,
+  "coste_total": 24.52,
+  "coste_unitario": 0.0189,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "25-AXPZESWEAG",
+  "nombre": "Kit Frente+Fijaciones Cajon Interior AXIS",
+  "cantidad": 1,
+  "coste_total": 9.41,
+  "coste_unitario": 9.41,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-AXPZESWECG",
+  "nombre": "Kit Frente+Barra+Fijaciones Gaveta Interior",
+  "cantidad": 1,
+  "coste_total": 711.29,
+  "coste_unitario": 711.29,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-T60B35601S",
+  "nombre": "Blum Set TOB TANDEMBOX L5LN.350<600mm.E1XT.Total",
+  "cantidad": 1,
+  "coste_total": 10.39,
+  "coste_unitario": 10.39,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-Z30D000SLO",
+  "nombre": "Blum Adaptador L=Izqu.Trasera Mader.Gavet9a",
+  "cantidad": 9,
+  "coste_total": 7.11,
+  "coste_unitario": 0.79,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-Z30D000SRO",
+  "nombre": "Blum Adaptador R=Der.Trasera Mader.Gaveta9",
+  "cantidad": 9,
+  "coste_total": 7.11,
+  "coste_unitario": 0.79,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-Z31L1036AO",
+  "nombre": "Blum Frente Metal Cajón/Gaveta Interior",
+  "cantidad": 2,
+  "coste_total": 104168.18,
+  "coste_unitario": 52084.09,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-ZAA532CBLO",
+  "nombre": "Blum Tapa Embellec.Lateral Izq/Der.Cajón",
+  "cantidad": 18,
+  "coste_total": 1.08,
+  "coste_unitario": 0.06,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-ZIF71M0LO1",
+  "nombre": "Blum Fijación Frontal L=Izqu.Gris Orión",
+  "cantidad": 1,
+  "coste_total": 0.55,
+  "coste_unitario": 0.55,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-ZIF71M0RO1",
+  "nombre": "Blum Fijación Frontal R=Der.Gris Orión",
+  "cantidad": 1,
+  "coste_total": 0.55,
+  "coste_unitario": 0.55,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-ZIF74D0LO1",
+  "nombre": "Blum Fijación Frontal L=Izqu.Gris Orión",
+  "cantidad": 11,
+  "coste_total": 12.32,
+  "coste_unitario": 1.12,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-ZIF74D0RO1",
+  "nombre": "Blum Fijación Frontal R=Der.Gris Orión",
+  "cantidad": 11,
+  "coste_total": 12.32,
+  "coste_unitario": 1.12,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-ZRG1046Z1O",
+  "nombre": "Blum Guardacuerpo Frontal Gaveta",
+  "cantidad": 6,
+  "coste_total": 104624.96,
+  "coste_unitario": 17437.4933,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "25-ZRG437RSLO",
+  "nombre": "Blum Guardacuerpo L=Izqu.ANTARO",
+  "cantidad": 9,
+  "coste_total": null,
+  "coste_unitario": null,
+  "revisar": "sin_dato"
+ },
+ {
+  "codigo": "25-ZRG437RSRO",
+  "nombre": "Blum Guardacuerpo R=Der.ANTARO",
+  "cantidad": 9,
+  "coste_total": null,
+  "coste_unitario": null,
+  "revisar": "sin_dato"
+ },
+ {
+  "codigo": "25-ZSF35A2021",
+  "nombre": "Blum Fijación Frontal Atornillable Izq/Der.Cajó18n",
+  "cantidad": 18,
+  "coste_total": 4.32,
+  "coste_unitario": 0.24,
+  "revisar": ""
+ },
+ {
+  "codigo": "25-ZV71043C0O",
+  "nombre": "Blum Frente Metal Cajon M / Gaveta",
+  "cantidad": 5,
+  "coste_total": 46.7,
+  "coste_unitario": 9.34,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "2532867",
+  "nombre": "Cajon metal gris Ral 9006 500 X 149",
+  "cantidad": 1,
+  "coste_total": 4.61,
+  "coste_unitario": 4.61,
+  "revisar": ""
+ },
+ {
+  "codigo": "3202890",
+  "nombre": "Compas de gas 8 Kg gris montaje directo",
+  "cantidad": 4,
+  "coste_total": 2.24,
+  "coste_unitario": 0.56,
+  "revisar": ""
+ },
+ {
+  "codigo": "3202891",
+  "nombre": "Compas de gas 10 Kg gris montaje directo",
+  "cantidad": 6,
+  "coste_total": 3.36,
+  "coste_unitario": 0.56,
+  "revisar": ""
+ },
+ {
+  "codigo": "3208030",
+  "nombre": "Escuadra abatible 30X30 CROMO 3",
+  "cantidad": 1,
+  "coste_total": 8.17,
+  "coste_unitario": 8.17,
+  "revisar": ""
+ },
+ {
+  "codigo": "3211102",
+  "nombre": "Tubo silicona Soudal transparente 280",
+  "cantidad": 1,
+  "coste_total": 1.27,
+  "coste_unitario": 1.27,
+  "revisar": ""
+ },
+ {
+  "codigo": "325.0568.821",
+  "nombre": "Campana MEPAMSA SILUETA XLA 60",
+  "cantidad": 1,
+  "coste_total": 130.27,
+  "coste_unitario": 130.27,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "325.0571.785",
+  "nombre": "Campana MEPAMSA SILUETA XLA 70",
+  "cantidad": 1,
+  "coste_total": 137.63,
+  "coste_unitario": 137.63,
+  "revisar": ""
+ },
+ {
+  "codigo": "3455555",
+  "nombre": "Fabricación cocina completa",
+  "cantidad": 45,
+  "coste_total": 1647.09,
+  "coste_unitario": 36.602,
+  "revisar": ""
+ },
+ {
+  "codigo": "35-ALVICACCES",
+  "nombre": "Alvic Accesorio",
+  "cantidad": 5,
+  "coste_total": 34.5,
+  "coste_unitario": 6.9,
+  "revisar": ""
+ },
+ {
+  "codigo": "35-ALVICCASCO",
+  "nombre": "Casco de cocina Alvic",
+  "cantidad": 10,
+  "coste_total": 631.86,
+  "coste_unitario": 63.186,
+  "revisar": ""
+ },
+ {
+  "codigo": "35-ALVICKITCHEN",
+  "nombre": "Fabricación cocina completa Alvic",
+  "cantidad": 15,
+  "coste_total": 15907.68,
+  "coste_unitario": 1060.512,
+  "revisar": ""
+ },
+ {
+  "codigo": "35-ALVICPUERT",
+  "nombre": "Puerta Alvic",
+  "cantidad": 100,
+  "coste_total": 3675.6,
+  "coste_unitario": 36.756,
+  "revisar": ""
+ },
+ {
+  "codigo": "35-LUIGGIMVKITCHEN",
+  "nombre": "Fabricación cocina completa Luiggi",
+  "cantidad": 2,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "350--0000002C",
+  "nombre": "Canto Mod:",
+  "cantidad": 5,
+  "coste_total": 122.3,
+  "coste_unitario": 24.46,
+  "revisar": ""
+ },
+ {
+  "codigo": "350--00000PEC",
+  "nombre": "Ref.Pedido Cliente:",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "350-152400100",
+  "nombre": "Puerta Laminado S1_T15. Al.2400xAn.100mm12.2",
+  "cantidad": 122,
+  "coste_total": 246286.36,
+  "coste_unitario": 2018.7407,
+  "revisar": ""
+ },
+ {
+  "codigo": "3511111",
+  "nombre": "AGUJERO DE BISAGRAS EN PUERTAS",
+  "cantidad": 16,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "35111111",
+  "nombre": "PUERTAS FABRICADAS EN PUBLIOFERTA",
+  "cantidad": 35,
+  "coste_total": 124.25,
+  "coste_unitario": 3.55,
+  "revisar": ""
+ },
+ {
+  "codigo": "35400000",
+  "nombre": "Puerta Madera",
+  "cantidad": 36,
+  "coste_total": 1110.4,
+  "coste_unitario": 30.8444,
+  "revisar": ""
+ },
+ {
+  "codigo": "355-PCDSNBLBR",
+  "nombre": "CORNISA Diseño Blanco Brillo.",
+  "cantidad": 2,
+  "coste_total": 113.67,
+  "coste_unitario": 56.835,
+  "revisar": ""
+ },
+ {
+  "codigo": "355555",
+  "nombre": "CASCOS ALVIC",
+  "cantidad": 8,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "36-228001TLGO",
+  "nombre": "Blum Tapa Izquierda Gris Orion HF/HL/HS-TOP",
+  "cantidad": 1,
+  "coste_total": 1.29,
+  "coste_unitario": 1.29,
+  "revisar": ""
+ },
+ {
+  "codigo": "36-228001TRGO",
+  "nombre": "Blum Tapa Derecha Gris Orion HF/HL/HS-TOP",
+  "cantidad": 1,
+  "coste_total": 1.29,
+  "coste_unitario": 1.29,
+  "revisar": ""
+ },
+ {
+  "codigo": "36-22F2801PLT",
+  "nombre": "Blum Mecanismo HF-TOP28 Con Plantilla",
+  "cantidad": 10200,
+  "coste_total": 31.4,
+  "coste_unitario": 0.0031,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "36-22F28STPMM",
+  "nombre": "Blum Set HF-TOP 28 ST Con Plantilla Puertas",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "36-22F3901UND",
+  "nombre": "Blum Brazo HF-TOP39 Alt. 840-1200mm.",
+  "cantidad": 2,
+  "coste_total": 19.12,
+  "coste_unitario": 9.56,
+  "revisar": ""
+ },
+ {
+  "codigo": "36-22F39STDPM",
+  "nombre": "Blum Set Brazos HF-TOP 39 ST/SD Puerta",
+  "cantidad": 1,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "37OKA41",
+  "nombre": "Freg LUIGGI GRANITO NEGRO 45X45",
+  "cantidad": 0,
+  "coste_total": 0.0,
+  "coste_unitario": null,
+  "revisar": "sin_dato"
+ },
+ {
+  "codigo": "37OKA54",
+  "nombre": "Freg LUIGGI inox B/encimera 50X40x20",
+  "cantidad": 11,
+  "coste_total": 45.13,
+  "coste_unitario": 4.1027,
+  "revisar": ""
+ },
+ {
+  "codigo": "3BD967GN",
+  "nombre": "Campana BALAY 3BD967GN Integrada",
+  "cantidad": 1,
+  "coste_total": 304.18,
+  "coste_unitario": 304.18,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "3CB4130X3",
+  "nombre": "Horno BALAY 3CB4130X3 Compacto",
+  "cantidad": 1,
+  "coste_total": 325.0,
+  "coste_unitario": 325.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "3CG6112X3",
+  "nombre": "Microondas BALAY 3CG6112X3 Integrable",
+  "cantidad": 1,
+  "coste_total": 113.46,
+  "coste_unitario": 113.46,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "3EB765LQ",
+  "nombre": "Placa BALAY 3EB765LQ",
+  "cantidad": 1,
+  "coste_total": 253.32,
+  "coste_unitario": 253.32,
+  "revisar": ""
+ },
+ {
+  "codigo": "3EB865FR",
+  "nombre": "Placa BALAY 3EB865FR Inducción 3 fuegos",
+  "cantidad": 1,
+  "coste_total": 223.98,
+  "coste_unitario": 223.98,
+  "revisar": ""
+ },
+ {
+  "codigo": "3HB413CX3",
+  "nombre": "Horno BALAY 3HB413CX3 Multifunción",
+  "cantidad": 16,
+  "coste_total": 330.46,
+  "coste_unitario": 20.6537,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "3KFE753XI",
+  "nombre": "Combi BALAY 3KFE753XI 203 x 60 cm",
+  "cantidad": 1,
+  "coste_total": 518.08,
+  "coste_unitario": 518.08,
+  "revisar": ""
+ },
+ {
+  "codigo": "3SB093BC",
+  "nombre": "Secadora BALAY 3SB093BC con Bomba",
+  "cantidad": 1,
+  "coste_total": 504.97,
+  "coste_unitario": 504.97,
+  "revisar": ""
+ },
+ {
+  "codigo": "3SB582BE",
+  "nombre": "Secadora BALAY 3SB582BE 8 Kg Bomba",
+  "cantidad": 1,
+  "coste_total": 366.78,
+  "coste_unitario": 366.78,
+  "revisar": ""
+ },
+ {
+  "codigo": "3TS3104BH",
+  "nombre": "Lavadora BALAY 3TS3104BH 10 Kg 1400",
+  "cantidad": 1,
+  "coste_total": 461.6,
+  "coste_unitario": 461.6,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "3TS3107BD",
+  "nombre": "Lavadora BALAY 3TS3107BD Libre Instalación",
+  "cantidad": 110,
+  "coste_total": 381.23,
+  "coste_unitario": 3.4657,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "3TS993BP",
+  "nombre": "Lavadora BALAY 3TS993BP 9 Kg 1200",
+  "cantidad": 1,
+  "coste_total": 318.9,
+  "coste_unitario": 318.9,
+  "revisar": ""
+ },
+ {
+  "codigo": "3VF5032DP",
+  "nombre": "Lavavajillas BALAY 3VF5032DP integrable",
+  "cantidad": 1,
+  "coste_total": 405.83,
+  "coste_unitario": 405.83,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "40-C012916-B7E400ANEncimera",
+  "nombre": "FENOLICA FLINT Fantastic.",
+  "cantidad": 1,
+  "coste_total": 30500.0,
+  "coste_unitario": 30500.0,
+  "revisar": "revisar_coste"
+ },
+ {
+  "codigo": "402-FCAV47060",
+  "nombre": "Fondo Cajón/Gaveta AXIS PRO F-50",
+  "cantidad": 11,
+  "coste_total": 28.6,
+  "coste_unitario": 2.6,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-FCAV47090",
+  "nombre": "Fondo Cajón/Gaveta AXIS PRO F-50",
+  "cantidad": 3,
+  "coste_total": 8.7,
+  "coste_unitario": 2.9,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-TCAV47060",
+  "nombre": "Trasera Cajón AXIS PRO F-50 M-60",
+  "cantidad": 3,
+  "coste_total": 4.8,
+  "coste_unitario": 1.6,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-TCAV47090",
+  "nombre": "Trasera Cajón AXIS PRO F-50 M-90",
+  "cantidad": 1,
+  "coste_total": 2.1,
+  "coste_unitario": 2.1,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-TGDV47060",
+  "nombre": "Trasera Gaveta 199MM AXIS PRO F-50",
+  "cantidad": 6,
+  "coste_total": 8.77,
+  "coste_unitario": 1.4617,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-TGDV47090",
+  "nombre": "Trasera Gaveta 199MM AXIS PRO F-50",
+  "cantidad": 2,
+  "coste_total": 4.74,
+  "coste_unitario": 2.37,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-TGSV47060",
+  "nombre": "Trasera Gaveta 167MM AXIS PRO F-50",
+  "cantidad": 2,
+  "coste_total": 2.92,
+  "coste_unitario": 1.46,
+  "revisar": ""
+ },
+ {
+  "codigo": "40487182",
+  "nombre": "Campana TEKA DLH 986 T Inox",
+  "cantidad": 1,
+  "coste_total": 190.15,
+  "coste_unitario": 190.15,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-AABL35060",
+  "nombre": "Casco Alto ABATIBLE (350x600x330) Blanco",
+  "cantidad": 1,
+  "coste_total": 10.02,
+  "coste_unitario": 10.02,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-AABL60060",
+  "nombre": "Casco Alto ABATIBLE (600x600x330) Blanco",
+  "cantidad": 1,
+  "coste_total": 14.37,
+  "coste_unitario": 14.37,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-ACBL09040",
+  "nombre": "Casco Alto (900x330) M-40 Blanco Soft.",
+  "cantidad": 1,
+  "coste_total": 17.87,
+  "coste_unitario": 17.87,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-ACBL09045",
+  "nombre": "Casco Alto (900x330) M-45 Blanco Soft",
+  "cantidad": 1,
+  "coste_total": 19.02,
+  "coste_unitario": 19.02,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-ACBL09050",
+  "nombre": "Casco Alto (900x330) M-50 Blanco Soft.",
+  "cantidad": 2,
+  "coste_total": 41.58,
+  "coste_unitario": 20.79,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-ACBL09060",
+  "nombre": "Casco Alto (900x330) M-60 Blanco Soft.",
+  "cantidad": 5,
+  "coste_total": 106.37,
+  "coste_unitario": 21.274,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-ACBL09090",
+  "nombre": "Casco Alto (900x330) M-90 Blanco Soft.",
+  "cantidad": 2,
+  "coste_total": 54.38,
+  "coste_unitario": 27.19,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-ACBL10060",
+  "nombre": "Casco Alto (1000x330) M-60 Blanco Soft.",
+  "cantidad": 2,
+  "coste_total": 57.77,
+  "coste_unitario": 28.885,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-AEBL09045",
+  "nombre": "Casco Alto Esc./Platero (900x330) M-45",
+  "cantidad": 1,
+  "coste_total": 17.19,
+  "coste_unitario": 17.19,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-AEBL09060",
+  "nombre": "Casco Alto Esc./Platero (900x330) M-60",
+  "cantidad": 1,
+  "coste_total": 20.0,
+  "coste_unitario": 20.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-AEBL09080",
+  "nombre": "Casco Alto Esc./Platero (900x330) M-80",
+  "cantidad": 1,
+  "coste_total": 23.78,
+  "coste_unitario": 23.78,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-ARLBL0963",
+  "nombre": "Casco Alto Rincón Ang.\"L\" (900x330)-(630x6301)",
+  "cantidad": 301,
+  "coste_total": 44.98,
+  "coste_unitario": 0.1494,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "420-BABL70040",
+  "nombre": "Casco Bajo (700x580) M-40 Blanco Soft.",
+  "cantidad": 1,
+  "coste_total": 15.32,
+  "coste_unitario": 15.32,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-BABL70060",
+  "nombre": "Casco Bajo (700x580) M-60 Blanco Soft.",
+  "cantidad": 2,
+  "coste_total": 33.71,
+  "coste_unitario": 16.855,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-BABL70100",
+  "nombre": "Casco Bajo (700x580) M-100 Blanco",
+  "cantidad": 1,
+  "coste_total": 25.33,
+  "coste_unitario": 25.33,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-BABL80060",
+  "nombre": "Casco Bajo (800x580) M-60 Blanco Soft.",
+  "cantidad": 3,
+  "coste_total": 69.06,
+  "coste_unitario": 23.02,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-BFBL70050",
+  "nombre": "Casco Bajo Fregadero (700x580) M-50",
+  "cantidad": 1,
+  "coste_total": 15.5,
+  "coste_unitario": 15.5,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-BFBL80080",
+  "nombre": "Casco Bajo Fregadero (800x580) M-80",
+  "cantidad": 1,
+  "coste_total": 22.98,
+  "coste_unitario": 22.98,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-BFBL80090",
+  "nombre": "Casco Bajo Fregadero (800x580) M-90",
+  "cantidad": 1,
+  "coste_total": 24.41,
+  "coste_unitario": 24.41,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-BRLB70103",
+  "nombre": "Casco Bajo Rincón Ang.\"L\" (700)-(1030x1030)",
+  "cantidad": 1,
+  "coste_total": 63.4,
+  "coste_unitario": 63.4,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-CLDBL2060",
+  "nombre": "Casco Columna Desp.(2000x580) M-60",
+  "cantidad": 1,
+  "coste_total": 43.92,
+  "coste_unitario": 43.92,
+  "revisar": ""
+ },
+ {
+  "codigo": "420-SCBL15060",
+  "nombre": "Casco Semi Columna (1500x580) M-60",
+  "cantidad": 2,
+  "coste_total": 78.39,
+  "coste_unitario": 39.195,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-AAGR40060",
+  "nombre": "Casco Alto ABATIBLE (400x600x330) Gris.",
+  "cantidad": 2,
+  "coste_total": 27.08,
+  "coste_unitario": 13.54,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-ACGR07030",
+  "nombre": "Casco Alto (700x330) M-30 Gris.",
+  "cantidad": 1,
+  "coste_total": 14.02,
+  "coste_unitario": 14.02,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-ACGR07040",
+  "nombre": "Casco Alto (700x330) M-40 Gris.",
+  "cantidad": 1,
+  "coste_total": 16.05,
+  "coste_unitario": 16.05,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-ACGR09045",
+  "nombre": "Casco Alto (900x330) M-45 Gris.",
+  "cantidad": 1,
+  "coste_total": 23.65,
+  "coste_unitario": 23.65,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-ACGR09060",
+  "nombre": "Casco Alto (900x330) M-60 Gris.",
+  "cantidad": 3,
+  "coste_total": 82.54,
+  "coste_unitario": 27.5133,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-ACGR09070",
+  "nombre": "Casco Alto (900x330) M-70 Gris.",
+  "cantidad": 2,
+  "coste_total": 60.2,
+  "coste_unitario": 30.1,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-ARCGR0963",
+  "nombre": "Casco Alto Rincón Chaflan (900)-(630x630)",
+  "cantidad": 1,
+  "coste_total": 59.29,
+  "coste_unitario": 59.29,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-BAGR70030",
+  "nombre": "Casco Bajo (700x580) M-30 Gris.",
+  "cantidad": 2,
+  "coste_total": 36.8,
+  "coste_unitario": 18.4,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-BAGR70060",
+  "nombre": "Casco Bajo (700x580) M-60 Gris.",
+  "cantidad": 1,
+  "coste_total": 24.09,
+  "coste_unitario": 24.09,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-BAGR70070",
+  "nombre": "Casco Bajo (700x580) M-70 Gris.",
+  "cantidad": 1,
+  "coste_total": 27.59,
+  "coste_unitario": 27.59,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-BAGR70080",
+  "nombre": "Casco Bajo (700x580) M-80 Gris.",
+  "cantidad": 2,
+  "coste_total": 59.8,
+  "coste_unitario": 29.9,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-BAGR70100",
+  "nombre": "Casco Bajo (700x580) M-100 Gris.",
+  "cantidad": 1,
+  "coste_total": 34.5,
+  "coste_unitario": 34.5,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-BFGR70045",
+  "nombre": "Casco Bajo Fregadero (700x580) M-45",
+  "cantidad": 1,
+  "coste_total": 18.21,
+  "coste_unitario": 18.21,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-BFGR70050",
+  "nombre": "Casco Bajo Fregadero (700x580) M-50",
+  "cantidad": 1,
+  "coste_total": 18.96,
+  "coste_unitario": 18.96,
+  "revisar": ""
+ },
+ {
+  "codigo": "422-BFGR70060",
+  "nombre": "Casco Bajo Fregadero (700x580) M-60",
+  "cantidad": 2,
+  "coste_total": 40.88,
+  "coste_unitario": 20.44,
+  "revisar": ""
+ },
+ {
+  "codigo": "426-AARO50060",
+  "nombre": "Casco Alto ABATIBLE (500x600x330) Roble.",
+  "cantidad": 1,
+  "coste_total": 16.53,
+  "coste_unitario": 16.53,
+  "revisar": ""
+ },
+ {
+  "codigo": "426-ACRO07045",
+  "nombre": "Casco Alto (700x330) M-45 Roble.",
+  "cantidad": 1,
+  "coste_total": 17.05,
+  "coste_unitario": 17.05,
+  "revisar": ""
+ },
+ {
+  "codigo": "426-ACRO07060",
+  "nombre": "Casco Alto (700x330) M-60 Roble.",
+  "cantidad": 2,
+  "coste_total": 40.18,
+  "coste_unitario": 20.09,
+  "revisar": ""
+ },
+ {
+  "codigo": "426-AERO07080",
+  "nombre": "Casco Alto Esc./Platero (700x330) M-80",
+  "cantidad": 1,
+  "coste_total": 18.2,
+  "coste_unitario": 18.2,
+  "revisar": ""
+ },
+ {
+  "codigo": "427-ACRH08070",
+  "nombre": "Casco Alto (800x330) M-70 Roble. Hercules",
+  "cantidad": 191,
+  "coste_total": 30.53,
+  "coste_unitario": 0.1598,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "427-ACRH09045",
+  "nombre": "Casco Alto (900x330) M-45 Roble. Hercules",
+  "cantidad": 191,
+  "coste_total": 27.19,
+  "coste_unitario": 0.1424,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "427-ACRH09060",
+  "nombre": "Casco Alto (900x330) M-60 Roble. Hercules",
+  "cantidad": 192,
+  "coste_total": 63.27,
+  "coste_unitario": 0.3295,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "427-ACRH09090",
+  "nombre": "Casco Alto (900x330) M-90 Roble. Hercules",
+  "cantidad": 191,
+  "coste_total": 40.56,
+  "coste_unitario": 0.2124,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "427-ACRH09100",
+  "nombre": "Casco Alto (900x330) M-100 Roble. Hercules",
+  "cantidad": 119,
+  "coste_total": 43.55,
+  "coste_unitario": 0.366,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "427-BARH80045",
+  "nombre": "Casco Bajo (800x580) M-45 Roble. Hercules",
+  "cantidad": 192,
+  "coste_total": 60.14,
+  "coste_unitario": 0.3132,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "427-BFRH80120",
+  "nombre": "Casco Bajo Fregadero (800x580) M-120",
+  "cantidad": 1,
+  "coste_total": 40.41,
+  "coste_unitario": 40.41,
+  "revisar": ""
+ },
+ {
+  "codigo": "427-SCRH15090",
+  "nombre": "Casco Semi Columna (1500x580) M-90",
+  "cantidad": 1,
+  "coste_total": 65.22,
+  "coste_unitario": 65.22,
+  "revisar": ""
+ },
+ {
+  "codigo": "43-CAT178P130",
+  "nombre": "Encimera Modelo CAT 178-P1 30x620x3600mm3.",
+  "cantidad": 3,
+  "coste_total": 175.07,
+  "coste_unitario": 58.3567,
+  "revisar": ""
+ },
+ {
+  "codigo": "43-MARMFLRC40",
+  "nombre": "Encimera Modelo MARMOL FLORA Canteada1",
+  "cantidad": 14,
+  "coste_total": 94.98,
+  "coste_unitario": 6.7843,
+  "revisar": ""
+ },
+ {
+  "codigo": "43-MARMHDP130",
+  "nombre": "Encimera Modelo MARMOL HADES-P1",
+  "cantidad": 20136,
+  "coste_total": 0.0,
+  "coste_unitario": 0.0,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "43-MARMHDR513",
+  "nombre": "Encimera Modelo MARMOL HADES-R5",
+  "cantidad": 20136,
+  "coste_total": 115.29,
+  "coste_unitario": 0.0057,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "43-PIZ224P130",
+  "nombre": "Encimera Modelo PIZ 224-P1 30x620x3600mm.2",
+  "cantidad": 2,
+  "coste_total": 112.32,
+  "coste_unitario": 56.16,
+  "revisar": ""
+ },
+ {
+  "codigo": "43-ROBLEHERCL",
+  "nombre": "Encimera Modelo ROBLE HERCULES-P1",
+  "cantidad": 21013,
+  "coste_total": 772.34,
+  "coste_unitario": 0.0368,
+  "revisar": "revisar_cantidad"
+ },
+ {
+  "codigo": "5300003",
+  "nombre": "Grifo OKA Caño Alto Mod: ASTRAL Cromo",
+  "cantidad": 1,
+  "coste_total": 22.28,
+  "coste_unitario": 22.28,
+  "revisar": ""
+ },
+ {
+  "codigo": "5300010",
+  "nombre": "Grifo OKA Caño Alto Mod: GRANADA",
+  "cantidad": 2,
+  "coste_total": 57.0,
+  "coste_unitario": 28.5,
+  "revisar": ""
+ },
+ {
+  "codigo": "5300031",
+  "nombre": "Grifo OKA ducha extraible MOD: HELMANTICA2",
+  "cantidad": 2,
+  "coste_total": 169.58,
+  "coste_unitario": 84.79,
+  "revisar": ""
+ },
+ {
+  "codigo": "5300032",
+  "nombre": "Grifo OKA Ducha extraible Mod: HELMANTICA3",
+  "cantidad": 3,
+  "coste_total": 229.43,
+  "coste_unitario": 76.4767,
+  "revisar": ""
+ },
+ {
+  "codigo": "5300038",
+  "nombre": "Grifo OKA Extraible MOD GOLD acero",
+  "cantidad": 7,
+  "coste_total": 351.45,
+  "coste_unitario": 50.2071,
+  "revisar": ""
+ },
+ {
+  "codigo": "999",
+  "nombre": "CONCEPTOS FMCVa",
+  "cantidad": 0,
+  "coste_total": 7531.74,
+  "coste_unitario": null,
+  "revisar": "sin_dato"
+ }
+]
