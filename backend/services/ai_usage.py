@@ -18,6 +18,62 @@ def _month() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
+# ─── Tarifas de referencia (EUR) para el cálculo de coste ────────────────────
+# €/1M tokens de entrada y salida, y €/imagen para los modelos de imagen.
+# Precios de lista (Nivel de pago) aproximados; ajustables por el master.
+MODEL_PRICES = {
+    "gemini-2.5-flash":              {"in": 0.28, "out": 2.30, "img": 0.0},
+    "gemini-flash-latest":           {"in": 0.28, "out": 2.30, "img": 0.0},
+    "gemini-3-flash-preview":        {"in": 0.28, "out": 2.30, "img": 0.0},
+    "gemini-2.5-pro":                {"in": 1.15, "out": 9.25, "img": 0.0},
+    "gemini-2.5-flash-image":        {"in": 0.28, "out": 2.30, "img": 0.036},
+    "gemini-2.5-flash-image-preview":{"in": 0.28, "out": 2.30, "img": 0.036},
+    "gemini-3-pro-image-preview":    {"in": 2.00, "out": 12.0, "img": 0.12},
+}
+# Coste estimado por TIPO de llamada cuando no se miden tokens reales.
+DEFAULT_COST_PER = {"render": 0.12, "vision": 0.003, "otro": 0.003}
+
+
+def cost_of(model: str, in_tokens: int = 0, out_tokens: int = 0, images: int = 0) -> float:
+    """Coste (EUR) exacto de una llamada a partir de tokens reales y/o nº de imágenes."""
+    p = MODEL_PRICES.get(model or "", MODEL_PRICES["gemini-2.5-flash"])
+    return round(
+        (int(in_tokens or 0) / 1_000_000) * p["in"]
+        + (int(out_tokens or 0) / 1_000_000) * p["out"]
+        + int(images or 0) * p["img"],
+        6,
+    )
+
+
+async def record_ai_tokens(kind: str, model: str, in_tokens: int = 0, out_tokens: int = 0,
+                           images: int = 0, user_id: str = None):
+    """Registra el consumo REAL de una llamada: tokens por modelo y coste exacto
+    acumulado del mes. Best-effort (nunca rompe la llamada de IA)."""
+    if db is None:
+        return
+    try:
+        eur = cost_of(model, in_tokens, out_tokens, images)
+        mdl = (model or "otro").replace(".", "_")
+        inc = {
+            "total": 1,
+            f"by_kind.{kind or 'otro'}": 1,
+            f"tokens_in.{mdl}": int(in_tokens or 0),
+            f"tokens_out.{mdl}": int(out_tokens or 0),
+            f"images.{mdl}": int(images or 0),
+            f"calls.{mdl}": 1,
+            "real_cost": eur,
+        }
+        if user_id:
+            inc[f"by_user.{user_id}"] = 1
+        await db.ai_usage.update_one(
+            {"month": _month()},
+            {"$inc": inc, "$setOnInsert": {"month": _month()}},
+            upsert=True,
+        )
+    except Exception:
+        pass
+
+
 async def record_ai_usage(kind: str, user_id: str = None):
     """Suma 1 al contador del mes en curso (total y por tipo). Best-effort."""
     if db is None:
@@ -45,11 +101,14 @@ async def get_usage_summary():
     threshold = int(cfg.get("threshold", 0) or 0)
     total = int(cur.get("total", 0) or 0)
     by_kind = cur.get("by_kind", {})
-    # Coste ESTIMADO: nº de llamadas por tipo × coste unitario configurable (€).
-    cost_per = cfg.get("cost_per", {}) or {}
+    # Coste ESTIMADO: nº de llamadas por tipo × coste unitario (€). Si el master no
+    # ha configurado tarifas, se usan los valores por defecto precargados.
+    cost_per = cfg.get("cost_per") or DEFAULT_COST_PER
     est = 0.0
     for k, n in by_kind.items():
         est += (float(cost_per.get(k, 0) or 0)) * int(n or 0)
+    # Coste REAL acumulado del mes (medido con los tokens reales de cada llamada).
+    real_cost = round(float(cur.get("real_cost", 0) or 0), 4)
     history = await db.ai_usage.find({}, {"_id": 0, "by_user": 0}).sort("month", -1).to_list(6)
     return {
         "current_month": month,
@@ -62,6 +121,13 @@ async def get_usage_summary():
         "history": history,
         "cost_per": cost_per,
         "estimated_cost": round(est, 2),
+        "real_cost": real_cost,
+        "by_model": {
+            "calls": cur.get("calls", {}),
+            "tokens_in": cur.get("tokens_in", {}),
+            "tokens_out": cur.get("tokens_out", {}),
+            "images": cur.get("images", {}),
+        },
         "spend_url": cfg.get("spend_url", ""),
         "default_credits": int(cfg.get("default_credits", 0) or 0),
         "credits_per": cfg.get("credits_per", {"render": 1, "vision": 0}) or {"render": 1, "vision": 0},
