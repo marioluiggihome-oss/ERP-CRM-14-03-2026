@@ -769,11 +769,11 @@
  },
  {
   "codigo": "1825011",
-  "nombre": "Rinconero extraible cromo reversible",
+  "nombre": "Rinconero extraible cromo reversible M-40 H 700",
   "cantidad": 7100.0,
   "coste_total": 184.77,
-  "coste_unitario": 0.026,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 180.6973,
+  "revisar": ""
  },
  {
   "codigo": "1825015",
