@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FileText, Upload, Sparkles, Plus, Trash2, X, Save, Euro,
   Receipt, ClipboardList, FileCheck, Eye, Loader2, RefreshCw,
-  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck, Users
+  ArrowUp, ArrowDown, Filter, Files, ChevronLeft, ChevronRight, Truck, Users,
+  Lock, Unlock
 } from 'lucide-react';
 import { clientsAPI, authHeaders } from '../services/api';
 
@@ -19,6 +20,9 @@ const NEXT_DOC_TYPE = { presupuesto: 'pedido', pedido: 'albaran', albaran: 'fact
 
 const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} \u20AC`;
 const normRef = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+// Limpia la referencia visible: elimina espacios alrededor de '/' y al inicio/fin
+// para que 'LG26 / 57' se guarde y filtre como 'LG26/57'
+const cleanRef = (v) => String(v || '').trim().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ');
 
 const fileToB64 = (file) => new Promise((res, rej) => {
   const fr = new FileReader();
@@ -96,44 +100,34 @@ const RentabilidadLineas = ({ currentUser }) => {
     try { const c = await clientsAPI.getAll(); setClients(c || []); } catch { setClients([]); }
   };
 
-  // ── Marcar factura como pagada ──
-  const [markingPaid, setMarkingPaid] = useState('');
-  const markAsPaid = async (e, f) => {
+  // ── Revisión de controller: marcar/desmarcar que la factura y sus márgenes han sido revisados ──
+  const [togglingRevision, setTogglingRevision] = useState('');
+  const toggleRevision = async (e, f) => {
     e.stopPropagation();
-    const tt = f.totals || {};
-    const pendiente = Number(f.pendienteCobro) || 0;
-    if (pendiente <= 0.01) return;
-    if (!window.confirm(`¿Marcar "${f.ref || f.id}" como PAGADA?\n\nSe registrará un cobro de ${eur(pendiente)} vinculado a esta factura.`)) return;
-    setMarkingPaid(f.id);
+    const yaRevisada = !!f.revisada;
+    const accion = yaRevisada ? 'desmarcar la revisión' : 'marcar como REVISADA';
+    if (!window.confirm(`¿Deseas ${accion} la factura "${f.ref || f.id}"?`)) return;
+    setTogglingRevision(f.id);
     try {
-      const payload = {
-        importe: pendiente,
-        concepto: `Cobro factura ${f.ref || f.id}`,
-        metodo: 'otro',
-        fecha: new Date().toISOString().slice(0, 10),
-        cliente: f.cliente || '',
-        clientCode: f.clienteCodigo || '',
-        targetId: f.id,
-        targetRef: f.ref || '',
-        targetType: 'factura',
-        projectRef: f.projectRef || f.ref || '',
-        createdBy: currentUser?.id || '',
-        createdByName: currentUser?.name || currentUser?.clientName || currentUser?.username || '',
-      };
-      const r = await fetch(`${API_URL}/api/rentabilidad/ingresos`, {
-        method: 'POST',
+      const r = await fetch(`${API_URL}/api/rentabilidad/fichas/${f.id}/revision`, {
+        method: 'PATCH',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ revisada: !yaRevisada }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         throw new Error(err.detail || `Error ${r.status}`);
       }
-      await load();
+      // Actualizar la ficha en local sin recargar todo
+      const data = await r.json();
+      setFichas(prev => prev.map(x => x.id === f.id
+        ? { ...x, revisada: data.revisada, revisadaPor: data.revisadaPor, revisadaAt: data.revisadaAt }
+        : x
+      ));
     } catch (err) {
-      alert('Error al marcar como pagada: ' + err.message);
+      alert('Error al cambiar revisión: ' + err.message);
     } finally {
-      setMarkingPaid('');
+      setTogglingRevision('');
     }
   };
 
@@ -168,7 +162,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       } else { // venta
         const lines = (p.lines && p.lines.length) ? p.lines.map(l => ({ concepto: l.concepto || '', venta: Number(l.importe || l.venta) || 0, coste: 0 })) : [{ concepto: p.resumen || 'Documento', venta: Number(p.total) || 0, coste: 0 }];
         const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ docType: p.docType || 'factura', ref: p.ref || '', cliente: p.cliente || '', clienteCodigo: p.clientCode || '', fecha: p.fecha || '', lines, projectRef: p.projectRef || '', createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }) });
+          body: JSON.stringify({ docType: p.docType || 'factura', ref: cleanRef(p.ref || ''), cliente: p.cliente || '', clienteCodigo: p.clientCode || '', fecha: p.fecha || '', lines, projectRef: p.projectRef || '', createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username }) });
         if (!r.ok) throw new Error((await r.json()).detail || 'Error');
         const created = await r.json().catch(() => ({}));
         const fid = created?.ficha?.id;
@@ -230,7 +224,7 @@ const RentabilidadLineas = ({ currentUser }) => {
       const data = await r.json();
       if (!data.success) { alert(data.error || 'No se pudo leer el documento'); return; }
       setEditor({
-        ref: data.data.ref || '',
+        ref: cleanRef(data.data.ref || ''),
         cliente: data.data.cliente || '',
         clienteCodigo: data.data.clienteCodigo || '',
         fecha: data.data.fecha || '',
@@ -321,7 +315,7 @@ const RentabilidadLineas = ({ currentUser }) => {
 
           const merged = {
             id: existing.id,
-            ref: existing.ref,
+            ref: cleanRef(existing.ref),
             docType: resolvedDocType,
             cliente: clienteFill ? data.data.cliente : (existing.cliente || ''),
             clienteCodigo: codigoFill ? data.data.clienteCodigo : (existing.clienteCodigo || ''),
@@ -350,7 +344,7 @@ const RentabilidadLineas = ({ currentUser }) => {
 
         // Guardar directamente la ficha
         const fichaData = {
-          ref: data.data.ref || '',
+          ref: cleanRef(data.data.ref || ''),
           cliente: data.data.cliente || '',
           clienteCodigo: data.data.clienteCodigo || '',
           fecha: data.data.fecha || '',
@@ -439,9 +433,25 @@ const RentabilidadLineas = ({ currentUser }) => {
     finally { setFeeding(false); }
   };
 
+  // Normaliza separador decimal: acepta tanto coma como punto
+  const parseDecimal = (val) => {
+    if (val === '' || val === null || val === undefined) return 0;
+    const normalized = String(val).replace(',', '.');
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? 0 : parsed;
+  };
   const setLine = (i, field, val) => {
     const lines = [...editor.lines];
-    lines[i] = { ...lines[i], [field]: field === 'concepto' || field === 'ref' ? val : (parseFloat(val) || 0) };
+    const isText = field === 'concepto' || field === 'ref';
+    // Para campos numéricos guardamos el valor raw mientras se escribe (para no
+    // interrumpir la edición) y sólo convertimos a número al guardar.
+    lines[i] = { ...lines[i], [field]: isText ? val : val };
+    setEditor({ ...editor, lines });
+  };
+  // Al salir del campo numérico (blur) normalizamos el valor a número
+  const blurLine = (i, field, val) => {
+    const lines = [...editor.lines];
+    lines[i] = { ...lines[i], [field]: parseDecimal(val) };
     setEditor({ ...editor, lines });
   };
   const addLine = () => setEditor({ ...editor, lines: [...editor.lines, { id: `ln-${Date.now()}`, ref: '', concepto: '', cantidad: 1, venta: 0, coste: 0 }] });
@@ -485,8 +495,14 @@ const RentabilidadLineas = ({ currentUser }) => {
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: overwriteId, ref: editor.ref, cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
-          docType: editor.docType, lines: editor.lines,
+          id: overwriteId, ref: cleanRef(editor.ref), cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
+          docType: editor.docType,
+          // Normalizar separador decimal (coma o punto) antes de guardar
+          lines: (editor.lines || []).map(l => ({
+            ...l,
+            venta: parseDecimal(l.venta),
+            coste: parseDecimal(l.coste),
+          })),
           createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
         }),
       });
@@ -756,7 +772,10 @@ const RentabilidadLineas = ({ currentUser }) => {
 
     // Aplicar filtros por columna
     if (columnFilters.ref) {
-      rows = rows.filter(f => (f.ref || '').toLowerCase().includes(columnFilters.ref.toLowerCase()));
+      // Usa normRef en ambos lados: elimina espacios, barras y convierte a mayúsculas
+      // Así 'LG26/61' encuentra 'LG26 / 61' y viceversa
+      const refQ = normRef(columnFilters.ref);
+      rows = rows.filter(f => normRef(f.ref).includes(refQ));
     }
     if (columnFilters.cliente) {
       // Filtra por NOMBRE o por CÓDIGO de cliente (p. ej. "4273").
@@ -871,6 +890,8 @@ const RentabilidadLineas = ({ currentUser }) => {
   // Se excluyen las fichas ya convertidas a otro documento (convertidoAId): su importe
   // ya vive en el documento destino, sumarla aqui tambien duplicaria la venta.
   const [showTotals, setShowTotals] = useState(false);
+  // Candado: oculta la columna MARGEN para privacidad
+  const [hideMargen, setHideMargen] = useState(false);
   const filteredTotals = useMemo(() => {
     return filteredAndSorted.filter(f => !f.convertidoAId).reduce((acc, f) => {
       const tt = f.totals || totals(f.lines);
@@ -1016,7 +1037,23 @@ const RentabilidadLineas = ({ currentUser }) => {
               <SortHeader col="fecha" label="Fecha" />
               <SortHeader col="venta" label="Venta" align="right" />
               <SortHeader col="coste" label="Coste" align="right" />
-              <SortHeader col="margen" label="Margen" align="right" />
+              {/* Cabecera MARGEN con botón candado */}
+              <th className="text-right p-3 text-xs font-black uppercase">
+                <span className="inline-flex items-center gap-1.5">
+                  {!hideMargen && <SortHeader col="margen" label="Margen" align="right" />}
+                  {hideMargen && <span className="text-slate-400 italic">Margen</span>}
+                  <button
+                    onClick={() => setHideMargen(h => !h)}
+                    title={hideMargen ? 'Mostrar margen' : 'Ocultar margen (privacidad)'}
+                    className={`p-0.5 rounded transition-colors ${
+                      hideMargen ? 'text-red-500 hover:text-red-700' : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    {hideMargen ? <Lock size={12} /> : <Unlock size={12} />}
+                  </button>
+                </span>
+              </th>
+              <th className="text-right p-3 text-xs font-black uppercase">% Incr. C→V</th>
               <th className="text-right p-3 text-xs font-black uppercase">Pendiente cobro</th>
               <th className="text-center p-3 text-xs font-black uppercase">Docs</th>
               <th className="p-3"></th>
@@ -1157,7 +1194,14 @@ const RentabilidadLineas = ({ currentUser }) => {
                         className="block mt-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-0.5 inline-block">⚠ Faltan costes</span>
                     )}
                   </td>
-                  <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(tt.margen)}</td>
+                  {/* Celda MARGEN — oculta si hideMargen */}
+                  <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(tt.margen)}
+                  </td>
+                  {/* Columna % Incremento Coste→Venta (Margen/Coste) */}
+                  <td className="p-3 text-right font-mono text-slate-600 text-xs">
+                    {tt.coste > 0 ? `${(((tt.venta - tt.coste) / tt.coste) * 100).toFixed(1)}%` : '—'}
+                  </td>
                   <td className={`p-3 text-right font-mono ${(f.pendienteCobro || 0) > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
                     {/* PAGADA: el cobro (ingresos a cuenta vinculados) cubre la venta */}
                     {tt.venta > 0 && (f.cobrado || 0) >= tt.venta - 0.01 ? (
@@ -1178,17 +1222,24 @@ const RentabilidadLineas = ({ currentUser }) => {
                         → {TABS.find(t => t.key === NEXT_DOC_TYPE[f.docType || 'factura'])?.label}
                       </button>
                     )}
-                    {/* Botón Marcar como pagada: solo en facturas con pendiente > 0 */}
-                    {f.docType === 'factura' && (f.pendienteCobro || 0) > 0.01 && (
+                    {/* Botón de revisión de controller: ❓✔ = pendiente de revisar | ✅ = ya revisada */}
+                    {f.docType === 'factura' && (
                       <button
-                        onClick={(e) => markAsPaid(e, f)}
-                        disabled={markingPaid === f.id}
-                        title={`Marcar como pagada (cobrar ${eur(f.pendienteCobro)} pendiente)`}
-                        className="mr-2 px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"
+                        onClick={(e) => toggleRevision(e, f)}
+                        disabled={togglingRevision === f.id}
+                        title={f.revisada
+                          ? `Revisada por ${f.revisadaPor || 'controller'}${f.revisadaAt ? ' el ' + f.revisadaAt.slice(0,10) : ''} — pulsa para desmarcar`
+                          : 'Marcar como revisada por el controller (márgenes verificados)'}
+                        className={`mr-2 px-2.5 py-1 rounded-lg text-[11px] font-bold disabled:opacity-50 flex items-center gap-1 transition-colors ${
+                          f.revisada
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200'
+                            : 'bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200'
+                        }`}
                       >
-                        {markingPaid === f.id
+                        {togglingRevision === f.id
                           ? <Loader2 size={11} className="animate-spin" />
-                          : '✔'} Pagada
+                          : f.revisada ? '✅' : '❓✔'}
+                        {f.revisada ? 'Check Controller' : 'Check Controller'}
                       </button>
                     )}
                     <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
@@ -1208,7 +1259,13 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <td colSpan={3} className="p-3 text-xs uppercase tracking-wide text-slate-500">Total {hasActiveFilters ? '(filtrado)' : ''} · {filteredAndSorted.length} doc.</td>
                 <td className="p-3 text-right font-mono">{eur(filteredTotals.venta)}</td>
                 <td className="p-3 text-right font-mono">{eur(filteredTotals.coste)}</td>
-                <td className="p-3 text-right font-mono text-emerald-700">{eur(filteredTotals.margen)}</td>
+                <td className="p-3 text-right font-mono text-emerald-700">
+                  {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(filteredTotals.margen)}
+                </td>
+                {/* Total % Incremento Coste→Venta ponderado */}
+                <td className="p-3 text-right font-mono text-slate-600 text-xs">
+                  {filteredTotals.coste > 0 ? `${(((filteredTotals.venta - filteredTotals.coste) / filteredTotals.coste) * 100).toFixed(1)}%` : '—'}
+                </td>
                 <td className="p-3 text-right font-mono text-amber-700">{eur(filteredTotals.pendienteCobro)}</td>
                 <td colSpan={2}></td>
               </tr>
@@ -1420,8 +1477,22 @@ const RentabilidadLineas = ({ currentUser }) => {
                         <tr key={l.id || i}>
                           <td className="p-1"><input value={l.ref} onChange={e => setLine(i, 'ref', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
                           <td className="p-1"><input value={l.concepto} onChange={e => setLine(i, 'concepto', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
-                          <td className="p-1"><input type="number" step="0.01" value={l.venta} onChange={e => setLine(i, 'venta', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs text-right" /></td>
-                          <td className="p-1"><input type="number" step="0.01" value={l.coste} onChange={e => setLine(i, 'coste', e.target.value)} className={`w-full px-1.5 py-1 border rounded text-xs text-right ${l._match ? 'bg-blue-50 border-blue-200' : ''}`} /></td>
+                          <td className="p-1"><input
+                            type="text" inputMode="decimal"
+                            value={l.venta}
+                            onChange={e => setLine(i, 'venta', e.target.value)}
+                            onBlur={e => blurLine(i, 'venta', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-1.5 py-1 border rounded text-xs text-right"
+                          /></td>
+                          <td className="p-1"><input
+                            type="text" inputMode="decimal"
+                            value={l.coste}
+                            onChange={e => setLine(i, 'coste', e.target.value)}
+                            onBlur={e => blurLine(i, 'coste', e.target.value)}
+                            placeholder="0"
+                            className={`w-full px-1.5 py-1 border rounded text-xs text-right ${l._match ? 'bg-blue-50 border-blue-200' : ''}`}
+                          /></td>
                           <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
                           <td className="p-1 text-center"><button onClick={() => removeLine(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                         </tr>

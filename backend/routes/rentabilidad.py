@@ -88,6 +88,54 @@ async def _log_deletion(entity: str, entity_id: str, before: Optional[dict], use
 
 # ----------------------------- COSTES POR PROYECTO -----------------------------
 
+@router.get("/rentabilidad/articulo")
+async def buscar_articulo_por_codigo(codigo: str = ""):
+    """Busca un artículo por código exacto o parcial en la colección de productos.
+    Devuelve código y nombre para rellenar el formulario de coste por código."""
+    import re as _re
+    try:
+        if not codigo or len(codigo.strip()) < 2:
+            return {"found": False, "results": []}
+        q = codigo.strip()
+        escaped = _re.escape(q)
+        # Primero busca coincidencia exacta de código
+        exact = await db.products.find_one(
+            {"code": {"$regex": f"^{escaped}$", "$options": "i"}},
+            {"_id": 0, "code": 1, "name": 1, "description": 1, "pvp": 1, "coste": 1}
+        )
+        if exact:
+            return {
+                "found": True,
+                "results": [{
+                    "code": exact.get("code", ""),
+                    "name": exact.get("name") or exact.get("description") or "",
+                    "pvp": float(exact.get("pvp", 0) or 0),
+                    "coste": float(exact.get("coste", 0) or 0),
+                }]
+            }
+        # Si no hay exacta, busca parcial (hasta 10 resultados)
+        cursor = db.products.find(
+            {"$or": [
+                {"code": {"$regex": escaped, "$options": "i"}},
+                {"name": {"$regex": escaped, "$options": "i"}},
+            ]},
+            {"_id": 0, "code": 1, "name": 1, "description": 1, "pvp": 1, "coste": 1}
+        ).limit(10)
+        results = await cursor.to_list(10)
+        return {
+            "found": len(results) > 0,
+            "results": [{
+                "code": r.get("code", ""),
+                "name": r.get("name") or r.get("description") or "",
+                "pvp": float(r.get("pvp", 0) or 0),
+                "coste": float(r.get("coste", 0) or 0),
+            } for r in results]
+        }
+    except Exception as e:
+        logger.error(f"Buscar articulo error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/project-costs")
 async def add_project_cost(cost: dict):
     """Registrar un coste/gasto asociado a un proyecto (por su referencia)."""
@@ -1274,6 +1322,36 @@ async def trace_ficha(ficha_id: str, payload: dict):
     return {"success": True}
 
 
+@router.patch("/rentabilidad/fichas/{ficha_id}/revision")
+async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(require_rentabilidad)):
+    """Marca o desmarca la ficha como revisada por el controller/director.
+    Guarda quién la revisó y cuándo. Enviar {revisada: true} para marcar,
+    {revisada: false} para desmarcar."""
+    try:
+        revisada = bool((payload or {}).get("revisada", True))
+        now = datetime.now(timezone.utc).isoformat()
+        upd = {
+            "revisada": revisada,
+            "revisadaPor": (
+                (user or {}).get("name") or
+                (user or {}).get("username") or
+                (user or {}).get("email") or ""
+            ) if revisada else "",
+            "revisadaAt": now if revisada else "",
+            "updatedAt": now,
+        }
+        await db.sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
+        return {
+            "success": True,
+            "revisada": revisada,
+            "revisadaPor": upd["revisadaPor"],
+            "revisadaAt": upd["revisadaAt"],
+        }
+    except Exception as e:
+        logger.error(f"Toggle revision error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/rentabilidad/fichas/{ficha_id}")
 async def delete_ficha(ficha_id: str, user: dict = Depends(require_rentabilidad)):
     try:
@@ -1783,3 +1861,40 @@ async def delete_ingreso(ingreso_id: str, user: dict = Depends(require_rentabili
     if existing:
         await _log_deletion("ingreso_cuenta", ingreso_id, existing, user)
     return {"success": True}
+
+
+# ── Migración: limpiar espacios en refs de fichas existentes ─────────────────
+@router.post("/rentabilidad/admin/normalize-refs")
+async def normalize_refs(user: dict = Depends(require_rentabilidad)):
+    """Elimina espacios alrededor de '/' en el campo ref de todas las fichas.
+    Convierte 'LG26 / 61' → 'LG26/61' para que el filtro funcione correctamente.
+    Solo accesible para administradores o usuarios con permisos elevados.
+    """
+    import re as _re
+    if not _is_elevated(user):
+        raise HTTPException(status_code=403, detail="Solo administradores pueden ejecutar migraciones")
+
+    def _clean_ref(v: str) -> str:
+        return _re.sub(r'\s*/\s*', '/', str(v or '').strip())
+
+    cursor = db.fichas_rentabilidad.find({}, {"_id": 0, "id": 1, "ref": 1})
+    updated = 0
+    skipped = 0
+    async for doc in cursor:
+        original = doc.get("ref") or ""
+        cleaned = _clean_ref(original)
+        if cleaned != original:
+            await db.fichas_rentabilidad.update_one(
+                {"id": doc["id"]},
+                {"$set": {"ref": cleaned}}
+            )
+            updated += 1
+        else:
+            skipped += 1
+
+    return {
+        "success": True,
+        "updated": updated,
+        "skipped": skipped,
+        "message": f"Normalizadas {updated} referencias. {skipped} ya estaban correctas."
+    }
