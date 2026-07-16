@@ -81,6 +81,7 @@ async def generate_rentabilidad_report(
     min_venta: Optional[float] = Query(None, description="Venta mínima por línea"),
     max_venta: Optional[float] = Query(None, description="Venta máxima por línea"),
     created_by: Optional[str] = Query(None, description="Filtrar por usuario creador"),
+    revisada: Optional[str] = Query(None, description="Check Controller: 'si' revisadas, 'no' faltan por revisar"),
     sort_by: Optional[str] = Query("fecha", description="Ordenar por: fecha, venta, margen, cliente"),
     sort_order: Optional[str] = Query("desc", description="Orden: asc, desc"),
 ):
@@ -103,6 +104,12 @@ async def generate_rentabilidad_report(
             if fecha_desde and ficha_fecha < fecha_desde:
                 continue
             if fecha_hasta and ficha_fecha > fecha_hasta:
+                continue
+
+            # Filtro por Check Controller (revisada por el controller)
+            if revisada == "si" and not ficha.get("revisada"):
+                continue
+            if revisada == "no" and ficha.get("revisada"):
                 continue
             
             # Filtro por cliente: casa por NOMBRE o por CÓDIGO de cliente
@@ -263,6 +270,7 @@ async def generate_rentabilidad_pdf(
     min_venta: Optional[float] = Query(None),
     max_venta: Optional[float] = Query(None),
     created_by: Optional[str] = Query(None),
+    revisada: Optional[str] = Query(None),
     sort_by: Optional[str] = Query("fecha"),
     sort_order: Optional[str] = Query("desc"),
 ):
@@ -282,7 +290,7 @@ async def generate_rentabilidad_pdf(
         fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
         cliente=cliente, categoria=categoria, doc_type=doc_type,
         min_venta=min_venta, max_venta=max_venta,
-        created_by=created_by, sort_by=sort_by, sort_order=sort_order
+        created_by=created_by, revisada=revisada, sort_by=sort_by, sort_order=sort_order
     )
     
     if not data.get("success"):
