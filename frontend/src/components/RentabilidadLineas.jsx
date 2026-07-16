@@ -67,6 +67,7 @@ const RentabilidadLineas = ({ currentUser }) => {
   const [parsingMulti, setParsingMulti] = useState(false);
   const [multiProgress, setMultiProgress] = useState({ current: 0, total: 0 });
   const [matching, setMatching] = useState(false);
+  const [feeding, setFeeding] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Filtros por columna
@@ -406,6 +407,32 @@ const RentabilidadLineas = ({ currentUser }) => {
     finally { setMatching(false); }
   };
 
+  // ── Alimentar costes desde el catálogo (coste medio ponderado por artículo) ──
+  const handleAutoCostes = async () => {
+    if (!editor || !(editor.lines || []).length) return;
+    const hasCostes = (editor.lines || []).some(l => Number(l.coste) > 0);
+    let force = false;
+    if (hasCostes) {
+      const r = window.confirm('Algunas líneas ya tienen coste.\n\nAceptar = recalcular TODAS desde el catálogo.\nCancelar = solo rellenar las que están a 0.');
+      force = r;
+    }
+    setFeeding(true);
+    try {
+      const r = await fetch(`${API_URL}/api/rentabilidad/apply-article-costs`, {
+        method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ lines: editor.lines, force }),
+      });
+      const data = await r.json();
+      if (!data.success) { alert(data.error || 'No se pudieron aplicar los costes'); return; }
+      setEditor({ ...editor, lines: data.lines });
+      const rev = data.revisar ? ` · ${data.revisar} a revisar` : '';
+      const sin = (data.sinCoste || []).filter(Boolean);
+      const sinTxt = sin.length ? `\n\nSin coste en catálogo (${sin.length}): ${sin.slice(0, 12).join(', ')}${sin.length > 12 ? '…' : ''}` : '';
+      alert(`Costes alimentados: ${data.matched} de ${editor.lines.length} líneas${rev}.${sinTxt}`);
+    } catch { alert('Error al alimentar los costes'); }
+    finally { setFeeding(false); }
+  };
+
   // Normaliza separador decimal: acepta tanto coma como punto
   const parseDecimal = (val) => {
     if (val === '' || val === null || val === undefined) return 0;
@@ -657,6 +684,82 @@ const RentabilidadLineas = ({ currentUser }) => {
     }
   };
 
+  // Informe PDF a nivel de LÍNEA: líneas sin coste (precio de coste = 0) o con
+  // margen 0/negativo, en todas las fichas del listado actual, para revisarlas
+  // antes del visto bueno. Cada línea indica su ficha, artículo y el motivo.
+  const exportarRevisionLineas = async () => {
+    const items = [];
+    (baseFiltered || []).forEach(f => {
+      (f.lines || []).forEach(l => {
+        const venta = Number(l.venta) || 0;
+        const coste = Number(l.coste) || 0;
+        const margen = venta - coste;
+        const sinCoste = coste <= 0;
+        const margenMalo = margen <= 0;
+        if (!sinCoste && !margenMalo) return;
+        items.push({
+          ficha: f.ref || '-', cliente: f.cliente || '-',
+          ref: l.ref || '-', concepto: l.concepto || '-',
+          cantidad: Number(l.cantidad) || 0, venta, coste, margen,
+          motivo: sinCoste ? (margenMalo && venta <= 0 ? 'SIN VENTA/COSTE' : 'SIN COSTE') : 'MARGEN ≤ 0',
+        });
+      });
+    });
+    if (items.length === 0) { alert('No hay líneas sin coste ni con margen ≤ 0 en el listado actual.'); return; }
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const clean = (s) => String(s ?? '').normalize('NFKC');
+      const hoy = new Date();
+      const fechaStr = hoy.toLocaleDateString('es-ES');
+      const fechaFile = hoy.toISOString().slice(0, 10);
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const W = pdf.internal.pageSize.getWidth();
+      const M = 12;
+      const logo = currentUser?.logo || null;
+      const drawHeader = () => {
+        const hy = 12;
+        if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+          try {
+            const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG');
+            pdf.addImage(logo, fmt, M, hy, 30, 15);
+          } catch (_) { /* logo no incrustable */ }
+        } else {
+          pdf.setFontSize(14); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
+          pdf.text('LUIGGI HOME', M, hy + 8); pdf.setFont(undefined, 'normal');
+        }
+        pdf.setFontSize(12); pdf.setTextColor(185, 28, 28); pdf.setFont(undefined, 'bold');
+        pdf.text('Revisión de líneas — sin coste o margen ≤ 0', W - M, hy + 4, { align: 'right' });
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(9); pdf.setTextColor(120);
+        pdf.text(`${fechaStr}   ·   ${items.length} línea(s)`, W - M, hy + 10, { align: 'right' });
+      };
+      drawHeader();
+      const head = [['Ficha', 'Ref art.', 'Concepto', 'Cant', 'Venta', 'Coste', 'Margen', 'Motivo']];
+      const body = items.map(it => [
+        clean(it.ficha), clean(it.ref), clean(it.concepto),
+        String(it.cantidad), eur(it.venta), eur(it.coste), eur(it.margen), it.motivo,
+      ]);
+      autoTable(pdf, {
+        startY: 34, head, body,
+        styles: { fontSize: 8, cellPadding: 1.5, overflow: 'linebreak', valign: 'middle' },
+        headStyles: { fillColor: [185, 28, 28], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [253, 242, 242] },
+        columnStyles: {
+          0: { cellWidth: 30 }, 1: { cellWidth: 34 }, 2: { cellWidth: 'auto' },
+          3: { cellWidth: 14, halign: 'right' }, 4: { cellWidth: 24, halign: 'right' },
+          5: { cellWidth: 24, halign: 'right' }, 6: { cellWidth: 24, halign: 'right' },
+          7: { cellWidth: 30 },
+        },
+        margin: { top: 30, left: M, right: M },
+        didDrawPage: (data) => { if (data.pageNumber > 1) drawHeader(); },
+      });
+      pdf.save(`revision_lineas_${fechaFile}.pdf`);
+    } catch (e) {
+      alert('No se pudo generar el PDF: ' + (e?.message || e));
+    }
+  };
+
   // Modo "Revisar margen": aísla las fichas con margen 0 o negativo antes del visto bueno.
   const [reviewMode, setReviewMode] = useState(false);
   // Margen de una ficha (usa totals precalculados si existen, si no los calcula).
@@ -867,6 +970,11 @@ const RentabilidadLineas = ({ currentUser }) => {
             className="px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed">
             <FileText size={16} /> Informe PDF (margen ≤ 0)
           </button>
+          <button onClick={exportarRevisionLineas}
+            title="PDF con las líneas sin coste o con margen 0/negativo de todas las fichas del listado"
+            className="px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 bg-amber-600 text-white hover:bg-amber-700">
+            <FileText size={16} /> Líneas sin coste / margen ≤ 0
+          </button>
           <button onClick={load} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl">
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -927,8 +1035,8 @@ const RentabilidadLineas = ({ currentUser }) => {
               <SortHeader col="ref" label="N. / Ref" />
               <SortHeader col="cliente" label="Cliente" />
               <SortHeader col="fecha" label="Fecha" />
-              <SortHeader col="venta" label="Venta" align="right" />
               <SortHeader col="coste" label="Coste" align="right" />
+              <SortHeader col="venta" label="Venta" align="right" />
               {/* Cabecera MARGEN con botón candado */}
               <th className="text-right p-3 text-xs font-black uppercase">
                 <span className="inline-flex items-center gap-1.5">
@@ -990,24 +1098,6 @@ const RentabilidadLineas = ({ currentUser }) => {
                 <div className="flex gap-0.5">
                   <input
                     type="number"
-                    value={columnFilters.ventaMin}
-                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMin: e.target.value }))}
-                    placeholder="Min"
-                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
-                  />
-                  <input
-                    type="number"
-                    value={columnFilters.ventaMax}
-                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMax: e.target.value }))}
-                    placeholder="Max"
-                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
-                  />
-                </div>
-              </th>
-              <th className="p-1.5">
-                <div className="flex gap-0.5">
-                  <input
-                    type="number"
                     value={columnFilters.costeMin}
                     onChange={e => setColumnFilters(prev => ({ ...prev, costeMin: e.target.value }))}
                     placeholder="Min"
@@ -1017,6 +1107,24 @@ const RentabilidadLineas = ({ currentUser }) => {
                     type="number"
                     value={columnFilters.costeMax}
                     onChange={e => setColumnFilters(prev => ({ ...prev, costeMax: e.target.value }))}
+                    placeholder="Max"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                </div>
+              </th>
+              <th className="p-1.5">
+                <div className="flex gap-0.5">
+                  <input
+                    type="number"
+                    value={columnFilters.ventaMin}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMin: e.target.value }))}
+                    placeholder="Min"
+                    className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
+                  />
+                  <input
+                    type="number"
+                    value={columnFilters.ventaMax}
+                    onChange={e => setColumnFilters(prev => ({ ...prev, ventaMax: e.target.value }))}
                     placeholder="Max"
                     className="w-1/2 px-1 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 font-normal text-right"
                   />
@@ -1077,7 +1185,6 @@ const RentabilidadLineas = ({ currentUser }) => {
                     {f.clienteCodigo && <span className="ml-1.5 text-[10px] font-bold text-indigo-500">({f.clienteCodigo})</span>}
                   </td>
                   <td className="p-3 text-slate-500">{f.fecha || '-'}</td>
-                  <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
                   <td className="p-3 text-right font-mono text-orange-600">
                     {eur(tt.coste)}
                     {/* Aviso: hay venta pero ningún coste emparejado (ni en líneas ni en costes de proyecto) */}
@@ -1086,6 +1193,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                         className="block mt-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-0.5 inline-block">⚠ Faltan costes</span>
                     )}
                   </td>
+                  <td className="p-3 text-right font-mono">{eur(tt.venta)}</td>
                   {/* Celda MARGEN — oculta si hideMargen */}
                   <td className={`p-3 text-right font-mono font-black ${alertaMargen ? 'text-red-600' : tt.margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     {hideMargen ? <span className="text-slate-300 select-none tracking-widest">••••</span> : eur(tt.margen)}
@@ -1334,6 +1442,10 @@ const RentabilidadLineas = ({ currentUser }) => {
                   {matching ? 'Emparejando...' : 'Subir pantallazo de costes (IA empareja)'}
                   <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleCostShot} disabled={matching} />
                 </label>
+                <button onClick={handleAutoCostes} disabled={feeding} title="Rellena el coste de cada línea con el coste medio ponderado del catálogo, casando por la referencia del artículo" className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 ${feeding ? 'bg-emerald-200 text-emerald-500' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+                  <span className={feeding ? 'animate-pulse' : ''}>💰</span>
+                  {feeding ? 'Alimentando...' : 'Alimentar costes (catálogo)'}
+                </button>
                 <button onClick={addLine} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold flex items-center gap-1"><Plus size={14} /> Anadir linea</button>
               </div>
 

@@ -1049,6 +1049,234 @@ async def match_line_costs(payload: dict):
         return {"success": False, "error": "No se pudo leer el pantallazo de costes. Intentalo de nuevo."}
 
 
+# ------------------- CATALOGO DE COSTES POR ARTICULO (coste medio ponderado) -------------------
+# Coste unitario por articulo calculado como Coste_total / Cantidad del informe de
+# ventas del proveedor (coste medio ponderado). El catalogo vive en la coleccion
+# `article_costs` de MongoDB (editable y auditable desde el master); la primera vez
+# se SIEMBRA automaticamente desde el CSV validado backend/data/costes_unitarios.csv.
+# Permite alimentar el coste de las lineas de una ficha casando por la referencia
+# del articulo (linea.ref == codigo).
+import csv as _csv
+
+_ARTICLE_COSTS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "costes_unitarios.csv")
+
+
+def _read_costs_csv() -> List[Dict[str, Any]]:
+    """Lee el CSV validado y devuelve la lista de articulos con coste unitario."""
+    rows: List[Dict[str, Any]] = []
+    try:
+        with open(_ARTICLE_COSTS_PATH, encoding="utf-8") as fh:
+            for r in _csv.DictReader(fh, delimiter=";"):
+                cu = (r.get("coste_unitario") or "").strip()
+                cod = (r.get("codigo") or "").strip()
+                if not cod:
+                    continue
+                try:
+                    coste_unit = float(cu) if cu else None
+                except Exception:
+                    coste_unit = None
+                def _f(x):
+                    try:
+                        return float(x)
+                    except Exception:
+                        return None
+                rows.append({
+                    "codigo": cod,
+                    "codigoNorm": _normalize_ref(cod),
+                    "nombre": (r.get("nombre") or "").strip(),
+                    "cantidad": _f(r.get("cantidad")),
+                    "costeTotal": _f(r.get("coste_total")),
+                    "costeUnitario": round(coste_unit, 4) if coste_unit is not None else None,
+                    "revisar": (r.get("revisar") or "").strip(),
+                    "source": "csv",
+                })
+    except FileNotFoundError:
+        logger.warning("costes_unitarios.csv no encontrado en %s", _ARTICLE_COSTS_PATH)
+    return rows
+
+
+async def _seed_article_costs_if_empty():
+    """Siembra la coleccion article_costs desde el CSV solo si esta vacia."""
+    try:
+        if await db.article_costs.estimated_document_count() > 0:
+            return
+        rows = _read_costs_csv()
+        if not rows:
+            return
+        now = datetime.now(timezone.utc).isoformat()
+        docs = []
+        for r in rows:
+            if not r.get("codigoNorm"):
+                continue
+            docs.append({**r, "updatedAt": now, "updatedBy": "seed"})
+        if docs:
+            await db.article_costs.insert_many(docs)
+            logger.info("article_costs sembrado con %d articulos desde CSV", len(docs))
+    except Exception as e:
+        logger.error("No se pudo sembrar article_costs: %s", e)
+
+
+async def _article_costs_map() -> Dict[str, Any]:
+    """Devuelve {codigoNorm: articulo} con coste unitario desde MongoDB."""
+    await _seed_article_costs_if_empty()
+    by_code: Dict[str, Any] = {}
+    async for a in db.article_costs.find({"costeUnitario": {"$ne": None}}, {"_id": 0}):
+        norm = a.get("codigoNorm") or _normalize_ref(a.get("codigo"))
+        if norm:
+            by_code[norm] = a
+    return by_code
+
+
+@router.get("/rentabilidad/article-costs")
+async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar: bool = False):
+    """Lista/busca el catalogo de costes unitarios por articulo (desde MongoDB)."""
+    await _seed_article_costs_if_empty()
+    query: Dict[str, Any] = {}
+    if soloRevisar:
+        query["revisar"] = {"$nin": ["", None]}
+    if q:
+        nq = re.escape(q.strip())
+        query["$or"] = [
+            {"codigo": {"$regex": nq, "$options": "i"}},
+            {"nombre": {"$regex": nq, "$options": "i"}},
+        ]
+    total = await db.article_costs.count_documents(query)
+    items = await db.article_costs.find(query, {"_id": 0}).sort("codigo", 1).to_list(max(1, min(limit, 5000)))
+    return {"total": total, "items": items}
+
+
+@router.post("/rentabilidad/article-costs")
+async def upsert_article_cost(payload: dict, user: dict = Depends(require_rentabilidad)):
+    """Crea o modifica el coste de un articulo (master). Guarda auditoria del cambio."""
+    cod = (payload or {}).get("codigo", "").strip()
+    if not cod:
+        raise HTTPException(status_code=400, detail="Falta el codigo del articulo")
+    norm = _normalize_ref(cod)
+    prev = await db.article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
+    def _f(x, d=None):
+        try:
+            return float(x)
+        except Exception:
+            return d
+    coste_unit = _f(payload.get("costeUnitario"))
+    doc = {
+        "codigo": cod,
+        "codigoNorm": norm,
+        "nombre": str(payload.get("nombre") or (prev or {}).get("nombre") or "").strip(),
+        "cantidad": _f(payload.get("cantidad"), (prev or {}).get("cantidad")),
+        "costeTotal": _f(payload.get("costeTotal"), (prev or {}).get("costeTotal")),
+        "costeUnitario": round(coste_unit, 4) if coste_unit is not None else (prev or {}).get("costeUnitario"),
+        "revisar": str(payload.get("revisar", (prev or {}).get("revisar") or "")).strip(),
+        "source": "manual",
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "updatedBy": (user or {}).get("username", ""),
+    }
+    await db.article_costs.update_one({"codigoNorm": norm}, {"$set": doc}, upsert=True)
+    # Auditoria: registra el antes/despues de cada cambio de coste.
+    try:
+        await db.article_costs_audit.insert_one({
+            "id": f"acaud-{uuid.uuid4().hex[:8]}",
+            "codigo": cod, "codigoNorm": norm,
+            "before": prev, "after": doc,
+            "userId": (user or {}).get("id", ""),
+            "userName": (user or {}).get("username", ""),
+            "createdAt": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as e:
+        logger.error("No se pudo auditar cambio de coste %s: %s", cod, e)
+    return {"success": True, "article": doc, "created": prev is None}
+
+
+@router.delete("/rentabilidad/article-costs/{codigo}")
+async def delete_article_cost(codigo: str, user: dict = Depends(require_rentabilidad)):
+    """Elimina un articulo del catalogo de costes (master)."""
+    norm = _normalize_ref(codigo)
+    prev = await db.article_costs.find_one({"codigoNorm": norm}, {"_id": 0})
+    res = await db.article_costs.delete_one({"codigoNorm": norm})
+    if prev:
+        await _log_deletion("article_cost", codigo, prev, user)
+    return {"success": True, "deleted": res.deleted_count}
+
+
+@router.get("/rentabilidad/article-costs/audit")
+async def article_costs_audit(codigo: Optional[str] = None, limit: int = 100, user: dict = Depends(require_rentabilidad)):
+    """Historial de cambios del catalogo de costes (auditoria)."""
+    query = {"codigoNorm": _normalize_ref(codigo)} if codigo else {}
+    items = await db.article_costs_audit.find(query, {"_id": 0}).sort("createdAt", -1).to_list(max(1, min(limit, 1000)))
+    return {"total": len(items), "items": items}
+
+
+@router.post("/rentabilidad/article-costs/reseed")
+async def reseed_article_costs(payload: Optional[dict] = None, user: dict = Depends(require_rentabilidad)):
+    """Recarga el catalogo desde el CSV validado. Con replace=true BORRA y vuelve a
+    sembrar (pierde ediciones manuales); si no, hace upsert respetando lo existente."""
+    replace = bool((payload or {}).get("replace"))
+    rows = _read_costs_csv()
+    if not rows:
+        raise HTTPException(status_code=404, detail="No se encontro el CSV de costes")
+    now = datetime.now(timezone.utc).isoformat()
+    uname = (user or {}).get("username", "")
+    if replace:
+        await db.article_costs.delete_many({})
+        docs = [{**r, "updatedAt": now, "updatedBy": uname or "reseed"} for r in rows if r.get("codigoNorm")]
+        if docs:
+            await db.article_costs.insert_many(docs)
+        return {"success": True, "mode": "replace", "count": len(docs)}
+    upserts = 0
+    for r in rows:
+        if not r.get("codigoNorm"):
+            continue
+        await db.article_costs.update_one(
+            {"codigoNorm": r["codigoNorm"]},
+            {"$set": {**r, "updatedAt": now, "updatedBy": uname or "reseed"}},
+            upsert=True,
+        )
+        upserts += 1
+    return {"success": True, "mode": "upsert", "count": upserts}
+
+
+@router.post("/rentabilidad/apply-article-costs")
+async def apply_article_costs(payload: dict):
+    """Alimenta el coste de cada linea a partir del coste unitario (coste medio
+    ponderado) del articulo, casando por la referencia de la linea:
+        coste_linea = coste_unitario * cantidad.
+    Por defecto solo rellena lineas con coste 0 (no pisa un coste ya puesto a
+    mano); con force=true recalcula TODAS las que tengan articulo en catalogo.
+    Devuelve las lineas actualizadas y un resumen (casadas, a revisar, sin coste)."""
+    by_code = await _article_costs_map()
+    lines = (payload or {}).get("lines") or []
+    force = bool((payload or {}).get("force"))
+    out: List[Dict[str, Any]] = []
+    matched = 0
+    revisar = 0
+    sin_coste: List[str] = []
+    for l in lines:
+        nl = dict(l)
+        ref = _normalize_ref(l.get("ref") or "")
+        art = by_code.get(ref) if ref else None
+        cur = float(l.get("coste") or 0)
+        if art and (force or cur == 0):
+            cant = float(l.get("cantidad") or 1) or 1
+            nl["coste"] = round(art["costeUnitario"] * cant, 2)
+            nl["costeUnitario"] = art["costeUnitario"]
+            nl["costeFuente"] = "catalogo"
+            if art.get("revisar"):
+                nl["costeRevisar"] = art["revisar"]
+                revisar += 1
+            matched += 1
+        elif not art and cur == 0:
+            sin_coste.append((l.get("ref") or l.get("concepto") or "").strip())
+        out.append(nl)
+    return {
+        "success": True,
+        "lines": out,
+        "matched": matched,
+        "revisar": revisar,
+        "sinCoste": sin_coste,
+        "totals": _ficha_totals(out),
+    }
+
+
 # ----------------------------- FICHAS (guardado) -----------------------------
 
 @router.get("/rentabilidad/fichas")
