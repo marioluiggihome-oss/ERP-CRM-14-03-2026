@@ -3246,5 +3246,13 @@
   "coste_total": null,
   "coste_unitario": 0.07,
   "revisar": ""
+ },
+ {
+  "codigo": "22-L13115W412",
+  "nombre": "Transformador LED Modelo L131-12V-15W-IP20 4 Conexiones Blanco",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 11.55,
+  "revisar": ""
  }
 ]
