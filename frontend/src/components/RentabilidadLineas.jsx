@@ -1340,11 +1340,13 @@ const RentabilidadLineas = ({ currentUser }) => {
                         {f.revisada ? 'Check Controller' : 'Check Controller'}
                       </button>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }}
-                      title={bloqueada(f) ? 'Bloqueada por el controller (solo master con Shift)' : 'Eliminar'}
-                      className={bloqueada(f) ? 'text-slate-300' : 'text-slate-300 hover:text-red-500'}>
-                      {bloqueada(f) ? <Lock size={15} /> : <Trash2 size={15} />}
-                    </button>
+                    {bloqueada(f) ? (
+                      <span title="Factura con visto bueno del controller: bloqueada. Solo el master puede borrarla (mantén Shift ~2,5s)."
+                        className="inline-flex text-slate-300 cursor-not-allowed"><Lock size={15} /></span>
+                    ) : (
+                      <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }}
+                        title="Eliminar" className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
+                    )}
                   </td>
                 </tr>
               );
@@ -1555,39 +1557,34 @@ const RentabilidadLineas = ({ currentUser }) => {
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <table className="w-full text-sm table-fixed">
                   <colgroup>
-                    <col style={{ width: '120px' }} />
+                    <col style={{ width: '110px' }} />
                     <col />
-                    <col style={{ width: '110px' }} />
-                    <col style={{ width: '110px' }} />
-                    <col style={{ width: '100px' }} />
-                    <col style={{ width: '40px' }} />
+                    <col style={{ width: '95px' }} />
+                    <col style={{ width: '95px' }} />
+                    <col style={{ width: '95px' }} />
+                    <col style={{ width: '70px' }} />
+                    <col style={{ width: '36px' }} />
                   </colgroup>
                   <thead className="bg-slate-100 text-slate-500">
                     <tr>
                       <th className="text-left p-2 text-[10px] font-black uppercase">Ref</th>
                       <th className="text-left p-2 text-[10px] font-black uppercase">Concepto</th>
-                      <th className="text-right p-2 text-[10px] font-black uppercase">Venta</th>
                       <th className="text-right p-2 text-[10px] font-black uppercase">Coste</th>
-                      <th className="text-right p-2 text-[10px] font-black uppercase">Margen / %</th>
+                      <th className="text-right p-2 text-[10px] font-black uppercase">Venta</th>
+                      <th className="text-right p-2 text-[10px] font-black uppercase">Beneficio</th>
+                      <th className="text-right p-2 text-[10px] font-black uppercase">%</th>
                       <th className="p-2"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {editor.lines.map((l, i) => {
                       const m = (Number(l.venta) || 0) - (Number(l.coste) || 0);
-                      const mpct = (Number(l.venta) || 0) > 0 ? (m / (Number(l.venta) || 0) * 100) : null;
+                      // % = incremento sobre el coste (cuánto se sube el coste hasta la venta)
+                      const mpct = (Number(l.coste) || 0) > 0 ? (m / (Number(l.coste) || 0) * 100) : null;
                       return (
                         <tr key={l.id || i}>
                           <td className="p-1"><input value={l.ref} onChange={e => setLine(i, 'ref', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
                           <td className="p-1"><input value={l.concepto} onChange={e => setLine(i, 'concepto', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
-                          <td className="p-1"><input
-                            type="text" inputMode="decimal"
-                            value={l.venta}
-                            onChange={e => setLine(i, 'venta', e.target.value)}
-                            onBlur={e => blurLine(i, 'venta', e.target.value)}
-                            placeholder="0"
-                            className="w-full px-1.5 py-1 border rounded text-xs text-right"
-                          /></td>
                           <td className="p-1"><input
                             type="text" inputMode="decimal"
                             value={l.coste}
@@ -1596,15 +1593,21 @@ const RentabilidadLineas = ({ currentUser }) => {
                             placeholder="0"
                             className={`w-full px-1.5 py-1 border rounded text-xs text-right ${l._match ? 'bg-blue-50 border-blue-200' : ''}`}
                           /></td>
-                          <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {eur(m)}
-                            <span className={`block text-[10px] font-bold ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(1)}%`}</span>
-                          </td>
+                          <td className="p-1"><input
+                            type="text" inputMode="decimal"
+                            value={l.venta}
+                            onChange={e => setLine(i, 'venta', e.target.value)}
+                            onBlur={e => blurLine(i, 'venta', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-1.5 py-1 border rounded text-xs text-right"
+                          /></td>
+                          <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
+                          <td className={`p-1 text-right font-mono font-bold text-xs ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(1)}%`}</td>
                           <td className="p-1 text-center"><button onClick={() => removeLine(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                         </tr>
                       );
                     })}
-                    {editor.lines.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-slate-400 text-xs">Sin lineas</td></tr>}
+                    {editor.lines.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-slate-400 text-xs">Sin lineas</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -1612,9 +1615,9 @@ const RentabilidadLineas = ({ currentUser }) => {
               {/* Totales del editor */}
               {et && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-                  <div className="bg-indigo-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-indigo-500 font-black">Venta</p><p className="text-lg font-black text-indigo-700">{eur(et.venta)}</p></div>
                   <div className="bg-orange-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-orange-500 font-black">Coste</p><p className="text-lg font-black text-orange-700">{eur(et.coste)}</p></div>
-                  <div className={`${et.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${et.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Margen ({et.margenPct.toFixed(1)}%)</p><p className={`text-lg font-black ${et.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(et.margen)}</p></div>
+                  <div className="bg-indigo-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-indigo-500 font-black">Venta</p><p className="text-lg font-black text-indigo-700">{eur(et.venta)}</p></div>
+                  <div className={`${et.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${et.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Beneficio ({et.coste > 0 ? (et.margen / et.coste * 100).toFixed(1) : '0.0'}%)</p><p className={`text-lg font-black ${et.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(et.margen)}</p></div>
                 </div>
               )}
             </div>
