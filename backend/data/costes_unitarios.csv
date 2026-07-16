@@ -65,7 +65,7 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 15-ZPBM150400;Zocalo PVC Revestido Blanco Mate;504;31.98;8.3992;
 15-ZPNM100400;Zocalo PVC Revestido Negro Mate Altura;7;45.23;6.4614;revisar_cantidad
 15-ZPNM150400;Zocalo PVC Revestido Negro Mate Altura 150 x L.4000 mm;502;15.99;8.3992;
-15-ZPREFNG100;Accesorio bivalente Esqu./Rinc.Flexible;2;1002.7;501.35;revisar_coste
+15-ZPREFNG100;Accesorio bivalente Esqu./Rinc.Flexible Zocalo PVC Negro Alt.100mm;2;1002.7;0.7354;
 15-ZPREFNG150;Accesorio bivalente Esqu./Rinc.Flexible;4;1503.04;375.76;revisar_coste
 15-ZZPABZALPR;Pinza Abrazadera Sujeción Zocalo Aluminio;24;0.93;0.0387;revisar_coste
 15-ZZPABZPVPR;Pinza Abrazadera Sujeción Zocalo PVC;50;2.45;0.049;revisar_coste
