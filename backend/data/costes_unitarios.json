@@ -2692,24 +2692,24 @@
   "nombre": "Suelo SPC FUSION base IXPE espesor",
   "cantidad": 680.0,
   "coste_total": 228112.43,
-  "coste_unitario": 335.4595,
-  "revisar": "revisar_coste"
+  "coste_unitario": 6.63,
+  "revisar": ""
  },
  {
   "codigo": "SPC-VERA1524X228",
   "nombre": "Suelo SPC VERA base IXPE espesor tota5l",
   "cantidad": 780.0,
   "coste_total": 82136.23,
-  "coste_unitario": 105.3029,
-  "revisar": "revisar_coste"
+  "coste_unitario": 6.63,
+  "revisar": ""
  },
  {
   "codigo": "SPC-VOLARE1524X228",
   "nombre": "SPC VOLARE base IXPE espesor",
   "cantidad": 415.0,
   "coste_total": 228845.37,
-  "coste_unitario": 551.4346,
-  "revisar": "revisar_coste"
+  "coste_unitario": 6.63,
+  "revisar": ""
  },
  {
   "codigo": "SUJETOPASIVO",
