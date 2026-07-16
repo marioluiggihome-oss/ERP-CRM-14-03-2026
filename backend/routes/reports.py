@@ -105,10 +105,12 @@ async def generate_rentabilidad_report(
             if fecha_hasta and ficha_fecha > fecha_hasta:
                 continue
             
-            # Filtro por cliente
+            # Filtro por cliente: casa por NOMBRE o por CÓDIGO de cliente
             if cliente:
+                q = cliente.lower().strip()
                 ficha_cliente = ficha.get("cliente", "").lower()
-                if cliente.lower() not in ficha_cliente:
+                ficha_cod = str(ficha.get("clienteCodigo", "") or "").lower()
+                if q not in ficha_cliente and q not in ficha_cod:
                     continue
             
             # Filtro por tipo de documento
@@ -440,22 +442,30 @@ async def get_available_filters():
         fichas = await fichas_cursor.to_list(length=1000)
 
         clientes = set()
+        clientes_map = {}  # nombre -> codigo (para poder buscar por código de cliente)
         categorias = set()
         creadores = set()
         doc_types = set()
         fechas = []
-        
+
         for ficha in fichas:
-            clientes.add(ficha.get("cliente", ""))
+            nom = ficha.get("cliente", "")
+            clientes.add(nom)
+            if nom and nom not in clientes_map:
+                clientes_map[nom] = str(ficha.get("clienteCodigo", "") or "")
             doc_types.add(ficha.get("docType", ""))
             creadores.add(ficha.get("createdByName", ""))
             if ficha.get("fecha"):
                 fechas.append(ficha["fecha"])
             for line in ficha.get("lines", []):
                 categorias.add(classify_line(line.get("concepto", "")))
-        
+
         return {
             "clientes": sorted([c for c in clientes if c]),
+            "clientesInfo": sorted(
+                [{"nombre": n, "codigo": c} for n, c in clientes_map.items() if n],
+                key=lambda x: x["nombre"],
+            ),
             "categorias": sorted([c for c in categorias if c]),
             "creadores": sorted([c for c in creadores if c]),
             "docTypes": sorted([d for d in doc_types if d]),

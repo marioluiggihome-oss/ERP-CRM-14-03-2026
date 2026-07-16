@@ -29,6 +29,7 @@ const ReportGenerator = () => {
   // Opciones de filtros disponibles
   const [availableFilters, setAvailableFilters] = useState({
     clientes: [],
+    clientesInfo: [],
     categorias: [],
     creadores: [],
     docTypes: [],
@@ -222,18 +223,25 @@ const ReportGenerator = () => {
               {/* Cliente */}
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                  <User size={10} /> Cliente
+                  <User size={10} /> Cliente (nombre o código)
                 </label>
-                <select
+                <input
+                  list="report-clientes-datalist"
                   value={filters.cliente}
                   onChange={(e) => setFilters(prev => ({ ...prev, cliente: e.target.value }))}
+                  placeholder="Todos · escribe nombre o código"
                   className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
-                >
-                  <option value="">Todos los clientes</option>
-                  {availableFilters.clientes.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                />
+                <datalist id="report-clientes-datalist">
+                  {(availableFilters.clientesInfo && availableFilters.clientesInfo.length
+                    ? availableFilters.clientesInfo
+                    : (availableFilters.clientes || []).map(n => ({ nombre: n, codigo: '' }))
+                  ).flatMap(c => {
+                    const opts = [<option key={c.nombre} value={c.nombre}>{c.codigo ? `${c.nombre} (${c.codigo})` : c.nombre}</option>];
+                    if (c.codigo) opts.push(<option key={`${c.codigo}-cod`} value={c.codigo}>{`${c.codigo} — ${c.nombre}`}</option>);
+                    return opts;
+                  })}
+                </datalist>
               </div>
               
               {/* Categoría */}
