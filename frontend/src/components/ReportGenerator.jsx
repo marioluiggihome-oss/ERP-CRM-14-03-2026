@@ -433,13 +433,17 @@ const ReportGenerator = () => {
                       <th className="text-left px-4 py-2 font-bold text-slate-500">Concepto</th>
                       <th className="text-left px-4 py-2 font-bold text-slate-500">Cliente</th>
                       <th className="text-left px-4 py-2 font-bold text-slate-500">Categoría</th>
-                      <th className="text-right px-4 py-2 font-bold text-slate-500">Venta</th>
                       <th className="text-right px-4 py-2 font-bold text-slate-500">Coste</th>
+                      <th className="text-right px-4 py-2 font-bold text-slate-500">Venta</th>
                       <th className="text-right px-4 py-2 font-bold text-slate-500">Margen</th>
+                      <th className="text-right px-4 py-2 font-bold text-slate-500">%</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {report.topLines.map((line, i) => (
+                    {report.topLines.map((line, i) => {
+                      const lmargen = (Number(line.venta) || 0) - (Number(line.coste) || 0);
+                      const mpct = (Number(line.coste) || 0) > 0 ? (lmargen / (Number(line.coste) || 0) * 100) : null;
+                      return (
                       <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
                         <td className="px-4 py-2 font-mono text-indigo-600 font-bold">{line.ref || '—'}</td>
                         <td className="px-4 py-2 text-slate-700 max-w-[300px] truncate">{line.concepto}</td>
@@ -449,11 +453,13 @@ const ReportGenerator = () => {
                             {line.categoria}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-right font-bold text-slate-800">{eur(line.venta)}</td>
                         <td className="px-4 py-2 text-right text-red-500">{eur(line.coste)}</td>
-                        <td className="px-4 py-2 text-right font-bold text-emerald-600">{eur(line.margen)}</td>
+                        <td className="px-4 py-2 text-right font-bold text-slate-800">{eur(line.venta)}</td>
+                        <td className={`px-4 py-2 text-right font-bold ${lmargen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(lmargen)}</td>
+                        <td className={`px-4 py-2 text-right font-bold ${lmargen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : pct(mpct)}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -474,8 +480,10 @@ const ReportGenerator = () => {
                         <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">{ficha.fecha}</span>
                       </div>
                       <div className="flex items-center gap-4 text-xs">
+                        <span className="text-slate-500">Coste: <strong className="text-red-500">{eur(ficha.totals.coste)}</strong></span>
                         <span className="text-slate-500">Venta: <strong className="text-slate-800">{eur(ficha.totals.venta)}</strong></span>
-                        <span className="text-slate-500">Margen: <strong className="text-emerald-600">{eur(ficha.totals.margen)}</strong></span>
+                        <span className="text-slate-500">Margen: <strong className="text-emerald-600">{eur((Number(ficha.totals.venta) || 0) - (Number(ficha.totals.coste) || 0))}</strong></span>
+                        <span className="text-slate-500">%: <strong className="text-emerald-500">{(Number(ficha.totals.coste) || 0) > 0 ? pct(((Number(ficha.totals.venta) || 0) - (Number(ficha.totals.coste) || 0)) / (Number(ficha.totals.coste) || 0) * 100) : '—'}</strong></span>
                       </div>
                     </div>
                     <table className="w-full text-[11px]">
@@ -484,22 +492,28 @@ const ReportGenerator = () => {
                           <th className="text-left px-3 py-1.5 font-bold text-slate-400">Ref</th>
                           <th className="text-left px-3 py-1.5 font-bold text-slate-400">Concepto</th>
                           <th className="text-right px-3 py-1.5 font-bold text-slate-400">Cant.</th>
-                          <th className="text-right px-3 py-1.5 font-bold text-slate-400">Venta</th>
                           <th className="text-right px-3 py-1.5 font-bold text-slate-400">Coste</th>
+                          <th className="text-right px-3 py-1.5 font-bold text-slate-400">Venta</th>
                           <th className="text-right px-3 py-1.5 font-bold text-slate-400">Margen</th>
+                          <th className="text-right px-3 py-1.5 font-bold text-slate-400">%</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {ficha.lines.map((line, j) => (
+                        {ficha.lines.map((line, j) => {
+                          const lmargen = (Number(line.venta) || 0) - (Number(line.coste) || 0);
+                          const lpct = (Number(line.coste) || 0) > 0 ? (lmargen / (Number(line.coste) || 0) * 100) : null;
+                          return (
                           <tr key={j} className="border-t border-slate-100">
                             <td className="px-3 py-1.5 font-mono text-indigo-500 text-[10px]">{line.ref || '—'}</td>
                             <td className="px-3 py-1.5 text-slate-700">{line.concepto}</td>
                             <td className="px-3 py-1.5 text-right text-slate-500">{line.cantidad}</td>
-                            <td className="px-3 py-1.5 text-right font-bold">{eur(line.venta)}</td>
                             <td className="px-3 py-1.5 text-right text-red-500">{eur(line.coste)}</td>
-                            <td className="px-3 py-1.5 text-right font-bold text-emerald-600">{eur(line.margen)}</td>
+                            <td className="px-3 py-1.5 text-right font-bold">{eur(line.venta)}</td>
+                            <td className={`px-3 py-1.5 text-right font-bold ${lmargen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(lmargen)}</td>
+                            <td className={`px-3 py-1.5 text-right font-bold ${lmargen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{lpct === null ? '—' : pct(lpct)}</td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

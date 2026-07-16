@@ -342,13 +342,13 @@ async def generate_rentabilidad_pdf(
     # Por categoría
     if data["byCategory"]:
         elements.append(Paragraph("POR CATEGORÍA", styles['Heading2']))
-        cat_data = [["Categoría", "Líneas", "Venta (€)", "Coste (€)", "Margen (€)", "% Total"]]
+        cat_data = [["Categoría", "Líneas", "Coste (€)", "Venta (€)", "Margen (€)", "% Total"]]
         for cat in data["byCategory"]:
             cat_data.append([
                 cat["categoria"],
                 str(cat["count"]),
-                f"{cat['venta']:,.2f}",
                 f"{cat['coste']:,.2f}",
+                f"{cat['venta']:,.2f}",
                 f"{cat['margen']:,.2f}",
                 f"{cat['pctTotal']:.1f}%",
             ])
@@ -368,13 +368,13 @@ async def generate_rentabilidad_pdf(
     # Por cliente
     if data["byClient"]:
         elements.append(Paragraph("POR CLIENTE", styles['Heading2']))
-        cli_data = [["Cliente", "Docs", "Venta (€)", "Coste (€)", "Margen (€)", "% Total"]]
+        cli_data = [["Cliente", "Docs", "Coste (€)", "Venta (€)", "Margen (€)", "% Total"]]
         for cli in data["byClient"]:
             cli_data.append([
                 cli["cliente"][:30],
                 str(cli["docs"]),
-                f"{cli['venta']:,.2f}",
                 f"{cli['coste']:,.2f}",
+                f"{cli['venta']:,.2f}",
                 f"{cli['margen']:,.2f}",
                 f"{cli['pctTotal']:.1f}%",
             ])
