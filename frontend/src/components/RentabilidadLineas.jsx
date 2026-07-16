@@ -402,9 +402,25 @@ const RentabilidadLineas = ({ currentUser }) => {
     finally { setMatching(false); }
   };
 
+  // Normaliza separador decimal: acepta tanto coma como punto
+  const parseDecimal = (val) => {
+    if (val === '' || val === null || val === undefined) return 0;
+    const normalized = String(val).replace(',', '.');
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? 0 : parsed;
+  };
   const setLine = (i, field, val) => {
     const lines = [...editor.lines];
-    lines[i] = { ...lines[i], [field]: field === 'concepto' || field === 'ref' ? val : (parseFloat(val) || 0) };
+    const isText = field === 'concepto' || field === 'ref';
+    // Para campos numéricos guardamos el valor raw mientras se escribe (para no
+    // interrumpir la edición) y sólo convertimos a número al guardar.
+    lines[i] = { ...lines[i], [field]: isText ? val : val };
+    setEditor({ ...editor, lines });
+  };
+  // Al salir del campo numérico (blur) normalizamos el valor a número
+  const blurLine = (i, field, val) => {
+    const lines = [...editor.lines];
+    lines[i] = { ...lines[i], [field]: parseDecimal(val) };
     setEditor({ ...editor, lines });
   };
   const addLine = () => setEditor({ ...editor, lines: [...editor.lines, { id: `ln-${Date.now()}`, ref: '', concepto: '', cantidad: 1, venta: 0, coste: 0 }] });
@@ -449,7 +465,13 @@ const RentabilidadLineas = ({ currentUser }) => {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: overwriteId, ref: editor.ref, cliente: editor.cliente, clienteCodigo: editor.clienteCodigo || '', fecha: editor.fecha,
-          docType: editor.docType, lines: editor.lines,
+          docType: editor.docType,
+          // Normalizar separador decimal (coma o punto) antes de guardar
+          lines: (editor.lines || []).map(l => ({
+            ...l,
+            venta: parseDecimal(l.venta),
+            coste: parseDecimal(l.coste),
+          })),
           createdBy: currentUser?.id, createdByName: currentUser?.clientName || currentUser?.username,
         }),
       });
@@ -1305,8 +1327,22 @@ const RentabilidadLineas = ({ currentUser }) => {
                         <tr key={l.id || i}>
                           <td className="p-1"><input value={l.ref} onChange={e => setLine(i, 'ref', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
                           <td className="p-1"><input value={l.concepto} onChange={e => setLine(i, 'concepto', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs" /></td>
-                          <td className="p-1"><input type="number" step="0.01" value={l.venta} onChange={e => setLine(i, 'venta', e.target.value)} className="w-full px-1.5 py-1 border rounded text-xs text-right" /></td>
-                          <td className="p-1"><input type="number" step="0.01" value={l.coste} onChange={e => setLine(i, 'coste', e.target.value)} className={`w-full px-1.5 py-1 border rounded text-xs text-right ${l._match ? 'bg-blue-50 border-blue-200' : ''}`} /></td>
+                          <td className="p-1"><input
+                            type="text" inputMode="decimal"
+                            value={l.venta}
+                            onChange={e => setLine(i, 'venta', e.target.value)}
+                            onBlur={e => blurLine(i, 'venta', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-1.5 py-1 border rounded text-xs text-right"
+                          /></td>
+                          <td className="p-1"><input
+                            type="text" inputMode="decimal"
+                            value={l.coste}
+                            onChange={e => setLine(i, 'coste', e.target.value)}
+                            onBlur={e => blurLine(i, 'coste', e.target.value)}
+                            placeholder="0"
+                            className={`w-full px-1.5 py-1 border rounded text-xs text-right ${l._match ? 'bg-blue-50 border-blue-200' : ''}`}
+                          /></td>
                           <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
                           <td className="p-1 text-center"><button onClick={() => removeLine(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                         </tr>
