@@ -337,11 +337,11 @@
  },
  {
   "codigo": "127.0715.191",
-  "nombre": "Fregadero FRANKE SRX 110-40 Bajo Encimera",
+  "nombre": "Fregadero FRANKE SRX 110-40 Bajo Encimera 40.40 Inox",
   "cantidad": 240.0,
   "coste_total": 108.54,
-  "coste_unitario": 0.4523,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 54.2685,
+  "revisar": ""
  },
  {
   "codigo": "13-AERM2R30NG",
@@ -2297,11 +2297,11 @@
  },
  {
   "codigo": "CORO60X1",
-  "nombre": "Campana de integración JOHNSON",
+  "nombre": "Campana de integracion JOHNSON CORO60X1 Inox 60 cm",
   "cantidad": 6081.0,
   "coste_total": 1273.6,
-  "coste_unitario": 0.2094,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 159.2,
+  "revisar": ""
  },
  {
   "codigo": "CORO90X1",

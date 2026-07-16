@@ -41,7 +41,7 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 122.0375.818;Fregadero FRANKE BMG MU 50.40 PLUS;410;0.0;0.0;sin_coste_origen
 122.0393.818;Fregadero FRANKE BOX BXX 110-68;1;237.5;237.5;
 125.0633.508;Fregadero FRANKE KUBUS KNG 110-52;1;278.85;278.85;
-127.0715.191;Fregadero FRANKE SRX 110-40 Bajo Encimera;240;108.54;0.4523;revisar_cantidad
+127.0715.191;Fregadero FRANKE SRX 110-40 Bajo Encimera 40.40 Inox;240;108.54;54.2685;
 13-AERM2R30NG;Tapa/Remate Encimera 2 Radios Grueso;3;4.95;1.65;
 13-AEU92R30NG;Unión 90º Reversible Encimera 2 Radios;13;1.98;0.1523;
 13-AEURRT40NG;Union Recta Encimera Recta Grueso;1;1.21;1.21;
@@ -286,7 +286,7 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 BE623LMB3;Microondas SIEMENS BE623LMB3 Integrable;201;0.0;0.0;sin_coste_origen
 BER7321B1;Microondas BOSCH BER7321B1 Integrable;11;0.0;0.0;sin_coste_origen
 BF525LMB1;SIEMENS MICROONDAS BF525LMB1 20;1;0.0;0.0;sin_coste_origen
-CORO60X1;Campana de integración JOHNSON;6081;1273.6;0.2094;revisar_cantidad
+CORO60X1;Campana de integracion JOHNSON CORO60X1 Inox 60 cm;6081;1273.6;159.2;
 CORO90X1;Campana de integración JOHNSON;9021;366.4;0.0406;revisar_cantidad
 DANUBIO90;Lavadora JOHNSON DANUBIO90 Libre;1;226.02;226.02;revisar_coste
 DANUBIODRY90;Secadora JOHNSON DANUBIODRY90;1;348.37;348.37;revisar_coste
