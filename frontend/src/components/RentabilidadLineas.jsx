@@ -1080,7 +1080,7 @@ const RentabilidadLineas = ({ currentUser }) => {
                       >
                         {markingPaid === f.id
                           ? <Loader2 size={11} className="animate-spin" />
-                          : '❓'} Pagada
+                          : '❓✔'} Pagada
                       </button>
                     )}
                     <button onClick={(e) => { e.stopPropagation(); removeFicha(f.id); }} className="text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
