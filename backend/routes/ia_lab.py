@@ -473,6 +473,20 @@ COMPLETITUD (CRÍTICO — el error más habitual es DETECTAR DE MENOS):
 - Antes de responder, comprueba que el nº total de muebles es coherente con el
   TAMAÑO de la cocina visible; si parece bajo, vuelve a recorrer el plano.
 
+MÉTODO DE CONTEO EN 4 PASOS (síguelo SIEMPRE antes de escribir el JSON):
+  PASO 1 — Cuenta TODOS los FRENTES visibles: cada puerta y cada cajón, arriba (altos)
+    y abajo (bajos) por separado. Fíjate en tiradores, ranuras entre puertas y líneas
+    de cajón; ahí hay un frente aunque el mueble parezca continuo.
+  PASO 2 — Agrupa los frentes en MÓDULOS: un módulo puede tener 1 puerta, 2 puertas o
+    varios cajones. Convierte cada grupo de frentes en un módulo con su tipo y ancho.
+  PASO 3 — Reparte los ANCHOS: usa las cotas rotuladas; para los tramos sin cota, usa la
+    medida total de la pared/escala para repartir de forma que la SUMA de anchos de cada
+    fila cuadre con el largo de esa pared. Anchos estándar: 300/400/450/500/600/800/900/1000/1200.
+  PASO 4 — VERIFICA antes de responder: (a) que "resumen.total_altos/total_bajos/…"
+    COINCIDE con el nº real de entradas de cada tipo en "muebles_detectados"; (b) que no
+    has repetido un módulo inexistente ni omitido ninguno; (c) que cada medida está en rango.
+  Si algo no cuadra, corrígelo y vuelve a contar antes de dar la respuesta.
+
 Responde SOLO con JSON válido:
 {
   "muebles_detectados": [

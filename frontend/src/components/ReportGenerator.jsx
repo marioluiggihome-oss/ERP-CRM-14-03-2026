@@ -238,11 +238,12 @@ const ReportGenerator = () => {
                   {(availableFilters.clientesInfo && availableFilters.clientesInfo.length
                     ? availableFilters.clientesInfo
                     : (availableFilters.clientes || []).map(n => ({ nombre: n, codigo: '' }))
-                  ).flatMap(c => {
-                    const opts = [<option key={c.nombre} value={c.nombre}>{c.codigo ? `${c.nombre} (${c.codigo})` : c.nombre}</option>];
-                    if (c.codigo) opts.push(<option key={`${c.codigo}-cod`} value={c.codigo}>{`${c.codigo} — ${c.nombre}`}</option>);
-                    return opts;
-                  })}
+                  ).map(c => (
+                    // Una sola entrada por cliente. El texto incluye el código para poder
+                    // buscarlo; el valor es el nombre. También puedes teclear el código y
+                    // filtrar (el backend casa por nombre o código).
+                    <option key={c.nombre} value={c.nombre}>{c.codigo ? `${c.nombre} (${c.codigo})` : c.nombre}</option>
+                  ))}
                 </datalist>
               </div>
               

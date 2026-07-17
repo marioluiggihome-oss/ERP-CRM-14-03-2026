@@ -536,9 +536,7 @@ IMPORTANTE:
                         image_base64=pimg,
                         prompt=extraction_prompt,
                         session_id=f"digitalizador-{uuid.uuid4().hex[:8]}",
-                        # Pro detecta mejor los muebles en disenos/alzados/planos (imagen).
-                        # Si no estuviera disponible, el servicio hace fallback a flash.
-                        model="gemini-2.5-pro",
+                        model="gemini-2.5-flash",
                     )
                 except Exception as e:
                     # Un fallo en una página (timeout, cuota IA…) no debe tumbar
