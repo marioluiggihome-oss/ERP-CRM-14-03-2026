@@ -56,7 +56,7 @@ const extractRefNumber = (ref) => {
   return match ? parseInt(match[1], 10) : 999999;
 };
 
-const RentabilidadLineas = ({ currentUser }) => {
+const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport }) => {
   const [docType, setDocType] = useState('factura');
   const [converting, setConverting] = useState('');
   const [fichas, setFichas] = useState([]);
@@ -603,6 +603,15 @@ const RentabilidadLineas = ({ currentUser }) => {
     } catch { /* noop */ }
   };
 
+  // Navegación desde el Generador de informes: abre automáticamente el documento
+  // cuya referencia coincide con openRef.
+  useEffect(() => {
+    if (!openRef) return;
+    const target = normRef(openRef);
+    const f = (fichas || []).find(x => normRef(x.ref) === target);
+    if (f) { openFicha(f.id); if (onOpenedRef) onOpenedRef(); }
+  }, [openRef, fichas]);
+
   const viewDoc = async (fichaId, docId) => {
     try {
       const r = await fetch(`${API_URL}/api/rentabilidad/fichas/${fichaId}/docs/${docId}`);
@@ -1012,6 +1021,13 @@ const RentabilidadLineas = ({ currentUser }) => {
 
   return (
     <div>
+      {/* Botón de retroceso al Generador de informes (cuando llegas desde ahí) */}
+      {onBackToReport && (
+        <button onClick={onBackToReport}
+          className="mb-3 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 inline-flex items-center gap-2">
+          ← Volver al informe
+        </button>
+      )}
       {/* Pestanas */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         {TABS.map(t => {

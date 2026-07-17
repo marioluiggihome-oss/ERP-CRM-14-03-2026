@@ -20,6 +20,9 @@ const projectLabel = (r) => {
 
 const RentabilidadPanel = ({ currentUser }) => {
   const [view, setView] = useState('lineas'); // 'lineas' (por líneas/documentos) por defecto | 'proyecto' | 'informes'
+  // Navegación desde el informe a un documento concreto (y botón de retroceso al informe).
+  const [openRef, setOpenRef] = useState(null);
+  const [cameFromReport, setCameFromReport] = useState(false);
   const [data, setData] = useState({ rows: [], totales: {} });
   const [loading, setLoading] = useState(true);
   const [costModal, setCostModal] = useState(null);
@@ -407,9 +410,12 @@ const RentabilidadPanel = ({ currentUser }) => {
 
       {view === 'ingresos' && <IngresosACuenta currentUser={currentUser} />}
 
-      {view === 'informes' && <ReportGenerator />}
+      {view === 'informes' && <ReportGenerator onOpenDocument={(ref) => { setOpenRef(ref); setCameFromReport(true); setView('lineas'); }} />}
 
-      {view === 'lineas' && <RentabilidadLineas currentUser={currentUser} />}
+      {view === 'lineas' && <RentabilidadLineas currentUser={currentUser}
+        openRef={openRef}
+        onOpenedRef={() => setOpenRef(null)}
+        onBackToReport={cameFromReport ? () => { setCameFromReport(false); setView('informes'); } : null} />}
 
       {view === 'proyecto' && currentUser?.isAdmin && (<>
       {/* Modal: revisar factura leida por IA antes de registrar */}
