@@ -1674,6 +1674,10 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                 <p className="text-xs opacity-70">{TABS.find(t => t.key === viewing.docType)?.label} - {viewing.fecha}</p>
               </div>
               <div className="flex items-center gap-2">
+                {onBackToReport && (
+                  <button onClick={() => { setViewing(null); onBackToReport(); }}
+                    className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 rounded-lg text-xs font-bold">← Volver al informe</button>
+                )}
                 <button onClick={() => {
                     if (bloqueada(viewing)) { alert('Ficha con visto bueno del controller: bloqueada.\n\nSolo el master puede modificarla: mantén pulsada la tecla Shift un par de segundos (desbloqueo) y vuelve a intentarlo.'); return; }
                     setViewing(null); setEditor({ ...viewing, saleDoc: null, costDocs: [], existingDocs: viewing.docs || [] });
