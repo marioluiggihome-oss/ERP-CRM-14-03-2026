@@ -537,13 +537,14 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                 {(() => {
                   const rp = analysisResult.resumen_precios || analysisResult.resumen?.resumen_precios;
                   if (!rp) return null;
-                  // Estimar con la MISMA base que el presupuesto: puntos × valor del punto
+                  // Total en EUROS del backend (Σ precio_pvp × cantidad): es el mismo que el
+                  // precio por línea y el que se vuelca al presupuesto. Antes se recalculaba
+                  // como puntos × valor-de-punto-del-frontend y daba un total incoherente.
                   const lib = (analysisResult.library || 'ZC').toUpperCase();
                   const pointValue = (state?.libraryPointValues?.[lib])
                     ?? (state?.currentModule === 'despiece' ? state?.pointValueDespiece : state?.pointValueMontada)
                     ?? 1;
-                  const totalPuntos = rp.total_puntos ?? rp.total_pvp ?? 0;
-                  const estimado = Math.round(totalPuntos * pointValue);
+                  const estimado = Math.round(Number(rp.total_pvp ?? ((rp.total_puntos ?? 0) * pointValue)));
                   return (
                   <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
                     <div className="flex items-center justify-between">
@@ -585,7 +586,7 @@ const Visualizer = ({ images, state, setState, onAddToBudget }) => {
                   const pointValue = (state?.libraryPointValues?.[lib])
                     ?? (state?.currentModule === 'despiece' ? state?.pointValueDespiece : state?.pointValueMontada)
                     ?? 1;
-                  const estimado = Math.round((rp.total_puntos ?? rp.total_pvp ?? 0) * pointValue);
+                  const estimado = Math.round(Number(rp.total_pvp ?? ((rp.total_puntos ?? 0) * pointValue)));
                   return (
                   <button
                     onClick={addAllFurnitureToBudget}

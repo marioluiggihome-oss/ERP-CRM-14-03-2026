@@ -11,7 +11,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 const pct = (n) => `${(Number(n) || 0).toFixed(1)}%`;
 
-const ReportGenerator = () => {
+const ReportGenerator = ({ onOpenDocument }) => {
   // Filtros
   const [filters, setFilters] = useState({
     fecha_desde: '',
@@ -469,8 +469,11 @@ const ReportGenerator = () => {
                       const lmargen = (Number(line.venta) || 0) - (Number(line.coste) || 0);
                       const mpct = (Number(line.coste) || 0) > 0 ? (lmargen / (Number(line.coste) || 0) * 100) : null;
                       return (
-                      <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="px-4 py-2 font-mono text-indigo-600 font-bold">{line.ref || '—'}</td>
+                      <tr key={i}
+                        onClick={() => onOpenDocument && line.docRef && onOpenDocument(line.docRef)}
+                        title={line.docRef ? `Ir al documento ${line.docRef}` : ''}
+                        className={`border-b border-slate-100 hover:bg-slate-50 ${onOpenDocument && line.docRef ? 'cursor-pointer' : ''}`}>
+                        <td className="px-4 py-2 font-mono text-indigo-600 font-bold">{line.ref || '—'}{line.docRef && <span className="block text-[9px] text-slate-400 font-normal">📄 {line.docRef}</span>}</td>
                         <td className="px-4 py-2 text-slate-700 max-w-[300px] truncate">{line.concepto}</td>
                         <td className="px-4 py-2 text-slate-500">{line.cliente}</td>
                         <td className="px-4 py-2">
@@ -498,9 +501,11 @@ const ReportGenerator = () => {
               <div className="p-4 space-y-4">
                 {report.fichas.map((ficha, i) => (
                   <div key={i} className="border border-slate-200 rounded-lg overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-3 flex items-center justify-between">
+                    <div className={`bg-slate-50 px-4 py-3 flex items-center justify-between ${onOpenDocument && ficha.ref ? 'cursor-pointer hover:bg-slate-100' : ''}`}
+                      onClick={() => onOpenDocument && ficha.ref && onOpenDocument(ficha.ref)}
+                      title={ficha.ref ? `Ir al documento ${ficha.ref}` : ''}>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-black text-indigo-600">{ficha.ref}</span>
+                        <span className="text-sm font-black text-indigo-600">{onOpenDocument && ficha.ref ? '📄 ' : ''}{ficha.ref}</span>
                         <span className="text-xs text-slate-500">{ficha.cliente}</span>
                         <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">{ficha.fecha}</span>
                       </div>
