@@ -23,8 +23,8 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 11-PRP2SPCTGR;Soporte C/Taco Perfil Alum Estriado;4;0.27;0.0675;
 112.0264.987;Válvula Man. FRANKE Integrada Premium;1;0.0;0.0;sin_coste_origen
 112.0671.788;Rebosadero FRANKE Rectangular Hidden;1;0.0;0.0;sin_coste_origen
-112500036;Placa TEKA IZF 68780 MST Total Flex Inducción;160;640.08;4.0005;
-112570022;Placa TEKA GZC 63310 XBN NAT Cristal;31;211.58;6.8252;revisar_coste
+112500036;Placa TEKA IZF 68780 MST Total Flex Inducción;160;640.08;640.08;
+112570022;Placa TEKA GZC 63310 XBN NAT Cristal;31;211.58;211.58;
 112660000;Placa Teppan Yaki TEKA YZC 32600 XFL;1;819.53;819.53;
 114.0361.524;Fregadero FRANKE SIRIUS SID-610-50;1;124.25;124.25;
 115.0550.427;Grifo FRANKE ATLAS NEO PULL OUT Negro;1;240.9;240.9;
@@ -52,8 +52,8 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 14-CCRNC242LB;"Rincon Copete En forma de "" C"" (Convexo)243x24.mm.U3n,d12.Blanco";2432;0.66;0.2281;
 14-CCRNC242LN;"Rincon Copete En forma de "" C"" (Convexo)242x24.mm.U2n,d08.Negro";2422;0.44;0.32;
 14-CCRNC242PM;"Rincon Copete En forma de "" C"" (Convexo)249x24.mm.U9n,d64.";2492;3.86;0.4285;
-14-CCTAPIZDLB;"Tapa IZ/Dr. Copete En forma de "" C""";22;0.24;0.0109;revisar_coste
-14-CCTAPIZDLN;"Tapa IZ/Dr. Copete En forma de "" C""";42;1.52;0.0362;revisar_coste
+14-CCTAPIZDLB;"Tapa IZ/Dr. Copete En forma de "" C""";22;0.24;0.1175;
+14-CCTAPIZDLN;"Tapa IZ/Dr. Copete En forma de "" C""";42;1.52;0.38;
 14-CCTAPIZDPM;"Tapa IZ/Dr. Copete En forma de "" C""";102;2.56;0.2557;
 144.0667.810;Fregadero MEPAMSA SQUARE 50.40;3;353.52;117.84;
 14ESRENE02;Esquina copete rectangular negro;2;0.21;0.105;
@@ -148,14 +148,14 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 25-3MO500B03A;Blum Set Cajón ANTARO M Gris Orión;2;35.68;17.84;revisar_coste
 25-5785001M1J;Blum Juego Guias TANDEMBOX 30Kg.TOB;950;80.65;0.0849;revisar_cantidad
 25-AXP084500B;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m8m.Blan1c1o7,.18;48;77.61;1.6169;
-25-AXP084500G;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m5m.Gris;45;48.51;1.078;
+25-AXP084500G;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m5m.Gris;45;48.51;9.69;
 25-AXP084550B;Set Cajón AXIS PRO 40Kg.Fondo 550mm.H-84-m1m.Blan-c1o9,.19;41;0.0;0.0;sin_coste_origen
 25-AXP167300G;Set Gaveta AXIS PRO 40Kg.Fondo 300mm.H-1267mm.Gr3is2;1267;22.76;0.018;revisar_cantidad
 25-AXP167350G;Set Gaveta AXIS PRO 40Kg.Fondo 350mm.H-1467mm.Gr6is7;1467;43.4;0.0296;revisar_cantidad
-25-AXP167500B;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1667mm.B1la36n,c2o3.;1667;71.52;0.0429;revisar_cantidad
-25-AXP167500G;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1767mm.G1r4is7;1767;83.44;0.0472;revisar_cantidad
+25-AXP167500B;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1667mm.B1la36n,c2o3.;1667;71.52;11.92;
+25-AXP167500G;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1767mm.G1r4is7;1767;83.44;11.92;
 25-AXP199500B;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-11099mm.B2la20n,c0o5.;11099;122.22;0.011;revisar_cantidad
-25-AXP199500G;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1299mm.Gr4is4;1299;24.52;0.0189;revisar_cantidad
+25-AXP199500G;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1299mm.Gr4is4;1299;24.52;12.45;
 25-AXPZESWEAG;Kit Frente+Fijaciones Cajon Interior AXIS;1;9.41;9.41;
 25-AXPZESWECG;Kit Frente+Barra+Fijaciones Gaveta Interior;1;711.29;711.29;revisar_coste
 25-T60B35601S;Blum Set TOB TANDEMBOX L5LN.350<600mm.E1XT.Total;1;10.39;10.39;
@@ -200,18 +200,18 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 36-22F3901UND;Blum Brazo HF-TOP39 Alt. 840-1200mm.;2;19.12;9.56;
 36-22F39STDPM;Blum Set Brazos HF-TOP 39 ST/SD Puerta;1;0.0;0.0;sin_coste_origen
 37OKA41;Freg LUIGGI GRANITO NEGRO 45X45;0;0.0;;sin_coste_origen
-37OKA54;Freg LUIGGI inox B/encimera 50X40x20;11;45.13;4.1027;
+37OKA54;Freg LUIGGI inox B/encimera 50X40x20;11;45.13;45.133;
 3BD967GN;Campana BALAY 3BD967GN Integrada;1;304.18;304.18;revisar_cantidad
 3CB4130X3;Horno BALAY 3CB4130X3 Compacto;1;325.0;325.0;
 3CG6112X3;Microondas BALAY 3CG6112X3 Integrable;1;113.46;113.46;revisar_cantidad
 3EB765LQ;Placa BALAY 3EB765LQ;1;253.32;253.32;
 3EB865FR;Placa BALAY 3EB865FR Inducción 3 fuegos;1;223.98;223.98;
-3HB413CX3;Horno BALAY 3HB413CX3 Multifunción;16;330.46;20.6537;revisar_coste
+3HB413CX3;Horno BALAY 3HB413CX3 Multifunción;16;330.46;330.46;
 3KFE753XI;Combi BALAY 3KFE753XI 203 x 60 cm;1;518.08;518.08;
 3SB093BC;Secadora BALAY 3SB093BC con Bomba;1;504.97;504.97;
 3SB582BE;Secadora BALAY 3SB582BE 8 Kg Bomba;1;366.78;366.78;
 3TS3104BH;Lavadora BALAY 3TS3104BH 10 Kg 1400;1;461.6;461.6;revisar_coste
-3TS3107BD;Lavadora BALAY 3TS3107BD Libre Instalación;110;381.23;3.4657;revisar_coste
+3TS3107BD;Lavadora BALAY 3TS3107BD Libre Instalación;110;381.23;381.23;
 3TS993BP;Lavadora BALAY 3TS993BP 9 Kg 1200;1;318.9;318.9;
 3VF5032DP;Lavavajillas BALAY 3VF5032DP integrable;1;405.83;405.83;revisar_coste
 40-C012916-B7E400AN;FENOLICA FLINT Fantastic.;1;30500.0;30500.0;revisar_coste
@@ -264,18 +264,18 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 426-ACRO07045;Casco Alto (700x330) M-45 Roble.;1;17.05;17.05;
 426-ACRO07060;Casco Alto (700x330) M-60 Roble.;2;40.18;20.09;
 426-AERO07080;Casco Alto Esc./Platero (700x330) M-80;1;18.2;18.2;
-427-ACRH08070;Casco Alto (800x330) M-70 Roble. Hercules;191;30.53;0.1598;revisar_cantidad
-427-ACRH09045;Casco Alto (900x330) M-45 Roble. Hercules;191;27.19;0.1424;revisar_cantidad
+427-ACRH08070;Casco Alto (800x330) M-70 Roble. Hercules;191;30.53;30.532;
+427-ACRH09045;Casco Alto (900x330) M-45 Roble. Hercules;191;27.19;27.192;
 427-ACRH09060;Casco Alto (900x330) M-60 Roble. Hercules;192;63.27;0.3295;revisar_cantidad
-427-ACRH09090;Casco Alto (900x330) M-90 Roble. Hercules;191;40.56;0.2124;revisar_cantidad
-427-ACRH09100;Casco Alto (900x330) M-100 Roble. Hercules;119;43.55;0.366;revisar_cantidad
-427-BARH80045;Casco Bajo (800x580) M-45 Roble. Hercules;192;60.14;0.3132;revisar_cantidad
+427-ACRH09090;Casco Alto (900x330) M-90 Roble. Hercules;191;40.56;40.5636;
+427-ACRH09100;Casco Alto (900x330) M-100 Roble. Hercules;119;43.55;43.547;
+427-BARH80045;Casco Bajo (800x580) M-45 Roble. Hercules;192;60.14;30.07;
 427-BFRH80120;Casco Bajo Fregadero (800x580) M-120;1;40.41;40.41;
 427-SCRH15090;Casco Semi Columna (1500x580) M-90;1;65.22;65.22;
 43-CAT178P130;Encimera Modelo CAT 178-P1 30x620x3600mm3.;3;175.07;58.3567;
 43-MARMFLRC40;Encimera Modelo MARMOL FLORA Canteada 40x620x3660mm;14;94.98;94.977;
 43-MARMHDP130;Encimera Modelo MARMOL HADES-P1;20136;0.0;0.0;sin_coste_origen
-43-MARMHDR513;Encimera Modelo MARMOL HADES-R5;20136;115.29;0.0057;revisar_cantidad
+43-MARMHDR513;Encimera Modelo MARMOL HADES-R5;20136;115.29;115.29;
 43-PIZ224P130;Encimera Modelo PIZ 224-P1 30x620x3600mm.2;2;112.32;56.16;
 43-ROBLEHERCL;Encimera Modelo ROBLE HERCULES-P1;21013;772.34;66.54;
 5300003;Grifo OKA Caño Alto Mod: ASTRAL Cromo;1;22.28;22.28;
@@ -287,7 +287,7 @@ BE623LMB3;Microondas SIEMENS BE623LMB3 Integrable;201;0.0;0.0;sin_coste_origen
 BER7321B1;Microondas BOSCH BER7321B1 Integrable;11;0.0;0.0;sin_coste_origen
 BF525LMB1;SIEMENS MICROONDAS BF525LMB1 20;1;0.0;0.0;sin_coste_origen
 CORO60X1;Campana de integracion JOHNSON CORO60X1 Inox 60 cm;6081;1273.6;159.2;
-CORO90X1;Campana de integración JOHNSON;9021;366.4;0.0406;revisar_cantidad
+CORO90X1;Campana de integración JOHNSON;9021;366.4;183.2;
 DANUBIO90;Lavadora JOHNSON DANUBIO90 Libre;1;226.02;226.02;revisar_coste
 DANUBIODRY90;Secadora JOHNSON DANUBIODRY90;1;348.37;348.37;revisar_coste
 DBB85CC60;Campana BOSCH DBB85CC60 Integrada;1;0.0;0.0;sin_coste_origen
@@ -300,7 +300,7 @@ GI81NACE0;Congelador 1 puerta SIEMENS GI81NACE0;1;0.0;0.0;sin_coste_origen
 GRANITODS;Fabricación encimera de cocina a medida;1;0.0;0.0;sin_coste_origen
 GUADIANA80W;Lavadora JOHNSON GUADIANA80W;2;527.06;263.53;revisar_coste
 HB734G1B1;Horno SIEMENS HB734G1B1 Multifunción;1;0.0;0.0;sin_coste_origen
-HEZ9VDKR0;Set Accesorios Recirculación BALAY;10;118.34;11.834;
+HEZ9VDKR0;Set Accesorios Recirculación BALAY;10;118.34;118.34;
 HR532GBS3;SIEMENS HORNO HR532GBS3;1;0.0;0.0;sin_coste_origen
 HRG7361B1;Horno BOSCH HRG7361B1 Multifunción;1;0.0;0.0;sin_coste_origen
 IR15ACEREXNE;Grifo NOVAMIX Extraible negro IR15;1;57.0;57.0;
@@ -309,7 +309,7 @@ JINDU230;PLACA JOHNSON JINDU230 30CM 2;7;735.0;105.0;
 JINDU3292;PLACA JOHNSON JINDU3292 3 ZONAS;2;247.2;123.6;revisar_coste
 JINDU332FLEX;Placa JOHNSON JINDU332FLEX Flexindución;1;172.0;172.0;revisar_coste
 JOMI20NINT;MICROONDAS JOHNSON JOMI20NINT;9;1844.73;204.97;revisar_coste
-JOMI28NINT;Microondas JOHNSON JOMI28NINT Integrable1;12;146.06;12.1717;revisar_coste
+JOMI28NINT;Microondas JOHNSON JOMI28NINT Integrable1;12;146.06;146.064;
 JOR45X;Horno JOHNSON JOR45X 45CM 45L 8;1;157.76;157.76;
 JOR50MI;Horno con microondas JOHNSON JOR50MI;1;292.94;292.94;
 JOR70CB;HORNO JOHNSON JOR70CB 4 FUNCIONES;1;128.37;128.37;revisar_coste
@@ -317,18 +317,18 @@ JOR70N;Horno JOHNSON JOR70N Multifunción;1;159.12;159.12;
 JOR70NQ;Horno JOHNSON JOR70NQ Pirolitico;2;471.65;235.825;revisar_coste
 JRC1851ENW;Combi JOHNSON JRC1851ENW 185 x;1;219.5;219.5;
 JRC200CN2DX;Combi JOHNSON JRC200CN2DX Libre;2;829.73;414.865;revisar_coste
-JRFS1986ENDX;Frigorífico Puerta Francesa JOHNSON;9826;164175.17;16.7082;revisar_coste
+JRFS1986ENDX;Frigorífico Puerta Francesa JOHNSON;9826;164175.17;652.87;
 JRR82Z-INT;FRIGORIFICO JRR82Z-INT JOHNSON INTEGRABL7E;7;1937.81;276.83;revisar_coste
 JRVN28FB60D;Vinoteca JOHNSON JRVN28FB60D Integrable;128;0.0;0.0;sin_coste_origen
-JVICA4201;PLACA JOHNSON JVICA4201 4 Fuegos;1;61008.0;61008.0;revisar_coste
-JWAS12EW;LAVAVAJILLAS JOHNSON JWAS12EW;121;219.3;1.8124;revisar_coste
+JVICA4201;PLACA JOHNSON JVICA4201 4 Fuegos;1;61008.0;108.0;
+JWAS12EW;LAVAVAJILLAS JOHNSON JWAS12EW;121;219.3;219.3;
 JWAS14BINT;Lavavajillas JOHNSON JWAS14BINT Integració1n;1;309.26;309.26;
-JWAS14EINT;Lavavajillas JOHNSON JWAS14EINT Int.;601;236.0;0.3927;revisar_cantidad
+JWAS14EINT;Lavavajillas JOHNSON JWAS14EINT Int.;601;236.0;236.0;
 KG39NVXCG;SIEMENS COMBI 203x60 NEGRO NO FROST;1;0.0;0.0;sin_coste_origen
 KGN39LBCF;Combi BOSCH KGN39LBCF 203 x 60 cm;1;1085.06;1085.06;
 KI81RADD0;Frigorífico 1 puerta SIEMENS KI81RADD0;1;796.34;796.34;revisar_coste
-KON908N;Campana decorativa JOHNSON KON908N;920;322.2;0.3502;revisar_cantidad
-NERVION107DRY;Lavasecadora JOHNSON NERVION107DRY;101;376.38;3.7265;revisar_coste
+KON908N;Campana decorativa JOHNSON KON908N;920;322.2;179.0;
+NERVION107DRY;Lavasecadora JOHNSON NERVION107DRY;101;376.38;376.38;
 PIJ631BB5E;Placa BOSCH PIJ631BB5E Inducción;1;270.92;270.92;
 REF;;49;0.0;0.0;sin_coste_origen
 RODI-ACQUAVIVA;FREGADERO-LAVADERO RODI ACQUAVIVA;1;143.55;143.55;
