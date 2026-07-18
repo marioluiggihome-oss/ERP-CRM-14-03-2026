@@ -196,7 +196,7 @@
   "nombre": "Placa TEKA IZF 68780 MST Total Flex Inducción",
   "cantidad": 160.0,
   "coste_total": 640.08,
-  "coste_unitario": 4.0005,
+  "coste_unitario": 640.08,
   "revisar": ""
  },
  {
@@ -204,8 +204,8 @@
   "nombre": "Placa TEKA GZC 63310 XBN NAT Cristal",
   "cantidad": 31.0,
   "coste_total": 211.58,
-  "coste_unitario": 6.8252,
-  "revisar": "revisar_coste"
+  "coste_unitario": 211.58,
+  "revisar": ""
  },
  {
   "codigo": "112660000",
@@ -428,16 +428,16 @@
   "nombre": "Tapa IZ/Dr. Copete En forma de \" C\"",
   "cantidad": 22.0,
   "coste_total": 0.24,
-  "coste_unitario": 0.0109,
-  "revisar": "revisar_coste"
+  "coste_unitario": 0.1175,
+  "revisar": ""
  },
  {
   "codigo": "14-CCTAPIZDLN",
   "nombre": "Tapa IZ/Dr. Copete En forma de \" C\"",
   "cantidad": 42.0,
   "coste_total": 1.52,
-  "coste_unitario": 0.0362,
-  "revisar": "revisar_coste"
+  "coste_unitario": 0.38,
+  "revisar": ""
  },
  {
   "codigo": "14-CCTAPIZDPM",
@@ -1196,7 +1196,7 @@
   "nombre": "Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m5m.Gris",
   "cantidad": 45.0,
   "coste_total": 48.51,
-  "coste_unitario": 1.078,
+  "coste_unitario": 9.69,
   "revisar": ""
  },
  {
@@ -1228,16 +1228,16 @@
   "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1667mm.B1la36n,c2o3.",
   "cantidad": 1667.0,
   "coste_total": 71.52,
-  "coste_unitario": 0.0429,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 11.92,
+  "revisar": ""
  },
  {
   "codigo": "25-AXP167500G",
   "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1767mm.G1r4is7",
   "cantidad": 1767.0,
   "coste_total": 83.44,
-  "coste_unitario": 0.0472,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 11.92,
+  "revisar": ""
  },
  {
   "codigo": "25-AXP199500B",
@@ -1252,8 +1252,8 @@
   "nombre": "Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1299mm.Gr4is4",
   "cantidad": 1299.0,
   "coste_total": 24.52,
-  "coste_unitario": 0.0189,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 12.45,
+  "revisar": ""
  },
  {
   "codigo": "25-AXPZESWEAG",
@@ -1612,7 +1612,7 @@
   "nombre": "Freg LUIGGI inox B/encimera 50X40x20",
   "cantidad": 11.0,
   "coste_total": 45.13,
-  "coste_unitario": 4.1027,
+  "coste_unitario": 45.133,
   "revisar": ""
  },
  {
@@ -1660,8 +1660,8 @@
   "nombre": "Horno BALAY 3HB413CX3 Multifunción",
   "cantidad": 16.0,
   "coste_total": 330.46,
-  "coste_unitario": 20.6537,
-  "revisar": "revisar_coste"
+  "coste_unitario": 330.46,
+  "revisar": ""
  },
  {
   "codigo": "3KFE753XI",
@@ -1700,8 +1700,8 @@
   "nombre": "Lavadora BALAY 3TS3107BD Libre Instalación",
   "cantidad": 110.0,
   "coste_total": 381.23,
-  "coste_unitario": 3.4657,
-  "revisar": "revisar_coste"
+  "coste_unitario": 381.23,
+  "revisar": ""
  },
  {
   "codigo": "3TS993BP",
@@ -2124,16 +2124,16 @@
   "nombre": "Casco Alto (800x330) M-70 Roble. Hercules",
   "cantidad": 191.0,
   "coste_total": 30.53,
-  "coste_unitario": 0.1598,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 30.532,
+  "revisar": ""
  },
  {
   "codigo": "427-ACRH09045",
   "nombre": "Casco Alto (900x330) M-45 Roble. Hercules",
   "cantidad": 191.0,
   "coste_total": 27.19,
-  "coste_unitario": 0.1424,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 27.192,
+  "revisar": ""
  },
  {
   "codigo": "427-ACRH09060",
@@ -2148,24 +2148,24 @@
   "nombre": "Casco Alto (900x330) M-90 Roble. Hercules",
   "cantidad": 191.0,
   "coste_total": 40.56,
-  "coste_unitario": 0.2124,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 40.5636,
+  "revisar": ""
  },
  {
   "codigo": "427-ACRH09100",
   "nombre": "Casco Alto (900x330) M-100 Roble. Hercules",
   "cantidad": 119.0,
   "coste_total": 43.55,
-  "coste_unitario": 0.366,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 43.547,
+  "revisar": ""
  },
  {
   "codigo": "427-BARH80045",
   "nombre": "Casco Bajo (800x580) M-45 Roble. Hercules",
   "cantidad": 192.0,
   "coste_total": 60.14,
-  "coste_unitario": 0.3132,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 30.07,
+  "revisar": ""
  },
  {
   "codigo": "427-BFRH80120",
@@ -2212,8 +2212,8 @@
   "nombre": "Encimera Modelo MARMOL HADES-R5",
   "cantidad": 20136.0,
   "coste_total": 115.29,
-  "coste_unitario": 0.0057,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 115.29,
+  "revisar": ""
  },
  {
   "codigo": "43-PIZ224P130",
@@ -2308,8 +2308,8 @@
   "nombre": "Campana de integración JOHNSON",
   "cantidad": 9021.0,
   "coste_total": 366.4,
-  "coste_unitario": 0.0406,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 183.2,
+  "revisar": ""
  },
  {
   "codigo": "DANUBIO90",
@@ -2412,7 +2412,7 @@
   "nombre": "Set Accesorios Recirculación BALAY",
   "cantidad": 10.0,
   "coste_total": 118.34,
-  "coste_unitario": 11.834,
+  "coste_unitario": 118.34,
   "revisar": ""
  },
  {
@@ -2484,8 +2484,8 @@
   "nombre": "Microondas JOHNSON JOMI28NINT Integrable1",
   "cantidad": 12.0,
   "coste_total": 146.06,
-  "coste_unitario": 12.1717,
-  "revisar": "revisar_coste"
+  "coste_unitario": 146.064,
+  "revisar": ""
  },
  {
   "codigo": "JOR45X",
@@ -2548,8 +2548,8 @@
   "nombre": "Frigorífico Puerta Francesa JOHNSON",
   "cantidad": 9826.0,
   "coste_total": 164175.17,
-  "coste_unitario": 16.7082,
-  "revisar": "revisar_coste"
+  "coste_unitario": 652.87,
+  "revisar": ""
  },
  {
   "codigo": "JRR82Z-INT",
@@ -2572,16 +2572,16 @@
   "nombre": "PLACA JOHNSON JVICA4201 4 Fuegos",
   "cantidad": 1.0,
   "coste_total": 61008.0,
-  "coste_unitario": 61008.0,
-  "revisar": "revisar_coste"
+  "coste_unitario": 108.0,
+  "revisar": ""
  },
  {
   "codigo": "JWAS12EW",
   "nombre": "LAVAVAJILLAS JOHNSON JWAS12EW",
   "cantidad": 121.0,
   "coste_total": 219.3,
-  "coste_unitario": 1.8124,
-  "revisar": "revisar_coste"
+  "coste_unitario": 219.3,
+  "revisar": ""
  },
  {
   "codigo": "JWAS14BINT",
@@ -2596,8 +2596,8 @@
   "nombre": "Lavavajillas JOHNSON JWAS14EINT Int.",
   "cantidad": 601.0,
   "coste_total": 236.0,
-  "coste_unitario": 0.3927,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 236.0,
+  "revisar": ""
  },
  {
   "codigo": "KG39NVXCG",
@@ -2628,16 +2628,16 @@
   "nombre": "Campana decorativa JOHNSON KON908N",
   "cantidad": 920.0,
   "coste_total": 322.2,
-  "coste_unitario": 0.3502,
-  "revisar": "revisar_cantidad"
+  "coste_unitario": 179.0,
+  "revisar": ""
  },
  {
   "codigo": "NERVION107DRY",
   "nombre": "Lavasecadora JOHNSON NERVION107DRY",
   "cantidad": 101.0,
   "coste_total": 376.38,
-  "coste_unitario": 3.7265,
-  "revisar": "revisar_coste"
+  "coste_unitario": 376.38,
+  "revisar": ""
  },
  {
   "codigo": "PIJ631BB5E",
