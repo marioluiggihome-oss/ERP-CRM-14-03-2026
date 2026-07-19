@@ -13,7 +13,7 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 10-181000203B;Aro Reductor Piramide Ø125 > Ø100mm.;3;2.47;0.8233;
 10-181200454B;Aro Reductor Ø150 > Ø120 mm.;3;6.47;2.1567;
 10-401021023B;Tubo Flexible Ø102mm. Largo 3000mm.;2;16.96;8.48;
-10107007;Fregadero TEKA STYLO 1C Cubeta INOXIDABL4E;4;160.54;40.135;
+10107007;Fregadero TEKA STYLO 1C Cubeta INOXIDABL4E;4;160.54;39.57;
 10110005;Fregadero TEKA DR-80 1C 1E Cubeta;1;71.37;71.37;
 10111004;Fregadero TEKA 1 Cubeta CENTROVAL;1;55.44;55.44;
 11-CJECL0600X;Conjunto Escurreplatos Clasic Acero;1;7.37;7.37;
@@ -45,25 +45,25 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 13-AERM2R30NG;Tapa/Remate Encimera 2 Radios Grueso;3;4.95;1.65;
 13-AEU92R30NG;Unión 90º Reversible Encimera 2 Radios;13;1.98;0.1523;
 13-AEURRT40NG;Union Recta Encimera Recta Grueso;1;1.21;1.21;
-14-CC242440LB;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;20.18;10.3945;confirmar_valor
-14-CC242440LN;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;21.12;10.86;
+14-CC242440LB;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;20.18;10.0904;confirmar_valor
+14-CC242440LN;"Copete En forma de "" C"" (Convexo)24x24.L.40200mm.";40200;21.12;10.5604;
 14-CC242440PM;"Copete En forma de "" C"" (Convexo)24x24.L.40500mm.";40500;45.98;9.1956;
 14-CCESQ242PM;"Esquina Copete En forma de "" C"" (Convexo)234x24.mm.U3,n6d2.";234;1.24;0.0053;revisar_cantidad
 14-CCRNC242LB;"Rincon Copete En forma de "" C"" (Convexo)243x24.mm.U3n,d12.Blanco";2432;0.66;0.2281;
-14-CCRNC242LN;"Rincon Copete En forma de "" C"" (Convexo)242x24.mm.U2n,d08.Negro";2422;0.44;0.32;
+14-CCRNC242LN;"Rincon Copete En forma de "" C"" (Convexo)242x24.mm.U2n,d08.Negro";2422;0.44;0.2212;
 14-CCRNC242PM;"Rincon Copete En forma de "" C"" (Convexo)249x24.mm.U9n,d64.";2492;3.86;0.4285;
 14-CCTAPIZDLB;"Tapa IZ/Dr. Copete En forma de "" C""";22;0.24;0.1175;
 14-CCTAPIZDLN;"Tapa IZ/Dr. Copete En forma de "" C""";42;1.52;0.38;
 14-CCTAPIZDPM;"Tapa IZ/Dr. Copete En forma de "" C""";102;2.56;0.2557;
-144.0667.810;Fregadero MEPAMSA SQUARE 50.40;3;353.52;117.84;
+144.0667.810;Fregadero MEPAMSA SQUARE 50.40;3;353.52;119.44;
 14ESRENE02;Esquina copete rectangular negro;2;0.21;0.105;
 14RECTNEG02;Copete rectangular negro 395cm;3;27.54;9.18;
 14TADENE02;Tapa derecha copete rectangular negro;2;0.13;0.065;
 14TAIZNE02;Tapa izquierda copete rectangular negro;2;0.13;0.065;
 15-ZPAL15040;Zocalo PVC Revestido Aluminio Cepillado;2;15.32;7.66;revisar_coste
-15-ZPBM100400;Zocalo PVC Revestido Blanco Mate;3;19.08;6.36;revisar_cantidad
+15-ZPBM100400;Zocalo PVC Revestido Blanco Mate;3;19.08;7.0724;revisar_cantidad
 15-ZPBM150400;Zocalo PVC Revestido Blanco Mate;504;31.98;8.3992;
-15-ZPNM100400;Zocalo PVC Revestido Negro Mate Altura;7;45.23;6.4614;revisar_cantidad
+15-ZPNM100400;Zocalo PVC Revestido Negro Mate Altura;7;45.23;6.004;revisar_cantidad
 15-ZPNM150400;Zocalo PVC Revestido Negro Mate Altura 150 x L.4000 mm;502;15.99;8.3992;
 15-ZPREFNG100;Accesorio bivalente Esqu./Rinc.Flexible Zocalo PVC Negro Alt.100mm;2;1002.7;0.7354;
 15-ZPREFNG150;Accesorio bivalente Esqu./Rinc.Flexible;4;1503.04;375.76;revisar_coste
@@ -147,7 +147,7 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 25-3DO500B03A;Blum Set Gaveta ANTARO D Gris Orión;105;0.0;0.0;sin_coste_origen
 25-3MO500B03A;Blum Set Cajón ANTARO M Gris Orión;2;35.68;17.84;revisar_coste
 25-5785001M1J;Blum Juego Guias TANDEMBOX 30Kg.TOB;950;80.65;0.0849;revisar_cantidad
-25-AXP084500B;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m8m.Blan1c1o7,.18;48;77.61;1.6169;
+25-AXP084500B;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m8m.Blan1c1o7,.18;48;77.61;9.69;
 25-AXP084500G;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m5m.Gris;45;48.51;9.69;
 25-AXP084550B;Set Cajón AXIS PRO 40Kg.Fondo 550mm.H-84-m1m.Blan-c1o9,.19;41;0.0;0.0;sin_coste_origen
 25-AXP167300G;Set Gaveta AXIS PRO 40Kg.Fondo 300mm.H-1267mm.Gr3is2;1267;22.76;0.018;revisar_cantidad
@@ -183,14 +183,14 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 35-ALVICACCES;Alvic Accesorio;5;34.5;6.9;
 35-ALVICCASCO;Casco de cocina Alvic;10;631.86;63.186;
 35-ALVICKITCHEN;Fabricación cocina completa Alvic;15;15907.68;1060.512;
-35-ALVICPUERT;Puerta Alvic;100;3675.6;36.756;
+35-ALVICPUERT;Puerta Alvic;100;3675.6;28.95;
 35-LUIGGIMVKITCHEN;Fabricación cocina completa Luiggi;2;0.0;0.0;sin_coste_origen
 350--0000002C;Canto Mod:;5;122.3;24.46;
 350--00000PEC;Ref.Pedido Cliente:;1;0.0;0.0;sin_coste_origen
-350-152400100;Puerta Laminado S1_T15. Al.2400xAn.100mm12.2;122;246286.36;2018.7407;
+350-152400100;Puerta Laminado S1_T15. Al.2400xAn.100mm12.2;122;246286.36;2515.28;
 3511111;AGUJERO DE BISAGRAS EN PUERTAS;16;0.0;0.0;sin_coste_origen
 35111111;PUERTAS FABRICADAS EN PUBLIOFERTA;35;124.25;3.55;
-35400000;Puerta Madera;36;1110.4;30.8444;
+35400000;Puerta Madera;36;1110.4;36.7;
 355-PCDSNBLBR;CORNISA Diseño Blanco Brillo.;2;113.67;56.835;
 355555;CASCOS ALVIC;8;0.0;0.0;sin_coste_origen
 36-228001TLGO;Blum Tapa Izquierda Gris Orion HF/HL/HS-TOP;1;1.29;1.29;
@@ -336,8 +336,8 @@ SMH4HVX14E;Lavavajillas BOSCH SMH4HVX14E Int.;1;0.0;0.0;sin_coste_origen
 SN63HX03TE;Lavavajillas SIEMENS SN63HX03TE Int.Total;1;0.0;0.0;sin_coste_origen
 SN63HX03VE;SIEMENS LAVAVAJILLAS SN63HX03VE;1;0.0;0.0;sin_coste_origen
 SPC-FUSION1524X228;Suelo SPC FUSION base IXPE espesor;680;228112.43;6.63;
-SPC-VERA1524X228;Suelo SPC VERA base IXPE espesor tota5l;780;82136.23;6.63;
-SPC-VOLARE1524X228;SPC VOLARE base IXPE espesor;415;228845.37;6.63;
+SPC-VERA1524X228;Suelo SPC VERA base IXPE espesor tota5l;780;82136.23;6.658;
+SPC-VOLARE1524X228;SPC VOLARE base IXPE espesor;415;228845.37;6.7406;
 SUJETOPASIVO;Operacion con INVERSION DEL SUJETO;1;71909.2;71909.2;revisar_coste
 V0296;Vinoteca EVVO VT8 Cristal Negro 8 Botellas;1;83.81;83.81;
 WG56G2Z1ES;Lavadora SIEMENS WG56G2Z1ES Libre;1;0.0;0.0;sin_coste_origen
@@ -407,3 +407,21 @@ WQ45G2D1ES;Secadora SIEMENS WQ45G2D1ES Bomba;1;0.0;0.0;sin_coste_origen
 36-ABD1000BLO;Blum Tapa PEQUEÑA Decorativa Gris Orion;;;0.07;
 22-L13115W412;Transformador LED Modelo L131-12V-15W-IP20 4 Conexiones Blanco;1;;11.55;
 08063212;Placa CATA TT 6003 BK Radiacion 3 Fuegos Zona Grande Triple;1;;99.0;
+402-FCAV47045;Fondo Cajón/Gaveta AXIS PRO F-50 M-45 Antracita;1;;2.3;
+402-TCAV47045;Trasera Cajón AXIS PRO F-50 M-45 Antracita;1;;1.4;
+02189309;Campana Integración CATA ARMONIA 90 X;1;;170.14;
+999-;40 cajas;1;;0.17;
+EFC18220NFWH;Combi EDESA EFC-18220 NF WH 186 x 60 cm Blanco;1;;263.0;
+FIDCB100;Horno CANDY FIDC B100 Blanco Convencional 60 cm;1;;123.57;
+08063116;Placa CATA IBS 6303 E2 BK Inducción 3 Fuegos Potencia 7100 W;1;;122.0;
+02034501;Campana CATA TF 5260 Blanca;1;;64.91;
+260383;Microondas ARTICA AMW2080WG 20L Blanco Grill;1;;45.4955;
+402-FCAV47040;Fondo Cajón/Gaveta AXIS PRO F-50 M-40 BLANCO;1;;2.2;
+402-TCAV47040;Trasera Cajón AXIS PRO F-50 M-40 BLANCO;1;;1.3;
+402-TGSV47040;Trasera Gaveta 167MM AXIS PRO F-50 M-40 BLANCO;1;;0.86;
+125.0683.232;Fregadero FRANKE MARIS MRG 110-37 BLACK COLLECTION;1;;248.1875;
+115.0613.671;Grifo FRANKE EOS NEO PULL OUT Negro Industrial;1;;248.05;
+121.0200.692;Sorter FRANKE GARBO 45-2;1;;140.8;
+356-06KITZBMNM;KIT PERSIANA 150X60-16 ROLLBOX NEGRO MATE CEPILLADO;1;;203.5;
+23-9011011;Pomo modelo 9011 madera barniz natural;1;;0.95;
+23-9012049;Pomo modelo 9012 madera barniz wengue;1;;0.71;

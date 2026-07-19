@@ -116,7 +116,7 @@
   "nombre": "Fregadero TEKA STYLO 1C Cubeta INOXIDABL4E",
   "cantidad": 4.0,
   "coste_total": 160.54,
-  "coste_unitario": 40.135,
+  "coste_unitario": 39.57,
   "revisar": ""
  },
  {
@@ -372,7 +372,7 @@
   "nombre": "Copete En forma de \" C\" (Convexo)24x24.L.40200mm.",
   "cantidad": 40200.0,
   "coste_total": 20.18,
-  "coste_unitario": 10.3945,
+  "coste_unitario": 10.0904,
   "revisar": "confirmar_valor"
  },
  {
@@ -380,7 +380,7 @@
   "nombre": "Copete En forma de \" C\" (Convexo)24x24.L.40200mm.",
   "cantidad": 40200.0,
   "coste_total": 21.12,
-  "coste_unitario": 10.86,
+  "coste_unitario": 10.5604,
   "revisar": ""
  },
  {
@@ -412,7 +412,7 @@
   "nombre": "Rincon Copete En forma de \" C\" (Convexo)242x24.mm.U2n,d08.Negro",
   "cantidad": 2422.0,
   "coste_total": 0.44,
-  "coste_unitario": 0.32,
+  "coste_unitario": 0.2212,
   "revisar": ""
  },
  {
@@ -452,7 +452,7 @@
   "nombre": "Fregadero MEPAMSA SQUARE 50.40",
   "cantidad": 3.0,
   "coste_total": 353.52,
-  "coste_unitario": 117.84,
+  "coste_unitario": 119.44,
   "revisar": ""
  },
  {
@@ -500,7 +500,7 @@
   "nombre": "Zocalo PVC Revestido Blanco Mate",
   "cantidad": 3.0,
   "coste_total": 19.08,
-  "coste_unitario": 6.36,
+  "coste_unitario": 7.0724,
   "revisar": "revisar_cantidad"
  },
  {
@@ -516,7 +516,7 @@
   "nombre": "Zocalo PVC Revestido Negro Mate Altura",
   "cantidad": 7.0,
   "coste_total": 45.23,
-  "coste_unitario": 6.4614,
+  "coste_unitario": 6.004,
   "revisar": "revisar_cantidad"
  },
  {
@@ -1188,7 +1188,7 @@
   "nombre": "Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m8m.Blan1c1o7,.18",
   "cantidad": 48.0,
   "coste_total": 77.61,
-  "coste_unitario": 1.6169,
+  "coste_unitario": 9.69,
   "revisar": ""
  },
  {
@@ -1476,7 +1476,7 @@
   "nombre": "Puerta Alvic",
   "cantidad": 100.0,
   "coste_total": 3675.6,
-  "coste_unitario": 36.756,
+  "coste_unitario": 28.95,
   "revisar": ""
  },
  {
@@ -1508,7 +1508,7 @@
   "nombre": "Puerta Laminado S1_T15. Al.2400xAn.100mm12.2",
   "cantidad": 122.0,
   "coste_total": 246286.36,
-  "coste_unitario": 2018.7407,
+  "coste_unitario": 2515.28,
   "revisar": ""
  },
  {
@@ -1532,7 +1532,7 @@
   "nombre": "Puerta Madera",
   "cantidad": 36.0,
   "coste_total": 1110.4,
-  "coste_unitario": 30.8444,
+  "coste_unitario": 36.7,
   "revisar": ""
  },
  {
@@ -2700,7 +2700,7 @@
   "nombre": "Suelo SPC VERA base IXPE espesor tota5l",
   "cantidad": 780.0,
   "coste_total": 82136.23,
-  "coste_unitario": 6.63,
+  "coste_unitario": 6.658,
   "revisar": ""
  },
  {
@@ -2708,7 +2708,7 @@
   "nombre": "SPC VOLARE base IXPE espesor",
   "cantidad": 415.0,
   "coste_total": 228845.37,
-  "coste_unitario": 6.63,
+  "coste_unitario": 6.7406,
   "revisar": ""
  },
  {
@@ -3261,6 +3261,150 @@
   "cantidad": 1.0,
   "coste_total": null,
   "coste_unitario": 99.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-FCAV47045",
+  "nombre": "Fondo Cajón/Gaveta AXIS PRO F-50 M-45 Antracita",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 2.3,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-TCAV47045",
+  "nombre": "Trasera Cajón AXIS PRO F-50 M-45 Antracita",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 1.4,
+  "revisar": ""
+ },
+ {
+  "codigo": "02189309",
+  "nombre": "Campana Integración CATA ARMONIA 90 X",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 170.14,
+  "revisar": ""
+ },
+ {
+  "codigo": "999-",
+  "nombre": "40 cajas",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 0.17,
+  "revisar": ""
+ },
+ {
+  "codigo": "EFC18220NFWH",
+  "nombre": "Combi EDESA EFC-18220 NF WH 186 x 60 cm Blanco",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 263.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "FIDCB100",
+  "nombre": "Horno CANDY FIDC B100 Blanco Convencional 60 cm",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 123.57,
+  "revisar": ""
+ },
+ {
+  "codigo": "08063116",
+  "nombre": "Placa CATA IBS 6303 E2 BK Inducción 3 Fuegos Potencia 7100 W",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 122.0,
+  "revisar": ""
+ },
+ {
+  "codigo": "02034501",
+  "nombre": "Campana CATA TF 5260 Blanca",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 64.91,
+  "revisar": ""
+ },
+ {
+  "codigo": "260383",
+  "nombre": "Microondas ARTICA AMW2080WG 20L Blanco Grill",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 45.4955,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-FCAV47040",
+  "nombre": "Fondo Cajón/Gaveta AXIS PRO F-50 M-40 BLANCO",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 2.2,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-TCAV47040",
+  "nombre": "Trasera Cajón AXIS PRO F-50 M-40 BLANCO",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 1.3,
+  "revisar": ""
+ },
+ {
+  "codigo": "402-TGSV47040",
+  "nombre": "Trasera Gaveta 167MM AXIS PRO F-50 M-40 BLANCO",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 0.86,
+  "revisar": ""
+ },
+ {
+  "codigo": "125.0683.232",
+  "nombre": "Fregadero FRANKE MARIS MRG 110-37 BLACK COLLECTION",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 248.1875,
+  "revisar": ""
+ },
+ {
+  "codigo": "115.0613.671",
+  "nombre": "Grifo FRANKE EOS NEO PULL OUT Negro Industrial",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 248.05,
+  "revisar": ""
+ },
+ {
+  "codigo": "121.0200.692",
+  "nombre": "Sorter FRANKE GARBO 45-2",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 140.8,
+  "revisar": ""
+ },
+ {
+  "codigo": "356-06KITZBMNM",
+  "nombre": "KIT PERSIANA 150X60-16 ROLLBOX NEGRO MATE CEPILLADO",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 203.5,
+  "revisar": ""
+ },
+ {
+  "codigo": "23-9011011",
+  "nombre": "Pomo modelo 9011 madera barniz natural",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 0.95,
+  "revisar": ""
+ },
+ {
+  "codigo": "23-9012049",
+  "nombre": "Pomo modelo 9012 madera barniz wengue",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 0.71,
   "revisar": ""
  }
 ]
