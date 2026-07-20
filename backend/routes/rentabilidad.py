@@ -857,7 +857,9 @@ def _ficha_totals(lines):
         "venta": round(venta, 2),
         "coste": round(coste, 2),
         "margen": round(margen, 2),
-        "margenPct": round((margen / venta * 100) if venta > 0 else 0, 1),
+        # % unificado = INCREMENTO sobre el coste (margen / coste). Coherente con el
+        # resto de la app (columna "% Incr. C→V", editor, informe).
+        "margenPct": round((margen / coste * 100) if coste > 0 else 0, 1),
     }
 
 
@@ -1507,6 +1509,21 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
             "updatedAt": now,
         }
         await db.sale_fichas.update_one({"id": ficha_id}, {"$set": upd})
+        # Auditoria de la revisión (marcar/desmarcar): quién, cuándo y sobre qué factura.
+        try:
+            await db.rentabilidad_audit_log.insert_one({
+                "id": f"rev-{uuid.uuid4().hex[:8]}",
+                "action": "revision_marcar" if revisada else "revision_desmarcar",
+                "entity": "sale_ficha",
+                "entityId": ficha_id,
+                "fichaRef": (fic or {}).get("ref", "") if revisada else "",
+                "revisada": revisada,
+                "userId": (user or {}).get("id", ""),
+                "userName": upd["revisadaPor"] or (user or {}).get("username", ""),
+                "createdAt": now,
+            })
+        except Exception as e:
+            logger.error(f"No se pudo auditar revisión de {ficha_id}: {e}")
         return {
             "success": True,
             "revisada": revisada,

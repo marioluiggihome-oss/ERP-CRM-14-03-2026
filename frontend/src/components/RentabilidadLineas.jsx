@@ -181,6 +181,11 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
         // de esa línea (o crea una línea nueva de coste) y baja su margen. Se guarda la ficha.
         const repMulti = p.costeMulti && p.costeReparto && Object.values(p.costeReparto).some(v => Number(v) > 0);
         if (target && (p.costeLineId || repMulti)) {
+          // Aviso claro si la factura destino tiene el visto bueno del controller (bloqueada).
+          if (bloqueada(target)) {
+            setInbox(s => ({ ...s, saving: false, error: `La factura ${target.ref} está revisada por el controller (bloqueada). Desbloquéala (master, manteniendo Shift) o quítale el visto bueno antes de asignarle costes.` }));
+            return;
+          }
           const fr = await fetch(`${API_URL}/api/rentabilidad/fichas/${target.id}`);
           const full = await fr.json();
           let lines = (full.lines || []).map(l => ({ ...l }));
@@ -242,7 +247,8 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
     const venta = (lines || []).reduce((s, l) => s + (Number(l.venta) || 0), 0);
     const coste = (lines || []).reduce((s, l) => s + (Number(l.coste) || 0), 0);
     const margen = venta - coste;
-    return { venta, coste, margen, margenPct: venta > 0 ? (margen / venta * 100) : 0 };
+    // % unificado = incremento sobre el coste (margen / coste), coherente con el resto de la app
+    return { venta, coste, margen, margenPct: coste > 0 ? (margen / coste * 100) : 0 };
   };
 
   // Normaliza el tipo de documento detectado por la IA a uno de los 4 válidos.
@@ -760,7 +766,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
       };
       drawHeader();
 
-      const head = [['Nº / Ref', 'Cliente', 'Fecha', 'Venta', 'Coste', 'Margen', '% Margen']];
+      const head = [['Nº / Ref', 'Cliente', 'Fecha', 'Coste', 'Venta', 'Margen', '% s/Coste']];
       const acc = { venta: 0, coste: 0, margen: 0 };
       const body = rows.map(f => {
         const tt = f.totals || totals(f.lines);
@@ -769,7 +775,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
           clean(f.ref || '-'),
           clean(f.cliente || '-') + (f.clienteCodigo ? ` (${f.clienteCodigo})` : ''),
           f.fecha || '-',
-          eur(tt.venta), eur(tt.coste), eur(tt.margen),
+          eur(tt.coste), eur(tt.venta), eur(tt.margen),
           `${(Number(tt.margenPct) || 0).toFixed(1)}%`,
         ];
       });
@@ -1368,6 +1374,11 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   </td>
                   <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
                   <td className="p-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    {f.revisada && f.revisadaPor && (
+                      <span className="block text-[9px] font-bold text-emerald-600 mb-0.5" title="Revisado por el controller">
+                        ✅ {f.revisadaPor}{f.revisadaAt ? ` · ${String(f.revisadaAt).slice(0, 10)}` : ''}
+                      </span>
+                    )}
                     {NEXT_DOC_TYPE[f.docType || 'factura'] && (
                       <button onClick={() => convertFicha(f)} disabled={converting === f.id}
                         className="mr-2 px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50">
