@@ -20,4 +20,5 @@ export { default as InventoryTab } from './InventoryTab';
 export { default as ArmazonesTab } from './ArmazonesTab';
 export { default as SubscriptionTab } from './SubscriptionTab';
 export { default as CostesArticulosTab } from './CostesArticulosTab';
+export { default as ElectrosTab } from './ElectrosTab';
 export { SettingsProvider, useSettingsContext, formatCurrency, CHART_COLORS, buttonStyles } from './SettingsContext';

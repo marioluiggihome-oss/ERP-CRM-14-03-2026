@@ -1138,12 +1138,14 @@ async def _article_costs_map() -> Dict[str, Any]:
 
 
 @router.get("/rentabilidad/article-costs")
-async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar: bool = False):
+async def article_costs(q: Optional[str] = None, limit: int = 1000, soloRevisar: bool = False, electros: bool = False):
     """Lista/busca el catalogo de costes unitarios por articulo (desde MongoDB)."""
     await _seed_article_costs_if_empty()
     query: Dict[str, Any] = {}
     if soloRevisar:
         query["revisar"] = {"$nin": ["", None]}
+    if electros:
+        query["esElectro"] = True
     if q:
         nq = re.escape(q.strip())
         query["$or"] = [
@@ -1169,6 +1171,7 @@ async def upsert_article_cost(payload: dict, user: dict = Depends(require_rentab
         except Exception:
             return d
     coste_unit = _f(payload.get("costeUnitario"))
+    pvp = _f(payload.get("pvp"), (prev or {}).get("pvp"))
     doc = {
         "codigo": cod,
         "codigoNorm": norm,
@@ -1177,6 +1180,12 @@ async def upsert_article_cost(payload: dict, user: dict = Depends(require_rentab
         "costeTotal": _f(payload.get("costeTotal"), (prev or {}).get("costeTotal")),
         "costeUnitario": round(coste_unit, 4) if coste_unit is not None else (prev or {}).get("costeUnitario"),
         "revisar": str(payload.get("revisar", (prev or {}).get("revisar") or "")).strip(),
+        # Campos del modulo Electros: PVP (precio venta publico), marca, categoria
+        # y bandera esElectro. El coste solo lo ve el master (control en el front).
+        "pvp": round(pvp, 2) if pvp is not None else None,
+        "marca": str(payload.get("marca", (prev or {}).get("marca") or "")).strip(),
+        "categoria": str(payload.get("categoria", (prev or {}).get("categoria") or "")).strip(),
+        "esElectro": bool(payload.get("esElectro")) if payload.get("esElectro") is not None else bool((prev or {}).get("esElectro")),
         "source": "manual",
         "updatedAt": datetime.now(timezone.utc).isoformat(),
         "updatedBy": (user or {}).get("username", ""),
@@ -1243,6 +1252,46 @@ async def reseed_article_costs(payload: Optional[dict] = None, user: dict = Depe
         )
         upserts += 1
     return {"success": True, "mode": "upsert", "count": upserts}
+
+
+# Palabras clave y marcas para autodetectar electrodomesticos en el catalogo.
+_ELECTRO_KEYWORDS = [
+    "campana", "combi", "lavadora", "secadora", "lavasecadora", "placa",
+    "microondas", "lavavajillas", "frigor", "frigo", "horno", "congelador",
+    "vinoteca", "encimera induc", "induccion", "vitro", "nevera",
+]
+_ELECTRO_MARCAS = [
+    "johnson", "franke", "balay", "bosch", "siemens", "teka", "cata",
+    "mepamsa", "edesa", "artica",
+]
+
+
+def _detect_marca(nombre: str) -> str:
+    low = (nombre or "").lower()
+    for m in _ELECTRO_MARCAS:
+        if m in low:
+            return m.capitalize()
+    return ""
+
+
+@router.post("/rentabilidad/article-costs/tag-electros")
+async def tag_electros(payload: Optional[dict] = None, user: dict = Depends(require_rentabilidad)):
+    """Autoetiqueta como electrodomesticos (esElectro=True) los articulos cuyo
+    nombre contiene una palabra clave de electro, y rellena la marca detectada.
+    No pisa la marca ya definida a mano. Solo master."""
+    tagged = 0
+    async for a in db.article_costs.find({}, {"_id": 0, "codigoNorm": 1, "nombre": 1, "marca": 1, "esElectro": 1}):
+        nombre = (a.get("nombre") or "").lower()
+        if not any(k in nombre for k in _ELECTRO_KEYWORDS):
+            continue
+        upd = {"esElectro": True}
+        if not (a.get("marca") or "").strip():
+            m = _detect_marca(a.get("nombre") or "")
+            if m:
+                upd["marca"] = m
+        await db.article_costs.update_one({"codigoNorm": a["codigoNorm"]}, {"$set": upd})
+        tagged += 1
+    return {"success": True, "tagged": tagged}
 
 
 @router.post("/rentabilidad/apply-article-costs")
