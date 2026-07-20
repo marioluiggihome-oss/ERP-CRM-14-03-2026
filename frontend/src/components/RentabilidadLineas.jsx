@@ -166,11 +166,16 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
         const target = (fichas || []).find(f => normRef(f.ref) === normRef(p.projectRef || ''));
         // Opción B: si se elige una factura de venta Y una línea, el coste SE SUMA al coste
         // de esa línea (o crea una línea nueva de coste) y baja su margen. Se guarda la ficha.
-        if (target && p.costeLineId) {
+        const repMulti = p.costeMulti && p.costeReparto && Object.values(p.costeReparto).some(v => Number(v) > 0);
+        if (target && (p.costeLineId || repMulti)) {
           const fr = await fetch(`${API_URL}/api/rentabilidad/fichas/${target.id}`);
           const full = await fr.json();
           let lines = (full.lines || []).map(l => ({ ...l }));
-          if (p.costeLineId === '__new__') {
+          if (repMulti) {
+            // Repartir el coste entre varias líneas: sumar a cada una su importe asignado.
+            const rep = p.costeReparto || {};
+            lines = lines.map(l => { const add = Number(rep[l.id]) || 0; return add ? { ...l, coste: (Number(l.coste) || 0) + add } : l; });
+          } else if (p.costeLineId === '__new__') {
             lines.push({ id: `ln-${Date.now()}`, ref: '', concepto: `Coste ${p.proveedor || ''}`.trim() || (p.resumen || 'Coste proveedor'), cantidad: 1, venta: 0, coste: importe });
           } else {
             lines = lines.map(l => l.id === p.costeLineId ? { ...l, coste: (Number(l.coste) || 0) + importe } : l);
@@ -1493,19 +1498,55 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                       </datalist>
                       {p.kind === 'coste' && <p className="text-[10px] text-slate-400 mt-0.5">Elige la factura de venta a la que pertenece este coste.</p>}
                     </div>
-                    {/* Coste → línea concreta de esa factura (para que reste en su margen) */}
-                    {p.kind === 'coste' && targetFicha && (
-                      <div className="col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase">Asignar el coste a la línea</label>
-                        <select value={p.costeLineId || ''} onChange={e => setProp('costeLineId', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm">
-                          <option value="">— Como coste de proyecto (no resta en líneas) —</option>
-                          {(targetFicha.lines || []).map(l => (
-                            <option key={l.id} value={l.id}>{(l.concepto || l.ref || 'Línea').slice(0, 60)} · venta {eur(l.venta)}{Number(l.coste) ? ` · coste actual ${eur(l.coste)}` : ''}</option>
-                          ))}
-                          <option value="__new__">➕ Añadir como línea nueva de coste</option>
-                        </select>
-                        {p.costeLineId && p.costeLineId !== '__new__' && <p className="text-[10px] text-emerald-600 mt-0.5">El importe se sumará al coste de esa línea y bajará su margen.</p>}
+                    {/* Coste → línea(s) concreta(s) de esa factura (para que reste en su margen) */}
+                    {p.kind === 'coste' && targetFicha && (() => {
+                      const imp = Number(p.total) || 0;
+                      const rep = p.costeReparto || {};
+                      const suma = Object.values(rep).reduce((s, v) => s + (Number(v) || 0), 0);
+                      return (
+                      <div className="col-span-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-black text-slate-400 uppercase">Asignar el coste a {p.costeMulti ? 'varias líneas' : 'la línea'}</label>
+                          <button type="button" onClick={() => setProp('costeMulti', !p.costeMulti)} className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800">
+                            {p.costeMulti ? '↩ Una sola línea' : '⇄ Repartir en varias líneas'}
+                          </button>
+                        </div>
+                        {!p.costeMulti ? (
+                          <select value={p.costeLineId || ''} onChange={e => setProp('costeLineId', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm">
+                            <option value="">— Como coste de proyecto (no resta en líneas) —</option>
+                            {(targetFicha.lines || []).map(l => (
+                              <option key={l.id} value={l.id}>{(l.concepto || l.ref || 'Línea').slice(0, 60)} · venta {eur(l.venta)}{Number(l.coste) ? ` · coste actual ${eur(l.coste)}` : ''}</option>
+                            ))}
+                            <option value="__new__">➕ Añadir como línea nueva de coste</option>
+                          </select>
+                        ) : (
+                          <div className="border border-slate-200 rounded-lg p-2 max-h-44 overflow-auto space-y-1">
+                            {(targetFicha.lines || []).map(l => (
+                              <div key={l.id} className="flex items-center gap-2">
+                                <span className="flex-1 text-[11px] text-slate-600 truncate" title={l.concepto}>{(l.concepto || l.ref || 'Línea')} · venta {eur(l.venta)}</span>
+                                <input type="number" step="0.01" value={rep[l.id] ?? ''} placeholder="0"
+                                  onChange={e => setProp('costeReparto', { ...rep, [l.id]: e.target.value })}
+                                  className="w-24 px-1.5 py-1 border rounded text-xs text-right" />
+                                <span className="text-[10px] text-slate-400">€</span>
+                              </div>
+                            ))}
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                              <button type="button" onClick={() => {
+                                const ls = (targetFicha.lines || []);
+                                if (!ls.length) return;
+                                const each = Math.floor((imp / ls.length) * 100) / 100;
+                                const nrep = {}; ls.forEach((l, i) => { nrep[l.id] = i === ls.length - 1 ? +(imp - each * (ls.length - 1)).toFixed(2) : each; });
+                                setProp('costeReparto', nrep);
+                              }} className="text-indigo-600 font-bold">Repartir a partes iguales</button>
+                              <span className={Math.abs(suma - imp) <= 0.02 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>Suma: {eur(suma)} / {eur(imp)}</span>
+                            </div>
+                          </div>
+                        )}
+                        {!p.costeMulti && p.costeLineId && p.costeLineId !== '__new__' && <p className="text-[10px] text-emerald-600 mt-0.5">El importe se sumará al coste de esa línea y bajará su margen.</p>}
+                        {p.costeMulti && Math.abs(suma - imp) > 0.02 && <p className="text-[10px] text-amber-600 mt-0.5">⚠ La suma repartida no cuadra con el importe ({eur(imp)}).</p>}
                       </div>
-                    )}
+                      );
+                    })()}
                     {p.kind === 'ingreso' && <div><label className="text-[10px] font-black text-slate-400 uppercase">Código cliente</label>
                       <input value={p.clientCode || ''} onChange={e => setProp('clientCode', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" /></div>}
                     <div><label className="text-[10px] font-black text-slate-400 uppercase">Nº / Ref</label>
