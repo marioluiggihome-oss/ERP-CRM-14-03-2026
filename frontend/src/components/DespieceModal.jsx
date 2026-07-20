@@ -340,7 +340,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
       <body>
         <div class="header">
           <h1>📦 PEDIDO DE PUERTAS - PROVEEDOR</h1>
-          <div class="header-subtitle">LUIGGI HOME - Documento para envío a proveedor</div>
+          <div class="header-subtitle">Documento para envío a proveedor</div>
         </div>
         
         <div class="info-box">
@@ -405,7 +405,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
         </table>
         
         <div class="footer">
-          LUIGGI HOME ERP | Documento generado: ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')} | Este documento es un pedido para proveedor de puertas
+           ERP | Documento generado: ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')} | Este documento es un pedido para proveedor de puertas
         </div>
       </body>
       </html>
@@ -834,7 +834,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
             <h1>${viewTitle}</h1>
           </div>
           <div class="header-right">
-            LUIGGI HOME ERP<br/>
+            ERP<br/>
             ${fechaHoy}
           </div>
         </div>
@@ -1293,7 +1293,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     // Footer
     html += `
         <div class="footer">
-          Documento generado por LUIGGI HOME ERP | ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')} | Medidas en cm, grosor en mm
+          Documento generado por  ERP | ${fechaHoy} ${new Date().toLocaleTimeString('es-ES')} | Medidas en cm, grosor en mm
         </div>
       </body>
       </html>
@@ -1388,7 +1388,7 @@ const DespieceModal = ({ isOpen, onClose, items, catalogs, carcassMaterialName, 
     xmlContent += `  <Header>\n`;
     xmlContent += `    <GeneratedDate>${fechaHoy}</GeneratedDate>\n`;
     xmlContent += `    <GeneratedTime>${horaHoy}</GeneratedTime>\n`;
-    xmlContent += `    <Software>LUIGGI HOME ERP</Software>\n`;
+    xmlContent += `    <Software>ERP</Software>\n`;
     xmlContent += `  </Header>\n`;
     xmlContent += `  <Project>\n`;
     xmlContent += `    <Name>${editableExpedient || 'DESPIECE'}</Name>\n`;

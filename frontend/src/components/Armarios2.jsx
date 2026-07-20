@@ -290,7 +290,7 @@ const Armarios2 = ({ state }) => {
     const logo = state?.logo;
     if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
       try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 12, 32, 16); } catch {}
-    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.setFont(undefined, 'normal'); }
     pdf.setFontSize(16); pdf.setTextColor(88, 28, 135); pdf.setFont(undefined, 'bold');
     pdf.text('PRESUPUESTO ARMARIO', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
     pdf.setFontSize(10); pdf.setTextColor(120);

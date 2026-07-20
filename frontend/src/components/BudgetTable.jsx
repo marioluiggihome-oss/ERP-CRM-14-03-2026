@@ -1136,7 +1136,7 @@ const BudgetTable = ({ items, catalogs, activeCatalogIds, state, setState, onOpe
       carcassMaterialName: carcassMat?.name || 'No especificado',
       brandColor: state.brandColor,
       logo: state.logo,
-      companyName: 'LUIGGI HOME',
+      companyName: state.companyName || '',
       globalFinish: state.globalFinish,
       allProducts: allProducts,
       calculateLineDetails: calculateLineDetails,

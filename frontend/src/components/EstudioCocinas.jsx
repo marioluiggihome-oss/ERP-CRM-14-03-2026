@@ -886,7 +886,7 @@ export default function EstudioCocinas({ state, setState }) {
       // ── Portada ──
       pdf.setFillColor(24, 24, 27); pdf.rect(0, 0, W, H, 'F');
       if (dossierLogo) { try { pdf.addImage(dossierLogo, fmtLogo(dossierLogo), W / 2 - 26, 30, 52, 24); } catch (_) {} }
-      pdf.setTextColor(202, 169, 104); pdf.setFontSize(11); pdf.text('LUIGGI HOME · ESTUDIO DE COCINAS', W / 2, 68, { align: 'center' });
+      pdf.setTextColor(202, 169, 104); pdf.setFontSize(11); pdf.text('ESTUDIO DE COCINAS', W / 2, 68, { align: 'center' });
       pdf.setTextColor(255); pdf.setFontSize(30); pdf.setFont(undefined, 'bold');
       pdf.text('DOSSIER DE PROYECTO', W / 2, 92, { align: 'center' });
       pdf.setFont(undefined, 'normal'); pdf.setFontSize(14); pdf.setTextColor(230);

@@ -689,7 +689,7 @@ export const settingsAPI = {
   // Logo de marca Luiggi Floor para la pantalla de login (acceso directo, sin sesión).
   getPublicFloorLogo: async () => {
     const response = await fetch(`${API_URL}/api/floor/public-logo`);
-    if (!response.ok) throw new Error('Error al obtener el logo de Luiggi Floor');
+    if (!response.ok) throw new Error('Error al obtener el logo de Floor');
     return response.json();
   }
 };

@@ -205,7 +205,7 @@ const LuiggiFloor = ({ currentUser }) => {
       const dataUri = pdf.output('datauristring'); // data:application/pdf;base64,...
       const r = await fetch(`${API_URL}/api/floor/docs`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ name: 'Ficha técnica Luiggi Floor SPC', fileBase64: dataUri, mime: 'application/pdf' }),
+        body: JSON.stringify({ name: 'Ficha técnica Floor SPC', fileBase64: dataUri, mime: 'application/pdf' }),
       });
       if (r.ok) { await loadDocs(); alert('Ficha técnica generada y añadida a los catálogos.'); }
       else alert('Se generó el PDF pero no se pudo guardar en catálogos.');
@@ -420,7 +420,7 @@ const LuiggiFloor = ({ currentUser }) => {
     try { pdf.addImage(FLOOR_FEATURES, 'JPEG', 14, y, stripW, stripH); } catch (_) {}
     y += stripH + 6;
     pdf.setFontSize(8); pdf.setTextColor(150);
-    pdf.text('Luiggi Floor · división de suelo SPC porcelánico · oferta orientativa salvo error u omisión.', 14, y);
+    pdf.text('Floor · división de suelo SPC porcelánico · oferta orientativa salvo error u omisión.', 14, y);
     pdf.save(d.fileName || 'Oferta_LuiggiFloor.pdf');
   };
 
@@ -490,7 +490,7 @@ const LuiggiFloor = ({ currentUser }) => {
       {/* Cabecera con logo de marca centrado */}
       <div className="relative px-4 sm:px-6 pt-7 pb-4 flex flex-col items-center text-center">
         {floorLogo ? (
-          <img src={floorLogo} alt="Luiggi Floor" className="h-16 sm:h-24 w-auto max-w-[80vw] object-contain" />
+          <img src={floorLogo} alt="Floor" className="h-16 sm:h-24 w-auto max-w-[80vw] object-contain" />
         ) : (
           <div className="flex items-baseline justify-center gap-2 select-none">
             <span className="italic font-serif text-4xl sm:text-6xl bg-clip-text text-transparent bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 leading-none">luiggi</span>

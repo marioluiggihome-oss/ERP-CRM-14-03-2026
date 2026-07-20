@@ -782,7 +782,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
         pointValueMontada: pointValue,
         logo: logo || currentUser?.logo,
         brandColor: '#ea580c',
-        companyName: 'LUIGGI HOME',
+        companyName: currentUser?.companyName || '',
         ivaRate,
         allProducts: products,
         globalFinish: `${levelLabel} ${tariff}`,
@@ -1572,7 +1572,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
                       <button onClick={() => setRender3dImage(null)} className="text-red-400 hover:text-red-600"><X size={12} /></button>
                     </div>
                   )}
-                  <p className="text-[10px] text-center text-slate-400">PDF con formato Luiggi Home · se guarda como presupuesto</p>
+                  <p className="text-[10px] text-center text-slate-400">PDF con formato corporativo · se guarda como presupuesto</p>
                 </div>
               )}
             </div>

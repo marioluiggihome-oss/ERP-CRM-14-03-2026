@@ -583,7 +583,7 @@ const Digitalizador = ({ state, setState }) => {
           } catch (_) { /* logo no incrustable: se omite */ }
         } else {
           pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
-          pdf.text('LUIGGI HOME', M, hy + 8); pdf.setFont(undefined, 'normal');
+          pdf.setFont(undefined, 'normal');
         }
 
         pdf.setFontSize(15); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
@@ -1471,7 +1471,7 @@ const Digitalizador = ({ state, setState }) => {
 
               {/* Footer */}
               <div className="px-6 py-3 bg-white border-t border-indigo-100 flex justify-between items-center text-[9px] text-indigo-300 font-bold uppercase tracking-widest">
-                <span>— Luiggi Home Master Report Professional</span>
+                <span>— Informe Profesional</span>
                 <span>Fin de Documento</span>
               </div>
             </div>

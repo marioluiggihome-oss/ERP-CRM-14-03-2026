@@ -391,7 +391,7 @@ const Cascos = ({ state, setState }) => {
     const logo = state?.logo;
     if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
       try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 12, 32, 16); } catch {}
-    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.setFont(undefined, 'normal'); }
     pdf.setFontSize(16); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
     pdf.text('PRESUPUESTO COCINA DESMONTADA', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
     pdf.setFontSize(10); pdf.setTextColor(120);
@@ -440,7 +440,7 @@ const Cascos = ({ state, setState }) => {
     const logo = state?.logo;
     if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
       try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 12, 32, 16); } catch {}
-    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+    } else { pdf.setFontSize(15); pdf.setFont(undefined, 'bold'); pdf.setFont(undefined, 'normal'); }
     pdf.setFontSize(16); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
     pdf.text('PEDIDO A PROVEEDOR', W - M, 18, { align: 'right' }); pdf.setFont(undefined, 'normal');
     pdf.setFontSize(10); pdf.setTextColor(120);
@@ -449,7 +449,7 @@ const Cascos = ({ state, setState }) => {
     // Datos de entrega / comprador (empresa) tomados de Ajustes
     const cs = state?.settings || {};
     const entrega = centroEnvio || cs.companyAddress;
-    const buyer = [cs.companyName || 'LUIGGI HOME', entrega, cs.companyTaxId ? `CIF: ${cs.companyTaxId}` : '', cs.companyPhone].filter(Boolean);
+    const buyer = [cs.companyName || '', entrega, cs.companyTaxId ? `CIF: ${cs.companyTaxId}` : '', cs.companyPhone].filter(Boolean);
     pdf.setFontSize(8); pdf.setTextColor(110); pdf.setFont(undefined, 'bold');
     pdf.text('DATOS DE ENTREGA / COMPRADOR', M, 36); pdf.setFont(undefined, 'normal'); pdf.setTextColor(70);
     let yc = 40; buyer.forEach(l => { pdf.text(String(l), M, yc); yc += 4; });
@@ -505,7 +505,7 @@ const Cascos = ({ state, setState }) => {
       const drawHeader = () => {
         if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
           try { const fmt = logo.includes('png') ? 'PNG' : logo.includes('webp') ? 'WEBP' : 'JPEG'; pdf.addImage(logo, fmt, M, 7, 30, 15); } catch {}
-        } else { pdf.setFontSize(13); pdf.setFont(undefined, 'bold'); pdf.setTextColor(30, 27, 65); pdf.text('LUIGGI HOME', M, 15); pdf.setFont(undefined, 'normal'); }
+        } else { pdf.setFontSize(13); pdf.setFont(undefined, 'bold'); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'normal'); }
         pdf.setFontSize(11); pdf.setTextColor(49, 46, 129); pdf.setFont(undefined, 'bold');
         pdf.text('CATÁLOGO DE CASCOS · COCINA DESMONTADA', W - M, 13, { align: 'right' });
         pdf.setFont(undefined, 'normal'); pdf.setFontSize(8); pdf.setTextColor(150);
@@ -547,10 +547,10 @@ const Cascos = ({ state, setState }) => {
       const n = pdf.getNumberOfPages();
       for (let i = 1; i <= n; i++) {
         pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(150);
-        pdf.text('Luiggi Home · Cocina Desmontada', M, Hp - 6);
+        pdf.text('Cocina Desmontada', M, Hp - 6);
         pdf.text(`Página ${i} de ${n}`, W / 2, Hp - 6, { align: 'center' });
       }
-      pdf.save('Catalogo_Cascos_LuiggiHome.pdf');
+      pdf.save('Catalogo_Cascos.pdf');
     } catch (e) { alert('No se pudo generar el catálogo.'); }
     finally { setGenCat(false); }
   };

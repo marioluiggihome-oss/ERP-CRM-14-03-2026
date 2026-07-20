@@ -66,7 +66,7 @@ const CatalogImporter = ({ onProductsImported }) => {
         points: p.puntos_por_zona?.Z1 || 0,
         zonePoints: p.puntos_por_zona,
         module: 'montada',
-        manufacturer: 'Luiggi Home Master'
+        manufacturer: 'Master'
       }));
 
       const response = await fetch(`${API_URL}/api/products/bulk?module=montada`, {

@@ -74,7 +74,7 @@ const MODULES = [
   // Producción
   { tab: 'fabrica',         label: 'Fábrica',         icon: Factory,      color: 'bg-emerald-600', group: 'produccion', can: (u) => u?.canAccessFabrica === true },
   { tab: 'montajes',        label: 'Montajes',        icon: Wrench,       color: 'bg-orange-600',  group: 'produccion', can: (u, s) => s?.montajesEnabled && (u?.canAccessMontajes || u?.isMontador) },
-  { tab: 'luiggifloor',     label: 'Luiggi Floor',    icon: Layers,       color: 'bg-amber-500',   group: 'produccion', can: (u) => u?.canAccessFloor === true },
+  { tab: 'luiggifloor',     label: 'Floor',    icon: Layers,       color: 'bg-amber-500',   group: 'produccion', can: (u) => u?.canAccessFloor === true },
   { tab: 'agentesDisenadores', label: 'Agentes IA', icon: Sparkles, color: 'bg-purple-600', group: 'produccion', can: (u) => (u?.canUseAgentesIA || u?.isAdmin) && !u?.isTienda },
 
   // Administración
@@ -100,7 +100,7 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
             Bienvenido{name ? `, ${name}` : ''} 👋
           </h1>
           <p className="text-sm text-slate-500 font-semibold mt-1">
-            LUIGGI HOME ERP · elige un módulo para empezar
+            Elige un módulo para empezar
           </p>
         </div>
 
@@ -151,7 +151,7 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
                 <iframe
                   className="absolute inset-0 w-full h-full"
                   src={embed}
-                  title="Vídeo promocional LUIGGI HOME"
+                  title="Vídeo promocional"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
