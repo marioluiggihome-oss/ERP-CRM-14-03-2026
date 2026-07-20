@@ -6,6 +6,7 @@
  * Sections: Nav, Hero, Features, AI Render, Pricing, Testimonials, FAQ, CTA, Footer
  */
 import { useEffect, useState } from "react";
+import CarpinterLogo, { CarpinterMark } from "./CarpinterLogo";
 import {
   FileText, Sparkles, BarChart3, Clock, CheckCircle2,
   ChevronDown, Menu, X, ArrowRight, Zap, Shield, Users,
@@ -224,16 +225,8 @@ function Nav({ onEnter }) {
     >
       <div className="container flex items-center justify-between h-16 lg:h-18">
         {/* Logo */}
-        <a href="#" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-lg bg-[#1C1A17] border border-[#C4622D]/30 flex items-center justify-center">
-            <GramilMark size={22} color="#C4622D" />
-          </div>
-          <span
-            className="font-bold text-lg tracking-tight"
-            style={{ fontFamily: "'DM Sans', sans-serif", color: scrolled ? "#1C1A17" : "#F5F0E8" }}
-          >
-            carpinter<span className="text-[#C4622D]">.io</span>
-          </span>
+        <a href="#" className="flex items-center group">
+          <CarpinterLogo height={36} tone={scrolled ? 'dark' : 'light'} />
         </a>
 
         {/* Desktop nav */}
@@ -866,13 +859,8 @@ function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-[#C4622D]/20 border border-[#C4622D]/30 flex items-center justify-center">
-                <GramilMark size={18} color="#C4622D" />
-              </div>
-              <span className="font-bold text-lg text-[#F5F0E8]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                carpinter<span className="text-[#C4622D]">.io</span>
-              </span>
+            <div className="mb-4">
+              <CarpinterLogo height={38} tone="light" />
             </div>
             <p className="text-[#F5F0E8]/40 text-sm leading-relaxed max-w-xs">
               El ERP para carpinteros y ebanistas que quieren gestionar su negocio

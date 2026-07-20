@@ -37,11 +37,9 @@ const isFloorDirect = () => {
 // Marca Carpinteros & Ebanistas (división carpenter.io). Logotipo tipográfico
 // provisional en tonos madera hasta que haya logo definitivo.
 const CarpBrand = ({ big = false }) => (
-  <div className={`inline-flex items-center justify-center rounded-2xl bg-stone-900 shadow-md ${big ? 'px-8 py-5' : 'px-4 py-2.5'}`}>
-    <div className="flex flex-col items-center justify-center leading-none" style={{ color: '#D4A373' }}>
-      <span className={`${big ? 'text-3xl' : 'text-lg'} font-black tracking-wide`} style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>carpinter<span style={{ color: '#8A7B6A' }}>.io</span></span>
-      <span className={`${big ? 'text-xs mt-1.5' : 'text-[8px] mt-1'} font-bold tracking-[0.45em]`}>CARPINTEROS · EBANISTAS</span>
-    </div>
+  <div className={`inline-flex flex-col items-center justify-center rounded-2xl bg-[#1A1A1A] shadow-md ${big ? 'px-8 py-5' : 'px-4 py-2.5'}`}>
+    <CarpinterLogo height={big ? 42 : 26} tone="light" />
+    <span className={`${big ? 'text-[10px] mt-2' : 'text-[8px] mt-1'} font-bold tracking-[0.4em] text-[#C4622D]`}>CARPINTEROS · EBANISTAS</span>
   </div>
 );
 
@@ -262,13 +260,19 @@ const Login = ({ onLogin, customLogo }) => {
     );
   }
 
+  // Fondo por marca. Carpinteros/ebanistas: cocina y mobiliario de madera
+  // (ebanistería), en tonos cálidos. Reserva de color por si la imagen tarda.
+  const brandBg = brand === 'carpinteros'
+    ? 'https://images.unsplash.com/photo-1600489000022-c2086d79f9d4?auto=format&fit=crop&w=1920&q=80'
+    : 'https://static.prod-images.emergentagent.com/jobs/b3965c3e-ccdc-4506-be7a-5d947275bca3/images/34360bf741aea83455380cd7a1a3e4f5cf9c6771d54283a4efe0ac8d2bf300d3.png';
+
   return (
-    <div className="fixed inset-0 flex overflow-hidden font-sans">
+    <div className="fixed inset-0 flex overflow-hidden font-sans" style={{ backgroundColor: brand === 'carpinteros' ? '#2a2119' : '#0f172a' }}>
       {/* Full Background Image */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ 
-          backgroundImage: 'url(https://static.prod-images.emergentagent.com/jobs/b3965c3e-ccdc-4506-be7a-5d947275bca3/images/34360bf741aea83455380cd7a1a3e4f5cf9c6771d54283a4efe0ac8d2bf300d3.png)'
+        style={{
+          backgroundImage: `url(${brandBg})`
         }}
       />
       
