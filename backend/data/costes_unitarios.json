@@ -2305,10 +2305,10 @@
  },
  {
   "codigo": "CORO90X1",
-  "nombre": "Campana de integración JOHNSON",
+  "nombre": "Campana Encastre T Oculta JOHNSON 90cm Clase A 620m3/h Inox",
   "cantidad": 9021.0,
   "coste_total": 366.4,
-  "coste_unitario": 183.2,
+  "coste_unitario": 185.49,
   "revisar": ""
  },
  {
@@ -2497,10 +2497,10 @@
  },
  {
   "codigo": "JOR50MI",
-  "nombre": "Horno con microondas JOHNSON JOR50MI",
+  "nombre": "Horno con Microondas JOHNSON 45cm Digital Cristal Negro",
   "cantidad": 1.0,
   "coste_total": 292.94,
-  "coste_unitario": 292.94,
+  "coste_unitario": 296.61,
   "revisar": ""
  },
  {
@@ -2537,11 +2537,11 @@
  },
  {
   "codigo": "JRC200CN2DX",
-  "nombre": "Combi JOHNSON JRC200CN2DX Libre",
+  "nombre": "Combi JOHNSON NF 201x59.5x67.8 Clase C Dark Inox Display",
   "cantidad": 2.0,
   "coste_total": 829.73,
-  "coste_unitario": 414.865,
-  "revisar": "revisar_coste"
+  "coste_unitario": 445.5,
+  "revisar": ""
  },
  {
   "codigo": "JRFS1986ENDX",
@@ -2593,10 +2593,10 @@
  },
  {
   "codigo": "JWAS14EINT",
-  "nombre": "Lavavajillas JOHNSON JWAS14EINT Int.",
+  "nombre": "Lavavajillas JOHNSON Integrable 60cm 14 Serv. 6 Prog. Clase E Blanco",
   "cantidad": 601.0,
   "coste_total": 236.0,
-  "coste_unitario": 236.0,
+  "coste_unitario": 238.95,
   "revisar": ""
  },
  {
@@ -2625,10 +2625,10 @@
  },
  {
   "codigo": "KON908N",
-  "nombre": "Campana decorativa JOHNSON KON908N",
+  "nombre": "Campana Decorativa JOHNSON 90cm 800m3/h Cristal Negra",
   "cantidad": 920.0,
   "coste_total": 322.2,
-  "coste_unitario": 179.0,
+  "coste_unitario": 136.89,
   "revisar": ""
  },
  {
@@ -3405,6 +3405,38 @@
   "cantidad": 1.0,
   "coste_total": null,
   "coste_unitario": 0.71,
+  "revisar": ""
+ },
+ {
+  "codigo": "JINDU3Z",
+  "nombre": "Placa Induccion 7400W JOHNSON 3 Zonas 290mm Control Deslizante Cristal Negro",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 114.21,
+  "revisar": ""
+ },
+ {
+  "codigo": "KON608B",
+  "nombre": "Campana Decorativa JOHNSON 60cm 800m3/h Cristal Blanca",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 115.02,
+  "revisar": ""
+ },
+ {
+  "codigo": "KON608N",
+  "nombre": "Campana Decorativa JOHNSON 60cm 800m3/h Cristal Negra",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 106.92,
+  "revisar": ""
+ },
+ {
+  "codigo": "KON908B",
+  "nombre": "Campana Decorativa JOHNSON 90cm 800m3/h Cristal Blanco",
+  "cantidad": 1.0,
+  "coste_total": null,
+  "coste_unitario": 144.99,
   "revisar": ""
  }
 ]
