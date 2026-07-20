@@ -812,6 +812,22 @@ const App = () => {
                 Presupuestador
               </button>
             )}
+            {(state.currentUser?.canUseKitchenDesigner || state.currentUser?.canUseCocinasAI || state.currentUser?.canUseAIAnalysis) && (
+              <button
+                onClick={() => setState(prev => ({ ...prev, carpinteroPortalOff: true, currentTab: 'estudioCocinas' }))}
+                className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg uppercase tracking-wide"
+              >
+                Estudio 3D
+              </button>
+            )}
+            {state.currentUser?.canAccessArmarios && (
+              <button
+                onClick={() => setState(prev => ({ ...prev, carpinteroPortalOff: true, currentTab: 'armarios' }))}
+                className="text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 rounded-lg uppercase tracking-wide"
+              >
+                Armarios
+              </button>
+            )}
             {landingUrl && (
               <a href={landingUrl} target="_blank" rel="noreferrer"
                 className="text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest">
