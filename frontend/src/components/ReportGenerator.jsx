@@ -466,7 +466,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
                   </thead>
                   <tbody>
                     {report.topLines.map((line, i) => {
-                      const lmargen = (Number(line.venta) || 0) - (Number(line.coste) || 0);
+                      const _cEf = (Number(line.venta) || 0) < 0 ? -Math.abs(Number(line.coste) || 0) : (Number(line.coste) || 0); const lmargen = (Number(line.venta) || 0) - _cEf;
                       const mpct = (Number(line.coste) || 0) > 0 ? (lmargen / (Number(line.coste) || 0) * 100) : null;
                       return (
                       <tr key={i}
@@ -533,7 +533,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
                       </thead>
                       <tbody>
                         {ficha.lines.map((line, j) => {
-                          const lmargen = (Number(line.venta) || 0) - (Number(line.coste) || 0);
+                          const _cEf = (Number(line.venta) || 0) < 0 ? -Math.abs(Number(line.coste) || 0) : (Number(line.coste) || 0); const lmargen = (Number(line.venta) || 0) - _cEf;
                           const lpct = (Number(line.coste) || 0) > 0 ? (lmargen / (Number(line.coste) || 0) * 100) : null;
                           return (
                           <tr key={j} className="border-t border-slate-100">
