@@ -298,7 +298,7 @@ EX975LXC1E;Placa SIEMENS EX975LXC1E Inducción;1;0.0;0.0;sin_coste_origen
 GASTOS+PORT3;Portes + gastos C/R incluidos Fra;0;21.0;;sin_dato
 GI81NACE0;Congelador 1 puerta SIEMENS GI81NACE0;1;0.0;0.0;sin_coste_origen
 GRANITODS;Fabricación encimera de cocina a medida;1;0.0;0.0;sin_coste_origen
-GUADIANA80W;Lavadora JOHNSON GUADIANA80W;2;527.06;263.53;revisar_coste
+GUADIANA80W;Lavadora Integrable JOHNSON GUADIANA80W 8kg 1400rpm Clase A Inverter;1;234.09;234.09;
 HB734G1B1;Horno SIEMENS HB734G1B1 Multifunción;1;0.0;0.0;sin_coste_origen
 HEZ9VDKR0;Set Accesorios Recirculación BALAY;10;118.34;118.34;
 HR532GBS3;SIEMENS HORNO HR532GBS3;1;0.0;0.0;sin_coste_origen
@@ -306,7 +306,7 @@ HRG7361B1;Horno BOSCH HRG7361B1 Multifunción;1;0.0;0.0;sin_coste_origen
 IR15ACEREXNE;Grifo NOVAMIX Extraible negro IR15;1;57.0;57.0;
 JFILC38668;Kit Filtros C/A JOHNSON JFILC38668;8;115.2;14.4;
 JINDU230;PLACA JOHNSON JINDU230 30CM 2;7;735.0;105.0;
-JINDU3292;PLACA JOHNSON JINDU3292 3 ZONAS;2;247.2;123.6;revisar_coste
+JINDU3292;Placa Inducción JOHNSON JINDU3292 7400W 3 Zonas 280mm Cristal Negro;1;108.54;108.54;
 JINDU332FLEX;Placa JOHNSON JINDU332FLEX Flexindución;1;172.0;172.0;revisar_coste
 JOMI20NINT;MICROONDAS JOHNSON JOMI20NINT;9;1844.73;204.97;revisar_coste
 JOMI28NINT;Microondas JOHNSON JOMI28NINT Integrable1;12;146.06;146.064;
@@ -429,3 +429,14 @@ JINDU3Z;Placa Induccion 7400W JOHNSON 3 Zonas 290mm Control Deslizante Cristal N
 KON608B;Campana Decorativa JOHNSON 60cm 800m3/h Cristal Blanca;1;;115.02;
 KON608N;Campana Decorativa JOHNSON 60cm 800m3/h Cristal Negra;1;;106.92;
 KON908B;Campana Decorativa JOHNSON 90cm 800m3/h Cristal Blanco;1;;144.99;
+JWAS12EINT;Lavavajillas Integrable JOHNSON 60cm 12 Serv. Clase E;1;218.7;218.7;
+JOMI20XINT;Microondas Encastre JOHNSON 20L 800W Grill 1000W Inox;1;101.25;101.25;
+JRC200ENX1;Combi JOHNSON NF 201x60x60.5 Clase E Inox;1;283.5;283.5;
+JWAS14DXN;Lavavajillas JOHNSON 60cm 14 Serv. Clase D Auto Door Dark Inox;1;243.81;243.81;
+JWAS10EINT;Lavavajillas Integrable JOHNSON 45cm 10 Serv. Clase E;1;201.69;201.69;
+NERVION10;Lavadora JOHNSON NERVION10 Carga Frontal 10kg 1500rpm Autodose Blanca Inverter;1;271.35;271.35;
+JDRY10NERVION;Secadora JOHNSON JDRY10NERVION 10kg Bomba de Calor A+++ Display;1;303.75;303.75;
+JRC201EN2GN;Combi JOHNSON NF 201.8x59.5x66 Clase E Steel Cooling Cristal Negro;1;485.19;485.19;
+JRC1851ENW2;Combi JOHNSON NF 185x59.5x60 Clase E Blanco;1;213.03;213.03;
+JR4D1986ENDX;Frigorífico 4 Puertas JOHNSON 190x83.3x64.1 NF Dark;1;506.25;506.25;
+JR4D1986ENGN;Frigorífico 4 Puertas JOHNSON 190x83.3x64.1 NF Clase E Cristal Negro;1;526.5;526.5;
