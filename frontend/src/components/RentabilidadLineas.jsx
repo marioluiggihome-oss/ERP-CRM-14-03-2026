@@ -162,9 +162,29 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
     setInbox(s => ({ ...s, saving: true, error: '' }));
     try {
       if (p.kind === 'coste') {
-        const r = await fetch(`${API_URL}/api/project-costs`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ projectRef: p.projectRef || p.ref, proveedor: p.proveedor || '', concepto: p.resumen || p.ref || 'Factura proveedor', categoria: p.categoria || 'OTROS', importe: Number(p.total) || 0, source: 'ia', docBase64: inbox.fileB64, docMime: inbox.mime, docName: inbox.name }) });
-        if (!r.ok) throw new Error((await r.json()).detail || 'Error');
+        const importe = Number(p.total) || 0;
+        const target = (fichas || []).find(f => normRef(f.ref) === normRef(p.projectRef || ''));
+        // Opción B: si se elige una factura de venta Y una línea, el coste SE SUMA al coste
+        // de esa línea (o crea una línea nueva de coste) y baja su margen. Se guarda la ficha.
+        if (target && p.costeLineId) {
+          const fr = await fetch(`${API_URL}/api/rentabilidad/fichas/${target.id}`);
+          const full = await fr.json();
+          let lines = (full.lines || []).map(l => ({ ...l }));
+          if (p.costeLineId === '__new__') {
+            lines.push({ id: `ln-${Date.now()}`, ref: '', concepto: `Coste ${p.proveedor || ''}`.trim() || (p.resumen || 'Coste proveedor'), cantidad: 1, venta: 0, coste: importe });
+          } else {
+            lines = lines.map(l => l.id === p.costeLineId ? { ...l, coste: (Number(l.coste) || 0) + importe } : l);
+          }
+          const sr = await fetch(`${API_URL}/api/rentabilidad/fichas`, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ ...full, lines }) });
+          if (!sr.ok) throw new Error((await sr.json().catch(() => ({}))).detail || 'No se pudo guardar el coste en la factura');
+          // adjuntar la factura del proveedor como documento de coste de la ficha
+          try { await fetch(`${API_URL}/api/rentabilidad/fichas/${target.id}/docs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileBase64: inbox.fileB64, docMime: inbox.mime, docName: inbox.name, kind: 'coste' }) }); } catch {}
+        } else {
+          const r = await fetch(`${API_URL}/api/project-costs`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectRef: p.projectRef || p.ref, proveedor: p.proveedor || '', concepto: p.resumen || p.ref || 'Factura proveedor', categoria: p.categoria || 'OTROS', importe, source: 'ia', docBase64: inbox.fileB64, docMime: inbox.mime, docName: inbox.name }) });
+          if (!r.ok) throw new Error((await r.json()).detail || 'Error');
+        }
       } else if (p.kind === 'ingreso') {
         const r = await fetch(`${API_URL}/api/rentabilidad/ingresos`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ importe: Number(p.total) || 0, cliente: p.cliente || '', clientCode: p.clientCode || '', projectRef: p.projectRef || '', fecha: p.fecha || '', docBase64: inbox.fileB64, docMime: inbox.mime, docName: inbox.name, createdBy: currentUser?.id }) });
@@ -1445,7 +1465,9 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                 <p className="text-center text-slate-400 py-8 text-sm flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={18} /> Analizando «{inbox.name}»…</p>
               ) : inbox.error && !inbox.prop ? (
                 <p className="text-rose-600 font-bold text-sm py-4">{inbox.error}</p>
-              ) : inbox.prop && (() => { const p = inbox.prop; return (
+              ) : inbox.prop && (() => { const p = inbox.prop;
+                const targetFicha = p.kind === 'coste' ? (fichas || []).find(f => normRef(f.ref) === normRef(p.projectRef || '')) : null;
+                return (
                 <>
                   <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">{p.resumen || 'Documento analizado.'}</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -1471,6 +1493,19 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                       </datalist>
                       {p.kind === 'coste' && <p className="text-[10px] text-slate-400 mt-0.5">Elige la factura de venta a la que pertenece este coste.</p>}
                     </div>
+                    {/* Coste → línea concreta de esa factura (para que reste en su margen) */}
+                    {p.kind === 'coste' && targetFicha && (
+                      <div className="col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase">Asignar el coste a la línea</label>
+                        <select value={p.costeLineId || ''} onChange={e => setProp('costeLineId', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm">
+                          <option value="">— Como coste de proyecto (no resta en líneas) —</option>
+                          {(targetFicha.lines || []).map(l => (
+                            <option key={l.id} value={l.id}>{(l.concepto || l.ref || 'Línea').slice(0, 60)} · venta {eur(l.venta)}{Number(l.coste) ? ` · coste actual ${eur(l.coste)}` : ''}</option>
+                          ))}
+                          <option value="__new__">➕ Añadir como línea nueva de coste</option>
+                        </select>
+                        {p.costeLineId && p.costeLineId !== '__new__' && <p className="text-[10px] text-emerald-600 mt-0.5">El importe se sumará al coste de esa línea y bajará su margen.</p>}
+                      </div>
+                    )}
                     {p.kind === 'ingreso' && <div><label className="text-[10px] font-black text-slate-400 uppercase">Código cliente</label>
                       <input value={p.clientCode || ''} onChange={e => setProp('clientCode', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" /></div>}
                     <div><label className="text-[10px] font-black text-slate-400 uppercase">Nº / Ref</label>
