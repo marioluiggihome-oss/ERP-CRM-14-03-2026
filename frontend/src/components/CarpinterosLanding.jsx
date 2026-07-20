@@ -100,7 +100,7 @@ const PLANS = [
       "Facturación básica",
       "Soporte por email",
     ],
-    cta: "Empezar gratis",
+    cta: "Acceder al programa",
     highlight: false,
   },
   {
@@ -117,7 +117,7 @@ const PLANS = [
       "Informes avanzados",
       "Soporte prioritario",
     ],
-    cta: "Empezar gratis",
+    cta: "Acceder al programa",
     highlight: true,
   },
   {
@@ -174,8 +174,8 @@ const FAQS = [
     a: "Sí. Usamos el mismo motor de IA que utilizan estudios de arquitectura e interiorismo. El resultado es fotorrealista y válido para presentar al cliente.",
   },
   {
-    q: "¿Puedo probar antes de pagar?",
-    a: "Sí. Tienes 14 días de prueba gratuita con todas las funciones activas, sin tarjeta de crédito.",
+    q: "¿Cómo me doy de alta?",
+    a: "El alta la gestiona nuestro equipo: te damos de alta, configuramos tus materiales y precios, y entras con tus credenciales. Sin permanencia.",
   },
   {
     q: "¿Qué pasa con mis datos si cancelo?",
@@ -264,7 +264,7 @@ function Nav({ onEnter }) {
             onClick={enter}
             className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-[#C4622D] text-[#F5F0E8] hover:bg-[#A0834A] transition-all active:scale-[0.97] shadow-warm"
           >
-            Prueba gratis
+            Acceder al programa
           </a>
         </div>
 
@@ -304,7 +304,7 @@ function Nav({ onEnter }) {
               onClick={(e) => { setOpen(false); enter(e); }}
               className="block w-full text-center py-2.5 rounded-lg bg-[#C4622D] text-[#F5F0E8] font-semibold text-sm"
             >
-              Prueba gratis — 14 días sin tarjeta
+              Acceder a mi cuenta
             </a>
           </div>
         </div>
@@ -365,7 +365,7 @@ function Hero() {
               href="#precios"
               className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-[#C4622D] text-[#F5F0E8] font-semibold text-base hover:bg-[#A0834A] transition-all active:scale-[0.97] shadow-warm-lg"
             >
-              Empieza gratis — 14 días
+              Acceder al programa
               <ArrowRight size={16} />
             </a>
             <a
@@ -545,7 +545,7 @@ function AISection() {
               href="#precios"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#C4622D] text-[#F5F0E8] font-semibold text-sm hover:bg-[#A0834A] transition-all active:scale-[0.97]"
             >
-              Probar los renders gratis
+              Ver los renders
               <ArrowRight size={15} />
             </a>
           </div>
@@ -572,7 +572,7 @@ function Pricing({ onEnter }) {
               <span className="italic text-[#C4622D]">precio justo</span>
             </h2>
             <p className="text-[#6B5E4E]">
-              14 días de prueba gratuita en todos los planes. Sin tarjeta de crédito.
+              Elige tu plan. Alta gestionada por nuestro equipo.
             </p>
             {/* Conmutador mensual / anual (anual = 2 meses gratis) */}
             <div className="flex items-center gap-3 mt-5">
@@ -833,7 +833,7 @@ function CTASection({ onEnter }) {
             <span className="italic">Sin riesgos.</span>
           </h2>
           <p className="text-[#F5F0E8]/70 text-lg mb-8">
-            14 días de prueba gratuita. Sin tarjeta de crédito. Sin permanencia.
+            Sin permanencia. Alta y puesta en marcha con acompañamiento.
             Si no te convence, no pagas nada.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -842,7 +842,7 @@ function CTASection({ onEnter }) {
               onClick={(e) => { e.preventDefault(); onEnter && onEnter(); }}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#1C1A17] text-[#F5F0E8] font-semibold text-base hover:bg-[#1C1A17]/80 transition-all active:scale-[0.97] shadow-warm-lg"
             >
-              Empezar gratis ahora
+              Acceder al programa
               <ArrowRight size={16} />
             </a>
             <a
