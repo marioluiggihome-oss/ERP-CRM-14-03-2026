@@ -455,6 +455,7 @@ export default function AIRenderStudio({ state, setState }) {
   const [ref, setRef] = useState('');
   const [savedId, setSavedId] = useState(null);
   const [savedList, setSavedList] = useState(null); // null = oculto
+  const [savedSearch, setSavedSearch] = useState(''); // Buscador de proyectos por nombre/referencia
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
   // Captura de medidas de la estancia (para proporción/escala reales).
@@ -2655,10 +2656,28 @@ export default function AIRenderStudio({ state, setState }) {
               <h3 className="font-black text-slate-800">Mis proyectos 3D</h3>
               <button onClick={() => setSavedList(null)} className="p-1.5 text-slate-400 hover:text-slate-700"><X size={18} /></button>
             </div>
+            {savedList.length > 0 && (
+              <div className="px-4 pt-3 pb-1">
+                <input
+                  autoFocus
+                  value={savedSearch}
+                  onChange={e => setSavedSearch(e.target.value)}
+                  placeholder="Buscar por nombre o referencia…"
+                  className="w-full px-3 py-2 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                />
+              </div>
+            )}
             <div className="p-4 overflow-y-auto">
-              {savedList.length === 0 ? (
+              {(() => {
+                const q = savedSearch.trim().toLowerCase();
+                const shown = q ? savedList.filter(d => `${d.cliente || ''} ${d.ref || ''}`.toLowerCase().includes(q)) : savedList;
+                if (savedList.length === 0) return (
                 <p className="text-sm text-slate-400 text-center py-8">No tienes proyectos guardados todavía.</p>
-              ) : savedList.map(d => (
+                );
+                if (shown.length === 0) return (
+                <p className="text-sm text-slate-400 text-center py-8">Sin resultados para “{savedSearch}”.</p>
+                );
+                return shown.map(d => (
                 <div key={d.id} className="flex items-center gap-3 border border-slate-200 rounded-xl p-2 mb-2 hover:bg-slate-50">
                   <div className="w-12 h-12 shrink-0 bg-slate-200 rounded-lg overflow-hidden">
                     {d.images?.[0] ? <img src={assetSrc(d.images[0])} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400"><Image size={16} /></div>}
@@ -2670,7 +2689,8 @@ export default function AIRenderStudio({ state, setState }) {
                   <button onClick={() => loadDesign(d)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700">Abrir</button>
                   <button onClick={() => deleteDesign(d.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                 </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
         </div>
