@@ -1501,7 +1501,9 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
         if revisada:
             fic = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0, "lines": 1})
             tt = _ficha_totals((fic or {}).get("lines", []))
-            if (tt.get("margen") or 0) <= 0:
+            # Los abonos/rectificativas (venta total <= 0) sí se pueden revisar (margen negativo correcto).
+            es_abono = (tt.get("venta") or 0) <= 0
+            if not es_abono and (tt.get("margen") or 0) <= 0:
                 raise HTTPException(status_code=400, detail="No se puede marcar como revisada: el margen es 0 o negativo. Revisa venta/costes.")
             if (tt.get("venta") or 0) > 0 and not (tt.get("coste") or 0) > 0:
                 raise HTTPException(status_code=400, detail="No se puede marcar como revisada: la factura no tiene costes cargados (margen no real).")

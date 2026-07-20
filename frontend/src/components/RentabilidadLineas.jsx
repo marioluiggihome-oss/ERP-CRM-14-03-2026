@@ -115,11 +115,13 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
       alert('Ficha con visto bueno del controller: bloqueada.\n\nPara desmarcarla, el master debe mantener pulsada la tecla Shift un par de segundos (desbloqueo) y volver a intentarlo.');
       return;
     }
-    // No dejar dar el visto bueno a una factura con margen 0/negativo o sin costes cargados.
+    // No dejar dar el visto bueno a una VENTA real con margen 0/negativo o sin costes.
+    // Los ABONOS/rectificativas (venta total ≤ 0) sí se pueden revisar (su margen negativo es correcto).
     if (!yaRevisada) {
       const tt = f.totals || totals(f.lines);
+      const esAbono = (Number(tt.venta) || 0) <= 0;
       const faltanCostes = (tt.venta > 0) && !(tt.coste > 0) && !((f.costesProyecto || 0) > 0);
-      if ((Number(tt.margen) || 0) <= 0) {
+      if (!esAbono && (Number(tt.margen) || 0) <= 0) {
         alert(`No se puede marcar como REVISADA: el margen es ${eur(tt.margen)} (0 o negativo).\n\nRevisa/corrige la venta o el coste de las líneas antes de dar el visto bueno.`);
         return;
       }
