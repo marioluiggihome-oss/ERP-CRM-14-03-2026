@@ -39,7 +39,7 @@ const isFloorDirect = () => {
 const CarpBrand = ({ big = false }) => (
   <div className={`inline-flex items-center justify-center rounded-2xl bg-stone-900 shadow-md ${big ? 'px-8 py-5' : 'px-4 py-2.5'}`}>
     <div className="flex flex-col items-center justify-center leading-none" style={{ color: '#D4A373' }}>
-      <span className={`${big ? 'text-3xl' : 'text-lg'} font-black tracking-wide`} style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>carpenter</span>
+      <span className={`${big ? 'text-3xl' : 'text-lg'} font-black tracking-wide`} style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>carpinter<span style={{ color: '#8A7B6A' }}>.io</span></span>
       <span className={`${big ? 'text-xs mt-1.5' : 'text-[8px] mt-1'} font-bold tracking-[0.45em]`}>CARPINTEROS · EBANISTAS</span>
     </div>
   </div>

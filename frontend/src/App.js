@@ -722,8 +722,16 @@ const App = () => {
     } catch { return false; }
   })();
 
+  // Acceso directo al programa saltando la landing: ?entrar / ?app / ?login
+  const _skipLanding = (() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.has('entrar') || sp.has('app') || sp.has('login');
+    } catch { return false; }
+  })();
+
   if (!state.currentUser) {
-    if (_isCarpBrandEntry && !state.carpLandingSkip) {
+    if (_isCarpBrandEntry && !state.carpLandingSkip && !_skipLanding) {
       return (
         <Suspense fallback={<div className="min-h-screen bg-[#F5F0E8]" />}>
           <CarpinterosLanding onEnter={() => setState(prev => ({ ...prev, carpLandingSkip: true }))} />
