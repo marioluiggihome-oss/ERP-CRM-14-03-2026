@@ -1294,6 +1294,79 @@ async def tag_electros(payload: Optional[dict] = None, user: dict = Depends(requ
     return {"success": True, "tagged": tagged}
 
 
+# ---------------------------------------------------------------------------
+# Bodegones de electros: grupos de articulos (muchos-a-muchos). Un articulo
+# puede estar en varios bodegones. tipo: 'bodegon' (suma PVP) u 'oferta'
+# (valores individuales, no suma). Coleccion: electro_bodegones.
+# ---------------------------------------------------------------------------
+async def _resolve_bodegon(b: dict) -> dict:
+    """Anade a un bodegon el detalle de sus articulos desde article_costs y el
+    total de PVP (solo suma si tipo == 'bodegon')."""
+    codes = b.get("articleCodes") or []
+    arts = []
+    total_pvp = 0.0
+    if codes:
+        async for a in db.article_costs.find({"codigoNorm": {"$in": codes}}, {"_id": 0}):
+            arts.append({
+                "codigo": a.get("codigo"), "codigoNorm": a.get("codigoNorm"),
+                "nombre": a.get("nombre"), "marca": a.get("marca"),
+                "costeUnitario": a.get("costeUnitario"), "pvp": a.get("pvp"),
+            })
+    # Ordena los articulos segun el orden guardado en articleCodes.
+    order = {c: i for i, c in enumerate(codes)}
+    arts.sort(key=lambda x: order.get(x.get("codigoNorm"), 9999))
+    if (b.get("tipo") or "bodegon") == "bodegon":
+        total_pvp = sum(float(a.get("pvp") or 0) for a in arts if a.get("pvp"))
+    con_pvp = sum(1 for a in arts if a.get("pvp"))
+    return {**{k: v for k, v in b.items() if k != "_id"}, "articulos": arts,
+            "totalPvp": round(total_pvp, 2), "conPvp": con_pvp, "nArts": len(arts)}
+
+
+@router.get("/rentabilidad/bodegones")
+async def list_bodegones():
+    """Lista los bodegones de electros con el detalle de sus articulos."""
+    out = []
+    async for b in db.electro_bodegones.find({}, {"_id": 0}).sort("createdAt", 1):
+        out.append(await _resolve_bodegon(b))
+    return {"total": len(out), "items": out}
+
+
+@router.post("/rentabilidad/bodegones")
+async def upsert_bodegon(payload: dict, user: dict = Depends(require_rentabilidad)):
+    """Crea o actualiza un bodegon. Campos: id?, nombre, tipo ('bodegon'|'oferta'),
+    marca, articleCodes[] (referencias normalizadas de los articulos asignados)."""
+    bid = (payload or {}).get("id") or f"bod-{uuid.uuid4().hex[:8]}"
+    prev = await db.electro_bodegones.find_one({"id": bid}, {"_id": 0})
+    codes = payload.get("articleCodes")
+    if codes is None:
+        codes = (prev or {}).get("articleCodes") or []
+    # Normaliza y elimina duplicados conservando el orden.
+    seen, norm_codes = set(), []
+    for c in codes:
+        n = _normalize_ref(str(c))
+        if n and n not in seen:
+            seen.add(n); norm_codes.append(n)
+    doc = {
+        "id": bid,
+        "nombre": str(payload.get("nombre", (prev or {}).get("nombre") or "")).strip() or "Bodegón",
+        "tipo": (payload.get("tipo") or (prev or {}).get("tipo") or "bodegon"),
+        "marca": str(payload.get("marca", (prev or {}).get("marca") or "")).strip(),
+        "articleCodes": norm_codes,
+        "createdAt": (prev or {}).get("createdAt") or datetime.now(timezone.utc).isoformat(),
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "updatedBy": (user or {}).get("username", ""),
+    }
+    await db.electro_bodegones.update_one({"id": bid}, {"$set": doc}, upsert=True)
+    return {"success": True, "bodegon": await _resolve_bodegon(doc), "created": prev is None}
+
+
+@router.delete("/rentabilidad/bodegones/{bid}")
+async def delete_bodegon(bid: str, user: dict = Depends(require_rentabilidad)):
+    """Elimina un bodegon (no borra los articulos del catalogo)."""
+    res = await db.electro_bodegones.delete_one({"id": bid})
+    return {"success": res.deleted_count > 0}
+
+
 @router.post("/rentabilidad/apply-article-costs")
 async def apply_article_costs(payload: dict):
     """Alimenta el coste de cada linea a partir del coste unitario (coste medio
