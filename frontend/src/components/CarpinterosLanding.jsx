@@ -209,9 +209,10 @@ function useScrolled() {
 
 // ─── COMPONENTS ──────────────────────────────────────────────────────────────
 
-function Nav() {
+function Nav({ onEnter }) {
   const scrolled = useScrolled();
   const [open, setOpen] = useState(false);
+  const enter = (e) => { if (e) e.preventDefault(); if (onEnter) onEnter(); };
 
   return (
     <header
@@ -252,13 +253,15 @@ function Nav() {
         {/* CTA */}
         <div className="hidden lg:flex items-center gap-3">
           <a
-            href="#precios"
+            href="#acceso"
+            onClick={enter}
             className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-[#C4622D]/10 text-[#C4622D]"
           >
-            Ver precios
+            Acceder
           </a>
           <a
-            href="#precios"
+            href="#acceso"
+            onClick={enter}
             className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-[#C4622D] text-[#F5F0E8] hover:bg-[#A0834A] transition-all active:scale-[0.97] shadow-warm"
           >
             Prueba gratis
@@ -288,10 +291,17 @@ function Nav() {
               {l.label}
             </a>
           ))}
-          <div className="pt-2 border-t border-[#C4622D]/10">
+          <div className="pt-2 border-t border-[#C4622D]/10 space-y-1">
             <a
-              href="#precios"
-              onClick={() => setOpen(false)}
+              href="#acceso"
+              onClick={(e) => { setOpen(false); enter(e); }}
+              className="block w-full text-center py-2.5 rounded-lg border border-[#C4622D]/30 text-[#C4622D] font-semibold text-sm"
+            >
+              Acceder a mi cuenta
+            </a>
+            <a
+              href="#acceso"
+              onClick={(e) => { setOpen(false); enter(e); }}
               className="block w-full text-center py-2.5 rounded-lg bg-[#C4622D] text-[#F5F0E8] font-semibold text-sm"
             >
               Prueba gratis — 14 días sin tarjeta
@@ -545,7 +555,7 @@ function AISection() {
   );
 }
 
-function Pricing() {
+function Pricing({ onEnter }) {
   const [anual, setAnual] = useState(false);
   return (
     <section id="precios" className="py-24 bg-[#F5F0E8]">
@@ -796,7 +806,7 @@ function FAQ() {
   );
 }
 
-function CTASection() {
+function CTASection({ onEnter }) {
   return (
     <section className="py-24 bg-[#C4622D] relative overflow-hidden grain-overlay">
       {/* Marcas de precisión en las esquinas */}
@@ -925,14 +935,14 @@ export default function CarpinterosLanding({ onEnter }) {
 
   return (
     <div className="min-h-screen">
-      <Nav />
+      <Nav onEnter={onEnter} />
       <Hero />
       <Features />
       <AISection />
-      <Pricing />
+      <Pricing onEnter={onEnter} />
       <Testimonials />
       <FAQ />
-      <CTASection />
+      <CTASection onEnter={onEnter} />
       <Footer />
     </div>
   );
