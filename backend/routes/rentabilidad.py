@@ -1453,7 +1453,11 @@ async def assign_client_code(payload: dict, user: dict = Depends(require_rentabi
     codigo = str((payload or {}).get("codigo") or "").strip()
     if not cliente or not codigo:
         raise HTTPException(status_code=400, detail="Falta el cliente o el código")
-    res = await db.sale_fichas.update_many({"cliente": cliente}, {"$set": {"clienteCodigo": codigo}})
+    # Respeta el bloqueo del controller: a un no-master no se le tocan las fichas revisadas.
+    query = {"cliente": cliente}
+    if not _is_elevated(user):
+        query["revisada"] = {"$ne": True}
+    res = await db.sale_fichas.update_many(query, {"$set": {"clienteCodigo": codigo}})
     # Si el cliente existe en la ficha pero no en db.clients, lo damos de alta con ese código.
     try:
         await _ensure_client_for_invoice(cliente, codigo)
@@ -1483,6 +1487,14 @@ async def toggle_revision(ficha_id: str, payload: dict, user: dict = Depends(req
         # (master/dirección). El controller puede marcar, pero no desmarcar.
         if not revisada and not _is_elevated(user):
             raise HTTPException(status_code=403, detail="Solo el master puede quitar el visto bueno del controller")
+        # No dar el visto bueno a una factura con margen 0/negativo o sin costes cargados.
+        if revisada:
+            fic = await db.sale_fichas.find_one({"id": ficha_id}, {"_id": 0, "lines": 1})
+            tt = _ficha_totals((fic or {}).get("lines", []))
+            if (tt.get("margen") or 0) <= 0:
+                raise HTTPException(status_code=400, detail="No se puede marcar como revisada: el margen es 0 o negativo. Revisa venta/costes.")
+            if (tt.get("venta") or 0) > 0 and not (tt.get("coste") or 0) > 0:
+                raise HTTPException(status_code=400, detail="No se puede marcar como revisada: la factura no tiene costes cargados (margen no real).")
         now = datetime.now(timezone.utc).isoformat()
         upd = {
             "revisada": revisada,

@@ -115,6 +115,19 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
       alert('Ficha con visto bueno del controller: bloqueada.\n\nPara desmarcarla, el master debe mantener pulsada la tecla Shift un par de segundos (desbloqueo) y volver a intentarlo.');
       return;
     }
+    // No dejar dar el visto bueno a una factura con margen 0/negativo o sin costes cargados.
+    if (!yaRevisada) {
+      const tt = f.totals || totals(f.lines);
+      const faltanCostes = (tt.venta > 0) && !(tt.coste > 0) && !((f.costesProyecto || 0) > 0);
+      if ((Number(tt.margen) || 0) <= 0) {
+        alert(`No se puede marcar como REVISADA: el margen es ${eur(tt.margen)} (0 o negativo).\n\nRevisa/corrige la venta o el coste de las líneas antes de dar el visto bueno.`);
+        return;
+      }
+      if (faltanCostes) {
+        alert('No se puede marcar como REVISADA: la factura tiene venta pero NO tiene costes cargados (el margen no es real).\n\nAlimenta los costes (💰) o asígnalos antes de dar el visto bueno.');
+        return;
+      }
+    }
     const accion = yaRevisada ? 'desmarcar la revisión' : 'marcar como REVISADA';
     if (!window.confirm(`¿Deseas ${accion} la factura "${f.ref || f.id}"?`)) return;
     setTogglingRevision(f.id);
@@ -972,11 +985,13 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
   const marginBadFichas = useMemo(() => baseFiltered.filter(margenNegativo), [baseFiltered]);
 
   // Facturas que faltan por controlar (Check Controller pendiente). Solo facturas de venta.
+  // Respeta los filtros activos (cliente, fechas, importes) y la pestaña actual: cuenta lo
+  // que el controller está viendo, no el total global.
   const pendientesControl = useMemo(() => {
-    const facturas = (fichas || []).filter(f => (f.docType || 'factura') === 'factura' && !f.revisada);
+    const facturas = (baseFiltered || []).filter(f => (f.docType || 'factura') === 'factura' && !f.revisada);
     const lineas = facturas.reduce((s, f) => s + ((f.lines || []).length), 0);
     return { docs: facturas.length, lineas };
-  }, [fichas]);
+  }, [baseFiltered]);
 
   // Lista final que se pinta: si el modo revisión está activo, solo las de margen ≤ 0.
   const filteredAndSorted = useMemo(
@@ -1134,11 +1149,10 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
 
       {/* Totales del listado filtrado (pestaña + filtros de columna activos) */}
       {showTotals && (
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-4">
-          <div className="bg-indigo-600 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Total venta</p><p className="text-xl font-black">{eur(filteredTotals.venta)}</p></div>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
           <div className="bg-orange-600 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Total coste</p><p className="text-xl font-black">{eur(filteredTotals.coste)}</p></div>
+          <div className="bg-indigo-600 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Total venta</p><p className="text-xl font-black">{eur(filteredTotals.venta)}</p></div>
           <div className={`${filteredTotals.margen >= 0 ? 'bg-emerald-600' : 'bg-red-600'} text-white p-3 rounded-2xl`}><p className="text-[10px] uppercase opacity-80">Total margen</p><p className="text-xl font-black">{eur(filteredTotals.margen)}</p></div>
-          <div className={`${filteredTotals.pendienteCobro > 0 ? 'bg-amber-600' : 'bg-slate-700'} text-white p-3 rounded-2xl`}><p className="text-[10px] uppercase opacity-80">Pendiente cobro</p><p className="text-xl font-black">{eur(filteredTotals.pendienteCobro)}</p></div>
           <div className="bg-slate-800 text-white p-3 rounded-2xl"><p className="text-[10px] uppercase opacity-80">Documentos {hasActiveFilters ? '(filtrados)' : ''}</p><p className="text-xl font-black">{filteredAndSorted.length}</p></div>
         </div>
       )}
@@ -1377,7 +1391,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                         {togglingRevision === f.id
                           ? <Loader2 size={11} className="animate-spin" />
                           : f.revisada ? '✅' : '❓✔'}
-                        {f.revisada ? 'Check Controller' : 'Check Controller'}
+                        {f.revisada ? 'Revisada' : 'Check Controller'}
                       </button>
                     )}
                     {bloqueada(f) ? (
@@ -1392,7 +1406,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
               );
             })}
             {filteredAndSorted.length === 0 && (
-              <tr><td colSpan={8} className="p-8 text-center text-slate-400">
+              <tr><td colSpan={9} className="p-8 text-center text-slate-400">
                 {loading ? 'Cargando...' : hasActiveFilters ? 'Sin resultados con estos filtros' : `Sin ${TABS.find(t => t.key === docType)?.label.toLowerCase()}. Sube un documento de venta para empezar.`}
               </td></tr>
             )}
