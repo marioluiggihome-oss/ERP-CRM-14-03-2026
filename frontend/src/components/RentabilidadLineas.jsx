@@ -1725,7 +1725,14 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                             onBlur={e => blurLine(i, 'cantidad', e.target.value)}
                             className="w-full px-1.5 py-1 border rounded text-xs text-right"
                           /></td>
-                          <td className="p-1 text-right font-mono text-[11px] text-slate-500" title="Coste unitario = Coste ÷ Cantidad">{eur(costeUd)}</td>
+                          <td className="p-1"><input
+                            type="text" inputMode="decimal"
+                            value={l.costeUdRaw ?? (costeUd ? String(costeUd) : '')}
+                            title="Coste unitario (Coste ÷ Cantidad). Editable: recalcula el coste total × cantidad."
+                            onChange={e => { const lines = [...editor.lines]; lines[i] = { ...lines[i], costeUdRaw: e.target.value }; setEditor({ ...editor, lines }); }}
+                            onBlur={e => { const v = parseDecimal(e.target.value); const lines = [...editor.lines]; const c = Number(lines[i].cantidad) || 1; lines[i] = { ...lines[i], coste: Number((v * c).toFixed(2)), costeUdRaw: undefined }; setEditor({ ...editor, lines }); }}
+                            className="w-full px-1.5 py-1 border rounded text-xs text-right text-slate-600"
+                          /></td>
                           <td className="p-1"><input
                             type="text" inputMode="decimal"
                             value={l.coste}
