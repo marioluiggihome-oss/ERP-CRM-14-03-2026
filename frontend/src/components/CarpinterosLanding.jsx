@@ -89,6 +89,7 @@ const PLANS = [
   {
     name: "Starter",
     price: "79",
+    anual: "790",
     desc: "Para el taller que empieza a organizarse",
     credits: "10 renders/mes",
     features: [
@@ -105,6 +106,7 @@ const PLANS = [
   {
     name: "Profesional",
     price: "179",
+    anual: "1.790",
     desc: "Para talleres en crecimiento",
     credits: "40 renders/mes",
     features: [
@@ -121,6 +123,7 @@ const PLANS = [
   {
     name: "Business",
     price: "349",
+    anual: "3.490",
     desc: "Para empresas con varios talleres",
     credits: "120 renders/mes",
     features: [
@@ -543,6 +546,7 @@ function AISection() {
 }
 
 function Pricing() {
+  const [anual, setAnual] = useState(false);
   return (
     <section id="precios" className="py-24 bg-[#F5F0E8]">
       <div className="container">
@@ -560,6 +564,25 @@ function Pricing() {
             <p className="text-[#6B5E4E]">
               14 días de prueba gratuita en todos los planes. Sin tarjeta de crédito.
             </p>
+            {/* Conmutador mensual / anual (anual = 2 meses gratis) */}
+            <div className="flex items-center gap-3 mt-5">
+              <div className="inline-flex rounded-full bg-white border border-[#C4622D]/20 p-1 text-sm font-medium">
+                <button
+                  onClick={() => setAnual(false)}
+                  className={`px-4 py-1.5 rounded-full transition-colors ${!anual ? "bg-[#1C1A17] text-[#F5F0E8]" : "text-[#6B5E4E]"}`}
+                >
+                  Mensual
+                </button>
+                <button
+                  onClick={() => setAnual(true)}
+                  className={`px-4 py-1.5 rounded-full transition-colors ${anual ? "bg-[#1C1A17] text-[#F5F0E8]" : "text-[#6B5E4E]"}`}
+                >
+                  Anual
+                </button>
+              </div>
+              <span className="text-xs font-bold text-[#C4622D]">{anual ? "2 meses gratis incluidos" : "Con el plan anual, 2 meses gratis"}</span>
+            </div>
+            <p className="text-[11px] text-[#6B5E4E]/70 mt-2">Precios sin IVA.</p>
           </div>
           {/* Sello artesanal */}
           <div className="hidden lg:flex flex-col items-center justify-center w-24 h-24 rounded-full border-2 border-[#C4622D]/25 text-center flex-shrink-0 mt-2">
@@ -604,14 +627,14 @@ function Pricing() {
                     className={`text-5xl font-black ${plan.highlight ? "text-[#F5F0E8]" : "text-[#1C1A17]"}`}
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}
                   >
-                    {plan.price}€
+                    {anual ? plan.anual : plan.price}€
                   </span>
                   <span className={`text-sm pb-2 ${plan.highlight ? "text-[#F5F0E8]/40" : "text-[#6B5E4E]"}`}>
-                    /mes
+                    /{anual ? "año" : "mes"} + IVA
                   </span>
                 </div>
                 <p className={`text-xs mt-1 font-medium ${plan.highlight ? "text-[#C4622D]" : "text-[#C4622D]"}`}>
-                  {plan.credits}
+                  {plan.credits}{anual ? " · 12 meses al precio de 10" : ""}
                 </p>
               </div>
 
