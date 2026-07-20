@@ -2411,10 +2411,18 @@ if ENFORCE_GLOBAL_AUTH:
 logger.info(f"🔐 Global auth enforcement (ENFORCE_GLOBAL_AUTH): {'ON' if ENFORCE_GLOBAL_AUTH else 'OFF'}")
 
 # CORS Middleware - MUST be added BEFORE routers
+# Origenes permitidos: los de la variable de entorno + los dominios de marca
+# de cada division (carpinter.io, etc.), para que el SaaS funcione multi-dominio
+# aunque CORS_ORIGINS este fijado en produccion.
+_cors_env = os.environ.get('CORS_ORIGINS', 'https://erp.luiggihome.es,https://erp-crm-14-03-2026-production.up.railway.app,http://localhost:3000')
+_cors_origins = [o.strip() for o in _cors_env.split(',') if o.strip()]
+for _extra in ['https://carpinter.io', 'https://www.carpinter.io']:
+    if _extra not in _cors_origins:
+        _cors_origins.append(_extra)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', 'https://erp.luiggihome.es,https://erp-crm-14-03-2026-production.up.railway.app,http://localhost:3000').split(','),
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -625,7 +625,7 @@ const Login = ({ onLogin, customLogo }) => {
               {brand === 'floor'
                 ? '© 2026 FLOOR · Suelo SPC porcelánico'
                 : brand === 'carpinteros'
-                ? '© 2026 CARPENTER · Carpinteros & Ebanistas'
+                ? '© 2026 carpinter.io · Carpinteros & Ebanistas'
                 : '© 2026 · Sistema Profesional de Presupuestos'}
             </p>
           </div>
