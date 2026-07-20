@@ -243,9 +243,12 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
 
   useEffect(() => { load(); }, [load]);
 
+  // Coste EFECTIVO: en un abono (línea con venta negativa) el coste también resta
+  // (se revierte la venta, no se vuelve a costar la mercancía). Así el margen neto cuadra.
+  const costeEfectivo = (venta, coste) => (Number(venta) || 0) < 0 ? -Math.abs(Number(coste) || 0) : (Number(coste) || 0);
   const totals = (lines) => {
     const venta = (lines || []).reduce((s, l) => s + (Number(l.venta) || 0), 0);
-    const coste = (lines || []).reduce((s, l) => s + (Number(l.coste) || 0), 0);
+    const coste = (lines || []).reduce((s, l) => s + costeEfectivo(l.venta, l.coste), 0);
     const margen = venta - coste;
     // % unificado = incremento sobre el coste (margen / coste), coherente con el resto de la app
     return { venta, coste, margen, margenPct: coste > 0 ? (margen / coste * 100) : 0 };
@@ -1709,9 +1712,10 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {editor.lines.map((l, i) => {
-                      const m = (Number(l.venta) || 0) - (Number(l.coste) || 0);
+                      const cEf = costeEfectivo(l.venta, l.coste);   // en abonos (venta<0) el coste resta
+                      const m = (Number(l.venta) || 0) - cEf;
                       // % = incremento sobre el coste (cuánto se sube el coste hasta la venta)
-                      const mpct = (Number(l.coste) || 0) > 0 ? (m / (Number(l.coste) || 0) * 100) : null;
+                      const mpct = Math.abs(cEf) > 0 ? (m / Math.abs(cEf) * 100) : null;
                       const cant = Number(l.cantidad) || 1;
                       const costeUd = cant > 0 ? (Number(l.coste) || 0) / cant : (Number(l.coste) || 0);
                       return (
@@ -1825,11 +1829,12 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   </tr></thead>
                   <tbody className="divide-y divide-slate-100">
                     {(viewing.lines || []).map((l, i) => {
-                      const m = (Number(l.venta) || 0) - (Number(l.coste) || 0);
-                      const mpct = (Number(l.coste) || 0) > 0 ? (m / (Number(l.coste) || 0) * 100) : null;
+                      const cEf = costeEfectivo(l.venta, l.coste);   // abono: coste resta
+                      const m = (Number(l.venta) || 0) - cEf;
+                      const mpct = Math.abs(cEf) > 0 ? (m / Math.abs(cEf) * 100) : null;
                       return (<tr key={l.id || i}>
-                        <td className="p-2">{l.ref ? <span className="text-slate-400 mr-1">[{l.ref}]</span> : null}{l.concepto}</td>
-                        <td className="p-2 text-right font-mono text-orange-600">{eur(l.coste)}</td>
+                        <td className="p-2">{l.ref ? <span className="text-slate-400 mr-1">[{l.ref}]</span> : null}{l.concepto}{(Number(l.venta) || 0) < 0 && <span className="ml-1 text-[9px] font-bold text-amber-600">(abono)</span>}</td>
+                        <td className="p-2 text-right font-mono text-orange-600">{eur(cEf)}</td>
                         <td className="p-2 text-right font-mono">{eur(l.venta)}</td>
                         <td className={`p-2 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
                         <td className={`p-2 text-right font-mono font-bold text-xs ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(1)}%`}</td>

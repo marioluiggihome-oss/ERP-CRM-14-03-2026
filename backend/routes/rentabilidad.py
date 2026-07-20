@@ -849,9 +849,17 @@ LINEAS DE VENTA:
 """
 
 
+def _coste_efectivo(l):
+    """En un abono (linea con venta negativa) el coste tambien resta: se revierte la
+    venta, no se vuelve a costar la mercancia. Asi el margen neto de la ficha cuadra."""
+    v = float(l.get("venta", 0) or 0)
+    c = float(l.get("coste", 0) or 0)
+    return -abs(c) if v < 0 else c
+
+
 def _ficha_totals(lines):
     venta = sum(float(l.get("venta", 0) or 0) for l in lines)
-    coste = sum(float(l.get("coste", 0) or 0) for l in lines)
+    coste = sum(_coste_efectivo(l) for l in lines)
     margen = venta - coste
     return {
         "venta": round(venta, 2),
