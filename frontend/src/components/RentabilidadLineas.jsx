@@ -1463,8 +1463,14 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                       </select></div>}
                     <div><label className="text-[10px] font-black text-slate-400 uppercase">{p.kind === 'coste' ? 'Proveedor' : 'Cliente'}</label>
                       <input value={p.kind === 'coste' ? (p.proveedor || '') : (p.cliente || '')} onChange={e => setProp(p.kind === 'coste' ? 'proveedor' : 'cliente', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" /></div>
-                    <div><label className="text-[10px] font-black text-slate-400 uppercase">Proyecto (ref)</label>
-                      <input value={p.projectRef || ''} onChange={e => setProp('projectRef', e.target.value)} placeholder="LG26/…" className="w-full px-2 py-2 border rounded-lg text-sm" /></div>
+                    <div><label className="text-[10px] font-black text-slate-400 uppercase">{p.kind === 'coste' ? 'Asignar a venta (Nº/Ref)' : 'Proyecto (ref)'}</label>
+                      <input list="inbox-fichas-datalist" value={p.projectRef || ''} onChange={e => setProp('projectRef', e.target.value)} placeholder="Escribe o elige LG26/…" className="w-full px-2 py-2 border rounded-lg text-sm" />
+                      <datalist id="inbox-fichas-datalist">
+                        {Array.from(new Map((fichas || []).filter(f => f.ref).map(f => [normRef(f.ref), f])).values())
+                          .map(f => <option key={f.id} value={f.ref}>{f.ref}{f.cliente ? ` — ${f.cliente}` : ''}</option>)}
+                      </datalist>
+                      {p.kind === 'coste' && <p className="text-[10px] text-slate-400 mt-0.5">Elige la factura de venta a la que pertenece este coste.</p>}
+                    </div>
                     {p.kind === 'ingreso' && <div><label className="text-[10px] font-black text-slate-400 uppercase">Código cliente</label>
                       <input value={p.clientCode || ''} onChange={e => setProp('clientCode', e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" /></div>}
                     <div><label className="text-[10px] font-black text-slate-400 uppercase">Nº / Ref</label>
