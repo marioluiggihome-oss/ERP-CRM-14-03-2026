@@ -33,6 +33,7 @@ const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
 const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
 const ElectrosTab = lazy(() => import('./components/settings/ElectrosTab')); // Catálogo de electrodomésticos (menú principal)
+const CarpinterosUsers = lazy(() => import('./components/CarpinterosUsers')); // Gestión de usuarios de la división carpinteros
 const AgentesDisenadores = lazy(() => import('./components/AgentesDisenadores')); // Agentes diseñadores en paralelo
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
 const GestionGastos = lazy(() => import('./components/GestionGastos'));
@@ -755,12 +756,25 @@ const App = () => {
     return (
       <div className="h-screen flex flex-col bg-slate-950 overflow-hidden">
         <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
+        {state.showCarpinterosUsers && (
+          <Suspense fallback={null}>
+            <CarpinterosUsers onClose={() => setState(prev => ({ ...prev, showCarpinterosUsers: false }))} />
+          </Suspense>
+        )}
         <div className="flex items-center justify-between px-4 py-2 bg-slate-900 shrink-0">
           <div className="flex items-center gap-2">
             {state.logo && <img src={state.logo} alt="" className="h-7 rounded" />}
             <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Carpinteros & Ebanistas</span>
           </div>
           <div className="flex items-center gap-3">
+            {state.currentUser?.canManageCarpinteroUsers && (
+              <button
+                onClick={() => setState(prev => ({ ...prev, showCarpinterosUsers: true }))}
+                className="text-xs font-bold text-white bg-stone-700 hover:bg-stone-600 px-3 py-1.5 rounded-lg uppercase tracking-wide"
+              >
+                Usuarios
+              </button>
+            )}
             {state.currentUser?.canUseCascos && (
               <button
                 onClick={() => setState(prev => ({ ...prev, carpinteroPortalOff: true, currentTab: 'cascos' }))}
