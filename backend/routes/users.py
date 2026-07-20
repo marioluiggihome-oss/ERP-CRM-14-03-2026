@@ -290,3 +290,78 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_user_ma
     logger.info(f"User deleted: {user_to_delete.get('username') if user_to_delete else user_id}")
     
     return {"message": "Usuario eliminado"}
+
+
+# ---------------------------------------------------------------------------
+# Division Carpinteros & Ebanistas: el admin de la division (isCarpintero +
+# canManageCarpinteroUsers) puede crear y gestionar UNICAMENTE los usuarios
+# vinculados a el (linkedCarpinteroAdminId). Los usuarios creados heredan el
+# perfil carpintero, su landing y los permisos por defecto de la division.
+# Rutas con dos segmentos para no chocar con /{user_id}.
+# ---------------------------------------------------------------------------
+async def require_carpintero_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Admin de la division carpinteros (o gestor de usuarios global)."""
+    user = await require_authenticated_user(credentials)
+    if _is_user_manager(user):
+        return user
+    if user.get("isCarpintero") and user.get("canManageCarpinteroUsers"):
+        return user
+    raise HTTPException(status_code=403, detail="Se requiere permiso de gestion de usuarios de la division")
+
+
+@router.get("/carpinteros/mine")
+async def carpintero_users(current_user: dict = Depends(require_carpintero_admin)):
+    """Usuarios vinculados al admin carpintero autenticado."""
+    users = await db.users.find(
+        {"linkedCarpinteroAdminId": current_user.get("id")},
+        {"_id": 0, "password": 0},
+    ).to_list(500)
+    return users
+
+
+@router.post("/carpinteros/create")
+async def carpintero_create_user(payload: dict, current_user: dict = Depends(require_carpintero_admin)):
+    """Crea un usuario de la division carpinteros, vinculado al admin.
+    Hereda perfil carpintero, landing y permisos por defecto; nunca roles elevados."""
+    username = str((payload or {}).get("username", "")).strip()
+    password = str((payload or {}).get("password", ""))
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Usuario y contrasena son obligatorios")
+    existing = await db.users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+    doc = {
+        "id": f"user-{uuid.uuid4().hex[:8]}",
+        "username": username,
+        "password": hash_password(password),
+        "clientName": str(payload.get("clientName", "")).strip(),
+        "isActive": True,
+        # Herencia de la division (el admin define los permisos por defecto):
+        "isCarpintero": True,
+        "linkedCarpinteroAdminId": current_user.get("id"),
+        "carpinteroLandingUrl": str(payload.get("carpinteroLandingUrl") or current_user.get("carpinteroLandingUrl") or ""),
+        "canUseCascos": bool(current_user.get("canUseCascos")),
+    }
+    await db.users.insert_one(doc)
+    logger.info("Carpintero user created: %s (by %s)", username, current_user.get("username"))
+    return {k: v for k, v in doc.items() if k != "password"}
+
+
+@router.put("/carpinteros/toggle/{user_id}")
+async def carpintero_toggle_user(user_id: str, current_user: dict = Depends(require_carpintero_admin)):
+    """Activa/desactiva un usuario de la division (solo los vinculados al admin)."""
+    u = await db.users.find_one({"id": user_id, "linkedCarpinteroAdminId": current_user.get("id")}, {"_id": 0})
+    if not u:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en tu division")
+    new_active = not bool(u.get("isActive", True))
+    await db.users.update_one({"id": user_id}, {"$set": {"isActive": new_active}})
+    return {"success": True, "isActive": new_active}
+
+
+@router.delete("/carpinteros/remove/{user_id}")
+async def carpintero_delete_user(user_id: str, current_user: dict = Depends(require_carpintero_admin)):
+    """Elimina un usuario de la division (solo los vinculados al admin)."""
+    res = await db.users.delete_one({"id": user_id, "linkedCarpinteroAdminId": current_user.get("id")})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en tu division")
+    return {"success": True}

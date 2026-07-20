@@ -34,11 +34,32 @@ const isFloorDirect = () => {
   } catch { return false; }
 };
 
+// Marca Carpinteros & Ebanistas (división carpenter.io). Logotipo tipográfico
+// provisional en tonos madera hasta que haya logo definitivo.
+const CarpBrand = ({ big = false }) => (
+  <div className={`inline-flex items-center justify-center rounded-2xl bg-stone-900 shadow-md ${big ? 'px-8 py-5' : 'px-4 py-2.5'}`}>
+    <div className="flex flex-col items-center justify-center leading-none" style={{ color: '#D4A373' }}>
+      <span className={`${big ? 'text-3xl' : 'text-lg'} font-black tracking-wide`} style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>carpenter</span>
+      <span className={`${big ? 'text-xs mt-1.5' : 'text-[8px] mt-1'} font-bold tracking-[0.45em]`}>CARPINTEROS · EBANISTAS</span>
+    </div>
+  </div>
+);
+
+// ¿Acceso directo a la división Carpinteros? ?brand=carpinteros, ?carpinteros,
+// #carpinteros o #carpenter — enlace directo con SU marca (p.ej. carpenter.io).
+const isCarpDirect = () => {
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    const hash = (window.location.hash || '').toLowerCase();
+    return sp.get('brand') === 'carpinteros' || sp.has('carpinteros') || hash === '#carpinteros' || hash === '#carpenter';
+  } catch { return false; }
+};
+
 const Login = ({ onLogin, customLogo }) => {
   const floorDirect = isFloorDirect();
-  // La marca la decide CÓMO se entra: por el acceso directo de Luiggi Floor se ve
-  // sólo Luiggi Floor; el resto de usuarios, sólo Luiggi Home. No hay conmutador.
-  const brand = floorDirect ? 'floor' : 'home';
+  // La marca la decide CÓMO se entra: cada división tiene su enlace directo con
+  // SU marca (floor, carpinteros...); el resto ve la marca corporativa. Sin conmutador.
+  const brand = floorDirect ? 'floor' : (isCarpDirect() ? 'carpinteros' : 'home');
   const [mode, setMode] = useState('login'); // 'login', 'register', 'registerEmail', 'distributor'
   const [floorLogo, setFloorLogo] = useState(null);
   const [username, setUsername] = useState('');
@@ -268,6 +289,18 @@ const Login = ({ onLogin, customLogo }) => {
                   Suelo SPC porcelánico — red de distribución Floor.
                 </p>
               </>
+            ) : brand === 'carpinteros' ? (
+              <>
+                <div className="mb-6"><CarpBrand big /></div>
+                <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
+                  TU TALLER<br />
+                  TU OFICIO<br />
+                  <span style={{ color: '#D4A373' }}>TU NEGOCIO</span>
+                </h1>
+                <p className="text-white/70 text-lg">
+                  Herramientas profesionales para carpinteros y ebanistas.
+                </p>
+              </>
             ) : (
               <>
                 <h1 className="text-4xl xl:text-5xl font-black mb-4 leading-tight tracking-wide">
@@ -295,6 +328,13 @@ const Login = ({ onLogin, customLogo }) => {
                 <FloorBrand src={floorLogo} big />
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-3">
                   Acceso Floor
+                </p>
+              </div>
+            ) : brand === 'carpinteros' ? (
+              <div className="flex flex-col items-center">
+                <CarpBrand big />
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-3">
+                  Acceso Carpinteros & Ebanistas
                 </p>
               </div>
             ) : (
@@ -582,6 +622,8 @@ const Login = ({ onLogin, customLogo }) => {
             <p className="text-[10px] text-slate-400 font-medium">
               {brand === 'floor'
                 ? '© 2026 FLOOR · Suelo SPC porcelánico'
+                : brand === 'carpinteros'
+                ? '© 2026 CARPENTER · Carpinteros & Ebanistas'
                 : '© 2026 · Sistema Profesional de Presupuestos'}
             </p>
           </div>
