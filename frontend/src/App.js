@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import GlobalEventReminder from './components/GlobalEventReminder';
-import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat } from 'lucide-react';
+import { ShoppingCart, Settings, LogOut, FolderOpen, Sparkles, ShieldCheck, FileText, Loader, HardDrive, Users, Target, LayoutDashboard, CalendarDays, ScanLine, Wrench, Building2, Box, Factory, HelpCircle, ShoppingBag, Receipt, Shield, Image, TrendingUp, Layers, Hammer, ChefHat, Zap } from 'lucide-react';
 import "./App.css";
 
 // ─── Lazy Loading: componentes pesados se cargan bajo demanda ───────────────
@@ -32,6 +32,7 @@ const BackupManager = lazy(() => import('./components/BackupManager'));
 const AIRenderStudio = lazy(() => import('./components/AIRenderStudio'));
 const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
+const ElectrosTab = lazy(() => import('./components/settings/ElectrosTab')); // Catálogo de electrodomésticos (menú principal)
 const AgentesDisenadores = lazy(() => import('./components/AgentesDisenadores')); // Agentes diseñadores en paralelo
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
 const GestionGastos = lazy(() => import('./components/GestionGastos'));
@@ -1174,8 +1175,21 @@ const App = () => {
                       </button>
                     )}
 
+                    {/* Electros — catálogo de electrodomésticos (coste solo master; el resto ve PVP) */}
+                    {!state.currentUser?.isTienda && (
+                      <button
+                        onClick={() => setState(p => ({...p, currentTab: 'electros'}))}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.currentTab === 'electros' ? 'bg-amber-500 text-white shadow-xl scale-110' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                        data-testid="electros-nav-btn"
+                        title="Electros: catálogo de electrodomésticos (PVP; coste solo master)"
+                      >
+                        <Zap size={18}/>
+                        <span className="text-[7px] font-black uppercase tracking-widest">Electros</span>
+                      </button>
+                    )}
+
                     {/* Informes: ahora vive DENTRO de RENTAB (pestaña "Generador de informes") */}
-                    
+
                     {/* Digitalizador - Solo usuarios con permiso (NO para Tienda) */}
                     {state.currentUser?.canUseDigitalizador && !state.currentUser?.isTienda && (
                       <button 
@@ -1381,6 +1395,17 @@ const App = () => {
             )}
             {state.currentTab === 'armarios' && state.currentUser?.canAccessArmarios && (
               <Armarios state={state} setState={setState} />
+            )}
+            {/* Electros — catálogo de electrodomésticos (menú principal) */}
+            {state.currentTab === 'electros' && !state.currentUser?.isTienda && (
+              <ErrorBoundary>
+                <div className="max-w-6xl mx-auto p-4 sm:p-8">
+                  <ElectrosTab
+                    isMaster={!!state.currentUser?.isPrimaryAdmin}
+                    isAdmin={!!state.currentUser?.isAdmin}
+                  />
+                </div>
+              </ErrorBoundary>
             )}
             {state.currentTab === 'montajes' && state.settings?.montajesEnabled && (state.currentUser?.canAccessMontajes || state.currentUser?.isMontador) && (
               <AgendaMontajes currentUser={state.currentUser} />
