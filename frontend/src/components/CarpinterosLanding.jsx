@@ -1,406 +1,199 @@
 /**
- * CarpinterosLanding — Landing propia de la división Carpinteros & Ebanistas
- * (clonada del diseño original de carpinter.io para servirla desde la app y carpenter.io)
- * Design: Craft Modernism — warm cream + terracotta + walnut
- * Fonts: Playfair Display (headings) + DM Sans (body)
- * Sections: Nav, Hero, Features, AI Render, Pricing, Testimonials, FAQ, CTA, Footer
+ * CarpinterosLanding — Landing de carpinter.io (Carpinteros & Ebanistas).
+ * Rediseño "Taller de precisión": tradición de ebanista (nogal, cota, gramil)
+ * + IA (etiquetas monoespaciadas, plano técnico auto-calculado). Autocontenida
+ * (React + lucide + logo SVG de marca). Todos los CTA llevan al acceso (onEnter);
+ * alta gestionada por el equipo (sin registro automático).
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import CarpinterLogo, { CarpinterMark } from "./CarpinterLogo";
 import {
-  FileText, Sparkles, BarChart3, Clock, CheckCircle2,
-  ChevronDown, Menu, X, ArrowRight, Zap, Shield, Users,
-  Star, Phone, Mail, MapPin
+  FileText, Sparkles, TrendingUp, Ruler, CheckCircle2, ChevronDown,
+  Menu, X, ArrowRight, Boxes, ScanLine, Receipt, Phone, Mail, Star,
 } from "lucide-react";
 
-// ─── CONSTANTS ───────────────────────────────────────────────────────────────
-
-const HERO_IMG = "/carpinteros/hero-workshop.jpg";
-const RENDER_IMG = "/carpinteros/render-ai-preview.jpg";
-
-// Gramil SVG — herramienta de marcar líneas, forma implícita de C
-const GramilMark = ({ size = 28, color = "#C4622D", className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <rect x="4" y="4" width="3" height="24" rx="1" fill={color} />
-    <rect x="4" y="4" width="18" height="3" rx="1" fill={color} />
-    <rect x="4" y="25" width="14" height="3" rx="1" fill={color} />
-    <rect x="7" y="10" width="5" height="1.5" rx="0.5" fill={color} opacity="0.55" />
-    <rect x="7" y="15" width="7" height="1.5" rx="0.5" fill={color} opacity="0.55" />
-    <rect x="7" y="20" width="5" height="1.5" rx="0.5" fill={color} opacity="0.55" />
-    <circle cx="22" cy="16" r="2" fill={color} />
-    <line x1="22" y1="18" x2="22" y2="28" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
-
-// Anotación de cota estilo plano técnico
-const CotaAnnotation = ({ label, className = "" }) => (
-  <div className={`flex items-center gap-1.5 ${className}`}>
-    <div className="w-4 h-px bg-[#C4622D]/35" />
-    <div className="w-1 h-1 rounded-full bg-[#C4622D]/35" />
-    <span className="text-[9px] font-mono text-[#C4622D]/45 uppercase tracking-widest">{label}</span>
-    <div className="w-1 h-1 rounded-full bg-[#C4622D]/35" />
-    <div className="w-4 h-px bg-[#C4622D]/35" />
-  </div>
-);
+/* ─── DATOS ──────────────────────────────────────────────────────────────── */
 
 const NAV_LINKS = [
-  { label: "Funciones", href: "#funciones" },
+  { label: "Producto", href: "#producto" },
   { label: "IA", href: "#ia" },
   { label: "Precios", href: "#precios" },
-  { label: "Testimonios", href: "#testimonios" },
   { label: "FAQ", href: "#faq" },
 ];
 
 const FEATURES = [
-  {
-    icon: FileText,
-    title: "Presupuestos en minutos",
-    desc: "Configura tus materiales, márgenes y mano de obra una sola vez. Después, genera presupuestos profesionales con un clic. El cliente los acepta desde su móvil.",
-    tag: "Más usado",
-  },
-  {
-    icon: Sparkles,
-    title: "Renders con IA",
-    desc: "Sube un boceto o plano y obtén un render fotorrealista en segundos. Sin programas 3D complejos, sin diseñador externo. El cliente ve el resultado antes de firmar.",
-    tag: "Exclusivo",
-  },
-  {
-    icon: BarChart3,
-    title: "Rentabilidad real",
-    desc: "Sabe exactamente cuánto ganas en cada proyecto. Costes de material, horas de taller, subcontratistas. Sin sorpresas al final de la obra.",
-  },
-  {
-    icon: Clock,
-    title: "Control de obras",
-    desc: "Cada proyecto en su estado: presupuestado, en curso, pendiente de cobro, cerrado. Nunca pierdas el hilo de dónde está cada trabajo.",
-  },
-  {
-    icon: Users,
-    title: "Gestión de clientes",
-    desc: "Historial completo de cada cliente: proyectos, presupuestos, facturas, comunicaciones. Todo en un solo lugar, siempre accesible.",
-  },
-  {
-    icon: Shield,
-    title: "Facturación legal",
-    desc: "Facturas en formato legal, numeración automática, exportación a PDF. Cumple con la normativa sin complicaciones.",
-  },
+  { icon: FileText, cota: "A", title: "Presupuestos al milímetro", desc: "Configura materiales, herrajes, mano de obra y márgenes una vez. Después, cada presupuesto sale en minutos y el cliente lo firma desde el móvil." },
+  { icon: ScanLine, cota: "B", title: "Del boceto a la ficha", desc: "Digitaliza medidas y planos y conviértelos en despiece y órdenes de taller. Menos errores de corte, menos madera perdida." },
+  { icon: Boxes, cota: "C", title: "Cascos, puertas y herraje", desc: "Catálogos de cascos y tarifas (ACB, Montakit…) con descuentos de compra ya calculados. Sabes tu coste real de cada mueble." },
+  { icon: TrendingUp, cota: "D", title: "Rentabilidad por obra", desc: "Coste, venta y margen de cada proyecto en una pantalla. Por fin sabes cuánto ganas en cada cocina antes de cortar una tabla." },
+  { icon: Receipt, cota: "E", title: "Facturación en regla", desc: "Numeración automática por delegación, exportación a PDF y cumplimiento normativo. La parte aburrida, resuelta." },
+  { icon: Ruler, cota: "F", title: "Tu marca, tu dominio", desc: "Portal y web propia bajo tu nombre. La herramienta trabaja para ti; el cliente ve tu taller, no el nuestro." },
 ];
 
 const PLANS = [
-  {
-    name: "Starter",
-    price: "79",
-    anual: "790",
-    desc: "Para el taller que empieza a organizarse",
-    credits: "10 renders/mes",
-    features: [
-      "Presupuestos ilimitados",
-      "Hasta 3 usuarios",
-      "10 renders IA/mes",
-      "Gestión de clientes",
-      "Facturación básica",
-      "Soporte por email",
-    ],
-    cta: "Acceder al programa",
-    highlight: false,
-  },
-  {
-    name: "Profesional",
-    price: "179",
-    anual: "1.790",
-    desc: "Para talleres en crecimiento",
-    credits: "40 renders/mes",
-    features: [
-      "Todo lo de Starter",
-      "Hasta 10 usuarios",
-      "40 renders IA/mes",
-      "Control de rentabilidad",
-      "Informes avanzados",
-      "Soporte prioritario",
-    ],
-    cta: "Acceder al programa",
-    highlight: true,
-  },
-  {
-    name: "Business",
-    price: "349",
-    anual: "3.490",
-    desc: "Para empresas con varios talleres",
-    credits: "120 renders/mes",
-    features: [
-      "Todo lo de Profesional",
-      "Usuarios ilimitados",
-      "120 renders IA/mes",
-      "Multi-sede",
-      "API de integración",
-      "Gestor de cuenta dedicado",
-    ],
-    cta: "Contactar",
-    highlight: false,
-  },
+  { name: "Taller", price: "79", anual: "790", desc: "Para el taller que empieza a ordenarse", credits: "10 renders IA/mes",
+    features: ["Presupuestos ilimitados", "Hasta 3 usuarios", "10 renders IA/mes", "Gestión de clientes", "Facturación básica", "Soporte por email"], highlight: false },
+  { name: "Ebanista", price: "179", anual: "1.790", desc: "Para talleres en crecimiento", credits: "40 renders IA/mes",
+    features: ["Todo lo de Taller", "Hasta 10 usuarios", "40 renders IA/mes", "Control de rentabilidad", "Cascos, puertas y herraje", "Soporte prioritario"], highlight: true },
+  { name: "Maestría", price: "349", anual: "3.490", desc: "Para empresas con varios talleres", credits: "120 renders IA/mes",
+    features: ["Todo lo de Ebanista", "Usuarios ilimitados", "120 renders IA/mes", "Multi-sede y delegaciones", "Tu marca y tu dominio", "Gestor de cuenta dedicado"], highlight: false },
 ];
 
 const TESTIMONIALS = [
-  {
-    name: "Marcos Ruiz",
-    role: "Ebanista, Taller Ruiz e Hijos — Sevilla",
-    text: "Antes tardaba dos horas en hacer un presupuesto. Ahora lo hago en diez minutos y el cliente lo tiene en el móvil al instante. Me ha cambiado la forma de trabajar.",
-    stars: 5,
-  },
-  {
-    name: "Ana Lorente",
-    role: "Carpintería Lorente — Valencia",
-    text: "El render de IA es lo que más me ha sorprendido. El cliente ve la cocina antes de que yo haya cortado ni una tabla. Cierro más ventas y con menos dudas.",
-    stars: 5,
-  },
-  {
-    name: "Javier Molina",
-    role: "Muebles a Medida Molina — Madrid",
-    text: "Por fin sé cuánto gano en cada proyecto. Llevaba años trabajando sin saber si ganaba o perdía dinero en algunas obras. Ahora tengo el control.",
-    stars: 5,
-  },
+  { name: "Marcos Ruiz", role: "Ebanista · Taller Ruiz e Hijos, Sevilla", text: "Antes tardaba dos horas en un presupuesto. Ahora lo hago en diez minutos y el cliente lo tiene en el móvil al instante. Me ha cambiado la forma de trabajar." },
+  { name: "Ana Lorente", role: "Carpintería Lorente, Valencia", text: "El render de IA es lo que más me sorprendió. El cliente ve el mueble antes de que yo haya cortado ni una tabla. Cierro más ventas y con menos dudas." },
+  { name: "Javier Molina", role: "Muebles a Medida Molina, Madrid", text: "Por fin sé cuánto gano en cada proyecto. Llevaba años trabajando sin saber si ganaba o perdía en algunas obras. Ahora tengo el control." },
 ];
 
 const FAQS = [
-  {
-    q: "¿Necesito conocimientos de informática para usarlo?",
-    a: "No. Si sabes usar el móvil, sabes usar carpinter.io. Está diseñado por y para carpinteros, no para informáticos.",
-  },
-  {
-    q: "¿Cuánto tiempo lleva la configuración inicial?",
-    a: "En menos de una hora tienes el sistema listo con tus materiales, precios y datos de empresa. Si necesitas ayuda, te acompañamos en la configuración sin coste adicional.",
-  },
-  {
-    q: "¿Los renders de IA son de buena calidad?",
-    a: "Sí. Usamos el mismo motor de IA que utilizan estudios de arquitectura e interiorismo. El resultado es fotorrealista y válido para presentar al cliente.",
-  },
-  {
-    q: "¿Cómo me doy de alta?",
-    a: "El alta la gestiona nuestro equipo: te damos de alta, configuramos tus materiales y precios, y entras con tus credenciales. Sin permanencia.",
-  },
-  {
-    q: "¿Qué pasa con mis datos si cancelo?",
-    a: "Tus datos son tuyos. Puedes exportarlos en cualquier momento en formato estándar (Excel, PDF). Nunca retenemos información.",
-  },
+  { q: "¿Necesito saber de informática?", a: "No. Si sabes usar el móvil, sabes usar carpinter.io. Está pensado por y para carpinteros, no para informáticos." },
+  { q: "¿Cómo me doy de alta?", a: "El alta la gestiona nuestro equipo: te damos de alta, configuramos tus materiales y precios contigo y entras con tus credenciales. Sin permanencia." },
+  { q: "¿Cuánto tarda la puesta en marcha?", a: "En menos de una hora tienes el sistema con tus materiales, tarifas y datos de empresa. Y te acompañamos en la configuración sin coste." },
+  { q: "¿Los renders de IA son de calidad?", a: "Sí. Usamos el mismo motor de IA que estudios de arquitectura e interiorismo. El resultado es fotorrealista y válido para presentar al cliente." },
+  { q: "¿Puedo usar mi propia marca?", a: "Sí. En los planes superiores el portal y la web van bajo tu nombre y tu dominio. Tus clientes ven tu taller." },
 ];
 
-// ─── HOOKS ───────────────────────────────────────────────────────────────────
+/* ─── HOOKS ──────────────────────────────────────────────────────────────── */
 
-function useScrollReveal() {
+function useScrolled() {
+  const [s, setS] = useState(false);
   useEffect(() => {
-    const els = document.querySelectorAll(".reveal");
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add("visible"); }),
-      { threshold: 0.12 }
-    );
+    const h = () => setS(window.scrollY > 24);
+    h(); window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+  return s;
+}
+
+function useReveal() {
+  useEffect(() => {
+    const els = document.querySelectorAll("[data-reveal]");
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-in"); obs.unobserve(e.target); } });
+    }, { threshold: 0.14 });
     els.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
   }, []);
 }
 
-function useScrolled() {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", h, { passive: true });
-    return () => window.removeEventListener("scroll", h);
-  }, []);
-  return scrolled;
-}
+/* ─── PIEZAS ─────────────────────────────────────────────────────────────── */
 
-// ─── COMPONENTS ──────────────────────────────────────────────────────────────
+// Etiqueta de cota (eyebrow) estilo plano técnico: ── • texto • ──
+function Cota({ children, light = false }) {
+  const c = light ? "rgba(245,240,231,.55)" : "#C4622D";
+  return (
+    <span className="cota" style={{ color: c }}>
+      <span className="cota-line" style={{ background: c }} />
+      {children}
+      <span className="cota-line" style={{ background: c }} />
+    </span>
+  );
+}
 
 function Nav({ onEnter }) {
   const scrolled = useScrolled();
   const [open, setOpen] = useState(false);
-  const enter = (e) => { if (e) e.preventDefault(); if (onEnter) onEnter(); };
-
+  const enter = (e) => { if (e) e.preventDefault(); onEnter && onEnter(); };
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-[#F5F0E8]/95 backdrop-blur-xl shadow-warm border-b border-[#C4622D]/10"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="container flex items-center justify-between h-16 lg:h-18">
-        {/* Logo */}
-        <a href="#" className="flex items-center group">
-          <CarpinterLogo height={36} tone={scrolled ? 'dark' : 'light'} />
-        </a>
-
-        {/* Desktop nav */}
-        <nav className="hidden lg:flex items-center gap-8">
+    <header className={`nav ${scrolled ? "nav-solid" : ""}`}>
+      <div className="wrap nav-inner">
+        <a href="#top" className="nav-logo"><CarpinterLogo height={34} tone={scrolled ? "dark" : "light"} /></a>
+        <nav className="nav-links">
           {NAV_LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              className="text-sm font-medium transition-colors hover:text-[#C4622D]"
-              style={{ color: scrolled ? "#6B5E4E" : "inherit" }}
-            >
-              {l.label}
-            </a>
+            <a key={l.label} href={l.href} style={{ color: scrolled ? "#5B4E3F" : "rgba(245,240,231,.8)" }}>{l.label}</a>
           ))}
         </nav>
-
-        {/* CTA */}
-        <div className="hidden lg:flex items-center gap-3">
-          <a
-            href="#acceso"
-            onClick={enter}
-            className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-[#C4622D]/10 text-[#C4622D]"
-          >
-            Acceder
-          </a>
-          <a
-            href="#acceso"
-            onClick={enter}
-            className="text-sm font-semibold px-5 py-2.5 rounded-lg bg-[#C4622D] text-[#F5F0E8] hover:bg-[#A0834A] transition-all active:scale-[0.97] shadow-warm"
-          >
-            Acceder al programa
-          </a>
+        <div className="nav-cta">
+          <a href="#acceso" onClick={enter} className="btn-ghost" style={{ color: scrolled ? "#C4622D" : "#F5F0E7", borderColor: scrolled ? "rgba(196,98,45,.35)" : "rgba(245,240,231,.3)" }}>Acceder</a>
+          <a href="#acceso" onClick={enter} className="btn-solid">Acceder al programa</a>
         </div>
-
-        {/* Mobile menu */}
-        <button
-          className="lg:hidden p-2 rounded-lg hover:bg-[#C4622D]/10 transition-colors"
-          onClick={() => setOpen(!open)}
-          aria-label="Menú"
-        >
-          {open ? <X size={20} /> : <Menu size={20} />}
+        <button className="nav-burger" onClick={() => setOpen(!open)} aria-label="Menú" style={{ color: scrolled ? "#201A14" : "#F5F0E7" }}>
+          {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
-
-      {/* Mobile dropdown */}
       {open && (
-        <div className="lg:hidden bg-[#F5F0E8] border-t border-[#C4622D]/10 px-4 py-4 space-y-1">
+        <div className="nav-mobile">
           {NAV_LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className="block px-3 py-2.5 rounded-lg text-sm font-medium text-[#6B5E4E] hover:bg-[#C4622D]/10 hover:text-[#C4622D] transition-colors"
-            >
-              {l.label}
-            </a>
+            <a key={l.label} href={l.href} onClick={() => setOpen(false)}>{l.label}</a>
           ))}
-          <div className="pt-2 border-t border-[#C4622D]/10 space-y-1">
-            <a
-              href="#acceso"
-              onClick={(e) => { setOpen(false); enter(e); }}
-              className="block w-full text-center py-2.5 rounded-lg border border-[#C4622D]/30 text-[#C4622D] font-semibold text-sm"
-            >
-              Acceder a mi cuenta
-            </a>
-            <a
-              href="#acceso"
-              onClick={(e) => { setOpen(false); enter(e); }}
-              className="block w-full text-center py-2.5 rounded-lg bg-[#C4622D] text-[#F5F0E8] font-semibold text-sm"
-            >
-              Acceder a mi cuenta
-            </a>
-          </div>
+          <a href="#acceso" onClick={(e) => { setOpen(false); enter(e); }} className="nav-mobile-ghost">Acceder a mi cuenta</a>
+          <a href="#acceso" onClick={(e) => { setOpen(false); enter(e); }} className="nav-mobile-solid">Acceder al programa</a>
         </div>
       )}
     </header>
   );
 }
 
-function Hero() {
+// Plano técnico animado de un mueble (cascos) con cotas — símbolo tradición+IA.
+function BlueprintPanel() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-[#1C1A17]">
-      {/* Background image */}
-      <div className="absolute inset-0">
-        <img
-          src={HERO_IMG} onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          alt="Taller de carpintería"
-          className="w-full h-full object-cover opacity-40"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1C1A17] via-[#1C1A17]/80 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1C1A17] via-transparent to-[#1C1A17]/30" />
+    <div className="blueprint" data-reveal>
+      <div className="bp-tag mono">alto_130 · fondo_58 · <span style={{ color: "#E8A06B" }}>auto-calc</span></div>
+      <svg viewBox="0 0 300 300" className="bp-svg" aria-hidden="true">
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0H0V20" fill="none" stroke="rgba(196,98,45,.13)" strokeWidth="1" />
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="300" height="300" fill="url(#grid)" />
+        {/* mueble columna */}
+        <g fill="none" stroke="#E8A06B" strokeWidth="2">
+          <rect x="70" y="40" width="120" height="210" rx="3" />
+          <line x1="70" y1="95" x2="190" y2="95" />
+          <line x1="70" y1="150" x2="190" y2="150" />
+          <line x1="70" y1="205" x2="190" y2="205" />
+          <circle cx="178" cy="122" r="3.4" />
+          <circle cx="178" cy="178" r="3.4" />
+        </g>
+        {/* cotas */}
+        <g stroke="#C4622D" strokeWidth="1.4">
+          <line x1="210" y1="40" x2="210" y2="250" />
+          <line x1="205" y1="40" x2="215" y2="40" />
+          <line x1="205" y1="250" x2="215" y2="250" />
+          <line x1="70" y1="268" x2="190" y2="268" />
+          <line x1="70" y1="263" x2="70" y2="273" />
+          <line x1="190" y1="263" x2="190" y2="273" />
+        </g>
+        <text x="222" y="150" fill="#C4622D" fontSize="11" fontFamily="monospace" transform="rotate(90 222 150)" textAnchor="middle">130 cm</text>
+        <text x="130" y="285" fill="#C4622D" fontSize="11" fontFamily="monospace" textAnchor="middle">60 cm</text>
+      </svg>
+      <div className="bp-chip">
+        <div className="mono bp-chip-k">PRESUPUESTO</div>
+        <div className="bp-chip-v">1.204,72 €</div>
+        <div className="mono bp-chip-s" style={{ color: "#7DBE9B" }}>margen +162%</div>
       </div>
+    </div>
+  );
+}
 
-      {/* Cota decoration lines */}
-      <div className="absolute right-0 top-1/4 w-px h-48 bg-[#C4622D]/20 hidden lg:block" />
-      <div className="absolute right-8 top-1/4 w-px h-32 bg-[#C4622D]/10 hidden lg:block" />
-
-      <div className="container relative z-10 pt-24 pb-16">
-        <div className="max-w-2xl">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#C4622D]/20 border border-[#C4622D]/30 text-[#C4622D] text-xs font-semibold mb-6 reveal">
-            <Zap size={12} />
-            ERP para carpinteros y ebanistas
-          </div>
-
-          {/* Headline */}
-          <h1
-            className="text-5xl lg:text-7xl font-black text-[#F5F0E8] leading-[1.05] mb-6 reveal"
-            style={{ fontFamily: "'Playfair Display', serif", transitionDelay: "60ms" }}
-          >
-            Tu taller,<br />
-            <span className="text-[#C4622D] italic">en orden.</span><br />
-            Tu negocio,<br />bajo control.
+function Hero({ onEnter }) {
+  const enter = (e) => { if (e) e.preventDefault(); onEnter && onEnter(); };
+  return (
+    <section className="hero" id="top">
+      <div className="hero-grain" />
+      <div className="wrap hero-inner">
+        <div className="hero-copy" data-reveal>
+          <Cota light>ERP + IA · CARPINTEROS Y EBANISTAS</Cota>
+          <h1 className="hero-h1">
+            Mide dos veces.<br />
+            <span className="accent">Presupuesta una.</span>
           </h1>
-
-          {/* Subheadline */}
-          <p
-            className="text-lg text-[#F5F0E8]/70 leading-relaxed mb-8 max-w-xl reveal"
-            style={{ transitionDelay: "120ms" }}
-          >
-            Presupuestos en minutos. Renders fotorrealistas con IA. Rentabilidad
-            real de cada proyecto. Todo lo que necesitas para gestionar tu taller
-            sin perder tiempo en papeleo.
+          <p className="hero-sub">
+            La precisión del oficio con la velocidad de la inteligencia artificial.
+            Presupuestos, renders y control de tu taller en una sola herramienta —
+            bajo tu propia marca.
           </p>
-
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 reveal" style={{ transitionDelay: "180ms" }}>
-            <a
-              href="#precios"
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-[#C4622D] text-[#F5F0E8] font-semibold text-base hover:bg-[#A0834A] transition-all active:scale-[0.97] shadow-warm-lg"
-            >
-              Acceder al programa
-              <ArrowRight size={16} />
-            </a>
-            <a
-              href="#funciones"
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-[#F5F0E8]/20 text-[#F5F0E8]/80 font-medium text-base hover:bg-[#F5F0E8]/10 transition-all"
-            >
-              Ver cómo funciona
-            </a>
+          <div className="hero-actions">
+            <a href="#acceso" onClick={enter} className="btn-solid btn-lg">Acceder al programa <ArrowRight size={18} /></a>
+            <a href="#precios" className="btn-ghost btn-lg" style={{ color: "#F5F0E7", borderColor: "rgba(245,240,231,.3)" }}>Ver precios</a>
           </div>
-
-          {/* Social proof */}
-          <div
-            className="flex items-center gap-4 mt-10 pt-8 border-t border-[#F5F0E8]/10 reveal"
-            style={{ transitionDelay: "240ms" }}
-          >
-            <div className="flex -space-x-2">
-              {["M", "A", "J", "P"].map((l, i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 rounded-full bg-[#C4622D]/80 border-2 border-[#1C1A17] flex items-center justify-center text-[#F5F0E8] text-xs font-bold"
-                >
-                  {l}
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className="flex items-center gap-1 mb-0.5">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={12} className="fill-[#C4622D] text-[#C4622D]" />
-                ))}
-              </div>
-              <p className="text-xs text-[#F5F0E8]/50">
-                +200 talleres ya confían en carpinter.io
-              </p>
-            </div>
+          <div className="hero-stats">
+            {[["10 min", "por presupuesto"], ["+162%", "margen medio visible"], ["1 h", "puesta en marcha"]].map(([k, v]) => (
+              <div key={v}><div className="hero-stat-k">{k}</div><div className="mono hero-stat-v">{v}</div></div>
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-[#F5F0E8]/30 animate-bounce">
-        <ChevronDown size={20} />
+        <div className="hero-visual"><BlueprintPanel /></div>
       </div>
     </section>
   );
@@ -408,58 +201,22 @@ function Hero() {
 
 function Features() {
   return (
-    <section id="funciones" className="py-24 bg-[#F5F0E8]">
-      <div className="container">
-        {/* Header asimétrico con cota lateral */}
-        <div className="flex gap-8 mb-16 reveal">
-          <div className="hidden lg:flex flex-col items-center pt-2">
-            <div className="w-px flex-1 bg-[#C4622D]/20" />
-            <GramilMark size={18} color="#C4622D" className="my-2 opacity-40" />
-            <div className="w-px flex-1 bg-[#C4622D]/20" />
-          </div>
-          <div className="max-w-xl">
-          <CotaAnnotation label="módulo funciones" className="mb-3" />
-          <h2
-            className="text-4xl lg:text-5xl font-black text-[#1C1A17] leading-tight mb-4"
-            style={{ fontFamily: "'Playfair Display', serif" }}
-          >
-            Todo lo que necesita<br />
-            <span className="italic text-[#C4622D]">un buen taller</span>
-          </h2>
-          <p className="text-[#6B5E4E] leading-relaxed">
-            Sin funciones innecesarias. Sin curvas de aprendizaje. Solo las
-            herramientas que un carpintero usa cada día.
-          </p>
-          </div>
+    <section className="sec sec-bone" id="producto">
+      <div className="wrap">
+        <div className="sec-head" data-reveal>
+          <Cota>EL BANCO DE TRABAJO DIGITAL</Cota>
+          <h2 className="sec-h2">Todo el taller, <span className="accent">en una pantalla</span></h2>
+          <p className="sec-lead">Desde la primera medida hasta la factura. Cada herramienta encaja con la siguiente, como un buen ensamble.</p>
         </div>
-
-        {/* Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FEATURES.map((f, i) => (
-            <div
-              key={f.title}
-              className="relative bg-white rounded-2xl p-6 border border-[#C4622D]/10 hover:border-[#C4622D]/30 hover:-translate-y-1 transition-all duration-300 shadow-warm reveal group"
-              style={{ transitionDelay: `${i * 60}ms` }}
-            >
-              {f.tag && (
-                <span className="absolute top-4 right-4 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C4622D]/10 text-[#C4622D] uppercase tracking-wider">
-                  {f.tag}
-                </span>
-              )}
-              {/* Blueprint index */}
-              <span className="absolute top-4 right-4 text-[9px] font-mono text-[#C4622D]/25 uppercase tracking-widest">
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <div className="w-10 h-10 rounded-lg border border-[#C4622D]/20 bg-[#C4622D]/8 flex items-center justify-center mb-4 group-hover:border-[#C4622D]/40 group-hover:bg-[#C4622D]/15 transition-all">
-                <f.icon size={18} className="text-[#C4622D]" strokeWidth={1.5} />
+        <div className="feat-grid">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="feat" data-reveal>
+              <div className="feat-top">
+                <div className="feat-icon"><f.icon size={20} /></div>
+                <span className="mono feat-cota">{f.cota}</span>
               </div>
-              <h3
-                className="text-lg font-bold text-[#1C1A17] mb-2"
-                style={{ fontFamily: "'Playfair Display', serif" }}
-              >
-                {f.title}
-              </h3>
-              <p className="text-sm text-[#6B5E4E] leading-relaxed">{f.desc}</p>
+              <h3 className="feat-title">{f.title}</h3>
+              <p className="feat-desc">{f.desc}</p>
             </div>
           ))}
         </div>
@@ -470,77 +227,29 @@ function Features() {
 
 function AISection() {
   return (
-    <section id="ia" className="py-24 bg-[#1C1A17] relative overflow-hidden grain-overlay">
-      {/* Background texture */}
-      <div className="absolute inset-0 opacity-5" style={{
-        backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 40px, oklch(0.55 0.14 40) 40px, oklch(0.55 0.14 40) 41px)`,
-      }} />
-
-      <div className="container relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          {/* Image */}
-          <div className="reveal order-2 lg:order-1">
-            <div className="relative rounded-2xl overflow-hidden shadow-warm-lg">
-              <img
-                src={RENDER_IMG} onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                alt="Del plano al render con IA"
-                className="w-full object-cover"
-              />
-              {/* Badge overlay */}
-              <div className="absolute bottom-4 left-4 right-4 bg-[#1C1A17]/90 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#C4622D] flex items-center justify-center flex-shrink-0">
-                  <Sparkles size={16} className="text-[#F5F0E8]" />
-                </div>
-                <div>
-                  <p className="text-[#F5F0E8] text-xs font-semibold">Render generado en</p>
-                  <p className="text-[#C4622D] text-lg font-black" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    8 segundos
-                  </p>
-                </div>
-              </div>
-            </div>
+    <section className="sec sec-espresso" id="ia">
+      <div className="wrap ia-grid">
+        <div data-reveal>
+          <Cota light>MOTOR DE IA</Cota>
+          <h2 className="sec-h2" style={{ color: "#F5F0E7" }}>El cliente lo ve <span className="accent">antes de cortar</span></h2>
+          <p className="sec-lead" style={{ color: "rgba(245,240,231,.6)" }}>
+            Describe el mueble o sube una foto y la IA genera un render fotorrealista en segundos.
+            La misma que usan estudios de arquitectura, puesta al servicio de tu taller: cierras
+            más ventas y con menos dudas, sin haber levantado una tabla.
+          </p>
+          <ul className="ia-list">
+            {["Render por texto o por foto", "Planos 2D y fichas técnicas", "Presupuesto vinculado al diseño"].map((t) => (
+              <li key={t}><CheckCircle2 size={16} /> {t}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="ia-demo" data-reveal>
+          <div className="ia-prompt mono">
+            <span style={{ color: "#E8A06B" }}>prompt&gt;</span> cocina en roble natural, isla central, tiradores negros…
           </div>
-
-          {/* Text */}
-          <div className="reveal order-1 lg:order-2" style={{ transitionDelay: "80ms" }}>
-            <p className="text-xs font-semibold tracking-widest text-[#C4622D] uppercase mb-3">
-              IA para carpinteros
-            </p>
-            <h2
-              className="text-4xl lg:text-5xl font-black text-[#F5F0E8] leading-tight mb-6"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              Del boceto al render<br />
-              <span className="text-[#C4622D] italic">en segundos</span>
-            </h2>
-            <p className="text-[#F5F0E8]/60 leading-relaxed mb-8">
-              Sube un plano, un alzado o incluso un boceto a mano. La IA genera
-              un render fotorrealista que puedes mostrar al cliente antes de
-              empezar a trabajar. Sin programas 3D. Sin diseñador externo.
-              Sin esperas.
-            </p>
-
-            <ul className="space-y-3 mb-8">
-              {[
-                "Fotorrealismo de nivel profesional",
-                "Cualquier estilo: moderno, rústico, industrial…",
-                "El cliente lo ve y firma en el momento",
-                "Sin curva de aprendizaje",
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-3 text-sm text-[#F5F0E8]/70">
-                  <CheckCircle2 size={16} className="text-[#C4622D] flex-shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-
-            <a
-              href="#precios"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#C4622D] text-[#F5F0E8] font-semibold text-sm hover:bg-[#A0834A] transition-all active:scale-[0.97]"
-            >
-              Ver los renders
-              <ArrowRight size={15} />
-            </a>
+          <div className="ia-render">
+            <CarpinterMark size={88} orange="#C4622D" />
+            <div className="ia-render-lbl mono">render_ia · 4s</div>
           </div>
         </div>
       </div>
@@ -549,134 +258,39 @@ function AISection() {
 }
 
 function Pricing({ onEnter }) {
+  const enter = (e) => { if (e) e.preventDefault(); onEnter && onEnter(); };
   const [anual, setAnual] = useState(false);
   return (
-    <section id="precios" className="py-24 bg-[#F5F0E8]">
-      <div className="container">
-        {/* Header asimétrico con sello */}
-        <div className="flex items-start gap-6 mb-14 reveal">
-          <div className="flex-1">
-            <CotaAnnotation label="tabla de precios" className="mb-3" />
-            <h2
-              className="text-4xl lg:text-5xl font-black text-[#1C1A17] leading-tight mb-3"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              Gestión a medida,<br />
-              <span className="italic text-[#C4622D]">precio justo</span>
-            </h2>
-            <p className="text-[#6B5E4E]">
-              Elige tu plan. Alta gestionada por nuestro equipo.
-            </p>
-            {/* Conmutador mensual / anual (anual = 2 meses gratis) */}
-            <div className="flex items-center gap-3 mt-5">
-              <div className="inline-flex rounded-full bg-white border border-[#C4622D]/20 p-1 text-sm font-medium">
-                <button
-                  onClick={() => setAnual(false)}
-                  className={`px-4 py-1.5 rounded-full transition-colors ${!anual ? "bg-[#1C1A17] text-[#F5F0E8]" : "text-[#6B5E4E]"}`}
-                >
-                  Mensual
-                </button>
-                <button
-                  onClick={() => setAnual(true)}
-                  className={`px-4 py-1.5 rounded-full transition-colors ${anual ? "bg-[#1C1A17] text-[#F5F0E8]" : "text-[#6B5E4E]"}`}
-                >
-                  Anual
-                </button>
-              </div>
-              <span className="text-xs font-bold text-[#C4622D]">{anual ? "2 meses gratis incluidos" : "Con el plan anual, 2 meses gratis"}</span>
-            </div>
-            <p className="text-[11px] text-[#6B5E4E]/70 mt-2">Precios sin IVA.</p>
-          </div>
-          {/* Sello artesanal */}
-          <div className="hidden lg:flex flex-col items-center justify-center w-24 h-24 rounded-full border-2 border-[#C4622D]/25 text-center flex-shrink-0 mt-2">
-            <GramilMark size={20} color="#C4622D" className="opacity-40 mb-1" />
-            <span className="text-[8px] font-mono text-[#C4622D]/50 uppercase tracking-wider leading-tight">sin<br />permanencia</span>
+    <section className="sec sec-bone" id="precios">
+      <div className="wrap">
+        <div className="sec-head" data-reveal>
+          <Cota>TARIFAS</Cota>
+          <h2 className="sec-h2">Un plan a tu <span className="accent">medida</span></h2>
+          <p className="sec-lead">Alta gestionada por nuestro equipo. Sin permanencia. Precios sin IVA.</p>
+          <div className="toggle">
+            <button className={!anual ? "on" : ""} onClick={() => setAnual(false)}>Mensual</button>
+            <button className={anual ? "on" : ""} onClick={() => setAnual(true)}>Anual</button>
+            <span className="toggle-note mono">{anual ? "2 meses gratis" : "anual = 2 meses gratis"}</span>
           </div>
         </div>
-
-        {/* Cards */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          {PLANS.map((plan, i) => (
-            <div
-              key={plan.name}
-              className={`relative rounded-2xl p-7 reveal transition-all duration-300 ${
-                plan.highlight
-                  ? "bg-[#1C1A17] text-[#F5F0E8] shadow-warm-lg scale-[1.03] border-2 border-[#C4622D]"
-                  : "bg-white border border-[#C4622D]/10 hover:border-[#C4622D]/30 shadow-warm"
-              }`}
-              style={{ transitionDelay: `${i * 80}ms` }}
-            >
-              {plan.highlight && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#C4622D] text-[#F5F0E8] text-xs font-bold whitespace-nowrap">
-                  Más popular
-                </div>
-              )}
-
-              <div className="mb-5">
-                <h3
-                  className={`text-xl font-bold mb-1 ${plan.highlight ? "text-[#F5F0E8]" : "text-[#1C1A17]"}`}
-                  style={{ fontFamily: "'Playfair Display', serif" }}
-                >
-                  {plan.name}
-                </h3>
-                <p className={`text-xs ${plan.highlight ? "text-[#F5F0E8]/50" : "text-[#6B5E4E]"}`}>
-                  {plan.desc}
-                </p>
+        <div className="price-grid">
+          {PLANS.map((p) => (
+            <div key={p.name} className={`price ${p.highlight ? "price-hot" : ""}`} data-reveal>
+              {p.highlight && <div className="price-badge mono">MÁS ELEGIDO</div>}
+              <h3 className="price-name">{p.name}</h3>
+              <p className="price-desc">{p.desc}</p>
+              <div className="price-amt">
+                <span className="price-num mono">{anual ? p.anual : p.price}€</span>
+                <span className="price-per">/{anual ? "año" : "mes"} + IVA</span>
               </div>
-
-              <div className="mb-6">
-                <div className="flex items-end gap-1">
-                  <span
-                    className={`text-5xl font-black ${plan.highlight ? "text-[#F5F0E8]" : "text-[#1C1A17]"}`}
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    {anual ? plan.anual : plan.price}€
-                  </span>
-                  <span className={`text-sm pb-2 ${plan.highlight ? "text-[#F5F0E8]/40" : "text-[#6B5E4E]"}`}>
-                    /{anual ? "año" : "mes"} + IVA
-                  </span>
-                </div>
-                <p className={`text-xs mt-1 font-medium ${plan.highlight ? "text-[#C4622D]" : "text-[#C4622D]"}`}>
-                  {plan.credits}{anual ? " · 12 meses al precio de 10" : ""}
-                </p>
-              </div>
-
-              <ul className="space-y-2.5 mb-7">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2.5 text-sm">
-                    <CheckCircle2
-                      size={14}
-                      className={plan.highlight ? "text-[#C4622D]" : "text-[#C4622D]"}
-                    />
-                    <span className={plan.highlight ? "text-[#F5F0E8]/80" : "text-[#6B5E4E]"}>
-                      {f}
-                    </span>
-                  </li>
-                ))}
+              <div className="price-credits">{p.credits}{anual ? " · 12 meses al precio de 10" : ""}</div>
+              <ul className="price-feats">
+                {p.features.map((f) => <li key={f}><CheckCircle2 size={15} /> {f}</li>)}
               </ul>
-
-              <a
-                href="#acceso"
-              onClick={(e) => { e.preventDefault(); onEnter && onEnter(); }}
-                className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all active:scale-[0.97] ${
-                  plan.highlight
-                    ? "bg-[#C4622D] text-[#F5F0E8] hover:bg-[#A0834A]"
-                    : "bg-[#C4622D]/10 text-[#C4622D] hover:bg-[#C4622D]/20"
-                }`}
-              >
-                {plan.cta}
-              </a>
+              <a href="#acceso" onClick={enter} className={p.highlight ? "btn-solid price-btn" : "btn-outline price-btn"}>Acceder al programa</a>
             </div>
           ))}
         </div>
-
-        {/* Enterprise note */}
-        <p className="text-center text-sm text-[#6B5E4E] mt-8 reveal" style={{ transitionDelay: "240ms" }}>
-          ¿Más de 10 talleres o necesidades especiales?{" "}
-          <a href="#contacto" className="text-[#C4622D] font-medium hover:underline">
-            Hablamos de un plan Enterprise a medida →
-          </a>
-        </p>
       </div>
     </section>
   );
@@ -684,51 +298,19 @@ function Pricing({ onEnter }) {
 
 function Testimonials() {
   return (
-    <section id="testimonios" className="py-24 bg-[#1C1A17] relative overflow-hidden grain-overlay">
-      <div className="container relative z-10">
-        <div className="flex items-end justify-between mb-14 reveal">
-          <div>
-            <CotaAnnotation label="referencias de clientes" className="mb-3" />
-            <h2
-              className="text-4xl lg:text-5xl font-black text-[#F5F0E8] leading-tight"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              Lo que dicen los<br />
-              <span className="italic text-[#C4622D]">que ya lo usan</span>
-            </h2>
-          </div>
-          <div className="hidden lg:flex flex-col items-end gap-1 text-[#C4622D]/25">
-            <div className="w-8 h-px bg-[#C4622D]/20" />
-            <div className="w-px h-8 bg-[#C4622D]/20" />
-            <span className="text-[9px] font-mono uppercase tracking-widest text-[#C4622D]/30">+200 talleres</span>
-          </div>
+    <section className="sec sec-espresso">
+      <div className="wrap">
+        <div className="sec-head" data-reveal>
+          <Cota light>DEL BANCO DE TRABAJO</Cota>
+          <h2 className="sec-h2" style={{ color: "#F5F0E7" }}>Talleres que ya <span className="accent">miden distinto</span></h2>
         </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {TESTIMONIALS.map((t, i) => (
-            <div
-              key={t.name}
-              className="bg-[#F5F0E8]/5 border border-[#F5F0E8]/10 rounded-2xl p-6 reveal hover:bg-[#F5F0E8]/8 transition-colors"
-              style={{ transitionDelay: `${i * 80}ms` }}
-            >
-              <div className="flex items-center gap-1 mb-4">
-                {[...Array(t.stars)].map((_, j) => (
-                  <Star key={j} size={14} className="fill-[#C4622D] text-[#C4622D]" />
-                ))}
-              </div>
-              <p className="text-[#F5F0E8]/70 text-sm leading-relaxed mb-5 italic">
-                "{t.text}"
-              </p>
-              <div className="flex items-center gap-3 pt-4 border-t border-[#F5F0E8]/10">
-                <div className="w-9 h-9 rounded-full bg-[#C4622D]/30 flex items-center justify-center text-[#C4622D] font-bold text-sm">
-                  {t.name[0]}
-                </div>
-                <div>
-                  <p className="text-[#F5F0E8] text-sm font-semibold">{t.name}</p>
-                  <p className="text-[#F5F0E8]/40 text-xs">{t.role}</p>
-                </div>
-              </div>
-            </div>
+        <div className="test-grid">
+          {TESTIMONIALS.map((t) => (
+            <figure key={t.name} className="test" data-reveal>
+              <div className="test-stars">{[0,1,2,3,4].map((i) => <Star key={i} size={14} fill="#C4622D" stroke="#C4622D" />)}</div>
+              <blockquote>“{t.text}”</blockquote>
+              <figcaption><span className="test-name">{t.name}</span><span className="mono test-role">{t.role}</span></figcaption>
+            </figure>
           ))}
         </div>
       </div>
@@ -737,62 +319,23 @@ function Testimonials() {
 }
 
 function FAQ() {
-  const [open, setOpen] = useState(null);
-
+  const [open, setOpen] = useState(0);
   return (
-    <section id="faq" className="py-24 bg-[#F5F0E8]">
-      <div className="container">
-        <div className="grid lg:grid-cols-[1fr_2fr] gap-12 lg:gap-20">
-          {/* Left */}
-          <div className="reveal">
-            <p className="text-xs font-semibold tracking-widest text-[#C4622D] uppercase mb-3">
-              Preguntas frecuentes
-            </p>
-            <h2
-              className="text-4xl font-black text-[#1C1A17] leading-tight mb-4"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              Resolvemos<br />
-              <span className="italic text-[#C4622D]">tus dudas</span>
-            </h2>
-            <p className="text-[#6B5E4E] text-sm leading-relaxed">
-              Si no encuentras lo que buscas, escríbenos. Respondemos en menos de 24 horas.
-            </p>
-            <a
-              href="#contacto"
-              className="inline-flex items-center gap-2 mt-6 text-sm font-medium text-[#C4622D] hover:underline"
-            >
-              Contactar con soporte <ArrowRight size={14} />
-            </a>
-          </div>
-
-          {/* Right */}
-          <div className="space-y-3 reveal" style={{ transitionDelay: "80ms" }}>
-            {FAQS.map((faq, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl border border-[#C4622D]/10 overflow-hidden"
-              >
-                <button
-                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-[#C4622D]/5 transition-colors"
-                  onClick={() => setOpen(open === i ? null : i)}
-                >
-                  <span className="text-sm font-semibold text-[#1C1A17]">{faq.q}</span>
-                  <ChevronDown
-                    size={16}
-                    className={`text-[#C4622D] flex-shrink-0 transition-transform duration-200 ${
-                      open === i ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-                {open === i && (
-                  <div className="px-5 pb-4">
-                    <p className="text-sm text-[#6B5E4E] leading-relaxed">{faq.a}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+    <section className="sec sec-bone" id="faq">
+      <div className="wrap faq-wrap">
+        <div className="sec-head" data-reveal>
+          <Cota>DUDAS FRECUENTES</Cota>
+          <h2 className="sec-h2">Antes de <span className="accent">empezar</span></h2>
+        </div>
+        <div className="faq-list" data-reveal>
+          {FAQS.map((f, i) => (
+            <div key={f.q} className={`faq-item ${open === i ? "faq-on" : ""}`}>
+              <button onClick={() => setOpen(open === i ? -1 : i)}>
+                <span>{f.q}</span><ChevronDown size={18} className="faq-chev" />
+              </button>
+              <div className="faq-a"><p>{f.a}</p></div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -800,52 +343,16 @@ function FAQ() {
 }
 
 function CTASection({ onEnter }) {
+  const enter = (e) => { if (e) e.preventDefault(); onEnter && onEnter(); };
   return (
-    <section className="py-24 bg-[#C4622D] relative overflow-hidden grain-overlay">
-      {/* Marcas de precisión en las esquinas */}
-      <div className="absolute top-8 left-8 w-12 h-px bg-[#F5F0E8]/25" />
-      <div className="absolute top-8 left-8 w-px h-12 bg-[#F5F0E8]/25" />
-      <div className="absolute top-8 right-8 w-12 h-px bg-[#F5F0E8]/25" />
-      <div className="absolute top-8 right-8 w-px h-12 bg-[#F5F0E8]/25" />
-      <div className="absolute bottom-8 left-8 w-12 h-px bg-[#F5F0E8]/25" />
-      <div className="absolute bottom-8 left-8 w-px h-12 bg-[#F5F0E8]/25" />
-      <div className="absolute bottom-8 right-8 w-12 h-px bg-[#F5F0E8]/25" />
-      <div className="absolute bottom-8 right-8 w-px h-12 bg-[#F5F0E8]/25" />
-      {/* Gramil watermark */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.04] pointer-events-none">
-        <GramilMark size={220} color="#F5F0E8" />
-      </div>
-
-      <div className="container relative z-10 text-center">
-        <div className="max-w-2xl mx-auto reveal">
-          <h2
-            className="text-4xl lg:text-6xl font-black text-[#F5F0E8] leading-tight mb-6"
-            style={{ fontFamily: "'Playfair Display', serif" }}
-          >
-            Empieza hoy.<br />
-            <span className="italic">Sin riesgos.</span>
-          </h2>
-          <p className="text-[#F5F0E8]/70 text-lg mb-8">
-            Sin permanencia. Alta y puesta en marcha con acompañamiento.
-            Si no te convence, no pagas nada.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href="#acceso"
-              onClick={(e) => { e.preventDefault(); onEnter && onEnter(); }}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#1C1A17] text-[#F5F0E8] font-semibold text-base hover:bg-[#1C1A17]/80 transition-all active:scale-[0.97] shadow-warm-lg"
-            >
-              Acceder al programa
-              <ArrowRight size={16} />
-            </a>
-            <a
-              href="tel:+34900000000"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl border-2 border-[#F5F0E8]/30 text-[#F5F0E8] font-medium text-base hover:bg-[#F5F0E8]/10 transition-all"
-            >
-              <Phone size={16} />
-              Llamar a ventas
-            </a>
-          </div>
+    <section className="sec cta" id="acceso">
+      <div className="wrap cta-inner" data-reveal>
+        <CarpinterMark size={64} orange="#F5F0E7" />
+        <h2 className="cta-h2">Tu taller ya está listo.<br /><span className="accent">Solo falta que entres.</span></h2>
+        <p className="cta-sub">Sin permanencia. Alta y puesta en marcha con acompañamiento.</p>
+        <div className="cta-actions">
+          <a href="#acceso" onClick={enter} className="btn-bone btn-lg">Acceder al programa <ArrowRight size={18} /></a>
+          <a href="tel:+34900000000" className="btn-ghost btn-lg" style={{ color: "#F5F0E7", borderColor: "rgba(245,240,231,.35)" }}><Phone size={16} /> Hablar con el equipo</a>
         </div>
       </div>
     </section>
@@ -854,77 +361,203 @@ function CTASection({ onEnter }) {
 
 function Footer() {
   return (
-    <footer id="contacto" className="bg-[#1C1A17] pt-16 pb-8">
-      <div className="container">
-        <div className="grid md:grid-cols-4 gap-8 mb-12">
-          {/* Brand */}
-          <div className="md:col-span-2">
-            <div className="mb-4">
-              <CarpinterLogo height={38} tone="light" />
-            </div>
-            <p className="text-[#F5F0E8]/40 text-sm leading-relaxed max-w-xs">
-              El ERP para carpinteros y ebanistas que quieren gestionar su negocio
-              con la misma precisión con la que trabajan la madera.
-            </p>
-            <div className="flex flex-col gap-2 mt-5">
-              <a href="mailto:hola@carpinter.io" className="flex items-center gap-2 text-[#F5F0E8]/40 hover:text-[#C4622D] text-sm transition-colors">
-                <Mail size={14} /> hola@carpinter.io
-              </a>
-              <a href="tel:+34900000000" className="flex items-center gap-2 text-[#F5F0E8]/40 hover:text-[#C4622D] text-sm transition-colors">
-                <Phone size={14} /> 900 000 000
-              </a>
-              <span className="flex items-center gap-2 text-[#F5F0E8]/40 text-sm">
-                <MapPin size={14} /> España
-              </span>
-            </div>
-          </div>
-
-          {/* Links */}
-          <div>
-            <h4 className="text-[#F5F0E8] font-semibold text-sm mb-4">Producto</h4>
-            <ul className="space-y-2.5">
-              {["Funciones", "Precios", "Renders IA", "Integraciones", "Actualizaciones"].map((l) => (
-                <li key={l}>
-                  <a href="#" className="text-[#F5F0E8]/40 hover:text-[#C4622D] text-sm transition-colors">{l}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-[#F5F0E8] font-semibold text-sm mb-4">Empresa</h4>
-            <ul className="space-y-2.5">
-              {["Sobre nosotros", "Blog", "Contacto", "Privacidad", "Términos"].map((l) => (
-                <li key={l}>
-                  <a href="#" className="text-[#F5F0E8]/40 hover:text-[#C4622D] text-sm transition-colors">{l}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
+    <footer className="footer">
+      <div className="wrap footer-grid">
+        <div className="footer-brand">
+          <CarpinterLogo height={38} tone="light" />
+          <p>El ERP para carpinteros y ebanistas que gestionan su negocio con la misma precisión con la que trabajan la madera.</p>
         </div>
-
-        <div className="border-t border-[#F5F0E8]/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[#F5F0E8]/30 text-xs">
-            © 2025 carpinter.io — Todos los derechos reservados
-          </p>
-          <p className="text-[#F5F0E8]/20 text-xs">
-            Hecho con precisión artesanal 🪵
-          </p>
+        <div className="footer-col">
+          <span className="mono footer-h">PRODUCTO</span>
+          {NAV_LINKS.map((l) => <a key={l.label} href={l.href}>{l.label}</a>)}
+        </div>
+        <div className="footer-col">
+          <span className="mono footer-h">CONTACTO</span>
+          <a href="mailto:hola@carpinter.io"><Mail size={13} /> hola@carpinter.io</a>
+          <a href="tel:+34900000000"><Phone size={13} /> 900 000 000</a>
         </div>
       </div>
+      <div className="wrap footer-bottom mono">© {new Date().getFullYear()} carpinter.io · Carpinteros &amp; Ebanistas</div>
     </footer>
   );
 }
 
-// ─── PAGE ─────────────────────────────────────────────────────────────────────
+/* ─── ESTILOS ────────────────────────────────────────────────────────────── */
+const STYLES = `
+.cl-root{
+  --espresso:#17130F; --espresso-2:#1F1912; --bone:#F5F0E7; --bone-2:#EDE5D6;
+  --orange:#C4622D; --orange-soft:#E8A06B; --ink:#201A14; --muted:#6F6152;
+  --sans:'DM Sans',system-ui,-apple-system,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  font-family:var(--sans); color:var(--ink); background:var(--bone); overflow-x:hidden;
+}
+.cl-root *{box-sizing:border-box;}
+.cl-root .wrap{max-width:1140px;margin:0 auto;padding:0 24px;}
+.cl-root .mono{font-family:var(--mono);font-weight:500;}
+.cl-root .accent{color:var(--orange);}
+[data-reveal]{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1);}
+[data-reveal].is-in{opacity:1;transform:none;}
+@media (prefers-reduced-motion:reduce){[data-reveal]{opacity:1;transform:none;transition:none;}}
 
+/* cota eyebrow */
+.cl-root .cota{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;margin-bottom:18px;}
+.cl-root .cota-line{width:26px;height:1px;display:inline-block;opacity:.5;}
+
+/* botones */
+.cl-root .btn-solid{display:inline-flex;align-items:center;gap:8px;background:var(--orange);color:#fff;font-weight:700;font-size:14px;padding:11px 20px;border-radius:10px;transition:.2s;box-shadow:0 8px 24px -12px rgba(196,98,45,.7);}
+.cl-root .btn-solid:hover{background:#A9521F;transform:translateY(-1px);}
+.cl-root .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--orange);color:var(--orange);font-weight:700;font-size:14px;padding:11px 20px;border-radius:10px;transition:.2s;}
+.cl-root .btn-outline:hover{background:var(--orange);color:#fff;}
+.cl-root .btn-ghost{display:inline-flex;align-items:center;gap:8px;border:1.5px solid;background:transparent;font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;transition:.2s;}
+.cl-root .btn-ghost:hover{opacity:.75;}
+.cl-root .btn-bone{display:inline-flex;align-items:center;gap:8px;background:var(--bone);color:var(--ink);font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;transition:.2s;}
+.cl-root .btn-bone:hover{transform:translateY(-1px);}
+.cl-root .btn-lg{font-size:15px;padding:14px 26px;border-radius:12px;}
+
+/* nav */
+.cl-root .nav{position:fixed;top:0;left:0;right:0;z-index:50;transition:.3s;}
+.cl-root .nav-solid{background:rgba(245,240,231,.92);backdrop-filter:blur(14px);box-shadow:0 1px 0 rgba(32,26,20,.08);}
+.cl-root .nav-inner{display:flex;align-items:center;justify-content:space-between;height:70px;}
+.cl-root .nav-links{display:flex;gap:30px;}
+.cl-root .nav-links a{font-size:14px;font-weight:600;transition:.2s;}
+.cl-root .nav-links a:hover{color:var(--orange)!important;}
+.cl-root .nav-cta{display:flex;align-items:center;gap:12px;}
+.cl-root .nav-burger{display:none;background:none;border:none;cursor:pointer;padding:6px;}
+.cl-root .nav-mobile{background:var(--bone);border-top:1px solid var(--bone-2);padding:14px 24px;display:flex;flex-direction:column;gap:6px;}
+.cl-root .nav-mobile a{padding:10px;border-radius:8px;font-weight:600;color:var(--ink);}
+.cl-root .nav-mobile-ghost{border:1.5px solid rgba(196,98,45,.35);color:var(--orange)!important;text-align:center;margin-top:6px;}
+.cl-root .nav-mobile-solid{background:var(--orange);color:#fff!important;text-align:center;}
+@media(max-width:900px){.cl-root .nav-links,.cl-root .nav-cta{display:none;}.cl-root .nav-burger{display:block;}}
+
+/* hero */
+.cl-root .hero{position:relative;background:var(--espresso);color:var(--bone);padding:150px 0 90px;overflow:hidden;}
+.cl-root .hero-grain{position:absolute;inset:0;background:
+  radial-gradient(1200px 500px at 85% -10%,rgba(196,98,45,.18),transparent 60%),
+  radial-gradient(800px 400px at 0% 110%,rgba(196,98,45,.09),transparent 60%);}
+.cl-root .hero-inner{position:relative;display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center;}
+.cl-root .hero-h1{font-size:clamp(38px,6vw,68px);line-height:1.02;font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0 0 22px;}
+.cl-root .hero-sub{font-size:clamp(15px,1.6vw,18px);line-height:1.6;color:rgba(245,240,231,.68);max-width:30em;margin:0 0 30px;}
+.cl-root .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:42px;}
+.cl-root .hero-stats{display:flex;gap:38px;flex-wrap:wrap;border-top:1px solid rgba(245,240,231,.14);padding-top:24px;}
+.cl-root .hero-stat-k{font-size:26px;font-weight:800;color:var(--orange-soft);}
+.cl-root .hero-stat-v{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,240,231,.5);margin-top:2px;}
+@media(max-width:900px){.cl-root .hero-inner{grid-template-columns:1fr;gap:40px;}.cl-root .hero{padding:120px 0 70px;}}
+
+/* blueprint */
+.cl-root .blueprint{position:relative;background:var(--espresso-2);border:1px solid rgba(196,98,45,.28);border-radius:18px;padding:20px;box-shadow:0 40px 80px -40px rgba(0,0,0,.7);}
+.cl-root .bp-tag{position:absolute;top:14px;left:20px;font-size:10.5px;letter-spacing:.1em;color:rgba(245,240,231,.55);text-transform:uppercase;}
+.cl-root .bp-svg{width:100%;height:auto;display:block;margin-top:10px;}
+.cl-root .bp-chip{position:absolute;right:-14px;bottom:26px;background:var(--bone);color:var(--ink);border-radius:12px;padding:12px 16px;box-shadow:0 20px 40px -16px rgba(0,0,0,.5);}
+.cl-root .bp-chip-k{font-size:9.5px;letter-spacing:.16em;color:var(--muted);}
+.cl-root .bp-chip-v{font-size:22px;font-weight:800;line-height:1.1;}
+.cl-root .bp-chip-s{font-size:11px;}
+
+/* secciones */
+.cl-root .sec{padding:92px 0;}
+.cl-root .sec-bone{background:var(--bone);}
+.cl-root .sec-espresso{background:var(--espresso);}
+.cl-root .sec-head{max-width:640px;margin-bottom:52px;}
+.cl-root .sec-h2{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.08;text-wrap:balance;margin:0 0 14px;}
+.cl-root .sec-lead{font-size:16px;line-height:1.6;color:var(--muted);margin:0;}
+
+/* features */
+.cl-root .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.cl-root .feat{background:#fff;border:1px solid var(--bone-2);border-radius:16px;padding:26px;transition:.25s;}
+.cl-root .feat:hover{transform:translateY(-3px);box-shadow:0 24px 50px -30px rgba(32,26,20,.4);border-color:rgba(196,98,45,.35);}
+.cl-root .feat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.cl-root .feat-icon{width:44px;height:44px;border-radius:11px;background:rgba(196,98,45,.1);color:var(--orange);display:flex;align-items:center;justify-content:center;}
+.cl-root .feat-cota{font-size:12px;color:rgba(111,97,82,.5);letter-spacing:.2em;}
+.cl-root .feat-title{font-size:18px;font-weight:700;margin:0 0 8px;}
+.cl-root .feat-desc{font-size:14px;line-height:1.6;color:var(--muted);margin:0;}
+@media(max-width:900px){.cl-root .feat-grid{grid-template-columns:1fr;}}
+
+/* IA */
+.cl-root .ia-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
+.cl-root .ia-list{list-style:none;padding:0;margin:24px 0 0;display:flex;flex-direction:column;gap:12px;}
+.cl-root .ia-list li{display:flex;align-items:center;gap:10px;color:rgba(245,240,231,.8);font-size:15px;}
+.cl-root .ia-list svg{color:var(--orange-soft);flex-shrink:0;}
+.cl-root .ia-demo{background:var(--espresso-2);border:1px solid rgba(196,98,45,.25);border-radius:18px;padding:18px;}
+.cl-root .ia-prompt{background:rgba(0,0,0,.35);border-radius:10px;padding:12px 14px;font-size:12.5px;color:rgba(245,240,231,.75);line-height:1.5;margin-bottom:14px;}
+.cl-root .ia-render{position:relative;aspect-ratio:16/10;border-radius:12px;background:
+  radial-gradient(400px 200px at 50% 0%,rgba(196,98,45,.22),transparent 70%),var(--espresso);
+  border:1px dashed rgba(196,98,45,.4);display:flex;align-items:center;justify-content:center;}
+.cl-root .ia-render-lbl{position:absolute;bottom:10px;right:12px;font-size:10.5px;color:var(--orange-soft);letter-spacing:.1em;}
+@media(max-width:900px){.cl-root .ia-grid{grid-template-columns:1fr;gap:36px;}}
+
+/* pricing */
+.cl-root .toggle{display:inline-flex;align-items:center;gap:12px;margin-top:22px;}
+.cl-root .toggle button{border:1px solid var(--bone-2);background:#fff;color:var(--muted);font-weight:700;font-size:13px;padding:8px 16px;border-radius:999px;cursor:pointer;transition:.2s;}
+.cl-root .toggle button.on{background:var(--espresso);color:var(--bone);border-color:var(--espresso);}
+.cl-root .toggle-note{font-size:12px;color:var(--orange);font-weight:600;}
+.cl-root .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;}
+.cl-root .price{background:#fff;border:1px solid var(--bone-2);border-radius:18px;padding:28px;position:relative;transition:.25s;}
+.cl-root .price-hot{background:var(--espresso);color:var(--bone);border-color:var(--orange);transform:scale(1.03);box-shadow:0 40px 80px -40px rgba(0,0,0,.5);}
+.cl-root .price-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:10px;letter-spacing:.12em;padding:5px 12px;border-radius:999px;}
+.cl-root .price-name{font-size:20px;font-weight:800;margin:0 0 4px;}
+.cl-root .price-desc{font-size:13px;color:var(--muted);margin:0 0 18px;}
+.cl-root .price-hot .price-desc{color:rgba(245,240,231,.55);}
+.cl-root .price-amt{display:flex;align-items:baseline;gap:6px;}
+.cl-root .price-num{font-size:44px;font-weight:800;letter-spacing:-.02em;}
+.cl-root .price-per{font-size:13px;color:var(--muted);}
+.cl-root .price-hot .price-per{color:rgba(245,240,231,.55);}
+.cl-root .price-credits{font-size:12.5px;font-weight:600;color:var(--orange);margin:6px 0 18px;}
+.cl-root .price-hot .price-credits{color:var(--orange-soft);}
+.cl-root .price-feats{list-style:none;padding:0;margin:0 0 22px;display:flex;flex-direction:column;gap:11px;}
+.cl-root .price-feats li{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted);}
+.cl-root .price-hot .price-feats li{color:rgba(245,240,231,.8);}
+.cl-root .price-feats svg{color:var(--orange);flex-shrink:0;}
+.cl-root .price-btn{width:100%;}
+@media(max-width:900px){.cl-root .price-grid{grid-template-columns:1fr;}.cl-root .price-hot{transform:none;}}
+
+/* testimonios */
+.cl-root .test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.cl-root .test{background:var(--espresso-2);border:1px solid rgba(245,240,231,.08);border-radius:16px;padding:26px;}
+.cl-root .test-stars{display:flex;gap:3px;margin-bottom:14px;}
+.cl-root .test blockquote{margin:0 0 18px;font-size:15px;line-height:1.6;color:rgba(245,240,231,.85);}
+.cl-root .test figcaption{display:flex;flex-direction:column;gap:2px;}
+.cl-root .test-name{font-weight:700;color:var(--bone);font-size:14px;}
+.cl-root .test-role{font-size:11px;color:rgba(245,240,231,.45);letter-spacing:.04em;}
+@media(max-width:900px){.cl-root .test-grid{grid-template-columns:1fr;}}
+
+/* faq */
+.cl-root .faq-wrap{max-width:760px;}
+.cl-root .faq-list{display:flex;flex-direction:column;gap:10px;}
+.cl-root .faq-item{background:#fff;border:1px solid var(--bone-2);border-radius:12px;overflow:hidden;}
+.cl-root .faq-item button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;background:none;border:none;cursor:pointer;font-weight:700;font-size:15px;color:var(--ink);text-align:left;}
+.cl-root .faq-chev{transition:.25s;color:var(--orange);flex-shrink:0;}
+.cl-root .faq-on .faq-chev{transform:rotate(180deg);}
+.cl-root .faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+.cl-root .faq-on .faq-a{max-height:220px;}
+.cl-root .faq-a p{margin:0;padding:0 20px 18px;font-size:14px;line-height:1.6;color:var(--muted);}
+
+/* cta */
+.cl-root .cta{background:var(--orange);color:var(--bone);text-align:center;}
+.cl-root .cta-inner{display:flex;flex-direction:column;align-items:center;}
+.cl-root .cta-h2{font-size:clamp(28px,4.5vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.08;margin:20px 0 12px;text-wrap:balance;}
+.cl-root .cta .accent{color:var(--espresso);}
+.cl-root .cta-sub{font-size:16px;color:rgba(245,240,231,.85);margin:0 0 28px;}
+.cl-root .cta-actions{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+
+/* footer */
+.cl-root .footer{background:var(--espresso);color:var(--bone);padding:64px 0 28px;}
+.cl-root .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;padding-bottom:40px;border-bottom:1px solid rgba(245,240,231,.1);}
+.cl-root .footer-brand p{margin:16px 0 0;font-size:14px;line-height:1.6;color:rgba(245,240,231,.45);max-width:32ch;}
+.cl-root .footer-col{display:flex;flex-direction:column;gap:12px;}
+.cl-root .footer-h{font-size:11px;letter-spacing:.16em;color:var(--orange-soft);margin-bottom:4px;}
+.cl-root .footer-col a{display:flex;align-items:center;gap:8px;font-size:14px;color:rgba(245,240,231,.6);transition:.2s;}
+.cl-root .footer-col a:hover{color:var(--orange-soft);}
+.cl-root .footer-bottom{padding-top:24px;font-size:11px;letter-spacing:.06em;color:rgba(245,240,231,.35);}
+@media(max-width:900px){.cl-root .footer-grid{grid-template-columns:1fr;gap:28px;}}
+`;
+
+/* ─── EXPORT ─────────────────────────────────────────────────────────────── */
 export default function CarpinterosLanding({ onEnter }) {
-  useScrollReveal();
-
+  useReveal();
+  const rootRef = useRef(null);
   return (
-    <div className="min-h-screen">
+    <div className="cl-root" ref={rootRef}>
+      <style>{STYLES}</style>
       <Nav onEnter={onEnter} />
-      <Hero />
+      <Hero onEnter={onEnter} />
       <Features />
       <AISection />
       <Pricing onEnter={onEnter} />
