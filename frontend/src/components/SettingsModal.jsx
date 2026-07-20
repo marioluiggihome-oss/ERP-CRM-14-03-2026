@@ -147,6 +147,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     isPrescriptor: false,
     isTienda: false,  // Tienda/Punto de Venta
     isMontador: false,  // Montador/Instalador
+    isCarpintero: false,  // Carpintero/Ebanista (portal con landing propia)
+    carpinteroLandingUrl: '',  // URL de la web de inicio del portal carpinteros
     linkedRepresentativeId: '',
     allowedModules: ['montada'],
     allowedLibraries: ['ZC'],  // Tarifas/Bibliotecas activas (ZC, MV, etc.)
@@ -738,6 +740,8 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       isPrescriptor: false,
       isTienda: false,
       isMontador: false,
+      isCarpintero: false,
+      carpinteroLandingUrl: '',
       linkedRepresentativeId: isCommercial ? state.currentUser.id : '',
       allowedModules: ['montada'],
       allowedLibraries: ['ZC'],  // Por defecto ZC
@@ -1613,6 +1617,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               {user.canUseAgentesIA && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-[9px] font-black">AGENTES IA</span>}
                               {user.canAccessMontajes && <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-[9px] font-black">MONTAJES</span>}
                               {user.isMontador && <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[9px] font-black">MONTADOR</span>}
+                              {user.isCarpintero && <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-[9px] font-black">CARPINTERO</span>}
                               {user.useCustomBranding && <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded text-[9px] font-black">PERSONALIZAR</span>}
                             </div>
                           </div>
@@ -2219,6 +2224,24 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                               />
                               <span title="Marca al usuario como montador (agenda de montajes)." className="text-xs font-bold text-slate-700">Montador</span>
                             </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.isCarpintero}
+                                onChange={(e) => setUserForm({...userForm, isCarpintero: e.target.checked})}
+                                className="w-4 h-4 rounded accent-amber-700"
+                              />
+                              <span title="Perfil Carpintero/Ebanista: al entrar ve su portal con la web de inicio configurada." className="text-xs font-bold text-slate-700">Carpintero/Ebanista</span>
+                            </label>
+                            {userForm.isCarpintero && (
+                              <input
+                                type="url"
+                                value={userForm.carpinteroLandingUrl || ''}
+                                onChange={(e) => setUserForm({...userForm, carpinteroLandingUrl: e.target.value})}
+                                placeholder="URL web de inicio (landing carpinteros)"
+                                className="w-full px-2 py-1.5 border border-amber-300 rounded-lg text-xs"
+                              />
+                            )}
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input
                                 type="checkbox"

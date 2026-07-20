@@ -745,6 +745,48 @@ const App = () => {
     );
   }
 
+  // Portal Carpinteros & Ebanistas: el usuario con perfil carpintero entra a su
+  // web de inicio (landing configurable por usuario) a pantalla completa. Si
+  // además tiene el presupuestador de Cocina Desmontada, un botón le deja pasar
+  // a la app normal. La landing por defecto es la web del negocio de carpinteros.
+  if (state.currentUser?.isCarpintero && !_hasOtherAccess && !state.carpinteroPortalOff) {
+    const landingUrl = state.currentUser?.carpinteroLandingUrl || 'https://carpinter-odzjngix.manus.space';
+    return (
+      <div className="h-screen flex flex-col bg-slate-950 overflow-hidden">
+        <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-900 shrink-0">
+          <div className="flex items-center gap-2">
+            {state.logo && <img src={state.logo} alt="" className="h-7 rounded" />}
+            <span className="text-xs font-black text-amber-400 uppercase tracking-widest">Carpinteros & Ebanistas</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {state.currentUser?.canUseCascos && (
+              <button
+                onClick={() => setState(prev => ({ ...prev, carpinteroPortalOff: true, currentTab: 'cascos' }))}
+                className="text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded-lg uppercase tracking-wide"
+              >
+                Presupuestador
+              </button>
+            )}
+            <a href={landingUrl} target="_blank" rel="noreferrer"
+              className="text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest">
+              Abrir web
+            </a>
+            <button
+              onClick={() => setState(prev => ({ ...prev, currentUser: null }))}
+              className="text-xs font-bold text-amber-400 hover:text-amber-300 uppercase tracking-widest"
+            >
+              Salir
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0">
+          <iframe src={landingUrl} title="Portal Carpinteros" className="w-full h-full border-0 bg-white" />
+        </div>
+      </div>
+    );
+  }
+
   // Usuario SOLO Luiggi Floor: entra directo a esa sección a pantalla completa,
   // sin acceso al resto de presupuestadores ni módulos. Cadena de altura correcta
   // (h-screen + flex-col + flex-1/min-h-0) para que se vea bien en iPhone/iPad.
