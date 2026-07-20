@@ -113,8 +113,9 @@ async def login(request: Request, credentials: dict):
             logger.warning(f"Error parsing expiration date for {username}: {e}")
     
     # ─── Sesión única: verificar si ya hay una sesión activa ───
-    # Los usuarios admin/master pueden tener múltiples sesiones simultáneas.
-    is_admin_user = any(user.get(flag) for flag in ("isAdmin", "isResponsableDelegacion", "isGerente", "isDirectorComercial", "isDirectorFabrica"))
+    # Los usuarios admin/master (y el admin de division carpinteros) pueden tener
+    # varias sesiones simultaneas.
+    is_admin_user = any(user.get(flag) for flag in ("isAdmin", "isResponsableDelegacion", "isGerente", "isDirectorComercial", "isDirectorFabrica", "canManageCarpinteroUsers"))
     force = credentials.get("force", False)
     user_id = user.get("id")
     if not is_admin_user:

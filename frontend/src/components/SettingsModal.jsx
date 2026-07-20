@@ -600,8 +600,9 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       if (userRoleFilter === 'gerente' && u.isGerente) return matchesSearch;
       if (userRoleFilter === 'responsable' && u.isResponsableDelegacion) return matchesSearch;
       if (userRoleFilter === 'comercial' && u.isRepresentative && !u.isAdmin && !u.isGerente && !u.isResponsableDelegacion) return matchesSearch;
-      if (userRoleFilter === 'tienda' && u.isTienda) return matchesSearch;
+      if (userRoleFilter === 'tienda' && u.isTienda && !u.isCarpintero) return matchesSearch;
       if (userRoleFilter === 'colaborador' && u.isPrescriptor) return matchesSearch;
+      if (userRoleFilter === 'carpintero' && u.isCarpintero) return matchesSearch;
       
       return false;
     });
@@ -1530,6 +1531,14 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                       >
                         🤝 Colaborador ({visibleUsers.filter(u => u.isPrescriptor).length})
                       </button>
+                      <button
+                        onClick={() => setUserRoleFilter('carpintero')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-all ${
+                          userRoleFilter === 'carpintero' ? 'bg-orange-600 text-white shadow' : 'text-slate-600 hover:bg-orange-100'
+                        }`}
+                      >
+                        🪚 Carpintero ({visibleUsers.filter(u => u.isCarpintero).length})
+                      </button>
                     </div>
                   </div>
 
@@ -1563,12 +1572,13 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rol</p>
                                 <p className="text-xs font-bold text-slate-900">
                                   {user.isGerente ? '👔 Gerente' :
-                                   user.isAdmin ? '🛡️ Director Comercial' : 
+                                   user.isAdmin ? '🛡️ Director Comercial' :
                                    user.isDirectorComercial ? '📊 Dir. Comercial' :
                                    user.isDirectorFabrica ? '🏭 Dir. Fábrica' :
-                                   user.isResponsableDelegacion ? '📍 Resp. Delegación' : 
-                                   user.isRepresentative ? '💼 Comercial' : 
-                                   user.isPrescriptor ? '🤝 Colaborador' : 
+                                   user.isResponsableDelegacion ? '📍 Resp. Delegación' :
+                                   user.isRepresentative ? '💼 Comercial' :
+                                   user.isPrescriptor ? '🤝 Colaborador' :
+                                   user.isCarpintero ? '🪚 Carpintero/Ebanista' :
                                    user.isTienda ? '🏪 Punto de Venta' : '🏪 Tienda'}
                                 </p>
                               </div>
