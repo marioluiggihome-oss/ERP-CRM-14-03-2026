@@ -11,5 +11,8 @@ Fuente: Ajustes → Precios (Panel Maestro). Actualizado 20/07/2026.
 
 ## Descuentos de compra de cascos (vigentes 20/07/2026)
 - **Montakit**: −25% sobre su tarifa de cascos (columna del acabado que aplique).
-- **Grupo ACB**: −50% y sobre el resultado −28% (factor 0,36) sobre la tarifa ACB
-  publicada (la misma que está cargada como base en Cocina Desmontada).
+- **Grupo ACB**: coste = **netos tarifa −28%** (tarifa ACB × 0,72).
+  - IMPORTANTE: el "−50% −28%" se aplica SOLO cuando se parte del precio
+    PUBLICADO en el presupuestador de Cocina Desmontada, porque ese precio ya
+    lleva el valor de punto ×2 (el −50% deshace el ×2 y el −28% es el descuento
+    real). Sobre la tarifa neta (cascos.js) se aplica únicamente el −28%.
