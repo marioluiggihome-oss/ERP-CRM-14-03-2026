@@ -481,6 +481,7 @@ export default function EstudioCocinas({ state, setState }) {
   const [compareOn, setCompareOn] = useState(false);     // Comparativa croquis vs render
   const [savedId, setSavedId] = useState(null);          // ID del proyecto guardado
   const [savedList, setSavedList] = useState(null);      // Lista de proyectos (null = modal oculto)
+  const [savedSearch, setSavedSearch] = useState('');    // Buscador de proyectos por nombre/referencia
   const [busySave, setBusySave] = useState(false);       // Guardando proyecto
   // Panel lateral redimensionable/ocultable (solo pantallas grandes).
   const [panelW, setPanelW] = useState(224);
@@ -1725,10 +1726,28 @@ export default function EstudioCocinas({ state, setState }) {
               <h3 className={`font-black ${t.title}`}>Mis proyectos 3D</h3>
               <button onClick={() => setSavedList(null)} className={`p-1.5 ${t.subtext} hover:opacity-70`}><X size={18} /></button>
             </div>
+            {savedList.length > 0 && (
+              <div className={`px-4 pt-3 pb-1`}>
+                <input
+                  autoFocus
+                  value={savedSearch}
+                  onChange={e => setSavedSearch(e.target.value)}
+                  placeholder="Buscar por nombre o referencia…"
+                  className={`w-full px-3 py-2 rounded-lg text-sm border ${t.cardBorder} ${t.card} ${t.title} focus:outline-none focus:ring-2 focus:ring-amber-500/40`}
+                />
+              </div>
+            )}
             <div className="p-4 overflow-y-auto">
-              {savedList.length === 0 ? (
+              {(() => {
+                const q = savedSearch.trim().toLowerCase();
+                const shown = q ? savedList.filter(d => `${d.cliente || ''} ${d.ref || ''}`.toLowerCase().includes(q)) : savedList;
+                if (savedList.length === 0) return (
                 <p className={`text-sm text-center py-8 ${t.subtext}`}>No tienes proyectos guardados todavía.</p>
-              ) : savedList.map(d => (
+                );
+                if (shown.length === 0) return (
+                <p className={`text-sm text-center py-8 ${t.subtext}`}>Sin resultados para “{savedSearch}”.</p>
+                );
+                return shown.map(d => (
                 <div key={d.id} className={`flex items-center gap-3 border rounded-xl p-2 mb-2 ${t.cardBorder} hover:opacity-90`}>
                   <div className={`w-12 h-12 shrink-0 rounded-lg overflow-hidden ${t.card}`}>
                     {d.images?.[0] ? <img src={imgSrc(d.images[0])} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Image size={16} className={t.subtext} /></div>}
@@ -1740,7 +1759,8 @@ export default function EstudioCocinas({ state, setState }) {
                   <button onClick={() => loadProject(d)} className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-500">Abrir</button>
                   <button onClick={() => deleteProject(d.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                 </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
         </div>
