@@ -25,6 +25,7 @@ PUBLIC_API_PATHS = frozenset({
     "/api",
     "/api/auth/login",
     "/api/auth/login-email",
+    "/api/auth/force-login",
     "/api/auth/refresh",
     "/api/auth/logout",
     "/api/auth/register",
