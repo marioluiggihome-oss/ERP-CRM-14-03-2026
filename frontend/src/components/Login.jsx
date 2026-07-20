@@ -49,9 +49,11 @@ const CarpBrand = ({ big = false }) => (
 // #carpinteros o #carpenter — enlace directo con SU marca (p.ej. carpenter.io).
 const isCarpDirect = () => {
   try {
+    const host = (window.location.hostname || '').toLowerCase();
     const sp = new URLSearchParams(window.location.search);
     const hash = (window.location.hash || '').toLowerCase();
-    return sp.get('brand') === 'carpinteros' || sp.has('carpinteros') || hash === '#carpinteros' || hash === '#carpenter';
+    return host.includes('carpenter.io') || host.includes('carpinter.io')
+      || sp.get('brand') === 'carpinteros' || sp.has('carpinteros') || hash === '#carpinteros' || hash === '#carpenter';
   } catch { return false; }
 };
 
