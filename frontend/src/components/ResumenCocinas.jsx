@@ -237,7 +237,7 @@ const ResumenCocinas = ({ state }) => {
         } catch (_) { /* omitir */ }
       } else {
         pdf.setFontSize(16); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
-        pdf.text('LUIGGI HOME', M, y + 9); pdf.setFont(undefined, 'normal');
+        pdf.setFont(undefined, 'normal');
       }
       pdf.setFontSize(17); pdf.setTextColor(30, 27, 65); pdf.setFont(undefined, 'bold');
       pdf.text('PRESUPUESTO', W - M, y + 6, { align: 'right' });

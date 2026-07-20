@@ -1165,7 +1165,7 @@ export default function AIRenderStudio({ state, setState }) {
       const logo = state?.logo;
       if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
         try { const fmt = logo.includes('image/png') ? 'PNG' : (logo.includes('image/webp') ? 'WEBP' : 'JPEG'); pdf.addImage(logo, fmt, M, 8, 30, 15); } catch (_) {}
-      } else { pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 17); pdf.setFont(undefined, 'normal'); }
+      } else { pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold'); pdf.setFont(undefined, 'normal'); }
       pdf.setFontSize(16); pdf.setTextColor(60, 40, 120); pdf.setFont(undefined, 'bold');
       pdf.text('PROPUESTA DE DISEÑO 3D', W - M, 15, { align: 'right' });
       pdf.setFont(undefined, 'normal'); pdf.setFontSize(10); pdf.setTextColor(120);
@@ -1191,7 +1191,7 @@ export default function AIRenderStudio({ state, setState }) {
     if (!img) return;
     try {
       const dataUrl = await imageToDataUrl(img);
-      const text = `✨ Propuesta de diseño 3D${cliente ? ` para ${cliente}` : ''}\n${(renderResult?.description || description || '').substring(0, 200)}\n\n— Luiggi Home`;
+      const text = `✨ Propuesta de diseño 3D${cliente ? ` para ${cliente}` : ''}\n${(renderResult?.description || description || '').substring(0, 200)}`;
       // Intentar Web Share API (móvil)
       if (navigator.share && navigator.canShare) {
         const blob = await (await fetch(dataUrl)).blob();
@@ -1225,7 +1225,7 @@ export default function AIRenderStudio({ state, setState }) {
       const logo = state?.logo;
       if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
         try { const fmt = logo.includes('image/png') ? 'PNG' : 'JPEG'; pdf.addImage(logo, fmt, M, M, 40, 20); } catch (_) {}
-      } else { pdf.setFontSize(20); pdf.setTextColor(30); pdf.setFont(undefined, 'bold'); pdf.text('LUIGGI HOME', M, 22); pdf.setFont(undefined, 'normal'); }
+      } else { pdf.setFontSize(20); pdf.setTextColor(30); pdf.setFont(undefined, 'bold'); pdf.setFont(undefined, 'normal'); }
       pdf.setFontSize(24); pdf.setTextColor(60, 40, 120); pdf.setFont(undefined, 'bold');
       pdf.text('PROPUESTA DE DISEÑO 3D', W / 2, H / 2 - 10, { align: 'center' });
       pdf.setFont(undefined, 'normal'); pdf.setFontSize(14); pdf.setTextColor(80);
@@ -1651,7 +1651,7 @@ export default function AIRenderStudio({ state, setState }) {
             </div>
             <div>
               <h1 className="text-lg font-black text-slate-900 uppercase tracking-wide">Estudio 3D</h1>
-              <p className="text-xs text-slate-500 font-medium">Powered by LuiggiAI Engine</p>
+              <p className="text-xs text-slate-500 font-medium">Powered by Motor de IA</p>
             </div>
             {/* Créditos de IA del usuario (bolsa mensual). Admin/master = ilimitado. */}
             {aiCredits && (
@@ -2221,7 +2221,7 @@ export default function AIRenderStudio({ state, setState }) {
                   </div>
                 </div>
                 <p className="text-lg font-black text-slate-700 uppercase tracking-wider">Generando render</p>
-                <p className="text-sm text-slate-500 mt-2">LuiggiAI está creando tu diseño 3D...</p>
+                <p className="text-sm text-slate-500 mt-2">El motor de IA está creando tu diseño 3D...</p>
                 <p className="text-xs text-slate-400 mt-1">Esto puede tardar hasta 30 segundos</p>
               </div>
             </div>
@@ -2463,7 +2463,7 @@ export default function AIRenderStudio({ state, setState }) {
                 {/* Badge del motor */}
                 <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg">
                   <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">
-                    LuiggiAI Render Engine
+                    Render 3D IA
                   </span>
                 </div>
               </div>

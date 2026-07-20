@@ -144,7 +144,7 @@ const MaintenanceScreen = ({ onCheckAgain }) => {
 
         {/* Footer */}
         <p className="text-center text-indigo-400/50 text-xs mt-8">
-          LUIGGI HOME MASTER · Sistema ERP/CRM
+          Sistema ERP/CRM
         </p>
       </div>
     </div>

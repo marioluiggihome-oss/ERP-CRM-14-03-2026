@@ -114,7 +114,7 @@ const CRMParteDiario = ({ currentUser }) => {
     const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
     const W = pdf.internal.pageSize.getWidth();
     pdf.setFillColor(55, 48, 163); pdf.rect(0, 0, W, 26, 'F');
-    pdf.setTextColor(255); pdf.setFontSize(9); pdf.text('LUIGGI HOME · INFORME CRM', 14, 10);
+    pdf.setTextColor(255); pdf.setFontSize(9); pdf.text('INFORME CRM', 14, 10);
     pdf.setFontSize(16); pdf.text(r.titulo || 'Parte de visitas', 14, 18);
     pdf.setFontSize(9); pdf.setTextColor(80);
     pdf.text(`${r.periodoLabel || ''}  ·  ${r.userName || ''}  ·  ${r.totalVisitas || (r.visitas || []).length} visita(s)`, 14, 32);
@@ -154,7 +154,7 @@ const CRMParteDiario = ({ currentUser }) => {
   const enviarWhatsApp = (rep) => {
     const r = rep || report;
     if (!r) return;
-    let t = `*LUIGGI HOME — INFORME CRM*\n${r.titulo || 'Parte de visitas'}\n${r.periodoLabel || ''}\n`;
+    let t = `*INFORME CRM*\n${r.titulo || 'Parte de visitas'}\n${r.periodoLabel || ''}\n`;
     (r.visitas || []).forEach((v, i) => {
       t += `\n${i + 1}. *${v.cliente || ''}*${v.hora ? ' (' + v.hora + ')' : ''}\n`;
       if (v.resumen) t += `   ${v.resumen}\n`;
@@ -206,7 +206,7 @@ const CRMParteDiario = ({ currentUser }) => {
         {report && (
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-5">
             <div className="bg-gradient-to-r from-indigo-800 to-purple-800 text-white px-5 py-4">
-              <div className="text-[10px] uppercase tracking-widest opacity-80">Luiggi Home · Informe CRM</div>
+              <div className="text-[10px] uppercase tracking-widest opacity-80">Informe CRM</div>
               <h2 className="text-lg font-black">{report.titulo}</h2>
               <div className="text-xs opacity-90">{report.periodoLabel} · {report.userName} · {report.totalVisitas || (report.visitas || []).length} visita(s)</div>
             </div>

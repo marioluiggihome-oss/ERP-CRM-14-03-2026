@@ -174,8 +174,8 @@ const MisPedidos = ({ currentUser }) => {
       <body>
         <div class="header">
           <div>
-            <div class="logo">LUIGGI HOME</div>
-            <div style="font-size: 12px; color: #64748b;">Cocinas y Mobiliario</div>
+            <div class="logo"></div>
+            <div style="font-size: 12px; color: #64748b;"></div>
           </div>
           <div style="text-align: right;">
             <div class="order-number">PEDIDO #${order.budgetNumber}</div>
@@ -262,7 +262,7 @@ const MisPedidos = ({ currentUser }) => {
         ` : ''}
 
         <div class="footer">
-          LUIGGI HOME · Documento generado el ${new Date().toLocaleString('es-ES')}
+          Documento generado el ${new Date().toLocaleString('es-ES')}
         </div>
       </body>
       </html>

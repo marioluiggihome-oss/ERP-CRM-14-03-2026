@@ -112,7 +112,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     width: 0,
     height: 0,
     depth: 0,
-    manufacturer: 'Luiggi Home Master',
+    manufacturer: 'Master',
     zonePoints: {
       Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0, Z6: 0,
       Z7: 0, Z8: 0, Z9: 0, Z10: 0, Z11: 0, Z12: 0
@@ -908,7 +908,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       width: 0,
       height: 0,
       depth: 0,
-      manufacturer: 'Luiggi Home Master',
+      manufacturer: 'Master',
       zonePoints: {
         Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0, Z6: 0,
         Z7: 0, Z8: 0, Z9: 0, Z10: 0, Z11: 0, Z12: 0
@@ -928,7 +928,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       width: product.width || 0,
       height: product.height || 0,
       depth: product.depth || 0,
-      manufacturer: product.manufacturer || 'Luiggi Home Master',
+      manufacturer: product.manufacturer || 'Master',
       zonePoints: product.zonePoints || {
         Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0, Z6: 0,
         Z7: 0, Z8: 0, Z9: 0, Z10: 0, Z11: 0, Z12: 0
@@ -2258,7 +2258,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 onChange={(e) => setUserForm({...userForm, canAccessFloor: e.target.checked})}
                                 className="w-4 h-4 rounded accent-amber-600"
                               />
-                              <span className="text-xs font-black text-amber-800">Luiggi Floor</span>
+                              <span className="text-xs font-black text-amber-800">Floor</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-amber-50 px-2 py-1.5 rounded-lg hover:bg-amber-100 transition-colors border border-amber-200">
                               <input

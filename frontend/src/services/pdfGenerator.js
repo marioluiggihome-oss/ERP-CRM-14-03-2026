@@ -44,7 +44,7 @@ export const generateBudgetPDF = ({
   carcassMaterialName,
   logo,
   brandColor = '#ea580c',
-  companyName = 'LUIGGI HOME',
+  companyName = '',
   globalFinish = '',
   allProducts = [],
   calculateLineDetails = null,
@@ -489,7 +489,7 @@ export const generateArmarioPresupuestoPDF = ({
   ivaRate = 21,
   logo,
   brandColor = '#ea580c',
-  companyName = 'LUIGGI HOME'
+  companyName = ''
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -663,7 +663,7 @@ export const generateArmariosDespiecePDF = ({
   ivaRate = 21,
   logo,
   brandColor = '#ea580c',
-  companyName = 'LUIGGI HOME'
+  companyName = ''
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -887,7 +887,7 @@ export const generateManufacturingPDF = ({
   allProducts = [],
   logo,
   brandColor = '#ea580c',
-  companyName = 'LUIGGI HOME',
+  companyName = '',
   distributorName = ''
 }) => {
   const doc = new jsPDF({

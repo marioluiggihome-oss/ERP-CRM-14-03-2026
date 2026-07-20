@@ -761,7 +761,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
           } catch (_) { /* logo no incrustable */ }
         } else {
           pdf.setFontSize(15); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
-          pdf.text('LUIGGI HOME', M, hy + 8); pdf.setFont(undefined, 'normal');
+          pdf.setFont(undefined, 'normal');
         }
         pdf.setFontSize(13); pdf.setTextColor(185, 28, 28); pdf.setFont(undefined, 'bold');
         pdf.text('Revisión de margen — artículos con margen 0 o negativo', W - M, hy + 4, { align: 'right' });
@@ -858,7 +858,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
           } catch (_) { /* logo no incrustable */ }
         } else {
           pdf.setFontSize(14); pdf.setTextColor(30); pdf.setFont(undefined, 'bold');
-          pdf.text('LUIGGI HOME', M, hy + 8); pdf.setFont(undefined, 'normal');
+          pdf.setFont(undefined, 'normal');
         }
         pdf.setFontSize(12); pdf.setTextColor(185, 28, 28); pdf.setFont(undefined, 'bold');
         pdf.text('Revisión de líneas — sin coste o margen ≤ 0', W - M, hy + 4, { align: 'right' });

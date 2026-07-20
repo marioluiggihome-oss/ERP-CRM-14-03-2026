@@ -556,7 +556,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
 
             {/* Footer del informe */}
             <div className="text-center text-xs text-slate-400 py-4">
-              Informe generado el {new Date(report.generatedAt).toLocaleString('es-ES')} — LuiggiAI Engine — Luiggi Home ERP v4.1
+              Informe generado el {new Date(report.generatedAt).toLocaleString('es-ES')} — Motor de IA — ERP v4.1
             </div>
           </div>
         ) : (

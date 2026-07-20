@@ -17,7 +17,7 @@ const MANUAL_SECTIONS = {
   introduccion: {
     title: "Introducción",
     icon: BookOpen,
-    content: `LUIGGI HOME es un sistema ERP/CRM especializado para empresas de mobiliario de cocina.
+    content: `Este es un sistema ERP/CRM especializado para empresas de mobiliario de cocina.
 
 Funcionalidades principales:
 • Crear presupuestos con productos de diferentes bibliotecas (ZC, MV)
@@ -403,7 +403,7 @@ const UserManualModal = ({ isOpen, onClose, currentUser }) => {
 
     doc.setFontSize(14);
     doc.setTextColor(99, 102, 241); // indigo-500
-    doc.text("LUIGGI HOME", pageWidth / 2, y, { align: "center" });
+    doc.text("MANUAL DE USUARIO", pageWidth / 2, y, { align: "center" });
     y += 8;
 
     // Rol del usuario
@@ -457,7 +457,7 @@ const UserManualModal = ({ isOpen, onClose, currentUser }) => {
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       doc.text(
-        `LUIGGI HOME - Manual de Usuario | Página ${i} de ${totalPages} | ${new Date().toLocaleDateString('es-ES')}`,
+        `Manual de Usuario | Página ${i} de ${totalPages} | ${new Date().toLocaleDateString('es-ES')}`,
         pageWidth / 2,
         290,
         { align: "center" }
@@ -465,7 +465,7 @@ const UserManualModal = ({ isOpen, onClose, currentUser }) => {
     }
 
     // Descargar
-    doc.save(`Manual_LUIGGI_${roleConfig?.name?.replace(/\s/g, '_') || 'Usuario'}.pdf`);
+    doc.save(`Manual_${roleConfig?.name?.replace(/\s/g, '_') || 'Usuario'}.pdf`);
   };
 
   // Imprimir
@@ -595,7 +595,7 @@ const UserManualModal = ({ isOpen, onClose, currentUser }) => {
 
         {/* Footer */}
         <div className="border-t border-indigo-100 px-6 py-3 bg-indigo-50/30 flex justify-between items-center text-xs text-indigo-400 shrink-0">
-          <span>LUIGGI HOME © {new Date().getFullYear()}</span>
+          <span>© {new Date().getFullYear()}</span>
           <span>Versión del manual: 1.0 | Última actualización: Marzo 2026</span>
         </div>
       </div>

@@ -151,8 +151,8 @@ const App = () => {
       },
       ivaRate: 21, // IVA editable (por defecto 21%)
       catalogs: [
-        { id: 'cat-m-base', name: 'Cocina Montada Luiggi', manufacturer: 'Luiggi', products: [], module: 'montada' },
-        { id: 'cat-d-base', name: 'Despiece Luiggi', manufacturer: 'Luiggi', products: [], module: 'despiece' }
+        { id: 'cat-m-base', name: 'Cocina Montada', manufacturer: 'Base', products: [], module: 'montada' },
+        { id: 'cat-d-base', name: 'Despiece', manufacturer: 'Base', products: [], module: 'despiece' }
       ], 
       activeCatalogIds: ['cat-m-base', 'cat-d-base'],
       users: [],
@@ -271,6 +271,7 @@ const App = () => {
             MV: 0
           },
           brandColor: settings.brandColor || DEFAULT_BRAND_COLOR,
+          companyName: settings.companyName || '',
           logo: settings.logo || null
         }));
       } catch (err) {
@@ -804,7 +805,7 @@ const App = () => {
         </div>
         <div className="flex-1 min-h-0">
           <ErrorBoundary>
-            <Suspense fallback={<div className="p-10 text-center text-amber-400">Cargando Luiggi Floor…</div>}>
+            <Suspense fallback={<div className="p-10 text-center text-amber-400">Cargando Floor…</div>}>
               <LuiggiFloor currentUser={state.currentUser} />
             </Suspense>
           </ErrorBoundary>
@@ -893,7 +894,7 @@ const App = () => {
               title="Mostrar menú"
             >
               {state.logo ? (
-                <img src={state.logo} alt="Luiggi Home" className="w-full h-full object-contain p-1" />
+                <img src={state.logo} alt="logo" className="w-full h-full object-contain p-1" />
               ) : (
                 <div className="w-full h-full bg-brand flex items-center justify-center font-black text-white italic text-xl">L</div>
               )}

@@ -43,7 +43,7 @@ export const INITIAL_CARCASS_MATERIALS = [
   { id: 'mat-blanco-zc', name: 'Blanco Ártico Standard', fixedIncrement: 0, thickness: 16, library: 'ZC' },
   { id: 'mat-gris-zc', name: 'Gris Antracita Pro', fixedIncrement: 18, thickness: 16, library: 'ZC' },
   { id: 'mat-roble-zc', name: 'Roble Natural Veta', fixedIncrement: 25, thickness: 19, library: 'ZC' },
-  { id: 'mat-nogal-zc', name: 'Nogal Luiggi Exclusive', fixedIncrement: 40, thickness: 19, library: 'ZC' },
+  { id: 'mat-nogal-zc', name: 'Nogal Exclusive', fixedIncrement: 40, thickness: 19, library: 'ZC' },
   // Materiales MV
   { id: 'mat-blanco-mv', name: 'Blanco MV', fixedIncrement: 0, thickness: 16, library: 'MV' },
   { id: 'mat-gris-mv', name: 'Gris MV', fixedIncrement: 15, thickness: 16, library: 'MV' },
@@ -65,7 +65,7 @@ export const CabinetCategory = {
   MANUAL: 'Manual'
 };
 
-const mfr = 'Luiggi Home Master';
+const mfr = 'Master';
 
 const generateProfessionalCatalog = () => {
   const products = [];

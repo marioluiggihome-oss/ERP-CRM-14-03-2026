@@ -31,7 +31,7 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
       allProducts: allProducts,
       logo: logo,
       brandColor: state.brandColor,
-      companyName: 'LUIGGI HOME',
+      companyName: state.companyName || '',
       distributorName: distributorName
     });
   };
@@ -89,7 +89,7 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
               {logo ? (
                 <img src={logo} alt="Logo" className="h-16 mb-4" />
               ) : (
-                <div className="text-3xl font-black italic text-indigo-950 mb-2">LUIGGI HOME</div>
+                <div className="text-3xl font-black italic text-indigo-950 mb-2">{(state.companyName || "").toUpperCase()}</div>
               )}
               <p className="text-sm font-black text-indigo-400 uppercase">{distributorName}</p>
             </div>
@@ -252,7 +252,7 @@ const ManufacturingReport = ({ items, finish, carcassColor, state, catalogs, log
         {/* Footer */}
         <div className="mt-12 pt-6 border-t border-slate-200 text-center">
           <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">
-            Documento Generado por Luiggi Home Master Industrial System v2026
+            Documento generado por Master Industrial System v2026
           </p>
         </div>
       </div>

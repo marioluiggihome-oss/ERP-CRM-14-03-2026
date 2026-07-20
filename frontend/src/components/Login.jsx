@@ -13,7 +13,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const FloorBrand = ({ src, big = false }) => (
   <div className={`inline-flex items-center justify-center rounded-2xl bg-zinc-950 shadow-md ${big ? 'px-8 py-5' : 'px-4 py-2.5'}`}>
     {src ? (
-      <img src={src} alt="Luiggi Floor" className={`${big ? 'h-16' : 'h-9'} w-auto object-contain`} />
+      <img src={src} alt="Floor" className={`${big ? 'h-16' : 'h-9'} w-auto object-contain`} />
     ) : (
       <div className="flex flex-col items-center justify-center leading-none" style={{ color: '#CAA968' }}>
         <span className={`${big ? 'text-4xl' : 'text-xl'} italic`} style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>luiggi</span>
@@ -265,7 +265,7 @@ const Login = ({ onLogin, customLogo }) => {
                   <span style={{ color: '#CAA968' }}>TU ESTILO</span>
                 </h1>
                 <p className="text-white/70 text-lg">
-                  Suelo SPC porcelánico — red de distribución Luiggi Floor.
+                  Suelo SPC porcelánico — red de distribución Floor.
                 </p>
               </>
             ) : (
@@ -294,7 +294,7 @@ const Login = ({ onLogin, customLogo }) => {
               <div className="flex flex-col items-center">
                 <FloorBrand src={floorLogo} big />
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-3">
-                  Acceso Luiggi Floor
+                  Acceso Floor
                 </p>
               </div>
             ) : (
@@ -581,8 +581,8 @@ const Login = ({ onLogin, customLogo }) => {
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <p className="text-[10px] text-slate-400 font-medium">
               {brand === 'floor'
-                ? '© 2026 LUIGGI FLOOR · Suelo SPC porcelánico'
-                : '© 2026 LUIGGI HOME · Sistema Profesional de Presupuestos'}
+                ? '© 2026 FLOOR · Suelo SPC porcelánico'
+                : '© 2026 · Sistema Profesional de Presupuestos'}
             </p>
           </div>
         </div>
