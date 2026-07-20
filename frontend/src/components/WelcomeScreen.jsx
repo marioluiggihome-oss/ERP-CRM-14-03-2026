@@ -82,7 +82,8 @@ const MODULES = [
 ];
 
 const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
-  const name = currentUser?.name || currentUser?.username || '';
+  // Saludo con el NOMBRE de la persona (clientName), no con el usuario/email.
+  const name = currentUser?.clientName || currentUser?.name || currentUser?.username || '';
   const modules = MODULES.filter((m) => {
     try { return !!m.can(currentUser, settings); } catch { return false; }
   });
