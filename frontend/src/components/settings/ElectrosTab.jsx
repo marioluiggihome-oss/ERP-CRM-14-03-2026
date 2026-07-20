@@ -1,0 +1,237 @@
+/**
+ * ElectrosTab — Catálogo de electrodomésticos (Artículos → Electros)
+ * El COSTE solo lo ve el master (isPrimaryAdmin). El resto de usuarios ve el
+ * PVP (precio de venta al público). Si un electro no tiene PVP, no se muestra
+ * precio. Los datos viven en la colección article_costs (campos pvp, marca,
+ * categoria, esElectro). El coste = tarifa proveedor con su descuento.
+ */
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Save, RefreshCw, Plus, Zap, Eye, EyeOff, Wand2, Trash2 } from 'lucide-react';
+import { authHeaders } from '../../services/api';
+
+const BASE = process.env.REACT_APP_BACKEND_URL;
+const eur = (n) => `${(Number(n) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+
+export default function ElectrosTab({ isMaster = false, isAdmin = false }) {
+  const [items, setItems] = useState([]);
+  const [q, setQ] = useState('');
+  const [marca, setMarca] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [edits, setEdits] = useState({}); // codigoNorm -> { pvp, marca, categoria }
+  const [savingCode, setSavingCode] = useState('');
+  const [revealed, setRevealed] = useState({}); // codigoNorm -> true (coste revelado)
+  const [nuevo, setNuevo] = useState({ codigo: '', nombre: '', marca: '', costeUnitario: '', pvp: '' });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('electros', 'true');
+      if (q.trim()) params.set('q', q.trim());
+      params.set('limit', '3000');
+      const r = await fetch(`${BASE}/api/rentabilidad/article-costs?${params.toString()}`, { headers: authHeaders() });
+      const data = await r.json();
+      setItems(data.items || []);
+      setEdits({});
+    } catch { /* noop */ }
+    finally { setLoading(false); }
+  }, [q]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const setEdit = (code, field, val) => setEdits(prev => ({ ...prev, [code]: { ...(prev[code] || {}), [field]: val } }));
+
+  const guardar = async (art) => {
+    const code = art.codigoNorm || art.codigo;
+    const ed = edits[code] || {};
+    const payload = {
+      codigo: art.codigo,
+      nombre: art.nombre,
+      costeUnitario: art.costeUnitario,
+      cantidad: art.cantidad,
+      costeTotal: art.costeTotal,
+      esElectro: true,
+      pvp: ed.pvp !== undefined ? String(ed.pvp).replace(',', '.') : art.pvp,
+      marca: ed.marca !== undefined ? ed.marca : art.marca,
+      categoria: ed.categoria !== undefined ? ed.categoria : art.categoria,
+    };
+    setSavingCode(code);
+    try {
+      const r = await fetch(`${BASE}/api/rentabilidad/article-costs`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json();
+      if (!data.success) { alert(data.detail || 'No se pudo guardar'); return; }
+      await load();
+    } catch { alert('Error al guardar'); }
+    finally { setSavingCode(''); }
+  };
+
+  const detectar = async () => {
+    if (!window.confirm('Auto-detectar electrodomésticos del catálogo por palabras clave (campana, combi, lavadora, placa, microondas, lavavajillas, frigo, horno…) y marcarlos como electros. ¿Continuar?')) return;
+    try {
+      const r = await fetch(`${BASE}/api/rentabilidad/article-costs/tag-electros`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: '{}',
+      });
+      const data = await r.json();
+      if (!data.success) { alert(data.detail || 'No se pudo detectar'); return; }
+      alert(`${data.tagged} electrodomésticos marcados.`);
+      await load();
+    } catch { alert('Error al detectar electros'); }
+  };
+
+  const quitarElectro = async (art) => {
+    if (!window.confirm(`Quitar ${art.codigo} de Electros (no se borra del catálogo de costes).`)) return;
+    try {
+      await fetch(`${BASE}/api/rentabilidad/article-costs`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: art.codigo, nombre: art.nombre, costeUnitario: art.costeUnitario, esElectro: false }),
+      });
+      await load();
+    } catch { alert('Error'); }
+  };
+
+  const crear = async () => {
+    if (!nuevo.codigo.trim()) { alert('Indica el código'); return; }
+    try {
+      const r = await fetch(`${BASE}/api/rentabilidad/article-costs`, {
+        method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo: nuevo.codigo.trim(), nombre: nuevo.nombre.trim(), marca: nuevo.marca.trim(),
+          costeUnitario: String(nuevo.costeUnitario).replace(',', '.'),
+          pvp: String(nuevo.pvp).replace(',', '.'), esElectro: true, source: 'manual',
+        }),
+      });
+      const data = await r.json();
+      if (!data.success) { alert(data.detail || 'No se pudo crear'); return; }
+      setNuevo({ codigo: '', nombre: '', marca: '', costeUnitario: '', pvp: '' });
+      await load();
+    } catch { alert('Error al crear'); }
+  };
+
+  const marcas = Array.from(new Set(items.map(i => (i.marca || '').trim()).filter(Boolean))).sort();
+  const shown = marca ? items.filter(i => (i.marca || '') === marca) : items;
+  const margen = (art) => {
+    const c = Number(art.costeUnitario) || 0, p = Number(edits[art.codigoNorm]?.pvp ?? art.pvp) || 0;
+    if (!c || !p) return null;
+    return Math.round((p - c) / c * 100);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Zap size={18} className="text-amber-500" /> Electros</h3>
+          <p className="text-sm text-slate-500">
+            Catálogo de electrodomésticos · {items.length} artículos.{' '}
+            {isMaster ? 'Como master ves el coste.' : 'El coste solo lo ve el master; tú gestionas el PVP.'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button onClick={detectar} className="px-3 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-bold flex items-center gap-1.5">
+              <Wand2 size={14} /> Detectar electros
+            </button>
+          )}
+          <button onClick={load} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button>
+        </div>
+      </div>
+
+      {/* Buscador + filtro marca */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por código o nombre…" className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm" />
+        </div>
+        <select value={marca} onChange={e => setMarca(e.target.value)} className="px-3 py-2 border border-slate-200 rounded-lg text-sm">
+          <option value="">Todas las marcas</option>
+          {marcas.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+
+      {/* Alta rápida (admin) */}
+      {isAdmin && (
+        <div className="flex items-center gap-2 flex-wrap bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <input value={nuevo.codigo} onChange={e => setNuevo({ ...nuevo, codigo: e.target.value })} placeholder="Código" className="px-2 py-1.5 border rounded-lg text-sm w-32" />
+          <input value={nuevo.nombre} onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} placeholder="Nombre" className="px-2 py-1.5 border rounded-lg text-sm flex-1 min-w-[140px]" />
+          <input value={nuevo.marca} onChange={e => setNuevo({ ...nuevo, marca: e.target.value })} placeholder="Marca" className="px-2 py-1.5 border rounded-lg text-sm w-28" />
+          {isMaster && <input value={nuevo.costeUnitario} onChange={e => setNuevo({ ...nuevo, costeUnitario: e.target.value })} placeholder="Coste €" className="px-2 py-1.5 border rounded-lg text-sm w-24" />}
+          <input value={nuevo.pvp} onChange={e => setNuevo({ ...nuevo, pvp: e.target.value })} placeholder="PVP €" className="px-2 py-1.5 border rounded-lg text-sm w-24" />
+          <button onClick={crear} className="px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1"><Plus size={14} /> Añadir</button>
+        </div>
+      )}
+
+      {/* Tabla */}
+      <div className="border border-slate-200 rounded-xl overflow-hidden">
+        <div className="max-h-[520px] overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100 text-slate-500 sticky top-0">
+              <tr>
+                <th className="text-left p-2 text-[10px] font-black uppercase">Código</th>
+                <th className="text-left p-2 text-[10px] font-black uppercase">Nombre</th>
+                <th className="text-left p-2 text-[10px] font-black uppercase">Marca</th>
+                {isMaster && <th className="text-right p-2 text-[10px] font-black uppercase">Coste</th>}
+                {isMaster && <th className="text-right p-2 text-[10px] font-black uppercase">Margen</th>}
+                <th className="text-right p-2 text-[10px] font-black uppercase">PVP</th>
+                {isAdmin && <th className="p-2"></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map(art => {
+                const code = art.codigoNorm || art.codigo;
+                const ed = edits[code] || {};
+                const dirty = ed.pvp !== undefined || ed.marca !== undefined || ed.categoria !== undefined;
+                const mg = margen(art);
+                return (
+                  <tr key={code} className="border-t border-slate-100 hover:bg-slate-50">
+                    <td className="p-2 font-mono text-xs font-bold text-slate-700">{art.codigo}</td>
+                    <td className="p-2 text-xs text-slate-700">{art.nombre}</td>
+                    <td className="p-2">
+                      {isAdmin ? (
+                        <input value={ed.marca !== undefined ? ed.marca : (art.marca || '')} onChange={e => setEdit(code, 'marca', e.target.value)}
+                          className="w-24 px-1.5 py-1 border border-transparent hover:border-slate-200 focus:border-indigo-400 rounded text-xs" placeholder="—" />
+                      ) : <span className="text-xs text-slate-500">{art.marca || '—'}</span>}
+                    </td>
+                    {isMaster && (
+                      <td className="p-2 text-right whitespace-nowrap">
+                        {revealed[code]
+                          ? <span className="text-xs font-bold text-slate-700">{art.costeUnitario != null ? eur(art.costeUnitario) : '—'} <button onClick={() => setRevealed(p => ({ ...p, [code]: false }))} className="ml-1 text-slate-400"><EyeOff size={12} className="inline" /></button></span>
+                          : <button onClick={() => setRevealed(p => ({ ...p, [code]: true }))} className="px-2 py-1 rounded text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold inline-flex items-center gap-1"><Eye size={12} /> Coste</button>}
+                      </td>
+                    )}
+                    {isMaster && (
+                      <td className="p-2 text-right text-xs font-bold">
+                        {mg == null ? <span className="text-slate-300">—</span> : <span className={mg > 0 ? 'text-emerald-600' : 'text-red-600'}>{mg}%</span>}
+                      </td>
+                    )}
+                    <td className="p-2 text-right">
+                      {isAdmin ? (
+                        <input value={ed.pvp !== undefined ? ed.pvp : (art.pvp ?? '')} onChange={e => setEdit(code, 'pvp', e.target.value)}
+                          className="w-24 px-1.5 py-1 border border-slate-200 focus:border-indigo-400 rounded text-xs text-right font-bold" placeholder="PVP" />
+                      ) : (
+                        art.pvp > 0 ? <span className="text-xs font-bold text-slate-800">{eur(art.pvp)}</span> : <span className="text-[11px] text-slate-400">sin precio</span>
+                      )}
+                    </td>
+                    {isAdmin && (
+                      <td className="p-2 whitespace-nowrap">
+                        <button onClick={() => guardar(art)} disabled={!dirty || savingCode === code}
+                          className={`px-2 py-1 rounded text-xs font-bold ${dirty ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-400'}`}><Save size={13} /></button>
+                        <button onClick={() => quitarElectro(art)} title="Quitar de Electros" className="px-2 py-1 ml-1 rounded text-xs bg-red-50 text-red-600 hover:bg-red-100"><Trash2 size={13} /></button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+              {shown.length === 0 && !loading && (
+                <tr><td colSpan={isMaster ? 7 : 4} className="p-6 text-center text-slate-400 text-sm">
+                  Sin electros. {isAdmin ? 'Usa «Detectar electros» para marcar los del catálogo o añade uno nuevo.' : 'Aún no hay electrodomésticos.'}
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
