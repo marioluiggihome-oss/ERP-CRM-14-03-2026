@@ -34,6 +34,7 @@ const KitchenDesigner3D = lazy(() => import('./components/KitchenDesigner3D'));
 const EstudioCocinas = lazy(() => import('./components/EstudioCocinas')); // Módulo unificado de diseño de cocinas
 const ElectrosTab = lazy(() => import('./components/settings/ElectrosTab')); // Catálogo de electrodomésticos (menú principal)
 const CarpinterosUsers = lazy(() => import('./components/CarpinterosUsers')); // Gestión de usuarios de la división carpinteros
+const CarpinterosLanding = lazy(() => import('./components/CarpinterosLanding')); // Landing propia carpinteros (carpenter.io)
 const AgentesDisenadores = lazy(() => import('./components/AgentesDisenadores')); // Agentes diseñadores en paralelo
 const RentabilidadPanel = lazy(() => import('./components/RentabilidadPanel'));
 const GestionGastos = lazy(() => import('./components/GestionGastos'));
@@ -710,7 +711,25 @@ const App = () => {
     );
   }
 
+  // Marca Carpinteros: entrando por carpenter.io / carpinter.io (o ?brand=carpinteros)
+  // el visitante ve primero la LANDING comercial de la división; el botón de
+  // acceso lleva al login con la marca carpinteros.
+  const _isCarpBrandEntry = (() => {
+    try {
+      const host = (window.location.hostname || '').toLowerCase();
+      const sp = new URLSearchParams(window.location.search);
+      return host.includes('carpenter.io') || host.includes('carpinter.io') || sp.get('brand') === 'carpinteros';
+    } catch { return false; }
+  })();
+
   if (!state.currentUser) {
+    if (_isCarpBrandEntry && !state.carpLandingSkip) {
+      return (
+        <Suspense fallback={<div className="min-h-screen bg-[#F5F0E8]" />}>
+          <CarpinterosLanding onEnter={() => setState(prev => ({ ...prev, carpLandingSkip: true }))} />
+        </Suspense>
+      );
+    }
     return (
         <>
             <style>{`:root { --brand-primary: ${state.brandColor}; }`}</style>
@@ -752,7 +771,9 @@ const App = () => {
   // además tiene el presupuestador de Cocina Desmontada, un botón le deja pasar
   // a la app normal. La landing por defecto es la web del negocio de carpinteros.
   if (state.currentUser?.isCarpintero && !_hasOtherAccess && !state.carpinteroPortalOff) {
-    const landingUrl = state.currentUser?.carpinteroLandingUrl || 'https://carpinter-odzjngix.manus.space';
+    // Sin URL configurada se muestra la landing PROPIA (componente local, sin
+    // iframes externos que puedan dar 403). Si el usuario tiene una URL, iframe.
+    const landingUrl = state.currentUser?.carpinteroLandingUrl || '';
     return (
       <div className="h-screen flex flex-col bg-slate-950 overflow-hidden">
         <style>{`:root { --brand-primary: ${activeBrandColor}; }`}</style>
@@ -783,10 +804,12 @@ const App = () => {
                 Presupuestador
               </button>
             )}
-            <a href={landingUrl} target="_blank" rel="noreferrer"
-              className="text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest">
-              Abrir web
-            </a>
+            {landingUrl && (
+              <a href={landingUrl} target="_blank" rel="noreferrer"
+                className="text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest">
+                Abrir web
+              </a>
+            )}
             <button
               onClick={() => setState(prev => ({ ...prev, currentUser: null }))}
               className="text-xs font-bold text-amber-400 hover:text-amber-300 uppercase tracking-widest"
@@ -795,8 +818,14 @@ const App = () => {
             </button>
           </div>
         </div>
-        <div className="flex-1 min-h-0">
-          <iframe src={landingUrl} title="Portal Carpinteros" className="w-full h-full border-0 bg-white" />
+        <div className="flex-1 min-h-0 overflow-y-auto bg-white">
+          {landingUrl ? (
+            <iframe src={landingUrl} title="Portal Carpinteros" className="w-full h-full border-0 bg-white" />
+          ) : (
+            <Suspense fallback={<div className="min-h-full bg-[#F5F0E8]" />}>
+              <CarpinterosLanding onEnter={null} />
+            </Suspense>
+          )}
         </div>
       </div>
     );
