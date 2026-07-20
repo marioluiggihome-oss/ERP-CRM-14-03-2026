@@ -366,7 +366,7 @@ const ReportGenerator = ({ onOpenDocument }) => {
                 <p className="text-lg font-black text-emerald-600">{eur(report.summary.totalMargen)}</p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">% Margen</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">% s/Coste</p>
                 <p className="text-lg font-black text-indigo-600">{pct(report.summary.margenPct)}</p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
@@ -508,6 +508,9 @@ const ReportGenerator = ({ onOpenDocument }) => {
                         <span className="text-sm font-black text-indigo-600">{onOpenDocument && ficha.ref ? '📄 ' : ''}{ficha.ref}</span>
                         <span className="text-xs text-slate-500">{ficha.cliente}</span>
                         <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">{ficha.fecha}</span>
+                        {ficha.revisada
+                          ? <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold" title={`Revisada por ${ficha.revisadaPor || 'controller'}${ficha.revisadaAt ? ' el ' + String(ficha.revisadaAt).slice(0,10) : ''}`}>✅ {ficha.revisadaPor || 'Revisada'}{ficha.revisadaAt ? ` · ${String(ficha.revisadaAt).slice(0,10)}` : ''}</span>
+                          : (ficha.docType === 'factura' && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">❓ Sin revisar</span>)}
                       </div>
                       <div className="flex items-center gap-4 text-xs">
                         <span className="text-slate-500">Coste: <strong className="text-red-500">{eur(ficha.totals.coste)}</strong></span>

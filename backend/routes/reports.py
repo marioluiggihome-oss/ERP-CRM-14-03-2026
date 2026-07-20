@@ -157,6 +157,10 @@ async def generate_rentabilidad_report(
                     "fecha": ficha_fecha,
                     "docType": ficha.get("docType", ""),
                     "createdByName": ficha.get("createdByName", ""),
+                    # Estado del Check Controller (para mostrarlo/filtrarlo en el informe).
+                    "revisada": bool(ficha.get("revisada")),
+                    "revisadaPor": ficha.get("revisadaPor", ""),
+                    "revisadaAt": ficha.get("revisadaAt", ""),
                     "lines": filtered_lines,
                     "totals": {
                         "venta": sum(l.get("venta", 0) for l in filtered_lines),
@@ -164,9 +168,10 @@ async def generate_rentabilidad_report(
                         "margen": sum(l.get("margen", 0) for l in filtered_lines),
                     }
                 }
+                # % unificado = incremento sobre coste (margen / coste)
                 ficha_copy["totals"]["margenPct"] = (
-                    (ficha_copy["totals"]["margen"] / ficha_copy["totals"]["venta"] * 100)
-                    if ficha_copy["totals"]["venta"] > 0 else 0
+                    (ficha_copy["totals"]["margen"] / ficha_copy["totals"]["coste"] * 100)
+                    if ficha_copy["totals"]["coste"] > 0 else 0
                 )
                 filtered_fichas.append(ficha_copy)
         
@@ -239,7 +244,8 @@ async def generate_rentabilidad_report(
                 "totalVenta": round(total_venta, 2),
                 "totalCoste": round(total_coste, 2),
                 "totalMargen": round(total_margen, 2),
-                "margenPct": round((total_margen / total_venta * 100) if total_venta > 0 else 0, 1),
+                # % unificado = incremento sobre coste (margen / coste)
+                "margenPct": round((total_margen / total_coste * 100) if total_coste > 0 else 0, 1),
                 "numFichas": len(filtered_fichas),
                 "numLineas": total_lines,
             },
