@@ -453,7 +453,9 @@ const App = () => {
       golaBajo: false, golaBajoColor: '',
       // Logo POR USUARIO: si el usuario tiene marca propia y logo, usar el suyo;
       // si no, mantener el logo global cargado por defecto.
-      logo: (user.useCustomBranding && user.logo) ? user.logo : prev.logo
+      logo: (user.useCustomBranding && user.logo) ? user.logo : prev.logo,
+      // Colores de marca carpinter.io: naranja corporativo para todos los usuarios de la división
+      brandColor: (user.isCarpintero || user.linkedCarpinteroAdminId) ? '#C4621D' : prev.brandColor
     }));
     
     // Recargar productos de la biblioteca del usuario
