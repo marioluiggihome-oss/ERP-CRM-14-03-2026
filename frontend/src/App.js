@@ -964,6 +964,8 @@ const App = () => {
             >
               {state.logo ? (
                 <img src={state.logo} alt="logo" className="w-full h-full object-contain p-1" />
+              ) : (state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId) ? (
+                <img src="/carpinter-logo-icon.png" alt="carpinter.io" className="w-full h-full object-contain p-1" />
               ) : state.marcaBlanca ? (
                 <div className="w-full h-full bg-indigo-600 flex items-center justify-center font-black text-white text-lg">
                   {(state.companyName || '').trim().charAt(0).toUpperCase() || '·'}
@@ -1001,6 +1003,8 @@ const App = () => {
             >
               {state.logo ? (
                 <img src={state.logo} alt="Logo" className="w-full h-full object-contain p-1.5 group-hover:opacity-60 transition-opacity" />
+              ) : (state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId) ? (
+                <img src="/carpinter-logo-icon.png" alt="carpinter.io" className="w-full h-full object-contain p-1.5 group-hover:opacity-60 transition-opacity" />
               ) : (
                 <div className="w-full h-full bg-brand flex items-center justify-center font-black text-white italic text-2xl group-hover:opacity-60 transition-opacity">L</div>
               )}

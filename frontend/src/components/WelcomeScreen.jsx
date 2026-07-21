@@ -5,11 +5,14 @@ import {
   ScanLine, Wrench, Factory, PlayCircle, Briefcase, Palette, Hammer, Settings2, Building2, ChefHat, Zap
 } from 'lucide-react';
 
-// ⬇️ Enlace del vídeo promocional (YouTube, Vimeo o Google Drive). Si se deja
-//    vacío, se muestra un marcador "vídeo próximamente".
+// ⬇️ Vídeo promocional por defecto (Luiggi Home ERP).
 //    NOTA Google Drive: el archivo debe estar compartido como "Cualquier persona
 //    con el enlace" para que se pueda reproducir incrustado.
 const PROMO_VIDEO_URL = 'https://drive.google.com/file/d/1ZlEJ4pn2mFYQjrgw4rS_88AweP0z6azK/view?usp=sharing';
+
+// ⬇️ Vídeo promocional para usuarios de carpinter.io (master + sub-usuarios).
+//    Actualizar con el enlace definitivo del vídeo carpinter.io una vez subido.
+const PROMO_VIDEO_URL_CARPINTER = '';
 
 // Convierte un enlace normal de YouTube/Vimeo/Google Drive en su URL de embed.
 const toEmbedUrl = (url) => {
@@ -90,7 +93,12 @@ const WelcomeScreen = ({ currentUser, settings, onNavigate }) => {
   const groupedModules = GROUPS
     .map((g) => ({ ...g, items: modules.filter((m) => m.group === g.id) }))
     .filter((g) => g.items.length > 0);
-  const embed = toEmbedUrl(PROMO_VIDEO_URL);
+  // Usuarios de la división carpinter.io (master o vinculados al master carpintero)
+  const isCarpinterUser = !!(currentUser?.isCarpintero || currentUser?.linkedCarpinteroAdminId);
+  const activeVideoUrl = isCarpinterUser && PROMO_VIDEO_URL_CARPINTER
+    ? PROMO_VIDEO_URL_CARPINTER
+    : PROMO_VIDEO_URL;
+  const embed = toEmbedUrl(activeVideoUrl);
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
