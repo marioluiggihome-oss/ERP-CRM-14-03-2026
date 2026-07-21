@@ -73,13 +73,13 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 1500141;Pata zocalo 13-21 Cm. D13 ESPIGA R.13;228;36.02;0.158;revisar_cantidad
 16-560H5000B3;Blum Guia Tandem PLUS Blumotion LN.500mm1.EXT.Total;1;10.93;10.93;
 161;Fregadero POALGI GANDIA 15 Ref.161;7;404.25;57.75;
-17-173H7100NQ;Blum Base Bisagra Cruz Excentrica Alt.0mm.5A5t3ornillar;553;165.9;0.3;revisar_cantidad
+17-173H7100NQ;Blum Base Bisagra Cruz Excentrica Alt.0mm Atornillar Niquel;1;0.46;0.46;
 17-173L6130NQ;Blum Base Bisagra Cruz Altura 3mm.Atornillar.N2iquel.;2;0.0;0.0;sin_coste_origen
 17-174H7100EN;Blum Base Bisagra Cruz Excentrica Alt.0mm.Ta2co;2;0.72;0.36;
 17-175H3100NIQ;Blum Base Bisagra Recta Excentrica;2;0.58;0.29;
 17-175H9160NQ;Blum Base Bisagra Cruz Excentrica Altura;8;4.88;0.61;
 17-70T3580TLN;Blum Bisagra Recta 110º Sin Muelle Taco;32;31.04;0.97;
-17-71B3550NIQ;Blum Bisagra Recta 110º Blumotion Atornilla2r;244;412.36;1.69;
+17-71B3550NIQ;Blum Bisagra Recta 110 Blumotion Atornillar Niquel;1;2.61;2.61;
 17-71B3580NIQ;Blum Bisagra Recta 110º Blumotion Taco;2;3.34;1.67;
 17-71B358ENIQ;Blum Bisagra Recta 110º Blumotion Taco;6;10.44;1.74;
 17-71B7550NIQ;Blum Bisagra Recta 155º Ang.0º.Blumotion;3;8.76;2.92;
@@ -144,18 +144,18 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 25-093110823A;Distanciador/Separador lateral para;2;3.45;1.725;revisar_coste
 25-378M500SLO;Blum Perfil Altura M.L=Izqu.Cajón ANTARO;15;55.89;3.726;
 25-378M500SRO;Blum Perfil Altura M.R=Der.Cajón ANTARO;15;55.89;3.726;
-25-3DO500B03A;Blum Set Gaveta ANTARO D Gris Orión;105;0.0;0.0;sin_coste_origen
-25-3MO500B03A;Blum Set Cajón ANTARO M Gris Orión;2;35.68;17.84;revisar_coste
+25-3DO500B03A;Blum Set Gaveta ANTARO D Gris Orion LN.500mm 30Kg;1;44.62;44.62;
+25-3MO500B03A;Blum Set Cajon ANTARO M Gris Orion LN.500mm 30Kg;1;31.59;31.59;
 25-5785001M1J;Blum Juego Guias TANDEMBOX 30Kg.TOB;950;80.65;0.0849;revisar_cantidad
 25-AXP084500B;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m8m.Blan1c1o7,.18;48;77.61;9.69;
-25-AXP084500G;Set Cajón AXIS PRO 40Kg.Fondo 500mm.H-84m5m.Gris;45;48.51;9.69;
+25-AXP084500G;Set Cajon AXIS PRO GTV 40Kg Fondo 500mm H-84 Gris Antracita;1;15.07;15.07;
 25-AXP084550B;Set Cajón AXIS PRO 40Kg.Fondo 550mm.H-84-m1m.Blan-c1o9,.19;41;0.0;0.0;sin_coste_origen
 25-AXP167300G;Set Gaveta AXIS PRO 40Kg.Fondo 300mm.H-1267mm.Gr3is2;1267;22.76;0.018;revisar_cantidad
 25-AXP167350G;Set Gaveta AXIS PRO 40Kg.Fondo 350mm.H-1467mm.Gr6is7;1467;43.4;0.0296;revisar_cantidad
 25-AXP167500B;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1667mm.B1la36n,c2o3.;1667;71.52;11.92;
-25-AXP167500G;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1767mm.G1r4is7;1767;83.44;11.92;
+25-AXP167500G;Set Gaveta AXIS PRO GTV 40Kg Fondo 500mm H-167 Gris Antracita;1;19.83;19.83;
 25-AXP199500B;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-11099mm.B2la20n,c0o5.;11099;122.22;0.011;revisar_cantidad
-25-AXP199500G;Set Gaveta AXIS PRO 40Kg.Fondo 500mm.H-1299mm.Gr4is4;1299;24.52;12.45;
+25-AXP199500G;Set Gaveta AXIS PRO GTV 40Kg Fondo 500mm H-199 Gris Antracita;1;23.09;23.09;
 25-AXPZESWEAG;Kit Frente+Fijaciones Cajon Interior AXIS;1;9.41;9.41;
 25-AXPZESWECG;Kit Frente+Barra+Fijaciones Gaveta Interior;1;711.29;711.29;revisar_coste
 25-T60B35601S;Blum Set TOB TANDEMBOX L5LN.350<600mm.E1XT.Total;1;10.39;10.39;
@@ -216,11 +216,11 @@ codigo;nombre;cantidad;coste_total;coste_unitario;revisar
 3VF5032DP;Lavavajillas BALAY 3VF5032DP integrable;1;405.83;405.83;revisar_coste
 40-C012916-B7E400AN;FENOLICA FLINT Fantastic.;1;30500.0;30500.0;revisar_coste
 402-FCAV47060;Fondo Cajón/Gaveta AXIS PRO F-50;11;28.6;2.6;
-402-FCAV47090;Fondo Cajón/Gaveta AXIS PRO F-50;3;8.7;2.9;
+402-FCAV47090;Fondo Cajon/Gaveta AXIS PRO GTV F-50 M-90;1;9.58;9.58;
 402-TCAV47060;Trasera Cajón AXIS PRO F-50 M-60;3;4.8;1.6;
-402-TCAV47090;Trasera Cajón AXIS PRO F-50 M-90;1;2.1;2.1;
+402-TCAV47090;Trasera Cajon AXIS PRO GTV F-50 M-90;1;4.58;4.58;
 402-TGDV47060;Trasera Gaveta 199MM AXIS PRO F-50;6;8.77;1.4617;
-402-TGDV47090;Trasera Gaveta 199MM AXIS PRO F-50;2;4.74;2.37;
+402-TGDV47090;Trasera Gaveta 199MM AXIS PRO GTV F-50 M-90;1;8.55;8.55;
 402-TGSV47060;Trasera Gaveta 167MM AXIS PRO F-50;2;2.92;1.46;
 40487182;Campana TEKA DLH 986 T Inox;1;190.15;190.15;
 420-AABL35060;Casco Alto ABATIBLE (350x600x330) Blanco;1;10.02;10.02;
@@ -440,3 +440,7 @@ JRC201EN2GN;Combi JOHNSON NF 201.8x59.5x66 Clase E Steel Cooling Cristal Negro;1
 JRC1851ENW2;Combi JOHNSON NF 185x59.5x60 Clase E Blanco;1;213.03;213.03;
 JR4D1986ENDX;Frigorífico 4 Puertas JOHNSON 190x83.3x64.1 NF Dark;1;506.25;506.25;
 JR4D1986ENGN;Frigorífico 4 Puertas JOHNSON 190x83.3x64.1 NF Clase E Cristal Negro;1;526.5;526.5;
+1711116;Bisagra clip EMUCA gas recta con regulacion + base s/t;1;1.01;1.01;
+402-FCAB47090;Fondo Cajon/Gaveta Blum ANTARO Gr./Bl. F-50 M-90;1;9.75;9.75;
+402-TCBM47090;Trasera Cajon M Blum ANTARO Gr./Bl. F-50 M-90;1;4.15;4.15;
+402-TGBD47090;Trasera Gaveta D Blum ANTARO Gr./Bl. F-50 M-90;1;8.91;8.91;

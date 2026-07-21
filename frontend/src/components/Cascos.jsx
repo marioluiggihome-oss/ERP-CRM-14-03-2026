@@ -18,16 +18,31 @@ const SECCIONES = [
   { id: 'emuca', label: 'EMUCA', desc: 'Bisagras' },
 ];
 
-// Catálogo BLUM (bisagras y bases). Precio = tarifa SIN descuento (el descuento de
-// proveedor/cliente se aplica luego en el presupuesto). Importado del albarán de venta.
+// Catálogo de HERRAJE (Blum · GTV · Emuca). Precio = tarifa/PVP SIN descuento
+// (el descuento de proveedor se aplica luego). Importado de tarifas/albaranes.
 const BLUM_PRODUCTOS = [
-  { ref: '17-71B3550 NIQ', nombre: 'Bisagra Recta 110º Blumotion Atornillar Níquel', precio: 7.103, cat: 'Bisagras' },
-  { ref: '17-71T3550 NIQ', nombre: 'Bisagra Recta 110º Con Muelle Atornillar Níquel', precio: 4.305, cat: 'Bisagras' },
-  { ref: '17-70T3580T LN', nombre: 'Bisagra Recta 110º Sin Muelle Taco 8mm Níquel', precio: 4.883, cat: 'Bisagras' },
-  { ref: '17-71B758E NIQ', nombre: 'Bisagra Recta 155º Ang.0º Blumotion Taco 8mm EXPANDO Níquel', precio: 19.438, cat: 'Bisagras' },
-  { ref: '17-79B9550 NIQ', nombre: 'Bisagra 95º Rincón Ciego Blumotion Recubri.Inter. Atornillar Níquel', precio: 17.177, cat: 'Bisagras' },
-  { ref: '17-173H7100 NQ', nombre: 'Base Bisagra Cruz Excéntrica Alt.0mm Atornillar Níquel', precio: 1.26, cat: 'Bases' },
-  { ref: '17-173L6130 NQ', nombre: 'Base Bisagra Cruz Altura 3mm Atornillar Níquel', precio: 0.789, cat: 'Bases' },
+  // ── BLUM ──────────────────────────────────────────────────────────────────
+  { ref: '25-3DO500B03A', nombre: 'Blum Set Gaveta ANTARO D Gris Orión LN.500mm 30Kg', precio: 127.494, cat: 'Cajones', marca: 'Blum' },
+  { ref: '25-3MO500B03A', nombre: 'Blum Set Cajón ANTARO M Gris Orión LN.500mm 30Kg', precio: 90.27, cat: 'Cajones', marca: 'Blum' },
+  { ref: '402-FCAB47090', nombre: 'Blum Fondo Cajón/Gaveta ANTARO Gr./Bl. F-50 M-90', precio: 24.37, cat: 'Fondos y traseras', marca: 'Blum' },
+  { ref: '402-TCBM47090', nombre: 'Blum Trasera Cajón "M" ANTARO Gr./Bl. F-50 M-90', precio: 10.38, cat: 'Fondos y traseras', marca: 'Blum' },
+  { ref: '402-TGBD47090', nombre: 'Blum Trasera Gaveta "D" ANTARO Gr./Bl. F-50 M-90', precio: 22.28, cat: 'Fondos y traseras', marca: 'Blum' },
+  { ref: '17-71B3550 NIQ', nombre: 'Blum Bisagra Recta 110º Blumotion Atornillar Níquel', precio: 7.458, cat: 'Bisagras', marca: 'Blum' },
+  { ref: '17-71T3550 NIQ', nombre: 'Blum Bisagra Recta 110º Con Muelle Atornillar Níquel', precio: 4.305, cat: 'Bisagras', marca: 'Blum' },
+  { ref: '17-70T3580T LN', nombre: 'Blum Bisagra Recta 110º Sin Muelle Taco 8mm Níquel', precio: 4.883, cat: 'Bisagras', marca: 'Blum' },
+  { ref: '17-71B758E NIQ', nombre: 'Blum Bisagra Recta 155º Ang.0º Blumotion Taco 8mm EXPANDO Níquel', precio: 19.438, cat: 'Bisagras', marca: 'Blum' },
+  { ref: '17-79B9550 NIQ', nombre: 'Blum Bisagra 95º Rincón Ciego Blumotion Atornillar Níquel', precio: 17.177, cat: 'Bisagras', marca: 'Blum' },
+  { ref: '17-173H7100 NQ', nombre: 'Blum Base Bisagra Cruz Excéntrica Alt.0mm Atornillar Níquel', precio: 1.323, cat: 'Bases', marca: 'Blum' },
+  { ref: '17-173L6130 NQ', nombre: 'Blum Base Bisagra Cruz Altura 3mm Atornillar Níquel', precio: 0.789, cat: 'Bases', marca: 'Blum' },
+  // ── GTV (AXIS PRO) ──────────────────────────────────────────────────────────
+  { ref: '25-AXP084500G', nombre: 'GTV Set Cajón AXIS PRO 40Kg Fondo 500mm H-84 Gris Antracita', precio: 43.055, cat: 'Cajones', marca: 'GTV' },
+  { ref: '25-AXP167500G', nombre: 'GTV Set Gaveta AXIS PRO 40Kg Fondo 500mm H-167 Gris Antracita', precio: 56.65, cat: 'Cajones', marca: 'GTV' },
+  { ref: '25-AXP199500G', nombre: 'GTV Set Gaveta AXIS PRO 40Kg Fondo 500mm H-199 Gris Antracita', precio: 65.966, cat: 'Cajones', marca: 'GTV' },
+  { ref: '402-FCAV47090', nombre: 'GTV Fondo Cajón/Gaveta AXIS PRO F-50 M-90', precio: 23.95, cat: 'Fondos y traseras', marca: 'GTV' },
+  { ref: '402-TCAV47090', nombre: 'GTV Trasera Cajón AXIS PRO F-50 M-90', precio: 11.44, cat: 'Fondos y traseras', marca: 'GTV' },
+  { ref: '402-TGDV47090', nombre: 'GTV Trasera Gaveta 199mm AXIS PRO F-50 M-90', precio: 21.38, cat: 'Fondos y traseras', marca: 'GTV' },
+  // ── EMUCA ───────────────────────────────────────────────────────────────────
+  { ref: '1711116', nombre: 'Emuca Bisagra clip gas recta con regulación + base s/t', precio: 1.01, cat: 'Bisagras', marca: 'Emuca' },
 ];
 
 // Logotipos de proveedor (wordmarks SVG inline en colores de marca; sin hotlinking
