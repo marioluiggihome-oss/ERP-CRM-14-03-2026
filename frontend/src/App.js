@@ -847,7 +847,7 @@ const App = () => {
             <iframe src={landingUrl} title="Portal Carpinteros" className="w-full h-full border-0 bg-white" />
           ) : (
             <Suspense fallback={<div className="min-h-full bg-[#F5F0E8]" />}>
-              <CarpinterosLanding onEnter={null} />
+              <CarpinterosLanding onEnter={null} embedded />
             </Suspense>
           )}
         </div>

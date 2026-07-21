@@ -472,6 +472,7 @@ class Render3DService:
         reference_mime: Optional[str] = None,
         provider: Optional[str] = None,
         reference_images: Optional[list] = None,
+        project_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Genera un render 3D a partir de una descripción (texto o voz transcrita).
@@ -493,8 +494,20 @@ class Render3DService:
         if params_override:
             parsed_params.update(params_override)
 
-        # Detectar el tipo de espacio/mueble para NO forzar "cocina"
-        space_type = self.detect_space_type(description)
+        # Tipo de espacio: si el usuario ELIGIÓ un tipo de proyecto (Cocina,
+        # Armario, Baño…), MANDA sobre la detección por texto — así una plantilla
+        # de cocina no puede acabar generando un armario. Solo "otro" delega en
+        # la detección automática por la descripción.
+        _forced = {
+            "cocina": "modern kitchen",
+            "armario": "fitted/built-in wardrobe (custom closet) with exterior doors and interior shelving, drawers and columns",
+            "bano": "bathroom with custom vanity/cabinetry",
+        }
+        pt = (project_type or "").strip().lower()
+        if pt in _forced:
+            space_type = _forced[pt]
+        else:
+            space_type = self.detect_space_type(description)
         parsed_params["space_type"] = space_type
 
         # Preparar la imagen de referencia (si es PDF, convertir 1ª página a PNG)
