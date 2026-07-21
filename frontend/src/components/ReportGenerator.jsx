@@ -9,7 +9,7 @@ import { FileText, Download, Filter, RefreshCw, Calendar, User, Tag, TrendingUp,
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const eur = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
-const pct = (n) => `${(Number(n) || 0).toFixed(1)}%`;
+const pct = (n) => `${(Number(n) || 0).toFixed(2)}%`;
 
 const ReportGenerator = ({ onOpenDocument }) => {
   // Filtros
@@ -26,6 +26,21 @@ const ReportGenerator = ({ onOpenDocument }) => {
     sort_by: 'fecha',
     sort_order: 'desc',
   });
+
+  // Multi-cliente: filters.cliente guarda los clientes separados por coma; aquí
+  // el texto del cuadro de añadir y helpers para gestionar los chips.
+  const [clienteInput, setClienteInput] = useState('');
+  const clientesSel = (filters.cliente || '').split(',').map(s => s.trim()).filter(Boolean);
+  const addCliente = (nombre) => {
+    const n = (nombre || '').trim();
+    if (!n) return;
+    if (clientesSel.some(c => c.toLowerCase() === n.toLowerCase())) { setClienteInput(''); return; }
+    setFilters(prev => ({ ...prev, cliente: [...clientesSel, n].join(', ') }));
+    setClienteInput('');
+  };
+  const removeCliente = (nombre) => {
+    setFilters(prev => ({ ...prev, cliente: clientesSel.filter(c => c !== nombre).join(', ') }));
+  };
 
   // Opciones de filtros disponibles
   const [availableFilters, setAvailableFilters] = useState({
@@ -52,13 +67,18 @@ const ReportGenerator = ({ onOpenDocument }) => {
         if (r.ok) {
           const data = await r.json();
           setAvailableFilters(data);
-          // Establecer rango de fechas por defecto
+          // Establecer rango de fechas por defecto. El inicio del ejercicio es
+          // SIEMPRE el 02/10/2025 (salvo que haya documentos aún anteriores).
+          const INICIO_EJERCICIO = '2025-10-02';
           if (data.fechaMin && data.fechaMax) {
+            const desde = (data.fechaMin && data.fechaMin < INICIO_EJERCICIO) ? data.fechaMin : INICIO_EJERCICIO;
             setFilters(prev => ({
               ...prev,
-              fecha_desde: data.fechaMin,
+              fecha_desde: desde,
               fecha_hasta: data.fechaMax,
             }));
+          } else {
+            setFilters(prev => ({ ...prev, fecha_desde: INICIO_EJERCICIO }));
           }
         }
       } catch (e) {
@@ -121,8 +141,10 @@ const ReportGenerator = ({ onOpenDocument }) => {
 
   // Limpiar filtros
   const clearFilters = () => {
+    const INICIO_EJERCICIO = '2025-10-02';
+    const minDesde = (availableFilters.fechaMin && availableFilters.fechaMin < INICIO_EJERCICIO) ? availableFilters.fechaMin : INICIO_EJERCICIO;
     setFilters({
-      fecha_desde: availableFilters.fechaMin || '',
+      fecha_desde: minDesde,
       fecha_hasta: availableFilters.fechaMax || '',
       cliente: '',
       categoria: '',
@@ -222,29 +244,46 @@ const ReportGenerator = ({ onOpenDocument }) => {
                 />
               </div>
               
-              {/* Cliente */}
+              {/* Cliente (multi-selección con chips) */}
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                  <User size={10} /> Cliente (nombre o código)
+                  <User size={10} /> Clientes (nombre o código) {clientesSel.length > 0 && <span className="text-indigo-500">· {clientesSel.length}</span>}
                 </label>
                 <input
                   list="report-clientes-datalist"
-                  value={filters.cliente}
-                  onChange={(e) => setFilters(prev => ({ ...prev, cliente: e.target.value }))}
-                  placeholder="Todos · escribe nombre o código"
+                  value={clienteInput}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    // Al elegir del desplegable, el valor llega completo → se añade como chip.
+                    const match = (availableFilters.clientesInfo || []).some(c => c.nombre === v);
+                    if (match) addCliente(v); else setClienteInput(v);
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === 'Tab') && clienteInput.trim()) { e.preventDefault(); addCliente(clienteInput); }
+                    if (e.key === 'Backspace' && !clienteInput && clientesSel.length) removeCliente(clientesSel[clientesSel.length - 1]);
+                  }}
+                  placeholder={clientesSel.length ? 'Añadir otro cliente (Tab/Enter)…' : 'Todos · añade uno o varios (Tab/Enter)'}
                   className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
                 />
                 <datalist id="report-clientes-datalist">
                   {(availableFilters.clientesInfo && availableFilters.clientesInfo.length
                     ? availableFilters.clientesInfo
                     : (availableFilters.clientes || []).map(n => ({ nombre: n, codigo: '' }))
-                  ).map(c => (
-                    // Una sola entrada por cliente. El texto incluye el código para poder
-                    // buscarlo; el valor es el nombre. También puedes teclear el código y
-                    // filtrar (el backend casa por nombre o código).
+                  ).filter(c => !clientesSel.includes(c.nombre)).map(c => (
                     <option key={c.nombre} value={c.nombre}>{c.codigo ? `${c.nombre} (${c.codigo})` : c.nombre}</option>
                   ))}
                 </datalist>
+                {clientesSel.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {clientesSel.map(c => (
+                      <span key={c} className="inline-flex items-center gap-1 pl-2 pr-1 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold">
+                        {c}
+                        <button type="button" onClick={() => removeCliente(c)} className="p-0.5 rounded hover:bg-indigo-200" title="Quitar"><X size={12} /></button>
+                      </span>
+                    ))}
+                    <button type="button" onClick={() => setFilters(prev => ({ ...prev, cliente: '' }))} className="text-[11px] text-slate-400 hover:text-red-500 font-bold underline ml-1">limpiar</button>
+                  </div>
+                )}
               </div>
               
               {/* Categoría */}
