@@ -319,6 +319,69 @@ async def carpintero_users(current_user: dict = Depends(require_carpintero_admin
     return users
 
 
+@router.get("/carpinteros/stats")
+async def carpintero_stats(current_user: dict = Depends(require_carpintero_admin), adminId: Optional[str] = None):
+    """Estadisticas de la division carpinteros. El master (gestor global) ve
+    TODOS los carpinteros (o los de un adminId concreto); el admin de division
+    solo los suyos. Por usuario: ultimo login, nº de accesos y renders del mes."""
+    from datetime import datetime, timezone
+    # Ambito
+    if _is_user_manager(current_user):
+        q = {"isCarpintero": True}
+        if adminId:
+            q["linkedCarpinteroAdminId"] = adminId
+    else:
+        q = {"$or": [{"linkedCarpinteroAdminId": current_user.get("id")}, {"id": current_user.get("id")}]}
+    users = await db.users.find(q, {"_id": 0, "password": 0}).to_list(1000)
+    ids = [u.get("id") for u in users if u.get("id")]
+
+    # Logins (colección user_activity, activityType=login)
+    logins_count = {}
+    last_login = {}
+    try:
+        cur = db.user_activity.find({"userId": {"$in": ids}, "activityType": "login"}, {"_id": 0, "userId": 1, "timestamp": 1})
+        async for a in cur:
+            uid = a.get("userId")
+            logins_count[uid] = logins_count.get(uid, 0) + 1
+            ts = a.get("timestamp")
+            ts = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+            if uid not in last_login or ts > last_login[uid]:
+                last_login[uid] = ts
+    except Exception as e:
+        logger.warning("stats logins: %s", e)
+
+    # Renders del mes en curso (ai_credits)
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    renders = {}
+    try:
+        cur = db.ai_credits.find({"user_id": {"$in": [str(i) for i in ids]}, "month": month}, {"_id": 0})
+        async for c in cur:
+            renders[str(c.get("user_id"))] = int(c.get("consumed", 0) or 0)
+    except Exception as e:
+        logger.warning("stats renders: %s", e)
+
+    items = []
+    for u in users:
+        uid = u.get("id")
+        items.append({
+            "id": uid, "username": u.get("username"), "clientName": u.get("clientName", ""),
+            "isActive": u.get("isActive", True),
+            "esAdmin": bool(u.get("canManageCarpinteroUsers")),
+            "logins": logins_count.get(uid, 0),
+            "ultimoLogin": last_login.get(uid, ""),
+            "rendersMes": renders.get(str(uid), 0),
+        })
+    items.sort(key=lambda x: x.get("ultimoLogin") or "", reverse=True)
+    activos_mes = sum(1 for i in items if i["rendersMes"] > 0 or i["logins"] > 0)
+    return {
+        "success": True, "month": month, "total": len(items),
+        "activos": sum(1 for i in items if i["isActive"]),
+        "conActividad": activos_mes,
+        "rendersTotales": sum(i["rendersMes"] for i in items),
+        "items": items,
+    }
+
+
 @router.post("/carpinteros/create")
 async def carpintero_create_user(payload: dict, current_user: dict = Depends(require_carpintero_admin)):
     """Crea un usuario de la division carpinteros, vinculado al admin.
