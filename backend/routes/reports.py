@@ -112,12 +112,13 @@ async def generate_rentabilidad_report(
             if revisada == "no" and ficha.get("revisada"):
                 continue
             
-            # Filtro por cliente: casa por NOMBRE o por CÓDIGO de cliente
+            # Filtro por cliente: casa por NOMBRE o por CÓDIGO. Acepta VARIOS
+            # clientes separados por coma; basta con que case cualquiera de ellos.
             if cliente:
-                q = cliente.lower().strip()
+                queries = [c.lower().strip() for c in cliente.split(",") if c.strip()]
                 ficha_cliente = ficha.get("cliente", "").lower()
                 ficha_cod = str(ficha.get("clienteCodigo", "") or "").lower()
-                if q not in ficha_cliente and q not in ficha_cod:
+                if queries and not any(q in ficha_cliente or q in ficha_cod for q in queries):
                     continue
             
             # Filtro por tipo de documento
@@ -302,139 +303,151 @@ async def generate_rentabilidad_pdf(
     if not data.get("success"):
         raise HTTPException(status_code=500, detail="Error generando datos del informe")
     
+    # ── Paleta y marca (marca blanca: nombre de empresa desde settings) ──────
+    INK = colors.HexColor('#1e1b4b')       # tinta principal (azul noche)
+    ACCENT = colors.HexColor('#4f46e5')    # indigo
+    GREEN = colors.HexColor('#059669')     # margen positivo
+    RED = colors.HexColor('#dc2626')       # margen negativo
+    SLATE = colors.HexColor('#64748b')     # texto tenue
+    HEADBG = colors.HexColor('#1e293b')    # cabecera de tabla
+    ROWALT = colors.HexColor('#f8fafc')    # fila alterna
+    LINE = colors.HexColor('#e2e8f0')      # rejilla suave
+    try:
+        from server import db as _db
+        _settings = await _db["settings"].find_one({"id": "global-settings"}) or {}
+        company = (_settings.get("companyName") or "").strip()
+    except Exception:
+        company = ""
+
+    def _eur(v):
+        try:
+            return f"{float(v):,.2f} €"
+        except Exception:
+            return "0,00 €"
+    def _pct(v):
+        try:
+            return f"{float(v):.2f}%"
+        except Exception:
+            return "0,00%"
+
     # Generar PDF
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm, topMargin=20*mm, bottomMargin=20*mm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm, topMargin=16*mm, bottomMargin=16*mm)
     styles = getSampleStyleSheet()
     elements = []
-    
-    # Título
-    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=18, spaceAfter=6)
-    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey)
-    
-    elements.append(Paragraph("INFORME DE RENTABILIDAD POR LÍNEAS", title_style))
-    elements.append(Paragraph(f"Luiggi Home ERP — Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
-    
-    # Filtros aplicados
+
+    title_style = ParagraphStyle('T', parent=styles['Title'], fontSize=19, spaceAfter=2, textColor=INK, alignment=0)
+    eyebrow_style = ParagraphStyle('E', parent=styles['Normal'], fontSize=8, textColor=ACCENT, spaceAfter=1, fontName='Helvetica-Bold')
+    subtitle_style = ParagraphStyle('S', parent=styles['Normal'], fontSize=9, textColor=SLATE)
+    section_style = ParagraphStyle('H', parent=styles['Normal'], fontSize=11, textColor=INK, fontName='Helvetica-Bold', spaceAfter=3, spaceBefore=2)
+
+    # ── Cabecera de marca ────────────────────────────────────────────────────
+    if company:
+        elements.append(Paragraph(company.upper(), eyebrow_style))
+    elements.append(Paragraph("Informe de rentabilidad", title_style))
+    elements.append(Paragraph("Venta − Coste = Margen · por proyecto", subtitle_style))
+
+    # Filtros aplicados (en una línea sobria)
     filters_text = []
-    if fecha_desde: filters_text.append(f"Desde: {fecha_desde}")
-    if fecha_hasta: filters_text.append(f"Hasta: {fecha_hasta}")
+    if fecha_desde: filters_text.append(f"Desde {fecha_desde}")
+    if fecha_hasta: filters_text.append(f"Hasta {fecha_hasta}")
     if cliente: filters_text.append(f"Cliente: {cliente}")
     if categoria: filters_text.append(f"Categoría: {categoria}")
     if doc_type: filters_text.append(f"Tipo: {doc_type}")
+    meta = f"Generado {datetime.now().strftime('%d/%m/%Y %H:%M')}"
     if filters_text:
-        elements.append(Spacer(1, 4*mm))
-        elements.append(Paragraph(f"Filtros: {' | '.join(filters_text)}", subtitle_style))
-    
-    elements.append(Spacer(1, 8*mm))
-    
-    # Resumen
+        meta += "  ·  " + "  ·  ".join(filters_text)
+    elements.append(Spacer(1, 2*mm))
+    elements.append(Paragraph(meta, subtitle_style))
+    elements.append(Spacer(1, 6*mm))
+
+    # ── KPIs en tarjetas (Coste · Venta · Margen · % · Docs · Líneas) ────────
     summary = data["summary"]
-    elements.append(Paragraph("RESUMEN", styles['Heading2']))
-    summary_data = [
-        ["Facturación Total", "Coste Total", "Margen Bruto", "% Margen", "Documentos", "Líneas"],
-        [
-            f"{summary['totalVenta']:,.2f} €",
-            f"{summary['totalCoste']:,.2f} €",
-            f"{summary['totalMargen']:,.2f} €",
-            f"{summary['margenPct']:.1f}%",
-            str(summary['numFichas']),
-            str(summary['numLineas']),
-        ]
+    margen_val = summary['totalMargen']
+    INK_H, GREEN_H, RED_H, ACCENT_H = '#1e1b4b', '#059669', '#dc2626', '#4f46e5'
+    mpos = margen_val >= 0
+    ppos = summary['margenPct'] >= 0
+    kpi_cells = [
+        ("COSTE TOTAL", _eur(summary['totalCoste']), INK_H),
+        ("VENTA TOTAL", _eur(summary['totalVenta']), INK_H),
+        ("MARGEN BRUTO", _eur(margen_val), GREEN_H if mpos else RED_H),
+        ("% MARGEN", _pct(summary['margenPct']), GREEN_H if ppos else RED_H),
+        ("DOCUMENTOS", str(summary['numFichas']), ACCENT_H),
+        ("LÍNEAS", str(summary['numLineas']), ACCENT_H),
     ]
-    t = Table(summary_data, colWidths=[80, 70, 80, 50, 60, 50])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e1b4b')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+    labels = [Paragraph(f"<font size=6.5 color='#94a3b8'><b>{l}</b></font>", styles['Normal']) for l, _, _ in kpi_cells]
+    values = [Paragraph(f"<font size=13 color='{c}'><b>{v}</b></font>", styles['Normal']) for _, v, c in kpi_cells]
+    kpi = Table([labels, values], colWidths=[86]*6)
+    kpi.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+        ('BOX', (0, 0), (-1, -1), 0.6, LINE),
+        ('INNERGRID', (0, 0), (-1, -1), 0.6, colors.white),
+        ('LINEBEFORE', (1, 0), (-1, -1), 0.6, LINE),
+        ('TOPPADDING', (0, 0), (-1, 0), 8), ('BOTTOMPADDING', (0, 0), (-1, 0), 1),
+        ('TOPPADDING', (0, 1), (-1, 1), 0), ('BOTTOMPADDING', (0, 1), (-1, 1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8), ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
-    elements.append(t)
-    elements.append(Spacer(1, 8*mm))
-    
-    # Por categoría
-    if data["byCategory"]:
-        elements.append(Paragraph("POR CATEGORÍA", styles['Heading2']))
-        cat_data = [["Categoría", "Líneas", "Coste (€)", "Venta (€)", "Margen (€)", "% Total"]]
-        for cat in data["byCategory"]:
-            cat_data.append([
-                cat["categoria"],
-                str(cat["count"]),
-                f"{cat['coste']:,.2f}",
-                f"{cat['venta']:,.2f}",
-                f"{cat['margen']:,.2f}",
-                f"{cat['pctTotal']:.1f}%",
-            ])
-        t2 = Table(cat_data, colWidths=[100, 40, 70, 70, 70, 45])
-        t2.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e1b4b')),
+    elements.append(kpi)
+    elements.append(Spacer(1, 7*mm))
+
+    # ── Helper de tabla con estilo (orden Coste · Venta · Margen · %) ────────
+    def styled_table(title, headers, rows, colw, money_cols=(), margin_col=None, pct_col=None):
+        elements.append(Paragraph(title, section_style))
+        body = [headers] + rows
+        t = Table(body, colWidths=colw, repeatRows=1)
+        st = [
+            ('BACKGROUND', (0, 0), (-1, 0), HEADBG),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
-        ]))
-        elements.append(t2)
-        elements.append(Spacer(1, 8*mm))
-    
+            ('FONTSIZE', (0, 0), (-1, 0), 7),
+            ('FONTSIZE', (0, 1), (-1, -1), 7.5),
+            ('TEXTCOLOR', (0, 1), (-1, -1), INK),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, ROWALT]),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.8, ACCENT),
+            ('LINEBELOW', (0, 1), (-1, -2), 0.4, LINE),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4), ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6), ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]
+        # margen en verde/rojo
+        if margin_col is not None:
+            for i, r in enumerate(rows, start=1):
+                try:
+                    val = float(str(r[margin_col]).replace('.', '').replace(',', '.').replace('€', '').replace('%', '').strip())
+                except Exception:
+                    val = 0
+                st.append(('TEXTCOLOR', (margin_col, i), (margin_col, i), GREEN if val >= 0 else RED))
+                st.append(('FONTNAME', (margin_col, i), (margin_col, i), 'Helvetica-Bold'))
+        if pct_col is not None:
+            st.append(('TEXTCOLOR', (pct_col, 1), (pct_col, -1), SLATE))
+        t.setStyle(TableStyle(st))
+        elements.append(t)
+        elements.append(Spacer(1, 6*mm))
+
+    # Por categoría — orden Coste · Venta · Margen · %
+    if data["byCategory"]:
+        rows = [[c["categoria"], str(c["count"]), _eur(c['coste']), _eur(c['venta']), _eur(c['margen']), _pct(c['pctTotal'])] for c in data["byCategory"]]
+        styled_table("Por categoría", ["Categoría", "Líneas", "Coste", "Venta", "Margen", "% s/total"],
+                     rows, [110, 42, 78, 78, 78, 50], margin_col=4, pct_col=5)
+
     # Por cliente
     if data["byClient"]:
-        elements.append(Paragraph("POR CLIENTE", styles['Heading2']))
-        cli_data = [["Cliente", "Docs", "Coste (€)", "Venta (€)", "Margen (€)", "% Total"]]
-        for cli in data["byClient"]:
-            cli_data.append([
-                cli["cliente"][:30],
-                str(cli["docs"]),
-                f"{cli['coste']:,.2f}",
-                f"{cli['venta']:,.2f}",
-                f"{cli['margen']:,.2f}",
-                f"{cli['pctTotal']:.1f}%",
-            ])
-        t3 = Table(cli_data, colWidths=[120, 35, 70, 70, 70, 45])
-        t3.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e1b4b')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTSIZE', (0, 0), (-1, -1), 7),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
-        ]))
-        elements.append(t3)
-        elements.append(Spacer(1, 8*mm))
-    
-    # Top líneas
+        rows = [[c["cliente"][:34], str(c["docs"]), _eur(c['coste']), _eur(c['venta']), _eur(c['margen']), _pct(c['pctTotal'])] for c in data["byClient"]]
+        styled_table("Por cliente", ["Cliente", "Docs", "Coste", "Venta", "Margen", "% s/total"],
+                     rows, [130, 38, 74, 74, 74, 50], margin_col=4, pct_col=5)
+
+    # Top líneas por venta
     if data["topLines"]:
-        elements.append(Paragraph("TOP LÍNEAS POR VENTA", styles['Heading2']))
-        top_data = [["Ref", "Concepto", "Cliente", "Venta (€)", "Categoría"]]
-        for line in data["topLines"][:15]:
-            top_data.append([
-                line.get("ref", "—")[:12],
-                line.get("concepto", "")[:40],
-                line.get("cliente", "")[:20],
-                f"{line.get('venta', 0):,.2f}",
-                line.get("categoria", ""),
-            ])
-        t4 = Table(top_data, colWidths=[55, 160, 85, 55, 80])
-        t4.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e1b4b')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTSIZE', (0, 0), (-1, -1), 6.5),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
-        ]))
-        elements.append(t4)
-    
-    # Footer
-    elements.append(Spacer(1, 10*mm))
-    elements.append(Paragraph("Generado por LuiggiAI Engine — Luiggi Home ERP v4.1", subtitle_style))
-    
+        rows = [[l.get("ref", "—")[:12], l.get("concepto", "")[:44], l.get("cliente", "")[:22], _eur(l.get('venta', 0)), l.get("categoria", "")] for l in data["topLines"][:15]]
+        styled_table("Top líneas por venta", ["Ref", "Concepto", "Cliente", "Venta", "Categoría"],
+                     rows, [52, 168, 90, 60, 78])
+
+    # Footer sobrio (marca blanca)
+    elements.append(Spacer(1, 6*mm))
+    foot = company or "Informe de rentabilidad"
+    elements.append(Paragraph(f"<font size=7 color='#94a3b8'>{foot} · Informe generado automáticamente</font>", styles['Normal']))
+
     doc.build(elements)
     buffer.seek(0)
     

@@ -781,7 +781,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
           clean(f.cliente || '-') + (f.clienteCodigo ? ` (${f.clienteCodigo})` : ''),
           f.fecha || '-',
           eur(tt.coste), eur(tt.venta), eur(tt.margen),
-          `${(Number(tt.margenPct) || 0).toFixed(1)}%`,
+          `${(Number(tt.margenPct) || 0).toFixed(2)}%`,
         ];
       });
 
@@ -1380,7 +1380,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   </td>
                   {/* Columna % Incremento Coste→Venta (Margen/Coste) */}
                   <td className="p-3 text-right font-mono text-slate-600 text-xs">
-                    {tt.coste > 0 ? `${(((tt.venta - tt.coste) / tt.coste) * 100).toFixed(1)}%` : '—'}
+                    {tt.coste > 0 ? `${(((tt.venta - tt.coste) / tt.coste) * 100).toFixed(2)}%` : '—'}
                   </td>
                   <td className="p-3 text-center text-slate-500">{f.numDocs || 0} 📎</td>
                   <td className="p-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -1443,7 +1443,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                 </td>
                 {/* Total % Incremento Coste→Venta ponderado */}
                 <td className="p-3 text-right font-mono text-slate-600 text-xs">
-                  {filteredTotals.coste > 0 ? `${(((filteredTotals.venta - filteredTotals.coste) / filteredTotals.coste) * 100).toFixed(1)}%` : '—'}
+                  {filteredTotals.coste > 0 ? `${(((filteredTotals.venta - filteredTotals.coste) / filteredTotals.coste) * 100).toFixed(2)}%` : '—'}
                 </td>
                 <td colSpan={2}></td>
               </tr>
@@ -1761,7 +1761,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                             className="w-full px-1.5 py-1 border rounded text-xs text-right"
                           /></td>
                           <td className={`p-1 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
-                          <td className={`p-1 text-right font-mono font-bold text-xs ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(1)}%`}</td>
+                          <td className={`p-1 text-right font-mono font-bold text-xs ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(2)}%`}</td>
                           <td className="p-1 text-center"><button onClick={() => removeLine(i)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                         </tr>
                       );
@@ -1776,7 +1776,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                   <div className="bg-orange-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-orange-500 font-black">Coste</p><p className="text-lg font-black text-orange-700">{eur(et.coste)}</p></div>
                   <div className="bg-indigo-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-indigo-500 font-black">Venta</p><p className="text-lg font-black text-indigo-700">{eur(et.venta)}</p></div>
-                  <div className={`${et.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${et.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Beneficio ({et.coste > 0 ? (et.margen / et.coste * 100).toFixed(1) : '0.0'}%)</p><p className={`text-lg font-black ${et.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(et.margen)}</p></div>
+                  <div className={`${et.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${et.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Beneficio ({et.coste > 0 ? (et.margen / et.coste * 100).toFixed(1) : '0.00'}%)</p><p className={`text-lg font-black ${et.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(et.margen)}</p></div>
                 </div>
               )}
             </div>
@@ -1844,7 +1844,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                         <td className="p-2 text-right font-mono text-orange-600">{eur(cEf)}</td>
                         <td className="p-2 text-right font-mono">{eur(l.venta)}</td>
                         <td className={`p-2 text-right font-mono font-bold ${m >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{eur(m)}</td>
-                        <td className={`p-2 text-right font-mono font-bold text-xs ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(1)}%`}</td>
+                        <td className={`p-2 text-right font-mono font-bold text-xs ${m >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mpct === null ? '—' : `${mpct.toFixed(2)}%`}</td>
                       </tr>);
                     })}
                   </tbody>
@@ -1854,7 +1854,7 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                   <div className="bg-orange-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-orange-500 font-black">Coste</p><p className="text-lg font-black text-orange-700">{eur(viewing.totals.coste)}</p></div>
                   <div className="bg-indigo-50 p-3 rounded-xl text-center"><p className="text-[10px] uppercase text-indigo-500 font-black">Venta</p><p className="text-lg font-black text-indigo-700">{eur(viewing.totals.venta)}</p></div>
-                  <div className={`${viewing.totals.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${viewing.totals.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Margen ({viewing.totals.coste > 0 ? (viewing.totals.margen / viewing.totals.coste * 100).toFixed(1) : '0.0'}%)</p><p className={`text-lg font-black ${viewing.totals.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(viewing.totals.margen)}</p></div>
+                  <div className={`${viewing.totals.margen >= 0 ? 'bg-emerald-50' : 'bg-red-50'} p-3 rounded-xl text-center`}><p className={`text-[10px] uppercase font-black ${viewing.totals.margen >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Margen ({viewing.totals.coste > 0 ? (viewing.totals.margen / viewing.totals.coste * 100).toFixed(1) : '0.00'}%)</p><p className={`text-lg font-black ${viewing.totals.margen >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{eur(viewing.totals.margen)}</p></div>
                 </div>
               )}
               {(viewing.costesProyecto || 0) > 0 && (viewing.costesProyecto !== viewing.totals?.coste) && (
