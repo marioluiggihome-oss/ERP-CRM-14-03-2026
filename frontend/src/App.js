@@ -1388,8 +1388,10 @@ const App = () => {
               )}
               
               {/* Panel Maestro: un ADMIN siempre lo ve (aunque tenga ademas rol de
-                  fabrica/tienda). Un Comercial lo ve si no es Tienda ni solo Fabrica. */}
-              {(state.currentUser?.isAdmin || (state.currentUser?.isRepresentative && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && state.currentUser?.canAccessMaster !== false)) && (
+                  fabrica/tienda). Un Comercial lo ve si no es Tienda ni solo Fabrica.
+                  El admin de la división carpinteros (canManageCarpinteroUsers) también
+                  lo ve para poder gestionar su cuenta y usuarios. */}
+              {(state.currentUser?.isAdmin || state.currentUser?.canManageCarpinteroUsers || (state.currentUser?.isRepresentative && !state.currentUser?.isTienda && !state.currentUser?.isFabrica && state.currentUser?.canAccessMaster !== false)) && (
                 <button 
                     onClick={() => setState(p => ({...p, showSettings: true}))} 
                     className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors duration-200 ${state.showSettings ? 'bg-brand text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
@@ -1577,7 +1579,11 @@ const App = () => {
 
             <div className="absolute bottom-6 left-12 pointer-events-none opacity-20 flex items-center gap-2">
                <ShieldCheck size={14} className="text-slate-900" />
-               <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">LUIGGI HOME ERP v4.1</span>
+               <span className="text-[8px] font-black uppercase tracking-widest text-slate-900 italic">
+                 {(state.currentUser?.isCarpintero || state.currentUser?.linkedCarpinteroAdminId || state.currentUser?.canManageCarpinteroUsers)
+                   ? 'CARPINTER.IO ERP v4.1'
+                   : 'LUIGGI HOME ERP v4.1'}
+               </span>
             </div>
           </main>
 

@@ -36,10 +36,14 @@ const isFloorDirect = () => {
 };
 
 // Marca Carpinteros & Ebanistas (división carpenter.io). Logotipo tipográfico
-// provisional en tonos madera hasta que haya logo definitivo.
+// Logo oficial carpinter.io (imagen en alta resolución, fondo claro).
 const CarpBrand = ({ big = false }) => (
-  <div className={`inline-flex flex-col items-center justify-center rounded-2xl bg-[#1A1A1A] shadow-md ${big ? 'px-8 py-5' : 'px-4 py-2.5'}`}>
-    <CarpinterLogo height={big ? 42 : 26} tone="light" />
+  <div className={`inline-flex flex-col items-center justify-center ${big ? 'py-2' : 'py-1'}`}>
+    <img
+      src="/carpinter-logo.webp"
+      alt="carpinter.io"
+      style={{ height: big ? 64 : 40, width: 'auto', objectFit: 'contain' }}
+    />
     <span className={`${big ? 'text-[10px] mt-2' : 'text-[8px] mt-1'} font-bold tracking-[0.4em] text-[#C4622D]`}>CARPINTEROS · EBANISTAS</span>
   </div>
 );
