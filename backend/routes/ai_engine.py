@@ -117,6 +117,7 @@ class RenderRequest(BaseModel):
     referenceMime: Optional[str] = Field(None, description="MIME de la imagen de referencia")
     referenceImages: Optional[List[str]] = Field(None, description="Imágenes adicionales (elemento a copiar: puerta, mueble…) en base64/data URL")
     provider: Optional[str] = Field(None, description="Motor de render: manus | gemini (opcional; por defecto manus)")
+    projectType: Optional[str] = Field(None, description="Tipo de proyecto elegido por el usuario: cocina|armario|bano|otro. Fuerza el sujeto del render.")
 
 
 class RenderComposeRequest(BaseModel):
@@ -280,6 +281,7 @@ async def generate_render_natural(request: RenderRequest, user=Depends(require_a
         reference_mime=request.referenceMime,
         provider=request.provider,
         reference_images=request.referenceImages,
+        project_type=request.projectType,
     )
 
     logger.info(f"Render solicitado por {user.get('username')}: {request.description[:80]}...")

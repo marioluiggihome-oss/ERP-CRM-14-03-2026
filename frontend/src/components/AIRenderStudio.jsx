@@ -785,11 +785,16 @@ export default function AIRenderStudio({ state, setState }) {
   };
   const toggleElectro = (id) => setElectros(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   // Aplica una plantilla: rellena la descripción (si está vacía) y ajusta ambiente.
+  // Las plantillas rápidas son de COCINA y generan DESDE CERO: se fija el tipo a
+  // cocina y se limpia cualquier imagen de referencia/edición previa (p.ej. un
+  // armario anterior) para que NO entre en modo edición y salga una cocina.
   const applyPreset = (p) => {
     setDescription(prev => prev.trim() ? `${prev.trim()}\n${p.desc}` : p.desc);
     setParams(prm => ({ ...prm, style: p.style, lighting: p.lighting }));
     setCamera(p.camera);
     setElectros(p.electros || []);
+    setTipo3d('cocina');
+    setRefImage(null); setRefImages([]); setEditRefImage(null); setOriginalRef(null);
   };
   // Añade una frase rápida al final de la descripción.
   const addPhrase = (t) => setDescription(prev => {
@@ -1529,6 +1534,7 @@ export default function AIRenderStudio({ state, setState }) {
               description: conMedidas(description.trim()),
               style: params.style,
               provider: providerOf(),
+              projectType: tipo3d,
               referenceImage: refs[i],
             }),
           });
@@ -1568,6 +1574,7 @@ export default function AIRenderStudio({ state, setState }) {
           description: conMedidas(description.trim()) + hint,
           style: params.style,
           provider: providerOf(),
+          projectType: tipo3d,
           referenceImage: refImage || undefined,
         }),
       });

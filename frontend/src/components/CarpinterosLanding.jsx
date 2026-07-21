@@ -441,6 +441,7 @@ const STYLES = `
 .cl-root .hero-stat-k{font-size:26px;font-weight:800;color:var(--orange-soft);}
 .cl-root .hero-stat-v{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,240,231,.5);margin-top:2px;}
 @media(max-width:900px){.cl-root .hero-inner{grid-template-columns:1fr;gap:40px;}.cl-root .hero{padding:120px 0 70px;}}
+.cl-root.cl-embedded .hero{padding-top:56px;}
 
 /* blueprint */
 .cl-root .blueprint{position:relative;background:var(--espresso-2);border:1px solid rgba(196,98,45,.28);border-radius:18px;padding:20px;box-shadow:0 40px 80px -40px rgba(0,0,0,.7);}
@@ -550,13 +551,15 @@ const STYLES = `
 `;
 
 /* ─── EXPORT ─────────────────────────────────────────────────────────────── */
-export default function CarpinterosLanding({ onEnter }) {
+export default function CarpinterosLanding({ onEnter, embedded = false }) {
   useReveal();
   const rootRef = useRef(null);
   return (
-    <div className="cl-root" ref={rootRef}>
+    <div className={`cl-root ${embedded ? 'cl-embedded' : ''}`} ref={rootRef}>
       <style>{STYLES}</style>
-      <Nav onEnter={onEnter} />
+      {/* Incrustada en el portal (usuario ya logueado): sin barra de navegación
+          propia, para no solaparse con la cabecera del portal. */}
+      {!embedded && <Nav onEnter={onEnter} />}
       <Hero onEnter={onEnter} />
       <Features />
       <AISection />
