@@ -8,9 +8,20 @@ import { settingsAPI } from '../../services/api';
 
 const IdentityTab = ({ state, setState }) => {
   const [colorInput, setColorInput] = useState(state.brandColor || '#ea580c');
+  const [savingMB, setSavingMB] = useState(false);
   // Solo puede cambiar su logo quien tenga el permiso (o sea admin).
   const u = state.currentUser || {};
   const canChangeLogo = !!(u.canChangeLogo || u.useCustomBranding || u.isAdmin);
+  const esAdmin = !!(u.isAdmin || u.isPrimaryAdmin || u.isGerente);
+
+  const toggleMarcaBlanca = async () => {
+    const next = !state.marcaBlanca;
+    setState(prev => ({ ...prev, marcaBlanca: next }));
+    setSavingMB(true);
+    try { await settingsAPI.update({ marcaBlanca: next }); }
+    catch (err) { console.error('Error marca blanca:', err); alert('No se pudo guardar el modo marca blanca'); }
+    finally { setSavingMB(false); }
+  };
 
   const handleColorChange = async () => {
     if (/^#[0-9A-Fa-f]{6}$/.test(colorInput)) {
@@ -58,6 +69,31 @@ const IdentityTab = ({ state, setState }) => {
 
   return (
     <div className="space-y-6">
+      {/* Marca Blanca (solo admin) */}
+      {esAdmin && (
+        <div className="bg-white border border-purple-100 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-1">Marca Blanca</h3>
+              <p className="text-xs text-indigo-400 max-w-md">
+                Oculta la marca propia y muestra un <b>logo neutro genérico</b> en toda la app
+                (login, pantalla de inicio y cabeceras). Si subes tu propio logo, se usará ese.
+              </p>
+            </div>
+            <button
+              onClick={toggleMarcaBlanca}
+              disabled={savingMB}
+              className={`shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl font-black uppercase text-xs transition-all ${
+                state.marcaBlanca ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <span className={`w-2.5 h-2.5 rounded-full ${state.marcaBlanca ? 'bg-emerald-300' : 'bg-slate-400'}`} />
+              {state.marcaBlanca ? 'Marca blanca ACTIVADA' : 'Activar marca blanca'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Color de Marca */}
       <div className="bg-white border border-purple-100 rounded-2xl p-6 shadow-sm">
         <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4">

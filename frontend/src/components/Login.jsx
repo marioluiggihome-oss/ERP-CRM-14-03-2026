@@ -74,13 +74,18 @@ const Login = ({ onLogin, customLogo }) => {
   // Logo corporativo para la pantalla de login. Si no llega por props, se pide
   // al endpoint público (la pantalla de login no tiene sesión todavía).
   const [publicLogo, setPublicLogo] = useState(null);
+  const [marcaBlanca, setMarcaBlanca] = useState(false);
+  const [companyName, setCompanyName] = useState('');
   useEffect(() => {
     let active = true;
-    if (!customLogo) {
-      settingsAPI.getPublicLogo()
-        .then(d => { if (active && d?.logo) setPublicLogo(d.logo); })
-        .catch(() => {});
-    }
+    settingsAPI.getPublicLogo()
+      .then(d => {
+        if (!active) return;
+        if (!customLogo && d?.logo) setPublicLogo(d.logo);
+        setMarcaBlanca(!!d?.marcaBlanca);
+        setCompanyName(d?.companyName || '');
+      })
+      .catch(() => {});
     // Logo de marca Luiggi Floor para el acceso directo (público, sin sesión).
     settingsAPI.getPublicFloorLogo()
       .then(d => { if (active && d?.logo) setFloorLogo(d.logo); })
@@ -346,7 +351,7 @@ const Login = ({ onLogin, customLogo }) => {
               </div>
             ) : (
               <>
-                <Logo variant="dark" customLogo={customLogo || publicLogo} className="h-24 mb-3" />
+                <Logo variant="dark" customLogo={customLogo || publicLogo} marcaBlanca={marcaBlanca} companyName={companyName} className="h-24 mb-3" />
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
                   {mode === 'login' ? 'Acceso Distribuidores' : 'Solicitud de Alta'}
                 </p>

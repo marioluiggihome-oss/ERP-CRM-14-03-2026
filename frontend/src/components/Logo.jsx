@@ -1,17 +1,45 @@
 import React from 'react';
 
-const Logo = ({ className = 'h-12', showSlogan = true, variant = 'light', customLogo }) => {
-  
+// Marca neutra (modo MARCA BLANCA): logo genérico sin nombre de marca propia.
+// Si hay companyName configurado, se usa como texto; si no, un rótulo neutro.
+const NeutralLogo = ({ className = 'h-12', variant = 'light', companyName = '' }) => {
+  const dark = variant === 'dark';
+  const ink = dark ? '#0f172a' : '#1e293b';
+  const accent = '#4f46e5';
+  const nombre = (companyName || 'Gestión Profesional').trim();
+  return (
+    <div className={`flex items-center justify-center gap-2 ${className}`}>
+      <svg viewBox="0 0 40 40" className="h-full w-auto" aria-label="logo">
+        <rect x="4" y="4" width="32" height="32" rx="9" fill={accent} />
+        <rect x="12" y="12" width="16" height="16" rx="3" fill="none" stroke="#fff" strokeWidth="2.4" />
+        <line x1="12" y1="20" x2="28" y2="20" stroke="#fff" strokeWidth="2.4" />
+        <circle cx="24" cy="16" r="1.4" fill="#fff" />
+        <circle cx="24" cy="24" r="1.4" fill="#fff" />
+      </svg>
+      <span className="font-black tracking-tight leading-none" style={{ color: ink, fontSize: '1.05rem' }}>
+        {nombre}
+      </span>
+    </div>
+  );
+};
+
+const Logo = ({ className = 'h-12', showSlogan = true, variant = 'light', customLogo, marcaBlanca = false, companyName = '' }) => {
+
   if (customLogo) {
     return (
       <div className={`flex items-center justify-center ${className} animate-in fade-in duration-500 overflow-hidden`}>
-        <img 
-          src={customLogo} 
-          alt="Logo Corporativo" 
-          className="h-full w-auto object-contain drop-shadow-[0_2px_5px_rgba(0,0,0,0.05)]" 
+        <img
+          src={customLogo}
+          alt="Logo Corporativo"
+          className="h-full w-auto object-contain drop-shadow-[0_2px_5px_rgba(0,0,0,0.05)]"
         />
       </div>
     );
+  }
+
+  // Modo marca blanca (sin logo propio subido): logo neutro genérico.
+  if (marcaBlanca) {
+    return <NeutralLogo className={className} variant={variant} companyName={companyName} />;
   }
 
   if (variant === 'dark') {

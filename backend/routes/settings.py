@@ -46,6 +46,7 @@ class SettingsModel(BaseModel):
     companyEmail: str = ""
     companyNIF: str = ""
     logo: Optional[str] = None
+    marcaBlanca: bool = False  # Modo marca blanca: logo neutro genérico en toda la app
     defaultIVA: float = 21.0
     defaultDiscount: float = 0.0
     currency: str = "EUR"
@@ -81,6 +82,7 @@ class SettingsUpdate(BaseModel):
     companyEmail: Optional[str] = None
     companyNIF: Optional[str] = None
     logo: Optional[str] = None
+    marcaBlanca: Optional[bool] = None
     defaultIVA: Optional[float] = None
     defaultDiscount: Optional[float] = None
     currency: Optional[str] = None
@@ -147,8 +149,13 @@ async def get_public_logo():
     Devuelve únicamente el logo global (el que se muestra antes de iniciar
     sesión). No expone ningún otro ajuste sensible (email, claves, etc.).
     """
-    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1})
-    return {"logo": settings.get("logo") if settings else None}
+    settings = await db.settings.find_one({"id": "global-settings"}, {"_id": 0, "logo": 1, "marcaBlanca": 1, "companyName": 1})
+    settings = settings or {}
+    return {
+        "logo": settings.get("logo"),
+        "marcaBlanca": bool(settings.get("marcaBlanca")),
+        "companyName": settings.get("companyName") or "",
+    }
 
 
 @router.get("/logo")
