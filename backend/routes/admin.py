@@ -5,10 +5,11 @@ Endpoints de Administración del Sistema - LUIGGI HOME
 - Estadísticas del sistema
 """
 from fastapi import APIRouter, HTTPException, Depends, Request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import logging
 import os
+import uuid
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -340,6 +341,105 @@ SUBSCRIPTION_PLANS = {
         "features": ["Configuración a medida"],
     },
 }
+
+# ─── Packs de renders (créditos IA extra) ────────────────────────────────────
+# Créditos que se suman al cupo mensual del cliente cuando agota el de su plan.
+# Coste real por render ~0,12 €, así que el margen del pack es muy alto.
+RENDER_PACKS = {
+    "pack20":  {"id": "pack20",  "name": "Pack 20 renders",  "renders": 20,  "price": 15,  "color": "#C4622D"},
+    "pack50":  {"id": "pack50",  "name": "Pack 50 renders",  "renders": 50,  "price": 35,  "color": "#0891b2"},
+    "pack100": {"id": "pack100", "name": "Pack 100 renders", "renders": 100, "price": 60,  "color": "#059669"},
+}
+
+
+@router.get("/render-packs")
+async def get_render_packs(user=Depends(require_admin)):
+    return {"success": True, "packs": list(RENDER_PACKS.values())}
+
+
+@router.post("/render-packs/grant")
+async def grant_render_pack(payload: dict, user=Depends(require_admin)):
+    """Añade un pack de renders (créditos extra) al cupo del mes del usuario.
+    payload: {user_id, pack_id} o {user_id, renders} para una cantidad libre."""
+    from config import db as main_db
+    from services.ai_usage import _month
+    uid = str((payload or {}).get("user_id", "")).strip()
+    if not uid:
+        raise HTTPException(status_code=400, detail="Falta user_id")
+    pack_id = (payload or {}).get("pack_id")
+    if pack_id:
+        pack = RENDER_PACKS.get(pack_id)
+        if not pack:
+            raise HTTPException(status_code=400, detail=f"Pack '{pack_id}' no existe")
+        renders = int(pack["renders"]); price = pack["price"]; name = pack["name"]
+    else:
+        try:
+            renders = int((payload or {}).get("renders", 0) or 0)
+        except (TypeError, ValueError):
+            renders = 0
+        if renders <= 0:
+            raise HTTPException(status_code=400, detail="Indica un pack o un nº de renders")
+        price = None; name = f"{renders} renders (manual)"
+    month = _month()
+    await main_db.ai_credits.update_one(
+        {"user_id": uid, "month": month},
+        {"$inc": {"extra": renders},
+         "$setOnInsert": {"user_id": uid, "month": month}},
+        upsert=True,
+    )
+    # Registro de la compra/concesión para histórico y facturación.
+    await main_db.render_pack_purchases.insert_one({
+        "id": f"pack-{uuid.uuid4().hex[:8]}",
+        "user_id": uid, "month": month, "renders": renders, "pack": pack_id or "manual",
+        "price": price, "name": name,
+        "grantedBy": (user or {}).get("username", ""),
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+    })
+    doc = await main_db.ai_credits.find_one({"user_id": uid, "month": month}, {"_id": 0})
+    return {"success": True, "extra": int((doc or {}).get("extra", 0) or 0), "renders": renders}
+
+
+@router.get("/ai-usage/clients")
+async def ai_usage_clients(user=Depends(require_admin)):
+    """Medidor de consumo IA por cliente (mes en curso): renders del plan,
+    packs extra, consumidos, restantes y coste estimado. Ordenado por % de uso."""
+    from config import db as main_db
+    from services.ai_usage import _month, DEFAULT_COST_PER
+    month = _month()
+    cost_render = float(DEFAULT_COST_PER.get("render", 0.12))
+    # Consumo del mes indexado por user_id
+    credits = {}
+    async for c in main_db.ai_credits.find({"month": month}, {"_id": 0}):
+        credits[str(c.get("user_id"))] = c
+    out = []
+    users = await main_db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
+    for u in users:
+        uid = str(u.get("id") or "")
+        plan_id = u.get("subscriptionPlan", "")
+        plan = SUBSCRIPTION_PLANS.get(plan_id, {})
+        assigned = int(u.get("aiCreditsMonthly", 0) or plan.get("aiCreditsMonthly", 0) or 0)
+        c = credits.get(uid, {})
+        consumed = int(c.get("consumed", 0) or 0)
+        extra = int(c.get("extra", 0) or 0)
+        total = assigned + extra
+        remaining = max(total - consumed, 0)
+        pct = round((consumed / total * 100), 0) if total > 0 else (100 if consumed > 0 else 0)
+        # Solo interesan clientes con plan/cupo o con consumo
+        if total == 0 and consumed == 0:
+            continue
+        out.append({
+            "id": uid, "username": u.get("username"), "clientName": u.get("clientName", ""),
+            "isCarpintero": bool(u.get("isCarpintero")),
+            "linkedCarpinteroAdminId": u.get("linkedCarpinteroAdminId", ""),
+            "planName": plan.get("name", "—"),
+            "asignados": assigned, "extra": extra, "total": total,
+            "consumidos": consumed, "restantes": remaining, "pct": pct,
+            "coste_estimado": round(consumed * cost_render, 2),
+            "agotado": total > 0 and consumed >= total,
+        })
+    out.sort(key=lambda x: x["pct"], reverse=True)
+    return {"success": True, "month": month, "cost_render": cost_render, "clients": out}
+
 
 @router.get("/subscription/plans")
 async def get_subscription_plans(user=Depends(require_admin)):

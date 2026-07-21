@@ -218,15 +218,21 @@ async def get_user_credits(user: dict) -> dict:
 
     uid = user.get("id") or user.get("_id") or ""
     consumed = 0
+    extra = 0
     try:
         doc = await db.ai_credits.find_one({"user_id": str(uid), "month": _month()})
         consumed = int((doc or {}).get("consumed", 0) or 0)
+        # Creditos extra comprados (packs de renders) para el mes en curso.
+        extra = int((doc or {}).get("extra", 0) or 0)
     except Exception:
         consumed = 0
 
-    remaining = max(assigned - consumed, 0)
+    total = assigned + extra
+    remaining = max(total - consumed, 0)
     return {
         "asignados": assigned,
+        "extra": extra,
+        "total": total,
         "consumidos_mes": consumed,
         "restantes": remaining,
         "ilimitado": False,
