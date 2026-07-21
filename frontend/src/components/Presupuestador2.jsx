@@ -1325,7 +1325,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             )}
           </div>
         ) : (
-          <div className={`${budgetExpanded ? 'w-full md:flex-1' : 'w-full md:w-[26rem] shrink-0'} bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col shadow-[-4px_0_20px_rgba(0,0,0,0.03)] relative ${
+          <div className={`${budgetExpanded ? 'w-full md:flex-1' : 'w-full md:w-[26rem] shrink-0'} bg-white border-t md:border-t-0 md:border-l border-slate-200 flex-col overflow-hidden min-h-0 shadow-[-4px_0_20px_rgba(0,0,0,0.03)] relative ${
             mobileTab === 'catalog' ? 'hidden md:flex' : 'flex'}`}
             style={!budgetExpanded && typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: cartWidth, maxWidth: cartWidth } : undefined}
           >
@@ -1378,7 +1378,7 @@ const Presupuestador2 = ({ currentUser, logo, incomingProject, onProjectConsumed
             </div>
 
             {/* Líneas */}
-            <div ref={cartListRef} className="flex-1 overflow-y-auto px-3 py-2">
+            <div ref={cartListRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
               {cart.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center text-slate-300 py-10">
                   <Receipt size={44} className="mb-2 opacity-50" />

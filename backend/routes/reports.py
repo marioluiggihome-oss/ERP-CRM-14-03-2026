@@ -96,9 +96,22 @@ async def generate_rentabilidad_report(
         fichas_cursor = db["sale_fichas"].find({})
         fichas = await fichas_cursor.to_list(length=1000)
 
+        # Coste EFECTIVO de una linea (alineado con Rentabilidad): en un ABONO
+        # (venta < 0) el coste resta en negativo para que el margen sea el neto
+        # (suma y resta), no la perdida total.
+        def _coste_ef(line):
+            v = float(line.get("venta", 0) or 0)
+            c = float(line.get("coste", 0) or 0)
+            return -abs(c) if v < 0 else c
+
         # Aplicar filtros
         filtered_fichas = []
         for ficha in fichas:
+            # Documentos CONVERTIDOS (pedido->factura, etc.): su importe vive en el
+            # documento de destino; incluirlos duplicaria las lineas (igual que en
+            # la pantalla de Rentabilidad, se excluyen de los totales).
+            if ficha.get("convertidoAId"):
+                continue
             # Filtro por fecha
             ficha_fecha = ficha.get("fecha", "")
             if fecha_desde and ficha_fecha < fecha_desde:
@@ -166,8 +179,8 @@ async def generate_rentabilidad_report(
                     "lines": filtered_lines,
                     "totals": {
                         "venta": sum(l.get("venta", 0) for l in filtered_lines),
-                        "coste": sum(l.get("coste", 0) for l in filtered_lines),
-                        "margen": sum(l.get("margen", 0) for l in filtered_lines),
+                        "coste": sum(_coste_ef(l) for l in filtered_lines),
+                        "margen": sum((float(l.get("venta", 0) or 0) - _coste_ef(l)) for l in filtered_lines),
                     }
                 }
                 # % unificado = incremento sobre coste (margen / coste)
@@ -200,9 +213,11 @@ async def generate_rentabilidad_report(
                 cat = classify_line(line.get("concepto", ""))
                 if cat not in categorias:
                     categorias[cat] = {"venta": 0, "coste": 0, "margen": 0, "count": 0}
-                categorias[cat]["venta"] += line.get("venta", 0)
-                categorias[cat]["coste"] += line.get("coste", 0)
-                categorias[cat]["margen"] += line.get("margen", 0)
+                _v = float(line.get("venta", 0) or 0)
+                _ce = _coste_ef(line)
+                categorias[cat]["venta"] += _v
+                categorias[cat]["coste"] += _ce
+                categorias[cat]["margen"] += (_v - _ce)
                 categorias[cat]["count"] += 1
         
         # Análisis por cliente
@@ -247,16 +262,16 @@ async def generate_rentabilidad_report(
                 "totalCoste": round(total_coste, 2),
                 "totalMargen": round(total_margen, 2),
                 # % unificado = incremento sobre coste (margen / coste)
-                "margenPct": round((total_margen / total_coste * 100) if total_coste > 0 else 0, 1),
+                "margenPct": round((total_margen / total_coste * 100) if total_coste > 0 else 0, 2),
                 "numFichas": len(filtered_fichas),
                 "numLineas": total_lines,
             },
             "byCategory": [
-                {"categoria": k, **v, "pctTotal": round(v["venta"] / total_venta * 100, 1) if total_venta > 0 else 0}
+                {"categoria": k, **v, "pctTotal": round(v["venta"] / total_venta * 100, 2) if total_venta > 0 else 0}
                 for k, v in sorted(categorias.items(), key=lambda x: x[1]["venta"], reverse=True)
             ],
             "byClient": [
-                {"cliente": k, **v, "pctTotal": round(v["venta"] / total_venta * 100, 1) if total_venta > 0 else 0}
+                {"cliente": k, **v, "pctTotal": round(v["venta"] / total_venta * 100, 2) if total_venta > 0 else 0}
                 for k, v in sorted(clientes.items(), key=lambda x: x[1]["venta"], reverse=True)
             ],
             "fichas": filtered_fichas,
