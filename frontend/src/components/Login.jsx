@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LogIn, User as UserIcon, Key, ShieldAlert, Loader, Building2, Mail, Phone, MapPin, Send, CheckCircle, ArrowLeft, Shield } from 'lucide-react';
 import Logo from './Logo';
+import CarpinterLogo from './CarpinterLogo';
 import { login } from '../services/authService';
 import { settingsAPI } from '../services/api';
 import RegisterForm from './RegisterForm';
