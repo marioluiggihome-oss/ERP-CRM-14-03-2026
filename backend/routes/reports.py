@@ -113,9 +113,10 @@ async def generate_rentabilidad_report(
                 continue
             
             # Filtro por cliente: casa por NOMBRE o por CÓDIGO. Acepta VARIOS
-            # clientes separados por coma; basta con que case cualquiera de ellos.
+            # clientes separados por '|' (no por coma, porque muchos nombres de
+            # empresa la llevan: "... MONTELLANO, S.L."). Casa cualquiera de ellos.
             if cliente:
-                queries = [c.lower().strip() for c in cliente.split(",") if c.strip()]
+                queries = [c.lower().strip() for c in cliente.split("|") if c.strip()]
                 ficha_cliente = ficha.get("cliente", "").lower()
                 ficha_cod = str(ficha.get("clienteCodigo", "") or "").lower()
                 if queries and not any(q in ficha_cliente or q in ficha_cod for q in queries):

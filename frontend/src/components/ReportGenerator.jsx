@@ -27,19 +27,19 @@ const ReportGenerator = ({ onOpenDocument }) => {
     sort_order: 'desc',
   });
 
-  // Multi-cliente: filters.cliente guarda los clientes separados por coma; aquí
-  // el texto del cuadro de añadir y helpers para gestionar los chips.
+  // Multi-cliente: filters.cliente guarda los clientes separados por '|' (NO por
+  // coma, porque muchos nombres la llevan: "... MONTELLANO, S.L.").
   const [clienteInput, setClienteInput] = useState('');
-  const clientesSel = (filters.cliente || '').split(',').map(s => s.trim()).filter(Boolean);
+  const clientesSel = (filters.cliente || '').split('|').map(s => s.trim()).filter(Boolean);
   const addCliente = (nombre) => {
     const n = (nombre || '').trim();
     if (!n) return;
     if (clientesSel.some(c => c.toLowerCase() === n.toLowerCase())) { setClienteInput(''); return; }
-    setFilters(prev => ({ ...prev, cliente: [...clientesSel, n].join(', ') }));
+    setFilters(prev => ({ ...prev, cliente: [...clientesSel, n].join(' | ') }));
     setClienteInput('');
   };
   const removeCliente = (nombre) => {
-    setFilters(prev => ({ ...prev, cliente: clientesSel.filter(c => c !== nombre).join(', ') }));
+    setFilters(prev => ({ ...prev, cliente: clientesSel.filter(c => c !== nombre).join(' | ') }));
   };
 
   // Opciones de filtros disponibles
