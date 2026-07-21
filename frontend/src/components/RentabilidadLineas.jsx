@@ -1339,9 +1339,12 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
               const tt = f.totals || totals(f.lines);
               // Alerta de margen bajo (<15%) solo tiene sentido si hay venta y coste registrados.
               const alertaMargen = tt.venta > 0 && tt.coste > 0 && tt.margenPct < 15;
-              // Margen 0 o negativo: aviso SIEMPRE visible (borde rojo + icono) para no dar
-              // por bueno un documento sin margen. Se resalta aunque el modo revisión esté off.
-              const margenCero = (Number(tt.margen) || 0) <= 0;
+              // Los ABONOS (venta <= 0) tienen margen negativo POR NATURALEZA (nota de
+              // crédito / devolución) — no son un error, así que no se marcan en rojo.
+              const esAbono = (Number(tt.venta) || 0) <= 0;
+              // Margen 0 o negativo (que NO sea abono): aviso SIEMPRE visible (borde rojo +
+              // icono) para no dar por bueno un documento de venta sin margen.
+              const margenCero = !esAbono && (Number(tt.margen) || 0) <= 0;
               // Ya convertida a otro documento: se atenua porque su importe ya no cuenta
               // en los totales (vive en el documento de destino), evita doble lectura.
               const yaConvertida = !!f.convertidoAId;
@@ -1350,7 +1353,9 @@ const RentabilidadLineas = ({ currentUser, openRef, onOpenedRef, onBackToReport 
                   <td className="p-3 font-black text-indigo-700">
                     {margenCero
                       ? <span title="Margen 0 o negativo — revisar antes del visto bueno" className="inline-block mr-1 text-red-600">⚠</span>
-                      : alertaMargen && <span title="Margen bajo (<15%)" className="inline-block mr-1 text-red-500">⚠</span>}
+                      : esAbono
+                        ? <span title="Abono / nota de crédito (venta ≤ 0): el margen negativo es normal" className="inline-block mr-1 px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[9px] font-black align-middle">ABONO</span>
+                        : alertaMargen && <span title="Margen bajo (<15%)" className="inline-block mr-1 text-red-500">⚠</span>}
                     {f.ref || '-'}
                     {f.origenRef && <button type="button" onClick={(e) => { e.stopPropagation(); irADocumento(f.origenType, f.origenRef); }} title="Ir al documento de origen" className="block text-[9px] font-bold text-slate-400 hover:text-indigo-600 hover:underline mt-0.5">↑ {(f.origenType || '').charAt(0).toUpperCase() + (f.origenType || '').slice(1)} {f.origenRef}</button>}
                     {f.convertidoARef && <button type="button" onClick={(e) => { e.stopPropagation(); irADocumento(f.convertidoAType, f.convertidoARef); }} title="Ir al documento de destino" className="block text-[9px] font-bold text-emerald-600 hover:text-emerald-800 hover:underline mt-0.5">→ {(f.convertidoAType || '').charAt(0).toUpperCase() + (f.convertidoAType || '').slice(1)} {f.convertidoARef}</button>}
