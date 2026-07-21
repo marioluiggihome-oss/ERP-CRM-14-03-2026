@@ -104,7 +104,6 @@ function Nav({ onEnter }) {
           ))}
         </nav>
         <div className="nav-cta">
-          <a href="#acceso" onClick={enter} className="btn-ghost" style={{ color: scrolled ? "#C4622D" : "#F5F0E7", borderColor: scrolled ? "rgba(196,98,45,.35)" : "rgba(245,240,231,.3)" }}>Acceder</a>
           <a href="#acceso" onClick={enter} className="btn-solid">Acceder al programa</a>
         </div>
         <button className="nav-burger" onClick={() => setOpen(!open)} aria-label="Menú" style={{ color: scrolled ? "#201A14" : "#F5F0E7" }}>

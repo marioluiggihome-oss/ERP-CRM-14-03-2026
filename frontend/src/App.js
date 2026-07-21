@@ -762,7 +762,8 @@ const App = () => {
     _u.isAdmin || _u.isGerente || _u.isDirectorComercial || _u.isDirectorFabrica ||
     _u.isResponsableDelegacion || _u.isRepresentative || _u.isTienda || _u.isFabrica ||
     _u.isMontador || _u.canAccessCRM || _u.canAccessFabrica || _u.canAccessArmarios ||
-    _u.canUseDigitalizador || _u.canAccessMontajes || (_u.allowedModules && _u.allowedModules.length > 0)
+    _u.canUseDigitalizador || _u.canAccessMontajes || (_u.allowedModules && _u.allowedModules.length > 0) ||
+    _u.canManageCarpinteroUsers  // Admin de división carpinteros: entra a la app completa con panel Master
   );
   if (state.currentUser?.isPrescriptor && !_hasOtherAccess) {
     return (
