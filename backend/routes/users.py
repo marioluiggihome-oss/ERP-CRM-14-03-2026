@@ -300,12 +300,19 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_user_ma
 # Rutas con dos segmentos para no chocar con /{user_id}.
 # ---------------------------------------------------------------------------
 async def require_carpintero_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
-    """Admin de la division carpinteros (o gestor de usuarios global)."""
+    """Admin de la division carpinteros (o gestor de usuarios global).
+    El JWT no lleva los flags de carpintero, asi que se cargan de la BD."""
     user = await require_authenticated_user(credentials)
     if _is_user_manager(user):
         return user
-    if user.get("isCarpintero") and user.get("canManageCarpinteroUsers"):
-        return user
+    full = await db.users.find_one(
+        {"id": user.get("id")},
+        {"_id": 0, "id": 1, "username": 1, "isCarpintero": 1, "canManageCarpinteroUsers": 1,
+         "carpinteroLandingUrl": 1, "canUseCascos": 1},
+    ) or {}
+    if full.get("isCarpintero") and full.get("canManageCarpinteroUsers"):
+        # Fusiona los flags reales para que los endpoints tengan id + landing + permisos.
+        return {**user, **full}
     raise HTTPException(status_code=403, detail="Se requiere permiso de gestion de usuarios de la division")
 
 

@@ -274,6 +274,7 @@ const App = () => {
           },
           brandColor: settings.brandColor || DEFAULT_BRAND_COLOR,
           companyName: settings.companyName || '',
+          marcaBlanca: !!settings.marcaBlanca,
           logo: settings.logo || null
         }));
       } catch (err) {
@@ -357,6 +358,7 @@ const App = () => {
             tarifa: settings.tarifa !== undefined ? settings.tarifa : prev.tarifa,
             ivaPercent: settings.ivaPercent !== undefined ? settings.ivaPercent : prev.ivaPercent,
             companyName: settings.companyName ?? prev.companyName,
+            marcaBlanca: settings.marcaBlanca ?? prev.marcaBlanca,
             companyLogo: settings.logo ?? prev.companyLogo,
             brandColor: settings.brandColor ?? prev.brandColor,
           } : {}),
@@ -962,6 +964,10 @@ const App = () => {
             >
               {state.logo ? (
                 <img src={state.logo} alt="logo" className="w-full h-full object-contain p-1" />
+              ) : state.marcaBlanca ? (
+                <div className="w-full h-full bg-indigo-600 flex items-center justify-center font-black text-white text-lg">
+                  {(state.companyName || '').trim().charAt(0).toUpperCase() || '·'}
+                </div>
               ) : (
                 <div className="w-full h-full bg-brand flex items-center justify-center font-black text-white italic text-xl">L</div>
               )}
