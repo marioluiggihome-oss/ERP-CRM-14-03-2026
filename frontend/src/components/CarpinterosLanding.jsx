@@ -24,7 +24,7 @@ const NAV_LINKS = [
 const FEATURES = [
   { icon: FileText, cota: "A", title: "Presupuestos al milímetro", desc: "Configura materiales, herrajes, mano de obra y márgenes una vez. Después, cada presupuesto sale en minutos y el cliente lo firma desde el móvil." },
   { icon: ScanLine, cota: "B", title: "Del boceto a la ficha", desc: "Digitaliza medidas y planos y conviértelos en despiece y órdenes de taller. Menos errores de corte, menos madera perdida." },
-  { icon: Boxes, cota: "C", title: "Cascos, puertas y herraje", desc: "Catálogos de cascos y tarifas (ACB, Montakit…) con descuentos de compra ya calculados. Sabes tu coste real de cada mueble." },
+  { icon: Boxes, cota: "C", title: "Cascos, puertas y herraje", desc: "Catálogos de cascos y tarifas de proveedor con los descuentos de compra ya calculados. Sabes tu coste real de cada mueble." },
   { icon: TrendingUp, cota: "D", title: "Rentabilidad por obra", desc: "Coste, venta y margen de cada proyecto en una pantalla. Por fin sabes cuánto ganas en cada cocina antes de cortar una tabla." },
   { icon: Receipt, cota: "E", title: "Facturación en regla", desc: "Numeración automática por delegación, exportación a PDF y cumplimiento normativo. La parte aburrida, resuelta." },
   { icon: Ruler, cota: "F", title: "Tu marca, tu dominio", desc: "Portal y web propia bajo tu nombre. La herramienta trabaja para ti; el cliente ve tu taller, no el nuestro." },
