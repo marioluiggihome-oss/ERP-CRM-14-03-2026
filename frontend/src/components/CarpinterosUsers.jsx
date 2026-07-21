@@ -6,13 +6,16 @@
  * defecto de la división. Se abre desde el portal carpinteros.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Plus, RefreshCw, Trash2, UserCheck, UserX, Users } from 'lucide-react';
+import { X, Plus, RefreshCw, Trash2, UserCheck, UserX, Users, BarChart3, Zap, Clock } from 'lucide-react';
 import { authHeaders } from '../services/api';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
+const fechaCorta = (s) => s ? new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
 
 export default function CarpinterosUsers({ onClose }) {
+  const [view, setView] = useState('usuarios'); // 'usuarios' | 'stats'
   const [users, setUsers] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [nuevo, setNuevo] = useState({ username: '', password: '', clientName: '' });
   const [creating, setCreating] = useState(false);
@@ -28,6 +31,15 @@ export default function CarpinterosUsers({ onClose }) {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const r = await fetch(`${BASE}/api/users/carpinteros/stats`, { headers: authHeaders() });
+      const d = await r.json();
+      setStats(d.success ? d : null);
+    } catch { /* noop */ }
+  }, []);
+  useEffect(() => { if (view === 'stats') loadStats(); }, [view, loadStats]);
 
   const crear = async () => {
     setError('');
@@ -69,10 +81,46 @@ export default function CarpinterosUsers({ onClose }) {
     <div className="fixed inset-0 z-[9998] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 bg-stone-900 text-white">
-          <h3 className="font-black flex items-center gap-2"><Users size={18} style={{ color: '#D4A373' }} /> Usuarios de mi división</h3>
+          <h3 className="font-black flex items-center gap-2"><Users size={18} style={{ color: '#D4A373' }} /> Mi división</h3>
           <button onClick={onClose} className="p-1.5 text-stone-400 hover:text-white"><X size={18} /></button>
         </div>
 
+        {/* Conmutador */}
+        <div className="flex gap-1 px-4 pt-3 bg-stone-50 border-b border-stone-200">
+          <button onClick={() => setView('usuarios')} className={`px-4 py-2 rounded-t-lg text-xs font-black flex items-center gap-1.5 ${view === 'usuarios' ? 'bg-white text-stone-800 border border-b-0 border-stone-200' : 'text-stone-400'}`}><Users size={13} /> Usuarios</button>
+          <button onClick={() => setView('stats')} className={`px-4 py-2 rounded-t-lg text-xs font-black flex items-center gap-1.5 ${view === 'stats' ? 'bg-white text-stone-800 border border-b-0 border-stone-200' : 'text-stone-400'}`}><BarChart3 size={13} /> Estadísticas</button>
+        </div>
+
+        {view === 'stats' ? (
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-3"><div className="text-[10px] font-black text-stone-400 uppercase">Usuarios</div><div className="text-2xl font-black text-stone-800">{stats?.total ?? '—'}</div></div>
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-3"><div className="text-[10px] font-black text-stone-400 uppercase flex items-center gap-1"><Clock size={11} /> Con actividad</div><div className="text-2xl font-black text-emerald-600">{stats?.conActividad ?? '—'}</div></div>
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-3"><div className="text-[10px] font-black text-stone-400 uppercase flex items-center gap-1"><Zap size={11} /> Renders/mes</div><div className="text-2xl font-black text-amber-600">{stats?.rendersTotales ?? '—'}</div></div>
+            </div>
+            <div className="border border-stone-200 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-stone-100 text-stone-500"><tr>
+                  <th className="text-left p-2 text-[10px] font-black uppercase">Usuario</th>
+                  <th className="text-left p-2 text-[10px] font-black uppercase">Último acceso</th>
+                  <th className="text-right p-2 text-[10px] font-black uppercase">Accesos</th>
+                  <th className="text-right p-2 text-[10px] font-black uppercase">Renders/mes</th>
+                </tr></thead>
+                <tbody>
+                  {(stats?.items || []).map(it => (
+                    <tr key={it.id} className={`border-t border-stone-100 ${it.isActive === false ? 'opacity-50' : ''}`}>
+                      <td className="p-2"><span className="font-bold text-stone-700 text-xs">{it.clientName || it.username}</span>{it.esAdmin && <span className="ml-1 text-[9px] text-amber-700">admin</span>}</td>
+                      <td className="p-2 text-xs text-stone-500">{fechaCorta(it.ultimoLogin)}</td>
+                      <td className="p-2 text-right text-xs text-stone-600 font-bold">{it.logins}</td>
+                      <td className="p-2 text-right text-xs text-amber-700 font-bold">{it.rendersMes}</td>
+                    </tr>
+                  ))}
+                  {(!stats?.items || stats.items.length === 0) && <tr><td colSpan={4} className="p-6 text-center text-stone-400 text-sm">Sin datos todavía.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (<>
         {/* Alta */}
         <div className="p-4 bg-stone-50 border-b border-stone-200">
           <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wide mb-2">Nuevo usuario / cliente</p>
@@ -117,6 +165,7 @@ export default function CarpinterosUsers({ onClose }) {
             ))}
           </div>
         </div>
+        </>)}
       </div>
     </div>
   );
