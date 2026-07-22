@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp } from 'lucide-react';
+import { Mic, MicOff, Send, Image, Loader, Palette, RotateCcw, RotateCw, Download, Maximize2, X, Volume2, Wand2, CheckCircle, Save, FolderOpen, FileText, Trash2, Plus, ChevronLeft, ChevronRight, Upload, Share2, BookOpen, Layers, Sparkles, PlugZap, Droplet, Waves, Flame, Lightbulb, Tv, Wifi, Fan, Lamp } from 'lucide-react';
 import { getToken } from '../services/api';
 import { DOOR_FINISHES, MV_TARIFFS } from '../constants';
 import { avgEurPerMl } from '../utils/pricing';
@@ -504,6 +504,11 @@ export default function AIRenderStudio({ state, setState }) {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, []);
   const [imgError, setImgError] = useState(false);    // la imagen del render no cargó
+  // Visor orbital 360º: vistas de la misma cocina a distintos ángulos, girables con el ratón
+  const [orbitFrames, setOrbitFrames] = useState([]);   // [dataURL] izquierda→derecha
+  const [orbitIndex, setOrbitIndex] = useState(0);
+  const [orbitLoading, setOrbitLoading] = useState(false);
+  const [orbitOn, setOrbitOn] = useState(false);
   // Visor interactivo: zoom + pan
   const [interactiveMode, setInteractiveMode] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -563,6 +568,30 @@ export default function AIRenderStudio({ state, setState }) {
       } else setError(d.detail || d.error || 'No se pudieron detectar las instalaciones.');
     } catch { setError('Error al detectar instalaciones.'); }
     finally { setDetecting(false); }
+  };
+
+  // Genera un GIRO 360º: varias vistas de la misma cocina a distintos ángulos para
+  // moverla con el ratón (arrastrar izquierda/derecha).
+  const generarOrbita = async () => {
+    const src = currentImage(); if (!src || orbitLoading) return;
+    setOrbitLoading(true); setError(null);
+    try {
+      const dataUrl = await imageToDataUrl(src);
+      const r = await fetch(`${API_URL}/api/ai-engine/render/orbit`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({ referenceImage: dataUrl, projectType: tipo3d, n: 6 }),
+      });
+      const d = await r.json();
+      if (d.success && (d.images || []).length >= 2) {
+        setOrbitFrames(d.images); setOrbitIndex(Math.floor(d.images.length / 2)); setOrbitOn(true);
+        setInteractiveMode(false);
+      } else if (r.status === 402) {
+        setError(d.detail || 'Sin créditos de IA para generar el giro 360º.');
+      } else {
+        setError(d.detail || d.error || 'No se pudo generar el giro. Inténtalo de nuevo.');
+      }
+    } catch { setError('Error al generar el giro 360º.'); }
+    finally { setOrbitLoading(false); }
   };
 
   // Coloca una marca de instalación en el punto pulsado del render (% del box).
@@ -699,6 +728,11 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Las imágenes del render se sirven por el proxy interno (marca blanca). Como
   // un <img> no puede enviar cabeceras, el token JWT viaja como query param.
+  // Al cambiar el render base, descarta el giro 360º anterior (era de otra cocina).
+  useEffect(() => {
+    setOrbitFrames([]); setOrbitOn(false); setOrbitIndex(0);
+  }, [renderResult?.result?.images?.[0]]); // eslint-disable-line
+
   const assetSrc = (path) => {
     if (!path) return path;
     if (typeof path === 'string' && path.startsWith('/api/ai-engine/asset')) {
@@ -2286,8 +2320,27 @@ export default function AIRenderStudio({ state, setState }) {
                       <Image size={14} /> Comparar
                     </button>
                   )}
+                  {orbitFrames.length >= 2 ? (
+                    <button
+                      onClick={() => setOrbitOn(v => !v)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${orbitOn ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                      title="Visor 360º: arrastra para girar la cocina"
+                    >
+                      <RotateCw size={14} /> 360º
+                    </button>
+                  ) : (
+                    <button
+                      onClick={generarOrbita}
+                      disabled={orbitLoading}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 transition-colors"
+                      title="Genera un giro 360º de la cocina para moverla con el ratón (consume créditos de IA)"
+                    >
+                      {orbitLoading ? <Loader size={14} className="animate-spin" /> : <RotateCw size={14} />}
+                      {orbitLoading ? 'Generando…' : 'Generar 360º'}
+                    </button>
+                  )}
                   <button
-                    onClick={() => { setInteractiveMode(v => !v); if (!interactiveMode) { setZoom(1); setPanX(0); setPanY(0); } }}
+                    onClick={() => { setInteractiveMode(v => !v); setOrbitOn(false); if (!interactiveMode) { setZoom(1); setPanX(0); setPanY(0); } }}
                     className={`p-2 rounded-lg transition-colors ${interactiveMode ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}
                     title={interactiveMode ? 'Desactivar visor interactivo' : 'Visor interactivo (zoom + pan)'}
                   >
@@ -2388,7 +2441,41 @@ export default function AIRenderStudio({ state, setState }) {
                 onWheel={e => { if (interactiveMode) { e.preventDefault(); setZoom(z => Math.max(0.5, Math.min(5, z + (e.deltaY > 0 ? -0.2 : 0.2)))); } }}
                 onMouseDown={e => { if (interactiveMode && e.button === 0) { e.preventDefault(); const startX = e.clientX - panX; const startY = e.clientY - panY; const onMove = (ev) => { setPanX(ev.clientX - startX); setPanY(ev.clientY - startY); }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); } }}
               >
-                {renderResult?.result?.images?.[0] && !imgError ? (
+                {orbitOn && orbitFrames.length >= 2 ? (
+                  <div
+                    className="w-full h-full flex items-center justify-center select-none"
+                    style={{ cursor: 'ew-resize', touchAction: 'none' }}
+                    onMouseDown={e => {
+                      e.preventDefault();
+                      const startX = e.clientX; const startIdx = orbitIndex; const N = orbitFrames.length;
+                      const step = Math.max(18, (e.currentTarget.offsetWidth || 600) / (N * 2)); // px por fotograma
+                      const onMove = (ev) => {
+                        const delta = Math.round((ev.clientX - startX) / step);
+                        let i = (startIdx + delta) % N; if (i < 0) i += N;
+                        setOrbitIndex(i);
+                      };
+                      const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                      window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+                    }}
+                  >
+                    <img
+                      src={assetSrc(orbitFrames[orbitIndex])}
+                      alt={`Vista ${orbitIndex + 1} de ${orbitFrames.length}`}
+                      draggable={false}
+                      className="max-w-full max-h-full object-contain pointer-events-none"
+                    />
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/55 backdrop-blur px-3 py-1.5 rounded-full">
+                      <RotateCw size={13} className="text-white/80" />
+                      <span className="text-[11px] font-bold text-white">Arrastra para girar · {orbitIndex + 1}/{orbitFrames.length}</span>
+                    </div>
+                    <div className="absolute bottom-3 right-3 flex gap-1">
+                      {orbitFrames.map((_, i) => (
+                        <button key={i} onClick={() => setOrbitIndex(i)}
+                          className={`w-2 h-2 rounded-full transition-all ${i === orbitIndex ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'}`} />
+                      ))}
+                    </div>
+                  </div>
+                ) : renderResult?.result?.images?.[0] && !imgError ? (
                   <>
                   <img
                     id="render-annot-img"

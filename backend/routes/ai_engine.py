@@ -316,6 +316,56 @@ async def generate_render_compose(request: RenderComposeRequest, user=Depends(re
     return result
 
 
+class OrbitRequest(BaseModel):
+    referenceImage: str = Field(..., description="Render base (base64/data URL) del que orbitar")
+    referenceMime: Optional[str] = Field(None, description="MIME de la imagen base")
+    projectType: Optional[str] = Field(None, description="cocina|armario|bano|otro")
+    n: Optional[int] = Field(6, description="Número de vistas (2-6)")
+    provider: Optional[str] = None
+
+
+@ai_engine_router.post("/render/orbit")
+async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth)):
+    """Genera varias vistas de la MISMA cocina a distintos ángulos, a partir de un
+    render base, para un visor orbital (girar con el ratón). Consume créditos de IA
+    (una vista = un render)."""
+    n = max(2, min(int(request.n or 6), 6))
+    # Enforcement de créditos: cada vista cuesta un render. Bloquea solo si no hay
+    # créditos suficientes; el contador nunca bloquea por error interno.
+    try:
+        from services.ai_usage import get_user_credits, consume_credits
+        credits = await get_user_credits(user)
+        if not credits.get("ilimitado"):
+            restantes = int(credits.get("restantes", 0) or 0)
+            if restantes <= 0:
+                raise HTTPException(status_code=402, detail="Sin créditos de IA para generar el giro 360º.")
+            n = min(n, restantes)
+        for _ in range(n):
+            await consume_credits(user, "render")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+    try:
+        from services.activity_tracker import get_tracker, ActivityType
+        _tr = get_tracker()
+        if _tr and user and user.get("id"):
+            await _tr.track(user.get("id"), user.get("username") or "", ActivityType.AI_TELEMETRY, {"kind": "orbit", "n": n})
+    except Exception:
+        pass
+
+    service = get_render_service()
+    result = await service.generate_orbit_views(
+        reference_image=request.referenceImage,
+        reference_mime=request.referenceMime,
+        project_type=request.projectType,
+        n=n,
+        provider=request.provider,
+    )
+    logger.info(f"Orbit 360º por {user.get('username')}: {result.get('count', 0)} vistas")
+    return result
+
+
 @ai_engine_router.post("/render/params")
 async def generate_render_params(request: RenderParamsRequest, user=Depends(require_auth)):
     """
