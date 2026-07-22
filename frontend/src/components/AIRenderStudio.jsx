@@ -380,6 +380,8 @@ export default function AIRenderStudio({ state, setState }) {
   const canUseRender360 = isMaster || state?.currentUser?.canUseRender360 === true;
   // Permiso específico para exportar a 4K (o rol master).
   const canUse4K = isMaster || state?.currentUser?.canUse4K === true;
+  // Permiso específico para el amueblado virtual (o rol master).
+  const canUseAmueblado = isMaster || state?.currentUser?.canUseAmueblado === true;
   // Permisos por partidas: qué tipos de mueble puede renderizar este usuario.
   // Admin o lista vacía/ausente = todos permitidos (compatibilidad hacia atrás).
   const tiposPermitidos = (() => {
@@ -1692,6 +1694,31 @@ export default function AIRenderStudio({ state, setState }) {
     }
   };
 
+  // ─── Amueblado virtual: diseñar el mueble SOBRE la foto de la estancia real ──
+  const amueblarEstanciaReal = async () => {
+    if (!refImage) { setError('Sube primero la FOTO de la estancia real (botón «Subir imagen(es) de referencia»).'); return; }
+    if (isGenerating) return;
+    setIsGenerating(true); setError(null);
+    try {
+      const response = await fetch(`${API_URL}/api/ai-engine/render`, {
+        method: 'POST', headers: getAuthHeaders(),
+        body: JSON.stringify({
+          description: conMedidas(description.trim()) || 'cocina moderna funcional bien equipada',
+          style: params.style, provider: providerOf(), projectType: tipo3d,
+          referenceImage: refImage, roomPhoto: true,
+        }),
+      });
+      if (response.status === 402) { const d = await response.json().catch(() => ({})); setError(d.detail || 'Sin créditos de IA.'); return; }
+      const data = await response.json();
+      if (data.success) {
+        const merged = { ...data, description: 'Amueblado virtual sobre estancia real' };
+        setRenderResult(merged);
+        setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
+      } else setError(data.error || 'No se pudo amueblar la estancia.');
+    } catch { setError('Error al amueblar la estancia.'); }
+    finally { setIsGenerating(false); fetchCredits(); }
+  };
+
   // ─── Generar render por parámetros ──────────────────────────────────────
   const handleGenerateParams = async () => {
     setIsGenerating(true);
@@ -1920,6 +1947,15 @@ export default function AIRenderStudio({ state, setState }) {
                         </div>
                       ))}
                     </div>
+                    {/* Amueblado virtual: botón específico (solo con permiso). */}
+                    {canUseAmueblado && (
+                    <button onClick={amueblarEstanciaReal} disabled={isGenerating || !refImage}
+                      title="Trata la foto como la estancia REAL (vacía o a reformar) y diseña el mueble dentro, respetando paredes, ventanas, suelo y perspectiva."
+                      className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[12px] font-black text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 shadow-sm">
+                      {isGenerating ? <Loader size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                      Amueblar esta estancia real (foto)
+                    </button>
+                    )}
                   </div>
                 )}
                 {/* Medidas de la estancia — arriba, junto a la subida de imagen (a mano).
