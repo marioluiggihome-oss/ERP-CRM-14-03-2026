@@ -1567,10 +1567,27 @@ async def generar_alzado(payload: ProyectoBase):
         import matplotlib.patches as patches
 
         C_LINE = "#2C2C2C"; C_COTA = "#B03A2E"; C_BG = "#FFFFFF"; C_GRID = "#E6E2DA"
-        ALTOS_Y0, ALTOS_Y1, ENC_Y, ZOC_Y, COL_Y = 140, 210, 90, 10, 220
+        C_FRENTE = "#8A6D3B"; C_ENCH = "#1F6FB2"
+        ALTOS_Y0, ALTOS_Y1, ENC_Y, ZOC_Y, COL_Y = 140, 210, 86, 10, 220
+        ENC_TOP = 90  # cara superior de la encimera (encimera de 4 cm)
         COLS = {"frigorifico", "columna_hornos", "despensa", "congelador"}
         ALTOS = {"microondas"}  # la campana se dibuja SIEMPRE sobre la placa (abajo)
         HOB = {"placa", "cocina", "vitroceramica", "vitro", "induccion", "placa_induccion", "coccion", "vitroceramicamica"}
+        DRAWERS = {"cajonera", "cajones", "gavetas", "cajon", "gaveta", "cacerolero", "cubertero"}
+        SINK = {"fregadero", "seno", "lavabo"}
+
+        def _frentes_gavetas(body_h, label_tipo):
+            """Devuelve las alturas (cm) de los frentes de una cajonera, de arriba
+            abajo. Cajón superior más bajo + gavetas iguales."""
+            t = (label_tipo or "").lower()
+            n = 3
+            for k in ("4", "cuatro"):
+                if k in t: n = 4
+            for k in ("2", "dos"):
+                if k in t and "cajon" in t: n = 3  # 2 gavetas + 1 cajon
+            top = round(body_h * 0.19, 1)           # cajón superior ~19%
+            resto = round((body_h - top) / (n - 1), 1)
+            return [top] + [resto] * (n - 1)
 
         dist = payload.distribucion_estructurada
         paredes = (dist.paredes if dist and dist.paredes else None) or [{"nombre": "Pared principal", "ancho": 400, "alto": 240}]
@@ -1624,9 +1641,20 @@ async def generar_alzado(payload: ProyectoBase):
                 elif tipo in ALTOS:
                     wire(ax, x, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0)
                     ax.text(x + w / 2, (ALTOS_Y0 + ALTOS_Y1) / 2, label, ha="center", va="center", fontsize=7)
+                elif tipo in DRAWERS:
+                    body_h_cm = ENC_Y - ZOC_Y  # altura útil del cuerpo (cm de dibujo)
+                    wire(ax, x, ZOC_Y, w, body_h_cm)
+                    fronts = _frentes_gavetas(body_h_cm, label)
+                    yy = ENC_Y
+                    for fh in fronts:
+                        yy -= fh
+                        ax.plot([x, x + w], [yy, yy], color=C_FRENTE, lw=0.8, zorder=3)
+                        ax.text(x + w / 2, yy + fh / 2, f"{fh:g}", ha="center", va="center",
+                                fontsize=6, color=C_FRENTE)
+                    ax.text(x + w / 2, ZOC_Y - 3, label, ha="center", va="top", fontsize=6.5, color=C_LINE)
                 else:
                     wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
-                    ax.text(x + w / 2, (ZOC_Y + ENC_Y) / 2, label, ha="center", va="center", fontsize=7)
+                    ax.text(x + w / 2, (ZOC_Y + ENC_Y) / 2, f"{label}\n{w}×{ENC_Y - ZOC_Y}", ha="center", va="center", fontsize=6.5)
                     if tipo in HOB:
                         hob_zones.append((x, w))
                         # marca de zona de cocción sobre la encimera
