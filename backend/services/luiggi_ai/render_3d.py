@@ -618,6 +618,73 @@ class Render3DService:
             provider=provider,
         )
 
+    async def generate_orbit_views(
+        self,
+        reference_image: str,
+        reference_mime: Optional[str] = None,
+        project_type: Optional[str] = None,
+        n: int = 6,
+        provider: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Genera VARIAS vistas de la MISMA cocina/mueble desde distintos ángulos de
+        cámara, a partir de un render base, para montar un visor orbital (girar con
+        el ratón). Cada vista reutiliza la imagen base como referencia para mantener
+        la coherencia (misma distribución, materiales, luz…); solo cambia la cámara.
+        Devuelve las imágenes ordenadas de izquierda a derecha."""
+        ref_b64, ref_mime = self._prepare_reference(reference_image, reference_mime)
+        if not ref_b64:
+            return {"success": False, "error": "Falta la imagen base del render."}
+
+        pt = (project_type or "cocina").strip().lower()
+        subject = {
+            "armario": "wardrobe/closet", "bano": "bathroom", "cocina": "kitchen",
+        }.get(pt, "kitchen/furniture")
+
+        # Ángulos orbitales, de la esquina izquierda a la derecha (recorrido continuo).
+        ANGLES = [
+            "from the far LEFT corner of the room, camera rotated about 40 degrees to the left",
+            "from the left, camera rotated about 20 degrees to the left",
+            "a straight-on FRONTAL eye-level view, centered",
+            "from the right, camera rotated about 20 degrees to the right",
+            "from the far RIGHT corner of the room, camera rotated about 40 degrees to the right",
+            "a slightly ELEVATED three-quarter view from the right corner",
+        ]
+        n = max(2, min(int(n or 6), len(ANGLES)))
+        angles = ANGLES[:n]
+
+        images = []
+        for ang in angles:
+            task_prompt = (
+                f"You are given a reference image of an EXISTING {subject} design. "
+                "Re-render the EXACT SAME scene — identical room, layout, modules, "
+                "appliances, sink, hob, hood, colors, materials, finishes, floor, walls, "
+                "windows and lighting — but seen from a DIFFERENT CAMERA ANGLE: "
+                f"{ang}. Only the camera viewpoint changes, as if the viewer walked "
+                "around the room; every object keeps its same identity, position and "
+                "proportions relative to the room. Do NOT redesign, add, remove or move "
+                "anything. Photorealistic result, PBR materials, natural light and "
+                "realistic shadows, 16:9 landscape. No text, watermarks or logos."
+            )
+            try:
+                res = await self._render_with_gemini(
+                    task_prompt, task_prompt, {"space_type": subject, "orbitAngle": ang},
+                    reference_image_base64=ref_b64, reference_mime=ref_mime,
+                )
+            except Exception as e:
+                logger.error(f"orbit view error: {e}")
+                res = None
+            if res and res.get("success"):
+                imgs = (res.get("result") or {}).get("images") or []
+                if imgs:
+                    images.append(imgs[0])
+
+        return {
+            "success": bool(images),
+            "images": images,
+            "count": len(images),
+            "engine": self.config.brand_name,
+        }
+
     async def generate_render_composed(
         self,
         description: str,
