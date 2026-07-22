@@ -1567,7 +1567,7 @@ async def generar_alzado(payload: ProyectoBase):
         import matplotlib.patches as patches
 
         C_LINE = "#2C2C2C"; C_COTA = "#B03A2E"; C_BG = "#FFFFFF"; C_GRID = "#E6E2DA"
-        C_FRENTE = "#8A6D3B"; C_ENCH = "#1F6FB2"
+        C_FRENTE = "#8A6D3B"; C_ENCH = "#1F6FB2"; C_HERRAJE = "#3F3F3F"
         ALTOS_Y0, ALTOS_Y1, ENC_Y, ZOC_Y, COL_Y = 140, 210, 86, 10, 220
         ENC_TOP = 90  # cara superior de la encimera (encimera de 4 cm)
         COLS = {"frigorifico", "columna_hornos", "despensa", "congelador"}
@@ -1608,6 +1608,14 @@ async def generar_alzado(payload: ProyectoBase):
             ax.plot([x, x + w], [y, y + h], color=C_LINE, lw=0.5, ls=":", zorder=3)
             ax.plot([x, x + w], [y + h, y], color=C_LINE, lw=0.5, ls=":", zorder=3)
 
+        # Tiradores (herraje visible por FUERA del mueble).
+        def tirador_h(ax, cx, y, length=13):   # tirador horizontal (frentes de cajón)
+            ax.plot([cx - length / 2, cx + length / 2], [y, y], color=C_HERRAJE,
+                    lw=2.4, zorder=6, solid_capstyle="round")
+        def tirador_v(ax, x, cy, length=15):    # tirador vertical (puertas)
+            ax.plot([x, x], [cy - length / 2, cy + length / 2], color=C_HERRAJE,
+                    lw=2.4, zorder=6, solid_capstyle="round")
+
         def cota_h(ax, x0, x1, y, txt):
             ax.annotate("", xy=(x0, y), xytext=(x1, y),
                         arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
@@ -1638,6 +1646,9 @@ async def generar_alzado(payload: ProyectoBase):
                 if tipo in COLS:
                     wire(ax, x, ZOC_Y, w, COL_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, COL_Y - ZOC_Y)
                     ax.text(x + w / 2, (ZOC_Y + COL_Y) / 2, label, ha="center", va="center", fontsize=7, rotation=90)
+                    # Tiradores verticales de la columna (puerta superior e inferior).
+                    tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.30, length=18)
+                    tirador_v(ax, x + w - 5, ZOC_Y + (COL_Y - ZOC_Y) * 0.72, length=18)
                 elif tipo in ALTOS:
                     wire(ax, x, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0)
                     ax.text(x + w / 2, (ALTOS_Y0 + ALTOS_Y1) / 2, label, ha="center", va="center", fontsize=7)
@@ -1651,10 +1662,15 @@ async def generar_alzado(payload: ProyectoBase):
                         ax.plot([x, x + w], [yy, yy], color=C_FRENTE, lw=0.8, zorder=3)
                         ax.text(x + w / 2, yy + fh / 2, f"{fh:g}", ha="center", va="center",
                                 fontsize=6, color=C_FRENTE)
+                        # Tirador horizontal centrado, junto al canto superior del frente.
+                        tirador_h(ax, x + w / 2, yy + fh - 3, length=min(16, w * 0.5))
                     ax.text(x + w / 2, ZOC_Y - 3, label, ha="center", va="top", fontsize=6.5, color=C_LINE)
                 else:
                     wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y); puerta_x(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y)
                     ax.text(x + w / 2, (ZOC_Y + ENC_Y) / 2, f"{label}\n{w}×{ENC_Y - ZOC_Y}", ha="center", va="center", fontsize=6.5)
+                    # Tirador vertical de la puerta del bajo (salvo bajo placa/cocción).
+                    if tipo not in HOB:
+                        tirador_v(ax, x + w - 5, ENC_Y - 14, length=16)
                     if tipo in HOB:
                         hob_zones.append((x, w))
                         # marca de zona de cocción sobre la encimera
@@ -1674,6 +1690,7 @@ async def generar_alzado(payload: ProyectoBase):
             while x + 30 <= ancho:
                 w = min(60, ancho - x)
                 wire(ax, x, ZOC_Y, w, ENC_Y - ZOC_Y, dash=True)
+                tirador_v(ax, x + w - 5, ENC_Y - 14, length=16)  # puerta del bajo
                 cotas.append((x, x + w, f"{w}"))
                 x += w
             # relleno de altos, saltando columnas y la zona de campana (sobre placa)
@@ -1686,6 +1703,7 @@ async def generar_alzado(payload: ProyectoBase):
                 ocupado_camp = any(hx < x2 + w and hx + hw > x2 for (hx, hw) in hob_zones)
                 if not (ocupado_col or ocupado_camp):
                     wire(ax, x2, ALTOS_Y0, w, ALTOS_Y1 - ALTOS_Y0, dash=True)
+                    tirador_v(ax, x2 + w - 5, ALTOS_Y0 + 12, length=16)  # puerta del alto (tirador abajo)
                 x2 += w
             # encimera y zócalo
             ax.plot([0, ancho], [ENC_Y, ENC_Y], color=C_LINE, lw=2.2, zorder=4)
