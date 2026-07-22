@@ -984,7 +984,7 @@ export default function AIRenderStudio({ state, setState }) {
       // motor vectorial está modelado para COCINA (zonas de cocción, campana…),
       // así que solo se añade en cocina. Es best-effort.
       if (tipo3d === 'cocina') try {
-        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl });
+        const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
         if (dj?.success && dj.distribucion) {
           const extra = await generarPlanosExactos(dj.distribucion);
           if (extra.length) setRenderHistory(prev => [...extra, ...prev].slice(0, 14));
@@ -1005,7 +1005,7 @@ export default function AIRenderStudio({ state, setState }) {
     setEditing(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(img);
-      const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl });
+      const dj = await postJson('/api/estudio-cocinas/detect-distribucion', { imageBase64: dataUrl, medidas });
       if (!dj?.success || !dj.distribucion) { setError(dj?.detail || 'No se pudo deducir la distribución del render para dibujar los planos.'); return; }
       const extra = await generarPlanosExactos(dj.distribucion);
       if (!extra.length) { setError('No se pudieron generar los planos técnicos (respuesta vacía del servicio).'); return; }
