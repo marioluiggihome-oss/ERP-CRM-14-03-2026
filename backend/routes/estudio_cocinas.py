@@ -1617,7 +1617,7 @@ async def generar_alzado(payload: ProyectoBase):
             ancho = int(pared.get("ancho") or 400)
             alto = int(pared.get("alto") or 240)
             ax.set_facecolor(C_BG); ax.set_aspect("equal"); ax.axis("off")
-            ax.set_xlim(-70, ancho + 30); ax.set_ylim(-45, alto + 30)
+            ax.set_xlim(-70, ancho + 55); ax.set_ylim(-45, alto + 30)
             # contorno de pared y líneas guía
             wire(ax, 0, 0, ancho, alto, lw=2)
             for gy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
@@ -1697,6 +1697,31 @@ async def generar_alzado(payload: ProyectoBase):
             for gy, t in ((ZOC_Y, "10"), (ENC_Y, "90"), (ALTOS_Y0, "140"), (ALTOS_Y1, "210"), (alto, str(alto))):
                 ax.text(-10, gy, t, ha="right", va="center", fontsize=7, color=C_COTA)
                 ax.plot([-6, 0], [gy, gy], color=C_COTA, lw=0.8)
+            # cota VERTICAL de alturas (lado derecho): tramos zócalo / bajo / alto
+            xc = ancho + 14
+            def cota_v(y0, y1, txt):
+                ax.annotate("", xy=(xc, y0), xytext=(xc, y1),
+                            arrowprops=dict(arrowstyle="<->", color=C_COTA, lw=0.9))
+                ax.text(xc + 4, (y0 + y1) / 2, txt, ha="left", va="center", fontsize=7, color=C_COTA, rotation=90)
+            for yy in (ZOC_Y, ENC_Y, ALTOS_Y0, ALTOS_Y1):
+                ax.plot([ancho, xc + 2], [yy, yy], color=C_COTA, lw=0.4, ls=":")
+            cota_v(ZOC_Y, ENC_Y, "80")            # cuerpo bajo (10→90 = 80 cm)
+            cota_v(ALTOS_Y0, ALTOS_Y1, "70")      # alto (140→210 = 70 cm)
+            cota_v(0, alto, f"{alto}")            # altura total pared
+            # ENCHUFES sobre la encimera (franja salpicadero), evitando zona de placa
+            ench_y = (ENC_Y + ALTOS_Y0) / 2
+            ex = 45
+            while ex < ancho - 20:
+                sobre_hob = any(hx - 5 <= ex <= hx + hw + 5 for (hx, hw) in hob_zones)
+                sobre_col = any(str(t.get("id") or "").lower() in COLS
+                                and (t.get("posicion_cm") or 0) <= ex <= (t.get("posicion_cm") or 0) + (t.get("ancho") or 60)
+                                for t in elems)
+                if not (sobre_hob or sobre_col):
+                    ax.add_patch(patches.Rectangle((ex - 4, ench_y - 4), 8, 8, fill=False,
+                                                   edgecolor=C_ENCH, linewidth=1.1, zorder=5))
+                    ax.plot([ex - 1.6, ex - 1.6], [ench_y - 1.6, ench_y + 1.6], color=C_ENCH, lw=1.0, zorder=5)
+                    ax.plot([ex + 1.6, ex + 1.6], [ench_y - 1.6, ench_y + 1.6], color=C_ENCH, lw=1.0, zorder=5)
+                ex += 90
             ax.text(0, alto + 12, f"ALZADO S{idx + 1} — {pared.get('nombre') or f'Pared {idx + 1}'} · escala orientativa · cotas en cm",
                     fontsize=9, fontweight="bold", color=C_LINE)
 
