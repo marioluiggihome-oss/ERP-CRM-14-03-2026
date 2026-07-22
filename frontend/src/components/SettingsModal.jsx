@@ -24,7 +24,7 @@ const CAPABILITY_KEYS = [
   'canAccessMaster', 'canAuthorizePermissions', 'canChangeLogo', 'canAccessArmarios',
   'canAccessPedidos', 'canAccessArchivo', 'canAccessInvoices', 'canAccessRentabilidad', 'canAccessMando',
   'canUseResumenTotales', 'canUseCascos', 'canVerVinculadosCascos', 'canUsePropData', 'canUseArmarios2', 'canUseCocinasAI', 'canUseAgentesIA',
-  'canUseRender360',
+  'canUseRender360', 'canUse4K',
 ];
 
 // Lista de provincias de España con sus códigos
@@ -168,6 +168,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
     canUseResumenTotales: false,
     canUseCascos: false,
     canUseRender360: false,
+    canUse4K: false,
     canVerVinculadosCascos: false,
     canUsePropData: false,
     canUseArmarios2: false,
@@ -765,6 +766,7 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
       canUseResumenTotales: false,
       canUseCascos: false,
       canUseRender360: false,
+      canUse4K: false,
       canVerVinculadosCascos: false,
       canUsePropData: false,
       canUseArmarios2: false,
@@ -2396,6 +2398,15 @@ const SettingsModal = ({ isOpen, onClose, state, setState }) => {
                                 className="w-4 h-4 rounded accent-indigo-600"
                               />
                               <span title="Estudio 3D: generar un giro 360º del render y moverlo con el ratón (consume créditos de IA)." className="text-xs font-bold text-slate-700">Render 360º (giro con ratón)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={!!userForm.canUse4K}
+                                onChange={(e) => setUserForm({...userForm, canUse4K: e.target.checked})}
+                                className="w-4 h-4 rounded accent-indigo-600"
+                              />
+                              <span title="Estudio 3D: generar y descargar el render a resolución 4K real (3840 px)." className="text-xs font-bold text-slate-700">Render 4K</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-2 py-1.5 rounded-lg hover:bg-white transition-colors">
                               <input

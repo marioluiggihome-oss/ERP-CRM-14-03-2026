@@ -388,6 +388,17 @@ async def upscale_render_4k(request: UpscaleRequest, user=Depends(require_auth))
     """Escala una imagen a resolución 4K (3840 px de ancho por defecto) con
     remuestreo Lanczos y un realce de nitidez suave. Determinista y sin coste de
     IA: garantiza dimensiones reales 4K para impresión/entrega al cliente."""
+    # Permiso específico: exportar a 4K requiere canUse4K (o rol elevado).
+    allowed = any(user.get(f) for f in ADMIN_ROLE_FLAGS)
+    if not allowed:
+        try:
+            full = await _db.users.find_one({"id": user.get("id")}, {"_id": 0, "canUse4K": 1}) or {}
+            allowed = bool(full.get("canUse4K"))
+        except Exception:
+            allowed = False
+    if not allowed:
+        raise HTTPException(status_code=403, detail="No tienes activado el permiso de exportación 4K. Pídeselo a tu administrador.")
+
     import base64 as _b64, io as _io, re as _re
     raw = request.imageBase64 or ""
     m = _re.match(r"^data:image/[^;]+;base64,(.*)$", raw, _re.DOTALL)
