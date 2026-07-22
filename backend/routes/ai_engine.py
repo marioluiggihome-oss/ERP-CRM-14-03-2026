@@ -378,6 +378,45 @@ async def generate_render_orbit(request: OrbitRequest, user=Depends(require_auth
     return result
 
 
+class UpscaleRequest(BaseModel):
+    imageBase64: str = Field(..., description="Imagen (base64/data URL) a escalar a 4K")
+    width: Optional[int] = Field(3840, description="Ancho objetivo en px (por defecto 3840 = 4K UHD)")
+
+
+@ai_engine_router.post("/render/upscale-4k")
+async def upscale_render_4k(request: UpscaleRequest, user=Depends(require_auth)):
+    """Escala una imagen a resolución 4K (3840 px de ancho por defecto) con
+    remuestreo Lanczos y un realce de nitidez suave. Determinista y sin coste de
+    IA: garantiza dimensiones reales 4K para impresión/entrega al cliente."""
+    import base64 as _b64, io as _io, re as _re
+    raw = request.imageBase64 or ""
+    m = _re.match(r"^data:image/[^;]+;base64,(.*)$", raw, _re.DOTALL)
+    b64 = m.group(1) if m else raw
+    try:
+        data = _b64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Imagen no válida.")
+    try:
+        from PIL import Image, ImageFilter
+        im = Image.open(_io.BytesIO(data)).convert("RGB")
+        target_w = max(1280, min(int(request.width or 3840), 7680))
+        if im.width < target_w:
+            target_h = round(im.height * target_w / im.width)
+            im = im.resize((target_w, target_h), Image.LANCZOS)
+        # Realce de detalle suave tras el reescalado.
+        im = im.filter(ImageFilter.UnsharpMask(radius=2.2, percent=110, threshold=2))
+        out = _io.BytesIO()
+        im.save(out, format="JPEG", quality=94, subsampling=0)
+        out.seek(0)
+        b = _b64.b64encode(out.read()).decode("utf-8")
+        return {"success": True, "image": f"data:image/jpeg;base64,{b}", "width": im.width, "height": im.height}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"upscale-4k error: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo escalar la imagen a 4K.")
+
+
 @ai_engine_router.post("/render/params")
 async def generate_render_params(request: RenderParamsRequest, user=Depends(require_auth)):
     """
