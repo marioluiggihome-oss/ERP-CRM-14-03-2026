@@ -555,8 +555,8 @@ export default function AIRenderStudio({ state, setState }) {
 
   // Detección AUTOMÁTICA de instalaciones con IA (analiza el render y coloca las
   // marcas de enchufes/agua/desagüe/gas donde irían).
-  const detectInstalaciones = async () => {
-    const src = currentImage(); if (!src || detecting) return;
+  const detectInstalaciones = async (srcArg) => {
+    const src = srcArg || currentImage(); if (!src || detecting) return;
     setDetecting(true); setError(null);
     try {
       const dataUrl = await imageToDataUrl(src);
@@ -1714,6 +1714,9 @@ export default function AIRenderStudio({ state, setState }) {
         const merged = { ...data, description: 'Amueblado virtual sobre estancia real' };
         setRenderResult(merged);
         setRenderHistory(prev => [{ ...merged, timestamp: new Date() }, ...prev].slice(0, 12));
+        // Marca automáticamente las tomas (agua/desagüe/enchufes/gas) sobre el resultado,
+        // para verificar que la propuesta respeta las instalaciones existentes.
+        try { await detectInstalaciones(data.result?.images?.[0]); } catch { /* best-effort */ }
       } else setError(data.error || 'No se pudo amueblar la estancia.');
     } catch { setError('Error al amueblar la estancia.'); }
     finally { setIsGenerating(false); fetchCredits(); }
