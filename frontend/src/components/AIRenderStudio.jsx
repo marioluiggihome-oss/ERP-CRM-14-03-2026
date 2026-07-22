@@ -1922,6 +1922,32 @@ export default function AIRenderStudio({ state, setState }) {
                     </div>
                   </div>
                 )}
+                {/* Medidas de la estancia — arriba, junto a la subida de imagen (a mano).
+                    Es la ESCALA REAL: clave para que los planos/alzados salgan acotados. */}
+                <div className="mb-2 rounded-xl border border-indigo-100 bg-indigo-50/50 p-2.5 flex flex-col gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Maximize2 size={13} className="text-indigo-500" />
+                    <span className="text-[11px] font-black text-indigo-700 uppercase tracking-wider">Medidas de la estancia</span>
+                    <span className="text-[10px] text-indigo-400">— escala real para render y planos acotados</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Ancho (cm)</span>
+                      <input type="number" value={medidas.ancho} onChange={e => setMedidas(m => ({ ...m, ancho: e.target.value }))} placeholder="360" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white" />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Fondo (cm)</span>
+                      <input type="number" value={medidas.fondo} onChange={e => setMedidas(m => ({ ...m, fondo: e.target.value }))} placeholder="300" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white" />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Techo (cm)</span>
+                      <input type="number" value={medidas.altura} onChange={e => setMedidas(m => ({ ...m, altura: e.target.value }))} placeholder="250" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white" />
+                    </label>
+                  </div>
+                  <input value={medidas.aberturas} onChange={e => setMedidas(m => ({ ...m, aberturas: e.target.value }))}
+                    placeholder="Ventanas/puertas: ej. ventana 120 cm en pared izquierda, puerta al fondo"
+                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white" />
+                </div>
                 <textarea
                   ref={textareaRef}
                   value={description}
@@ -1989,31 +2015,9 @@ export default function AIRenderStudio({ state, setState }) {
                 </div>
               </div>
 
-              {/* PASO 3 — Medidas de la estancia (opcional, para escala real) */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
-                <StepHeader n={3} title="Medidas de la estancia" hint="Opcional, pero da escala y proporción reales al render." />
-                <div className="grid grid-cols-3 gap-2">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Ancho (cm)</span>
-                    <input type="number" value={medidas.ancho} onChange={e => setMedidas(m => ({ ...m, ancho: e.target.value }))} placeholder="360" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Fondo (cm)</span>
-                    <input type="number" value={medidas.fondo} onChange={e => setMedidas(m => ({ ...m, fondo: e.target.value }))} placeholder="300" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Techo (cm)</span>
-                    <input type="number" value={medidas.altura} onChange={e => setMedidas(m => ({ ...m, altura: e.target.value }))} placeholder="250" className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
-                  </label>
-                </div>
-                <input value={medidas.aberturas} onChange={e => setMedidas(m => ({ ...m, aberturas: e.target.value }))}
-                  placeholder="Ventanas/puertas: ej. ventana 120 cm en pared izquierda, puerta al fondo"
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm" />
-              </div>
-
-              {/* PASO 4 — Plano + bocetos por pared (opcional, máxima fidelidad) */}
+              {/* PASO 3 — Plano + bocetos por pared (opcional, máxima fidelidad) */}
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 flex flex-col gap-2.5">
-                <StepHeader n={4} title="Plano + bocetos (opcional)" hint="Para máxima fidelidad: sube el plano en planta y un boceto por cada pared." />
+                <StepHeader n={3} title="Plano + bocetos (opcional)" hint="Para máxima fidelidad: sube el plano en planta y un boceto por cada pared." />
                 <p className="text-[11px] text-slate-500">
                   El render seguirá la distribución del plano y el diseño de cada pared, con el acabado descrito en el paso 1.
                 </p>
