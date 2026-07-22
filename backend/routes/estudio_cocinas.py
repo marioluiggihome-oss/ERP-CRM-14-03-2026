@@ -1746,16 +1746,34 @@ async def detect_distribucion(payload: dict):
     img = (payload or {}).get("imageBase64") or (payload or {}).get("image") or ""
     if not img:
         raise HTTPException(status_code=400, detail="Falta la imagen del render.")
+    # Medidas REALES que ha introducido el usuario (ancla de escala). Sin esto, la IA
+    # solo puede estimar por proporción visual y las medidas salen imprecisas.
+    medidas = (payload or {}).get("medidas") or {}
+    def _num(v):
+        try:
+            n = float(str(v).replace(",", "."));  return n if n > 0 else 0
+        except (TypeError, ValueError):
+            return 0
+    ancho_real = int(round(_num(medidas.get("ancho"))))    # ancho total de la estancia (cm)
+    alto_real = int(round(_num(medidas.get("altura")))) or 240
     try:
         from services.llm_vision import analyze_image_with_gemini, is_vision_available
         if not is_vision_available():
             raise HTTPException(status_code=503, detail="IA no configurada. Falta la clave del motor de IA (contacta con el administrador).")
+        escala_nota = (
+            f"\nDATO REAL (úsalo como ESCALA): el ancho total de la estancia es {ancho_real} cm"
+            + (f" y la altura de techo {alto_real} cm" if alto_real else "")
+            + ". La SUMA de los anchos de los módulos de la pared principal debe COINCIDIR con ese ancho real. "
+            "Distribuye los módulos para que cuadren exactamente con esa medida.\n"
+            if ancho_real else "\n"
+        )
         prompt = (
             "Eres proyectista de cocinas. Analiza esta imagen (render de cocina) y deduce su DISTRIBUCIÓN. "
             "Identifica el tipo (lineal, l, u, paralela, isla, g), las PAREDES con muebles y, en cada pared, "
             "la secuencia de MÓDULOS de izquierda a derecha con su nombre y ancho aproximado en cm "
-            "(anchos típicos: 30,40,45,60,80,90,100,120). Electrodomésticos visibles cuentan como módulos "
+            "(anchos típicos de fabricación: 15,20,30,40,45,50,60,80,90,100,120). Electrodomésticos visibles cuentan como módulos "
             "(frigorífico, columna horno/microondas, lavavajillas, fregadero, placa/cocina, campana...).\n"
+            + escala_nota +
             "Devuelve SOLO un JSON con esta forma exacta:\n"
             "{\"tipo\":\"l\",\"paredes\":[{\"nombre\":\"Pared principal\",\"ancho\":370,\"alto\":240}],"
             "\"elementos\":[{\"id\":\"frigorifico\",\"label\":\"Frigorífico\",\"pared_idx\":0,\"posicion_cm\":0,\"ancho\":60}]}. "
@@ -1796,7 +1814,47 @@ async def detect_distribucion(payload: dict):
             })
         if not paredes:
             raise HTTPException(status_code=422, detail="No se pudo deducir la distribución del render.")
-        return {"success": True, "distribucion": {"tipo": str(data.get("tipo") or "lineal"), "paredes": paredes, "elementos": elementos, "isla": {}}}
+
+        # ── NORMALIZACIÓN DE MEDIDAS ────────────────────────────────────────────
+        # La IA estima anchos por proporción visual (impreciso). Se corrige:
+        #  1) Si el usuario dio el ancho REAL de la estancia, la pared principal (0)
+        #     usa ESE ancho como verdad.
+        #  2) En cada pared, los módulos se reescalan para SUMAR el ancho de la pared,
+        #     se ajustan a tamaños de fabricación estándar y se recolocan contiguos
+        #     de izquierda a derecha (sin huecos ni solapes). Así las cotas cuadran.
+        STD = [15, 20, 30, 40, 45, 50, 60, 70, 80, 90, 100, 120]
+        def _snap(w):
+            return min(STD, key=lambda s: abs(s - w))
+        if ancho_real and paredes:
+            paredes[0]["ancho"] = ancho_real
+            if alto_real:
+                paredes[0]["alto"] = alto_real
+        norm_elems = []
+        for pidx, pared in enumerate(paredes):
+            grupo = sorted([e for e in elementos if e["pared_idx"] == pidx],
+                           key=lambda e: e["posicion_cm"])
+            if not grupo:
+                continue
+            suma = sum(e["ancho"] for e in grupo) or 1
+            objetivo = pared["ancho"]
+            factor = objetivo / suma
+            # Reescala y ajusta a estándar
+            for e in grupo:
+                e["ancho"] = max(15, _snap(e["ancho"] * factor))
+            # Cuadra la suma exactamente con el ancho de pared: el desfase se absorbe
+            # en el módulo más ancho (normalmente un mueble base, no un electrodoméstico).
+            desfase = objetivo - sum(e["ancho"] for e in grupo)
+            if desfase and grupo:
+                idx_max = max(range(len(grupo)), key=lambda i: grupo[i]["ancho"])
+                grupo[idx_max]["ancho"] = max(15, grupo[idx_max]["ancho"] + desfase)
+            # Recoloca contiguos de izquierda a derecha
+            x = 0
+            for e in grupo:
+                e["posicion_cm"] = x
+                x += e["ancho"]
+            norm_elems.extend(grupo)
+        elementos = norm_elems or elementos
+        return {"success": True, "distribucion": {"tipo": str(data.get("tipo") or "lineal"), "paredes": paredes, "elementos": elementos, "isla": {}, "medidasReales": bool(ancho_real)}}
     except HTTPException:
         raise
     except Exception as e:
